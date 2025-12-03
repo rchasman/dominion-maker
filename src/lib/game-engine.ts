@@ -282,7 +282,7 @@ export function endBuyPhase(state: GameState): GameState {
 
   // Switch player
   const nextPlayer: Player = player === "human" ? "ai" : "human";
-  const newTurn = player === "ai" ? state.turn + 1 : state.turn;
+  const newTurn = state.turn + 1;
 
   // Build log entries: end-turn (with draw as child) and turn-start
   const logEntries: LogEntry[] = [{
@@ -297,15 +297,12 @@ export function endBuyPhase(state: GameState): GameState {
     }],
   }];
 
-  // Add turn-start header (no children) only for human
-  if (nextPlayer === "human") {
-    logEntries.push({
-      type: "turn-start" as const,
-      turn: newTurn,
-      player: nextPlayer,
-    });
-  }
-  // For AI, turn-start is added in runSimpleAITurn
+  // Add turn-start header for both players
+  logEntries.push({
+    type: "turn-start" as const,
+    turn: newTurn,
+    player: nextPlayer,
+  });
 
   const newState: GameState = {
     ...state,
@@ -374,15 +371,7 @@ function getActionPlayPriority(card: CardName): number {
 export function runSimpleAITurn(state: GameState): GameState {
   if (state.activePlayer !== "ai" || state.gameOver) return state;
 
-  // Add turn-start header for AI
-  let current: GameState = {
-    ...state,
-    log: [...state.log, {
-      type: "turn-start",
-      turn: state.turn,
-      player: "ai",
-    }],
-  };
+  let current: GameState = state;
 
   // ACTION PHASE: Play action cards intelligently
   while (current.phase === "action" && current.actions > 0) {
