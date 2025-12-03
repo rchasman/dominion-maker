@@ -1,6 +1,6 @@
 import type { CardName, GameState, Player, LogEntry } from "../types/game-state";
 import { CARDS, isTreasureCard, isActionCard } from "../data/cards";
-import { drawCards, countVP } from "./game-utils";
+import { drawCards, logDraw, countVP } from "./game-utils";
 import { BASE_CARD_EFFECTS } from "../cards/base";
 
 function checkGameOver(state: GameState): GameState {
@@ -284,17 +284,16 @@ export function endBuyPhase(state: GameState): GameState {
   const nextPlayer: Player = player === "human" ? "ai" : "human";
   const newTurn = state.turn + 1;
 
-  // Build log entries: end-turn (with draw as child) and turn-start
+  // Build children for end-turn using logDraw helper
+  const endTurnChildren: LogEntry[] = [];
+  logDraw(endTurnChildren, afterDraw, player);
+
+  // Build log entries: end-turn (with shuffle and draw as children) and turn-start
   const logEntries: LogEntry[] = [{
     type: "end-turn" as const,
     player,
     nextPlayer,
-    children: [{
-      type: "draw-cards" as const,
-      player,
-      count: afterDraw.drawn.length,
-      cards: afterDraw.drawn,
-    }],
+    children: endTurnChildren,
   }];
 
   // Add turn-start header for both players

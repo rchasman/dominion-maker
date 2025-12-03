@@ -1,17 +1,17 @@
 import type { CardEffect } from "../card-effect";
 import type { Player } from "../../types/game-state";
-import { drawCards } from "../../lib/game-utils";
+import { drawCards, logDraw } from "../../lib/game-utils";
 
 export const witch: CardEffect = ({ state, player, children }) => {
   // +2 Cards, opponent gains Curse
-  const { player: newPlayer, drawn } = drawCards(state.players[player], 2);
+  const drawResult = drawCards(state.players[player], 2);
   const opponent: Player = player === "human" ? "ai" : "human";
 
   let newState = {
     ...state,
-    players: { ...state.players, [player]: newPlayer },
+    players: { ...state.players, [player]: drawResult.player },
   };
-  children.push({ type: "draw-cards", player, count: drawn.length, cards: drawn });
+  logDraw(children, drawResult, player);
 
   // Opponent gains Curse if available
   if (newState.supply.Curse > 0) {

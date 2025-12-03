@@ -1,13 +1,12 @@
 import type { CardEffect } from "../card-effect";
-import { drawCards } from "../../lib/game-utils";
+import { drawCards, logDraw } from "../../lib/game-utils";
 
 export const smithy: CardEffect = ({ state, player, children }) => {
   // +3 Cards
-  const { player: newPlayer, drawn } = drawCards(state.players[player], 3);
-  const newState = {
+  const drawResult = drawCards(state.players[player], 3);
+  logDraw(children, drawResult, player);
+  return {
     ...state,
-    players: { ...state.players, [player]: newPlayer },
+    players: { ...state.players, [player]: drawResult.player },
   };
-  children.push({ type: "draw-cards", player, count: drawn.length, cards: drawn });
-  return newState;
 };

@@ -8,9 +8,10 @@ interface LogEntryProps {
   depth?: number;
   isLast?: boolean;
   parentPrefix?: string;
+  viewer?: "human" | "ai";
 }
 
-function LogEntryContent({ entry, depth = 0 }: { entry: LogEntryType; depth?: number }) {
+function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEntryType; depth?: number; viewer?: "human" | "ai" }) {
   switch (entry.type) {
     case "turn-start":
       return (
@@ -92,6 +93,16 @@ function LogEntryContent({ entry, depth = 0 }: { entry: LogEntryType; depth?: nu
     }
 
     case "draw-cards": {
+      // Hide card details for opponent's draws
+      const isOpponent = entry.player !== viewer;
+      if (isOpponent) {
+        return (
+          <span>
+            <Verb>draws</Verb> {entry.count} new cards
+          </span>
+        );
+      }
+
       if (entry.cards) {
         // Group cards by name for compact display
         const cardCounts = new Map<string, number>();
@@ -277,7 +288,7 @@ function LogEntryContent({ entry, depth = 0 }: { entry: LogEntryType; depth?: nu
   }
 }
 
-export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }: LogEntryProps) {
+export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "", viewer = "human" }: LogEntryProps) {
   // Filter out count children (e.g., "5x") as they're used for formatting the parent entry
   const childrenToRender = entry.children?.filter(
     child => !(child.type === "text" && 'message' in child && child.message.endsWith("x"))
@@ -290,7 +301,7 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
     return (
       <>
         <div>
-          <LogEntryContent entry={entry} depth={depth} />
+          <LogEntryContent entry={entry} depth={depth} viewer={viewer} />
         </div>
         {childrenToRender?.map((child, i) => (
           <LogEntry
@@ -299,6 +310,7 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
             depth={1}
             isLast={i === childrenToRender.length - 1}
             parentPrefix=""
+            viewer={viewer}
           />
         ))}
       </>
@@ -325,7 +337,7 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
             {prefix}
           </span>
         )}
-        <LogEntryContent entry={entry} depth={depth} />
+        <LogEntryContent entry={entry} depth={depth} viewer={viewer} />
       </div>
       {childrenToRender?.map((child, i) => (
         <LogEntry
@@ -334,6 +346,7 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
           depth={depth + 1}
           isLast={i === childrenToRender.length - 1}
           parentPrefix={childPrefix}
+          viewer={viewer}
         />
       ))}
     </>

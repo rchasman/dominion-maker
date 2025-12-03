@@ -1,18 +1,18 @@
 import type { CardEffect } from "../card-effect";
-import { drawCards } from "../../lib/game-utils";
+import { drawCards, logDraw } from "../../lib/game-utils";
 import { isActionCard } from "../../data/cards";
 
 export const harbinger: CardEffect = ({ state, player, children, decision }) => {
   // +1 Card, +1 Action. May put a card from discard onto deck
-  const { player: newPlayer, drawn } = drawCards(state.players[player], 1);
-  const currentPlayer = newPlayer;
+  const drawResult = drawCards(state.players[player], 1);
+  const currentPlayer = drawResult.player;
 
   let newState = {
     ...state,
-    players: { ...state.players, [player]: newPlayer },
+    players: { ...state.players, [player]: drawResult.player },
     actions: state.actions + 1,
   };
-  children.push({ type: "draw-cards", player, count: drawn.length, cards: drawn });
+  logDraw(children, drawResult, player);
   children.push({ type: "get-actions", player, count: 1 });
 
   // For human players, prompt to choose from discard (optional)
