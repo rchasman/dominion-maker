@@ -1,96 +1,222 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { GameState, CardName } from "./types/game-state";
+import type { GameMode, GameStrategy } from "./types/game-mode";
 import { initializeGame } from "./lib/game-init";
-import { advanceGameState, runAITurn, type ModelProvider } from "./agent/game-agent";
+import { hasPlayableActions, hasTreasuresInHand, endActionPhase } from "./lib/game-engine";
 import { Board } from "./components/Board";
-import { ActionPrompt } from "./components/ActionPrompt";
-import { isActionCard, isTreasureCard } from "./data/cards";
+import { EngineStrategy } from "./strategies/engine-strategy";
+import { LLMStrategy } from "./strategies/llm-strategy";
+import { HybridStrategy } from "./strategies/hybrid-strategy";
+import type { LLMLogEntry } from "./components/LLMLog";
+
+const STORAGE_KEY = "dominion-maker-game-state";
+const STORAGE_MODE_KEY = "dominion-maker-game-mode";
 
 function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<ModelProvider>("openai");
+  const [gameMode, setGameMode] = useState<GameMode>("engine");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [llmLogs, setLlmLogs] = useState<LLMLogEntry[]>([]);
+  const isInitialMount = useRef(true);
 
-  const startGame = useCallback(() => {
-    setGameState(initializeGame(true));
-    setSelectedCards([]);
+  // Restore game state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
+
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        setGameState(parsed);
+      }
+
+      if (savedMode && (savedMode === "engine" || savedMode === "llm" || savedMode === "hybrid")) {
+        setGameMode(savedMode);
+      }
+    } catch (error) {
+      console.error("Failed to restore game state:", error);
+      // Clear corrupted data
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_MODE_KEY);
+    }
   }, []);
 
-  const handleAdvance = useCallback(
-    async (choice?: { selectedCards: CardName[] }) => {
-      if (!gameState || loading) return;
-
-      setLoading(true);
+  // Save game state to localStorage whenever it changes
+  useEffect(() => {
+    if (gameState) {
       try {
-        let newState = await advanceGameState(gameState, choice, provider);
-
-        // If it's now AI's turn, run the full AI turn
-        if (newState.activePlayer === "ai" && !newState.gameOver) {
-          newState = await runAITurn(newState, provider);
-        }
-
-        setGameState(newState);
-        setSelectedCards([]);
-      } catch (err) {
-        console.error("Error advancing game state:", err);
-      } finally {
-        setLoading(false);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      } catch (error) {
+        console.error("Failed to save game state:", error);
       }
-    },
-    [gameState, loading, provider]
-  );
+    }
+  }, [gameState]);
+
+  // Save game mode to localStorage whenever it changes (skip initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    localStorage.setItem(STORAGE_MODE_KEY, gameMode);
+  }, [gameMode]);
+
+  // Create logger for LLM strategy
+  const llmLogger = useCallback((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+    const logEntry: LLMLogEntry = {
+      ...entry,
+      id: `${Date.now()}-${Math.random()}`,
+      timestamp: Date.now(),
+    };
+    setLlmLogs(prev => [...prev, logEntry]);
+  }, []);
+
+  // Create strategy based on selected mode
+  const strategy: GameStrategy = useMemo(() => {
+    if (gameMode === "engine") {
+      return new EngineStrategy();
+    } else if (gameMode === "llm") {
+      return new LLMStrategy("openai", llmLogger);
+    } else {
+      // hybrid mode
+      return new HybridStrategy("openai", llmLogger);
+    }
+  }, [gameMode, llmLogger]);
+
+  const startGame = useCallback(() => {
+    // Clear localStorage for fresh game
+    localStorage.removeItem(STORAGE_KEY);
+
+    setGameState(initializeGame(true));
+    setSelectedCards([]);
+    setLlmLogs([]);
+  }, []);
+
+  // Auto-run AI turn or auto-skip empty action phase
+  useEffect(() => {
+    if (!gameState || gameState.gameOver || isProcessing) return;
+
+    // Auto-run AI turn using selected strategy
+    if (gameState.activePlayer === "ai") {
+      const timer = setTimeout(async () => {
+        setIsProcessing(true);
+        try {
+          const newState = await strategy.runAITurn(gameState);
+          setGameState(newState);
+        } catch (error) {
+          console.error("AI turn error:", error);
+        } finally {
+          setIsProcessing(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+
+    // Auto-skip action phase if no playable actions AND no pending decision
+    if (gameState.activePlayer === "human" &&
+        gameState.phase === "action" &&
+        !gameState.pendingDecision &&
+        !hasPlayableActions(gameState)) {
+      setGameState(endActionPhase(gameState));
+    }
+  }, [gameState, strategy, isProcessing]);
 
   const handleCardClick = useCallback(
-    (card: CardName, _index: number) => {
-      if (!gameState || gameState.activePlayer !== "human") return;
+    async (card: CardName, _index: number) => {
+      if (!gameState || gameState.activePlayer !== "human" || isProcessing) return;
 
-      const { phase, pendingDecision } = gameState;
-
-      // If there's a pending decision, toggle selection
-      if (pendingDecision) {
-        setSelectedCards((prev) =>
-          prev.includes(card)
-            ? prev.filter((c) => c !== card)
-            : [...prev, card]
-        );
-        return;
-      }
-
-      // Action phase: play action cards
-      if (phase === "action" && isActionCard(card) && gameState.actions > 0) {
-        handleAdvance({ selectedCards: [card] });
-        return;
-      }
-
-      // Buy phase: play treasures
-      if (phase === "buy" && isTreasureCard(card)) {
-        handleAdvance({ selectedCards: [card] });
-        return;
+      setIsProcessing(true);
+      try {
+        const newState = await strategy.handleCardPlay(gameState, card);
+        setGameState(newState);
+      } catch (error) {
+        console.error("Card play error:", error);
+      } finally {
+        setIsProcessing(false);
       }
     },
-    [gameState, handleAdvance]
+    [gameState, strategy, isProcessing]
   );
 
   const handleBuyCard = useCallback(
-    (card: CardName) => {
-      if (!gameState || gameState.phase !== "buy" || gameState.buys < 1) return;
-      handleAdvance({ selectedCards: [card] });
+    async (card: CardName) => {
+      if (!gameState || isProcessing) return;
+
+      // Allow clicks during gain decisions, not just buy phase
+      if (gameState.pendingDecision?.type === "gain") {
+        setIsProcessing(true);
+        try {
+          const newState = await strategy.handleBuyCard(gameState, card);
+          setGameState(newState);
+        } catch (error) {
+          console.error("Buy card error:", error);
+        } finally {
+          setIsProcessing(false);
+        }
+        return;
+      }
+
+      // Normal buy logic
+      if (gameState.phase !== "buy" || gameState.buys < 1) return;
+
+      setIsProcessing(true);
+      try {
+        const newState = await strategy.handleBuyCard(gameState, card);
+        setGameState(newState);
+      } catch (error) {
+        console.error("Buy card error:", error);
+      } finally {
+        setIsProcessing(false);
+      }
     },
-    [gameState, handleAdvance]
+    [gameState, strategy, isProcessing]
   );
 
-  const handleEndPhase = useCallback(() => {
-    handleAdvance({ selectedCards: [] });
-  }, [handleAdvance]);
+  const handlePlayAllTreasures = useCallback(async () => {
+    if (!gameState || gameState.phase !== "buy" || isProcessing) return;
 
-  const handleConfirmDecision = useCallback(() => {
-    handleAdvance({ selectedCards });
-  }, [handleAdvance, selectedCards]);
+    setIsProcessing(true);
+    try {
+      const newState = await strategy.handlePlayAllTreasures(gameState);
+      setGameState(newState);
+    } catch (error) {
+      console.error("Play all treasures error:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [gameState, strategy, isProcessing]);
 
-  const handleSkipDecision = useCallback(() => {
-    handleAdvance({ selectedCards: [] });
-  }, [handleAdvance]);
+  const handleInPlayClick = useCallback(
+    async (card: CardName, _index: number) => {
+      if (!gameState || gameState.phase !== "buy" || isProcessing) return;
+
+      setIsProcessing(true);
+      try {
+        const newState = await strategy.handleUnplayTreasure(gameState, card);
+        setGameState(newState);
+      } catch (error) {
+        console.error("Unplay treasure error:", error);
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [gameState, strategy, isProcessing]
+  );
+
+  const handleEndPhase = useCallback(async () => {
+    if (!gameState || isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      const newState = await strategy.handleEndPhase(gameState);
+      setGameState(newState);
+    } catch (error) {
+      console.error("End phase error:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [gameState, strategy, isProcessing]);
 
   // Start screen
   if (!gameState) {
@@ -101,91 +227,151 @@ function App() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "100vh",
-          gap: "24px",
+          minBlockSize: "100dvh",
+          gap: "var(--space-8)",
+          background: "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
         }}
       >
-        <h1>Dominion</h1>
-        <p style={{ color: "#666" }}>Base Game - AI Facilitator</p>
+        <h1 style={{
+          margin: 0,
+          fontSize: "3rem",
+          color: "var(--color-gold)",
+          textShadow: "var(--shadow-glow-gold)",
+          letterSpacing: "0.25rem",
+        }}>
+          DOMINION
+        </h1>
+        <p style={{
+          color: "var(--color-text-secondary)",
+          margin: 0,
+          fontSize: "0.875rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem"
+        }}>
+          Base Game
+        </p>
 
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <label>Model:</label>
-          <select
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as ModelProvider)}
-            style={{ padding: "8px", fontSize: "16px" }}
+        {/* Game Mode Selector */}
+        <div style={{
+          display: "flex",
+          gap: "var(--space-4)",
+          padding: "var(--space-4)",
+          background: "var(--color-bg-secondary)",
+          border: "1px solid var(--color-border-primary)",
+          borderRadius: "8px",
+        }}>
+          <button
+            onClick={() => setGameMode("engine")}
+            style={{
+              padding: "var(--space-3) var(--space-6)",
+              fontSize: "0.75rem",
+              fontWeight: gameMode === "engine" ? 700 : 400,
+              background: gameMode === "engine" ? "var(--color-victory-dark)" : "transparent",
+              color: gameMode === "engine" ? "#fff" : "var(--color-text-secondary)",
+              border: "1px solid",
+              borderColor: gameMode === "engine" ? "var(--color-victory)" : "var(--color-border-primary)",
+              cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.1rem",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+            }}
           >
-            <option value="openai">OpenAI (GPT-4o)</option>
-            <option value="anthropic">Anthropic (Claude)</option>
-          </select>
+            Engine Mode
+          </button>
+          <button
+            onClick={() => setGameMode("hybrid")}
+            style={{
+              padding: "var(--space-3) var(--space-6)",
+              fontSize: "0.75rem",
+              fontWeight: gameMode === "hybrid" ? 700 : 400,
+              background: gameMode === "hybrid" ? "var(--color-victory-dark)" : "transparent",
+              color: gameMode === "hybrid" ? "#fff" : "var(--color-text-secondary)",
+              border: "1px solid",
+              borderColor: gameMode === "hybrid" ? "var(--color-victory)" : "var(--color-border-primary)",
+              cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.1rem",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+            }}
+          >
+            Hybrid Mode
+          </button>
+          <button
+            onClick={() => setGameMode("llm")}
+            style={{
+              padding: "var(--space-3) var(--space-6)",
+              fontSize: "0.75rem",
+              fontWeight: gameMode === "llm" ? 700 : 400,
+              background: gameMode === "llm" ? "var(--color-victory-dark)" : "transparent",
+              color: gameMode === "llm" ? "#fff" : "var(--color-text-secondary)",
+              border: "1px solid",
+              borderColor: gameMode === "llm" ? "var(--color-victory)" : "var(--color-border-primary)",
+              cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.1rem",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+            }}
+          >
+            LLM Mode
+          </button>
         </div>
+        <p style={{
+          color: "var(--color-text-tertiary)",
+          margin: 0,
+          fontSize: "0.75rem",
+          maxWidth: "500px",
+          textAlign: "center",
+          lineHeight: 1.6,
+        }}>
+          {gameMode === "engine"
+            ? "Hard-coded rules engine with explicit card implementations"
+            : gameMode === "hybrid"
+            ? "Engine for human moves, MAKER consensus for AI turns (GPT-4o + Claude)"
+            : "Pure MAKER consensus for all moves (GPT-4o + Claude validate each step)"}
+        </p>
 
         <button
           onClick={startGame}
           style={{
-            padding: "16px 32px",
-            fontSize: "18px",
-            background: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
+            padding: "var(--space-6) var(--space-10)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+            color: "#fff",
+            border: "2px solid var(--color-victory)",
             cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+            fontFamily: "inherit",
+            boxShadow: "var(--shadow-lg)",
           }}
         >
           Start Game
         </button>
-
-        <p style={{ fontSize: "12px", color: "#999", maxWidth: "400px", textAlign: "center" }}>
-          Set VITE_OPENAI_API_KEY or VITE_ANTHROPIC_API_KEY in .env
-        </p>
       </div>
     );
   }
 
   return (
-    <div style={{ paddingBottom: gameState.pendingDecision ? "300px" : "20px" }}>
-      {loading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            background: "#4CAF50",
-            color: "white",
-            padding: "8px",
-            textAlign: "center",
-            zIndex: 1000,
-          }}
-        >
-          Thinking...
-        </div>
-      )}
-
-      <Board
-        state={gameState}
-        selectedCards={selectedCards}
-        onCardClick={handleCardClick}
-        onBuyCard={handleBuyCard}
-        onEndPhase={handleEndPhase}
-      />
-
-      {gameState.pendingDecision && gameState.pendingDecision.player === "human" && (
-        <ActionPrompt
-          decision={gameState.pendingDecision}
-          selectedCards={selectedCards}
-          onToggleCard={(card) =>
-            setSelectedCards((prev) =>
-              prev.includes(card)
-                ? prev.filter((c) => c !== card)
-                : [...prev, card]
-            )
-          }
-          onConfirm={handleConfirmDecision}
-          onSkip={gameState.pendingDecision.canSkip ? handleSkipDecision : undefined}
-        />
-      )}
-    </div>
+    <Board
+      state={gameState}
+      selectedCards={selectedCards}
+      onCardClick={handleCardClick}
+      onInPlayClick={handleInPlayClick}
+      onBuyCard={handleBuyCard}
+      onEndPhase={handleEndPhase}
+      onPlayAllTreasures={handlePlayAllTreasures}
+      hasPlayableActions={hasPlayableActions(gameState)}
+      hasTreasuresInHand={hasTreasuresInHand(gameState)}
+      llmLogs={llmLogs}
+      gameMode={gameMode}
+      onGameModeChange={setGameMode}
+      onNewGame={startGame}
+      isProcessing={isProcessing}
+    />
   );
 }
 

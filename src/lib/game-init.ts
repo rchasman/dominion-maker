@@ -1,14 +1,6 @@
 import type { CardName, GameState, PlayerState } from "../types/game-state";
 import { FIRST_GAME_KINGDOM, KINGDOM_CARDS } from "../data/cards";
-
-function shuffle<T>(array: T[]): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
+import { shuffle } from "./game-utils";
 
 function createStartingDeck(): CardName[] {
   const deck: CardName[] = [
@@ -33,6 +25,7 @@ function createPlayerState(): PlayerState {
     hand: deck.slice(0, 5),
     discard: [],
     inPlay: [],
+    inPlaySourceIndices: [],
   };
 }
 
@@ -70,14 +63,17 @@ function createSupply(kingdomCards: CardName[]): Record<CardName, number> {
 export function initializeGame(useFirstGame = true): GameState {
   const kingdomCards = selectKingdomCards(useFirstGame);
 
+  const humanPlayer = createPlayerState();
+  const aiPlayer = createPlayerState();
+
   return {
     turn: 1,
     phase: "action",
     activePlayer: "human",
 
     players: {
-      human: createPlayerState(),
-      ai: createPlayerState(),
+      human: humanPlayer,
+      ai: aiPlayer,
     },
 
     supply: createSupply(kingdomCards),
@@ -93,31 +89,19 @@ export function initializeGame(useFirstGame = true): GameState {
     gameOver: false,
     winner: null,
 
-    log: ["Game started. Human plays first."],
-  };
-}
-
-// Helper to draw cards from deck (reshuffling if needed)
-export function drawCards(
-  player: PlayerState,
-  count: number
-): { player: PlayerState; drawn: CardName[] } {
-  const drawn: CardName[] = [];
-  let { deck, hand, discard } = player;
-
-  for (let i = 0; i < count; i++) {
-    if (deck.length === 0) {
-      if (discard.length === 0) break; // Can't draw
-      deck = shuffle(discard);
-      discard = [];
-    }
-    const card = deck.shift()!;
-    drawn.push(card);
-    hand = [...hand, card];
-  }
-
-  return {
-    player: { ...player, deck, hand, discard },
-    drawn,
+    log: [
+      { type: "start-game", player: "human", coppers: 7, estates: 3 },
+      {
+        type: "turn-start",
+        turn: 1,
+        player: "human",
+        children: [{
+          type: "draw-cards",
+          player: "human",
+          count: humanPlayer.hand.length,
+          cards: humanPlayer.hand,
+        }],
+      },
+    ],
   };
 }

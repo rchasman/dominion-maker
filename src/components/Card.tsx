@@ -1,5 +1,5 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, CARDS } from "../data/cards";
+import { getCardImageUrl } from "../data/cards";
 
 interface CardProps {
   name: CardName;
@@ -8,13 +8,9 @@ interface CardProps {
   disabled?: boolean;
   count?: number;
   showBack?: boolean;
-  size?: "small" | "medium";
+  size?: "small" | "medium" | "large";
+  highlightMode?: "trash" | "discard" | "gain";
 }
-
-const SIZES = {
-  small: { width: 60, height: 95 },
-  medium: { width: 80, height: 125 },
-};
 
 export function Card({
   name,
@@ -24,12 +20,45 @@ export function Card({
   count,
   showBack,
   size = "medium",
+  highlightMode,
 }: CardProps) {
   const imageUrl = showBack
-    ? "https://robinzigmond.github.io/Dominion-app/images/card_images/Card_back.jpg"
+    ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
     : getCardImageUrl(name);
 
-  const { width } = SIZES[size];
+  // Determine border style based on state
+  const getBorderStyle = () => {
+    if (selected) {
+      return {
+        border: "2px solid var(--color-victory)",
+        boxShadow: "var(--shadow-md)",
+      };
+    }
+    if (highlightMode === "trash") {
+      return {
+        border: "3px dashed #ef4444",
+        boxShadow: "0 0 8px rgba(239, 68, 68, 0.4)",
+      };
+    }
+    if (highlightMode === "discard") {
+      return {
+        border: "3px dashed #f59e0b",
+        boxShadow: "0 0 8px rgba(245, 158, 11, 0.4)",
+      };
+    }
+    if (highlightMode === "gain") {
+      return {
+        border: "3px dashed #10b981",
+        boxShadow: "0 0 8px rgba(16, 185, 129, 0.4)",
+      };
+    }
+    return {
+      border: "2px solid transparent",
+      boxShadow: "none",
+    };
+  };
+
+  const borderStyle = getBorderStyle();
 
   return (
     <div
@@ -37,21 +66,20 @@ export function Card({
       style={{
         position: "relative",
         cursor: onClick && !disabled ? "pointer" : "default",
-        opacity: disabled ? 0.5 : 1,
-        transform: selected ? "translateY(-8px)" : "none",
-        transition: "transform 0.1s",
-        border: selected ? "2px solid #4CAF50" : "2px solid transparent",
-        borderRadius: "4px",
+        opacity: disabled ? 0.4 : 1,
+        transform: selected ? "translateY(calc(-1 * var(--space-2)))" : "none",
+        transition: "transform var(--transition-fast), box-shadow var(--transition-fast)",
+        ...borderStyle,
         flexShrink: 0,
+        userSelect: "none",
       }}
     >
       <img
         src={imageUrl}
         alt={showBack ? "Card back" : name}
         style={{
-          width: `${width}px`,
-          height: "auto",
-          borderRadius: "3px",
+          inlineSize: size === "small" ? "var(--card-width-small)" : size === "large" ? "var(--card-width-large)" : "var(--card-width-medium)",
+          blockSize: "auto",
           display: "block",
         }}
         onError={(e) => {
@@ -62,19 +90,20 @@ export function Card({
         <div
           style={{
             position: "absolute",
-            top: "-6px",
-            right: "-6px",
-            background: count === 0 ? "#999" : "#333",
+            insetBlockStart: "-0.5rem",
+            insetInlineEnd: "-0.5rem",
+            background: count === 0 ? "#666" : "rgba(0, 0, 0, 0.85)",
             color: "white",
-            minWidth: "18px",
-            height: "18px",
-            borderRadius: "9px",
+            minInlineSize: "1.75rem",
+            blockSize: "1.75rem",
+            borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "10px",
+            fontSize: "0.875rem",
             fontWeight: "bold",
-            padding: "0 4px",
+            border: "2px solid rgba(255, 255, 255, 0.3)",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
           }}
         >
           {count}
