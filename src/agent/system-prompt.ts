@@ -21,13 +21,22 @@ Buy phase: Province($8) > Gold($6) > Silver($3) > useful actions
 Early: Trash weak cards with Chapel
 Late: Buy Provinces, then Duchies when Provinces low
 
+## Pending Decisions
+When pendingDecision exists for AI player, respond with appropriate action:
+- discard decision → { "type": "discard_cards", "cards": ["Card1", "Card2"] }
+- trash decision → { "type": "trash_cards", "cards": ["Card1"] }
+- gain decision → { "type": "gain_card", "card": "Silver" }
+Pick cards from pendingDecision.options only. Consider strategy (discard weak cards first).
+
 ## Output Format
 Return JSON only:
 { "type": "play_action", "card": "Smithy" }
 { "type": "play_treasure", "card": "Gold" }
 { "type": "buy_card", "card": "Province" }
 { "type": "end_phase" }
-{ "type": "trash_cards", "cards": ["Copper"] }
+{ "type": "discard_cards", "cards": ["Estate", "Copper"] }
+{ "type": "trash_cards", "cards": ["Curse"] }
+{ "type": "gain_card", "card": "Silver" }
 
 Analyze: phase → resources (actions/buys/coins) → hand → best move → return JSON.`;
 
@@ -100,7 +109,11 @@ When it's AI's turn, analyze and execute optimal moves:
 **Human Turn:** Set pendingDecision with type, player="human", prompt, options, minCount/maxCount, canSkip.
 Types: play_action, buy_card, discard, trash, gain, end_actions, end_buys, reveal_reaction, choose_card_from_options.
 
-**AI Turn:** Execute directly. NEVER set pendingDecision (AI doesn't pause for decisions).
+**AI Turn:** Execute directly. When pendingDecision.player="ai" (e.g., opponent played Militia), respond with:
+- discard decision → { "type": "discard_cards", "cards": ["Card1", "Card2"] }
+- trash decision → { "type": "trash_cards", "cards": ["Card1"] }
+- gain decision → { "type": "gain_card", "card": "Silver" }
+Choose from pendingDecision.options only. Strategy: discard/trash weak cards (Estate, Curse, Copper) first.
 
 **Critical Tracking:**
 1. Deck order (deck[0] is top)
