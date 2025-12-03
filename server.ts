@@ -60,6 +60,8 @@ const server = Bun.serve({
           schema: Action,
           system: DOMINION_SYSTEM_PROMPT,
           prompt: userMessage,
+          maxRetries: 0, // Disable retries - let frontend handle consensus failures
+          abortSignal: AbortSignal.timeout(15000), // 15s timeout per model
           ...(isAnthropic && {
             providerOptions: {
               anthropic: {
