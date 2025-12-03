@@ -9,19 +9,15 @@ import {
   endBuyPhase,
   runSimpleAITurn,
   getLegalActions,
+  resolveDecision,
 } from "../lib/game-engine";
+import { MODEL_IDS, getModelFullName, type ModelProvider } from "../config/models";
+
+// Re-export for convenience
+export type { ModelProvider } from "../config/models";
 
 // Backend API endpoint
 const API_URL = "http://localhost:5174/api/generate-action";
-
-// Model configuration - verified working models through Vercel AI Gateway
-export type ModelProvider =
-  | "claude-haiku"
-  | "claude-sonnet"
-  | "gpt-4o-mini"
-  | "gpt-4o"
-  | "gemini-2.5-flash-lite"
-  | "ministral-3b";
 
 // Default: 8 fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
@@ -36,14 +32,7 @@ export const ALL_FAST_MODELS: ModelProvider[] = [
 ];
 
 // Available unique models
-export const AVAILABLE_MODELS: ModelProvider[] = [
-  "claude-haiku",
-  "claude-sonnet",
-  "gpt-4o-mini",
-  "gpt-4o",
-  "gemini-2.5-flash-lite",
-  "ministral-3b",
-];
+export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
 
 // Model settings for consensus
 export interface ModelSettings {
@@ -81,23 +70,6 @@ export function buildModelsFromSettings(settings: ModelSettings): ModelProvider[
   }
 
   return models;
-}
-
-function getModelName(provider: ModelProvider): string {
-  switch (provider) {
-    case "claude-haiku":
-      return "anthropic/claude-haiku-4.5";
-    case "claude-sonnet":
-      return "anthropic/claude-sonnet-4.5";
-    case "gpt-4o-mini":
-      return "openai/gpt-4o-mini";
-    case "gpt-4o":
-      return "openai/gpt-4o";
-    case "gemini-2.5-flash-lite":
-      return "google/gemini-2.5-flash-lite";
-    case "ministral-3b":
-      return "mistral/ministral-3b";
-  }
 }
 
 // Call backend API to generate action
@@ -138,10 +110,32 @@ function executeAction(state: GameState, action: Action): GameState {
     case "end_phase":
       return state.phase === "action" ? endActionPhase(state) : endBuyPhase(state);
     case "discard_cards":
+      if (!action.cards || action.cards.length === 0) {
+        throw new Error("discard_cards requires cards array");
+      }
+      // Validate this action is responding to a pendingDecision
+      if (!state.pendingDecision || state.pendingDecision.type !== "discard") {
+        throw new Error("discard_cards action but no pending discard decision");
+      }
+      return resolveDecision(state, action.cards);
     case "trash_cards":
+      if (!action.cards || action.cards.length === 0) {
+        throw new Error("trash_cards requires cards array");
+      }
+      // Validate this action is responding to a pendingDecision
+      if (!state.pendingDecision || state.pendingDecision.type !== "trash") {
+        throw new Error("trash_cards action but no pending trash decision");
+      }
+      return resolveDecision(state, action.cards);
     case "gain_card":
-      // TODO: implement when needed
-      return state;
+      if (!action.card) {
+        throw new Error("gain_card requires card");
+      }
+      // Validate this action is responding to a pendingDecision
+      if (!state.pendingDecision || state.pendingDecision.type !== "gain") {
+        throw new Error("gain_card action but no pending gain decision");
+      }
+      return resolveDecision(state, [action.card]);
   }
 }
 
@@ -151,7 +145,7 @@ export async function advanceGameState(
   provider: ModelProvider = "claude-haiku",
   _logger?: LLMLogger
 ): Promise<GameState> {
-  const modelName = getModelName(provider);
+  const modelName = getModelFullName(provider);
   const startTime = performance.now();
 
   console.log(`\n[${provider}] Requesting atomic action from ${modelName}`, {
@@ -180,6 +174,7 @@ export async function advanceGameState(
 }
 
 // Consensus system: run multiple LLMs and compare outputs
+// Uses early consensus detection - resolves as soon as majority agrees
 export async function advanceGameStateWithConsensus(
   currentState: GameState,
   humanChoice?: { selectedCards: string[] },
@@ -191,63 +186,14 @@ export async function advanceGameStateWithConsensus(
 
   console.log(`\n🎯 Consensus: Running ${providers.length} models in parallel`, { providers });
 
-  // Run all models in parallel via backend API with per-model timing
-  const promises = providers.map(async (provider, index) => {
-    const modelName = getModelName(provider);
-    const modelStart = performance.now();
-
-    console.log(`[${provider}] Consensus ${index + 1}/${providers.length} requesting action from ${modelName}`);
-
-    try {
-      const action = await generateActionViaBackend(provider, currentState, humanChoice);
-      const modelDuration = performance.now() - modelStart;
-      console.log(`[${provider}] ✓ Completed in ${modelDuration.toFixed(0)}ms`);
-      return { provider, result: action, error: null, duration: modelDuration };
-    } catch (error) {
-      const modelDuration = performance.now() - modelStart;
-      console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
-      return { provider, result: null, error, duration: modelDuration };
-    }
-  });
-
-  const results = await Promise.all(promises);
-  const parallelDuration = performance.now() - parallelStart;
-
-  // Calculate timing statistics
-  const timings = results.map(r => ({ provider: r.provider, duration: r.duration }));
-  const successfulTimings = results.filter(r => !r.error).map(r => ({ provider: r.provider, duration: r.duration }));
-  const fastest = successfulTimings.reduce((min, t) => t.duration < min.duration ? t : min, successfulTimings[0]);
-  const slowest = successfulTimings.reduce((max, t) => t.duration > max.duration ? t : max, successfulTimings[0]);
-  const avgDuration = successfulTimings.reduce((sum, t) => sum + t.duration, 0) / successfulTimings.length;
-
+  // Emit start event immediately so UI shows new turn
   logger?.({
-    type: "consensus-compare",
-    message: `All models finished in ${parallelDuration.toFixed(0)}ms (fastest: ${fastest?.provider} ${fastest?.duration.toFixed(0)}ms, slowest: ${slowest?.provider} ${slowest?.duration.toFixed(0)}ms, avg: ${avgDuration.toFixed(0)}ms)`,
-    data: {
-      timings: timings.sort((a, b) => a.duration - b.duration),
-      parallelDuration,
-      fastest,
-      slowest,
-      avgDuration
-    },
+    type: "consensus-start",
+    message: `Starting consensus with ${providers.length} models (k=${Math.max(2, Math.ceil(providers.length / 3))})`,
+    data: { providers, totalModels: providers.length, phase: currentState.phase },
   });
 
-  const votingStart = performance.now();
-
-  // Filter out failed results
-  const successfulResults = results.filter(r => r.result !== null && !r.error);
-
-  if (successfulResults.length === 0) {
-    console.error("✗ All models failed to generate actions");
-    return runSimpleAITurn(currentState);
-  }
-
-  console.log(`✓ ${successfulResults.length}/${results.length} models generated actions`, {
-    successful: successfulResults.map(r => r.provider),
-    failed: results.filter(r => r.error).map(r => r.provider),
-  });
-
-  // MAKER voting: Group actions and pick plurality winner
+  type ModelResult = { provider: ModelProvider; result: Action | null; error: unknown; duration: number };
   type ActionSignature = string;
   type VoteGroup = {
     signature: ActionSignature;
@@ -256,32 +202,184 @@ export async function advanceGameStateWithConsensus(
     count: number;
   };
 
-  // Create signature for each action (simple JSON stringify)
-  function createActionSignature(action: Action): ActionSignature {
-    return JSON.stringify(action);
-  }
+  const createActionSignature = (action: Action): ActionSignature => JSON.stringify(action);
 
-  // Group results by action signature
+  // Track votes as they come in
   const voteGroups = new Map<ActionSignature, VoteGroup>();
+  const completedResults: ModelResult[] = [];
+  const totalModels = providers.length;
+  // Scale k with voter count: need ~1/3 of total as margin
+  const aheadByK = Math.max(2, Math.ceil(totalModels / 3));
 
-  for (const { provider, result } of successfulResults) {
-    const signature = createActionSignature(result!);
-    const existing = voteGroups.get(signature);
+  // Track which models are still pending
+  const pendingModels = new Set<number>();
+  const modelStartTimes = new Map<number, number>();
 
-    if (existing) {
-      existing.voters.push(provider);
-      existing.count++;
-    } else {
-      voteGroups.set(signature, {
-        signature,
-        action: result!,
-        voters: [provider],
-        count: 1,
+  // Early consensus detection with Promise.race pattern
+  const { results, earlyConsensus } = await new Promise<{ results: ModelResult[]; earlyConsensus: VoteGroup | null }>((resolveAll) => {
+    let resolved = false;
+    let completedCount = 0;
+
+    const checkEarlyConsensus = (): VoteGroup | null => {
+      // First-to-ahead-by-k: accept when leader has k more votes than runner-up
+      const groups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
+      if (groups.length === 0) return null;
+
+      const leader = groups[0];
+      const runnerUp = groups[1]?.count ?? 0;
+
+      if (leader.count - runnerUp >= aheadByK) {
+        return leader;
+      }
+      return null;
+    };
+
+    providers.forEach((provider, index) => {
+      const modelName = getModelFullName(provider);
+      const modelStart = performance.now();
+      const uiStartTime = Date.now();
+
+      // Track this model as pending
+      pendingModels.add(index);
+      modelStartTimes.set(index, uiStartTime);
+
+      console.log(`[${provider}] Consensus ${index + 1}/${totalModels} requesting action from ${modelName}`);
+
+      // Log model start immediately (use Date.now() for UI compatibility)
+      logger?.({
+        type: "consensus-model-pending" as any,
+        message: `${provider} started`,
+        data: { provider, index, startTime: uiStartTime },
       });
-    }
+
+      generateActionViaBackend(provider, currentState, humanChoice)
+        .then((action) => {
+          const modelDuration = performance.now() - modelStart;
+          console.log(`[${provider}] ✓ Completed in ${modelDuration.toFixed(0)}ms`);
+          // Log model completion
+          logger?.({
+            type: "consensus-model-complete" as any,
+            message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
+            data: { provider, index, duration: modelDuration, action, success: true },
+          });
+          return { provider, result: action, error: null, duration: modelDuration };
+        })
+        .catch((error) => {
+          const modelDuration = performance.now() - modelStart;
+          console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
+          // Log model failure
+          logger?.({
+            type: "consensus-model-complete" as any,
+            message: `${provider} failed after ${modelDuration.toFixed(0)}ms`,
+            data: { provider, index, duration: modelDuration, error: String(error), success: false },
+          });
+          return { provider, result: null, error, duration: modelDuration };
+        })
+        .then((modelResult) => {
+          // Remove from pending
+          pendingModels.delete(index);
+
+          if (resolved) return; // Already resolved early
+
+          completedResults.push(modelResult);
+          completedCount++;
+
+          // Add to vote tally if successful
+          if (modelResult.result) {
+            const signature = createActionSignature(modelResult.result);
+            const existing = voteGroups.get(signature);
+            if (existing) {
+              existing.voters.push(modelResult.provider);
+              existing.count++;
+            } else {
+              voteGroups.set(signature, {
+                signature,
+                action: modelResult.result,
+                voters: [modelResult.provider],
+                count: 1,
+              });
+            }
+
+            // Check for early consensus (ahead-by-k)
+            const winner = checkEarlyConsensus();
+            if (winner) {
+              resolved = true;
+              const remaining = totalModels - completedCount;
+              const groups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
+              const runnerUp = groups[1]?.count ?? 0;
+              console.log(`⚡ Ahead-by-${aheadByK} consensus! ${winner.count} vs ${runnerUp} (${remaining} still pending)`);
+
+              // Log aborted events for all pending models
+              const nowTime = Date.now();
+              for (const pendingIndex of pendingModels) {
+                const startTime = modelStartTimes.get(pendingIndex) || nowTime;
+                logger?.({
+                  type: "consensus-model-aborted" as any,
+                  message: `${providers[pendingIndex]} aborted (early consensus)`,
+                  data: { provider: providers[pendingIndex], index: pendingIndex, duration: nowTime - startTime },
+                });
+              }
+
+              resolveAll({ results: completedResults, earlyConsensus: winner });
+              return;
+            }
+          }
+
+          // All done - resolve normally
+          if (completedCount === totalModels) {
+            resolveAll({ results: completedResults, earlyConsensus: null });
+          }
+        });
+    });
+  });
+
+  const parallelDuration = performance.now() - parallelStart;
+
+  // Calculate timing statistics from completed results
+  const timings = results.map(r => ({ provider: r.provider, duration: r.duration }));
+  const successfulTimings = results.filter(r => !r.error).map(r => ({ provider: r.provider, duration: r.duration }));
+  const fastest = successfulTimings.length > 0 ? successfulTimings.reduce((min, t) => t.duration < min.duration ? t : min, successfulTimings[0]) : null;
+  const slowest = successfulTimings.length > 0 ? successfulTimings.reduce((max, t) => t.duration > max.duration ? t : max, successfulTimings[0]) : null;
+  const avgDuration = successfulTimings.length > 0 ? successfulTimings.reduce((sum, t) => sum + t.duration, 0) / successfulTimings.length : 0;
+
+  const completedCount = results.length;
+  const pendingCount = totalModels - completedCount;
+
+  logger?.({
+    type: "consensus-compare",
+    message: earlyConsensus
+      ? `Early consensus in ${parallelDuration.toFixed(0)}ms (${completedCount}/${totalModels} completed, ${pendingCount} skipped)`
+      : `All ${totalModels} models finished in ${parallelDuration.toFixed(0)}ms`,
+    data: {
+      timings: timings.sort((a, b) => a.duration - b.duration),
+      parallelDuration,
+      fastest,
+      slowest,
+      avgDuration,
+      earlyConsensus: !!earlyConsensus,
+      pendingSkipped: pendingCount,
+    },
+  });
+
+  const votingStart = performance.now();
+
+  // Filter out failed results
+  const successfulResults = results.filter(r => r.result !== null && !r.error);
+
+  // If early consensus, use it directly; otherwise check we have results
+  if (!earlyConsensus && successfulResults.length === 0) {
+    console.error("✗ All models failed to generate actions");
+    return runSimpleAITurn(currentState);
   }
 
-  // Sort by vote count (descending) to get top-k
+  if (!earlyConsensus) {
+    console.log(`✓ ${successfulResults.length}/${results.length} models generated actions`, {
+      successful: successfulResults.map(r => r.provider),
+      failed: results.filter(r => r.error).map(r => r.provider),
+    });
+  }
+
+  // Use early consensus winner or compute from full results
   const rankedGroups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
 
   // Validate each action against legal actions
@@ -295,9 +393,10 @@ export async function advanceGameStateWithConsensus(
     );
   };
 
-  // Log voting results
-  const winner = rankedGroups[0];
-  const consensusStrength = winner.count / successfulResults.length;
+  // Log voting results - use early consensus winner if available
+  const winner = earlyConsensus || rankedGroups[0];
+  const votesConsidered = earlyConsensus ? completedCount : successfulResults.length;
+  const consensusStrength = winner.count / votesConsidered;
 
   const actionDesc = winner.action.type === "play_action" || winner.action.type === "play_treasure" || winner.action.type === "buy_card" || winner.action.type === "gain_card"
     ? `${winner.action.type}(${winner.action.card})`
@@ -315,17 +414,22 @@ export async function advanceGameStateWithConsensus(
     })));
   }
 
+  const runnerUpCount = rankedGroups[1]?.count ?? 0;
   logger?.({
     type: "consensus-voting",
-    message: `◉ Voting: ${rankedGroups.length} unique actions, winner: ${actionDesc} (voting: ${votingDuration.toFixed(0)}ms)`,
+    message: earlyConsensus
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} vs ${runnerUpCount})`
+      : `◉ Voting: ${rankedGroups.length} unique actions, winner: ${actionDesc}`,
     data: {
       topResult: {
         action: winner.action,
         votes: winner.count,
         voters: winner.voters,
-        totalVotes: successfulResults.length,
+        totalVotes: totalModels,
+        completed: votesConsidered,
         percentage: ((consensusStrength * 100).toFixed(1)) + "%",
         valid: isActionValid(winner.action),
+        earlyConsensus: !!earlyConsensus,
       },
       allResults: rankedGroups.map(g => ({
         action: g.action,
@@ -338,14 +442,16 @@ export async function advanceGameStateWithConsensus(
     },
   });
 
-  if (consensusStrength === 1.0) {
-    console.log(`◉ Unanimous! All ${successfulResults.length} models chose: ${actionDesc}`);
+  if (earlyConsensus) {
+    console.log(`⚡ Ahead-by-${aheadByK}: ${winner.count} vs ${runnerUpCount} chose ${actionDesc} (${pendingCount} skipped)`);
+  } else if (consensusStrength === 1.0) {
+    console.log(`◉ Unanimous! All ${votesConsidered} models chose: ${actionDesc}`);
   } else if (consensusStrength >= 0.5) {
-    console.log(`◉ Strong consensus: ${winner.count}/${successfulResults.length} models chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
-  } else if (rankedGroups.length === successfulResults.length) {
+    console.log(`◉ Strong consensus: ${winner.count}/${votesConsidered} models chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
+  } else if (rankedGroups.length === votesConsidered) {
     console.warn(`⚠ No consensus: All models chose different actions (picking: ${actionDesc})`);
   } else {
-    console.warn(`⚠ Weak consensus: ${winner.count}/${successfulResults.length} chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
+    console.warn(`⚠ Weak consensus: ${winner.count}/${votesConsidered} chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
   }
 
   // Execute the plurality winner action
@@ -355,13 +461,14 @@ export async function advanceGameStateWithConsensus(
 
   const overallDuration = performance.now() - overallStart;
 
-  console.log(`✓ Consensus complete in ${overallDuration.toFixed(0)}ms`, {
+  console.log(`✓ Consensus complete in ${overallDuration.toFixed(0)}ms${earlyConsensus ? ` (early, ${pendingCount} skipped)` : ""}`, {
     breakdown: {
       total: overallDuration,
       parallel: parallelDuration,
       voting: votingDuration,
       execution: executionDuration,
     },
+    earlyConsensus: !!earlyConsensus,
   });
 
   return newState;

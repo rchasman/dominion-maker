@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import type { GameMode } from "../types/game-mode";
 import { CARDS } from "../data/cards";
+import { getModelColor } from "../config/models";
 
 export interface LLMLogEntry {
   id: string;
   timestamp: number;
-  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete";
+  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted";
   message: string;
   data?: Record<string, any>;
   children?: LLMLogEntry[];
@@ -16,12 +17,28 @@ interface ConsensusDecision {
   votingEntry: LLMLogEntry;
   timingEntry?: LLMLogEntry;
   stepNumber: number;
+  modelStatuses?: Map<number, ModelStatus>; // Snapshot of model statuses for this decision
+}
+
+interface ModelStatus {
+  provider: string;
+  index: number;
+  startTime: number;
+  duration?: number;
+  success?: boolean;
+  completed: boolean;
+  aborted?: boolean; // True if skipped due to early consensus
+  action?: any; // The action this model voted for
 }
 
 interface Turn {
   turnNumber: number;
   gameTurn?: number;
   decisions: ConsensusDecision[];
+  pending?: boolean; // True when consensus-start received but no voting yet
+  pendingData?: { providers: string[]; totalModels: number; phase: string };
+  modelStatuses?: Map<number, ModelStatus>; // Track each model's status by index
+  consensusStartTime?: number;
 }
 
 interface LLMLogProps {
@@ -32,7 +49,14 @@ interface LLMLogProps {
 export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [currentActionIndex, setCurrentActionIndex] = useState(0);
-  const [activePane, setActivePane] = useState<"voting" | "performance">("voting");
+  const [activePane, setActivePane] = useState<"voting" | "performance">("performance");
+  const [now, setNow] = useState(Date.now());
+
+  // Update timer for live countups
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 50);
+    return () => clearInterval(interval);
+  }, []);
 
   // Extract turns and decisions from entries
   const turns: Turn[] = [];
@@ -55,9 +79,68 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
       stepNumber = 0;
     }
 
+    // Handle consensus-start - mark turn as pending
+    if (entry.type === "consensus-start") {
+      if (!buildingTurn) {
+        // Create a new turn if none exists
+        buildingTurn = {
+          turnNumber: turns.length + 1,
+          gameTurn: entry.data?.turn,
+          decisions: [],
+          pending: true,
+          pendingData: entry.data,
+          modelStatuses: new Map(),
+          consensusStartTime: entry.timestamp,
+        };
+      } else {
+        // Mark existing turn as pending (new action starting)
+        buildingTurn.pending = true;
+        buildingTurn.pendingData = entry.data;
+        buildingTurn.modelStatuses = new Map();
+        buildingTurn.consensusStartTime = entry.timestamp;
+      }
+    }
+
+    // Track individual model starts
+    if (entry.type === "consensus-model-pending" && buildingTurn) {
+      const { provider, index, startTime } = entry.data || {};
+      if (index !== undefined) {
+        buildingTurn.modelStatuses?.set(index, {
+          provider,
+          index,
+          startTime,
+          completed: false,
+        });
+      }
+    }
+
+    // Track individual model completions
+    if (entry.type === "consensus-model-complete" && buildingTurn) {
+      const { provider, index, duration, success, action } = entry.data || {};
+      if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
+        const status = buildingTurn.modelStatuses.get(index)!;
+        status.duration = duration;
+        status.success = success;
+        status.completed = true;
+        status.action = action;
+      }
+    }
+
+    // Track aborted models (skipped due to early consensus)
+    if (entry.type === "consensus-model-aborted" && buildingTurn) {
+      const { index, duration } = entry.data || {};
+      if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
+        const status = buildingTurn.modelStatuses.get(index)!;
+        status.duration = duration;
+        status.completed = true;
+        status.aborted = true;
+      }
+    }
+
     // Look for consensus-voting entries (these represent a decision)
     if (entry.type === "consensus-voting" && buildingTurn) {
       stepNumber++;
+      buildingTurn.pending = false; // No longer pending
 
       // Look backward for the corresponding timing entry
       let timingEntry: LLMLogEntry | undefined;
@@ -68,17 +151,23 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         }
       }
 
+      // Snapshot modelStatuses for this decision
+      const modelStatusesSnapshot = buildingTurn.modelStatuses
+        ? new Map(buildingTurn.modelStatuses)
+        : undefined;
+
       buildingTurn.decisions.push({
         id: entry.id,
         votingEntry: entry,
         timingEntry,
         stepNumber,
+        modelStatuses: modelStatusesSnapshot,
       });
     }
   }
 
-  // Add the last turn if it has decisions
-  if (buildingTurn && buildingTurn.decisions.length > 0) {
+  // Add the last turn if it has decisions OR is pending
+  if (buildingTurn && (buildingTurn.decisions.length > 0 || buildingTurn.pending)) {
     turns.push(buildingTurn);
   }
 
@@ -128,20 +217,53 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     }
   };
 
-  const renderConsensusVoting = (data: any) => {
-    if (!data?.topResult || !data?.allResults) return null;
+  const renderConsensusVoting = (data: any, liveStatuses?: Map<number, ModelStatus>, totalModels?: number) => {
+    let allResults: Array<{ action: any; votes: number; voters: string[]; valid?: boolean }>;
+    let maxVotes: number;
 
-    const { topResult, allResults } = data;
-    const maxVotes = topResult.totalVotes;
+    if (liveStatuses && liveStatuses.size > 0) {
+      // Build voting data from live model statuses
+      const voteGroups = new Map<string, { action: any; voters: string[] }>();
+      const completedStatuses = Array.from(liveStatuses.values()).filter(s => s.completed);
 
-    // Get subtle pastel color for provider
-    const getProviderColor = (providerName: string): string => {
-      if (providerName.includes("claude")) return "#a78bfa"; // subtle purple
-      if (providerName.includes("gpt")) return "#86efac"; // subtle green
-      if (providerName.includes("gemini")) return "#93c5fd"; // subtle blue
-      if (providerName.includes("ministral")) return "#fda4af"; // subtle pink
-      return "var(--color-text-secondary)";
-    };
+      for (const status of completedStatuses) {
+        if (!status.action) {
+          // Model completed but no action - log for debugging
+          console.warn(`[${status.provider}] completed but no action captured`);
+          continue;
+        }
+        const signature = JSON.stringify(status.action);
+        const existing = voteGroups.get(signature);
+        if (existing) {
+          existing.voters.push(status.provider);
+        } else {
+          voteGroups.set(signature, { action: status.action, voters: [status.provider] });
+        }
+      }
+
+      allResults = Array.from(voteGroups.values())
+        .map(g => ({ action: g.action, votes: g.voters.length, voters: g.voters, valid: true }))
+        .sort((a, b) => b.votes - a.votes);
+
+      maxVotes = totalModels || liveStatuses.size;
+
+      // If no votes yet, show placeholder
+      if (allResults.length === 0) {
+        return {
+          content: (
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.75rem", textAlign: "center", padding: "var(--space-4)" }}>
+              Waiting for votes...
+            </div>
+          ),
+          legend: null,
+        };
+      }
+    } else if (data?.topResult && data?.allResults) {
+      allResults = data.allResults;
+      maxVotes = data.topResult.totalVotes;
+    } else {
+      return null;
+    }
 
     // Group voter names and count duplicates
     const groupVoters = (voters: string[]) => {
@@ -153,7 +275,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
       return Array.from(counts.entries()).map(([name, count]) => ({
         name,
         count,
-        color: getProviderColor(name)
+        color: getModelColor(name)
       }));
     };
 
@@ -322,7 +444,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         }}>
           {Array.from(allModels).sort().map(model => (
             <div key={model} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ color: getProviderColor(model), fontSize: "0.8rem", lineHeight: 1 }}>◉</span>
+              <span style={{ color: getModelColor(model), fontSize: "0.8rem", lineHeight: 1 }}>◉</span>
               <span style={{ color: "var(--color-text-secondary)" }}>{model}</span>
             </div>
           ))}
@@ -331,12 +453,43 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     };
   };
 
-  const renderTimings = (data: any) => {
-    if (!data?.timings) return null;
+  const renderTimings = (data: any, liveStatuses?: Map<number, ModelStatus>) => {
+    // Build timings array from either final data or live statuses
+    let timings: Array<{ provider: string; duration: number; pending?: boolean; failed?: boolean; aborted?: boolean }>;
 
-    const timings = data.timings as Array<{ provider: string; duration: number }>;
-    const maxDuration = Math.max(...timings.map(t => t.duration));
-    const minDuration = Math.min(...timings.map(t => t.duration));
+    if (liveStatuses && liveStatuses.size > 0) {
+      // Use live model statuses with countup for pending
+      timings = Array.from(liveStatuses.values())
+        .map(status => ({
+          provider: status.provider,
+          duration: status.completed ? (status.duration || 0) : (now - status.startTime),
+          pending: !status.completed,
+          failed: status.completed && status.success === false && !status.aborted,
+          aborted: status.aborted,
+        }))
+        .sort((a, b) => {
+          // Completed first, then by duration, failures/aborted last
+          if (a.pending && !b.pending) return 1;
+          if (!a.pending && b.pending) return -1;
+          if (a.aborted && !b.aborted) return 1;
+          if (!a.aborted && b.aborted) return -1;
+          if (a.failed && !b.failed) return 1;
+          if (!a.failed && b.failed) return -1;
+          return a.duration - b.duration;
+        });
+    } else if (data?.timings) {
+      timings = data.timings as Array<{ provider: string; duration: number }>;
+    } else {
+      return null;
+    }
+
+    const completedTimings = timings.filter(t => !t.pending && !t.aborted);
+    // Include pending durations in max so bars grow relative to all models
+    const allDurations = timings.map(t => t.duration);
+    const maxDuration = allDurations.length > 0 ? Math.max(...allDurations) : 1;
+    const minDuration = completedTimings.length > 0
+      ? Math.min(...completedTimings.map(t => t.duration))
+      : 0;
 
     // Calculate width needed for longest timing string (e.g., "2776ms" = 6 chars)
     const longestTimingString = Math.max(...timings.map(t => `${t.duration.toFixed(0)}ms`.length));
@@ -350,39 +503,37 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     // Total available ~= 288px (pane width - padding), minus timing and model name
     const barAreaWidth = 288 - timingWidth - modelNameWidth - 16; // 16px for gaps
 
-    // Get subtle pastel color for provider
-    const getProviderColor = (providerName: string): string => {
-      if (providerName.includes("claude")) return "#a78bfa"; // subtle purple
-      if (providerName.includes("gpt")) return "#86efac"; // subtle green
-      if (providerName.includes("gemini")) return "#93c5fd"; // subtle blue
-      if (providerName.includes("ministral")) return "#fda4af"; // subtle pink
-      return "var(--color-text-secondary)";
-    };
-
     return (
       <div>
         {timings.map((timing, idx) => {
-          const percentage = (timing.duration / maxDuration) * 100;
-          const isFastest = timing.duration === minDuration;
-          const isSlowest = timing.duration === maxDuration;
+          const isPending = timing.pending;
+          const isFailed = timing.failed;
+          const isAborted = timing.aborted;
+          const percentage = maxDuration > 0 ? (timing.duration / maxDuration) * 100 : 0;
+          const isFastest = !isPending && !isFailed && !isAborted && timing.duration === minDuration && completedTimings.length > 1;
+          const isSlowest = !isPending && !isFailed && !isAborted && timing.duration === maxDuration && completedTimings.length > 1;
 
           // Calculate actual width this model name takes
           const thisModelNameWidth = timing.provider.length * 6.5;
           // Extra space in the model column for this row
           const extraSpace = modelNameWidth - thisModelNameWidth;
 
-          // Bar width in pixels (percentage of the fixed bar area)
-          const barWidthPx = (percentage / 100) * barAreaWidth;
+          // Bar width in pixels (percentage of the fixed bar area) - grows for pending too
+          const barWidthPx = Math.max(4, (percentage / 100) * barAreaWidth);
+
+          const barColor = isAborted ? "var(--color-text-secondary)" : isFailed ? "#ef4444" : isPending ? "var(--color-gold)" : isFastest ? "var(--color-action)" : isSlowest ? "var(--color-gold)" : "var(--color-text-secondary)";
+          const textColor = isAborted ? "var(--color-text-secondary)" : isFailed ? "#ef4444" : isPending ? "var(--color-gold)" : isFastest ? "var(--color-action)" : isSlowest ? "var(--color-gold)" : "var(--color-text-secondary)";
 
           return (
             <div key={idx} style={{ marginBottom: "6px", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               <span style={{
                 fontSize: "0.7rem",
-                color: isFastest ? "var(--color-action)" : isSlowest ? "var(--color-gold)" : "var(--color-text-secondary)",
-                fontWeight: isFastest || isSlowest ? 700 : 400,
+                color: textColor,
+                fontWeight: isPending || isFastest || isSlowest || isFailed ? 700 : 400,
                 textAlign: "left",
                 width: `${timingWidth}px`,
-                flexShrink: 0
+                flexShrink: 0,
+                fontFamily: "monospace",
               }}>
                 {timing.duration.toFixed(0)}ms
               </span>
@@ -390,16 +541,16 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               <div style={{
                 height: "5px",
                 width: `${barWidthPx}px`,
-                backgroundColor: isFastest ? "var(--color-action)" : isSlowest ? "var(--color-gold)" : "var(--color-text-secondary)",
-                opacity: 0.8,
+                backgroundColor: barColor,
+                opacity: isPending ? 0.5 : isAborted ? 0.2 : isFailed ? 0.6 : 0.8,
                 borderRadius: "3px",
                 flexShrink: 0
               }} />
               {/* Dotted line fills rest of bar area + extra space from short model names */}
               <div style={{
                 width: `${barAreaWidth - barWidthPx + extraSpace}px`,
-                color: getProviderColor(timing.provider),
-                opacity: 0.2,
+                color: isFailed ? "#ef4444" : getModelColor(timing.provider),
+                opacity: isPending ? 0.1 : isFailed ? 0.15 : 0.2,
                 fontSize: "0.6rem",
                 lineHeight: "5px",
                 overflow: "hidden",
@@ -411,12 +562,18 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
               </div>
               {/* Model name at the end */}
-              <span style={{
-                fontSize: "0.7rem",
-                color: getProviderColor(timing.provider),
-                whiteSpace: "nowrap",
-                flexShrink: 0
-              }}>
+              <span
+                title={isAborted ? "Skipped (early consensus)" : isFailed ? "Failed" : undefined}
+                style={{
+                  fontSize: "0.7rem",
+                  color: isAborted ? "var(--color-text-secondary)" : isFailed ? "#ef4444" : getModelColor(timing.provider),
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  opacity: isPending ? 0.6 : isAborted ? 0.4 : 1,
+                  textDecoration: isFailed || isAborted ? "line-through" : "none",
+                  cursor: isAborted || isFailed ? "help" : "default",
+                }}
+              >
                 {timing.provider}
               </span>
             </div>
@@ -560,6 +717,100 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               </>
             )}
           </div>
+        ) : currentTurn?.pending && !currentDecision ? (
+          /* Show live panes with both Voting and Performance tabs */
+          <>
+            <div style={{ padding: "0 var(--space-4)", marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
+              <div style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "var(--color-text-primary)",
+                marginBottom: "var(--space-2)",
+              }}>
+                {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                Action {(currentTurn.decisions.length || 0) + 1}{" "}
+                <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
+                  ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
+                </span>
+              </div>
+              <div style={{
+                fontSize: "0.75rem",
+                color: "var(--color-text-secondary)",
+              }}>
+                Phase: {currentTurn.pendingData?.phase || "unknown"}
+              </div>
+            </div>
+            {/* Tab switcher */}
+            <div style={{
+              display: "flex",
+              gap: "var(--space-2)",
+              borderBottom: "1px solid var(--color-border)",
+              padding: "0 var(--space-4)",
+              userSelect: "none",
+            }}>
+              <button
+                onClick={() => setActivePane("voting")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "var(--space-2) var(--space-3)",
+                  cursor: "pointer",
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  fontFamily: "inherit",
+                  color: activePane === "voting" ? "var(--color-action)" : "var(--color-text-secondary)",
+                  borderBottom: activePane === "voting" ? "2px solid var(--color-action)" : "2px solid transparent",
+                  marginBottom: "-1px",
+                }}
+              >
+                Voting
+              </button>
+              <button
+                onClick={() => setActivePane("performance")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "var(--space-2) var(--space-3)",
+                  cursor: "pointer",
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  fontFamily: "inherit",
+                  color: activePane === "performance" ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
+                  borderBottom: activePane === "performance" ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
+                  marginBottom: "-1px",
+                }}
+              >
+                Performance
+              </button>
+            </div>
+            {/* Pane content */}
+            {activePane === "voting" ? (
+              (() => {
+                const votingRender = renderConsensusVoting(null, currentTurn.modelStatuses, currentTurn.pendingData?.totalModels);
+                if (!votingRender) return null;
+                return (
+                  <>
+                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+                      {votingRender.content}
+                    </div>
+                    {votingRender.legend && (
+                      <div style={{ padding: "0 var(--space-4)" }}>
+                        {votingRender.legend}
+                      </div>
+                    )}
+                  </>
+                );
+              })()
+            ) : (
+              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+                {renderTimings(null, currentTurn.modelStatuses)}
+              </div>
+            )}
+          </>
         ) : currentDecision ? (
           <>
             {/* Decision Info with Navigation */}
@@ -745,7 +996,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               })()
             ) : (
               <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-                {currentDecision.timingEntry && renderTimings(currentDecision.timingEntry.data)}
+                {currentDecision.timingEntry && renderTimings(currentDecision.timingEntry.data, currentDecision.modelStatuses)}
               </div>
             )}
           </>
