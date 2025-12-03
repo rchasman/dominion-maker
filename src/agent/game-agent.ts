@@ -239,6 +239,17 @@ export async function advanceGameStateWithConsensus(
   // Sort by vote count (descending) to get top-k
   const rankedGroups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
 
+  // Validate each action against legal actions
+  const legalActions = getLegalActions(currentState);
+
+  // Helper to check if an action is legal
+  const isActionValid = (action: Action): boolean => {
+    return legalActions.some(legal =>
+      legal.type === action.type &&
+      (action.card ? legal.card === action.card : true)
+    );
+  };
+
   // Log voting results
   const winner = rankedGroups[0];
   const consensusStrength = winner.count / successfulResults.length;
@@ -248,6 +259,16 @@ export async function advanceGameStateWithConsensus(
     : winner.action.type;
 
   const votingDuration = performance.now() - votingStart;
+
+  // Log any invalid actions
+  const invalidActions = rankedGroups.filter(g => !isActionValid(g.action));
+  if (invalidActions.length > 0) {
+    console.warn(`⚠ ${invalidActions.length} invalid actions proposed:`, invalidActions.map(g => ({
+      action: g.action,
+      votes: g.count,
+      voters: g.voters
+    })));
+  }
 
   logger?.({
     type: "consensus-voting",
@@ -259,13 +280,16 @@ export async function advanceGameStateWithConsensus(
         voters: winner.voters,
         totalVotes: successfulResults.length,
         percentage: ((consensusStrength * 100).toFixed(1)) + "%",
+        valid: isActionValid(winner.action),
       },
       allResults: rankedGroups.map(g => ({
         action: g.action,
         votes: g.count,
         voters: g.voters,
+        valid: isActionValid(g.action),
       })),
       votingDuration,
+      currentPhase: currentState.phase,
     },
   });
 
