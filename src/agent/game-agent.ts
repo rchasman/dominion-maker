@@ -19,6 +19,18 @@ export type { ModelProvider } from "../config/models";
 // Backend API endpoint
 const API_URL = "http://localhost:5174/api/generate-action";
 
+// Global abort controller for canceling ongoing consensus operations
+let globalAbortController: AbortController | null = null;
+
+// Abort any ongoing consensus operations (e.g., when starting new game)
+export function abortOngoingConsensus() {
+  if (globalAbortController) {
+    console.log("🛑 Aborting ongoing consensus operations");
+    globalAbortController.abort();
+    globalAbortController = null;
+  }
+}
+
 // Default: 8 fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
   "claude-haiku",
@@ -76,7 +88,8 @@ export function buildModelsFromSettings(settings: ModelSettings): ModelProvider[
 async function generateActionViaBackend(
   provider: ModelProvider,
   currentState: GameState,
-  humanChoice?: { selectedCards: string[] }
+  humanChoice?: { selectedCards: string[] },
+  signal?: AbortSignal
 ): Promise<Action> {
   const legalActions = getLegalActions(currentState);
 
@@ -84,6 +97,7 @@ async function generateActionViaBackend(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, currentState, humanChoice, legalActions }),
+    signal, // Pass abort signal to fetch
   });
 
   if (!response.ok) {
@@ -215,6 +229,11 @@ export async function advanceGameStateWithConsensus(
   const pendingModels = new Set<number>();
   const modelStartTimes = new Map<number, number>();
 
+  // Create AbortController to cancel pending requests on early consensus
+  // Store globally so it can be aborted from outside (e.g., new game)
+  globalAbortController = new AbortController();
+  const abortController = globalAbortController;
+
   // Early consensus detection with Promise.race pattern
   const { results, earlyConsensus } = await new Promise<{ results: ModelResult[]; earlyConsensus: VoteGroup | null }>((resolveAll) => {
     let resolved = false;
@@ -252,7 +271,7 @@ export async function advanceGameStateWithConsensus(
         data: { provider, index, startTime: uiStartTime },
       });
 
-      generateActionViaBackend(provider, currentState, humanChoice)
+      generateActionViaBackend(provider, currentState, humanChoice, abortController.signal)
         .then((action) => {
           const modelDuration = performance.now() - modelStart;
           console.log(`[${provider}] ✓ Completed in ${modelDuration.toFixed(0)}ms`);
@@ -266,12 +285,23 @@ export async function advanceGameStateWithConsensus(
         })
         .catch((error) => {
           const modelDuration = performance.now() - modelStart;
-          console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
+
+          // Check if this was aborted due to early consensus
+          const isAborted = error.name === 'AbortError' || error.message?.includes('abort');
+
+          if (isAborted) {
+            console.log(`[${provider}] ⏸️ Aborted after ${modelDuration.toFixed(0)}ms (early consensus reached)`);
+          } else {
+            console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
+          }
+
           // Log model failure
           logger?.({
             type: "consensus-model-complete" as any,
-            message: `${provider} failed after ${modelDuration.toFixed(0)}ms`,
-            data: { provider, index, duration: modelDuration, error: String(error), success: false },
+            message: isAborted
+              ? `${provider} aborted after ${modelDuration.toFixed(0)}ms`
+              : `${provider} failed after ${modelDuration.toFixed(0)}ms`,
+            data: { provider, index, duration: modelDuration, error: String(error), success: false, aborted: isAborted },
           });
           return { provider, result: null, error, duration: modelDuration };
         })
@@ -309,6 +339,9 @@ export async function advanceGameStateWithConsensus(
               const runnerUp = groups[1]?.count ?? 0;
               console.log(`⚡ Ahead-by-${aheadByK} consensus! ${winner.count} vs ${runnerUp} (${remaining} still pending)`);
 
+              // Abort all pending requests to save resources
+              abortController.abort();
+
               // Log aborted events for all pending models
               const nowTime = Date.now();
               for (const pendingIndex of pendingModels) {
@@ -334,6 +367,11 @@ export async function advanceGameStateWithConsensus(
   });
 
   const parallelDuration = performance.now() - parallelStart;
+
+  // Clear global controller since consensus is done
+  if (globalAbortController === abortController) {
+    globalAbortController = null;
+  }
 
   // Calculate timing statistics from completed results
   const timings = results.map(r => ({ provider: r.provider, duration: r.duration }));
@@ -558,6 +596,13 @@ export async function runAITurnWithConsensus(
     stepCount++;
     console.log(`\n--- Consensus Step ${stepCount} ---`);
 
+    // Log step start for UI visibility
+    logger?.({
+      type: "consensus-step-start" as any,
+      message: `Step ${stepCount}: Requesting consensus`,
+      data: { step: stepCount, phase: currentState.phase, turn: currentState.turn },
+    });
+
     try {
       currentState = await advanceGameStateWithConsensus(currentState, undefined, providers, logger);
 
@@ -570,10 +615,22 @@ export async function runAITurnWithConsensus(
         };
       }
 
+      // Log step completion
+      logger?.({
+        type: "consensus-step-complete" as any,
+        message: `Step ${stepCount}: Completed`,
+        data: { step: stepCount, phase: currentState.phase, activePlayer: currentState.activePlayer },
+      });
+
       // Update UI incrementally
       onStateChange?.(currentState);
     } catch (error) {
       console.error("Error during consensus step:", error);
+      logger?.({
+        type: "consensus-step-error" as any,
+        message: `Step ${stepCount}: Error - ${String(error)}`,
+        data: { step: stepCount, error: String(error) },
+      });
       return currentState;
     }
   }
