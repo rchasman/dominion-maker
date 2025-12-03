@@ -9,7 +9,7 @@ import { LLMStrategy } from "./strategies/llm-strategy";
 import { HybridStrategy } from "./strategies/hybrid-strategy";
 import type { LLMLogEntry } from "./components/LLMLog";
 import type { ModelSettings, ModelProvider } from "./agent/game-agent";
-import { DEFAULT_MODEL_SETTINGS } from "./agent/game-agent";
+import { DEFAULT_MODEL_SETTINGS, abortOngoingConsensus } from "./agent/game-agent";
 
 const STORAGE_KEY = "dominion-maker-game-state";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -118,6 +118,13 @@ function App() {
     }
   }, [modelSettings]);
 
+  // Cleanup: abort ongoing consensus on unmount
+  useEffect(() => {
+    return () => {
+      abortOngoingConsensus();
+    };
+  }, []);
+
   // Create logger for LLM strategy
   const llmLogger = useCallback((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
     const logEntry: LLMLogEntry = {
@@ -141,6 +148,10 @@ function App() {
   }, [gameMode, llmLogger, modelSettings]);
 
   const startGame = useCallback(() => {
+    // Abort any ongoing consensus operations before starting new game
+    abortOngoingConsensus();
+    setIsProcessing(false); // Clear processing flag
+
     // Clear localStorage for fresh game (but keep model settings and game mode)
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
@@ -171,13 +182,14 @@ function App() {
       return () => clearTimeout(timer);
     }
 
-    // Auto-resolve AI pending decisions (e.g., responding to opponent's Militia attack)
-    if (gameState.pendingDecision && gameState.pendingDecision.player === "ai") {
+    // Auto-resolve opponent decisions during turn (e.g., AI responding to Militia attack)
+    if (gameState.subPhase === "opponent_decision" && gameState.pendingDecision?.player === "ai") {
       const timer = setTimeout(async () => {
         setIsProcessing(true);
         try {
           const newState = await strategy.resolveAIPendingDecision(gameState);
           setGameState(newState);
+          // No need to manually preserve activePlayer - subPhase system handles this!
         } catch (error) {
           console.error("AI pending decision error:", error);
         } finally {
