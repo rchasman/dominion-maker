@@ -48,6 +48,10 @@ export type Phase = z.infer<typeof Phase>;
 export const Player = z.enum(["human", "ai"]);
 export type Player = z.infer<typeof Player>;
 
+// Turn sub-phases for handling interruptions (attacks, reactions, etc.)
+export const TurnSubPhase = z.enum(["opponent_decision", "waiting_for_reactions"]).nullable();
+export type TurnSubPhase = z.infer<typeof TurnSubPhase>;
+
 // Log entry types with recursive children support
 export type LogEntry = {
   type: "turn-start";
@@ -304,6 +308,7 @@ export type PendingDecision = z.infer<typeof PendingDecision>;
 export const GameState = z.object({
   turn: z.number(),
   phase: Phase,
+  subPhase: TurnSubPhase,
   activePlayer: Player,
 
   players: z.object({

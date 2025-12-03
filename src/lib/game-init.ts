@@ -69,6 +69,7 @@ export function initializeGame(useFirstGame = true): GameState {
   return {
     turn: 1,
     phase: "action",
+    subPhase: null,
     activePlayer: "human",
 
     players: {
