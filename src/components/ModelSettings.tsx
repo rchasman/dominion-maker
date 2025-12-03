@@ -34,6 +34,8 @@ export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProp
         return "GPT-4o Mini";
       case "gpt-4o":
         return "GPT-4o";
+      case "gpt-oss-120b":
+        return "GPT OSS 120B";
       case "gemini-2.5-flash-lite":
         return "Gemini Flash";
       case "ministral-3b":
