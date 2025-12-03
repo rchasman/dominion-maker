@@ -30,8 +30,14 @@ export interface GameStrategy {
 
   /**
    * Run a full AI turn
+   * @param onStateChange - Optional callback for incremental UI updates
    */
-  runAITurn(state: GameState): Promise<GameState>;
+  runAITurn(state: GameState, onStateChange?: (state: GameState) => void): Promise<GameState>;
+
+  /**
+   * Resolve a pendingDecision for the AI player (e.g., responding to opponent's attack)
+   */
+  resolveAIPendingDecision(state: GameState): Promise<GameState>;
 
   /**
    * Get the mode name for display

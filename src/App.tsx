@@ -154,10 +154,26 @@ function App() {
       const timer = setTimeout(async () => {
         setIsProcessing(true);
         try {
-          const newState = await strategy.runAITurn(gameState);
+          const newState = await strategy.runAITurn(gameState, setGameState);
           setGameState(newState);
         } catch (error) {
           console.error("AI turn error:", error);
+        } finally {
+          setIsProcessing(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+
+    // Auto-resolve AI pending decisions (e.g., responding to opponent's Militia attack)
+    if (gameState.pendingDecision && gameState.pendingDecision.player === "ai") {
+      const timer = setTimeout(async () => {
+        setIsProcessing(true);
+        try {
+          const newState = await strategy.resolveAIPendingDecision(gameState);
+          setGameState(newState);
+        } catch (error) {
+          console.error("AI pending decision error:", error);
         } finally {
           setIsProcessing(false);
         }

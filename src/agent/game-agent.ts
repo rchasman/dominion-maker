@@ -426,7 +426,8 @@ export async function runAITurn(
 export async function runAITurnWithConsensus(
   state: GameState,
   providers: ModelProvider[] = ALL_FAST_MODELS,
-  logger?: LLMLogger
+  logger?: LLMLogger,
+  onStateChange?: (state: GameState) => void
 ): Promise<GameState> {
   console.log(`\n🤖 AI turn ${state.turn} starting (Consensus Mode with ${providers.length} models)`, { phase: state.phase });
 
@@ -461,6 +462,9 @@ export async function runAITurnWithConsensus(
           pendingDecision: null,
         };
       }
+
+      // Update UI incrementally
+      onStateChange?.(currentState);
     } catch (error) {
       console.error("Error during consensus step:", error);
       return currentState;
