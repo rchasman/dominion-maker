@@ -175,13 +175,18 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   useEffect(() => {
     if (turns.length > 0) {
       const lastTurnIndex = turns.length - 1;
-      const lastActionIndex = turns[lastTurnIndex].decisions.length - 1;
+      const lastTurn = turns[lastTurnIndex];
+      // If turn is pending, point to the pending action (beyond last completed decision)
+      // Otherwise point to last completed decision
+      const lastActionIndex = lastTurn.pending
+        ? lastTurn.decisions.length  // Point beyond last decision to show pending
+        : lastTurn.decisions.length - 1;
 
       // Always jump to latest when new data comes in
       setCurrentTurnIndex(lastTurnIndex);
       setCurrentActionIndex(lastActionIndex);
     }
-  }, [turns.length, turns[turns.length - 1]?.decisions.length]);
+  }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending]);
 
   const currentTurn = turns[currentTurnIndex];
   const currentDecision = currentTurn?.decisions[currentActionIndex];
@@ -189,7 +194,9 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const hasPrevTurn = currentTurnIndex > 0;
   const hasNextTurn = currentTurnIndex < turns.length - 1;
   const hasPrevAction = currentActionIndex > 0;
-  const hasNextAction = currentTurn && currentActionIndex < currentTurn.decisions.length - 1;
+  // Can navigate forward if there's a next decision OR if we're viewing a past decision and there's a pending action
+  const maxActionIndex = currentTurn?.pending ? currentTurn.decisions.length : currentTurn ? currentTurn.decisions.length - 1 : -1;
+  const hasNextAction = currentActionIndex < maxActionIndex;
 
   const handlePrevTurn = () => {
     if (hasPrevTurn) {
@@ -717,8 +724,8 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               </>
             )}
           </div>
-        ) : currentTurn?.pending && !currentDecision ? (
-          /* Show live panes with both Voting and Performance tabs */
+        ) : currentTurn?.pending && currentActionIndex === currentTurn.decisions.length ? (
+          /* Show live panes with both Voting and Performance tabs for pending action */
           <>
             <div style={{ padding: "0 var(--space-4)", marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
               <div style={{
@@ -827,12 +834,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               }}>
                 <span>
                   {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
-                  Action {currentActionIndex + 1} of {currentTurn.decisions.length}{" "}
+                  Action {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
                     ({((currentDecision.timingEntry?.data?.parallelDuration || 0) / 1000).toFixed(2)}s)
                   </span>
                 </span>
-                {currentTurn.decisions.length > 1 && (
+                {(currentTurn.decisions.length > 1 || (currentTurn.decisions.length > 0 && currentTurn.pending)) && (
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                     <button
                       onClick={handlePrevAction}
