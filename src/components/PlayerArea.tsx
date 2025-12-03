@@ -102,8 +102,8 @@ export function PlayerArea({
           position: "relative",
           padding: "var(--space-3)",
           marginBlockEnd: "var(--space-3)",
-          background: player.inPlay.length > 0 ? "rgb(201 162 39 / 0.15)" : "rgb(255 255 255 / 0.02)",
-          border: player.inPlay.length > 0 ? "1px solid var(--color-gold)" : "1px dashed var(--color-border)",
+          background: player.inPlay.length > 0 ? "rgb(255 255 255 / 0.05)" : "rgb(255 255 255 / 0.02)",
+          border: player.inPlay.length > 0 ? "1px solid var(--color-border)" : "1px dashed var(--color-border)",
           blockSize: "calc(var(--card-height-small) + var(--space-6))",
         }}>
           <div style={{
@@ -111,7 +111,7 @@ export function PlayerArea({
             insetBlockStart: "var(--space-1)",
             insetInlineStart: "var(--space-2)",
             fontSize: "0.5625rem",
-            color: player.inPlay.length > 0 ? "var(--color-gold)" : "var(--color-text-muted)",
+            color: "var(--color-text-muted)",
             textTransform: "uppercase",
             fontWeight: 600
           }}>
@@ -137,15 +137,15 @@ export function PlayerArea({
             position: "relative",
             minInlineSize: 0,
             padding: "var(--space-2)",
-            background: "rgb(100 181 246 / 0.1)",
-            border: "1px solid var(--color-border-highlight)",
+            background: "rgb(255 255 255 / 0.05)",
+            border: "1px solid var(--color-border)",
           }}>
             <div style={{
               position: "absolute",
               insetBlockStart: "var(--space-1)",
               insetInlineStart: "var(--space-2)",
               fontSize: "0.5625rem",
-              color: "var(--color-border-highlight)",
+              color: "var(--color-text-muted)",
               fontWeight: 600,
               textTransform: "uppercase"
             }}>
