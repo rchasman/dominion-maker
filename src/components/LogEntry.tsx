@@ -46,8 +46,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
         <span>
           <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}{suffix}
-          </span> <CoinValue coins={entry.coins} />
+            {entry.card}
+          </span>{suffix} <CoinValue coins={entry.coins} />
         </span>
       );
     }
@@ -69,8 +69,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
         <span>
           <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}{suffix}
-          </span>
+            {entry.card}
+          </span>{suffix}
         </span>
       );
     }
@@ -85,8 +85,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
         <span>
           <PlayerName player={entry.player} /> <Verb>buys</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}{suffix}
-          </span>
+            {entry.card}
+          </span>{suffix}
         </span>
       );
     }
@@ -106,10 +106,10 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
           if (count > 1) {
             parts.push(
               <span key={idx}>
-                {count}{" "}
                 <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
-                  {card}s
+                  {card}
                 </span>
+                {` x${count}`}
               </span>
             );
           } else {
@@ -168,8 +168,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
         <span>
           <PlayerName player={entry.player} /> <Verb>gains</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}{suffix}
-          </span>{coinDisplay}{vpDisplay}
+            {entry.card}
+          </span>{suffix}{coinDisplay}{vpDisplay}
         </span>
       );
     }
