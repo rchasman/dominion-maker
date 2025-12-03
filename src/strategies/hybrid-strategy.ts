@@ -1,16 +1,9 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState, CardName } from "../types/game-state";
 import { runAITurnWithConsensus, advanceGameStateWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
-import {
-  playAction,
-  playTreasure,
-  playAllTreasures,
-  unplayTreasure,
-  buyCard,
-  endActionPhase,
-  endBuyPhase,
-  resolveDecision,
-} from "../lib/game-engine";
+import { playAction, resolveDecision } from "../lib/game-engine/actions";
+import { playTreasure, playAllTreasures, unplayTreasure } from "../lib/game-engine/treasures";
+import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
 import { isActionCard, isTreasureCard } from "../data/cards";
 
 /**

@@ -1,16 +1,9 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState, CardName } from "../types/game-state";
-import {
-  playAction,
-  playTreasure,
-  playAllTreasures,
-  unplayTreasure,
-  buyCard,
-  endActionPhase,
-  endBuyPhase,
-  runSimpleAITurn,
-  resolveDecision,
-} from "../lib/game-engine";
+import { playAction, resolveDecision } from "../lib/game-engine/actions";
+import { playTreasure, playAllTreasures, unplayTreasure } from "../lib/game-engine/treasures";
+import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
+import { runSimpleAITurn } from "../lib/game-engine/ai-simple";
 import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
 
 export class EngineStrategy implements GameStrategy {

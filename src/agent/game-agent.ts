@@ -1,16 +1,11 @@
 import { GameState } from "../types/game-state";
 import { Action } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
-import {
-  playAction,
-  playTreasure,
-  buyCard,
-  endActionPhase,
-  endBuyPhase,
-  runSimpleAITurn,
-  getLegalActions,
-  resolveDecision,
-} from "../lib/game-engine";
+import { playAction, resolveDecision } from "../lib/game-engine/actions";
+import { playTreasure } from "../lib/game-engine/treasures";
+import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
+import { getLegalActions } from "../lib/game-engine/core";
+import { runSimpleAITurn } from "../lib/game-engine/ai-simple";
 import { MODEL_IDS, getModelFullName, type ModelProvider } from "../config/models";
 
 // Re-export for convenience
