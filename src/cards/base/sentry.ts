@@ -4,11 +4,31 @@ import type { CardName } from "../../types/game-state";
 
 export const sentry: CardEffect = ({ state, player, children, decision }) => {
   // +1 Card, +1 Action. Look at top 2, trash/discard/put back any
-  const { player: newPlayer, drawn } = drawCards(state.players[player], 1);
-
-  let currentPlayer = newPlayer;
+  let newState = state;
+  let currentPlayer = state.players[player];
   let deck = [...currentPlayer.deck];
   let discard = [...currentPlayer.discard];
+
+  // Apply immediate effects ONLY on initial call
+  if (!decision) {
+    const { player: newPlayer, drawn } = drawCards(currentPlayer, 1);
+    currentPlayer = newPlayer;
+    deck = [...currentPlayer.deck];
+    discard = [...currentPlayer.discard];
+
+    newState = {
+      ...state,
+      players: { ...state.players, [player]: newPlayer },
+      actions: state.actions + 1,
+    };
+    children.push({ type: "draw-cards", player, count: drawn.length, cards: drawn });
+    children.push({ type: "get-actions", player, count: 1 });
+  } else {
+    // Use current player state for decision resolution
+    currentPlayer = newState.players[player];
+    deck = [...currentPlayer.deck];
+    discard = [...currentPlayer.discard];
+  }
 
   // Shuffle if needed
   if (deck.length < 2 && discard.length > 0) {
@@ -17,14 +37,6 @@ export const sentry: CardEffect = ({ state, player, children, decision }) => {
   }
 
   const top2 = [deck[0], deck[1]].filter(c => c !== undefined) as CardName[];
-
-  let newState = {
-    ...state,
-    players: { ...state.players, [player]: newPlayer },
-    actions: state.actions + 1,
-  };
-  children.push({ type: "draw-cards", player, count: drawn.length, cards: drawn });
-  children.push({ type: "get-actions", player, count: 1 });
 
   // For human players, let them choose what to do with each card
   if (player === "human" && top2.length > 0) {
@@ -104,7 +116,7 @@ export const sentry: CardEffect = ({ state, player, children, decision }) => {
 
     // Record the decision for this card
     if (decision && decision.selectedCards && decision.selectedCards.length > 0 && decision.metadata) {
-      const choice = decision.selectedCards[0];
+      const choice = decision.selectedCards[0] as string;
       const sentryCard = (decision.metadata as any).sentryCard;
 
       let action: "trash" | "discard" | "keep";

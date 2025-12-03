@@ -6,8 +6,9 @@ export interface CardEffectContext {
   children: LogEntry[];
   // For multi-stage card effects that require human decisions
   decision?: {
-    stage: string;
+    stage?: string;
     selectedCards?: CardName[];
+    metadata?: Record<string, any>;
   };
 }
 

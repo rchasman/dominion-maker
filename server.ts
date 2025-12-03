@@ -1,0 +1,98 @@
+import { generateObject, createGateway } from "ai";
+import { GameState } from "./src/types/game-state";
+import { Action } from "./src/types/action";
+import { DOMINION_SYSTEM_PROMPT } from "./src/agent/system-prompt";
+
+const PORT = 5174;
+
+// Configure AI Gateway with server-side API key
+const gateway = createGateway({
+  apiKey: process.env.AI_GATEWAY_API_KEY || "",
+});
+
+const modelMap: Record<string, string> = {
+  "claude-haiku": "anthropic/claude-haiku-4.5",
+  "claude-sonnet": "anthropic/claude-sonnet-4.5",
+  "gpt-4o-mini": "openai/gpt-4o-mini",
+  "gpt-4o": "openai/gpt-4o",
+  "gemini-2.5-flash-lite": "google/gemini-2.5-flash-lite",
+  "ministral-3b": "mistral/ministral-3b",
+};
+
+const server = Bun.serve({
+  port: PORT,
+  async fetch(req) {
+    // Handle CORS preflight
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
+
+    // Handle POST /api/generate-action
+    if (req.method === "POST" && new URL(req.url).pathname === "/api/generate-action") {
+      try {
+        const body = await req.json();
+        const { provider, currentState, humanChoice, legalActions } = body;
+
+        const modelName = modelMap[provider];
+        if (!modelName) {
+          return Response.json({ error: "Invalid provider" }, { status: 400 });
+        }
+
+        const model = gateway(modelName);
+        const isAnthropic = provider.startsWith("claude");
+
+        const legalActionsStr = legalActions && legalActions.length > 0
+          ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
+          : "";
+
+        const userMessage = humanChoice
+          ? `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\nWhat is the next atomic action?`
+          : `Current state:\n${JSON.stringify(currentState, null, 2)}${legalActionsStr}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
+
+        const result = await generateObject({
+          model,
+          schema: Action,
+          system: DOMINION_SYSTEM_PROMPT,
+          prompt: userMessage,
+          ...(isAnthropic && {
+            providerOptions: {
+              anthropic: {
+                structuredOutputMode: "auto",
+              },
+            },
+          }),
+        });
+
+        return Response.json(
+          { action: result.object },
+          {
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
+          }
+        );
+      } catch (error) {
+        console.error("Error generating action:", error);
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Unknown error" },
+          {
+            status: 500,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
+          }
+        );
+      }
+    }
+
+    return new Response("Not Found", { status: 404 });
+  },
+});
+
+console.log(`AI Gateway proxy server running on http://localhost:${PORT}`);

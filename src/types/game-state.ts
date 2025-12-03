@@ -293,10 +293,11 @@ export const PendingDecision = z.object({
   type: DecisionType,
   player: Player,
   prompt: z.string(),
-  options: z.array(CardName),
+  options: z.array(z.union([CardName, z.string()])),
   minCount: z.number().optional(),
   maxCount: z.number().optional(),
   canSkip: z.boolean().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 export type PendingDecision = z.infer<typeof PendingDecision>;
 

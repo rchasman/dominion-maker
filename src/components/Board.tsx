@@ -377,7 +377,7 @@ export function Board({
               {state.phase === "buy" && hasTreasuresInHand && (
                 <button
                   onClick={onPlayAllTreasures}
-                  disabled={state.pendingDecision && !state.pendingDecision.canSkip}
+                  disabled={!!(state.pendingDecision && !state.pendingDecision.canSkip)}
                   style={{
                     padding: "var(--space-2) var(--space-4)",
                     background: "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
@@ -396,7 +396,7 @@ export function Board({
               )}
               <button
                 onClick={onEndPhase}
-                disabled={state.pendingDecision && !state.pendingDecision.canSkip}
+                disabled={!!(state.pendingDecision && !state.pendingDecision.canSkip)}
                 style={{
                   padding: "var(--space-2) var(--space-4)",
                   background: (state.pendingDecision && state.pendingDecision.canSkip)
@@ -449,34 +449,37 @@ export function Board({
               justifyContent: "center",
               flexWrap: "wrap",
             }}>
-              {state.pendingDecision.options.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => onCardClick(option as CardName, 0)}
-                  style={{
-                    padding: "var(--space-3) var(--space-6)",
-                    fontSize: "0.875rem",
-                    fontWeight: 600,
-                    background: option === "Trash"
-                      ? "linear-gradient(180deg, #ef4444 0%, #dc2626 100%)"
-                      : option === "Discard"
-                      ? "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)"
-                      : option === "Skip"
-                      ? "linear-gradient(180deg, #6b7280 0%, #4b5563 100%)"
-                      : "linear-gradient(180deg, #10b981 0%, #059669 100%)",
-                    color: "#fff",
-                    border: "2px solid rgba(255, 255, 255, 0.3)",
-                    cursor: "pointer",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05rem",
-                    fontFamily: "inherit",
-                    borderRadius: "6px",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
+              {state.pendingDecision.options.map((option) => {
+                const optionStr = option as string;
+                return (
+                  <button
+                    key={option}
+                    onClick={() => onCardClick(option as CardName, 0)}
+                    style={{
+                      padding: "var(--space-3) var(--space-6)",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      background: optionStr === "Trash"
+                        ? "linear-gradient(180deg, #ef4444 0%, #dc2626 100%)"
+                        : optionStr === "Discard"
+                        ? "linear-gradient(180deg, #f59e0b 0%, #d97706 100%)"
+                        : optionStr === "Skip"
+                        ? "linear-gradient(180deg, #6b7280 0%, #4b5563 100%)"
+                        : "linear-gradient(180deg, #10b981 0%, #059669 100%)",
+                      color: "#fff",
+                      border: "2px solid rgba(255, 255, 255, 0.3)",
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05rem",
+                      fontFamily: "inherit",
+                      borderRadius: "6px",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                    }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

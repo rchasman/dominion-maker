@@ -52,7 +52,7 @@ export const remodel: CardEffect = ({ state, player, children, decision }) => {
         players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
         trash: [...state.trash, toTrash],
       };
-      children.push({ type: "trash-cards", player, count: 1, cards: [toTrash] });
+      children.push({ type: "trash-card", player, card: toTrash });
 
       if (gainOptions.length === 0) {
         // No cards to gain
@@ -129,7 +129,7 @@ export const remodel: CardEffect = ({ state, player, children, decision }) => {
       players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
       trash: [...state.trash, toTrash],
     };
-    children.push({ type: "trash-cards", player, count: 1, cards: [toTrash] });
+    children.push({ type: "trash-card", player, card: toTrash });
 
     if (gained) {
       newState = {

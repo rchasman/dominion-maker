@@ -200,25 +200,6 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
         </span>
       );
 
-    case "trash-cards":
-      if (entry.cards) {
-        return (
-          <span>
-            <PlayerName player={entry.player} /> <Verb>trashes</Verb> {entry.cards.map((card, i) => (
-              <span key={i}>
-                {i > 0 && ", "}
-                <CardNameSpan card={card} />
-              </span>
-            ))}
-          </span>
-        );
-      }
-      return (
-        <span>
-          <PlayerName player={entry.player} /> <Verb>trashes</Verb> {entry.count} cards
-        </span>
-      );
-
     case "shuffle-deck":
       return (
         <span>

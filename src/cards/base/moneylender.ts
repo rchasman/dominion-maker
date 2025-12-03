@@ -15,7 +15,7 @@ export const moneylender: CardEffect = ({ state, player, children }) => {
       trash: [...state.trash, "Copper"],
       coins: state.coins + 3,
     };
-    children.push({ type: "trash-cards", player, count: 1, cards: ["Copper"] });
+    children.push({ type: "trash-card", player, card: "Copper" });
     children.push({ type: "get-coins", player, count: 3 });
     return newState;
   }

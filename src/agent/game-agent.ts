@@ -1,7 +1,5 @@
-import { generateObject, createGateway } from "ai";
 import { GameState } from "../types/game-state";
 import { Action } from "../types/action";
-import { DOMINION_SYSTEM_PROMPT } from "./system-prompt";
 import type { LLMLogEntry } from "../components/LLMLog";
 import {
   playAction,
@@ -10,38 +8,35 @@ import {
   endActionPhase,
   endBuyPhase,
   runSimpleAITurn,
+  getLegalActions,
 } from "../lib/game-engine";
+
+// Backend API endpoint
+const API_URL = "http://localhost:5174/api/generate-action";
 
 // Model configuration - verified working models through Vercel AI Gateway
 export type ModelProvider =
   | "claude-haiku"
   | "claude-sonnet"
-  | "deepseek-v32"
   | "gpt-4o-mini"
   | "gpt-4o"
-  | "deepseek-chat";
+  | "gemini-2.5-flash-lite"
+  | "ministral-3b";
 
-// Default: 10 fast model instances for maximum consensus (duplicates allowed)
+// Default: 8 fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
   "claude-haiku",
   "gpt-4o-mini",
-  "claude-haiku",
-  "deepseek-v32",
-  "gpt-4o-mini",
-  "claude-sonnet",
-  "deepseek-chat",
-  "gpt-4o",
+  "gemini-2.5-flash-lite",
+  "ministral-3b",
   "claude-haiku",
   "gpt-4o-mini",
+  "gemini-2.5-flash-lite",
+  "ministral-3b",
 ];
 
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
-
-// Configure AI Gateway - single endpoint for all models
-const gateway = createGateway({
-  apiKey: import.meta.env.VITE_AI_GATEWAY_API_KEY || "",
-});
 
 function getModelName(provider: ModelProvider): string {
   switch (provider) {
@@ -49,29 +44,51 @@ function getModelName(provider: ModelProvider): string {
       return "anthropic/claude-haiku-4.5";
     case "claude-sonnet":
       return "anthropic/claude-sonnet-4.5";
-    case "deepseek-v32":
-      return "deepseek/deepseek-v3.2";
     case "gpt-4o-mini":
       return "openai/gpt-4o-mini";
     case "gpt-4o":
       return "openai/gpt-4o";
-    case "deepseek-chat":
-      return "deepseek/deepseek-chat";
+    case "gemini-2.5-flash-lite":
+      return "google/gemini-2.5-flash-lite";
+    case "ministral-3b":
+      return "mistral/ministral-3b";
   }
 }
 
-function getModel(provider: ModelProvider) {
-  return gateway(getModelName(provider));
+// Call backend API to generate action
+async function generateActionViaBackend(
+  provider: ModelProvider,
+  currentState: GameState,
+  humanChoice?: { selectedCards: string[] }
+): Promise<Action> {
+  const legalActions = getLegalActions(currentState);
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, currentState, humanChoice, legalActions }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Backend request failed");
+  }
+
+  const data = await response.json();
+  return data.action;
 }
 
 // Execute an atomic action and return new state
 function executeAction(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "play_action":
+      if (!action.card) throw new Error("play_action requires card");
       return playAction(state, action.card);
     case "play_treasure":
+      if (!action.card) throw new Error("play_treasure requires card");
       return playTreasure(state, action.card);
     case "buy_card":
+      if (!action.card) throw new Error("buy_card requires card");
       return buyCard(state, action.card);
     case "end_phase":
       return state.phase === "action" ? endActionPhase(state) : endBuyPhase(state);
@@ -90,62 +107,26 @@ export async function advanceGameState(
   logger?: LLMLogger
 ): Promise<GameState> {
   const modelName = getModelName(provider);
-
-  logger?.({
-    type: "llm-call-start",
-    message: `Calling ${provider} (${modelName})`,
-    data: {
-      activePlayer: currentState.activePlayer,
-      phase: currentState.phase,
-      turn: currentState.turn,
-      ...(humanChoice && { humanChoice: humanChoice.selectedCards }),
-    },
-  });
-
-  const model = getModel(provider);
-
-  const userMessage = humanChoice
-    ? `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}\n\nWhat is the next atomic action?`
-    : `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
-
   const startTime = performance.now();
 
-  console.log(`\n[${provider}] Requesting atomic action from ${modelName}`);
+  console.log(`\n[${provider}] Requesting atomic action from ${modelName}`, {
+    activePlayer: currentState.activePlayer,
+    phase: currentState.phase,
+    turn: currentState.turn,
+    ...(humanChoice && { humanChoice: humanChoice.selectedCards }),
+  });
 
-  let result;
+  let action: Action;
   try {
-    const isAnthropic = provider.startsWith("claude");
-    result = await generateObject({
-      model,
-      schema: Action,
-      system: DOMINION_SYSTEM_PROMPT,
-      prompt: userMessage,
-      ...(isAnthropic && {
-        providerOptions: {
-          anthropic: {
-            structuredOutputMode: "auto",
-          },
-        },
-      }),
-    });
+    action = await generateActionViaBackend(provider, currentState, humanChoice);
   } catch (error) {
-    console.error(`[${provider}] generateObject failed:`, error);
-    logger?.({
-      type: "error",
-      message: `generateObject failed: ${error instanceof Error ? error.message : String(error)}`,
-      data: { provider },
-    });
+    console.error(`[${provider}] Backend request failed:`, error);
     throw error;
   }
 
   const duration = performance.now() - startTime;
-  const action = result.object;
 
-  logger?.({
-    type: "llm-call-end",
-    message: `Action: ${action.type}${action.type === "play_action" || action.type === "play_treasure" || action.type === "buy_card" || action.type === "gain_card" ? ` (${action.card})` : ""} (${duration.toFixed(0)}ms)`,
-    data: { action },
-  });
+  console.log(`[${provider}] Action: ${action.type}${action.type === "play_action" || action.type === "play_treasure" || action.type === "buy_card" || action.type === "gain_card" ? ` (${action.card})` : ""} (${duration.toFixed(0)}ms)`, { action });
 
   // Execute the action using game engine
   const newState = executeAction(currentState, action);
@@ -160,85 +141,65 @@ export async function advanceGameStateWithConsensus(
   providers: ModelProvider[] = ALL_FAST_MODELS,
   logger?: LLMLogger
 ): Promise<GameState> {
-  logger?.({
-    type: "consensus-start",
-    message: `Running ${providers.length} models in parallel for consensus`,
-    data: { providers },
-  });
+  const overallStart = performance.now();
+  const parallelStart = performance.now();
 
-  const startTime = performance.now();
+  console.log(`\n🎯 Consensus: Running ${providers.length} models in parallel`, { providers });
 
-  // Run all models in parallel WITHOUT individual validation
-  // (we'll validate the consensus result)
+  // Run all models in parallel via backend API with per-model timing
   const promises = providers.map(async (provider, index) => {
-    const model = getModel(provider);
     const modelName = getModelName(provider);
+    const modelStart = performance.now();
 
-    const userMessage = humanChoice
-      ? `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}\n\nWhat is the next atomic action?`
-      : `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
-
-    logger?.({
-      type: "llm-call-start",
-      message: `Model ${index + 1}/${providers.length}: ${provider} (${modelName})`,
-    });
-
-    console.log(`\n[${provider}] Consensus ${index + 1}/${providers.length} requesting action from ${modelName}`);
+    console.log(`[${provider}] Consensus ${index + 1}/${providers.length} requesting action from ${modelName}`);
 
     try {
-      const isAnthropic = provider.startsWith("claude");
-      const result = await generateObject({
-        model,
-        schema: Action,
-        system: DOMINION_SYSTEM_PROMPT,
-        prompt: userMessage,
-        ...(isAnthropic && {
-          providerOptions: {
-            anthropic: {
-              structuredOutputMode: "auto",
-            },
-          },
-        }),
-      });
-
-      return { provider, result: result.object, error: null };
+      const action = await generateActionViaBackend(provider, currentState, humanChoice);
+      const modelDuration = performance.now() - modelStart;
+      console.log(`[${provider}] ✓ Completed in ${modelDuration.toFixed(0)}ms`);
+      return { provider, result: action, error: null, duration: modelDuration };
     } catch (error) {
-      console.error(`[${provider}] Consensus call failed:`, error);
-      logger?.({
-        type: "error",
-        message: `${provider} failed: ${error instanceof Error ? error.message : String(error)}`,
-        data: { provider },
-      });
-      return { provider, result: null, error };
+      const modelDuration = performance.now() - modelStart;
+      console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
+      return { provider, result: null, error, duration: modelDuration };
     }
   });
 
   const results = await Promise.all(promises);
-  const duration = performance.now() - startTime;
+  const parallelDuration = performance.now() - parallelStart;
+
+  // Calculate timing statistics
+  const timings = results.map(r => ({ provider: r.provider, duration: r.duration }));
+  const successfulTimings = results.filter(r => !r.error).map(r => ({ provider: r.provider, duration: r.duration }));
+  const fastest = successfulTimings.reduce((min, t) => t.duration < min.duration ? t : min, successfulTimings[0]);
+  const slowest = successfulTimings.reduce((max, t) => t.duration > max.duration ? t : max, successfulTimings[0]);
+  const avgDuration = successfulTimings.reduce((sum, t) => sum + t.duration, 0) / successfulTimings.length;
 
   logger?.({
     type: "consensus-compare",
-    message: `Comparing ${results.length} results (${duration.toFixed(0)}ms total)`,
+    message: `All models finished in ${parallelDuration.toFixed(0)}ms (fastest: ${fastest?.provider} ${fastest?.duration.toFixed(0)}ms, slowest: ${slowest?.provider} ${slowest?.duration.toFixed(0)}ms, avg: ${avgDuration.toFixed(0)}ms)`,
+    data: {
+      timings: timings.sort((a, b) => a.duration - b.duration),
+      parallelDuration,
+      fastest,
+      slowest,
+      avgDuration
+    },
   });
+
+  const votingStart = performance.now();
 
   // Filter out failed results
   const successfulResults = results.filter(r => r.result !== null && !r.error);
 
   if (successfulResults.length === 0) {
-    logger?.({
-      type: "error",
-      message: "✗ All models failed to generate actions",
-    });
+    console.error("✗ All models failed to generate actions");
     return runSimpleAITurn(currentState);
   }
 
-  logger?.({
-    type: "consensus-validation",
-    message: `✓ ${successfulResults.length}/${results.length} models generated actions`,
-    data: {
-      successful: successfulResults.map(r => r.provider),
-      failed: results.filter(r => r.error).map(r => r.provider),
-    },
+  console.log(`✓ ${successfulResults.length}/${results.length} models generated actions`, {
+    successful: successfulResults.map(r => r.provider),
+    failed: results.filter(r => r.error).map(r => r.provider),
   });
 
   // MAKER voting: Group actions and pick plurality winner
@@ -286,9 +247,11 @@ export async function advanceGameStateWithConsensus(
     ? `${winner.action.type}(${winner.action.card})`
     : winner.action.type;
 
+  const votingDuration = performance.now() - votingStart;
+
   logger?.({
     type: "consensus-voting",
-    message: `◉ Voting: ${rankedGroups.length} unique actions, winner: ${actionDesc}`,
+    message: `◉ Voting: ${rankedGroups.length} unique actions, winner: ${actionDesc} (voting: ${votingDuration.toFixed(0)}ms)`,
     data: {
       topResult: {
         action: winner.action,
@@ -302,33 +265,36 @@ export async function advanceGameStateWithConsensus(
         votes: g.count,
         voters: g.voters,
       })),
+      votingDuration,
     },
   });
 
   if (consensusStrength === 1.0) {
-    logger?.({
-      type: "consensus-success",
-      message: `◉ Unanimous! All ${successfulResults.length} models chose: ${actionDesc}`,
-    });
+    console.log(`◉ Unanimous! All ${successfulResults.length} models chose: ${actionDesc}`);
   } else if (consensusStrength >= 0.5) {
-    logger?.({
-      type: "consensus-success",
-      message: `◉ Strong consensus: ${winner.count}/${successfulResults.length} models chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`,
-    });
+    console.log(`◉ Strong consensus: ${winner.count}/${successfulResults.length} models chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
   } else if (rankedGroups.length === successfulResults.length) {
-    logger?.({
-      type: "warning",
-      message: `⚠ No consensus: All models chose different actions (picking: ${actionDesc})`,
-    });
+    console.warn(`⚠ No consensus: All models chose different actions (picking: ${actionDesc})`);
   } else {
-    logger?.({
-      type: "warning",
-      message: `⚠ Weak consensus: ${winner.count}/${successfulResults.length} chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`,
-    });
+    console.warn(`⚠ Weak consensus: ${winner.count}/${successfulResults.length} chose: ${actionDesc} (${(consensusStrength * 100).toFixed(1)}%)`);
   }
 
   // Execute the plurality winner action
+  const executionStart = performance.now();
   const newState = executeAction(currentState, winner.action);
+  const executionDuration = performance.now() - executionStart;
+
+  const overallDuration = performance.now() - overallStart;
+
+  console.log(`✓ Consensus complete in ${overallDuration.toFixed(0)}ms`, {
+    breakdown: {
+      total: overallDuration,
+      parallel: parallelDuration,
+      voting: votingDuration,
+      execution: executionDuration,
+    },
+  });
+
   return newState;
 }
 
@@ -338,11 +304,7 @@ export async function runAITurn(
   provider: ModelProvider = "claude-haiku",
   logger?: LLMLogger
 ): Promise<GameState> {
-  logger?.({
-    type: "ai-turn-start",
-    message: `AI turn ${state.turn} starting...`,
-    data: { phase: state.phase, turn: state.turn },
-  });
+  console.log(`\n🤖 AI turn ${state.turn} starting...`, { phase: state.phase });
 
   let currentState = state;
   let stepCount = 0;
@@ -362,48 +324,30 @@ export async function runAITurn(
 
       // Check if AI incorrectly set a pendingDecision
       if (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
-        logger?.({
-          type: "warning",
-          message: "AI incorrectly set pendingDecision - clearing it",
-        });
+        console.warn("⚠ AI incorrectly set pendingDecision - clearing it");
         currentState = {
           ...currentState,
           pendingDecision: null,
         };
       }
     } catch (error) {
-      logger?.({
-        type: "error",
-        message: `Error during AI turn: ${error instanceof Error ? error.message : String(error)}`,
-      });
+      console.error("Error during AI turn:", error);
       return currentState;
     }
   }
 
   if (stepCount >= MAX_STEPS) {
-    logger?.({
-      type: "warning",
-      message: `AI turn exceeded ${MAX_STEPS} steps - stopping to prevent infinite loop`,
-    });
+    console.warn(`⚠ AI turn exceeded ${MAX_STEPS} steps - stopping to prevent infinite loop`);
   }
 
   if (currentState.pendingDecision) {
-    logger?.({
-      type: "warning",
-      message: `AI turn ended with pendingDecision: ${currentState.pendingDecision.type}`,
-      data: { pendingDecision: currentState.pendingDecision.type },
-    });
+    console.log(`⚠ AI turn ended with pendingDecision: ${currentState.pendingDecision.type}`);
   }
 
-  logger?.({
-    type: "ai-turn-end",
-    message: `AI turn complete after ${stepCount} steps`,
-    data: {
-      steps: stepCount,
-      phase: currentState.phase,
-      turn: currentState.turn,
-      activePlayer: currentState.activePlayer,
-    },
+  console.log(`✓ AI turn complete after ${stepCount} steps`, {
+    phase: currentState.phase,
+    turn: currentState.turn,
+    activePlayer: currentState.activePlayer,
   });
 
   return currentState;
@@ -415,9 +359,11 @@ export async function runAITurnWithConsensus(
   providers: ModelProvider[] = ALL_FAST_MODELS,
   logger?: LLMLogger
 ): Promise<GameState> {
+  console.log(`\n🤖 AI turn ${state.turn} starting (Consensus Mode with ${providers.length} models)`, { phase: state.phase });
+
   logger?.({
     type: "ai-turn-start",
-    message: `AI turn ${state.turn} starting (Consensus Mode with ${providers.length} models)`,
+    message: `AI turn ${state.turn} starting`,
     data: { phase: state.phase, turn: state.turn, providers },
   });
 
@@ -433,20 +379,14 @@ export async function runAITurnWithConsensus(
     stepCount < MAX_STEPS
   ) {
     stepCount++;
-    logger?.({
-      type: "consensus-step",
-      message: `Consensus Step ${stepCount}`,
-    });
+    console.log(`\n--- Consensus Step ${stepCount} ---`);
 
     try {
       currentState = await advanceGameStateWithConsensus(currentState, undefined, providers, logger);
 
       // Check if AI incorrectly set a pendingDecision
       if (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
-        logger?.({
-          type: "warning",
-          message: "AI incorrectly set pendingDecision - clearing it",
-        });
+        console.warn("⚠ AI incorrectly set pendingDecision - clearing it");
         currentState = {
           ...currentState,
           pendingDecision: null,
@@ -454,30 +394,18 @@ export async function runAITurnWithConsensus(
       }
     } catch (error) {
       console.error("Error during consensus step:", error);
-      logger?.({
-        type: "error",
-        message: `Error during consensus step: ${error instanceof Error ? error.message : String(error)}`,
-      });
       return currentState;
     }
   }
 
   if (stepCount >= MAX_STEPS) {
-    logger?.({
-      type: "warning",
-      message: `AI turn exceeded ${MAX_STEPS} steps - stopping to prevent infinite loop`,
-    });
+    console.warn(`⚠ AI turn exceeded ${MAX_STEPS} steps - stopping to prevent infinite loop`);
   }
 
-  logger?.({
-    type: "ai-turn-end",
-    message: `Consensus AI turn complete after ${stepCount} steps`,
-    data: {
-      steps: stepCount,
-      phase: currentState.phase,
-      turn: currentState.turn,
-      activePlayer: currentState.activePlayer,
-    },
+  console.log(`✓ Consensus AI turn complete after ${stepCount} steps`, {
+    phase: currentState.phase,
+    turn: currentState.turn,
+    activePlayer: currentState.activePlayer,
   });
 
   return currentState;

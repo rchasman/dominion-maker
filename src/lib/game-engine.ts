@@ -1,4 +1,4 @@
-import type { CardName, GameState, PlayerState, Player } from "../types/game-state";
+import type { CardName, GameState, Player, LogEntry } from "../types/game-state";
 import { CARDS, isTreasureCard, isActionCard } from "../data/cards";
 import { drawCards, countVP } from "./game-utils";
 import { BASE_CARD_EFFECTS } from "../cards/base";
@@ -219,6 +219,50 @@ export function hasPlayableActions(state: GameState): boolean {
   return hand.some(isActionCard);
 }
 
+export function getLegalActions(state: GameState): Array<{ type: string; card?: CardName; cards?: CardName[] }> {
+  const actions: Array<{ type: string; card?: CardName; cards?: CardName[] }> = [];
+  const player = state.activePlayer;
+  const playerState = state.players[player];
+
+  if (state.phase === "action") {
+    // Can play action cards if we have actions available
+    if (state.actions > 0) {
+      const actionCards = playerState.hand.filter(isActionCard);
+      const uniqueActions = Array.from(new Set(actionCards));
+      for (const card of uniqueActions) {
+        actions.push({ type: "play_action", card });
+      }
+    }
+
+    // Can always end action phase
+    actions.push({ type: "end_phase" });
+  } else if (state.phase === "buy") {
+    // Can play treasures
+    const treasureCards = playerState.hand.filter(isTreasureCard);
+    const uniqueTreasures = Array.from(new Set(treasureCards));
+    for (const card of uniqueTreasures) {
+      actions.push({ type: "play_treasure", card });
+    }
+
+    // Can buy cards if we have buys
+    if (state.buys > 0) {
+      for (const [cardName, count] of Object.entries(state.supply)) {
+        if (count > 0) {
+          const cost = CARDS[cardName as CardName]?.cost ?? 0;
+          if (cost <= state.coins) {
+            actions.push({ type: "buy_card", card: cardName as CardName });
+          }
+        }
+      }
+    }
+
+    // Can always end buy phase
+    actions.push({ type: "end_phase" });
+  }
+
+  return actions;
+}
+
 export function endBuyPhase(state: GameState): GameState {
   if (state.phase !== "buy") return state;
 
@@ -240,36 +284,28 @@ export function endBuyPhase(state: GameState): GameState {
   const nextPlayer: Player = player === "human" ? "ai" : "human";
   const newTurn = player === "ai" ? state.turn + 1 : state.turn;
 
-  // Build log entries: end-turn and turn-start (with draw as child)
-  const logEntries = [{
+  // Build log entries: end-turn (with draw as child) and turn-start
+  const logEntries: LogEntry[] = [{
     type: "end-turn" as const,
     player,
     nextPlayer,
+    children: [{
+      type: "draw-cards" as const,
+      player,
+      count: afterDraw.drawn.length,
+      cards: afterDraw.drawn,
+    }],
   }];
 
-  // Add turn-start with draw as child
+  // Add turn-start header (no children) only for human
   if (nextPlayer === "human") {
     logEntries.push({
       type: "turn-start" as const,
       turn: newTurn,
       player: nextPlayer,
-      children: [{
-        type: "draw-cards" as const,
-        player: nextPlayer,
-        count: afterDraw.drawn.length,
-        cards: afterDraw.drawn,
-      }],
-    });
-  } else {
-    // For AI, we don't add turn-start here (it adds its own in runSimpleAITurn)
-    // But we still need to show the draw
-    logEntries.push({
-      type: "draw-cards" as const,
-      player: nextPlayer,
-      count: afterDraw.drawn.length,
-      cards: afterDraw.drawn,
     });
   }
+  // For AI, turn-start is added in runSimpleAITurn
 
   const newState: GameState = {
     ...state,
@@ -338,23 +374,14 @@ function getActionPlayPriority(card: CardName): number {
 export function runSimpleAITurn(state: GameState): GameState {
   if (state.activePlayer !== "ai" || state.gameOver) return state;
 
-  // Check if the last log entry is a draw-cards for AI (from cleanup)
-  const lastLog = state.log[state.log.length - 1];
-  const hasDrawCards = lastLog && lastLog.type === "draw-cards" && lastLog.player === "ai";
-
-  // Add turn-start log entry, potentially with draw as child
-  const turnStartEntry: typeof state.log[0] = {
-    type: "turn-start",
-    turn: state.turn,
-    player: "ai",
-    ...(hasDrawCards && { children: [lastLog] }),
-  };
-
+  // Add turn-start header for AI
   let current: GameState = {
     ...state,
-    log: hasDrawCards
-      ? [...state.log.slice(0, -1), turnStartEntry]  // Replace draw with turn-start that has draw as child
-      : [...state.log, turnStartEntry],               // Just add turn-start
+    log: [...state.log, {
+      type: "turn-start",
+      turn: state.turn,
+      player: "ai",
+    }],
   };
 
   // ACTION PHASE: Play action cards intelligently
