@@ -38,7 +38,7 @@ export function CoinValue({ coins, showSign = true }: { coins: number; showSign?
   const sign = showSign ? (coins >= 0 ? "+" : "") : "";
   return (
     <span style={{ color: "var(--color-gold-bright)", fontWeight: 700 }}>
-      ({sign}${coins})
+      {sign}${coins}
     </span>
   );
 }

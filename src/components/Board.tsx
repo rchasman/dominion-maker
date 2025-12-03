@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import type { GameState, CardName, LogEntry as LogEntryType } from "../types/game-state";
 import type { GameMode } from "../types/game-mode";
 import { Supply } from "./Supply";
@@ -143,6 +143,20 @@ function aggregateLogEntries(log: LogEntryType[]): LogEntryType[] {
   return result;
 }
 
+function CyclingSquare() {
+  const glyphs = ['▤', '▥', '▦'];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % glyphs.length);
+    }, 300);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span>{glyphs[index]}</span>;
+}
+
 export function Board({
   state,
   selectedCards,
@@ -164,6 +178,46 @@ export function Board({
   const opponent = state.players.ai;
   const human = state.players.human;
   const gameLogScrollRef = useRef<HTMLDivElement>(null);
+
+  // Resize state: percentage of sidebar height for game log
+  const STORAGE_LOG_HEIGHT_KEY = "dominion-maker-log-height";
+  const [gameLogHeight, setGameLogHeight] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_LOG_HEIGHT_KEY);
+    return saved ? parseFloat(saved) : 40;
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Save log height to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_LOG_HEIGHT_KEY, gameLogHeight.toString());
+  }, [gameLogHeight]);
+
+  // Handle resize drag
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (sidebarRef.current) {
+        const sidebarRect = sidebarRef.current.getBoundingClientRect();
+        const relativeY = e.clientY - sidebarRect.top;
+        const percentage = (relativeY / sidebarRect.height) * 100;
+        setGameLogHeight(Math.max(20, Math.min(80, percentage)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Auto-scroll game log to bottom when new entries are added or spinner appears
   useEffect(() => {
@@ -500,6 +554,7 @@ export function Board({
 
       {/* Sidebar */}
       <div
+        ref={sidebarRef}
         style={{
           borderInlineStart: "1px solid var(--color-border)",
           background: "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
@@ -510,60 +565,112 @@ export function Board({
       >
         {/* Game Log - scrollable */}
         <div
-          ref={gameLogScrollRef}
           style={{
-            flex: "3",
+            height: `${gameLogHeight}%`,
             minBlockSize: 0,
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "var(--space-5)",
-            fontSize: "0.6875rem",
-            wordWrap: "break-word",
-            overflowWrap: "break-word",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
           }}
         >
           <div style={{
-            fontWeight: 600,
-            marginBlockEnd: "var(--space-4)",
-            textTransform: "uppercase",
-            fontSize: "0.625rem",
-            color: "var(--color-gold)",
-            borderBlockEnd: "1px solid var(--color-border)",
+            padding: "var(--space-5)",
             paddingBlockEnd: "var(--space-3)",
+            borderBlockEnd: "1px solid var(--color-border)",
           }}>
-            Game Log
+            <div style={{
+              fontWeight: 600,
+              textTransform: "uppercase",
+              fontSize: "0.625rem",
+              color: "var(--color-gold)",
+            }}>
+              Game Log
+            </div>
           </div>
-          {aggregateLogEntries(state.log).map((entry, i) => (
-            <div key={i} style={{ color: "var(--color-text-secondary)", marginBlockEnd: "var(--space-2)", lineHeight: 1.4 }}>
-              <LogEntry entry={entry} />
-            </div>
-          ))}
-          {isProcessing && state.activePlayer === "ai" && (
-            <div
-              style={{
-                color: "var(--color-ai)",
-                fontSize: "0.75rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                marginBlockStart: "var(--space-2)",
-                animation: "pulse 1.5s ease-in-out infinite",
-                fontStyle: "italic",
-              }}
-            >
-              <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⚙</span>
-              <span>AI thinking...</span>
-            </div>
-          )}
+          <div
+            ref={gameLogScrollRef}
+            style={{
+              flex: 1,
+              minBlockSize: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
+              padding: "var(--space-5)",
+              paddingBlockStart: "var(--space-3)",
+              fontSize: "0.6875rem",
+              wordWrap: "break-word",
+              overflowWrap: "break-word",
+            }}
+          >
+            {aggregateLogEntries(state.log).map((entry, i) => (
+              <div key={i} style={{ color: "var(--color-text-secondary)", marginBlockEnd: "var(--space-2)", lineHeight: 1.4 }}>
+                <LogEntry entry={entry} />
+              </div>
+            ))}
+            {isProcessing && state.activePlayer === "ai" && (
+              <div
+                style={{
+                  color: "var(--color-ai)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  marginBlockStart: "var(--space-2)",
+                  animation: "pulse 1.5s ease-in-out infinite",
+                  fontStyle: "italic",
+                }}
+              >
+                <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⚙</span>
+                <span>AI thinking...</span>
+              </div>
+            )}
+            {!isProcessing && state.activePlayer === "human" && (
+              <div
+                style={{
+                  color: "var(--color-human)",
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  marginBlockStart: "var(--space-2)",
+                }}
+              >
+                <span style={{ display: "inline-block" }}><CyclingSquare /></span>
+                <span>Human is thinking...</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resize Handle */}
+        <div
+          onMouseDown={() => setIsDragging(true)}
+          style={{
+            height: "8px",
+            background: isDragging ? "var(--color-gold)" : "var(--color-border)",
+            cursor: "ns-resize",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-gold)"}
+          onMouseLeave={(e) => !isDragging && (e.currentTarget.style.background = "var(--color-border)")}
+        >
+          <div style={{
+            width: "40px",
+            height: "3px",
+            background: "var(--color-text-secondary)",
+            borderRadius: "2px",
+            opacity: 0.5,
+          }} />
         </div>
 
         {/* LLM Debug Log - always visible, shows mode info */}
         <div style={{
-          flex: "2",
+          height: `${100 - gameLogHeight}%`,
           minBlockSize: 0,
           display: "flex",
           flexDirection: "column",
-          borderBlockStart: "1px solid var(--color-border)",
           background: "var(--color-bg-primary)",
           overflow: "hidden",
         }}>
