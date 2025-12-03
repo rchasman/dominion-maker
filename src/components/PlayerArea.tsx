@@ -31,6 +31,8 @@ export function PlayerArea({
   // Determine highlight mode for hand cards
   const getHandCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
     if (!pendingDecision || !isHuman) return undefined;
+    // Only highlight if the decision is for this player (human)
+    if (pendingDecision.player !== "human") return undefined;
 
     // Check if this card is in the options
     const isSelectable = pendingDecision.options.includes(card);
@@ -46,6 +48,8 @@ export function PlayerArea({
   // Determine if a hand card is disabled
   const isHandCardDisabled = (card: CardName): boolean => {
     if (!pendingDecision || !isHuman) return false;
+    // Only disable if the decision is for this player (human)
+    if (pendingDecision.player !== "human") return false;
 
     // During a decision, only cards in options are clickable
     return !pendingDecision.options.includes(card);
