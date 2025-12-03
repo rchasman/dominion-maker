@@ -62,41 +62,34 @@ export class LLMStrategy implements GameStrategy {
       return state;
     }
 
-    // For now, use hardcoded logic for AI decisions (same as engine mode)
-    // TODO: Implement LLM-based decision making for options
-    // The current LLM framework generates Actions, not option selections
-    const { resolveDecision } = await import("../lib/game-engine");
+    this.logger?.({
+      type: "ai-decision-resolving" as any,
+      message: `AI resolving ${decision.type} decision`,
+      data: { decisionType: decision.type, prompt: decision.prompt, optionsCount: decision.options.length },
+    });
 
-    // For discard decisions (e.g., Militia attack), use hardcoded priority
-    if (decision.type === "discard" && decision.metadata?.cardBeingPlayed === "Militia") {
-      const aiPlayer = state.players.ai;
-      const priorities = ["Estate", "Duchy", "Province", "Curse", "Copper"];
-      let selectedCard: CardName | null = null;
+    // Use LLM consensus to generate discard_cards/trash_cards/gain_card action
+    // The LLMs will vote on which cards to select from the options
+    const models = buildModelsFromSettings(this.modelSettings);
+    const newState = await advanceGameStateWithConsensus(state, undefined, models, this.logger);
 
-      for (const priority of priorities) {
-        if (aiPlayer.hand.includes(priority as CardName)) {
-          selectedCard = priority as CardName;
-          break;
-        }
-      }
-
-      if (!selectedCard && aiPlayer.hand.length > 0) {
-        selectedCard = aiPlayer.hand[0];
-      }
-
-      if (selectedCard) {
-        return resolveDecision(state, [selectedCard]);
-      }
+    // If there's still a pending decision (multi-card discard), recursively resolve
+    if (newState.pendingDecision && newState.pendingDecision.player === "ai") {
+      this.logger?.({
+        type: "ai-decision-continuing" as any,
+        message: `AI decision continues (multi-select)`,
+        data: { remaining: newState.pendingDecision.metadata?.totalNeeded },
+      });
+      return this.resolveAIPendingDecision(newState);
     }
 
-    // For other AI decisions, skip if possible or pick first option
-    if (decision.canSkip) {
-      return resolveDecision(state, []);
-    } else if (decision.options.length > 0) {
-      return resolveDecision(state, [decision.options[0] as CardName]);
-    }
-
-    return state;
+    // Decision fully resolved - subPhase cleared by card effect
+    this.logger?.({
+      type: "ai-decision-resolved" as any,
+      message: `AI decision fully resolved`,
+      data: { decisionType: decision.type },
+    });
+    return newState;
   }
 
   getModeName(): string {
