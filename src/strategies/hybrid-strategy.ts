@@ -1,6 +1,6 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState, CardName } from "../types/game-state";
-import { runAITurnWithConsensus, ALL_FAST_MODELS, type LLMLogger } from "../agent/game-agent";
+import { runAITurnWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
 import {
   playAction,
   playTreasure,
@@ -15,14 +15,16 @@ import { isActionCard, isTreasureCard } from "../data/cards";
 
 /**
  * Hybrid Strategy: Uses hard-coded engine for human moves,
- * but delegates to 10-model consensus for AI turns with full validation
+ * but delegates to model consensus for AI turns with full validation
  */
 export class HybridStrategy implements GameStrategy {
   private logger?: LLMLogger;
+  private modelSettings: ModelSettings;
 
-  constructor(_provider?: unknown, logger?: LLMLogger) {
-    // _provider param deprecated - now uses all 10 fast models
+  constructor(_provider?: unknown, logger?: LLMLogger, modelSettings?: ModelSettings) {
+    // _provider param deprecated - now uses model settings
     this.logger = logger;
+    this.modelSettings = modelSettings || { enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]), consensusCount: 8 };
   }
 
   async handleCardPlay(state: GameState, card: CardName): Promise<GameState> {
@@ -87,8 +89,9 @@ export class HybridStrategy implements GameStrategy {
   }
 
   async runAITurn(state: GameState): Promise<GameState> {
-    // Use 10-model consensus for AI turns with validation
-    return runAITurnWithConsensus(state, ALL_FAST_MODELS, this.logger);
+    // Use model consensus for AI turns with validation
+    const models = buildModelsFromSettings(this.modelSettings);
+    return runAITurnWithConsensus(state, models, this.logger);
   }
 
   getModeName(): string {

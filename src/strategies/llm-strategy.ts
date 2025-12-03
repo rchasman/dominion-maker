@@ -1,25 +1,29 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState, CardName } from "../types/game-state";
-import { advanceGameStateWithConsensus, runAITurnWithConsensus, ALL_FAST_MODELS, type LLMLogger } from "../agent/game-agent";
+import { advanceGameStateWithConsensus, runAITurnWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
 
 /**
- * LLM Strategy: Uses 10-model consensus for ALL moves (human and AI)
+ * LLM Strategy: Uses model consensus for ALL moves (human and AI)
  * Every atomic step is driven by MAKER consensus - no game engine
  */
 export class LLMStrategy implements GameStrategy {
   private logger?: LLMLogger;
+  private modelSettings: ModelSettings;
 
-  constructor(_provider?: unknown, logger?: LLMLogger) {
-    // _provider param deprecated - now uses all 10 fast models
+  constructor(_provider?: unknown, logger?: LLMLogger, modelSettings?: ModelSettings) {
+    // _provider param deprecated - now uses model settings
     this.logger = logger;
+    this.modelSettings = modelSettings || { enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]), consensusCount: 8 };
   }
 
   async handleCardPlay(state: GameState, card: CardName): Promise<GameState> {
-    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, models, this.logger);
   }
 
   async handleBuyCard(state: GameState, card: CardName): Promise<GameState> {
-    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, models, this.logger);
   }
 
   async handlePlayAllTreasures(state: GameState): Promise<GameState> {
@@ -33,19 +37,23 @@ export class LLMStrategy implements GameStrategy {
       return state;
     }
 
-    return advanceGameStateWithConsensus(state, { selectedCards: treasures }, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return advanceGameStateWithConsensus(state, { selectedCards: treasures }, models, this.logger);
   }
 
   async handleUnplayTreasure(state: GameState, card: CardName): Promise<GameState> {
-    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return advanceGameStateWithConsensus(state, { selectedCards: [card] }, models, this.logger);
   }
 
   async handleEndPhase(state: GameState): Promise<GameState> {
-    return advanceGameStateWithConsensus(state, undefined, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return advanceGameStateWithConsensus(state, undefined, models, this.logger);
   }
 
   async runAITurn(state: GameState): Promise<GameState> {
-    return runAITurnWithConsensus(state, ALL_FAST_MODELS, this.logger);
+    const models = buildModelsFromSettings(this.modelSettings);
+    return runAITurnWithConsensus(state, models, this.logger);
   }
 
   getModeName(): string {

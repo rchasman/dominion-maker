@@ -35,8 +35,53 @@ export const ALL_FAST_MODELS: ModelProvider[] = [
   "ministral-3b",
 ];
 
+// Available unique models
+export const AVAILABLE_MODELS: ModelProvider[] = [
+  "claude-haiku",
+  "claude-sonnet",
+  "gpt-4o-mini",
+  "gpt-4o",
+  "gemini-2.5-flash-lite",
+  "ministral-3b",
+];
+
+// Model settings for consensus
+export interface ModelSettings {
+  enabledModels: Set<ModelProvider>;
+  consensusCount: number;
+}
+
+export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
+  enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]),
+  consensusCount: 8,
+};
+
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
+
+// Build models array from settings by shuffling and duplicating enabled models
+export function buildModelsFromSettings(settings: ModelSettings): ModelProvider[] {
+  const enabled = Array.from(settings.enabledModels);
+
+  if (enabled.length === 0) {
+    console.warn("No models enabled, using defaults");
+    return ALL_FAST_MODELS;
+  }
+
+  // Create array by cycling through enabled models
+  const models: ModelProvider[] = [];
+  for (let i = 0; i < settings.consensusCount; i++) {
+    models.push(enabled[i % enabled.length]);
+  }
+
+  // Shuffle the array for randomness
+  for (let i = models.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [models[i], models[j]] = [models[j], models[i]];
+  }
+
+  return models;
+}
 
 function getModelName(provider: ModelProvider): string {
   switch (provider) {
@@ -104,7 +149,7 @@ export async function advanceGameState(
   currentState: GameState,
   humanChoice?: { selectedCards: string[] },
   provider: ModelProvider = "claude-haiku",
-  logger?: LLMLogger
+  _logger?: LLMLogger
 ): Promise<GameState> {
   const modelName = getModelName(provider);
   const startTime = performance.now();

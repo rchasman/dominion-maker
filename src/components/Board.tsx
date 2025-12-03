@@ -7,6 +7,8 @@ import { Card } from "./Card";
 import { LogEntry } from "./LogEntry";
 import { LLMLog, type LLMLogEntry } from "./LLMLog";
 import { CARDS } from "../data/cards";
+import { ModelSettingsAccordion } from "./ModelSettings";
+import type { ModelSettings } from "../agent/game-agent";
 
 interface BoardProps {
   state: GameState;
@@ -23,6 +25,8 @@ interface BoardProps {
   onGameModeChange: (mode: GameMode) => void;
   onNewGame: () => void;
   isProcessing: boolean;
+  modelSettings: ModelSettings;
+  onModelSettingsChange: (settings: ModelSettings) => void;
 }
 
 function countVP(cards: CardName[]): number {
@@ -172,6 +176,8 @@ export function Board({
   onGameModeChange,
   onNewGame,
   isProcessing,
+  modelSettings,
+  onModelSettingsChange,
 }: BoardProps) {
   const isHumanTurn = state.activePlayer === "human";
   const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0;
@@ -709,6 +715,16 @@ export function Board({
             <span>You: <strong style={{ color: "var(--color-victory)" }}>{humanVP} VP</strong></span>
             <span>Opp: <strong style={{ color: "var(--color-ai)" }}>{opponentVP} VP</strong></span>
           </div>
+
+          {/* Model Settings - only show for LLM/Hybrid modes */}
+          {(gameMode === "llm" || gameMode === "hybrid") && (
+            <div style={{ marginBlockStart: "var(--space-3)" }}>
+              <ModelSettingsAccordion
+                settings={modelSettings}
+                onChange={onModelSettingsChange}
+              />
+            </div>
+          )}
 
           {/* New Game Button */}
           <button

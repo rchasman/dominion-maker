@@ -8,10 +8,13 @@ import { EngineStrategy } from "./strategies/engine-strategy";
 import { LLMStrategy } from "./strategies/llm-strategy";
 import { HybridStrategy } from "./strategies/hybrid-strategy";
 import type { LLMLogEntry } from "./components/LLMLog";
+import type { ModelSettings, ModelProvider } from "./agent/game-agent";
+import { DEFAULT_MODEL_SETTINGS } from "./agent/game-agent";
 
 const STORAGE_KEY = "dominion-maker-game-state";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
 const STORAGE_LLM_LOGS_KEY = "dominion-maker-llm-logs";
+const STORAGE_MODEL_SETTINGS_KEY = "dominion-maker-model-settings";
 
 function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -19,6 +22,7 @@ function App() {
   const [gameMode, setGameMode] = useState<GameMode>("engine");
   const [isProcessing, setIsProcessing] = useState(false);
   const [llmLogs, setLlmLogs] = useState<LLMLogEntry[]>([]);
+  const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
   const modeRestoredFromStorage = useRef(false);
 
   // Restore game state from localStorage on mount
@@ -27,6 +31,7 @@ function App() {
       const savedState = localStorage.getItem(STORAGE_KEY);
       const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
       const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
+      const savedSettings = localStorage.getItem(STORAGE_MODEL_SETTINGS_KEY);
 
       if (savedState) {
         const parsed = JSON.parse(savedState);
@@ -42,12 +47,23 @@ function App() {
         const parsedLogs = JSON.parse(savedLogs);
         setLlmLogs(parsedLogs);
       }
+
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        // Convert enabledModels array back to Set
+        const settings: ModelSettings = {
+          enabledModels: new Set(parsed.enabledModels as ModelProvider[]),
+          consensusCount: parsed.consensusCount,
+        };
+        setModelSettings(settings);
+      }
     } catch (error) {
       console.error("Failed to restore game state:", error);
       // Clear corrupted data
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_MODE_KEY);
       localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
+      localStorage.removeItem(STORAGE_MODEL_SETTINGS_KEY);
     }
   }, []);
 
@@ -82,6 +98,20 @@ function App() {
     }
   }, [llmLogs]);
 
+  // Save model settings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      // Convert Set to array for JSON serialization
+      const serializable = {
+        enabledModels: Array.from(modelSettings.enabledModels),
+        consensusCount: modelSettings.consensusCount,
+      };
+      localStorage.setItem(STORAGE_MODEL_SETTINGS_KEY, JSON.stringify(serializable));
+    } catch (error) {
+      console.error("Failed to save model settings:", error);
+    }
+  }, [modelSettings]);
+
   // Create logger for LLM strategy
   const llmLogger = useCallback((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
     const logEntry: LLMLogEntry = {
@@ -97,17 +127,18 @@ function App() {
     if (gameMode === "engine") {
       return new EngineStrategy();
     } else if (gameMode === "llm") {
-      return new LLMStrategy("openai", llmLogger);
+      return new LLMStrategy("openai", llmLogger, modelSettings);
     } else {
       // hybrid mode
-      return new HybridStrategy("openai", llmLogger);
+      return new HybridStrategy("openai", llmLogger, modelSettings);
     }
-  }, [gameMode, llmLogger]);
+  }, [gameMode, llmLogger, modelSettings]);
 
   const startGame = useCallback(() => {
-    // Clear localStorage for fresh game
+    // Clear localStorage for fresh game (but keep model settings and game mode)
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
+    // Note: intentionally NOT clearing STORAGE_MODEL_SETTINGS_KEY to preserve user preferences
 
     setGameState(initializeGame(true));
     setSelectedCards([]);
@@ -392,6 +423,8 @@ function App() {
       onGameModeChange={setGameMode}
       onNewGame={startGame}
       isProcessing={isProcessing}
+      modelSettings={modelSettings}
+      onModelSettingsChange={setModelSettings}
     />
   );
 }
