@@ -24,6 +24,7 @@ function App() {
   const [llmLogs, setLlmLogs] = useState<LLMLogEntry[]>([]);
   const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
   const modeRestoredFromStorage = useRef(false);
+  const settingsRestoredFromStorage = useRef(false);
 
   // Restore game state from localStorage on mount
   useEffect(() => {
@@ -55,6 +56,7 @@ function App() {
           enabledModels: new Set(parsed.enabledModels as ModelProvider[]),
           consensusCount: parsed.consensusCount,
         };
+        settingsRestoredFromStorage.current = true;
         setModelSettings(settings);
       }
     } catch (error) {
@@ -98,8 +100,12 @@ function App() {
     }
   }, [llmLogs]);
 
-  // Save model settings to localStorage whenever they change
+  // Save model settings to localStorage whenever they change (skip restoration echo)
   useEffect(() => {
+    if (settingsRestoredFromStorage.current) {
+      settingsRestoredFromStorage.current = false;
+      return;
+    }
     try {
       // Convert Set to array for JSON serialization
       const serializable = {
