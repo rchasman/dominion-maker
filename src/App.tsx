@@ -11,6 +11,7 @@ import type { LLMLogEntry } from "./components/LLMLog";
 
 const STORAGE_KEY = "dominion-maker-game-state";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
+const STORAGE_LLM_LOGS_KEY = "dominion-maker-llm-logs";
 
 function App() {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -18,13 +19,14 @@ function App() {
   const [gameMode, setGameMode] = useState<GameMode>("engine");
   const [isProcessing, setIsProcessing] = useState(false);
   const [llmLogs, setLlmLogs] = useState<LLMLogEntry[]>([]);
-  const isInitialMount = useRef(true);
+  const modeRestoredFromStorage = useRef(false);
 
   // Restore game state from localStorage on mount
   useEffect(() => {
     try {
       const savedState = localStorage.getItem(STORAGE_KEY);
       const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
+      const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
 
       if (savedState) {
         const parsed = JSON.parse(savedState);
@@ -32,13 +34,20 @@ function App() {
       }
 
       if (savedMode && (savedMode === "engine" || savedMode === "llm" || savedMode === "hybrid")) {
+        modeRestoredFromStorage.current = true;
         setGameMode(savedMode);
+      }
+
+      if (savedLogs) {
+        const parsedLogs = JSON.parse(savedLogs);
+        setLlmLogs(parsedLogs);
       }
     } catch (error) {
       console.error("Failed to restore game state:", error);
       // Clear corrupted data
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(STORAGE_MODE_KEY);
+      localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
     }
   }, []);
 
@@ -53,14 +62,25 @@ function App() {
     }
   }, [gameState]);
 
-  // Save game mode to localStorage whenever it changes (skip initial mount)
+  // Save game mode to localStorage whenever it changes (skip restoration echo)
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (modeRestoredFromStorage.current) {
+      modeRestoredFromStorage.current = false;
       return;
     }
     localStorage.setItem(STORAGE_MODE_KEY, gameMode);
   }, [gameMode]);
+
+  // Save LLM logs to localStorage whenever they change
+  useEffect(() => {
+    if (llmLogs.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_LLM_LOGS_KEY, JSON.stringify(llmLogs));
+      } catch (error) {
+        console.error("Failed to save LLM logs:", error);
+      }
+    }
+  }, [llmLogs]);
 
   // Create logger for LLM strategy
   const llmLogger = useCallback((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
@@ -87,6 +107,7 @@ function App() {
   const startGame = useCallback(() => {
     // Clear localStorage for fresh game
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
 
     setGameState(initializeGame(true));
     setSelectedCards([]);
