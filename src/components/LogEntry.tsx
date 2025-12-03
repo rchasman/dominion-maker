@@ -10,7 +10,7 @@ interface LogEntryProps {
   parentPrefix?: string;
 }
 
-function LogEntryContent({ entry }: { entry: LogEntryType }) {
+function LogEntryContent({ entry, depth = 0 }: { entry: LogEntryType; depth?: number }) {
   switch (entry.type) {
     case "turn-start":
       return (
@@ -166,7 +166,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
 
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>gains</Verb>{" "}
+          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          <Verb>gains</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
             {entry.card}
           </span>{suffix}{coinDisplay}{vpDisplay}
@@ -178,7 +179,8 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
       if (entry.cards) {
         return (
           <span>
-            <PlayerName player={entry.player} /> <Verb>discards</Verb> {entry.cards.map((card, i) => (
+            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            <Verb>discards</Verb> {entry.cards.map((card, i) => (
               <span key={i}>
                 {i > 0 && ", "}
                 <CardNameSpan card={card} />
@@ -189,28 +191,31 @@ function LogEntryContent({ entry }: { entry: LogEntryType }) {
       }
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>discards</Verb> {entry.count} cards
+          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          <Verb>discards</Verb> {entry.count} cards
         </span>
       );
 
     case "trash-card":
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>trashes</Verb> <CardNameSpan card={entry.card} />
+          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          <Verb>trashes</Verb> <CardNameSpan card={entry.card} />
         </span>
       );
 
     case "shuffle-deck":
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>shuffles</Verb> their deck
+          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          <Verb>shuffles</Verb> {depth > 0 ? "deck" : "their deck"}
         </span>
       );
 
     case "end-turn":
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>ends turn</Verb>. <PlayerName player={entry.nextPlayer} />'s turn.
+          <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
         </span>
       );
 
@@ -285,13 +290,13 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
     return (
       <>
         <div>
-          <LogEntryContent entry={entry} />
+          <LogEntryContent entry={entry} depth={depth} />
         </div>
         {childrenToRender?.map((child, i) => (
           <LogEntry
             key={i}
             entry={child}
-            depth={0}
+            depth={1}
             isLast={i === childrenToRender.length - 1}
             parentPrefix=""
           />
@@ -320,7 +325,7 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "" }:
             {prefix}
           </span>
         )}
-        <LogEntryContent entry={entry} />
+        <LogEntryContent entry={entry} depth={depth} />
       </div>
       {childrenToRender?.map((child, i) => (
         <LogEntry
