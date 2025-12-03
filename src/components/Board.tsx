@@ -56,10 +56,10 @@ function aggregateLogEntries(log: LogEntryType[]): LogEntryType[] {
   while (i < log.length) {
     const current = log[i];
 
-    // Only aggregate play-treasure, play-action, buy-card, and gain-card entries
+    // Only aggregate play-treasure, buy-card, and gain-card entries
+    // NOT play-action since each action has unique effects (different draws, etc)
     if (
       current.type === "play-treasure" ||
-      current.type === "play-action" ||
       current.type === "buy-card" ||
       current.type === "gain-card"
     ) {
@@ -123,7 +123,7 @@ function aggregateLogEntries(log: LogEntryType[]): LogEntryType[] {
             ],
           });
         } else {
-          // play-action or gain-card
+          // gain-card
           result.push({
             ...current,
             children: [
