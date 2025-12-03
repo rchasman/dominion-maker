@@ -51,6 +51,22 @@ export function VPValue({ vp }: { vp: number }) {
   );
 }
 
+export function ActionValue({ count }: { count: number }) {
+  return (
+    <span style={{ color: "#e040fb", fontWeight: 700 }}>
+      +{count} {count === 1 ? "Action" : "Actions"}
+    </span>
+  );
+}
+
+export function BuyValue({ count }: { count: number }) {
+  return (
+    <span style={{ color: "var(--color-buy-phase)", fontWeight: 700 }}>
+      +{count} {count === 1 ? "Buy" : "Buys"}
+    </span>
+  );
+}
+
 export function Verb({ children }: { children: React.ReactNode }) {
   return (
     <span style={{ color: "var(--color-text-primary)", fontStyle: "italic" }}>

@@ -1,5 +1,5 @@
 import type { LogEntry as LogEntryType } from "../types/game-state";
-import { PlayerName, CardNameSpan, CoinValue, VPValue, Verb, getCardColor } from "./LogFormatters";
+import { PlayerName, CardNameSpan, CoinValue, VPValue, ActionValue, BuyValue, Verb, getCardColor } from "./LogFormatters";
 import { CARDS } from "../data/cards";
 import type { ReactNode } from "react";
 
@@ -263,14 +263,14 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
     case "get-actions":
       return (
         <span>
-          <Verb>gets</Verb> +{entry.count} {entry.count === 1 ? "Action" : "Actions"}
+          <Verb>gets</Verb> <ActionValue count={entry.count} />
         </span>
       );
 
     case "get-buys":
       return (
         <span>
-          <Verb>gets</Verb> +{entry.count} {entry.count === 1 ? "Buy" : "Buys"}
+          <Verb>gets</Verb> <BuyValue count={entry.count} />
         </span>
       );
 
