@@ -295,7 +295,7 @@ export const FIRST_GAME_KINGDOM: CardName[] = [
 
 export function getCardImageUrl(cardName: CardName): string {
   // Handle spaces in card names
-  const urlName = cardName.replace(/ /g, "%20");
+  const urlName = cardName.replace(/ /g, "_");
   return `https://robinzigmond.github.io/Dominion-app/images/card_images/${urlName}.jpg`;
 }
 
