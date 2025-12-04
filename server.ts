@@ -47,9 +47,18 @@ const server = Bun.serve({
           ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
           : "";
 
+        // Build appropriate prompt based on whether there's a pending decision
+        let promptQuestion: string;
+        if (currentState.pendingDecision) {
+          const decision = currentState.pendingDecision;
+          promptQuestion = `${decision.player.toUpperCase()} must respond to: ${decision.prompt}\nWhat action should ${decision.player} take?`;
+        } else {
+          promptQuestion = `What is the next atomic action for ${currentState.activePlayer}?`;
+        }
+
         const userMessage = humanChoice
-          ? `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\nWhat is the next atomic action?`
-          : `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
+          ? `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
+          : `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 
         const result = await generateObject({
           model,

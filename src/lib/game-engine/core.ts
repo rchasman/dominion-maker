@@ -3,6 +3,36 @@ import { CARDS, isTreasureCard, isActionCard } from "../../data/cards";
 
 export function getLegalActions(state: GameState): Array<{ type: string; card?: CardName; cards?: CardName[] }> {
   const actions: Array<{ type: string; card?: CardName; cards?: CardName[] }> = [];
+
+  // PRIORITY: Handle pending decisions first (e.g., Militia forcing opponent to discard)
+  if (state.pendingDecision) {
+    const decision = state.pendingDecision;
+
+    switch (decision.type) {
+      case "discard":
+        for (const card of decision.options) {
+          actions.push({ type: "discard_cards", cards: [card as CardName] });
+        }
+        break;
+      case "trash":
+        for (const card of decision.options) {
+          actions.push({ type: "trash_cards", cards: [card as CardName] });
+        }
+        break;
+      case "gain":
+        for (const card of decision.options) {
+          actions.push({ type: "gain_card", card: card as CardName });
+        }
+        break;
+    }
+
+    if (decision.canSkip) {
+      actions.push({ type: "end_phase" });
+    }
+
+    return actions;
+  }
+
   const player = state.activePlayer;
   const playerState = state.players[player];
 
