@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import type { GameMode } from "../../types/game-mode";
 import { CARDS } from "../../data/cards";
-import type { CardName } from "../../types/game-state";
+import type { CardName, TurnAction } from "../../types/game-state";
+import type { Action } from "../../types/action";
 import { getModelColor } from "../../config/models";
-import type { LLMLogEntry, ModelStatus, Turn } from "./types";
+import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, VotingResult, TimingData } from "./types";
 
 export type { LLMLogEntry } from "./types";
 
@@ -99,14 +100,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           gameTurn: entry.data?.turn,
           decisions: [],
           pending: true,
-          pendingData: entry.data as { providers: string[]; totalModels: number; phase: string; gameState?: any } | undefined,
+          pendingData: entry.data as PendingData | undefined,
           modelStatuses: new Map(),
           consensusStartTime: entry.timestamp,
         };
       } else {
         // Mark existing turn as pending (new action starting)
         buildingTurn.pending = true;
-        buildingTurn.pendingData = entry.data as { providers: string[]; totalModels: number; phase: string; gameState?: any } | undefined;
+        buildingTurn.pendingData = entry.data as PendingData | undefined;
         buildingTurn.modelStatuses = new Map();
         buildingTurn.consensusStartTime = entry.timestamp;
       }
@@ -247,7 +248,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   };
 
   // Render game state context for diagnostics
-  const renderGameStateContext = (gameState: any, decisions?: Turn["decisions"]) => {
+  const renderGameStateContext = (gameState: GameStateSnapshot | undefined, decisions?: Turn["decisions"]) => {
     if (!gameState) return null;
 
     const { phase, actions, buys, coins, hand, handCounts, inPlay, turnHistory } = gameState;
@@ -389,7 +390,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               Actions This Turn ({turnHistory.length})
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {turnHistory.map((action: any, idx: number) => {
+              {turnHistory.map((action: TurnAction, idx: number) => {
                 const actionStr = action.type === "play_action" || action.type === "play_treasure" || action.type === "buy_card" || action.type === "gain_card"
                   ? `${action.type}(${action.card})`
                   : action.type;
@@ -451,13 +452,13 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     );
   };
 
-  const renderConsensusVoting = (data: any, liveStatuses?: Map<number, ModelStatus>, totalModels?: number) => {
-    let allResults: Array<{ action: any; votes: number; voters: string[]; valid?: boolean }>;
+  const renderConsensusVoting = (data: ConsensusVotingData | null | undefined, liveStatuses?: Map<number, ModelStatus>, totalModels?: number) => {
+    let allResults: Array<{ action: Action; votes: number; voters: string[]; valid?: boolean }>;
     let maxVotes: number;
 
     if (liveStatuses && liveStatuses.size > 0) {
       // Build voting data from live model statuses
-      const voteGroups = new Map<string, { action: any; voters: string[] }>();
+      const voteGroups = new Map<string, { action: Action; voters: string[] }>();
       const completedStatuses = Array.from(liveStatuses.values()).filter(s => s.completed);
 
       for (const status of completedStatuses) {
@@ -517,23 +518,23 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Collect all unique models for legend
     const allModels = new Set<string>();
-    allResults.forEach((result: any) => {
-      result.voters.forEach((voter: string) => allModels.add(voter));
+    allResults.forEach((result) => {
+      result.voters.forEach((voter) => allModels.add(voter));
     });
 
     // Calculate vote count width based on longest vote string (e.g., "10×")
-    const longestVoteString = Math.max(...allResults.map((r: any) => `${r.votes}×`.length));
+    const longestVoteString = Math.max(...allResults.map((r) => `${r.votes}×`.length));
     const voteCountWidth = longestVoteString * 7; // ~7px per char at 0.75rem
 
     // Calculate percentage width based on longest percentage string (e.g., "100%")
-    const longestPercentageString = Math.max(...allResults.map((r: any) => {
+    const longestPercentageString = Math.max(...allResults.map((r) => {
       const pct = (r.votes / maxVotes) * 100;
       return `${pct.toFixed(0)}%`.length;
     }));
     const percentageWidth = longestPercentageString * 7.5; // ~7.5px per char at 0.7rem
 
     // Calculate max voter circles needed for any result
-    const maxVoterCircles = Math.max(...allResults.map((r: any) => r.voters.length));
+    const maxVoterCircles = Math.max(...allResults.map((r) => r.voters.length));
     const voterCirclesWidth = maxVoterCircles * 11; // ~11px per circle with gap
 
     // Calculate fixed bar area width (normalize to when max circles are present)
@@ -543,11 +544,11 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     return {
       content: (
         <div style={{ marginTop: "-1px" }}>
-          {allResults.map((result: any, idx: number) => {
+          {allResults.map((result, idx) => {
             const percentage = (result.votes / maxVotes) * 100;
             const isWinner = idx === 0;
             // Strip reasoning from display
-            const { reasoning, ...actionCore } = result.action || {};
+            const { reasoning, ...actionCore } = result.action;
             const actionStr = JSON.stringify(actionCore);
 
             // Check if action is valid (winner is always valid since it was executed)
@@ -707,7 +708,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     };
   };
 
-  const renderTimings = (data: any, liveStatuses?: Map<number, ModelStatus>) => {
+  const renderTimings = (data: TimingData | null | undefined, liveStatuses?: Map<number, ModelStatus>) => {
     // Build timings array from either final data or live statuses
     let timings: Array<{ provider: string; duration: number; pending?: boolean; failed?: boolean; aborted?: boolean }>;
 
@@ -837,12 +838,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     );
   };
 
-  const renderReasoning = (data: any) => {
+  const renderReasoning = (data: ConsensusVotingData | null | undefined) => {
     if (!data?.allResults) return null;
 
     return (
       <div>
-        {data.allResults.map((result: any, idx: number) => {
+        {data.allResults.map((result, idx) => {
           const isWinner = idx === 0;
           const actionStr = result.action.type === "play_action" || result.action.type === "play_treasure" || result.action.type === "buy_card" || result.action.type === "gain_card"
             ? `${result.action.type}(${result.action.card})`
@@ -897,7 +898,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   };
 
   // Unified reasoning pane renderer
-  const renderReasoningPaneContent = (modelStatuses?: Map<number, ModelStatus>, votingData?: any) => {
+  const renderReasoningPaneContent = (modelStatuses?: Map<number, ModelStatus>, votingData?: ConsensusVotingData | null) => {
     // For completed decisions, use votingData
     if (votingData?.allResults) {
       return renderReasoning(votingData);
@@ -910,7 +911,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     if (completedStatuses.length === 0) return <div style={{ color: "var(--color-text-secondary)", fontSize: "0.7rem" }}>Waiting for models...</div>;
 
     // Group by action (excluding reasoning)
-    const groups = new Map<string, { action: any; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
+    const groups = new Map<string, { action: Action; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
 
     for (const status of completedStatuses) {
       if (!status.action) continue;
@@ -995,10 +996,10 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     totalModels,
     decisions,
   }: {
-    votingData?: any;
-    timingData?: any;
+    votingData?: ConsensusVotingData | null;
+    timingData?: TimingData | null;
     modelStatuses?: Map<number, ModelStatus>;
-    gameStateData?: any;
+    gameStateData?: GameStateSnapshot;
     totalModels?: number;
     decisions?: Turn["decisions"];
   }) => {
