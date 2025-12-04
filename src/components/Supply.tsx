@@ -33,6 +33,10 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
     return isGainable ? "gain" : undefined;
   };
 
+  // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
+  const sorted = [...state.kingdomCards].sort((a, b) => CARDS[a].cost - CARDS[b].cost);
+  const sortedKingdom = [...sorted.slice(5), ...sorted.slice(0, 5)];
+
   return (
     <div style={{
       display: "grid",
@@ -115,7 +119,7 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
             gap: "0.125rem",
             justifyContent: "center",
           }}>
-            {state.kingdomCards.map((card) => (
+            {sortedKingdom.map((card) => (
               <Card
                 key={card}
                 name={card}
