@@ -182,6 +182,11 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     turns.push(buildingTurn);
   }
 
+  // Reset userNavigatedAway when a new turn starts
+  useEffect(() => {
+    setUserNavigatedAway(false);
+  }, [turns.length]);
+
   // Auto-advance to latest turn and action when new data arrives
   useEffect(() => {
     if (turns.length > 0) {
