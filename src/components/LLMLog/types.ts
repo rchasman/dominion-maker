@@ -1,7 +1,7 @@
 export interface LLMLogEntry {
   id: string;
   timestamp: number;
-  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted";
+  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted" | "ai-decision-resolving" | "ai-decision-continuing" | "ai-decision-resolved";
   message: string;
   data?: Record<string, any>;
   children?: LLMLogEntry[];
@@ -34,4 +34,6 @@ export interface Turn {
   pendingData?: { providers: string[]; totalModels: number; phase: string; gameState?: any };
   modelStatuses?: Map<number, ModelStatus>;
   consensusStartTime?: number;
+  isSubPhase?: boolean;
+  subPhaseLabel?: string; // e.g., "AI Response to Militia"
 }

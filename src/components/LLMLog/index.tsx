@@ -56,7 +56,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
 
-    // Start a new turn
+    // Start a new turn for AI's main turn
     if (entry.type === "ai-turn-start") {
       if (buildingTurn && buildingTurn.decisions.length > 0) {
         turns.push(buildingTurn);
@@ -65,6 +65,27 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         turnNumber: turns.length + 1,
         gameTurn: entry.data?.turn,
         decisions: [],
+      };
+      stepNumber = 0;
+    }
+
+    // Start a new turn for AI sub-phase responses (e.g., responding to Militia during human's turn)
+    if (entry.type === "ai-decision-resolving") {
+      if (buildingTurn && buildingTurn.decisions.length > 0) {
+        turns.push(buildingTurn);
+      }
+      const decisionType = entry.data?.decisionType || "decision";
+      const prompt = entry.data?.prompt || "";
+      // Extract card name from prompt if present (e.g., "Militia attack: Discard...")
+      const cardMatch = prompt.match(/^(\w+)\s+attack:/i);
+      const cardName = cardMatch ? cardMatch[1] : null;
+
+      buildingTurn = {
+        turnNumber: turns.length + 1,
+        gameTurn: entry.data?.turn,
+        decisions: [],
+        isSubPhase: true,
+        subPhaseLabel: cardName ? `Response to ${cardName}` : `AI ${decisionType}`,
       };
       stepNumber = 0;
     }
@@ -1122,7 +1143,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 userSelect: "none"
               }}>
                 <span>
-                  {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                  {currentTurn.isSubPhase ? (
+                    <span style={{ color: "var(--color-victory)" }}>
+                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                    </span>
+                  ) : (
+                    currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `
+                  )}
                   Action {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
                     ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
@@ -1268,7 +1296,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 userSelect: "none"
               }}>
                 <span>
-                  {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                  {currentTurn.isSubPhase ? (
+                    <span style={{ color: "var(--color-victory)" }}>
+                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                    </span>
+                  ) : (
+                    currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `
+                  )}
                   Action {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
                     ({((currentDecision.timingEntry?.data?.parallelDuration || 0) / 1000).toFixed(2)}s)
