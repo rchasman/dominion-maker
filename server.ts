@@ -3,6 +3,7 @@ import { GameState } from "./src/types/game-state";
 import { Action } from "./src/types/action";
 import { DOMINION_SYSTEM_PROMPT } from "./src/agent/system-prompt";
 import { MODEL_MAP } from "./src/config/models";
+import { buildStrategicContext } from "./src/agent/strategic-context";
 
 const PORT = 5174;
 
@@ -47,6 +48,9 @@ const server = Bun.serve({
           ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
           : "";
 
+        // Build strategic context - human-readable game analysis
+        const strategicContext = buildStrategicContext(currentState);
+
         // Build appropriate prompt based on whether there's a pending decision
         let promptQuestion: string;
         if (currentState.pendingDecision) {
@@ -57,8 +61,8 @@ const server = Bun.serve({
         }
 
         const userMessage = humanChoice
-          ? `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
-          : `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
+          ? `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
+          : `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 
         const result = await generateObject({
           model,
