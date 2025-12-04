@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { GameMode } from "../../types/game-mode";
 import { CARDS } from "../../data/cards";
+import type { CardName } from "../../types/game-state";
 import { getModelColor } from "../../config/models";
 import type { LLMLogEntry, ModelStatus, Turn } from "./types";
 
@@ -14,14 +15,38 @@ interface LLMLogProps {
 export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [currentActionIndex, setCurrentActionIndex] = useState(0);
-  const [activePane, setActivePane] = useState<"voting" | "performance">("performance");
+  const [activePaneState, setActivePaneState] = useState<"voting" | "performance" | "state" | "reasoning">(() => {
+    const saved = localStorage.getItem("llm-log-active-pane");
+    return (saved as "voting" | "performance" | "state" | "reasoning" | null) || "voting";
+  });
   const [now, setNow] = useState(Date.now());
+  const [userNavigatedAway, setUserNavigatedAway] = useState(false);
 
-  // Update timer for live countups
+  const activePane = activePaneState;
+  const setActivePane = (pane: "voting" | "performance" | "state" | "reasoning") => {
+    setActivePaneState(pane);
+    localStorage.setItem("llm-log-active-pane", pane);
+  };
+
+  // Update timer for live countups - only when there are pending operations
   useEffect(() => {
+    // Check if there are any consensus-start entries without corresponding consensus-complete
+    const hasPending = entries.some((entry, idx) => {
+      if (entry.type === 'consensus-start') {
+        // Look for matching consensus-complete after this index
+        const hasComplete = entries.slice(idx + 1).some(e =>
+          e.type === 'consensus-complete' || e.type === 'consensus-model-aborted'
+        );
+        return !hasComplete;
+      }
+      return false;
+    });
+
+    if (!hasPending) return;
+
     const interval = setInterval(() => setNow(Date.now()), 50);
     return () => clearInterval(interval);
-  }, []);
+  }, [entries]);
 
   // Extract turns and decisions from entries
   const turns: Turn[] = [];
@@ -53,14 +78,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           gameTurn: entry.data?.turn,
           decisions: [],
           pending: true,
-          pendingData: entry.data,
+          pendingData: entry.data as { providers: string[]; totalModels: number; phase: string; gameState?: any } | undefined,
           modelStatuses: new Map(),
           consensusStartTime: entry.timestamp,
         };
       } else {
         // Mark existing turn as pending (new action starting)
         buildingTurn.pending = true;
-        buildingTurn.pendingData = entry.data;
+        buildingTurn.pendingData = entry.data as { providers: string[]; totalModels: number; phase: string; gameState?: any } | undefined;
         buildingTurn.modelStatuses = new Map();
         buildingTurn.consensusStartTime = entry.timestamp;
       }
@@ -81,7 +106,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Track individual model completions
     if (entry.type === "consensus-model-complete" && buildingTurn) {
-      const { provider, index, duration, success, action } = entry.data || {};
+      const { index, duration, success, action } = entry.data || {};
       if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
         const status = buildingTurn.modelStatuses.get(index)!;
         status.duration = duration;
@@ -141,17 +166,17 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     if (turns.length > 0) {
       const lastTurnIndex = turns.length - 1;
       const lastTurn = turns[lastTurnIndex];
-      // If turn is pending, point to the pending action (beyond last completed decision)
-      // Otherwise point to last completed decision
       const lastActionIndex = lastTurn.pending
         ? lastTurn.decisions.length  // Point beyond last decision to show pending
         : lastTurn.decisions.length - 1;
 
-      // Always jump to latest when new data comes in
-      setCurrentTurnIndex(lastTurnIndex);
-      setCurrentActionIndex(lastActionIndex);
+      // Jump to latest unless user has manually navigated away
+      if (!userNavigatedAway) {
+        setCurrentTurnIndex(lastTurnIndex);
+        setCurrentActionIndex(lastActionIndex);
+      }
     }
-  }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending]);
+  }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending, userNavigatedAway]);
 
   const currentTurn = turns[currentTurnIndex];
   const currentDecision = currentTurn?.decisions[currentActionIndex];
@@ -180,12 +205,18 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const handlePrevAction = () => {
     if (hasPrevAction) {
       setCurrentActionIndex(currentActionIndex - 1);
+      setUserNavigatedAway(true);
     }
   };
 
   const handleNextAction = () => {
     if (hasNextAction) {
       setCurrentActionIndex(currentActionIndex + 1);
+      // If navigating to the latest, clear the flag
+      const maxAction = currentTurn?.pending ? currentTurn.decisions.length : Math.max(0, (currentTurn?.decisions.length || 1) - 1);
+      if (currentActionIndex + 1 >= maxAction) {
+        setUserNavigatedAway(false);
+      }
     }
   };
 
@@ -193,11 +224,11 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const renderGameStateContext = (gameState: any) => {
     if (!gameState) return null;
 
-    const { phase, actions, buys, coins, hand, handCounts, inPlay } = gameState;
+    const { phase, actions, buys, coins, hand, handCounts, inPlay, turnHistory } = gameState;
 
     // Helper to get card color
-    const getCardColor = (cardName: string) => {
-      const cardTypes = (CARDS as any)[cardName]?.types || [];
+    const getCardColor = (cardName: CardName) => {
+      const cardTypes = CARDS[cardName]?.types || [];
       if (cardTypes.includes("curse")) return "var(--color-curse)";
       if (cardTypes.includes("victory")) return "var(--color-victory)";
       if (cardTypes.includes("treasure")) return "var(--color-gold)";
@@ -207,36 +238,32 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     return (
       <div style={{
-        marginTop: "var(--space-4)",
-        padding: "var(--space-3)",
-        background: "var(--color-bg-secondary)",
-        borderRadius: "4px",
-        fontSize: "0.7rem",
+        fontSize: "0.75rem",
         fontFamily: "monospace",
       }}>
         <div style={{
           color: "var(--color-text-secondary)",
           fontWeight: 600,
-          marginBottom: "var(--space-2)",
+          marginBottom: "var(--space-4)",
           textTransform: "uppercase",
           fontSize: "0.65rem",
           letterSpacing: "0.05em",
         }}>
-          Game State Context
+          Game State
         </div>
 
         {/* Resources Line - RED WARNING when coins=0 in buy phase */}
         <div style={{
           display: "flex",
           gap: "var(--space-4)",
-          marginBottom: "var(--space-2)",
+          marginBottom: "var(--space-4)",
           padding: "var(--space-2)",
           background: coins === 0 && phase === "buy" ? "rgba(239, 68, 68, 0.1)" : "transparent",
           borderRadius: "3px",
         }}>
           <span>
             <span style={{ color: "var(--color-text-secondary)" }}>Phase:</span>{" "}
-            <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>{phase}</span>
+            <span style={{ color: "var(--color-text-primary)", fontWeight: 600, display: "inline-block", minWidth: "50px" }}>{phase}</span>
           </span>
           <span>
             <span style={{ color: "var(--color-text-secondary)" }}>Actions:</span>{" "}
@@ -263,7 +290,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
         {/* Hand Composition */}
         {handCounts && (
-          <div style={{ marginBottom: "var(--space-2)" }}>
+          <div style={{ marginBottom: "var(--space-4)" }}>
             <span style={{ color: "var(--color-text-secondary)" }}>Hand:</span>{" "}
             <span style={{ color: "var(--color-gold)" }}>{handCounts.treasures}T</span>
             {" / "}
@@ -275,20 +302,21 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
         {/* Cards in Hand */}
         {hand && hand.length > 0 && (
-          <div style={{ marginTop: "var(--space-2)" }}>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "2px" }}>
-              Hand cards:
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "var(--space-2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Hand Cards
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
               {hand.map((card: string, idx: number) => (
                 <span
                   key={idx}
                   style={{
-                    color: getCardColor(card),
-                    padding: "1px 4px",
-                    background: "var(--color-bg-primary)",
-                    borderRadius: "2px",
-                    fontSize: "0.65rem",
+                    color: getCardColor(card as CardName),
+                    padding: "var(--space-1) var(--space-2)",
+                    background: "var(--color-bg-tertiary)",
+                    borderRadius: "3px",
+                    fontSize: "0.7rem",
+                    fontWeight: 500,
                   }}
                 >
                   {card}
@@ -299,26 +327,63 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         )}
 
         {/* Cards in Play */}
-        {inPlay && inPlay.length > 0 && (
-          <div style={{ marginTop: "var(--space-2)" }}>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "2px" }}>
-              In play:
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "var(--space-2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            In Play
+          </div>
+          {inPlay && inPlay.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
               {inPlay.map((card: string, idx: number) => (
                 <span
                   key={idx}
                   style={{
-                    color: getCardColor(card),
-                    padding: "1px 4px",
-                    background: "var(--color-bg-primary)",
-                    borderRadius: "2px",
-                    fontSize: "0.65rem",
+                    color: getCardColor(card as CardName),
+                    padding: "var(--space-1) var(--space-2)",
+                    background: "var(--color-bg-tertiary)",
+                    borderRadius: "3px",
+                    fontSize: "0.7rem",
+                    fontWeight: 500,
                   }}
                 >
                   {card}
                 </span>
               ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)", fontStyle: "italic" }}>
+              None
+            </div>
+          )}
+        </div>
+
+        {/* Turn History */}
+        {turnHistory && turnHistory.length > 0 && (
+          <div style={{ marginBottom: "var(--space-4)" }}>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "var(--space-2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Actions This Turn ({turnHistory.length})
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+              {turnHistory.map((action: any, idx: number) => {
+                const actionStr = action.type === "play_action" || action.type === "play_treasure" || action.type === "buy_card" || action.type === "gain_card"
+                  ? `${action.type}(${action.card})`
+                  : action.type;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "var(--color-text-primary)",
+                      fontFamily: "monospace",
+                      padding: "var(--space-1) var(--space-2)",
+                      background: "var(--color-bg-tertiary)",
+                      borderRadius: "3px",
+                      borderLeft: `3px solid var(--color-action)`,
+                    }}
+                  >
+                    {idx + 1}. {actionStr}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -341,12 +406,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           console.warn(`[${status.provider}] completed but no action captured`);
           continue;
         }
-        const signature = JSON.stringify(status.action);
+        // Exclude reasoning from signature so actions with different reasoning group together
+        const { reasoning, ...actionCore } = status.action;
+        const signature = JSON.stringify(actionCore);
         const existing = voteGroups.get(signature);
         if (existing) {
           existing.voters.push(status.provider);
         } else {
-          voteGroups.set(signature, { action: status.action, voters: [status.provider] });
+          voteGroups.set(signature, { action: actionCore, voters: [status.provider] });
         }
       }
 
@@ -419,7 +486,9 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           {allResults.map((result: any, idx: number) => {
             const percentage = (result.votes / maxVotes) * 100;
             const isWinner = idx === 0;
-            const actionStr = JSON.stringify(result.action);
+            // Strip reasoning from display
+            const { reasoning, ...actionCore } = result.action || {};
+            const actionStr = JSON.stringify(actionCore);
 
             // Check if action is valid (winner is always valid since it was executed)
             const isValid = result.valid !== false; // Assume valid unless explicitly marked invalid
@@ -505,22 +574,38 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                   justifyContent: "space-between",
                   gap: "4px"
                 }}>
-                  <div style={{ display: "flex", gap: "4px", flex: 1, minWidth: 0 }}>
-                    <span style={{
-                      color: "var(--color-border)",
-                      userSelect: "none",
-                      flexShrink: 0,
-                      paddingLeft: "5px"
-                    }}>
-                      └─
-                    </span>
-                    <span style={{
-                      color: isWinner ? "var(--color-text-primary)" : "var(--color-text-secondary)",
-                      flex: 1,
-                      minWidth: 0
-                    }}>
-                      {actionStr}
-                    </span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      <span style={{
+                        color: "var(--color-border)",
+                        userSelect: "none",
+                        flexShrink: 0,
+                        paddingLeft: "5px"
+                      }}>
+                        └─
+                      </span>
+                      <span style={{
+                        color: isWinner ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                        flex: 1,
+                        minWidth: 0
+                      }}>
+                        {actionStr}
+                      </span>
+                    </div>
+                    {result.action.reasoning && (
+                      <div style={{
+                        display: "flex",
+                        gap: "4px",
+                        paddingLeft: "19px",
+                        fontStyle: "italic",
+                        color: isWinner ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                        fontSize: "0.7rem",
+                        lineHeight: "1.3"
+                      }}>
+                        <span style={{ opacity: 0.5 }}>→</span>
+                        <span>{result.action.reasoning}</span>
+                      </div>
+                    )}
                   </div>
                   <span
                     title={isValid ? "Valid action" : "Invalid action"}
@@ -692,8 +777,204 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     );
   };
 
-  // Pre-render voting pane to avoid calling twice
-  const votingRender = currentDecision ? renderConsensusVoting(currentDecision.votingEntry.data) : null;
+  const renderReasoning = (data: any) => {
+    if (!data?.allResults) return null;
+
+    return (
+      <div>
+        {data.allResults.map((result: any, idx: number) => {
+          const isWinner = idx === 0;
+          const actionStr = result.action.type === "play_action" || result.action.type === "play_treasure" || result.action.type === "buy_card" || result.action.type === "gain_card"
+            ? `${result.action.type}(${result.action.card})`
+            : result.action.type;
+
+          return (
+            <div key={idx} style={{
+              marginBottom: "var(--space-4)",
+              paddingBottom: "var(--space-3)",
+              borderBottom: idx < data.allResults.length - 1 ? "1px solid var(--color-border)" : "none"
+            }}>
+              <div style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: isWinner ? "var(--color-action)" : "var(--color-text-secondary)",
+                marginBottom: "var(--space-2)",
+                fontFamily: "monospace"
+              }}>
+                {result.votes}× {actionStr}
+              </div>
+              <div style={{
+                fontSize: "0.65rem",
+                color: "var(--color-text-secondary)",
+                marginBottom: "var(--space-3)",
+                opacity: 0.8
+              }}>
+                {result.voters.join(", ")}
+              </div>
+              {result.reasonings && result.reasonings.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                  {result.reasonings.map((r: { provider: string; reasoning?: string }, i: number) => (
+                    <div key={i} style={{
+                      fontSize: "0.7rem",
+                      color: "var(--color-text-primary)",
+                      lineHeight: 1.5,
+                      padding: "var(--space-2)",
+                      backgroundColor: "var(--color-bg-secondary)",
+                      borderRadius: "4px",
+                      borderLeft: `3px solid ${getModelColor(r.provider)}`
+                    }}>
+                      <span style={{ fontWeight: 600, color: getModelColor(r.provider) }}>{r.provider}:</span>{" "}
+                      <span style={{ fontStyle: "italic" }}>{r.reasoning || "(no reasoning)"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Unified reasoning pane renderer
+  const renderReasoningPaneContent = (modelStatuses?: Map<number, ModelStatus>, votingData?: any) => {
+    // For completed decisions, use votingData
+    if (votingData?.allResults) {
+      return renderReasoning(votingData);
+    }
+
+    // For pending, build from live model statuses
+    if (!modelStatuses) return <div style={{ color: "var(--color-text-secondary)", fontSize: "0.7rem" }}>No reasoning data yet...</div>;
+
+    const completedStatuses = Array.from(modelStatuses.values()).filter(s => s.completed && s.action);
+    if (completedStatuses.length === 0) return <div style={{ color: "var(--color-text-secondary)", fontSize: "0.7rem" }}>Waiting for models...</div>;
+
+    // Group by action (excluding reasoning)
+    const groups = new Map<string, { action: any; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
+
+    for (const status of completedStatuses) {
+      if (!status.action) continue;
+      const { reasoning, ...actionCore } = status.action;
+      const signature = JSON.stringify(actionCore);
+
+      if (!groups.has(signature)) {
+        groups.set(signature, {
+          action: status.action,
+          voters: [],
+          reasonings: []
+        });
+      }
+
+      const group = groups.get(signature)!;
+      group.voters.push(status.provider);
+      if (reasoning) {
+        group.reasonings.push({ provider: status.provider, reasoning });
+      }
+    }
+
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => b.voters.length - a.voters.length);
+
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        {sortedGroups.map((group, idx) => {
+          const isWinner = idx === 0;
+          const actionStr = group.action.type === "play_action" || group.action.type === "play_treasure" || group.action.type === "buy_card" || group.action.type === "gain_card"
+            ? `${group.action.type}(${group.action.card})`
+            : group.action.type;
+
+          return (
+            <div key={idx} style={{
+              paddingBottom: "var(--space-3)",
+              borderBottom: idx < sortedGroups.length - 1 ? "1px solid var(--color-border)" : "none"
+            }}>
+              <div style={{
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                color: isWinner ? "var(--color-action)" : "var(--color-text-secondary)",
+                marginBottom: "var(--space-2)",
+                fontFamily: "monospace"
+              }}>
+                {group.voters.length}× {actionStr}
+              </div>
+              <div style={{
+                fontSize: "0.65rem",
+                color: "var(--color-text-secondary)",
+                marginBottom: "var(--space-2)",
+                opacity: 0.8
+              }}>
+                {group.voters.join(", ")}
+              </div>
+              {group.reasonings.length > 0 && (
+                <div style={{
+                  padding: "var(--space-3)",
+                  backgroundColor: "var(--color-bg-secondary)",
+                  borderRadius: "4px",
+                  borderLeft: `3px solid ${isWinner ? "var(--color-action)" : "var(--color-text-secondary)"}`
+                }}>
+                  <div style={{ fontSize: "0.7rem", fontWeight: 600, color: getModelColor(group.reasonings[0].provider), marginBottom: "var(--space-1)" }}>
+                    {group.reasonings[0].provider}
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "var(--color-text-primary)", fontStyle: "italic", lineHeight: 1.5 }}>
+                    {group.reasonings[0].reasoning}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Unified pane content renderer
+  const PaneContent = ({
+    votingData,
+    timingData,
+    modelStatuses,
+    gameStateData,
+    totalModels,
+  }: {
+    votingData?: any;
+    timingData?: any;
+    modelStatuses?: Map<number, ModelStatus>;
+    gameStateData?: any;
+    totalModels?: number;
+  }) => {
+    if (activePane === "voting") {
+      const votingRender = renderConsensusVoting(votingData, modelStatuses, totalModels);
+      if (!votingRender) return null;
+      return (
+        <>
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+            {votingRender.content}
+          </div>
+          {votingRender.legend && (
+            <div style={{ padding: "0 var(--space-4)" }}>
+              {votingRender.legend}
+            </div>
+          )}
+        </>
+      );
+    } else if (activePane === "performance") {
+      return (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+          {renderTimings(timingData, modelStatuses)}
+        </div>
+      );
+    } else if (activePane === "reasoning") {
+      return (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+          {renderReasoningPaneContent(modelStatuses, votingData)}
+        </div>
+      );
+    } else {
+      return (
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
+          {renderGameStateContext(gameStateData)}
+        </div>
+      );
+    }
+  };
 
   return (
     <div
@@ -835,18 +1116,60 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 fontWeight: 600,
                 color: "var(--color-text-primary)",
                 marginBottom: "var(--space-2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                userSelect: "none"
               }}>
-                {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
-                Action {(currentTurn.decisions.length || 0) + 1}{" "}
-                <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
-                  ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
+                <span>
+                  {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                  Action {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
+                  <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
+                    ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
+                  </span>
                 </span>
-              </div>
-              <div style={{
-                fontSize: "0.75rem",
-                color: "var(--color-text-secondary)",
-              }}>
-                Phase: {currentTurn.pendingData?.phase || "unknown"}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                  <button
+                    onClick={handlePrevAction}
+                    disabled={!hasPrevAction}
+                    onMouseEnter={(e) => hasPrevAction && (e.currentTarget.style.opacity = "0.5")}
+                    onMouseLeave={(e) => hasPrevAction && (e.currentTarget.style.opacity = "1")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: hasPrevAction ? "var(--color-action)" : "var(--color-text-secondary)",
+                      cursor: hasPrevAction ? "pointer" : "not-allowed",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      fontFamily: "inherit",
+                      opacity: hasPrevAction ? 1 : 0.3,
+                      padding: "0",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={handleNextAction}
+                    disabled={!hasNextAction}
+                    onMouseEnter={(e) => hasNextAction && (e.currentTarget.style.opacity = "0.5")}
+                    onMouseLeave={(e) => hasNextAction && (e.currentTarget.style.opacity = "1")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: hasNextAction ? "var(--color-action)" : "var(--color-text-secondary)",
+                      cursor: hasNextAction ? "pointer" : "not-allowed",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      fontFamily: "inherit",
+                      opacity: hasNextAction ? 1 : 0.3,
+                      padding: "0",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
               </div>
             </div>
             {/* Tab switcher */}
@@ -857,73 +1180,78 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               padding: "0 var(--space-4)",
               userSelect: "none",
             }}>
-              <button
-                onClick={() => setActivePane("voting")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "var(--space-2) var(--space-3)",
-                  cursor: "pointer",
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  fontFamily: "inherit",
-                  color: activePane === "voting" ? "var(--color-action)" : "var(--color-text-secondary)",
-                  borderBottom: activePane === "voting" ? "2px solid var(--color-action)" : "2px solid transparent",
-                  marginBottom: "-1px",
-                }}
-              >
+              <button onClick={() => setActivePane("voting")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "voting" ? "var(--color-action)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "voting" ? "2px solid var(--color-action)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
                 Voting
               </button>
-              <button
-                onClick={() => setActivePane("performance")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "var(--space-2) var(--space-3)",
-                  cursor: "pointer",
-                  fontSize: "0.7rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  fontFamily: "inherit",
-                  color: activePane === "performance" ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                  borderBottom: activePane === "performance" ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
-                  marginBottom: "-1px",
-                }}
-              >
+              <button onClick={() => setActivePane("performance")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "performance" ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "performance" ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
                 Performance
               </button>
+              <button onClick={() => setActivePane("reasoning")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "reasoning" ? "var(--color-victory)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "reasoning" ? "2px solid var(--color-victory)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
+                Reasoning
+              </button>
+              <button onClick={() => setActivePane("state")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "state" ? "var(--color-treasure)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "state" ? "2px solid var(--color-treasure)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
+                State
+              </button>
             </div>
-            {/* Pane content */}
-            {activePane === "voting" ? (
-              (() => {
-                const votingRender = renderConsensusVoting(null, currentTurn.modelStatuses, currentTurn.pendingData?.totalModels);
-                if (!votingRender) return null;
-                return (
-                  <>
-                    {/* NEW: Add game state context at the top */}
-                    <div style={{ padding: "var(--space-5) var(--space-4) 0" }}>
-                      {renderGameStateContext(currentTurn.pendingData?.gameState)}
-                    </div>
-
-                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-                      {votingRender.content}
-                    </div>
-                    {votingRender.legend && (
-                      <div style={{ padding: "0 var(--space-4)" }}>
-                        {votingRender.legend}
-                      </div>
-                    )}
-                  </>
-                );
-              })()
-            ) : (
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-                {renderTimings(null, currentTurn.modelStatuses)}
-              </div>
-            )}
+            <PaneContent
+              votingData={null}
+              timingData={null}
+              modelStatuses={currentTurn.modelStatuses}
+              gameStateData={currentTurn.pendingData?.gameState}
+              totalModels={currentTurn.pendingData?.totalModels}
+            />
           </>
         ) : currentDecision ? (
           <>
@@ -946,113 +1274,78 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                     ({((currentDecision.timingEntry?.data?.parallelDuration || 0) / 1000).toFixed(2)}s)
                   </span>
                 </span>
-                {(currentTurn.decisions.length > 1 || (currentTurn.decisions.length > 0 && currentTurn.pending)) && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                    <button
-                      onClick={handlePrevAction}
-                      disabled={!hasPrevAction}
-                      onMouseEnter={(e) => hasPrevAction && (e.currentTarget.style.opacity = "0.5")}
-                      onMouseLeave={(e) => hasPrevAction && (e.currentTarget.style.opacity = "1")}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: hasPrevAction ? "var(--color-action)" : "var(--color-text-secondary)",
-                        cursor: hasPrevAction ? "pointer" : "not-allowed",
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        fontFamily: "inherit",
-                        opacity: hasPrevAction ? 1 : 0.3,
-                        padding: "0",
-                        transition: "opacity 0.15s",
-                      }}
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={handleNextAction}
-                      disabled={!hasNextAction}
-                      onMouseEnter={(e) => hasNextAction && (e.currentTarget.style.opacity = "0.5")}
-                      onMouseLeave={(e) => hasNextAction && (e.currentTarget.style.opacity = "1")}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: hasNextAction ? "var(--color-action)" : "var(--color-text-secondary)",
-                        cursor: hasNextAction ? "pointer" : "not-allowed",
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        fontFamily: "inherit",
-                        opacity: hasNextAction ? 1 : 0.3,
-                        padding: "0",
-                        transition: "opacity 0.15s",
-                      }}
-                    >
-                      →
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div style={{
-                fontSize: "0.75rem",
-                color: "var(--color-text-secondary)",
-                fontFamily: "monospace"
-              }}>
-                {(() => {
-                  const action = currentDecision.votingEntry.data?.topResult?.action;
-                  if (!action) return "";
-
-                  // Helper to get card color
-                  const getCardColor = (cardName: string) => {
-                    const cardTypes = (CARDS as any)[cardName]?.types || [];
-                    if (cardTypes.includes("curse")) return "var(--color-curse)";
-                    if (cardTypes.includes("victory")) return "var(--color-victory)";
-                    if (cardTypes.includes("treasure")) return "var(--color-gold)";
-                    if (cardTypes.includes("action")) return "var(--color-action)";
-                    return "var(--color-text-primary)";
-                  };
-
-                  if (action.type === "play_action") return (
-                    <>Consensus: Play <span style={{ color: getCardColor(action.card), fontWeight: 600 }}>{action.card}</span></>
-                  );
-                  if (action.type === "play_treasure") return (
-                    <>Consensus: Play <span style={{ color: getCardColor(action.card), fontWeight: 600 }}>{action.card}</span></>
-                  );
-                  if (action.type === "buy_card") return (
-                    <>Consensus: Buy <span style={{ color: getCardColor(action.card), fontWeight: 600 }}>{action.card}</span></>
-                  );
-                  if (action.type === "gain_card") return (
-                    <>Consensus: Gain <span style={{ color: getCardColor(action.card), fontWeight: 600 }}>{action.card}</span></>
-                  );
-                  if (action.type === "end_phase") {
-                    const phase = currentDecision.votingEntry.data?.currentPhase;
-                    if (phase === "action") {
-                      return (
-                        <>Consensus: <span style={{ color: "#67e8f9", fontWeight: 600 }}>Move to buy phase</span></>
-                      );
-                    } else {
-                      return (
-                        <>Consensus: <span style={{ color: "#fca5a5", fontWeight: 600 }}>End turn</span></>
-                      );
-                    }
-                  }
-                  if (action.type === "discard_cards") return "Consensus: Discard cards";
-                  if (action.type === "trash_cards") return "Consensus: Trash cards";
-                  return JSON.stringify(action);
-                })()}
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                  <button
+                    onClick={handlePrevAction}
+                    disabled={!hasPrevAction}
+                    onMouseEnter={(e) => hasPrevAction && (e.currentTarget.style.opacity = "0.5")}
+                    onMouseLeave={(e) => hasPrevAction && (e.currentTarget.style.opacity = "1")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: hasPrevAction ? "var(--color-action)" : "var(--color-text-secondary)",
+                      cursor: hasPrevAction ? "pointer" : "not-allowed",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      fontFamily: "inherit",
+                      opacity: hasPrevAction ? 1 : 0.3,
+                      padding: "0",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={handleNextAction}
+                    disabled={!hasNextAction}
+                    onMouseEnter={(e) => hasNextAction && (e.currentTarget.style.opacity = "0.5")}
+                    onMouseLeave={(e) => hasNextAction && (e.currentTarget.style.opacity = "1")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: hasNextAction ? "var(--color-action)" : "var(--color-text-secondary)",
+                      cursor: hasNextAction ? "pointer" : "not-allowed",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      fontFamily: "inherit",
+                      opacity: hasNextAction ? 1 : 0.3,
+                      padding: "0",
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Pane Switcher Tabs */}
+            {/* Tab switcher */}
             <div style={{
               display: "flex",
               gap: "var(--space-2)",
               borderBottom: "1px solid var(--color-border)",
               padding: "0 var(--space-4)",
-              userSelect: "none"
+              userSelect: "none",
             }}>
-              <button
-                onClick={() => setActivePane("voting")}
-                style={{
+              <button onClick={() => setActivePane("voting")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "voting" ? "var(--color-action)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "voting" ? "2px solid var(--color-action)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
+                Voting
+              </button>
+              {currentDecision.timingEntry && (
+                <button onClick={() => setActivePane("performance")} style={{
                   background: "none",
                   border: "none",
                   padding: "var(--space-2) var(--space-3)",
@@ -1062,63 +1355,54 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                   fontFamily: "inherit",
-                  color: activePane === "voting" ? "var(--color-action)" : "var(--color-text-secondary)",
-                  borderBottom: activePane === "voting" ? "2px solid var(--color-action)" : "2px solid transparent",
+                  color: activePane === "performance" ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
+                  borderBottom: activePane === "performance" ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
                   marginBottom: "-1px",
-                }}
-              >
-                Voting
-              </button>
-
-              {currentDecision.timingEntry && (
-                <button
-                  onClick={() => setActivePane("performance")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: "var(--space-2) var(--space-3)",
-                    cursor: "pointer",
-                    fontSize: "0.7rem",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    fontFamily: "inherit",
-                    color: activePane === "performance" ? "var(--color-gold-bright)" : "var(--color-text-secondary)",
-                    borderBottom: activePane === "performance" ? "2px solid var(--color-gold-bright)" : "2px solid transparent",
-                    marginBottom: "-1px",
-                  }}
-                >
+                }}>
                   Performance
                 </button>
               )}
+              <button onClick={() => setActivePane("reasoning")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "reasoning" ? "var(--color-victory)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "reasoning" ? "2px solid var(--color-victory)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
+                Reasoning
+              </button>
+              <button onClick={() => setActivePane("state")} style={{
+                background: "none",
+                border: "none",
+                padding: "var(--space-2) var(--space-3)",
+                cursor: "pointer",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontFamily: "inherit",
+                color: activePane === "state" ? "var(--color-treasure)" : "var(--color-text-secondary)",
+                borderBottom: activePane === "state" ? "2px solid var(--color-treasure)" : "2px solid transparent",
+                marginBottom: "-1px",
+              }}>
+                State
+              </button>
             </div>
 
-            {/* Pane Content */}
-            {activePane === "voting" ? (
-              (() => {
-                const votingRender = renderConsensusVoting(currentDecision.votingEntry.data);
-                if (!votingRender) return null;
-                return (
-                  <>
-                    {/* NEW: Add game state context */}
-                    <div style={{ padding: "var(--space-5) var(--space-4) 0" }}>
-                      {renderGameStateContext(currentDecision.votingEntry.data?.gameState)}
-                    </div>
-
-                    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-                      {votingRender.content}
-                    </div>
-                    <div style={{ padding: "0 var(--space-4)" }}>
-                      {votingRender.legend}
-                    </div>
-                  </>
-                );
-              })()
-            ) : (
-              <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-                {currentDecision.timingEntry && renderTimings(currentDecision.timingEntry.data, currentDecision.modelStatuses)}
-              </div>
-            )}
+            <PaneContent
+              votingData={currentDecision.votingEntry.data}
+              timingData={currentDecision.timingEntry?.data}
+              modelStatuses={currentDecision.modelStatuses}
+              gameStateData={currentDecision.votingEntry.data?.gameState}
+              totalModels={currentDecision.votingEntry.data?.topResult?.totalVotes}
+            />
           </>
         ) : null}
       </div>
