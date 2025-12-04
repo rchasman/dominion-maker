@@ -252,7 +252,10 @@ export async function advanceGameStateWithConsensus(
     count: number;
   };
 
-  const createActionSignature = (action: Action): ActionSignature => JSON.stringify(action);
+  const createActionSignature = (action: Action): ActionSignature => {
+    const { reasoning, ...actionCore } = action;
+    return JSON.stringify(actionCore); // Exclude reasoning from comparison
+  };
 
   // Track votes as they come in
   const voteGroups = new Map<ActionSignature, VoteGroup>();
@@ -458,10 +461,38 @@ export async function advanceGameStateWithConsensus(
 
   // Helper to check if an action is legal (legalActions already declared above)
   const isActionValid = (action: Action): boolean => {
-    return legalActions.some(legal =>
+    const player = currentState.activePlayer;
+    const playerState = currentState.players[player];
+
+    // Check if action matches legal actions list
+    const matchesLegal = legalActions.some(legal =>
       legal.type === action.type &&
-      (action.card ? legal.card === action.card : true)
+      (action.card ? legal.card === action.card : true) &&
+      (action.cards ? JSON.stringify(action.cards) === JSON.stringify(legal.cards) : true)
     );
+
+    if (!matchesLegal) {
+      console.warn(`❌ Invalid action - not in legal actions:`, action, `Legal:`, legalActions);
+      return false;
+    }
+
+    // Additional validation: check if card is actually in hand for play actions
+    if (action.type === "play_action" || action.type === "play_treasure") {
+      if (action.card && !playerState.hand.includes(action.card)) {
+        console.warn(`❌ Invalid action - card not in hand:`, action.card, `Hand:`, playerState.hand);
+        return false;
+      }
+    }
+
+    // Check if cards are in hand for discard/trash actions
+    if (action.type === "discard_cards" || action.type === "trash_cards") {
+      if (action.cards && !action.cards.every(c => playerState.hand.includes(c))) {
+        console.warn(`❌ Invalid action - cards not in hand:`, action.cards, `Hand:`, playerState.hand);
+        return false;
+      }
+    }
+
+    return true;
   };
 
   // Log voting results - use early consensus winner if available
@@ -519,6 +550,9 @@ export async function advanceGameStateWithConsensus(
         votes: g.count,
         voters: g.voters,
         valid: isActionValid(g.action),
+        reasonings: completedResults
+          .filter(r => r.result && createActionSignature(r.result) === g.signature)
+          .map(r => ({ provider: r.provider, reasoning: r.result!.reasoning })),
       })),
       votingDuration,
       currentPhase: currentState.phase,
@@ -533,6 +567,7 @@ export async function advanceGameStateWithConsensus(
         hand: currentState.players[currentState.activePlayer].hand,
         inPlay: currentState.players[currentState.activePlayer].inPlay,
         handCounts,
+        turnHistory: currentState.turnHistory,
       },
     },
   });
