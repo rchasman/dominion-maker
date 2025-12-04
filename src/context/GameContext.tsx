@@ -68,7 +68,13 @@ const initialState: GameContextState = {
   modelSettings: DEFAULT_MODEL_SETTINGS,
 };
 
-interface GameContextValue extends GameContextState {
+interface GameContextValue {
+  gameState: GameState | null;
+  selectedCards: CardName[];
+  gameMode: GameMode;
+  isProcessing: boolean;
+  modelSettings: ModelSettings;
+
   // Derived state
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
@@ -86,7 +92,12 @@ interface GameContextValue extends GameContextState {
   handleEndPhase: () => Promise<void>;
 }
 
+interface LLMLogsContextValue {
+  llmLogs: LLMLogEntry[];
+}
+
 const GameContext = createContext<GameContextValue | null>(null);
+const LLMLogsContext = createContext<LLMLogsContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
@@ -214,8 +225,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [state.gameMode, llmLogger, state.modelSettings]);
 
   // Derived state
-  const hasPlayableActionsValue = state.gameState ? hasPlayableActions(state.gameState) : false;
-  const hasTreasuresInHandValue = state.gameState ? hasTreasuresInHand(state.gameState) : false;
+  const hasPlayableActionsValue = useMemo(() =>
+    state.gameState ? hasPlayableActions(state.gameState) : false,
+    [state.gameState]
+  );
+  const hasTreasuresInHandValue = useMemo(() =>
+    state.gameState ? hasTreasuresInHand(state.gameState) : false,
+    [state.gameState]
+  );
 
   // Actions
   const setGameState = useCallback((gameState: GameState | null) => {
@@ -235,7 +252,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_PROCESSING", payload: false });
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
-    dispatch({ type: "SET_GAME_STATE", payload: initializeGame(true) });
+    dispatch({ type: "SET_GAME_STATE", payload: initializeGame() });
     dispatch({ type: "SET_SELECTED_CARDS", payload: [] });
     dispatch({ type: "CLEAR_LLM_LOGS" });
   }, []);
@@ -367,10 +384,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [state.gameState, state.isProcessing, strategy, setGameState]);
 
-  const value: GameContextValue = {
-    ...state,
-    hasPlayableActions: hasPlayableActionsValue,
-    hasTreasuresInHand: hasTreasuresInHandValue,
+  const gameValue: GameContextValue = useMemo(() => ({
+      gameState: state.gameState,
+      selectedCards: state.selectedCards,
+      gameMode: state.gameMode,
+      isProcessing: state.isProcessing,
+      modelSettings: state.modelSettings,
+      hasPlayableActions: hasPlayableActionsValue,
+      hasTreasuresInHand: hasTreasuresInHandValue,
+      strategy,
+      setGameState,
+      setGameMode,
+      setModelSettings,
+      startGame,
+      handleCardClick,
+      handleBuyCard,
+      handlePlayAllTreasures,
+      handleInPlayClick,
+      handleEndPhase,
+  }), [
+    state.gameState,
+    state.selectedCards,
+    state.gameMode,
+    state.isProcessing,
+    state.modelSettings,
+    hasPlayableActionsValue,
+    hasTreasuresInHandValue,
     strategy,
     setGameState,
     setGameMode,
@@ -381,15 +420,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
     handlePlayAllTreasures,
     handleInPlayClick,
     handleEndPhase,
-  };
+  ]);
 
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  const llmLogsValue: LLMLogsContextValue = useMemo(() => ({
+    llmLogs: state.llmLogs,
+  }), [state.llmLogs]);
+
+  return (
+    <GameContext.Provider value={gameValue}>
+      <LLMLogsContext.Provider value={llmLogsValue}>
+        {children}
+      </LLMLogsContext.Provider>
+    </GameContext.Provider>
+  );
 }
 
 export function useGame() {
   const context = useContext(GameContext);
   if (!context) {
     throw new Error("useGame must be used within a GameProvider");
+  }
+  return context;
+}
+
+export function useLLMLogs() {
+  const context = useContext(LLMLogsContext);
+  if (!context) {
+    throw new Error("useLLMLogs must be used within a GameProvider");
   }
   return context;
 }

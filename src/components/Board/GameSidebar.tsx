@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import type { GameState } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
-import type { LLMLogEntry } from "../LLMLog";
+import { useLLMLogs } from "../../context/GameContext";
 import { LogEntry } from "../LogEntry";
 import { LLMLog } from "../LLMLog";
 import { ModelSettingsAccordion } from "../ModelSettings";
@@ -25,7 +25,6 @@ function CyclingSquare() {
 interface GameSidebarProps {
   state: GameState;
   isProcessing: boolean;
-  llmLogs: LLMLogEntry[];
   gameMode: GameMode;
   modelSettings: ModelSettings;
   onModelSettingsChange: (settings: ModelSettings) => void;
@@ -35,12 +34,12 @@ interface GameSidebarProps {
 export function GameSidebar({
   state,
   isProcessing,
-  llmLogs,
   gameMode,
   modelSettings,
   onModelSettingsChange,
   onNewGame,
 }: GameSidebarProps) {
+  const { llmLogs } = useLLMLogs();
   const isHumanTurn = state.activePlayer === "human";
   const humanVP = countVP(getAllCards(state.players.human));
   const opponentVP = countVP(getAllCards(state.players.ai));

@@ -19,7 +19,6 @@ export function Board() {
     handlePlayAllTreasures: onPlayAllTreasures,
     hasPlayableActions,
     hasTreasuresInHand,
-    llmLogs,
     gameMode,
     setGameMode: onGameModeChange,
     startGame: onNewGame,
@@ -127,7 +126,6 @@ export function Board() {
       <GameSidebar
         state={state}
         isProcessing={isProcessing}
-        llmLogs={llmLogs}
         gameMode={gameMode}
         modelSettings={modelSettings}
         onModelSettingsChange={onModelSettingsChange}
