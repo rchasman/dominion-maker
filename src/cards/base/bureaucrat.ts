@@ -17,6 +17,7 @@ export const bureaucrat: CardEffect = ({ state, player, children }) => {
         [player]: {
           ...currentPlayer,
           deck: ["Silver", ...currentPlayer.deck],
+          deckTopRevealed: true,
         },
       },
       supply: {

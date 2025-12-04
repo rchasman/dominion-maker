@@ -44,7 +44,7 @@ export function drawCards(player: PlayerState, count: number): { player: PlayerS
   }
 
   return {
-    player: { ...player, deck, hand, discard, inPlaySourceIndices: player.inPlaySourceIndices },
+    player: { ...player, deck, hand, discard, inPlaySourceIndices: player.inPlaySourceIndices, deckTopRevealed: false },
     drawn,
     events,
   };

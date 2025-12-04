@@ -202,7 +202,7 @@ export function PlayerArea({
             Deck
           </div>
           {player.deck.length > 0 ? (
-            <Card name={player.deck[0]} showBack size={size} count={player.deck.length} />
+            <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} />
           ) : (
             <div style={{
               inlineSize: size === "small" ? "var(--card-width-small)" : "var(--card-width-medium)",

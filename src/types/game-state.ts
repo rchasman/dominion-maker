@@ -290,6 +290,7 @@ export const PlayerState = z.object({
   discard: z.array(CardName),
   inPlay: z.array(CardName),
   inPlaySourceIndices: z.array(z.number()), // tracks original hand index for each inPlay card
+  deckTopRevealed: z.boolean().optional(), // true when top card is known (e.g. from Bureaucrat)
 });
 export type PlayerState = z.infer<typeof PlayerState>;
 
