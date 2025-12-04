@@ -1,45 +1,10 @@
 import { useState, useEffect } from "react";
-import type { GameMode } from "../types/game-mode";
-import { CARDS } from "../data/cards";
-import { getModelColor } from "../config/models";
+import type { GameMode } from "../../types/game-mode";
+import { CARDS } from "../../data/cards";
+import { getModelColor } from "../../config/models";
+import type { LLMLogEntry, ModelStatus, Turn } from "./types";
 
-export interface LLMLogEntry {
-  id: string;
-  timestamp: number;
-  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted";
-  message: string;
-  data?: Record<string, any>;
-  children?: LLMLogEntry[];
-}
-
-interface ConsensusDecision {
-  id: string;
-  votingEntry: LLMLogEntry;
-  timingEntry?: LLMLogEntry;
-  stepNumber: number;
-  modelStatuses?: Map<number, ModelStatus>; // Snapshot of model statuses for this decision
-}
-
-interface ModelStatus {
-  provider: string;
-  index: number;
-  startTime: number;
-  duration?: number;
-  success?: boolean;
-  completed: boolean;
-  aborted?: boolean; // True if skipped due to early consensus
-  action?: any; // The action this model voted for
-}
-
-interface Turn {
-  turnNumber: number;
-  gameTurn?: number;
-  decisions: ConsensusDecision[];
-  pending?: boolean; // True when consensus-start received but no voting yet
-  pendingData?: { providers: string[]; totalModels: number; phase: string };
-  modelStatuses?: Map<number, ModelStatus>; // Track each model's status by index
-  consensusStartTime?: number;
-}
+export type { LLMLogEntry } from "./types";
 
 interface LLMLogProps {
   entries: LLMLogEntry[];
