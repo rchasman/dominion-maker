@@ -1,5 +1,5 @@
 import type { CardName, GameState, PlayerState } from "../types/game-state";
-import { FIRST_GAME_KINGDOM, KINGDOM_CARDS } from "../data/cards";
+import { KINGDOM_CARDS } from "../data/cards";
 import { shuffle } from "./game-utils";
 
 function createStartingDeck(): CardName[] {
@@ -29,10 +29,7 @@ function createPlayerState(): PlayerState {
   };
 }
 
-function selectKingdomCards(useFirstGame: boolean): CardName[] {
-  if (useFirstGame) {
-    return FIRST_GAME_KINGDOM;
-  }
+function selectKingdomCards(): CardName[] {
   return shuffle(KINGDOM_CARDS).slice(0, 10);
 }
 
@@ -60,8 +57,8 @@ function createSupply(kingdomCards: CardName[]): Record<CardName, number> {
   return supply as Record<CardName, number>;
 }
 
-export function initializeGame(useFirstGame = true): GameState {
-  const kingdomCards = selectKingdomCards(useFirstGame);
+export function initializeGame(): GameState {
+  const kingdomCards = selectKingdomCards();
 
   const humanPlayer = createPlayerState();
   const aiPlayer = createPlayerState();
