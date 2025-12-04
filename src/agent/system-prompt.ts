@@ -4,6 +4,7 @@ export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Return ONE action 
 - Return ONE atomic action only (no plans, no sequences)
 - AI never sets pendingDecision (only humans pause for decisions)
 - **CRITICAL: You will receive a LEGAL ACTIONS list. You MUST choose EXACTLY one action from that list. Do NOT invent actions not in the list.**
+- **BUY PHASE CRITICAL: Always play ALL treasures BEFORE attempting to buy. Never buy with 0 coins.**
 
 ## Phases
 - Action: Play action cards from hand (costs 1 action). End when actions=0.
@@ -17,7 +18,10 @@ Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
 ## Strategy
 Action phase: Play draw cards first (Smithy, Lab, Village), then terminals
-Buy phase: Province($8) > Gold($6) > Silver($3) > useful actions
+Buy phase:
+  1. **CRITICAL: Play ALL treasures from hand BEFORE buying anything**
+  2. Then buy: Province($8) > Gold($6) > Silver($3) > useful actions
+  3. If coins=0 and no treasures in hand, END PHASE (don't buy Curse/Copper)
 Early: Trash weak cards with Chapel
 Late: Buy Provinces, then Duchies when Provinces low
 

@@ -7,6 +7,7 @@ import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases"
 import { getLegalActions } from "../lib/game-engine/core";
 import { runSimpleAITurn } from "../lib/game-engine/ai-simple";
 import { MODEL_IDS, getModelFullName, type ModelProvider } from "../config/models";
+import { CARDS } from "../data/cards";
 
 // Re-export for convenience
 export type { ModelProvider } from "../config/models";
@@ -195,11 +196,34 @@ export async function advanceGameStateWithConsensus(
 
   console.log(`\n🎯 Consensus: Running ${providers.length} models in parallel`, { providers });
 
+  // Get legal actions for diagnostic logging
+  const legalActions = getLegalActions(currentState);
+
   // Emit start event immediately so UI shows new turn
   logger?.({
     type: "consensus-start",
     message: `Starting consensus with ${providers.length} models (k=${Math.max(2, Math.ceil(providers.length / 3))})`,
-    data: { providers, totalModels: providers.length, phase: currentState.phase },
+    data: {
+      providers,
+      totalModels: providers.length,
+      phase: currentState.phase,
+      // Diagnostic: Add game state context
+      gameState: {
+        turn: currentState.turn,
+        phase: currentState.phase,
+        activePlayer: currentState.activePlayer,
+        actions: currentState.actions,
+        buys: currentState.buys,
+        coins: currentState.coins,
+        hand: currentState.players[currentState.activePlayer].hand,
+        inPlay: currentState.players[currentState.activePlayer].inPlay,
+        supplySnapshot: Object.entries(currentState.supply)
+          .filter(([_, count]) => count > 0)
+          .reduce((acc, [card, count]) => ({ ...acc, [card]: count }), {}),
+      },
+      legalActionsCount: legalActions.length,
+      legalActionsSample: legalActions.slice(0, 10), // First 10 to avoid huge logs
+    },
   });
 
   type ModelResult = { provider: ModelProvider; result: Action | null; error: unknown; duration: number };
@@ -415,10 +439,7 @@ export async function advanceGameStateWithConsensus(
   // Use early consensus winner or compute from full results
   const rankedGroups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
 
-  // Validate each action against legal actions
-  const legalActions = getLegalActions(currentState);
-
-  // Helper to check if an action is legal
+  // Helper to check if an action is legal (legalActions already declared above)
   const isActionValid = (action: Action): boolean => {
     return legalActions.some(legal =>
       legal.type === action.type &&
@@ -448,6 +469,18 @@ export async function advanceGameStateWithConsensus(
   }
 
   const runnerUpCount = rankedGroups[1]?.count ?? 0;
+
+  // Calculate hand composition for diagnostics
+  const hand = currentState.players[currentState.activePlayer].hand;
+  const handCounts = {
+    treasures: hand.filter(c => ["Copper", "Silver", "Gold"].includes(c)).length,
+    actions: hand.filter(c => {
+      const cardDef = CARDS[c];
+      return cardDef?.types?.includes("action");
+    }).length,
+    total: hand.length,
+  };
+
   logger?.({
     type: "consensus-voting",
     message: earlyConsensus
@@ -472,6 +505,18 @@ export async function advanceGameStateWithConsensus(
       })),
       votingDuration,
       currentPhase: currentState.phase,
+      // Diagnostic: Add the same game state context for UI consumption
+      gameState: {
+        turn: currentState.turn,
+        phase: currentState.phase,
+        activePlayer: currentState.activePlayer,
+        actions: currentState.actions,
+        buys: currentState.buys,
+        coins: currentState.coins,
+        hand: currentState.players[currentState.activePlayer].hand,
+        inPlay: currentState.players[currentState.activePlayer].inPlay,
+        handCounts,
+      },
     },
   });
 

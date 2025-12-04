@@ -31,7 +31,7 @@ export interface Turn {
   gameTurn?: number;
   decisions: ConsensusDecision[];
   pending?: boolean;
-  pendingData?: { providers: string[]; totalModels: number; phase: string };
+  pendingData?: { providers: string[]; totalModels: number; phase: string; gameState?: any };
   modelStatuses?: Map<number, ModelStatus>;
   consensusStartTime?: number;
 }

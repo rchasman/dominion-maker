@@ -189,6 +189,143 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     }
   };
 
+  // Render game state context for diagnostics
+  const renderGameStateContext = (gameState: any) => {
+    if (!gameState) return null;
+
+    const { phase, actions, buys, coins, hand, handCounts, inPlay } = gameState;
+
+    // Helper to get card color
+    const getCardColor = (cardName: string) => {
+      const cardTypes = (CARDS as any)[cardName]?.types || [];
+      if (cardTypes.includes("curse")) return "var(--color-curse)";
+      if (cardTypes.includes("victory")) return "var(--color-victory)";
+      if (cardTypes.includes("treasure")) return "var(--color-gold)";
+      if (cardTypes.includes("action")) return "var(--color-action)";
+      return "var(--color-text-primary)";
+    };
+
+    return (
+      <div style={{
+        marginTop: "var(--space-4)",
+        padding: "var(--space-3)",
+        background: "var(--color-bg-secondary)",
+        borderRadius: "4px",
+        fontSize: "0.7rem",
+        fontFamily: "monospace",
+      }}>
+        <div style={{
+          color: "var(--color-text-secondary)",
+          fontWeight: 600,
+          marginBottom: "var(--space-2)",
+          textTransform: "uppercase",
+          fontSize: "0.65rem",
+          letterSpacing: "0.05em",
+        }}>
+          Game State Context
+        </div>
+
+        {/* Resources Line - RED WARNING when coins=0 in buy phase */}
+        <div style={{
+          display: "flex",
+          gap: "var(--space-4)",
+          marginBottom: "var(--space-2)",
+          padding: "var(--space-2)",
+          background: coins === 0 && phase === "buy" ? "rgba(239, 68, 68, 0.1)" : "transparent",
+          borderRadius: "3px",
+        }}>
+          <span>
+            <span style={{ color: "var(--color-text-secondary)" }}>Phase:</span>{" "}
+            <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>{phase}</span>
+          </span>
+          <span>
+            <span style={{ color: "var(--color-text-secondary)" }}>Actions:</span>{" "}
+            <span style={{ color: "var(--color-action)", fontWeight: 700 }}>{actions}</span>
+          </span>
+          <span>
+            <span style={{ color: "var(--color-text-secondary)" }}>Buys:</span>{" "}
+            <span style={{ color: "var(--color-buy)", fontWeight: 700 }}>{buys}</span>
+          </span>
+          <span>
+            <span style={{ color: "var(--color-text-secondary)" }}>Coins:</span>{" "}
+            <span style={{
+              color: coins === 0 ? "#ef4444" : "var(--color-gold)",
+              fontWeight: 700,
+              fontSize: coins === 0 ? "0.8rem" : "0.7rem",
+            }}>
+              ${coins}
+              {coins === 0 && phase === "buy" && (
+                <span style={{ color: "#ef4444", marginLeft: "4px" }} title="Warning: 0 coins in buy phase">⚠</span>
+              )}
+            </span>
+          </span>
+        </div>
+
+        {/* Hand Composition */}
+        {handCounts && (
+          <div style={{ marginBottom: "var(--space-2)" }}>
+            <span style={{ color: "var(--color-text-secondary)" }}>Hand:</span>{" "}
+            <span style={{ color: "var(--color-gold)" }}>{handCounts.treasures}T</span>
+            {" / "}
+            <span style={{ color: "var(--color-action)" }}>{handCounts.actions}A</span>
+            {" / "}
+            <span style={{ color: "var(--color-text-secondary)" }}>{handCounts.total} total</span>
+          </div>
+        )}
+
+        {/* Cards in Hand */}
+        {hand && hand.length > 0 && (
+          <div style={{ marginTop: "var(--space-2)" }}>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "2px" }}>
+              Hand cards:
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+              {hand.map((card: string, idx: number) => (
+                <span
+                  key={idx}
+                  style={{
+                    color: getCardColor(card),
+                    padding: "1px 4px",
+                    background: "var(--color-bg-primary)",
+                    borderRadius: "2px",
+                    fontSize: "0.65rem",
+                  }}
+                >
+                  {card}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cards in Play */}
+        {inPlay && inPlay.length > 0 && (
+          <div style={{ marginTop: "var(--space-2)" }}>
+            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "2px" }}>
+              In play:
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+              {inPlay.map((card: string, idx: number) => (
+                <span
+                  key={idx}
+                  style={{
+                    color: getCardColor(card),
+                    padding: "1px 4px",
+                    background: "var(--color-bg-primary)",
+                    borderRadius: "2px",
+                    fontSize: "0.65rem",
+                  }}
+                >
+                  {card}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderConsensusVoting = (data: any, liveStatuses?: Map<number, ModelStatus>, totalModels?: number) => {
     let allResults: Array<{ action: any; votes: number; voters: string[]; valid?: boolean }>;
     let maxVotes: number;
@@ -766,6 +903,11 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 if (!votingRender) return null;
                 return (
                   <>
+                    {/* NEW: Add game state context at the top */}
+                    <div style={{ padding: "var(--space-5) var(--space-4) 0" }}>
+                      {renderGameStateContext(currentTurn.pendingData?.gameState)}
+                    </div>
+
                     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
                       {votingRender.content}
                     </div>
@@ -861,7 +1003,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
                   // Helper to get card color
                   const getCardColor = (cardName: string) => {
-                    const cardTypes = CARDS[cardName]?.types || [];
+                    const cardTypes = (CARDS as any)[cardName]?.types || [];
                     if (cardTypes.includes("curse")) return "var(--color-curse)";
                     if (cardTypes.includes("victory")) return "var(--color-victory)";
                     if (cardTypes.includes("treasure")) return "var(--color-gold)";
@@ -955,8 +1097,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
             {activePane === "voting" ? (
               (() => {
                 const votingRender = renderConsensusVoting(currentDecision.votingEntry.data);
+                if (!votingRender) return null;
                 return (
                   <>
+                    {/* NEW: Add game state context */}
+                    <div style={{ padding: "var(--space-5) var(--space-4) 0" }}>
+                      {renderGameStateContext(currentDecision.votingEntry.data?.gameState)}
+                    </div>
+
                     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
                       {votingRender.content}
                     </div>
