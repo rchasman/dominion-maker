@@ -1,5 +1,5 @@
 import type { CardEffect } from "../card-effect";
-import type { Player, CardName } from "../../types/game-state";
+import type { Player } from "../../types/game-state";
 
 export const militia: CardEffect = ({ state, player, children, decision }) => {
   // +$2, each opponent discards down to 3 cards

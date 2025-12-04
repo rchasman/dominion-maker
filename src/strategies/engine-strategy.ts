@@ -3,7 +3,6 @@ import type { GameState, CardName } from "../types/game-state";
 import { playAction, resolveDecision } from "../lib/game-engine/actions";
 import { playTreasure, playAllTreasures, unplayTreasure } from "../lib/game-engine/treasures";
 import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
-import { runSimpleAITurn } from "../lib/game-engine/ai-simple";
 import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
 
 export class EngineStrategy implements GameStrategy {
@@ -148,9 +147,6 @@ export class EngineStrategy implements GameStrategy {
     // For discard decisions (e.g., Militia attack), use hardcoded logic
     if (decision.type === "discard" && decision.metadata?.cardBeingPlayed === "Militia") {
       const aiPlayer = state.players.ai;
-      const cardsToDiscard = decision.metadata.totalNeeded as number;
-      const alreadyDiscarded = decision.metadata.discardedCount as number;
-      const remainingToDiscard = cardsToDiscard - alreadyDiscarded;
 
       // Priority: Victory cards > Curses > Coppers > others
       const priorities = ["Estate", "Duchy", "Province", "Curse", "Copper"];

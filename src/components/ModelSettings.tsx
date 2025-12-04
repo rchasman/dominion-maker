@@ -42,6 +42,8 @@ export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProp
         return "Gemini Flash";
       case "ministral-3b":
         return "Ministral 3B";
+      default:
+        return model;
     }
   };
 

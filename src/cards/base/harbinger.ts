@@ -36,7 +36,7 @@ export const harbinger: CardEffect = ({ state, player, children, decision }) => 
     // Topdeck chosen card
     if (decision && decision.selectedCards && decision.selectedCards.length > 0) {
       const toTopdeck = decision.selectedCards[0];
-      const newDiscard = currentPlayer.discard.filter((c, i) =>
+      const newDiscard = currentPlayer.discard.filter((_c, i) =>
         i !== currentPlayer.discard.indexOf(toTopdeck)
       );
 
@@ -62,7 +62,7 @@ export const harbinger: CardEffect = ({ state, player, children, decision }) => 
   // For AI: auto-choose best card from discard
   if (currentPlayer.discard.length > 0) {
     const bestCard = currentPlayer.discard.find(c => isActionCard(c)) || currentPlayer.discard[0];
-    const newDiscard = currentPlayer.discard.filter((c, i) =>
+    const newDiscard = currentPlayer.discard.filter((_c, i) =>
       i !== currentPlayer.discard.indexOf(bestCard)
     );
 

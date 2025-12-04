@@ -42,14 +42,17 @@ export function ActionPrompt({
         </p>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-          {decision.options.map((card) => (
-            <Card
-              key={card}
-              name={card}
-              onClick={() => onToggleCard(card)}
-              selected={selectedCards.includes(card)}
-            />
-          ))}
+          {decision.options.map((card) => {
+            const cardName = card as CardName;
+            return (
+              <Card
+                key={card}
+                name={cardName}
+                onClick={() => onToggleCard(cardName)}
+                selected={selectedCards.includes(cardName)}
+              />
+            );
+          })}
         </div>
 
         <div style={{ display: "flex", gap: "12px" }}>
