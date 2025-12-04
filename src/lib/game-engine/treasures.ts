@@ -1,7 +1,7 @@
 import type { CardName, GameState } from "../../types/game-state";
 import { CARDS, isTreasureCard } from "../../data/cards";
 
-export function playTreasure(state: GameState, card: CardName, originalIndex?: number): GameState {
+export function playTreasure(state: GameState, card: CardName, originalIndex?: number, reasoning?: string): GameState {
   const player = state.activePlayer;
   const playerState = state.players[player];
 
@@ -31,6 +31,7 @@ export function playTreasure(state: GameState, card: CardName, originalIndex?: n
       player,
       card,
       coins: coinValue,
+      reasoning,
     }],
   };
 }

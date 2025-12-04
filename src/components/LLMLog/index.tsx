@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import type { GameMode } from "../../types/game-mode";
 import { CARDS } from "../../data/cards";
-import type { CardName, TurnAction } from "../../types/game-state";
+import type { CardName } from "../../types/game-state";
 import type { Action } from "../../types/action";
 import { getModelColor } from "../../config/models";
 import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, VotingResult, TimingData } from "./types";
@@ -248,10 +248,10 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   };
 
   // Render game state context for diagnostics
-  const renderGameStateContext = (gameState: GameStateSnapshot | undefined, decisions?: Turn["decisions"]) => {
+  const renderGameStateContext = (gameState: GameStateSnapshot | undefined) => {
     if (!gameState) return null;
 
-    const { phase, actions, buys, coins, hand, handCounts, inPlay, turnHistory } = gameState;
+    const { phase, actions, buys, coins, hand, handCounts, inPlay } = gameState;
 
     // Helper to get card color
     const getCardColor = (cardName: CardName) => {
@@ -383,71 +383,6 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           )}
         </div>
 
-        {/* Turn History */}
-        {turnHistory && turnHistory.length > 0 && (
-          <div style={{ marginBottom: "var(--space-4)" }}>
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.65rem", marginBottom: "var(--space-2)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Actions This Turn ({turnHistory.length})
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-              {turnHistory.map((action: TurnAction, idx: number) => {
-                const actionStr = action.type === "play_action" || action.type === "play_treasure" || action.type === "buy_card" || action.type === "gain_card"
-                  ? `${action.type}(${action.card})`
-                  : action.type;
-
-                // Find corresponding decision for this action (decisions are 1:1 with turnHistory)
-                const decision = decisions?.[idx];
-                const topResult = decision?.votingEntry?.data?.topResult;
-                const allResults = decision?.votingEntry?.data?.allResults;
-                const winnerReasoning = allResults?.[0]?.reasonings?.[0]?.reasoning;
-                const isValid = topResult?.valid;
-
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "var(--color-text-primary)",
-                      fontFamily: "monospace",
-                      padding: "var(--space-2)",
-                      background: "var(--color-bg-tertiary)",
-                      borderRadius: "3px",
-                      borderLeft: `3px solid ${isValid === false ? "#ef4444" : "var(--color-action)"}`,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--space-2)" }}>
-                      <span>{idx + 1}. {actionStr}</span>
-                      {isValid !== undefined && (
-                        <span
-                          title={isValid ? "Valid action" : "Invalid action"}
-                          style={{
-                            fontSize: "0.75rem",
-                            color: isValid ? "#10b981" : "#ef4444",
-                            fontWeight: 700,
-                            cursor: "help",
-                          }}
-                        >
-                          {isValid ? "✓" : "✗"}
-                        </span>
-                      )}
-                    </div>
-                    {winnerReasoning && (
-                      <div style={{
-                        marginTop: "var(--space-1)",
-                        fontSize: "0.65rem",
-                        color: "var(--color-text-secondary)",
-                        fontStyle: "italic",
-                        lineHeight: 1.4,
-                      }}>
-                        {winnerReasoning}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -994,14 +929,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     modelStatuses,
     gameStateData,
     totalModels,
-    decisions,
   }: {
     votingData?: ConsensusVotingData | null;
     timingData?: TimingData | null;
     modelStatuses?: Map<number, ModelStatus>;
     gameStateData?: GameStateSnapshot;
     totalModels?: number;
-    decisions?: Turn["decisions"];
   }) => {
     if (activePane === "voting") {
       const votingRender = renderConsensusVoting(votingData, modelStatuses, totalModels);
@@ -1033,7 +966,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     } else {
       return (
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "var(--space-5) var(--space-4) var(--space-3)" }}>
-          {renderGameStateContext(gameStateData, decisions)}
+          {renderGameStateContext(gameStateData)}
         </div>
       );
     }
@@ -1188,12 +1121,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
                       {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
-                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"} {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
                     </span>
                   ) : (
-                    currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `
+                    <>
+                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                      Action {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
+                    </>
                   )}
-                  Action {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
                     ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
                   </span>
@@ -1321,7 +1256,6 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               modelStatuses={currentTurn.modelStatuses}
               gameStateData={currentTurn.pendingData?.gameState}
               totalModels={currentTurn.pendingData?.totalModels}
-              decisions={currentTurn.decisions}
             />
           </>
         ) : currentDecision ? (
@@ -1342,12 +1276,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
                       {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
-                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"} {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
                     </span>
                   ) : (
-                    currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `
+                    <>
+                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
+                      Action {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
+                    </>
                   )}
-                  Action {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
                     ({((currentDecision.timingEntry?.data?.parallelDuration || 0) / 1000).toFixed(2)}s)
                   </span>
@@ -1480,7 +1416,6 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               modelStatuses={currentDecision.modelStatuses}
               gameStateData={currentDecision.votingEntry.data?.gameState}
               totalModels={currentDecision.votingEntry.data?.topResult?.totalVotes}
-              decisions={currentTurn?.decisions}
             />
           </>
         ) : null}

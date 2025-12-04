@@ -44,12 +44,26 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
-        <span>
-          <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
-          <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}
-          </span>{suffix} <CoinValue coins={entry.coins} />
-        </span>
+        <>
+          <span>
+            <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
+            <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
+              {entry.card}
+            </span>{suffix} <CoinValue coins={entry.coins} />
+          </span>
+          {entry.reasoning && (
+            <div style={{
+              marginTop: "2px",
+              paddingLeft: "12px",
+              fontSize: "0.625rem",
+              color: "var(--color-text-secondary)",
+              fontStyle: "italic",
+              opacity: 0.8,
+            }}>
+              → {entry.reasoning}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -67,12 +81,26 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
-        <span>
-          <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
-          <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}
-          </span>{suffix}
-        </span>
+        <>
+          <span>
+            <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
+            <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
+              {entry.card}
+            </span>{suffix}
+          </span>
+          {entry.reasoning && (
+            <div style={{
+              marginTop: "2px",
+              paddingLeft: "12px",
+              fontSize: "0.625rem",
+              color: "var(--color-text-secondary)",
+              fontStyle: "italic",
+              opacity: 0.8,
+            }}>
+              → {entry.reasoning}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -83,12 +111,26 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
-        <span>
-          <PlayerName player={entry.player} /> <Verb>buys</Verb>{" "}
-          <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
-            {entry.card}
-          </span>{suffix}
-        </span>
+        <>
+          <span>
+            <PlayerName player={entry.player} /> <Verb>buys</Verb>{" "}
+            <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
+              {entry.card}
+            </span>{suffix}
+          </span>
+          {entry.reasoning && (
+            <div style={{
+              marginTop: "2px",
+              paddingLeft: "12px",
+              fontSize: "0.625rem",
+              color: "var(--color-text-secondary)",
+              fontStyle: "italic",
+              opacity: 0.8,
+            }}>
+              → {entry.reasoning}
+            </div>
+          )}
+        </>
       );
     }
 

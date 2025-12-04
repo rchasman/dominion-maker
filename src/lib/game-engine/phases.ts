@@ -26,7 +26,7 @@ function checkGameOver(state: GameState): GameState {
   return state;
 }
 
-export function buyCard(state: GameState, card: CardName): GameState {
+export function buyCard(state: GameState, card: CardName, reasoning?: string): GameState {
   if (state.phase !== "buy" || state.buys < 1) return state;
 
   const cardDef = CARDS[card];
@@ -58,6 +58,7 @@ export function buyCard(state: GameState, card: CardName): GameState {
       player,
       card,
       vp,
+      reasoning,
       children: [
         { type: "gain-card", player, card }
       ],

@@ -68,6 +68,7 @@ export type LogEntry = {
   player: Player;
   card: CardName;
   coins: number;
+  reasoning?: string;
   children?: LogEntry[];
 } | {
   type: "unplay-treasure";
@@ -79,12 +80,14 @@ export type LogEntry = {
   type: "play-action";
   player: Player;
   card: CardName;
+  reasoning?: string;
   children?: LogEntry[];
 } | {
   type: "buy-card";
   player: Player;
   card: CardName;
   vp?: number;
+  reasoning?: string;
   children?: LogEntry[];
 } | {
   type: "draw-cards";

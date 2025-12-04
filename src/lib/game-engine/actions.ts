@@ -43,7 +43,7 @@ export function resolveDecision(state: GameState, selectedCards: CardName[]): Ga
 }
 
 // Execute action card effects
-export function playAction(state: GameState, card: CardName): GameState {
+export function playAction(state: GameState, card: CardName, reasoning?: string): GameState {
   if (state.phase !== "action" || state.actions < 1) return state;
   if (!isActionCard(card)) return state;
 
@@ -89,6 +89,7 @@ export function playAction(state: GameState, card: CardName): GameState {
       type: "play-action",
       player,
       card,
+      reasoning,
       children,
     }],
   };

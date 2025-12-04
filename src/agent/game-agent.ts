@@ -112,15 +112,15 @@ function executeAction(state: GameState, action: Action): GameState {
   switch (action.type) {
     case "play_action":
       if (!action.card) throw new Error("play_action requires card");
-      newState = playAction(state, action.card);
+      newState = playAction(state, action.card, action.reasoning);
       break;
     case "play_treasure":
       if (!action.card) throw new Error("play_treasure requires card");
-      newState = playTreasure(state, action.card);
+      newState = playTreasure(state, action.card, undefined, action.reasoning);
       break;
     case "buy_card":
       if (!action.card) throw new Error("buy_card requires card");
-      newState = buyCard(state, action.card);
+      newState = buyCard(state, action.card, action.reasoning);
       break;
     case "end_phase":
       newState = state.phase === "action" ? endActionPhase(state) : endBuyPhase(state);
