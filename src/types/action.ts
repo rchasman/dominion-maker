@@ -13,6 +13,7 @@ export const Action = z.object({
   ]),
   card: CardName.optional(),
   cards: z.array(CardName).optional(),
+  reasoning: z.string().optional(), // Brief explanation of why this action
 });
 
 export type Action = z.infer<typeof Action>;

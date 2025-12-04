@@ -33,16 +33,16 @@ When pendingDecision exists for AI player, respond with appropriate action:
 Pick cards from pendingDecision.options only. Consider strategy (discard weak cards first).
 
 ## Output Format
-Return JSON only:
-{ "type": "play_action", "card": "Smithy" }
-{ "type": "play_treasure", "card": "Gold" }
-{ "type": "buy_card", "card": "Province" }
-{ "type": "end_phase" }
-{ "type": "discard_cards", "cards": ["Estate", "Copper"] }
-{ "type": "trash_cards", "cards": ["Curse"] }
-{ "type": "gain_card", "card": "Silver" }
+Return JSON with brief reasoning (1 sentence explaining why):
+{ "type": "play_action", "card": "Smithy", "reasoning": "Draw 3 cards for more options" }
+{ "type": "play_treasure", "card": "Gold", "reasoning": "Need 8 for Province" }
+{ "type": "buy_card", "card": "Province", "reasoning": "Best VP with 8 coins" }
+{ "type": "end_phase", "reasoning": "No actions remaining" }
+{ "type": "discard_cards", "cards": ["Estate", "Copper"], "reasoning": "Weak cards, keep Smithy" }
+{ "type": "trash_cards", "cards": ["Curse"], "reasoning": "Remove negative VP" }
+{ "type": "gain_card", "card": "Silver", "reasoning": "Workshop grants free card" }
 
-Analyze: phase → resources (actions/buys/coins) → hand → best move → return JSON.`;
+Analyze: phase → resources (actions/buys/coins) → hand → best move → return JSON with reasoning.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
 export const DOMINION_SYSTEM_PROMPT_DETAILED = `You are a Dominion AI player analyzing game state to return ONE ATOMIC ACTION.
@@ -151,14 +151,15 @@ turn-start (turn:1, player:"ai", child:draw 5) → phase-change ("buy") → play
   "type": "play_action" | "play_treasure" | "buy_card" | "end_phase" | "discard_cards" | "trash_cards" | "gain_card",
   "card": "CardName",  // for play_action, play_treasure, buy_card, gain_card
   "cards": ["Card1", ...]  // for discard_cards, trash_cards
+  "reasoning": "Brief explanation (1 sentence)"  // optional but recommended
 }
 
 **Examples:**
-{ "type": "play_action", "card": "Smithy" }
-{ "type": "play_treasure", "card": "Gold" }
-{ "type": "buy_card", "card": "Province" }
-{ "type": "end_phase" }
-{ "type": "trash_cards", "cards": ["Copper", "Estate"] }
+{ "type": "play_action", "card": "Smithy", "reasoning": "Draw 3 to find Gold" }
+{ "type": "play_treasure", "card": "Gold", "reasoning": "Need 8 for Province" }
+{ "type": "buy_card", "card": "Province", "reasoning": "Best VP with 8 coins" }
+{ "type": "end_phase", "reasoning": "No buys left" }
+{ "type": "trash_cards", "cards": ["Copper", "Estate"], "reasoning": "Thin deck early" }
 
 **Analysis Checklist:**
 1. Phase? (action/buy/cleanup)
