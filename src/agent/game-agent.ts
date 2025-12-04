@@ -495,8 +495,20 @@ export async function advanceGameStateWithConsensus(
     return true;
   };
 
-  // Log voting results - use early consensus winner if available
-  const winner = earlyConsensus || rankedGroups[0];
+  // Filter to only valid actions - LLMs can hallucinate invalid moves
+  const validRankedGroups = rankedGroups.filter(g => isActionValid(g.action));
+
+  // If early consensus, validate it first
+  const validEarlyConsensus = earlyConsensus && isActionValid(earlyConsensus.action) ? earlyConsensus : null;
+
+  // Fall back to simple AI if no valid actions
+  if (!validEarlyConsensus && validRankedGroups.length === 0) {
+    console.warn("⚠ All LLM actions were invalid, falling back to simple AI");
+    return runSimpleAITurn(currentState);
+  }
+
+  // Select winner from valid actions only
+  const winner = validEarlyConsensus || validRankedGroups[0];
   const votesConsidered = earlyConsensus ? completedCount : successfulResults.length;
   const consensusStrength = winner.count / votesConsidered;
 
@@ -506,17 +518,18 @@ export async function advanceGameStateWithConsensus(
 
   const votingDuration = performance.now() - votingStart;
 
-  // Log any invalid actions
+  // Log any invalid actions that were filtered out
   const invalidActions = rankedGroups.filter(g => !isActionValid(g.action));
+  const invalidVoteCount = invalidActions.reduce((sum, g) => sum + g.count, 0);
   if (invalidActions.length > 0) {
-    console.warn(`⚠ ${invalidActions.length} invalid actions proposed:`, invalidActions.map(g => ({
+    console.warn(`⚠ Filtered ${invalidActions.length} invalid actions (${invalidVoteCount} votes):`, invalidActions.map(g => ({
       action: g.action,
       votes: g.count,
       voters: g.voters
     })));
   }
 
-  const runnerUpCount = rankedGroups[1]?.count ?? 0;
+  const runnerUpCount = validRankedGroups[1]?.count ?? 0;
 
   // Calculate hand composition for diagnostics
   const hand = currentState.players[currentState.activePlayer].hand;
@@ -529,11 +542,12 @@ export async function advanceGameStateWithConsensus(
     total: hand.length,
   };
 
+  const filteredMsg = invalidActions.length > 0 ? ` (${invalidActions.length} invalid filtered)` : "";
   logger?.({
     type: "consensus-voting",
-    message: earlyConsensus
-      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} vs ${runnerUpCount})`
-      : `◉ Voting: ${rankedGroups.length} unique actions, winner: ${actionDesc}`,
+    message: validEarlyConsensus
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} vs ${runnerUpCount})${filteredMsg}`
+      : `◉ Voting: ${validRankedGroups.length} valid actions, winner: ${actionDesc}${filteredMsg}`,
     data: {
       topResult: {
         action: winner.action,
