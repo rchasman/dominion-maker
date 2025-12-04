@@ -107,18 +107,24 @@ async function generateActionViaBackend(
 
 // Execute an atomic action and return new state
 function executeAction(state: GameState, action: Action): GameState {
+  let newState: GameState;
+
   switch (action.type) {
     case "play_action":
       if (!action.card) throw new Error("play_action requires card");
-      return playAction(state, action.card);
+      newState = playAction(state, action.card);
+      break;
     case "play_treasure":
       if (!action.card) throw new Error("play_treasure requires card");
-      return playTreasure(state, action.card);
+      newState = playTreasure(state, action.card);
+      break;
     case "buy_card":
       if (!action.card) throw new Error("buy_card requires card");
-      return buyCard(state, action.card);
+      newState = buyCard(state, action.card);
+      break;
     case "end_phase":
-      return state.phase === "action" ? endActionPhase(state) : endBuyPhase(state);
+      newState = state.phase === "action" ? endActionPhase(state) : endBuyPhase(state);
+      break;
     case "discard_cards":
       if (!action.cards || action.cards.length === 0) {
         throw new Error("discard_cards requires cards array");
@@ -127,7 +133,8 @@ function executeAction(state: GameState, action: Action): GameState {
       if (!state.pendingDecision || state.pendingDecision.type !== "discard") {
         throw new Error("discard_cards action but no pending discard decision");
       }
-      return resolveDecision(state, action.cards);
+      newState = resolveDecision(state, action.cards);
+      break;
     case "trash_cards":
       if (!action.cards || action.cards.length === 0) {
         throw new Error("trash_cards requires cards array");
@@ -136,7 +143,8 @@ function executeAction(state: GameState, action: Action): GameState {
       if (!state.pendingDecision || state.pendingDecision.type !== "trash") {
         throw new Error("trash_cards action but no pending trash decision");
       }
-      return resolveDecision(state, action.cards);
+      newState = resolveDecision(state, action.cards);
+      break;
     case "gain_card":
       if (!action.card) {
         throw new Error("gain_card requires card");
@@ -145,8 +153,16 @@ function executeAction(state: GameState, action: Action): GameState {
       if (!state.pendingDecision || state.pendingDecision.type !== "gain") {
         throw new Error("gain_card action but no pending gain decision");
       }
-      return resolveDecision(state, [action.card]);
+      newState = resolveDecision(state, [action.card]);
+      break;
   }
+
+  // Add action to turn history (strip reasoning)
+  const { reasoning, ...actionCore } = action;
+  return {
+    ...newState,
+    turnHistory: [...newState.turnHistory, actionCore],
+  };
 }
 
 export async function advanceGameState(
@@ -217,6 +233,7 @@ export async function advanceGameStateWithConsensus(
         coins: currentState.coins,
         hand: currentState.players[currentState.activePlayer].hand,
         inPlay: currentState.players[currentState.activePlayer].inPlay,
+        turnHistory: currentState.turnHistory,
         supplySnapshot: Object.entries(currentState.supply)
           .filter(([_, count]) => count > 0)
           .reduce((acc, [card, count]) => ({ ...acc, [card]: count }), {}),

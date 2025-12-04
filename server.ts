@@ -43,9 +43,13 @@ const server = Bun.serve({
           ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
           : "";
 
+        const turnHistoryStr = currentState.turnHistory && currentState.turnHistory.length > 0
+          ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
+          : "";
+
         const userMessage = humanChoice
-          ? `Current state:\n${JSON.stringify(currentState, null, 2)}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\nWhat is the next atomic action?`
-          : `Current state:\n${JSON.stringify(currentState, null, 2)}${legalActionsStr}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
+          ? `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\nWhat is the next atomic action?`
+          : `Current state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\nWhat is the next atomic action for ${currentState.activePlayer}?`;
 
         const result = await generateObject({
           model,

@@ -305,6 +305,22 @@ export const PendingDecision = z.object({
 });
 export type PendingDecision = z.infer<typeof PendingDecision>;
 
+// Action history entry (subset of Action without reasoning)
+export const TurnAction = z.object({
+  type: z.enum([
+    "play_action",
+    "play_treasure",
+    "buy_card",
+    "end_phase",
+    "discard_cards",
+    "trash_cards",
+    "gain_card",
+  ]),
+  card: CardName.optional(),
+  cards: z.array(CardName).optional(),
+});
+export type TurnAction = z.infer<typeof TurnAction>;
+
 export const GameState = z.object({
   turn: z.number(),
   phase: Phase,
@@ -330,6 +346,7 @@ export const GameState = z.object({
   winner: Player.nullable(),
 
   log: z.array(LogEntry),
+  turnHistory: z.array(TurnAction), // Actions taken this turn (reset on cleanup)
 });
 export type GameState = z.infer<typeof GameState>;
 

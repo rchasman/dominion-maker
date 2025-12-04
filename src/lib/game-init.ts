@@ -104,5 +104,6 @@ export function initializeGame(useFirstGame = true): GameState {
         }],
       },
     ],
+    turnHistory: [], // Start with empty turn history
   };
 }

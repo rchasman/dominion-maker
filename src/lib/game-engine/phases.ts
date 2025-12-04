@@ -132,6 +132,7 @@ export function endBuyPhase(state: GameState): GameState {
     coins: 0,
     turn: newTurn,
     log: [...state.log, ...logEntries],
+    turnHistory: [], // Reset turn history for new turn
   };
 
   return checkGameOver(newState);
