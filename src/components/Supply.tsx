@@ -60,7 +60,14 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
         }}>
           Victory
         </div>
-        <div style={{ display: "grid", gap: "var(--space-1)" }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          flexWrap: "wrap",
+          gap: "var(--space-1)",
+          maxBlockSize: "30rem",
+          alignContent: "start"
+        }}>
           {victory.map((card) => (
             <Card
               key={card}
@@ -86,7 +93,14 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
         }}>
           Treasure
         </div>
-        <div style={{ display: "grid", gap: "var(--space-1)" }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          flexWrap: "wrap",
+          gap: "var(--space-1)",
+          maxBlockSize: "30rem",
+          alignContent: "start"
+        }}>
           {treasures.map((card) => (
             <Card
               key={card}
@@ -102,35 +116,28 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
       </div>
 
       {/* Kingdom cards */}
-      <div style={{ gridArea: "kingdom", minInlineSize: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div>
-          <div style={{
-            fontSize: "0.625rem",
-            color: "var(--color-text-primary)",
-            textTransform: "uppercase",
-            fontWeight: 600,
-            marginBlockEnd: "var(--space-2)",
-          }}>
-            Kingdom
-          </div>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, auto)",
-            gap: "0.125rem",
-            justifyContent: "center",
-          }}>
-            {sortedKingdom.map((card) => (
-              <Card
-                key={card}
-                name={card}
-                size="large"
-                count={state.supply[card]}
-                onClick={() => onBuyCard?.(card)}
-                disabled={!canInteract(card)}
-                highlightMode={getSupplyCardHighlightMode(card)}
-              />
-            ))}
-          </div>
+      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
+        <div style={{
+          fontSize: "0.625rem",
+          color: "var(--color-text-primary)",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          marginBlockEnd: "var(--space-2)",
+        }}>
+          Kingdom
+        </div>
+        <div className="kingdom-grid">
+          {sortedKingdom.map((card) => (
+            <Card
+              key={card}
+              name={card}
+              size="large"
+              count={state.supply[card]}
+              onClick={() => onBuyCard?.(card)}
+              disabled={!canInteract(card)}
+              highlightMode={getSupplyCardHighlightMode(card)}
+            />
+          ))}
         </div>
       </div>
     </div>
