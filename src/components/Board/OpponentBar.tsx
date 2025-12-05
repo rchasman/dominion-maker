@@ -1,4 +1,4 @@
-import type { PlayerState } from "../../types/game-state";
+import type { PlayerState, Phase, TurnSubPhase } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { countVP, getAllCards } from "../../lib/board-utils";
 
@@ -7,10 +7,25 @@ interface OpponentBarProps {
   isHumanTurn: boolean;
   gameMode: GameMode;
   onGameModeChange: (mode: GameMode) => void;
+  phase: Phase;
+  subPhase: TurnSubPhase;
 }
 
-export function OpponentBar({ opponent, isHumanTurn, gameMode, onGameModeChange }: OpponentBarProps) {
+function getPhaseBorderColor(isAiTurn: boolean, phase: Phase, subPhase: TurnSubPhase): string {
+  if (isAiTurn) {
+    // AI's turn - show phase colors
+    if (subPhase === "waiting_for_reactions" || subPhase === "opponent_decision") {
+      return "var(--color-reaction)";
+    }
+    if (phase === "action") return "var(--color-action-phase)";
+    if (phase === "buy") return "var(--color-buy-phase)";
+  }
+  return "var(--color-border)";
+}
+
+export function OpponentBar({ opponent, isHumanTurn, gameMode, onGameModeChange, phase, subPhase }: OpponentBarProps) {
   const opponentVP = countVP(getAllCards(opponent));
+  const borderColor = getPhaseBorderColor(!isHumanTurn, phase, subPhase);
 
   return (
     <div style={{
@@ -21,7 +36,7 @@ export function OpponentBar({ opponent, isHumanTurn, gameMode, onGameModeChange 
       background: !isHumanTurn
         ? "linear-gradient(180deg, rgba(100, 181, 246, 0.15) 0%, rgba(100, 181, 246, 0.05) 100%)"
         : "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
-      border: !isHumanTurn ? "1px solid var(--color-ai)" : "1px solid var(--color-border)",
+      border: `2px solid ${borderColor}`,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-5)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>

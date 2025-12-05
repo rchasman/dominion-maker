@@ -81,6 +81,8 @@ export function Board() {
           isHumanTurn={isHumanTurn}
           gameMode={gameMode}
           onGameModeChange={onGameModeChange}
+          phase={state.phase}
+          subPhase={state.subPhase}
         />
 
         <div style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}>
@@ -120,6 +122,8 @@ export function Board() {
           onCardClick={onCardClick}
           onInPlayClick={state.phase === "buy" ? onInPlayClick : undefined}
           pendingDecision={state.pendingDecision}
+          phase={state.phase}
+          subPhase={state.subPhase}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import type { CardName, PlayerState, PendingDecision } from "../types/game-state";
+import type { CardName, PlayerState, PendingDecision, Phase, TurnSubPhase } from "../types/game-state";
 import { Card } from "./Card";
 
 interface PlayerAreaProps {
@@ -12,6 +12,23 @@ interface PlayerAreaProps {
   onInPlayClick?: (card: CardName, index: number) => void;
   compact?: boolean;
   pendingDecision?: PendingDecision | null;
+  phase: Phase;
+  subPhase: TurnSubPhase;
+}
+
+function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
+  if (!isActive) return "var(--color-border)";
+
+  // Reaction or opponent decision takes precedence
+  if (subPhase === "waiting_for_reactions" || subPhase === "opponent_decision") {
+    return "var(--color-reaction)";
+  }
+
+  // Phase-based colors
+  if (phase === "action") return "var(--color-action-phase)";
+  if (phase === "buy") return "var(--color-buy-phase)";
+
+  return "var(--color-border)";
 }
 
 export function PlayerArea({
@@ -25,8 +42,11 @@ export function PlayerArea({
   onInPlayClick,
   compact,
   pendingDecision,
+  phase,
+  subPhase,
 }: PlayerAreaProps) {
   const size = compact ? "small" : "medium";
+  const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
 
   // Determine highlight mode for hand cards
   const getHandCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
@@ -59,11 +79,11 @@ export function PlayerArea({
     <div
       style={{
         padding: "var(--space-4)",
-        border: isActive ? "2px solid var(--color-victory)" : "2px solid var(--color-border)",
+        border: `2px solid ${borderColor}`,
         background: isActive
           ? "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)"
           : "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
-        boxShadow: isActive ? "0 0 var(--space-5) rgb(124 179 66 / 0.2)" : "none",
+        boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}33` : "none",
       }}
     >
       <div style={{ marginBlockEnd: "var(--space-3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
