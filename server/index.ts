@@ -67,7 +67,7 @@ const app = new Elysia()
         ...(isAnthropic && {
           providerOptions: {
             anthropic: {
-              structuredOutputMode: "auto",
+              structuredOutputMode: "outputFormat",
             },
           },
         }),
