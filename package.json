@@ -5,18 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "bun run server.ts",
-    "start": "bun run server.ts & bun run dev",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "workflow:web": "workflow web"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.53",
-    "@ai-sdk/openai": "^2.0.76",
-    "ai": "^5.0.106",
+    "@ai-sdk/anthropic": "3.0.0-beta.73",
+    "@ai-sdk/openai": "3.0.0-beta.83",
+    "@workflow/ai": "^4.0.1-beta.27",
+    "ai": "6.0.0-beta.132",
+    "nitro": "^3.0.1-alpha.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "workflow": "^4.0.1-beta.27",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -32,6 +34,6 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^8.0.0-beta.0"
   }
 }
