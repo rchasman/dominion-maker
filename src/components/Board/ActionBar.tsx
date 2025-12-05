@@ -9,6 +9,12 @@ interface ActionBarProps {
 }
 
 export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures, onEndPhase }: ActionBarProps) {
+  // Determine if there's nothing left to do in the turn
+  const isTurnComplete = !state.pendingDecision && (
+    (state.phase === "action" && state.actions === 0) ||
+    (state.phase === "buy" && state.buys === 0 && !hasTreasuresInHand)
+  );
+
   return (
     <div style={{
       display: "flex",
@@ -26,6 +32,7 @@ export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures,
           background: state.phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)",
           padding: "var(--space-1) var(--space-3)",
           fontWeight: 600,
+          opacity: (state.phase === "action" && state.actions === 0) || (state.phase === "buy" && state.buys === 0) ? 0.4 : 1,
         }}>
           {state.phase} phase
         </span>
@@ -75,8 +82,10 @@ export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures,
               : state.phase === "action"
               ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
               : "linear-gradient(180deg, #555 0%, #333 100%)",
-            color: "#fff",
-            border: (state.pendingDecision && state.pendingDecision.canSkip)
+            color: isTurnComplete ? "#a89968" : "#fff",
+            border: isTurnComplete
+              ? "1px solid #a89968"
+              : (state.pendingDecision && state.pendingDecision.canSkip)
               ? "1px solid #fbbf24"
               : state.phase === "action" ? "1px solid var(--color-victory)" : "1px solid #666",
             cursor: (state.pendingDecision && !state.pendingDecision.canSkip) ? "not-allowed" : "pointer",
@@ -85,6 +94,7 @@ export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures,
             fontWeight: 600,
             textTransform: "uppercase",
             fontFamily: "inherit",
+            animation: isTurnComplete ? "glow 2s ease-in-out infinite" : "none",
           }}
         >
           {(state.pendingDecision && state.pendingDecision.canSkip)
