@@ -53,7 +53,7 @@ export function VPValue({ vp }: { vp: number }) {
 
 export function ActionValue({ count }: { count: number }) {
   return (
-    <span style={{ color: "#e040fb", fontWeight: 700 }}>
+    <span style={{ color: "var(--color-action-phase)", fontWeight: 700 }}>
       +{count} {count === 1 ? "Action" : "Actions"}
     </span>
   );
