@@ -1,5 +1,6 @@
 import type { CardName, PlayerState, PendingDecision, Phase, TurnSubPhase } from "../types/game-state";
 import { Card } from "./Card";
+import { CARDS } from "../data/cards";
 
 interface PlayerAreaProps {
   player: PlayerState;
@@ -31,6 +32,27 @@ function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubP
   return "var(--color-border)";
 }
 
+function getPhaseBackground(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
+  // Inactive: default gradient
+  if (!isActive) {
+    return "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)";
+  }
+
+  // Active: use phase-tinted gradients that maintain darkness
+  if (subPhase === "waiting_for_reactions" || subPhase === "opponent_decision") {
+    // Teal-tinted gradient (reaction)
+    return "linear-gradient(180deg, #253837 0%, #1a2628 100%)";
+  } else if (phase === "action") {
+    // Purple-tinted gradient (action phase)
+    return "linear-gradient(180deg, #2d2540 0%, #1e1a2f 100%)";
+  } else if (phase === "buy") {
+    // Green-tinted gradient (buy phase)
+    return "linear-gradient(180deg, #253532 0%, #1a2428 100%)";
+  }
+
+  return "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)";
+}
+
 export function PlayerArea({
   player,
   label,
@@ -47,6 +69,7 @@ export function PlayerArea({
 }: PlayerAreaProps) {
   const size = compact ? "small" : "medium";
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
+  const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
 
   // Determine highlight mode for hand cards
   const getHandCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
@@ -67,12 +90,29 @@ export function PlayerArea({
 
   // Determine if a hand card is disabled
   const isHandCardDisabled = (card: CardName): boolean => {
-    if (!pendingDecision || !isHuman) return false;
-    // Only disable if the decision is for this player (human)
-    if (pendingDecision.player !== "human") return false;
+    if (!isHuman) return false;
 
-    // During a decision, only cards in options are clickable
-    return !pendingDecision.options.includes(card);
+    // Dim all cards when it's not the player's turn
+    if (!isActive) return true;
+
+    // If there's a pending decision for the human player, only cards in options are clickable
+    if (pendingDecision && pendingDecision.player === "human") {
+      return !pendingDecision.options.includes(card);
+    }
+
+    const cardDef = CARDS[card];
+
+    // Victory cards are always dimmed (never playable)
+    if (cardDef.types.includes("victory")) {
+      return true;
+    }
+
+    // Dim treasures when not in buy phase (they can't be played)
+    if (cardDef.types.includes("treasure") && phase !== "buy") {
+      return true;
+    }
+
+    return false;
   };
 
   return (
@@ -80,26 +120,13 @@ export function PlayerArea({
       style={{
         padding: "var(--space-4)",
         border: `2px solid ${borderColor}`,
-        background: isActive
-          ? "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)"
-          : "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
-        boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}33` : "none",
+        background: backgroundColor,
+        boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
       }}
     >
       <div style={{ marginBlockEnd: "var(--space-3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
           <strong style={{ fontSize: "0.8125rem", color: "var(--color-text-primary)" }}>{label}</strong>
-          {isActive && (
-            <span style={{
-              fontSize: "0.5625rem",
-              color: "var(--color-bg-primary)",
-              background: "var(--color-victory)",
-              padding: "var(--space-1) var(--space-2)",
-              fontWeight: 600,
-            }}>
-              ACTIVE
-            </span>
-          )}
         </div>
         {vpCount !== undefined && (
           <div style={{
@@ -124,7 +151,8 @@ export function PlayerArea({
           marginBlockEnd: "var(--space-3)",
           background: player.inPlay.length > 0 ? "rgb(255 255 255 / 0.05)" : "rgb(255 255 255 / 0.02)",
           border: player.inPlay.length > 0 ? "1px solid var(--color-border)" : "1px dashed var(--color-border)",
-          blockSize: "calc(var(--card-height-small) + var(--space-6))",
+          minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
+          overflow: "hidden",
         }}>
           <div style={{
             position: "absolute",
@@ -137,7 +165,7 @@ export function PlayerArea({
           }}>
             In Play {player.inPlay.length === 0 && "(empty)"}
           </div>
-          <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", blockSize: "100%", justifyContent: "center", alignItems: "center", alignContent: "center" }}>
+          <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", minBlockSize: "100%", justifyContent: "center", alignItems: "center", alignContent: "center", minInlineSize: 0 }}>
             {player.inPlay.map((card, i) => (
               <Card
                 key={`${card}-${i}`}
@@ -159,6 +187,7 @@ export function PlayerArea({
             padding: "var(--space-2)",
             background: "rgb(255 255 255 / 0.05)",
             border: "1px solid var(--color-border)",
+            overflow: "hidden",
           }}>
             <div style={{
               position: "absolute",
@@ -171,7 +200,14 @@ export function PlayerArea({
             }}>
               Hand ({player.hand.length})
             </div>
-            <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignContent: "flex-start", justifyContent: "center" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(0, var(--card-width-large)))",
+              gap: "var(--space-2)",
+              alignContent: "flex-start",
+              justifyContent: "center",
+              minInlineSize: 0
+            }}>
               {player.hand.map((card, i) => (
                 <Card
                   key={`${card}-${i}`}
@@ -222,7 +258,7 @@ export function PlayerArea({
             Deck
           </div>
           {player.deck.length > 0 ? (
-            <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} />
+            <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} disabled={!isActive} />
           ) : (
             <div style={{
               inlineSize: size === "small" ? "var(--card-width-small)" : "var(--card-width-medium)",
@@ -283,7 +319,7 @@ export function PlayerArea({
                 ))}
               </div>
             ) : (
-              <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} />
+              <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} disabled={!isActive} />
             )
           ) : (
             <div style={{
