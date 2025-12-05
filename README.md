@@ -4,6 +4,12 @@
 
 MAKER = **M**aximal **A**gentic decomposition + ahead-by-**K** voting + **E**rror correction + **R**ed-flagging
 
+---
+
+> **⚠️ RESEARCH PROJECT - NON-COMMERCIAL USE ONLY**
+>
+> This is an academic implementation of the MAKER framework for research purposes. **Dominion** is a trademark of Rio Grande Games. All game content, rules, and card designs are © Donald X. Vaccarino and Rio Grande Games. This project is not affiliated with, endorsed by, or commercially licensed by Rio Grande Games. No commercial use intended or permitted.
+
 ## The Core Insight
 
 LLMs fail at long sequential tasks because errors compound. One mistake at step 50 ruins steps 51-100.
@@ -275,13 +281,15 @@ Typical game (300 actions, 8 voters each):
 ## Credits
 
 - **MAKER Framework**: [Cognizant AI Labs](https://www.cognizant.com/us/en/ai-lab/blog/maker)
-- **Dominion Design**: Donald X. Vaccarino
-- **Implementation**: Roey D. Chasman
+- **Dominion Game**: © Donald X. Vaccarino, published by Rio Grande Games
+- **MAKER Implementation**: Roey D. Chasman (research purposes only)
 - **AI Infrastructure**: Vercel AI SDK, Anthropic, OpenAI, Google, Mistral
 
 ## License
 
-MIT - See [LICENSE](LICENSE)
+**Code**: MIT License - See [LICENSE](LICENSE)
+
+**Game Content**: Dominion is © Donald X. Vaccarino and Rio Grande Games. Game rules, card names, and mechanics are used for non-commercial research purposes only under fair use. This project claims no ownership of Dominion intellectual property.
 
 ---
 
