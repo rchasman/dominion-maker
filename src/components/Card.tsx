@@ -30,30 +30,30 @@ export function Card({
   const getBorderStyle = () => {
     if (selected) {
       return {
-        border: "2px solid var(--color-victory)",
+        border: "0.125rem solid var(--color-victory)",
         boxShadow: "var(--shadow-md)",
       };
     }
     if (highlightMode === "trash") {
       return {
-        border: "3px dashed #ef4444",
-        boxShadow: "0 0 8px rgba(239, 68, 68, 0.4)",
+        border: "0.1875rem dashed #ef4444",
+        boxShadow: "0 0 0.5rem rgba(239, 68, 68, 0.4)",
       };
     }
     if (highlightMode === "discard") {
       return {
-        border: "3px dashed #f59e0b",
-        boxShadow: "0 0 8px rgba(245, 158, 11, 0.4)",
+        border: "0.1875rem dashed #f59e0b",
+        boxShadow: "0 0 0.5rem rgba(245, 158, 11, 0.4)",
       };
     }
     if (highlightMode === "gain") {
       return {
-        border: "3px dashed #10b981",
-        boxShadow: "0 0 8px rgba(16, 185, 129, 0.4)",
+        border: "0.1875rem dashed #10b981",
+        boxShadow: "0 0 0.5rem rgba(16, 185, 129, 0.4)",
       };
     }
     return {
-      border: "2px solid transparent",
+      border: "0.125rem solid transparent",
       boxShadow: "none",
     };
   };
@@ -66,11 +66,12 @@ export function Card({
       style={{
         position: "relative",
         cursor: onClick && !disabled ? "pointer" : "default",
-        opacity: disabled ? 0.4 : 1,
+        opacity: disabled ? 0.6 : 1,
         transform: selected ? "translateY(calc(-1 * var(--space-2)))" : "none",
         transition: "transform var(--transition-fast), box-shadow var(--transition-fast)",
         ...borderStyle,
-        flexShrink: 0,
+        minInlineSize: 0,
+        flexShrink: 1,
         userSelect: "none",
       }}
     >
@@ -78,7 +79,8 @@ export function Card({
         src={imageUrl}
         alt={showBack ? "Card back" : name}
         style={{
-          inlineSize: size === "small" ? "var(--card-width-small)" : size === "large" ? "var(--card-width-large)" : "var(--card-width-medium)",
+          maxInlineSize: size === "small" ? "var(--card-width-small)" : size === "large" ? "var(--card-width-large)" : "var(--card-width-medium)",
+          inlineSize: "100%",
           blockSize: "auto",
           display: "block",
         }}
@@ -102,8 +104,8 @@ export function Card({
             justifyContent: "center",
             fontSize: "0.875rem",
             fontWeight: "bold",
-            border: "2px solid rgba(255, 255, 255, 0.3)",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+            border: "0.125rem solid rgba(255, 255, 255, 0.3)",
+            boxShadow: "0 0.125rem 0.25rem rgba(0,0,0,0.3)",
           }}
         >
           {count}

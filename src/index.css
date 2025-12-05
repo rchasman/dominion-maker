@@ -10,6 +10,7 @@
 
   --color-text-primary: #e8e4d9;
   --color-text-secondary: #a0a0b0;
+  --color-text-tertiary: #f5f2ea;
   --color-text-muted: #666;
 
   --color-gold: #c9a227;
@@ -29,6 +30,7 @@
   --color-reaction: #4db6ac;
 
   --color-border: #4a4a6a;
+  --color-border-secondary: rgba(255, 255, 255, 0.15);
   --color-border-supply: #3d5c3d;
   --color-border-highlight: #64b5f6;
 
@@ -37,7 +39,7 @@
   --color-player-3: #e57373;
   --color-player-4: #ba68c8;
   --color-player-5: #4db6ac;
-  --color-action-phase: #8b5a2b;
+  --color-action-phase: #9d6bb3;
   --color-buy-phase: #2e7d32;
 
   /* Spacing Scale (rem-based) */
@@ -51,10 +53,10 @@
   --space-8: 1.5rem;   /* 24px */
   --space-10: 2.5rem;  /* 40px */
 
-  /* Card Sizes (using clamp for fluidity) */
-  --card-width-small: clamp(3.5rem, 5vw, 3.75rem);
-  --card-width-medium: clamp(4.5rem, 6vw, 5rem);
-  --card-width-large: clamp(6.5rem, 9vw, 7.5rem);
+  /* Card Sizes (rem-based for font size scaling) */
+  --card-width-small: 3.75rem;
+  --card-width-medium: 5rem;
+  --card-width-large: 7.5rem;
   --card-height-small: 5.9375rem;
   --card-height-medium: 7.8125rem;
   --card-height-large: 11.71875rem;
@@ -106,5 +108,36 @@ body {
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 0.125rem currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0.25rem currentColor;
+  }
+}
+
+.kingdom-grid {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 0.125rem;
+  justify-content: center;
+  container-type: inline-size;
+}
+
+/* Switch to 2 columns when too narrow */
+@container (max-width: 40rem) {
+  .kingdom-grid {
+    grid-template-columns: repeat(2, auto);
+  }
+}
+
+/* Allow 3 columns as middle ground */
+@container (max-width: 40rem) and (min-width: 30rem) {
+  .kingdom-grid {
+    grid-template-columns: repeat(3, auto);
   }
 }
