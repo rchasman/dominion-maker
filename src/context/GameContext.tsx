@@ -103,6 +103,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const modeRestoredFromStorage = useRef(false);
   const settingsRestoredFromStorage = useRef(false);
+  const gameSessionId = useRef(0);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -249,6 +250,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const startGame = useCallback(() => {
     abortOngoingConsensus();
+    gameSessionId.current++;
     dispatch({ type: "SET_PROCESSING", payload: false });
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
@@ -260,29 +262,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const handleCardClick = useCallback(async (card: CardName, _index: number) => {
     if (!state.gameState || state.gameState.activePlayer !== "human" || state.isProcessing) return;
 
+    const sessionId = gameSessionId.current;
     dispatch({ type: "SET_PROCESSING", payload: true });
     try {
       const newState = await strategy.handleCardPlay(state.gameState, card);
-      dispatch({ type: "SET_GAME_STATE", payload: newState });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_GAME_STATE", payload: newState });
+      }
     } catch (error) {
       console.error("Card play error:", error);
     } finally {
-      dispatch({ type: "SET_PROCESSING", payload: false });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_PROCESSING", payload: false });
+      }
     }
   }, [state.gameState, state.isProcessing, strategy]);
 
   const handleBuyCard = useCallback(async (card: CardName) => {
     if (!state.gameState || state.isProcessing) return;
 
+    const sessionId = gameSessionId.current;
     if (state.gameState.pendingDecision?.type === "gain") {
       dispatch({ type: "SET_PROCESSING", payload: true });
       try {
         const newState = await strategy.handleBuyCard(state.gameState, card);
-        dispatch({ type: "SET_GAME_STATE", payload: newState });
+        if (gameSessionId.current === sessionId) {
+          dispatch({ type: "SET_GAME_STATE", payload: newState });
+        }
       } catch (error) {
         console.error("Buy card error:", error);
       } finally {
-        dispatch({ type: "SET_PROCESSING", payload: false });
+        if (gameSessionId.current === sessionId) {
+          dispatch({ type: "SET_PROCESSING", payload: false });
+        }
       }
       return;
     }
@@ -292,53 +304,72 @@ export function GameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_PROCESSING", payload: true });
     try {
       const newState = await strategy.handleBuyCard(state.gameState, card);
-      dispatch({ type: "SET_GAME_STATE", payload: newState });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_GAME_STATE", payload: newState });
+      }
     } catch (error) {
       console.error("Buy card error:", error);
     } finally {
-      dispatch({ type: "SET_PROCESSING", payload: false });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_PROCESSING", payload: false });
+      }
     }
   }, [state.gameState, state.isProcessing, strategy]);
 
   const handlePlayAllTreasures = useCallback(async () => {
     if (!state.gameState || state.gameState.phase !== "buy" || state.isProcessing) return;
 
+    const sessionId = gameSessionId.current;
     dispatch({ type: "SET_PROCESSING", payload: true });
     try {
       const newState = await strategy.handlePlayAllTreasures(state.gameState);
-      dispatch({ type: "SET_GAME_STATE", payload: newState });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_GAME_STATE", payload: newState });
+      }
     } catch (error) {
       console.error("Play all treasures error:", error);
     } finally {
-      dispatch({ type: "SET_PROCESSING", payload: false });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_PROCESSING", payload: false });
+      }
     }
   }, [state.gameState, state.isProcessing, strategy]);
 
   const handleInPlayClick = useCallback(async (card: CardName, _index: number) => {
     if (!state.gameState || state.gameState.phase !== "buy" || state.isProcessing) return;
 
+    const sessionId = gameSessionId.current;
     dispatch({ type: "SET_PROCESSING", payload: true });
     try {
       const newState = await strategy.handleUnplayTreasure(state.gameState, card);
-      dispatch({ type: "SET_GAME_STATE", payload: newState });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_GAME_STATE", payload: newState });
+      }
     } catch (error) {
       console.error("Unplay treasure error:", error);
     } finally {
-      dispatch({ type: "SET_PROCESSING", payload: false });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_PROCESSING", payload: false });
+      }
     }
   }, [state.gameState, state.isProcessing, strategy]);
 
   const handleEndPhase = useCallback(async () => {
     if (!state.gameState || state.isProcessing) return;
 
+    const sessionId = gameSessionId.current;
     dispatch({ type: "SET_PROCESSING", payload: true });
     try {
       const newState = await strategy.handleEndPhase(state.gameState);
-      dispatch({ type: "SET_GAME_STATE", payload: newState });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_GAME_STATE", payload: newState });
+      }
     } catch (error) {
       console.error("End phase error:", error);
     } finally {
-      dispatch({ type: "SET_PROCESSING", payload: false });
+      if (gameSessionId.current === sessionId) {
+        dispatch({ type: "SET_PROCESSING", payload: false });
+      }
     }
   }, [state.gameState, state.isProcessing, strategy]);
 
@@ -347,30 +378,40 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!state.gameState || state.gameState.gameOver || state.isProcessing) return;
 
     if (state.gameState.activePlayer === "ai") {
+      const sessionId = gameSessionId.current;
       const timer = setTimeout(async () => {
         dispatch({ type: "SET_PROCESSING", payload: true });
         try {
           const newState = await strategy.runAITurn(state.gameState!, setGameState);
-          dispatch({ type: "SET_GAME_STATE", payload: newState });
+          if (gameSessionId.current === sessionId) {
+            dispatch({ type: "SET_GAME_STATE", payload: newState });
+          }
         } catch (error) {
           console.error("AI turn error:", error);
         } finally {
-          dispatch({ type: "SET_PROCESSING", payload: false });
+          if (gameSessionId.current === sessionId) {
+            dispatch({ type: "SET_PROCESSING", payload: false });
+          }
         }
       }, 500);
       return () => clearTimeout(timer);
     }
 
     if (state.gameState.subPhase === "opponent_decision" && state.gameState.pendingDecision?.player === "ai") {
+      const sessionId = gameSessionId.current;
       const timer = setTimeout(async () => {
         dispatch({ type: "SET_PROCESSING", payload: true });
         try {
           const newState = await strategy.resolveAIPendingDecision(state.gameState!);
-          dispatch({ type: "SET_GAME_STATE", payload: newState });
+          if (gameSessionId.current === sessionId) {
+            dispatch({ type: "SET_GAME_STATE", payload: newState });
+          }
         } catch (error) {
           console.error("AI pending decision error:", error);
         } finally {
-          dispatch({ type: "SET_PROCESSING", payload: false });
+          if (gameSessionId.current === sessionId) {
+            dispatch({ type: "SET_PROCESSING", payload: false });
+          }
         }
       }, 500);
       return () => clearTimeout(timer);
