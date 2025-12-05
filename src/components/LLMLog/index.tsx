@@ -128,13 +128,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Track individual model completions
     if (entry.type === "consensus-model-complete" && buildingTurn) {
-      const { index, duration, success, action } = entry.data || {};
+      const { index, duration, success, action, aborted } = entry.data || {};
       if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
         const status = buildingTurn.modelStatuses.get(index)!;
         status.duration = duration;
         status.success = success;
         status.completed = true;
         status.action = action;
+        status.aborted = aborted;
       }
     }
 
@@ -394,14 +395,15 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     if (liveStatuses && liveStatuses.size > 0) {
       // Build voting data from live model statuses
       const voteGroups = new Map<string, { action: Action; voters: string[] }>();
-      const completedStatuses = Array.from(liveStatuses.values()).filter(s => s.completed);
+      // Only consider models that completed successfully with an action
+      const successfulStatuses = Array.from(liveStatuses.values())
+        .filter(s => s.completed && s.success !== false && s.action);
 
-      for (const status of completedStatuses) {
-        if (!status.action) {
-          // Model completed but no action - log for debugging
-          console.warn(`[${status.provider}] completed but no action captured`);
-          continue;
-        }
+      // Count failed models for display
+      const failedCount = Array.from(liveStatuses.values())
+        .filter(s => s.completed && (s.success === false || !s.action)).length;
+
+      for (const status of successfulStatuses) {
         // Exclude reasoning from signature so actions with different reasoning group together
         const { reasoning, ...actionCore } = status.action;
         const signature = JSON.stringify(actionCore);
@@ -421,10 +423,20 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
       // If no votes yet, show placeholder
       if (allResults.length === 0) {
+        const totalCompleted = Array.from(liveStatuses.values()).filter(s => s.completed).length;
+        const isAllComplete = totalCompleted === liveStatuses.size;
+
         return {
           content: (
-            <div style={{ color: "var(--color-text-secondary)", fontSize: "0.75rem", textAlign: "center", padding: "var(--space-4)" }}>
-              Waiting for votes...
+            <div style={{
+              color: isAllComplete && failedCount > 0 ? "#ef4444" : "var(--color-text-secondary)",
+              fontSize: "0.75rem",
+              textAlign: "center",
+              padding: "var(--space-4)"
+            }}>
+              {isAllComplete && failedCount > 0
+                ? `✗ All ${failedCount} models failed (check API key / server logs)`
+                : "Waiting for votes..."}
             </div>
           ),
           legend: null,
@@ -842,14 +854,33 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     // For pending, build from live model statuses
     if (!modelStatuses) return <div style={{ color: "var(--color-text-secondary)", fontSize: "0.7rem" }}>No reasoning data yet...</div>;
 
-    const completedStatuses = Array.from(modelStatuses.values()).filter(s => s.completed && s.action);
-    if (completedStatuses.length === 0) return <div style={{ color: "var(--color-text-secondary)", fontSize: "0.7rem" }}>Waiting for models...</div>;
+    // Only consider models that completed successfully with an action
+    const completedStatuses = Array.from(modelStatuses.values())
+      .filter(s => s.completed && s.success !== false && s.action);
+
+    if (completedStatuses.length === 0) {
+      const totalCompleted = Array.from(modelStatuses.values()).filter(s => s.completed).length;
+      const failedCount = Array.from(modelStatuses.values())
+        .filter(s => s.completed && (s.success === false || !s.action)).length;
+      const isAllComplete = totalCompleted === modelStatuses.size;
+
+      return (
+        <div style={{
+          color: isAllComplete && failedCount > 0 ? "#ef4444" : "var(--color-text-secondary)",
+          fontSize: "0.7rem",
+          padding: "var(--space-4)"
+        }}>
+          {isAllComplete && failedCount > 0
+            ? `✗ All ${failedCount} models failed (check API key / server logs)`
+            : "Waiting for models..."}
+        </div>
+      );
+    }
 
     // Group by action (excluding reasoning)
     const groups = new Map<string, { action: Action; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
 
     for (const status of completedStatuses) {
-      if (!status.action) continue;
       const { reasoning, ...actionCore } = status.action;
       const signature = JSON.stringify(actionCore);
 
