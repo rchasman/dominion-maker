@@ -1,5 +1,5 @@
 import { GameState } from "../types/game-state";
-import { Action } from "../types/action";
+import type { Action } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
 import { playAction, resolveDecision } from "../lib/game-engine/actions";
 import { playTreasure } from "../lib/game-engine/treasures";
@@ -8,12 +8,10 @@ import { getLegalActions } from "../lib/game-engine/core";
 import { runSimpleAITurn } from "../lib/game-engine/ai-simple";
 import { MODEL_IDS, getModelFullName, type ModelProvider } from "../config/models";
 import { CARDS } from "../data/cards";
+import { api } from "../api/client";
 
 // Re-export for convenience
 export type { ModelProvider } from "../config/models";
-
-// Backend API endpoint
-const API_URL = "http://localhost:5174/api/generate-action";
 
 // Global abort controller for canceling ongoing consensus operations
 let globalAbortController: AbortController | null = null;
@@ -89,19 +87,19 @@ async function generateActionViaBackend(
 ): Promise<Action> {
   const legalActions = getLegalActions(currentState);
 
-  const response = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider, currentState, humanChoice, legalActions }),
-    signal, // Pass abort signal to fetch
+  const { data, error } = await api.api["generate-action"].post({
+    provider,
+    currentState,
+    humanChoice,
+    legalActions,
+  }, {
+    fetch: { signal }, // Pass abort signal
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Backend request failed");
+  if (error) {
+    throw new Error(error.value || "Backend request failed");
   }
 
-  const data = await response.json();
   return data.action;
 }
 
@@ -301,8 +299,6 @@ export async function advanceGameStateWithConsensus(
       pendingModels.add(index);
       modelStartTimes.set(index, uiStartTime);
 
-      console.log(`[${provider}] Consensus ${index + 1}/${totalModels} requesting action from ${modelName}`);
-
       // Log model start immediately (use Date.now() for UI compatibility)
       logger?.({
         type: "consensus-model-pending" as any,
@@ -313,8 +309,6 @@ export async function advanceGameStateWithConsensus(
       generateActionViaBackend(provider, currentState, humanChoice, abortController.signal)
         .then((action) => {
           const modelDuration = performance.now() - modelStart;
-          console.log(`[${provider}] ✓ Completed in ${modelDuration.toFixed(0)}ms`);
-          // Log model completion
           logger?.({
             type: "consensus-model-complete" as any,
             message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
@@ -324,17 +318,8 @@ export async function advanceGameStateWithConsensus(
         })
         .catch((error) => {
           const modelDuration = performance.now() - modelStart;
-
-          // Check if this was aborted due to early consensus
           const isAborted = error.name === 'AbortError' || error.message?.includes('abort');
 
-          if (isAborted) {
-            console.log(`[${provider}] ⏸️ Aborted after ${modelDuration.toFixed(0)}ms (early consensus reached)`);
-          } else {
-            console.error(`[${provider}] ✗ Failed after ${modelDuration.toFixed(0)}ms:`, error);
-          }
-
-          // Log model failure
           logger?.({
             type: "consensus-model-complete" as any,
             message: isAborted
@@ -700,9 +685,7 @@ export async function runAITurnWithConsensus(
     stepCount < MAX_STEPS
   ) {
     stepCount++;
-    console.log(`\n--- Consensus Step ${stepCount} ---`);
 
-    // Log step start for UI visibility
     logger?.({
       type: "consensus-step-start" as any,
       message: `Step ${stepCount}: Requesting consensus`,
