@@ -45,8 +45,24 @@ export type CardName = z.infer<typeof CardName>;
 export const Phase = z.enum(["action", "buy", "cleanup"]);
 export type Phase = z.infer<typeof Phase>;
 
-export const Player = z.enum(["human", "ai"]);
+// Player identifiers
+// For single-player: "human" vs "ai"
+// For multiplayer: "player0", "player1", etc.
+export const Player = z.enum(["human", "ai", "player0", "player1", "player2", "player3"]);
 export type Player = z.infer<typeof Player>;
+
+// Player type (human or AI-controlled)
+export const PlayerType = z.enum(["human", "ai"]);
+export type PlayerType = z.infer<typeof PlayerType>;
+
+// Player info for multiplayer (optional extension)
+export const PlayerInfo = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: PlayerType,
+  connected: z.boolean().optional(),
+});
+export type PlayerInfo = z.infer<typeof PlayerInfo>;
 
 // Turn sub-phases for handling interruptions (attacks, reactions, etc.)
 export const TurnSubPhase = z.enum(["opponent_decision", "waiting_for_reactions"]).nullable();
@@ -331,10 +347,10 @@ export const GameState = z.object({
   subPhase: TurnSubPhase,
   activePlayer: Player,
 
-  players: z.object({
-    human: PlayerState,
-    ai: PlayerState,
-  }),
+  // Single-player mode: { human, ai }
+  // Multiplayer mode: { player0, player1, player2?, player3? }
+  // Partial record to allow 2-4 players
+  players: z.record(Player, PlayerState),
 
   supply: z.record(z.string(), z.number()),
   trash: z.array(CardName),
@@ -351,6 +367,11 @@ export const GameState = z.object({
 
   log: z.array(LogEntry),
   turnHistory: z.array(TurnAction), // Actions taken this turn (reset on cleanup)
+
+  // Multiplayer extensions (optional for single-player)
+  playerOrder: z.array(Player).optional(), // Turn order for N-player games
+  playerInfo: z.record(Player, PlayerInfo).optional(), // Player names, types, connection status
+  isMultiplayer: z.boolean().optional(), // Flag to indicate multiplayer mode
 });
 export type GameState = z.infer<typeof GameState>;
 

@@ -7,18 +7,42 @@ function checkGameOver(state: GameState): GameState {
   const emptyPiles = Object.values(state.supply).filter(n => n === 0).length;
 
   if (state.supply.Province === 0 || emptyPiles >= 3) {
-    const humanVP = countVP(state.players.human);
-    const aiVP = countVP(state.players.ai);
+    // Calculate VP for all players
+    const activePlayers = state.playerOrder ?? (["human", "ai"] as const);
+    const vpScores: Record<string, number> = {};
+
+    for (const p of activePlayers) {
+      const playerState = state.players[p];
+      if (playerState) {
+        vpScores[p] = countVP(playerState);
+      }
+    }
+
+    // Find winner (highest VP, ties go to first in turn order)
+    let winner = activePlayers[0];
+    let highestVP = vpScores[winner] ?? 0;
+
+    for (const p of activePlayers) {
+      const vp = vpScores[p] ?? 0;
+      if (vp > highestVP) {
+        highestVP = vp;
+        winner = p;
+      }
+    }
+
+    // For backward compatibility with log format
+    const humanVP = vpScores["human"] ?? vpScores["player0"] ?? 0;
+    const aiVP = vpScores["ai"] ?? vpScores["player1"] ?? 0;
 
     return {
       ...state,
       gameOver: true,
-      winner: humanVP >= aiVP ? "human" : "ai",
+      winner,
       log: [...state.log, {
         type: "game-over",
         humanVP,
         aiVP,
-        winner: humanVP >= aiVP ? "human" : "ai",
+        winner,
       }],
     };
   }
@@ -35,6 +59,11 @@ export function buyCard(state: GameState, card: CardName, reasoning?: string): G
 
   const player = state.activePlayer;
   const playerState = state.players[player];
+
+  if (!playerState) {
+    console.error(`[buyCard] No player state for ${player}`);
+    return state;
+  }
 
   const vp = typeof cardDef.vp === "number" ? cardDef.vp : undefined;
 
@@ -87,6 +116,11 @@ export function endBuyPhase(state: GameState): GameState {
   const player = state.activePlayer;
   const playerState = state.players[player];
 
+  if (!playerState) {
+    console.error(`[endBuyPhase] No player state for ${player}`);
+    return state;
+  }
+
   // All cards to discard
   const allToDiscard = [...playerState.hand, ...playerState.inPlay];
   const newDiscard = [...playerState.discard, ...allToDiscard];
@@ -97,8 +131,19 @@ export function endBuyPhase(state: GameState): GameState {
     5
   );
 
-  // Switch player
-  const nextPlayer: Player = player === "human" ? "ai" : "human";
+  // Determine next player
+  // For multiplayer: use playerOrder
+  // For single-player: alternate between human and ai
+  let nextPlayer: Player;
+  if (state.playerOrder && state.playerOrder.length > 0) {
+    const currentIndex = state.playerOrder.indexOf(player);
+    const nextIndex = (currentIndex + 1) % state.playerOrder.length;
+    nextPlayer = state.playerOrder[nextIndex];
+  } else {
+    // Legacy 2-player logic
+    nextPlayer = player === "human" ? "ai" : "human";
+  }
+
   const newTurn = state.turn + 1;
 
   // Build children for end-turn using logDraw helper

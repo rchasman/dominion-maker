@@ -1,7 +1,17 @@
 import { useGame } from "../context/GameContext";
 
-export function StartScreen() {
+interface StartScreenProps {
+  onStartSinglePlayer?: () => void;
+  onStartMultiplayer?: () => void;
+}
+
+export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartScreenProps) {
   const { gameMode, setGameMode, startGame } = useGame();
+
+  const handleStartGame = () => {
+    startGame();
+    onStartSinglePlayer?.();
+  };
 
   return (
     <div
@@ -68,24 +78,47 @@ export function StartScreen() {
           : "Pure MAKER consensus for all moves (GPT-4o + Claude validate each step)"}
       </p>
 
-      <button
-        onClick={startGame}
-        style={{
-          padding: "var(--space-6) var(--space-10)",
-          fontSize: "0.875rem",
-          fontWeight: 600,
-          background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-          color: "#fff",
-          border: "2px solid var(--color-victory)",
-          cursor: "pointer",
-          textTransform: "uppercase",
-          letterSpacing: "0.125rem",
-          fontFamily: "inherit",
-          boxShadow: "var(--shadow-lg)",
-        }}
-      >
-        Start Game
-      </button>
+      <div style={{ display: "flex", gap: "var(--space-4)" }}>
+        <button
+          onClick={handleStartGame}
+          style={{
+            padding: "var(--space-6) var(--space-10)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+            color: "#fff",
+            border: "2px solid var(--color-victory)",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+            fontFamily: "inherit",
+            boxShadow: "var(--shadow-lg)",
+          }}
+        >
+          Single Player
+        </button>
+
+        {onStartMultiplayer && (
+          <button
+            onClick={onStartMultiplayer}
+            style={{
+              padding: "var(--space-6) var(--space-10)",
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+              color: "#fff",
+              border: "2px solid #3b82f6",
+              cursor: "pointer",
+              textTransform: "uppercase",
+              letterSpacing: "0.125rem",
+              fontFamily: "inherit",
+              boxShadow: "var(--shadow-lg)",
+            }}
+          >
+            Multiplayer
+          </button>
+        )}
+      </div>
     </div>
   );
 }

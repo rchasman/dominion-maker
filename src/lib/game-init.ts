@@ -1,4 +1,5 @@
-import type { CardName, GameState, PlayerState } from "../types/game-state";
+import type { CardName, GameState, PlayerState, Player, PlayerInfo, PlayerType } from "../types/game-state";
+// GameState type used for casting
 import { KINGDOM_CARDS } from "../data/cards";
 import { shuffle } from "./game-utils";
 
@@ -33,25 +34,36 @@ function selectKingdomCards(): CardName[] {
   return shuffle(KINGDOM_CARDS).slice(0, 10);
 }
 
-function createSupply(kingdomCards: CardName[]): Record<CardName, number> {
+/**
+ * Create supply scaled for player count
+ * Based on official Dominion rules:
+ * - Victory cards: 8 for 2 players, 12 for 3-4 players
+ * - Curses: (playerCount - 1) × 10
+ * - Copper: 60 - (7 × playerCount)
+ */
+function createSupply(kingdomCards: CardName[], playerCount: number = 2): Record<CardName, number> {
+  const victoryCount = playerCount <= 2 ? 8 : 12;
+  const curseCount = (playerCount - 1) * 10;
+  const copperCount = 60 - (7 * playerCount);
+
   const supply: Partial<Record<CardName, number>> = {
-    // Base treasures (for 2 players)
-    Copper: 46, // 60 - 14 (7 per player)
+    // Base treasures
+    Copper: copperCount,
     Silver: 40,
     Gold: 30,
 
-    // Victory (for 2 players: 8 each)
-    Estate: 8,
-    Duchy: 8,
-    Province: 8,
+    // Victory cards
+    Estate: victoryCount,
+    Duchy: victoryCount,
+    Province: victoryCount,
 
-    // Curse (10 for 2 players)
-    Curse: 10,
+    // Curses
+    Curse: curseCount,
   };
 
-  // Add kingdom cards (10 each, or 8 for victory cards)
+  // Add kingdom cards (10 each, or scaled for victory cards like Gardens)
   for (const card of kingdomCards) {
-    supply[card] = card === "Gardens" ? 8 : 10;
+    supply[card] = card === "Gardens" ? victoryCount : 10;
   }
 
   return supply as Record<CardName, number>;
@@ -102,5 +114,98 @@ export function initializeGame(): GameState {
       },
     ],
     turnHistory: [], // Start with empty turn history
+  };
+}
+
+/**
+ * Player info for multiplayer game initialization
+ */
+interface MultiplayerPlayerConfig {
+  id: string;
+  name: string;
+  type: PlayerType;
+}
+
+/**
+ * Initialize a multiplayer game with N players (2-4)
+ */
+export function initializeMultiplayerGame(
+  playerConfigs: MultiplayerPlayerConfig[],
+  options?: {
+    kingdomCards?: CardName[];
+  }
+): GameState {
+  const playerCount = playerConfigs.length;
+  if (playerCount < 2 || playerCount > 4) {
+    throw new Error(`Invalid player count: ${playerCount}. Must be 2-4.`);
+  }
+
+  const kingdomCards = options?.kingdomCards ?? selectKingdomCards();
+
+  // Create player order (player0, player1, etc.)
+  const playerOrder: Player[] = playerConfigs.map((_, i) => `player${i}` as Player);
+
+  // Create player states
+  const players: Partial<Record<Player, PlayerState>> = {};
+  const playerInfo: Partial<Record<Player, PlayerInfo>> = {};
+
+  for (let i = 0; i < playerCount; i++) {
+    const playerId = `player${i}` as Player;
+    const config = playerConfigs[i];
+
+    players[playerId] = createPlayerState();
+    playerInfo[playerId] = {
+      id: config.id,
+      name: config.name,
+      type: config.type,
+      connected: config.type === "human",
+    };
+  }
+
+  const firstPlayer = playerOrder[0];
+  const firstPlayerState = players[firstPlayer]!;
+
+  return {
+    turn: 1,
+    phase: "action",
+    subPhase: null,
+    activePlayer: firstPlayer,
+
+    players,
+
+    supply: createSupply(kingdomCards, playerCount),
+    trash: [],
+    kingdomCards,
+
+    actions: 1,
+    buys: 1,
+    coins: 0,
+
+    pendingDecision: null,
+
+    gameOver: false,
+    winner: null,
+
+    log: [
+      { type: "start-game", player: firstPlayer, coppers: 7, estates: 3 },
+      {
+        type: "turn-start",
+        turn: 1,
+        player: firstPlayer,
+        children: [{
+          type: "draw-cards",
+          player: firstPlayer,
+          count: firstPlayerState.hand.length,
+          cards: firstPlayerState.hand,
+        }],
+      },
+    ],
+    turnHistory: [],
+
+    // Multiplayer-specific fields
+    playerOrder,
+    // Cast to satisfy TypeScript - runtime only has the active player keys
+    playerInfo: playerInfo as GameState["playerInfo"],
+    isMultiplayer: true,
   };
 }
