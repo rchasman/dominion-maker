@@ -28,7 +28,11 @@ export function resolveDecision(state: GameState, selectedCards: CardName[]): Ga
     state,
     player,
     children,
-    decision: { stage: stage || "", selectedCards },
+    decision: {
+      stage: stage || "",
+      selectedCards,
+      metadata: state.pendingDecision.metadata, // Preserve metadata for iterative decisions
+    },
   });
 
   // Add log entries if any were generated

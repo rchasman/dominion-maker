@@ -627,13 +627,21 @@ export async function runAITurn(
     try {
       currentState = await advanceGameState(currentState, undefined, provider, logger);
 
-      // Check if AI incorrectly set a pendingDecision
-      if (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
-        console.warn("⚠ AI incorrectly set pendingDecision - clearing it");
-        currentState = {
-          ...currentState,
-          pendingDecision: null,
-        };
+      // Check if AI has a pendingDecision (e.g., Chapel trash, Cellar discard)
+      // These are legitimate decisions that need LLM reasoning
+      while (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
+        console.log("⚙ AI has pendingDecision, resolving:", currentState.pendingDecision.type);
+
+        // Use LLM to make the decision (trash_cards/discard_cards/gain_card)
+        const beforeDecision = currentState;
+        currentState = await advanceGameState(currentState, undefined, provider, logger);
+
+        // Safety: if state didn't change, break to avoid infinite loop
+        if (currentState === beforeDecision) {
+          console.error("⚠ AI pendingDecision not resolved, clearing to prevent infinite loop");
+          currentState = { ...currentState, pendingDecision: null };
+          break;
+        }
       }
     } catch (error) {
       console.error("Error during AI turn:", error);
@@ -695,13 +703,28 @@ export async function runAITurnWithConsensus(
     try {
       currentState = await advanceGameStateWithConsensus(currentState, undefined, providers, logger);
 
-      // Check if AI incorrectly set a pendingDecision
-      if (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
-        console.warn("⚠ AI incorrectly set pendingDecision - clearing it");
-        currentState = {
-          ...currentState,
-          pendingDecision: null,
-        };
+      // Check if AI has a pendingDecision (e.g., Chapel trash, Cellar discard)
+      // These are legitimate decisions that need LLM consensus
+      // They should nest under the current turn, not create separate turns
+      while (currentState.pendingDecision && currentState.pendingDecision.player === "ai") {
+        console.log("⚙ AI has pendingDecision, resolving via consensus:", currentState.pendingDecision.type);
+
+        // Don't emit ai-decision-resolving here - that creates a new turn in the UI
+        // Instead, the consensus-start from advanceGameStateWithConsensus will add to the current turn
+
+        // Use LLM consensus to make the decision (trash_cards/discard_cards/gain_card)
+        const beforeDecision = currentState;
+        currentState = await advanceGameStateWithConsensus(currentState, undefined, providers, logger);
+
+        // Update UI after each decision
+        onStateChange?.(currentState);
+
+        // Safety: if state didn't change, break to avoid infinite loop
+        if (currentState === beforeDecision) {
+          console.error("⚠ AI pendingDecision not resolved, clearing to prevent infinite loop");
+          currentState = { ...currentState, pendingDecision: null };
+          break;
+        }
       }
 
       // Log step completion

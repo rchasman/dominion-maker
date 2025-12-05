@@ -50,12 +50,13 @@ export const chapel: CardEffect = ({ state, player, children, decision }) => {
       }
 
       // Prompt for more trashing
+      const remaining = MAX_TRASH - newTrashedCards.length;
       return {
         ...newState,
         pendingDecision: {
           type: "trash",
           player: "human",
-          prompt: `Chapel: Trash up to ${MAX_TRASH - newTrashedCards.length} more cards (or skip)`,
+          prompt: `Chapel: Trash up to ${remaining} more cards (or skip)`,
           options: [...updatedPlayer.hand],
           minCount: 0,
           maxCount: 1,
@@ -63,6 +64,7 @@ export const chapel: CardEffect = ({ state, player, children, decision }) => {
           metadata: {
             cardBeingPlayed: "Chapel",
             trashedCards: newTrashedCards,
+            maxTrash: MAX_TRASH,
           },
         },
       };
@@ -88,6 +90,7 @@ export const chapel: CardEffect = ({ state, player, children, decision }) => {
           metadata: {
             cardBeingPlayed: "Chapel",
             trashedCards: [],
+            maxTrash: MAX_TRASH,
           },
         },
       };
@@ -96,25 +99,93 @@ export const chapel: CardEffect = ({ state, player, children, decision }) => {
     return state;
   }
 
-  // For AI: auto-trash Curses and Coppers (up to 4)
-  const toTrash = currentPlayer.hand
-    .filter(c => c === "Curse" || c === "Copper")
-    .slice(0, MAX_TRASH);
+  // For AI: Use same iterative process as human (allows LLM reasoning)
+  // Track trashed cards from metadata
+  const trashedCards: CardName[] =
+    (decision?.metadata?.trashedCards as CardName[]) || [];
 
-  if (toTrash.length > 0) {
-    const newHand = [...currentPlayer.hand];
-    for (const trashCard of toTrash) {
-      const idx = newHand.indexOf(trashCard);
-      if (idx !== -1) newHand.splice(idx, 1);
+  // If we just made a selection, process it
+  if (decision && decision.selectedCards) {
+    // Skip was clicked (empty selection)
+    if (decision.selectedCards.length === 0) {
+      return { ...state, pendingDecision: null };
     }
+
+    // Card was selected to trash
+    const toTrash = decision.selectedCards[0];
+    const newHand = [...currentPlayer.hand];
+    const idx = newHand.indexOf(toTrash);
+
+    // Validate card is in hand
+    if (idx === -1) {
+      console.error(`Chapel: Card ${toTrash} not found in hand`);
+      return state;
+    }
+
+    // Remove from hand and add to trash
+    newHand.splice(idx, 1);
+    const newTrashedCards = [...trashedCards, toTrash];
 
     const newState = {
       ...state,
       players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-      trash: [...state.trash, ...toTrash],
+      trash: [...state.trash, toTrash],
     };
-    children.push({ type: "trash-card", player, card: toTrash[0] });
-    return newState;
+    children.push({ type: "trash-card", player, card: toTrash });
+
+    // Update currentPlayer reference
+    const updatedPlayer = newState.players[player];
+
+    // Auto-complete if reached max or hand is empty
+    if (newTrashedCards.length >= MAX_TRASH || updatedPlayer.hand.length === 0) {
+      return { ...newState, pendingDecision: null };
+    }
+
+    // Prompt for more trashing
+    const remaining = MAX_TRASH - newTrashedCards.length;
+    return {
+      ...newState,
+      pendingDecision: {
+        type: "trash",
+        player: "ai",
+        prompt: `Chapel: Trash up to ${remaining} more cards (or skip)`,
+        options: [...updatedPlayer.hand],
+        minCount: 0,
+        maxCount: 1,
+        canSkip: true,
+        metadata: {
+          cardBeingPlayed: "Chapel",
+          trashedCards: newTrashedCards,
+          maxTrash: MAX_TRASH,
+        },
+      },
+    };
+  }
+
+  // Initial prompt (no decision yet)
+  if (!decision) {
+    // Auto-complete if hand is empty
+    if (currentPlayer.hand.length === 0) {
+      return { ...state, pendingDecision: null };
+    }
+
+    return {
+      ...state,
+      pendingDecision: {
+        type: "trash",
+        player: "ai",
+        prompt: "Chapel: Trash up to 4 cards from your hand (or skip)",
+        options: [...currentPlayer.hand],
+        minCount: 0,
+        maxCount: 1,
+        canSkip: true,
+        metadata: {
+          cardBeingPlayed: "Chapel",
+          trashedCards: [],
+          maxTrash: MAX_TRASH,
+        },
+      },
+    };
   }
 
   return state;
