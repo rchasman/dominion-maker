@@ -192,6 +192,15 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle, o
 
   // Reset scrubber to live mode
   const handleResetScrubber = () => {
+    // Stop playing when returning to live
+    if (isPlaying) {
+      setIsPlaying(false);
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+        playIntervalRef.current = null;
+      }
+    }
+
     setScrubberIndex(null);
     setSelectedEventId(null);
     setIsPinned(false);
@@ -238,7 +247,8 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle, o
       setIsPinned(true);
 
       // If at end or live, start from beginning
-      if (scrubberIndex === null || scrubberIndex >= events.findIndex(evt => evt.id === rootEvents[rootEvents.length - 1]?.id)) {
+      const lastRootIndex = events.findIndex(evt => evt.id === rootEvents[rootEvents.length - 1]?.id);
+      if (scrubberIndex === null || scrubberIndex >= lastRootIndex) {
         handleRewindToBeginning();
       }
     }
