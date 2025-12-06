@@ -1,0 +1,93 @@
+import type { CardName, Player } from "../types/game-state";
+import type { DecisionChoice, PlayerId } from "../events/types";
+
+/**
+ * Commands represent player intent.
+ * They are validated and converted to events by the command handler.
+ */
+
+// Game setup
+export type StartGameCommand = {
+  type: "START_GAME";
+  players: PlayerId[];
+  kingdomCards?: CardName[];
+  seed?: number;
+};
+
+// Action phase
+export type PlayActionCommand = {
+  type: "PLAY_ACTION";
+  player: PlayerId;
+  card: CardName;
+};
+
+// Buy phase
+export type PlayTreasureCommand = {
+  type: "PLAY_TREASURE";
+  player: PlayerId;
+  card: CardName;
+};
+
+export type PlayAllTreasuresCommand = {
+  type: "PLAY_ALL_TREASURES";
+  player: PlayerId;
+};
+
+export type BuyCardCommand = {
+  type: "BUY_CARD";
+  player: PlayerId;
+  card: CardName;
+};
+
+// Phase transitions
+export type EndPhaseCommand = {
+  type: "END_PHASE";
+  player: PlayerId;
+};
+
+// Decision responses
+export type SubmitDecisionCommand = {
+  type: "SUBMIT_DECISION";
+  player: PlayerId;
+  choice: DecisionChoice;
+};
+
+// Undo system
+export type RequestUndoCommand = {
+  type: "REQUEST_UNDO";
+  player: PlayerId;
+  toEventIndex: number;
+  reason?: string;
+};
+
+export type ApproveUndoCommand = {
+  type: "APPROVE_UNDO";
+  player: PlayerId;
+  requestId: string;
+};
+
+export type DenyUndoCommand = {
+  type: "DENY_UNDO";
+  player: PlayerId;
+  requestId: string;
+};
+
+// Union of all commands
+export type GameCommand =
+  | StartGameCommand
+  | PlayActionCommand
+  | PlayTreasureCommand
+  | PlayAllTreasuresCommand
+  | BuyCardCommand
+  | EndPhaseCommand
+  | SubmitDecisionCommand
+  | RequestUndoCommand
+  | ApproveUndoCommand
+  | DenyUndoCommand;
+
+/**
+ * Result of handling a command.
+ */
+export type CommandResult =
+  | { ok: true; events: import("../events/types").GameEvent[] }
+  | { ok: false; error: string };
