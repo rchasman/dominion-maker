@@ -3,7 +3,9 @@ import type { GameEvent, PlayerId, DecisionChoice } from "../events/types";
 import type { GameCommand, CommandResult } from "../commands/types";
 import { handleCommand } from "../commands/handle";
 import { applyEvents } from "../events/apply";
-import { projectState, projectStateAt, createEmptyState } from "../events/project";
+import { projectState, createEmptyState } from "../events/project";
+import { removeEventChain } from "../events/types";
+import { generateEventId } from "../events/id-generator";
 
 /**
  * Pending undo request awaiting approval.
@@ -11,7 +13,7 @@ import { projectState, projectStateAt, createEmptyState } from "../events/projec
 export type PendingUndoRequest = {
   requestId: string;
   byPlayer: PlayerId;
-  toEventIndex: number;
+  toEventId: string;  // Changed from toEventIndex to toEventId
   reason?: string;
   approvals: Set<PlayerId>;
   needed: number;
@@ -142,13 +144,13 @@ export class DominionEngine {
   }
 
   /**
-   * Request to undo to a specific event index.
+   * Request to undo to a specific event ID (causal root).
    */
-  requestUndo(player: PlayerId, toEventIndex: number, reason?: string): CommandResult {
+  requestUndo(player: PlayerId, toEventId: string, reason?: string): CommandResult {
     const result = this.dispatch({
       type: "REQUEST_UNDO",
       player,
-      toEventIndex,
+      toEventId,
       reason,
     }, player);
 
@@ -163,7 +165,7 @@ export class DominionEngine {
         this.pendingUndo = {
           requestId: requestEvent.requestId,
           byPlayer: player,
-          toEventIndex,
+          toEventId,
           reason,
           approvals: new Set(),
           needed: opponents.length, // All opponents must approve
@@ -189,10 +191,14 @@ export class DominionEngine {
   }
 
   /**
-   * Get state at a specific event index (for time travel preview).
+   * Get state at a specific event ID (for time travel preview).
    */
-  getStateAt(eventIndex: number): GameState {
-    return projectStateAt(this.events, eventIndex);
+  getStateAtEvent(eventId: string): GameState {
+    const eventIndex = this.events.findIndex(e => e.id === eventId);
+    if (eventIndex === -1) {
+      throw new Error(`Event ${eventId} not found`);
+    }
+    return projectState(this.events.slice(0, eventIndex + 1));
   }
 
   /**
@@ -283,6 +289,7 @@ export class DominionEngine {
         type: "UNDO_DENIED",
         requestId: command.requestId,
         byPlayer: command.player as Player,
+        id: generateEventId(),
       });
       this.pendingUndo = null;
       this.appendEvents(events);
@@ -295,27 +302,38 @@ export class DominionEngine {
       type: "UNDO_APPROVED",
       requestId: command.requestId,
       byPlayer: command.player as Player,
+      id: generateEventId(),
     });
 
     // Check if we have enough approvals
     if (this.pendingUndo.approvals.size >= this.pendingUndo.needed) {
-      // Execute the undo
-      const toIndex = this.pendingUndo.toEventIndex;
-      const fromIndex = this.events.length;
+      // Execute the undo using causal chain removal
+      const toEventId = this.pendingUndo.toEventId;
+
+      // Find the target event
+      const targetEvent = this.events.find(e => e.id === toEventId);
+      if (!targetEvent) {
+        return { ok: false, error: "Target event not found" };
+      }
+
+      // Get the ID of the last event before removal
+      const lastEvent = this.events[this.events.length - 1];
+      const fromEventId = lastEvent?.id || "";
 
       // Record undo execution
       events.push({
         type: "UNDO_EXECUTED",
-        fromEventIndex: fromIndex,
-        toEventIndex: toIndex,
+        fromEventId,
+        toEventId,
+        id: generateEventId(),
       });
 
-      // Truncate event log
-      this.events = this.events.slice(0, toIndex + 1);
+      // Remove the target event and all events caused by it (atomically)
+      this.events = removeEventChain(toEventId, this.events);
       this._state = null;
       this.pendingUndo = null;
 
-      // Add the events we collected to the (now truncated) log
+      // Add the undo execution event to the log
       this.appendEvents(events);
     } else {
       this.appendEvents(events);

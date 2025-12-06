@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import type { GameEvent } from "../events/types";
 import type { GameState } from "../types/game-state";
 import { projectState } from "../events/project";
+import { isRootCauseEvent, getCausalChain } from "../events/types";
 
 interface EventDevtoolsProps {
   events: GameEvent[];
@@ -71,7 +72,7 @@ const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
 };
 
 export function EventDevtools({ events, currentState, isOpen = true, onToggle }: EventDevtoolsProps) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventCategory>("all");
   const [showDiff, setShowDiff] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -93,15 +94,19 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
 
   // Selected state
   const selectedState = useMemo(() => {
-    if (selectedIndex === null) return null;
-    return projectState(events.slice(0, selectedIndex + 1));
-  }, [events, selectedIndex]);
+    if (!selectedEventId) return null;
+    const eventIndex = events.findIndex(e => e.id === selectedEventId);
+    if (eventIndex === -1) return null;
+    return projectState(events.slice(0, eventIndex + 1));
+  }, [events, selectedEventId]);
 
   // Previous state (for diff)
   const prevState = useMemo(() => {
-    if (selectedIndex === null || selectedIndex === 0) return null;
-    return projectState(events.slice(0, selectedIndex));
-  }, [events, selectedIndex]);
+    if (!selectedEventId) return null;
+    const eventIndex = events.findIndex(e => e.id === selectedEventId);
+    if (eventIndex <= 0) return null;
+    return projectState(events.slice(0, eventIndex));
+  }, [events, selectedEventId]);
 
   // Format event for display
   const formatEvent = (event: GameEvent): string => {
@@ -200,21 +205,30 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
 
       {/* Event list */}
       <div ref={listRef} style={styles.eventList}>
-        {filteredEvents.map((event, i) => {
-          const actualIndex = events.indexOf(event);
-          const isSelected = selectedIndex === actualIndex;
+        {filteredEvents.map((event) => {
+          const isSelected = selectedEventId === event.id;
+          const isRoot = isRootCauseEvent(event);
+          const hasParent = !!event.causedBy;
 
           return (
             <div
-              key={actualIndex}
-              onClick={() => setSelectedIndex(isSelected ? null : actualIndex)}
+              key={event.id}
+              onClick={() => setSelectedEventId(isSelected ? null : event.id)}
               style={{
                 ...styles.eventItem,
                 background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
                 borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
+                paddingLeft: hasParent ? "32px" : "12px",
+                position: "relative",
               }}
             >
-              <span style={styles.eventIndex}>{actualIndex}</span>
+              {hasParent && (
+                <span style={styles.causalArrow}>↶</span>
+              )}
+              {isRoot && (
+                <span style={styles.rootBadge}>ROOT</span>
+              )}
+              <span style={styles.eventId}>{event.id}</span>
               <span style={{ ...styles.eventType, color: EVENT_COLORS[event.type] || "#6b7280" }}>
                 {event.type}
               </span>
@@ -225,10 +239,10 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
       </div>
 
       {/* State inspector */}
-      {selectedIndex !== null && selectedState && (
+      {selectedEventId && selectedState && (
         <div style={styles.inspector}>
           <div style={styles.inspectorHeader}>
-            <span>State @ Event {selectedIndex}</span>
+            <span>State @ {selectedEventId}</span>
             <button
               onClick={() => setShowDiff(!showDiff)}
               style={{
@@ -495,9 +509,24 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     alignItems: "center",
   },
-  eventIndex: {
+  eventId: {
     color: "#6b7280",
-    minWidth: "24px",
+    minWidth: "50px",
+    fontSize: "10px",
+    fontFamily: "monospace",
+  },
+  causalArrow: {
+    position: "absolute",
+    left: "12px",
+    color: "#6366f1",
+    fontSize: "14px",
+  },
+  rootBadge: {
+    position: "absolute",
+    left: "2px",
+    fontSize: "8px",
+    color: "#22c55e",
+    fontWeight: 600,
   },
   eventType: {
     fontWeight: 600,
