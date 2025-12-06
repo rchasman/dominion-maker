@@ -46,8 +46,8 @@ interface UseMultiplayerEngineReturn {
   submitDecision: (choice: DecisionChoice) => CommandResult;
 
   // Undo actions
-  requestUndo: (toEventIndex: number, reason?: string) => void;
-  getStateAt: (eventIndex: number) => GameState;
+  requestUndo: (toEventId: string, reason?: string) => void;
+  getStateAtEvent: (eventId: string) => GameState;
 
   // Engine management
   startGame: (players: PlayerId[], kingdomCards?: CardName[]) => void;
@@ -158,12 +158,16 @@ export function useMultiplayerEngine({
   }, [myPlayerId]);
 
   // Undo
-  const requestUndo = useCallback((toEventIndex: number, reason?: string) => {
+  const requestUndo = useCallback((toEventId: string, reason?: string) => {
     if (!engineRef.current || !myPlayerId) return;
-    engineRef.current.requestUndo(myPlayerId, toEventIndex, reason);
+    engineRef.current.requestUndo(myPlayerId, toEventId, reason);
   }, [myPlayerId]);
 
-  const getStateAt = useCallback((eventIndex: number): GameState => {
+  const getStateAtEvent = useCallback((eventId: string): GameState => {
+    const eventIndex = events.findIndex(e => e.id === eventId);
+    if (eventIndex === -1) {
+      throw new Error(`Event ${eventId} not found`);
+    }
     return projectState(events.slice(0, eventIndex + 1));
   }, [events]);
 
@@ -179,7 +183,7 @@ export function useMultiplayerEngine({
     endPhase,
     submitDecision,
     requestUndo,
-    getStateAt,
+    getStateAtEvent,
     startGame,
     applyExternalEvents,
     resetToEvents,
