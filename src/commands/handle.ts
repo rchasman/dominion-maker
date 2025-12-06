@@ -6,6 +6,7 @@ import { getCardEffect } from "../cards/effects";
 import { applyEvents } from "../events/apply";
 import { peekDraw } from "../cards/effect-types";
 import { shuffle } from "../lib/game-utils";
+import { generateEventId } from "../events/id-generator";
 
 /**
  * Handle a command and return the resulting events.
@@ -94,13 +95,15 @@ function handleStartGame(
   // Calculate supply based on player count
   const supply = calculateSupply(players.length, selectedKingdom);
 
-  // Initialize game
+  // Root cause - initializing game
+  const rootEventId = generateEventId();
   events.push({
     type: "GAME_INITIALIZED",
     players: players as Player[],
     kingdomCards: selectedKingdom,
     supply,
     seed,
+    id: rootEventId,
   });
 
   // Deal starting decks (7 Copper, 3 Estate)
@@ -115,6 +118,8 @@ function handleStartGame(
       type: "INITIAL_DECK_DEALT",
       player: player as Player,
       cards: shuffledDeck,
+      id: generateEventId(),
+      causedBy: rootEventId,
     });
 
     // Draw initial hand of 5
@@ -123,6 +128,8 @@ function handleStartGame(
       type: "INITIAL_HAND_DRAWN",
       player: player as Player,
       cards: initialHand,
+      id: generateEventId(),
+      causedBy: rootEventId,
     });
   }
 
@@ -131,6 +138,7 @@ function handleStartGame(
     type: "TURN_STARTED",
     turn: 1,
     player: players[0] as Player,
+    id: generateEventId(),
   });
 
   return { ok: true, events };
@@ -162,9 +170,22 @@ function handlePlayAction(
 
   const events: GameEvent[] = [];
 
-  // Play the card (move to play area)
-  events.push({ type: "CARD_PLAYED", player: player as Player, card });
-  events.push({ type: "ACTIONS_MODIFIED", delta: -1 });
+  // Root cause event - playing the card
+  const rootEventId = generateEventId();
+  events.push({
+    type: "CARD_PLAYED",
+    player: player as Player,
+    card,
+    id: rootEventId,
+  });
+
+  // Action cost - caused by playing the card
+  events.push({
+    type: "ACTIONS_MODIFIED",
+    delta: -1,
+    id: generateEventId(),
+    causedBy: rootEventId,
+  });
 
   // Apply these events to get intermediate state
   const midState = applyEvents(state, events);
@@ -178,6 +199,12 @@ function handlePlayAction(
       card,
     });
 
+    // Link all effect events to the root cause
+    for (const effectEvent of result.events) {
+      effectEvent.id = generateEventId();
+      effectEvent.causedBy = rootEventId;
+    }
+
     events.push(...result.events);
 
     // If there's a pending decision, add it as an event
@@ -188,6 +215,8 @@ function handlePlayAction(
           ...result.pendingDecision,
           cardBeingPlayed: card,
         },
+        id: generateEventId(),
+        causedBy: rootEventId,
       });
     }
   }
@@ -217,13 +246,24 @@ function handlePlayTreasure(
 
   const events: GameEvent[] = [];
 
-  // Play the treasure
-  events.push({ type: "CARD_PLAYED", player: player as Player, card });
+  // Root cause event - playing the treasure
+  const rootEventId = generateEventId();
+  events.push({
+    type: "CARD_PLAYED",
+    player: player as Player,
+    card,
+    id: rootEventId,
+  });
 
-  // Add coins
+  // Add coins - caused by playing the treasure
   const coins = CARDS[card].coins || 0;
   if (coins > 0) {
-    events.push({ type: "COINS_MODIFIED", delta: coins });
+    events.push({
+      type: "COINS_MODIFIED",
+      delta: coins,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    });
   }
 
   // Check for Merchant bonus (first Silver = +$1)
@@ -233,7 +273,12 @@ function handlePlayTreasure(
 
     // If this is the first Silver and we have Merchants in play
     if (silversPlayed === 0 && merchantsInPlay > 0) {
-      events.push({ type: "COINS_MODIFIED", delta: merchantsInPlay });
+      events.push({
+        type: "COINS_MODIFIED",
+        delta: merchantsInPlay,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      });
     }
   }
 
@@ -299,10 +344,28 @@ function handleBuyCard(
     return { ok: false, error: "Card not available in supply" };
   }
 
+  // Root cause event - gaining the card
+  const rootEventId = generateEventId();
   const events: GameEvent[] = [
-    { type: "CARD_GAINED", player: player as Player, card, to: "discard" },
-    { type: "BUYS_MODIFIED", delta: -1 },
-    { type: "COINS_MODIFIED", delta: -cardDef.cost },
+    {
+      type: "CARD_GAINED",
+      player: player as Player,
+      card,
+      to: "discard",
+      id: rootEventId,
+    },
+    {
+      type: "BUYS_MODIFIED",
+      delta: -1,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+    {
+      type: "COINS_MODIFIED",
+      delta: -cardDef.cost,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
   ];
 
   return { ok: true, events };
@@ -313,13 +376,21 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
   if (state.phase === "action") {
     // Transition to buy phase
-    events.push({ type: "PHASE_CHANGED", phase: "buy" });
+    const phaseEventId = generateEventId();
+    events.push({
+      type: "PHASE_CHANGED",
+      phase: "buy",
+      id: phaseEventId,
+    });
   } else if (state.phase === "buy") {
     // End turn - cleanup and start next player's turn
     const playerState = state.players[player as Player];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
+
+    // Root cause - ending turn
+    const endTurnId = generateEventId();
 
     // Discard hand and in-play cards
     const handCards = [...playerState.hand];
@@ -331,6 +402,8 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
         player: player as Player,
         cards: handCards,
         from: "hand",
+        id: generateEventId(),
+        causedBy: endTurnId,
       });
     }
 
@@ -340,18 +413,22 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
         player: player as Player,
         cards: inPlayCards,
         from: "inPlay",
+        id: generateEventId(),
+        causedBy: endTurnId,
       });
     }
 
     // Draw 5 new cards
     const afterDiscard = applyEvents(state, events);
-    const drawEvents = createDrawEventsForCleanup(afterDiscard, player as Player, 5);
+    const drawEvents = createDrawEventsForCleanup(afterDiscard, player as Player, 5, endTurnId);
     events.push(...drawEvents);
 
     // Check game over
     const stateAfterDraw = applyEvents(state, events);
     const gameOverEvent = checkGameOver(stateAfterDraw);
     if (gameOverEvent) {
+      gameOverEvent.id = generateEventId();
+      gameOverEvent.causedBy = endTurnId;
       events.push(gameOverEvent);
     } else {
       // Start next turn
@@ -360,6 +437,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
         type: "TURN_STARTED",
         turn: state.turn + 1,
         player: nextPlayer,
+        id: generateEventId(),
       });
     }
   }
@@ -381,11 +459,13 @@ function handleSubmitDecision(
 
   const events: GameEvent[] = [];
 
-  // Resolve the decision
+  // Root cause event - resolving the decision
+  const rootEventId = generateEventId();
   events.push({
     type: "DECISION_RESOLVED",
     player: player as Player,
     choice,
+    id: rootEventId,
   });
 
   // Continue the card effect with the decision
@@ -404,6 +484,12 @@ function handleSubmitDecision(
         stage,
       });
 
+      // Link all continuation effects to the decision resolution
+      for (const effectEvent of result.events) {
+        effectEvent.id = generateEventId();
+        effectEvent.causedBy = rootEventId;
+      }
+
       events.push(...result.events);
 
       if (result.pendingDecision) {
@@ -413,6 +499,8 @@ function handleSubmitDecision(
             ...result.pendingDecision,
             cardBeingPlayed,
           },
+          id: generateEventId(),
+          causedBy: rootEventId,
         });
       }
     }
@@ -422,9 +510,9 @@ function handleSubmitDecision(
 }
 
 function handleRequestUndo(
-  state: GameState,
+  _state: GameState,
   player: PlayerId,
-  toEventIndex: number,
+  toEventId: string,
   reason?: string
 ): CommandResult {
   const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -434,8 +522,9 @@ function handleRequestUndo(
       type: "UNDO_REQUESTED",
       requestId,
       byPlayer: player as Player,
-      toEventIndex,
+      toEventId,
       reason,
+      id: generateEventId(),
     },
   ];
 
@@ -488,20 +577,33 @@ function calculateSupply(playerCount: number, kingdomCards: CardName[]): Record<
 function createDrawEventsForCleanup(
   state: GameState,
   player: Player,
-  count: number
+  count: number,
+  causedBy?: string
 ): GameEvent[] {
   const playerState = state.players[player];
   if (!playerState) return [];
 
   const events: GameEvent[] = [];
-  const { cards, shuffled } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder } = peekDraw(playerState, count);
 
   if (shuffled) {
-    events.push({ type: "DECK_SHUFFLED", player });
+    events.push({
+      type: "DECK_SHUFFLED",
+      player,
+      newDeckOrder,
+      id: generateEventId(),
+      causedBy,
+    });
   }
 
   if (cards.length > 0) {
-    events.push({ type: "CARDS_DRAWN", player, cards });
+    events.push({
+      type: "CARDS_DRAWN",
+      player,
+      cards,
+      id: generateEventId(),
+      causedBy,
+    });
   }
 
   return events;
