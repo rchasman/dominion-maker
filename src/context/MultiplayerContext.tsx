@@ -19,6 +19,7 @@ import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { DominionEngine } from "../engine";
 import { projectState } from "../events/project";
+import { resetEventCounter } from "../events/id-generator";
 
 const STORAGE_KEY = "dominion-maker-multiplayer-events";
 const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
@@ -64,7 +65,7 @@ interface MultiplayerContextValue {
   submitDecision: (choice: DecisionChoice) => CommandResult;
 
   // Undo / Time travel
-  requestUndo: (toEventIndex: number, reason?: string) => void;
+  requestUndo: (toEventId: string, reason?: string) => void;
   approveUndo: () => void;
   denyUndo: () => void;
   getStateAt: (eventIndex: number) => GameState;
@@ -378,6 +379,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
       // If host, recreate engine from saved events
       if (roomInfo.isHost) {
+        resetEventCounter();
         const engine = new DominionEngine();
         engineRef.current = engine;
 
@@ -432,6 +434,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         });
       } else {
         // Client: Initialize local engine from saved events
+        resetEventCounter();
         const engine = new DominionEngine();
         engineRef.current = engine;
         engine.loadEvents(events);
@@ -525,6 +528,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     if (!room || !isHost) return;
 
     // Create the engine
+    resetEventCounter();
     const engine = new DominionEngine();
     engineRef.current = engine;
 
@@ -681,19 +685,19 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   }, [isHost, myGamePlayerId, gameState?.pendingDecision]);
 
   // Undo actions
-  const requestUndo = useCallback((toEventIndex: number, reason?: string) => {
+  const requestUndo = useCallback((toEventId: string, reason?: string) => {
     const room = roomRef.current;
     if (!room || !myPeerId) return;
 
     if (isHost) {
       // Host: Update locally and broadcast
-      room.requestUndo(myPeerId, toEventIndex, reason);
+      room.requestUndo(myPeerId, toEventId, reason);
     } else {
       // Client: Send command to host
       room.sendCommandToHost({
         type: "REQUEST_UNDO",
         player: myPeerId,
-        toEventIndex,
+        toEventId,
         reason,
       });
     }

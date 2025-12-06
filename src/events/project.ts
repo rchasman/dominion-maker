@@ -1,6 +1,7 @@
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "./types";
 import { applyEvent } from "./apply";
+import { buildLogFromEvents } from "./log-builder";
 
 /**
  * Create an empty initial state.
@@ -31,9 +32,16 @@ export function createEmptyState(): GameState {
 /**
  * Project state from an event log.
  * Starting from empty state, applies all events in sequence.
+ * Then builds a nested log structure from causal chains.
  */
 export function projectState(events: GameEvent[]): GameState {
-  return events.reduce(applyEvent, createEmptyState());
+  const state = events.reduce(applyEvent, createEmptyState());
+
+  // Rebuild log with causality nesting
+  return {
+    ...state,
+    log: buildLogFromEvents(events),
+  };
 }
 
 /**
