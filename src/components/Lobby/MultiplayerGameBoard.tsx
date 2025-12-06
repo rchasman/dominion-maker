@@ -4,7 +4,7 @@
  * Full game board for multiplayer games using the event-driven engine.
  * Provides card interactions, action bar, and game state display.
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMultiplayer } from "../../context/MultiplayerContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -47,6 +47,14 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [showDevtools, setShowDevtools] = useState(false);
+
+  // Clear preview if the event no longer exists (after undo)
+  useEffect(() => {
+    if (previewEventId && !events.find(e => e.id === previewEventId)) {
+      console.log(`[MultiplayerGameBoard] Preview event ${previewEventId} no longer exists, clearing preview`);
+      setPreviewEventId(null);
+    }
+  }, [previewEventId, events]);
 
   // Use preview state if in time travel mode
   const displayState = previewEventId
