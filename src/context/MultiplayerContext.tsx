@@ -19,7 +19,7 @@ import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { DominionEngine } from "../engine";
 import { projectState } from "../events/project";
-import { resetEventCounter } from "../events/id-generator";
+import { resetEventCounter, syncEventCounter } from "../events/id-generator";
 
 const STORAGE_KEY = "dominion-maker-multiplayer-events";
 const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
@@ -68,7 +68,7 @@ interface MultiplayerContextValue {
   requestUndo: (toEventId: string, reason?: string) => void;
   approveUndo: () => void;
   denyUndo: () => void;
-  getStateAt: (eventIndex: number) => GameState;
+  getStateAtEvent: (eventId: string) => GameState;
 }
 
 const MultiplayerContext = createContext<MultiplayerContextValue | null>(null);
@@ -143,7 +143,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   }, [isPlaying, myPeerId, myPlayerIndex, myGamePlayerId, players]);
 
   const isMyTurn = (() => {
-    if (!isPlaying || !gameState || !myGamePlayerId) return false;
+    if (!isPlaying || !gameState || !myGamePlayerId) {
+      return false;
+    }
     // If there's a pending decision, check if it's for us
     if (gameState.pendingDecision) {
       return gameState.pendingDecision.player === myGamePlayerId;
@@ -213,7 +215,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
       // Subscribe to state changes
       room.onStateChange((state) => {
-        console.log(`[MultiplayerContext] Host state update: ${state.events.length} events, ${state.players.length} players`);
+        console.log(`[MultiplayerContext] Host state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? 'pending' : 'null'}`);
         setRoomState(state);
       });
 
@@ -279,7 +281,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
         // Subscribe to state changes
         room.onStateChange((state) => {
-          console.log(`[MultiplayerContext] Client state update: ${state.events.length} events, ${state.players.length} players`);
+          console.log(`[MultiplayerContext] Client state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? 'pending' : 'null'}`);
           setRoomState(state);
         });
 
@@ -379,7 +381,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
       // If host, recreate engine from saved events
       if (roomInfo.isHost) {
-        resetEventCounter();
+        syncEventCounter(events);
         const engine = new DominionEngine();
         engineRef.current = engine;
 
@@ -402,21 +404,34 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         });
 
         // Handle commands from clients
-        room.onCommand((command, fromPeerId) => {
-          console.log(`[MultiplayerContext] Processing command from ${fromPeerId}:`, command.type);
+        room.onCommand((command, customPlayerId) => {
+          console.log(`[MultiplayerContext] Processing command from ${customPlayerId}:`, command.type);
 
           // Handle undo commands
           if (command.type === "REQUEST_UNDO") {
-            room.requestUndo(fromPeerId, command.toEventIndex, command.reason);
+            room.requestUndo(customPlayerId, command.toEventId, command.reason);
             return;
           }
           if (command.type === "APPROVE_UNDO") {
-            room.approveUndo(fromPeerId);
-            if (!room.getPendingUndo()) {
+            console.log(`[MultiplayerContext] (Reconnect) Processing APPROVE_UNDO from ${customPlayerId}`);
+            const wasExecuted = room.approveUndo(customPlayerId);
+
+            console.log(`[MultiplayerContext] (Reconnect) After approval, wasExecuted:`, wasExecuted);
+
+            if (wasExecuted) {
               const newEvents = room.getEvents();
+              console.log(`[MultiplayerContext] (Reconnect) Undo executed! Reloading engine with ${newEvents.length} events`);
+
+              // Sync event counter to the highest ID in the truncated log
+              syncEventCounter(newEvents);
+
               const newState = projectState(newEvents);
               room.setGameStateAfterUndo(newState);
-              engine.loadEvents(newEvents);
+              engine.loadEventsSilently(newEvents);
+
+              // Broadcast full state (events were truncated, clients need full sync)
+              console.log(`[MultiplayerContext] (Reconnect) Broadcasting full state after undo, activePlayer: ${newState.activePlayer}`);
+              room.broadcastFullState();
             }
             return;
           }
@@ -426,15 +441,27 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
           }
 
           // Regular commands
-          const playerIndex = roomInfo.players.findIndex(p => p.id === fromPeerId);
-          if (playerIndex >= 0) {
-            const playerId = `player${playerIndex}` as Player;
-            engine.dispatch(command, playerId);
+          // Map custom player ID to game player ID (player0, player1, etc.)
+          const playerIndex = roomInfo.players.findIndex(p => p.id === customPlayerId);
+          if (playerIndex < 0) {
+            console.error(`[MultiplayerContext] Unknown custom player ID: ${customPlayerId}`);
+            return;
           }
+
+          const gamePlayerId = `player${playerIndex}` as Player;
+          const commandPlayerId = command.player;
+
+          if (commandPlayerId && commandPlayerId !== gamePlayerId) {
+            console.error(`[MultiplayerContext] Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
+            return;
+          }
+
+          // Dispatch with the game player ID
+          engine.dispatch(command, commandPlayerId || gamePlayerId);
         });
       } else {
         // Client: Initialize local engine from saved events
-        resetEventCounter();
+        syncEventCounter(events);
         const engine = new DominionEngine();
         engineRef.current = engine;
         engine.loadEvents(events);
@@ -567,23 +594,46 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     });
 
     // Handle commands from clients
-    room.onCommand((command, fromPeerId) => {
-      console.log(`[MultiplayerContext] Processing command from ${fromPeerId}:`, command.type);
+    room.onCommand((command, customPlayerId) => {
+      console.log(`[MultiplayerContext] Processing command from ${customPlayerId}:`, command.type);
 
       // Handle undo commands specially
       if (command.type === "REQUEST_UNDO") {
-        room.requestUndo(fromPeerId, command.toEventIndex, command.reason);
+        room.requestUndo(customPlayerId, command.toEventId, command.reason);
         return;
       }
 
       if (command.type === "APPROVE_UNDO") {
-        room.approveUndo(fromPeerId);
-        // Recompute state if undo was executed
-        if (!room.getPendingUndo()) {
+        console.log(`[MultiplayerContext] Processing APPROVE_UNDO from ${customPlayerId}`);
+        const wasExecuted = room.approveUndo(customPlayerId);
+
+        console.log(`[MultiplayerContext] After approval, wasExecuted:`, wasExecuted);
+
+        if (wasExecuted) {
           const newEvents = room.getEvents();
+          console.log(`[MultiplayerContext] Undo executed! Reloading engine with ${newEvents.length} events`);
+
+          // Sync event counter to the highest ID in the truncated log
+          syncEventCounter(newEvents);
+
           const newState = projectState(newEvents);
+          console.log(`[MultiplayerContext] Recomputed state:`, {
+            turn: newState.turn,
+            phase: newState.phase,
+            activePlayer: newState.activePlayer,
+            actions: newState.actions,
+            buys: newState.buys,
+            coins: newState.coins,
+          });
           room.setGameStateAfterUndo(newState);
-          engine.loadEvents(newEvents);
+
+          // Reload engine WITHOUT triggering event notifications
+          // (We don't want to re-broadcast events that are already in the room)
+          engine.loadEventsSilently(newEvents);
+
+          // Broadcast full state (events were truncated, clients need full sync)
+          console.log(`[MultiplayerContext] Broadcasting full state after undo`);
+          room.broadcastFullState();
         }
         return;
       }
@@ -594,12 +644,23 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       }
 
       // Regular game commands
-      const playerIndex = players.findIndex(p => p.id === fromPeerId);
-      if (playerIndex >= 0) {
-        const playerId = `player${playerIndex}` as Player;
-        // Validate and execute
-        engine.dispatch(command, playerId);
+      // Map custom player ID to game player ID (player0, player1, etc.)
+      const playerIndex = players.findIndex(p => p.id === customPlayerId);
+      if (playerIndex < 0) {
+        console.error(`[MultiplayerContext] Unknown custom player ID: ${customPlayerId}`);
+        return;
       }
+
+      const gamePlayerId = `player${playerIndex}` as Player;
+      const commandPlayerId = command.player;
+
+      if (commandPlayerId && commandPlayerId !== gamePlayerId) {
+        console.error(`[MultiplayerContext] Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
+        return;
+      }
+
+      // Dispatch with the game player ID
+      engine.dispatch(command, commandPlayerId || gamePlayerId);
     });
   }, [isHost, players]);
 
@@ -704,11 +765,14 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     const room = roomRef.current;
     if (!room || !myPeerId) return;
 
+    console.log(`[MultiplayerContext] requestUndo called with toEventId: ${toEventId}, reason: ${reason}`);
+
     if (isHost) {
       // Host: Update locally and broadcast
       room.requestUndo(myPeerId, toEventId, reason);
     } else {
       // Client: Send command to host
+      console.log(`[MultiplayerContext] Client sending REQUEST_UNDO for event ${toEventId}`);
       room.sendCommandToHost({
         type: "REQUEST_UNDO",
         player: myPeerId,
@@ -723,19 +787,32 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     const engine = engineRef.current;
     if (!room || !myPeerId || !pendingUndo) return;
 
+    console.log(`[MultiplayerContext] approveUndo called by ${isHost ? "host" : "client"}, myPeerId: ${myPeerId}`);
+
     if (isHost) {
       // Host: Approve locally
-      room.approveUndo(myPeerId);
+      const wasExecuted = room.approveUndo(myPeerId);
 
-      // Recompute state after undo if executed
-      if (engine && !room.getPendingUndo()) {
+      console.log(`[MultiplayerContext] Host approval, wasExecuted:`, wasExecuted);
+
+      if (engine && wasExecuted) {
         const newEvents = room.getEvents();
+        console.log(`[MultiplayerContext] Host reloading engine with ${newEvents.length} events`);
+
+        // Sync event counter to the highest ID in the truncated log
+        syncEventCounter(newEvents);
+
         const newState = projectState(newEvents);
         room.setGameStateAfterUndo(newState);
-        engine.loadEvents(newEvents);
+        engine.loadEventsSilently(newEvents);
+
+        // Broadcast full state (events were truncated, clients need full sync)
+        console.log(`[MultiplayerContext] Host broadcasting full state after undo, activePlayer: ${newState.activePlayer}`);
+        room.broadcastFullState();
       }
     } else {
       // Client: Send approval to host
+      console.log(`[MultiplayerContext] Client sending APPROVE_UNDO to host`);
       room.sendCommandToHost({
         type: "APPROVE_UNDO",
         player: myPeerId,
@@ -760,7 +837,11 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   }, [myPeerId, isHost, pendingUndo]);
 
   // Time travel
-  const getStateAt = useCallback((eventIndex: number): GameState => {
+  const getStateAtEvent = useCallback((eventId: string): GameState => {
+    const eventIndex = events.findIndex(e => e.id === eventId);
+    if (eventIndex === -1) {
+      throw new Error(`Event ${eventId} not found`);
+    }
     return projectState(events.slice(0, eventIndex + 1));
   }, [events]);
 
@@ -808,7 +889,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     requestUndo,
     approveUndo,
     denyUndo,
-    getStateAt,
+    getStateAtEvent,
   };
 
   return (

@@ -9,6 +9,7 @@ import type { GameState } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { GameCommand } from "../commands/types";
 import { projectState } from "../events/project";
+import { removeEventChain } from "../events/types";
 
 const APP_ID = "dominion-maker-p2p-v2"; // Bumped version for event-driven
 
@@ -22,7 +23,7 @@ export interface PlayerInfo {
 export interface PendingUndoRequest {
   requestId: string;
   byPlayer: string;
-  toEventIndex: number;
+  toEventId: string;
   reason?: string;
   approvals: string[];
   needed: number;
@@ -122,6 +123,12 @@ export class P2PRoom {
           ? projectState(state.events)
           : state.gameState;
 
+        console.log(`[P2PRoom] Client recomputed state:`, {
+          turn: this.gameState?.turn,
+          phase: this.gameState?.phase,
+          activePlayer: this.gameState?.activePlayer,
+        });
+
         this.notifyStateChange();
 
         // Mark as connected to host
@@ -156,11 +163,17 @@ export class P2PRoom {
     });
 
     // Handle commands from clients (host only)
-    receiveCommand((command, peerId) => {
+    receiveCommand((command, trysteroPeerId) => {
       if (this.isHost) {
-        console.log(`[P2PRoom] Received command from ${peerId}:`, command.type);
+        // Translate Trystero peer ID to custom player ID
+        const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
+        if (!playerId) {
+          console.error(`[P2PRoom] Received command from unknown Trystero peer: ${trysteroPeerId}`);
+          return;
+        }
+        console.log(`[P2PRoom] Received command from ${playerId} (Trystero: ${trysteroPeerId}):`, command.type);
         for (const handler of this.commandHandlers) {
-          handler(command, peerId);
+          handler(command, playerId);
         }
       }
     });
@@ -349,16 +362,16 @@ export class P2PRoom {
   /**
    * Request undo (anyone can request)
    */
-  requestUndo(playerId: string, toEventIndex: number, reason?: string): void {
+  requestUndo(playerId: string, toEventId: string, reason?: string): void {
     const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const playerCount = this.players.size;
 
-    console.log(`[P2PRoom] Undo requested by ${playerId} to event ${toEventIndex}, needs ${playerCount - 1} approvals`);
+    console.log(`[P2PRoom] Undo requested by ${playerId} to event ${toEventId}, needs ${playerCount - 1} approvals`);
 
     this.pendingUndo = {
       requestId,
       byPlayer: playerId,
-      toEventIndex,
+      toEventId,
       reason,
       approvals: [],
       needed: playerCount - 1, // All opponents must approve
@@ -369,34 +382,48 @@ export class P2PRoom {
 
   /**
    * Approve pending undo request
+   * Returns true if undo was executed (caller should recompute state and broadcast)
    */
-  approveUndo(playerId: string): void {
+  approveUndo(playerId: string): boolean {
     if (!this.pendingUndo) {
       console.log(`[P2PRoom] approveUndo called but no pending undo`);
-      return;
+      return false;
     }
     if (this.pendingUndo.approvals.includes(playerId)) {
-      console.log(`[P2PRoom] ${playerId} already approved`);
-      return;
+      console.log(`[P2PRoom] ${playerId} already approved (current approvals:`, this.pendingUndo.approvals, `)`);
+      return false;
     }
 
     console.log(`[P2PRoom] ${playerId} approved undo (${this.pendingUndo.approvals.length + 1}/${this.pendingUndo.needed})`);
+    console.log(`[P2PRoom] Current approvals:`, this.pendingUndo.approvals, `+ ${playerId}`);
     this.pendingUndo.approvals.push(playerId);
 
     // Check if we have enough approvals
     if (this.pendingUndo.approvals.length >= this.pendingUndo.needed) {
-      // Execute undo - truncate events
-      const toIndex = this.pendingUndo.toEventIndex;
-      console.log(`[P2PRoom] ✓ Undo approved! Truncating events from ${this.events.length} to ${toIndex + 1}`);
+      // Execute undo - remove causal chain
+      const toEventId = this.pendingUndo.toEventId;
+      const eventsBefore = this.events.length;
+      console.log(`[P2PRoom] ✓ Undo approved! Removing event chain for ${toEventId}, events before: ${eventsBefore}`);
 
-      this.events = this.events.slice(0, toIndex + 1);
+      // Find the target event index
+      const targetIndex = this.events.findIndex(e => e.id === toEventId);
+      const targetEvent = this.events[targetIndex];
+      console.log(`[P2PRoom] Removing event ${toEventId} at index ${targetIndex} and all events after it`);
+      console.log(`[P2PRoom] Target event:`, targetEvent);
+
+      // Remove the target event and everything after it
+      this.events = removeEventChain(toEventId, this.events);
+      const eventsAfter = this.events.length;
+      console.log(`[P2PRoom] Events after removal: ${eventsAfter} (removed ${eventsBefore - eventsAfter})`);
       this.pendingUndo = null;
 
-      // Broadcast full state (clients will recompute)
-      this.broadcastFullState();
+      // Return true - caller must recompute state and broadcast
+      console.log(`[P2PRoom] Undo executed, returning control to caller for state recomputation`);
+      return true;
     } else {
-      console.log(`[P2PRoom] Waiting for more approvals...`);
+      console.log(`[P2PRoom] Waiting for more approvals... (need ${this.pendingUndo.needed - this.pendingUndo.approvals.length} more)`);
       this.broadcastState();
+      return false;
     }
   }
 
@@ -481,13 +508,19 @@ export class P2PRoom {
   }
 
   /**
-   * Broadcast full state to all peers (host only) - used for initial sync
+   * Broadcast full state to all peers (host only) - PUBLIC for use after undo
    */
-  private broadcastFullState(): void {
+  broadcastFullState(): void {
     if (!this.isHost) return;
 
     const state = this.getState();
     console.log(`[P2PRoom] Broadcasting full state: ${this.players.size} players, ${this.events.length} events`);
+    console.log(`[P2PRoom] Broadcasting game state:`, {
+      turn: state.gameState?.turn,
+      phase: state.gameState?.phase,
+      activePlayer: state.gameState?.activePlayer,
+      pendingUndo: state.pendingUndo ? 'pending' : 'null',
+    });
     this.sendFullState(state);
     this.notifyStateChange();
   }
