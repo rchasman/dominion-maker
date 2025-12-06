@@ -37,13 +37,6 @@ export function projectState(events: GameEvent[]): GameState {
 }
 
 /**
- * Project state up to a specific event index (for time travel).
- */
-export function projectStateAt(events: GameEvent[], index: number): GameState {
-  return projectState(events.slice(0, index + 1));
-}
-
-/**
  * Get events for a specific turn.
  * Useful for log display and undo granularity.
  */
