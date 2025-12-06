@@ -41,7 +41,7 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
 /**
  * Peek at cards that would be drawn (without modifying state).
  * Handles shuffle if needed.
- * Returns the cards and whether a shuffle occurred.
+ * Returns the cards, whether a shuffle occurred, and the new deck order.
  */
 export function peekDraw(
   playerState: PlayerState,
@@ -59,6 +59,7 @@ export function peekDraw(
       deck = shuffle(discard);
       discard = [];
       shuffled = true;
+      // Capture full deck order BEFORE drawing for perfect replay
       newDeckOrder = [...deck];
     }
     // Top of deck is end of array
@@ -98,11 +99,11 @@ export function createDrawEvents(
   playerState: PlayerState,
   count: number
 ): GameEvent[] {
-  const { cards, shuffled } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder } = peekDraw(playerState, count);
   const events: GameEvent[] = [];
 
   if (shuffled) {
-    events.push({ type: "DECK_SHUFFLED", player });
+    events.push({ type: "DECK_SHUFFLED", player, newDeckOrder });
   }
 
   if (cards.length > 0) {
