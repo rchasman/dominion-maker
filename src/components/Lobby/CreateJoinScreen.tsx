@@ -11,7 +11,7 @@ interface CreateJoinScreenProps {
 }
 
 export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
-  const { createRoom, joinRoom, isConnecting, error } = useMultiplayer();
+  const { createRoom, joinRoom, isConnecting, isReconnecting, error, hasSavedSession, reconnectToSavedRoom } = useMultiplayer();
 
   const [joinCode, setJoinCode] = useState("");
   const [showJoinInput, setShowJoinInput] = useState(false);
@@ -78,16 +78,54 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
 
       {!showJoinInput && (
         <>
+          {hasSavedSession && (
+            <p
+              style={{
+                color: "var(--color-text-secondary)",
+                margin: 0,
+                fontSize: "0.875rem",
+              }}
+            >
+              You have an active game session
+            </p>
+          )}
+
           {/* Action Buttons */}
           <div
             style={{
               display: "flex",
-              gap: "var(--space-4)",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+              alignItems: "stretch",
+              minWidth: "300px",
             }}
           >
+            {hasSavedSession && (
+              <button
+                onClick={reconnectToSavedRoom}
+                disabled={isConnecting || isReconnecting}
+                style={{
+                  padding: "var(--space-6) var(--space-10)",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+                  color: "#fff",
+                  border: "2px solid #3b82f6",
+                  cursor: (isConnecting || isReconnecting) ? "wait" : "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.125rem",
+                  fontFamily: "inherit",
+                  boxShadow: "var(--shadow-lg)",
+                  opacity: (isConnecting || isReconnecting) ? 0.7 : 1,
+                  borderRadius: "4px",
+                }}
+              >
+                {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
+              </button>
+            )}
             <button
               onClick={handleCreate}
-              disabled={isConnecting}
+              disabled={isConnecting || isReconnecting}
               style={{
                 padding: "var(--space-6) var(--space-10)",
                 fontSize: "0.875rem",
@@ -95,19 +133,20 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
                 background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
                 color: "#fff",
                 border: "2px solid var(--color-victory)",
-                cursor: isConnecting ? "wait" : "pointer",
+                cursor: (isConnecting || isReconnecting) ? "wait" : "pointer",
                 textTransform: "uppercase",
                 letterSpacing: "0.125rem",
                 fontFamily: "inherit",
                 boxShadow: "var(--shadow-lg)",
-                opacity: isConnecting ? 0.7 : 1,
+                opacity: (isConnecting || isReconnecting) ? 0.7 : 1,
+                borderRadius: "4px",
               }}
             >
               {isConnecting ? "Creating..." : "Create Room"}
             </button>
             <button
               onClick={() => setShowJoinInput(true)}
-              disabled={isConnecting}
+              disabled={isConnecting || isReconnecting}
               style={{
                 padding: "var(--space-6) var(--space-10)",
                 fontSize: "0.875rem",
@@ -115,11 +154,12 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
                 background: "var(--color-bg-secondary)",
                 color: "var(--color-text-primary)",
                 border: "1px solid var(--color-border-primary)",
-                cursor: isConnecting ? "not-allowed" : "pointer",
+                cursor: (isConnecting || isReconnecting) ? "not-allowed" : "pointer",
                 textTransform: "uppercase",
                 letterSpacing: "0.125rem",
                 fontFamily: "inherit",
                 boxShadow: "var(--shadow-lg)",
+                borderRadius: "4px",
               }}
             >
               Join Room
