@@ -8,7 +8,11 @@ import { DecisionPanel } from "./DecisionPanel";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
 
-export function Board() {
+interface BoardProps {
+  onBackToHome?: () => void;
+}
+
+export function Board({ onBackToHome }: BoardProps) {
   const {
     gameState: state,
     selectedCards,
@@ -134,6 +138,7 @@ export function Board() {
         modelSettings={modelSettings}
         onModelSettingsChange={onModelSettingsChange}
         onNewGame={onNewGame}
+        onBackToHome={onBackToHome}
       />
 
       {state.gameOver && (

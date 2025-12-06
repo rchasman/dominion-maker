@@ -13,23 +13,24 @@ interface CreateJoinScreenProps {
 export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
   const { createRoom, joinRoom, isConnecting, error } = useMultiplayer();
 
-  const [playerName, setPlayerName] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [mode, setMode] = useState<"select" | "create" | "join">("select");
+  const [showJoinInput, setShowJoinInput] = useState(false);
 
   const handleCreate = async () => {
-    if (!playerName.trim()) return;
     try {
-      await createRoom(playerName.trim());
+      // Auto-generate player name
+      const randomName = `Player${Math.floor(Math.random() * 9999)}`;
+      await createRoom(randomName);
     } catch {
       // Error is handled in context
     }
   };
 
   const handleJoin = async () => {
-    if (!playerName.trim() || !joinCode.trim()) return;
+    if (joinCode.length < 6) return;
     try {
-      await joinRoom(joinCode.trim(), playerName.trim());
+      const randomName = `Player${Math.floor(Math.random() * 9999)}`;
+      await joinRoom(joinCode.trim(), randomName);
     } catch {
       // Error is handled in context
     }
@@ -75,47 +76,8 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
         </div>
       )}
 
-      {mode === "select" && (
+      {!showJoinInput && (
         <>
-          {/* Player Name Input */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-              alignItems: "center",
-            }}
-          >
-            <label
-              style={{
-                color: "var(--color-text-secondary)",
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.1rem",
-              }}
-            >
-              Your Name
-            </label>
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Enter your name"
-              maxLength={20}
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                fontSize: "1rem",
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border-primary)",
-                borderRadius: "4px",
-                color: "var(--color-text-primary)",
-                width: "250px",
-                textAlign: "center",
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
-
           {/* Action Buttons */}
           <div
             style={{
@@ -124,49 +86,40 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
             }}
           >
             <button
-              onClick={() => setMode("create")}
-              disabled={!playerName.trim()}
+              onClick={handleCreate}
+              disabled={isConnecting}
               style={{
-                padding: "var(--space-4) var(--space-8)",
+                padding: "var(--space-6) var(--space-10)",
                 fontSize: "0.875rem",
                 fontWeight: 600,
-                background: playerName.trim()
-                  ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
-                  : "var(--color-bg-tertiary)",
-                color: playerName.trim() ? "#fff" : "var(--color-text-tertiary)",
-                border: playerName.trim()
-                  ? "2px solid var(--color-victory)"
-                  : "2px solid var(--color-border-primary)",
-                cursor: playerName.trim() ? "pointer" : "not-allowed",
+                background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+                color: "#fff",
+                border: "2px solid var(--color-victory)",
+                cursor: isConnecting ? "wait" : "pointer",
                 textTransform: "uppercase",
-                letterSpacing: "0.1rem",
+                letterSpacing: "0.125rem",
                 fontFamily: "inherit",
-                borderRadius: "4px",
+                boxShadow: "var(--shadow-lg)",
+                opacity: isConnecting ? 0.7 : 1,
               }}
             >
-              Create Room
+              {isConnecting ? "Creating..." : "Create Room"}
             </button>
             <button
-              onClick={() => setMode("join")}
-              disabled={!playerName.trim()}
+              onClick={() => setShowJoinInput(true)}
+              disabled={isConnecting}
               style={{
-                padding: "var(--space-4) var(--space-8)",
+                padding: "var(--space-6) var(--space-10)",
                 fontSize: "0.875rem",
                 fontWeight: 600,
-                background: playerName.trim()
-                  ? "var(--color-bg-secondary)"
-                  : "var(--color-bg-tertiary)",
-                color: playerName.trim()
-                  ? "var(--color-text-primary)"
-                  : "var(--color-text-tertiary)",
-                border: playerName.trim()
-                  ? "1px solid var(--color-border-primary)"
-                  : "1px solid var(--color-border-primary)",
-                cursor: playerName.trim() ? "pointer" : "not-allowed",
+                background: "var(--color-bg-secondary)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--color-border-primary)",
+                cursor: isConnecting ? "not-allowed" : "pointer",
                 textTransform: "uppercase",
-                letterSpacing: "0.1rem",
+                letterSpacing: "0.125rem",
                 fontFamily: "inherit",
-                borderRadius: "4px",
+                boxShadow: "var(--shadow-lg)",
               }}
             >
               Join Room
@@ -175,56 +128,7 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
         </>
       )}
 
-      {mode === "create" && (
-        <>
-          <p
-            style={{
-              color: "var(--color-text-secondary)",
-              margin: 0,
-              fontSize: "0.875rem",
-            }}
-          >
-            Creating room as <strong>{playerName}</strong>
-          </p>
-          <button
-            onClick={handleCreate}
-            disabled={isConnecting}
-            style={{
-              padding: "var(--space-6) var(--space-10)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background:
-                "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-              color: "#fff",
-              border: "2px solid var(--color-victory)",
-              cursor: isConnecting ? "wait" : "pointer",
-              textTransform: "uppercase",
-              letterSpacing: "0.125rem",
-              fontFamily: "inherit",
-              boxShadow: "var(--shadow-lg)",
-              opacity: isConnecting ? 0.7 : 1,
-            }}
-          >
-            {isConnecting ? "Creating..." : "Create Room"}
-          </button>
-          <button
-            onClick={() => setMode("select")}
-            style={{
-              padding: "var(--space-2) var(--space-4)",
-              fontSize: "0.75rem",
-              background: "transparent",
-              color: "var(--color-text-tertiary)",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Back
-          </button>
-        </>
-      )}
-
-      {mode === "join" && (
+      {showJoinInput && (
         <>
           <div
             style={{
@@ -292,7 +196,7 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
             {isConnecting ? "Joining..." : "Join Room"}
           </button>
           <button
-            onClick={() => setMode("select")}
+            onClick={() => setShowJoinInput(false)}
             style={{
               padding: "var(--space-2) var(--space-4)",
               fontSize: "0.75rem",

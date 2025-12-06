@@ -2,14 +2,16 @@
  * Multiplayer Lobby Screen
  *
  * Orchestrates the multiplayer flow:
- * 1. Create/Join screen (not connected)
- * 2. Lobby room (connected, waiting)
- * 3. Game (playing)
+ * 1. Reconnect screen (saved session)
+ * 2. Create/Join screen (not connected)
+ * 3. Lobby room (connected, waiting)
+ * 4. Game (playing)
  */
 import { useMultiplayer } from "../../context/MultiplayerContext";
 import { CreateJoinScreen } from "./CreateJoinScreen";
 import { LobbyRoom } from "./LobbyRoom";
 import { MultiplayerGameBoard } from "./MultiplayerGameBoard";
+import { ReconnectScreen } from "./ReconnectScreen";
 
 interface MultiplayerScreenProps {
   onBack: () => void;
@@ -17,9 +19,14 @@ interface MultiplayerScreenProps {
 }
 
 export function MultiplayerScreen({ onBack, onGameStart }: MultiplayerScreenProps) {
-  const { isConnected, isInLobby, isPlaying, gameState } = useMultiplayer();
+  const { isConnected, isInLobby, isPlaying, gameState, hasSavedSession } = useMultiplayer();
 
-  // Not connected - show create/join
+  // Saved session but not connected yet - show reconnect screen
+  if (hasSavedSession && !isConnected) {
+    return <ReconnectScreen onBack={onBack} />;
+  }
+
+  // Not connected and no saved session - show create/join
   if (!isConnected) {
     return <CreateJoinScreen onBack={onBack} />;
   }
@@ -32,7 +39,7 @@ export function MultiplayerScreen({ onBack, onGameStart }: MultiplayerScreenProp
   // Game started - show game board
   if (isPlaying && gameState) {
     onGameStart?.();
-    return <MultiplayerGameBoard />;
+    return <MultiplayerGameBoard onBackToHome={onBack} />;
   }
 
   // Fallback
@@ -53,3 +60,4 @@ export function MultiplayerScreen({ onBack, onGameStart }: MultiplayerScreenProp
 
 export { CreateJoinScreen } from "./CreateJoinScreen";
 export { LobbyRoom } from "./LobbyRoom";
+export { ReconnectScreen } from "./ReconnectScreen";

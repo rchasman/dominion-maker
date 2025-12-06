@@ -29,6 +29,7 @@ interface GameSidebarProps {
   modelSettings: ModelSettings;
   onModelSettingsChange: (settings: ModelSettings) => void;
   onNewGame: () => void;
+  onBackToHome?: () => void;
 }
 
 export function GameSidebar({
@@ -38,6 +39,7 @@ export function GameSidebar({
   modelSettings,
   onModelSettingsChange,
   onNewGame,
+  onBackToHome,
 }: GameSidebarProps) {
   const { llmLogs } = useLLMLogs();
   const isHumanTurn = state.activePlayer === "human";
@@ -253,10 +255,31 @@ export function GameSidebar({
           </div>
         )}
 
+        {onBackToHome && (
+          <button
+            onClick={onBackToHome}
+            style={{
+              marginBlockStart: "var(--space-3)",
+              padding: "var(--space-2)",
+              background: "transparent",
+              color: "var(--color-text-primary)",
+              border: "1px solid var(--color-border)",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+              width: "100%",
+            }}
+            title="Return to home screen"
+          >
+            ← Back to Home
+          </button>
+        )}
+
         <button
           onClick={onNewGame}
           style={{
-            marginBlockStart: "var(--space-3)",
+            marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
             padding: "var(--space-2)",
             background: "transparent",
             color: "var(--color-text-secondary)",

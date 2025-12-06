@@ -1,7 +1,7 @@
 /**
- * Lobby Room Screen
+ * Lobby Room Screen - Simplified P2P version
  *
- * Shows connected players, ready status, and game settings.
+ * Shows connected players and allows host to start game.
  */
 import { useMultiplayer } from "../../context/MultiplayerContext";
 
@@ -9,39 +9,13 @@ export function LobbyRoom() {
   const {
     roomCode,
     isHost,
-    myPlayerId,
-    lobbyState,
-    multiplayerState,
-    setReady,
+    myPeerId,
+    players,
     startGame,
-    setGameMode,
     leaveRoom,
   } = useMultiplayer();
 
-  if (!lobbyState || !multiplayerState) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minBlockSize: "100dvh",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        Loading...
-      </div>
-    );
-  }
-
-  const myPresence = myPlayerId ? lobbyState.players[myPlayerId] : null;
-  const isReady = myPresence?.ready ?? false;
-  const allPlayers = Object.values(lobbyState.players);
-  const readyCount = allPlayers.filter((p) => p.ready).length;
-  const canStart =
-    isHost &&
-    allPlayers.length >= lobbyState.config.minPlayers &&
-    readyCount === allPlayers.length;
+  const canStart = isHost && players.length >= 2;
 
   return (
     <div
@@ -150,16 +124,15 @@ export function LobbyRoom() {
               fontSize: "0.75rem",
             }}
           >
-            {allPlayers.length}/{lobbyState.config.maxPlayers ?? 4}
+            {players.length}/4
           </span>
         </div>
 
-        {multiplayerState.playerSlots.map((slot, i) => {
-          const presence = lobbyState.players[slot.id];
-          const isMe = slot.id === myPlayerId;
+        {players.map((player, i) => {
+          const isMe = player.id === myPeerId;
           return (
             <div
-              key={slot.id}
+              key={player.id}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -201,164 +174,54 @@ export function LobbyRoom() {
                   fontWeight: isMe ? 600 : 400,
                 }}
               >
-                {slot.name}
+                {player.name}
                 {isMe && " (you)"}
-                {slot.type === "ai" && " [AI]"}
-              </span>
-
-              {/* Ready indicator */}
-              <span
-                style={{
-                  padding: "var(--space-1) var(--space-2)",
-                  fontSize: "0.625rem",
-                  textTransform: "uppercase",
-                  borderRadius: "4px",
-                  background: presence?.ready
-                    ? "rgba(34, 197, 94, 0.2)"
-                    : "rgba(234, 179, 8, 0.2)",
-                  color: presence?.ready ? "#22c55e" : "#eab308",
-                  border: presence?.ready
-                    ? "1px solid rgba(34, 197, 94, 0.5)"
-                    : "1px solid rgba(234, 179, 8, 0.5)",
-                }}
-              >
-                {presence?.ready ? "Ready" : "Not Ready"}
+                {player.isAI && " [AI]"}
+                {!player.connected && " [Disconnected]"}
               </span>
             </div>
           );
         })}
       </div>
 
-      {/* Game Mode (Host only) */}
+      {/* Start button (host only) */}
       {isHost && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-            alignItems: "center",
-          }}
-        >
-          <span
-            style={{
-              color: "var(--color-text-secondary)",
-              fontSize: "0.75rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.1rem",
-            }}
-          >
-            AI Mode
-          </span>
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-2)",
-            }}
-          >
-            {(["engine", "hybrid", "llm"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setGameMode(mode)}
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  fontSize: "0.75rem",
-                  background:
-                    multiplayerState.settings.gameMode === mode
-                      ? "var(--color-victory-dark)"
-                      : "transparent",
-                  color:
-                    multiplayerState.settings.gameMode === mode
-                      ? "#fff"
-                      : "var(--color-text-secondary)",
-                  border: "1px solid",
-                  borderColor:
-                    multiplayerState.settings.gameMode === mode
-                      ? "var(--color-victory)"
-                      : "var(--color-border-primary)",
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                  fontFamily: "inherit",
-                  borderRadius: "4px",
-                }}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-4)",
-        }}
-      >
         <button
-          onClick={() => setReady(!isReady)}
+          onClick={startGame}
+          disabled={!canStart}
           style={{
-            padding: "var(--space-4) var(--space-8)",
+            padding: "var(--space-6) var(--space-10)",
             fontSize: "0.875rem",
             fontWeight: 600,
-            background: isReady
-              ? "rgba(234, 179, 8, 0.2)"
-              : "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-            color: isReady ? "#eab308" : "#fff",
-            border: isReady
-              ? "2px solid rgba(234, 179, 8, 0.5)"
-              : "2px solid var(--color-victory)",
-            cursor: "pointer",
+            background: canStart
+              ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
+              : "var(--color-bg-tertiary)",
+            color: canStart ? "#fff" : "var(--color-text-tertiary)",
+            border: canStart
+              ? "2px solid var(--color-victory)"
+              : "2px solid var(--color-border-primary)",
+            cursor: canStart ? "pointer" : "not-allowed",
             textTransform: "uppercase",
-            letterSpacing: "0.1rem",
+            letterSpacing: "0.125rem",
             fontFamily: "inherit",
-            borderRadius: "4px",
+            boxShadow: canStart ? "var(--shadow-lg)" : "none",
           }}
         >
-          {isReady ? "Cancel Ready" : "Ready"}
+          Start Game
         </button>
+      )}
 
-        {isHost && (
-          <button
-            onClick={startGame}
-            disabled={!canStart}
-            style={{
-              padding: "var(--space-4) var(--space-8)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background: canStart
-                ? "linear-gradient(180deg, var(--color-gold) 0%, #b8860b 100%)"
-                : "var(--color-bg-tertiary)",
-              color: canStart ? "#000" : "var(--color-text-tertiary)",
-              border: canStart
-                ? "2px solid var(--color-gold)"
-                : "2px solid var(--color-border-primary)",
-              cursor: canStart ? "pointer" : "not-allowed",
-              textTransform: "uppercase",
-              letterSpacing: "0.1rem",
-              fontFamily: "inherit",
-              borderRadius: "4px",
-            }}
-          >
-            Start Game
-          </button>
-        )}
-      </div>
-
-      {/* Status message */}
-      <p
-        style={{
-          color: "var(--color-text-tertiary)",
-          fontSize: "0.75rem",
-          margin: 0,
-        }}
-      >
-        {readyCount}/{allPlayers.length} players ready
-        {!canStart &&
-          isHost &&
-          allPlayers.length < lobbyState.config.minPlayers &&
-          ` (need ${lobbyState.config.minPlayers} players minimum)`}
-      </p>
+      {!isHost && (
+        <p
+          style={{
+            color: "var(--color-text-tertiary)",
+            fontSize: "0.75rem",
+            margin: 0,
+          }}
+        >
+          Waiting for host to start...
+        </p>
+      )}
 
       {/* Leave button */}
       <button

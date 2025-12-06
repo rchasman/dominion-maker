@@ -1,15 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GameProvider, useGame } from "./context/GameContext";
-import { MultiplayerProvider } from "./context/MultiplayerContext";
+import { MultiplayerProvider, useMultiplayer } from "./context/MultiplayerContext";
 import { Board } from "./components/Board/index";
 import { StartScreen } from "./components/StartScreen";
 import { MultiplayerScreen } from "./components/Lobby";
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
+const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
 
 function App() {
-  const [mode, setMode] = useState<AppMode>("menu");
+  // Check for saved multiplayer session on mount
+  const [mode, setMode] = useState<AppMode>(() => {
+    try {
+      const savedRoom = localStorage.getItem(STORAGE_ROOM_KEY);
+      if (savedRoom) {
+        console.log("[App] Found saved room, auto-navigating to multiplayer");
+        return "multiplayer";
+      }
+    } catch (e) {
+      console.error("[App] Failed to check for saved session:", e);
+    }
+    return "menu";
+  });
 
   // Main menu / Single player start screen
   if (mode === "menu") {
@@ -27,7 +40,7 @@ function App() {
   if (mode === "singleplayer") {
     return (
       <GameProvider>
-        <SinglePlayerGame />
+        <SinglePlayerGame onBackToHome={() => setMode("menu")} />
       </GameProvider>
     );
   }
@@ -36,13 +49,7 @@ function App() {
   if (mode === "multiplayer") {
     return (
       <MultiplayerProvider>
-        <MultiplayerScreen
-          onBack={() => setMode("menu")}
-          onGameStart={() => {
-            // TODO: Initialize multiplayer game board
-            console.log("Multiplayer game started!");
-          }}
-        />
+        <MultiplayerScreen onBack={() => setMode("menu")} />
       </MultiplayerProvider>
     );
   }
@@ -50,7 +57,7 @@ function App() {
   return null;
 }
 
-function SinglePlayerGame() {
+function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
   const { gameState, startGame } = useGame();
 
   // Auto-start game when entering single player mode
@@ -59,7 +66,7 @@ function SinglePlayerGame() {
     return null;
   }
 
-  return <Board />;
+  return <Board onBackToHome={onBackToHome} />;
 }
 
 export default App;
