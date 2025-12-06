@@ -280,14 +280,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           Game State
         </div>
 
-        {/* Resources Line - RED WARNING when coins=0 in buy phase */}
+        {/* Resources Line */}
         <div style={{
           display: "flex",
           gap: "var(--space-4)",
           marginBottom: "var(--space-4)",
           padding: "var(--space-2)",
-          background: coins === 0 && phase === "buy" ? "rgba(239, 68, 68, 0.1)" : "transparent",
-          borderRadius: "3px",
         }}>
           <span>
             <span style={{ color: "var(--color-text-secondary)" }}>Phase:</span>{" "}
@@ -304,14 +302,10 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
           <span>
             <span style={{ color: "var(--color-text-secondary)" }}>Coins:</span>{" "}
             <span style={{
-              color: coins === 0 ? "#ef4444" : "var(--color-gold)",
+              color: "var(--color-gold)",
               fontWeight: 700,
-              fontSize: coins === 0 ? "0.8rem" : "0.7rem",
             }}>
               ${coins}
-              {coins === 0 && phase === "buy" && (
-                <span style={{ color: "#ef4444", marginLeft: "4px" }} title="Warning: 0 coins in buy phase">⚠</span>
-              )}
             </span>
           </span>
         </div>
@@ -788,6 +782,16 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
   const renderReasoning = (data: ConsensusVotingData | null | undefined) => {
     if (!data?.allResults) return null;
 
+    // Helper to group voters by model name and show counts
+    const groupVotersByModel = (voters: string[]) => {
+      const counts = new Map<string, number>();
+      voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
+      return Array.from(counts.entries())
+        .sort(([, a], [, b]) => b - a)
+        .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
+        .join(", ");
+    };
+
     return (
       <div>
         {data.allResults.map((result, idx) => {
@@ -817,7 +821,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 marginBottom: "var(--space-3)",
                 opacity: 0.8
               }}>
-                {result.voters.join(", ")}
+                {groupVotersByModel(result.voters)}
               </div>
               {result.reasonings && result.reasonings.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
@@ -901,6 +905,16 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     const sortedGroups = Array.from(groups.values()).sort((a, b) => b.voters.length - a.voters.length);
 
+    // Helper to group voters by model name and show counts
+    const groupVotersByModel = (voters: string[]) => {
+      const counts = new Map<string, number>();
+      voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
+      return Array.from(counts.entries())
+        .sort(([, a], [, b]) => b - a)
+        .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
+        .join(", ");
+    };
+
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         {sortedGroups.map((group, idx) => {
@@ -929,7 +943,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 marginBottom: "var(--space-2)",
                 opacity: 0.8
               }}>
-                {group.voters.join(", ")}
+                {groupVotersByModel(group.voters)}
               </div>
               {group.reasonings.length > 0 && (
                 <div style={{
