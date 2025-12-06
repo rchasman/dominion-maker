@@ -379,6 +379,18 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
                       >
                         {event.type}
                       </span>
+                      {!pendingUndo && !isSetupEvent && !isInitialTurn && isRootEvent && event.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestUndo(event.id, "Request from event log");
+                          }}
+                          style={styles.undoEventButton}
+                          title="Undo to here"
+                        >
+                          ⎌
+                        </button>
+                      )}
                     </div>
                   );
                 });
@@ -702,15 +714,17 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   undoEventButton: {
-    padding: "2px 6px",
-    background: "transparent",
-    border: "1px solid var(--color-border-primary)",
-    borderRadius: "3px",
-    color: "var(--color-text-tertiary)",
-    cursor: "pointer",
-    fontSize: "1rem",
     marginLeft: "auto",
+    padding: "2px 6px",
+    background: "rgba(34, 197, 94, 0.2)",
+    border: "1px solid rgba(34, 197, 94, 0.5)",
+    borderRadius: "3px",
+    color: "#22c55e",
+    cursor: "pointer",
+    fontSize: "0.875rem",
     lineHeight: 1,
+    fontWeight: 600,
+    transition: "all 0.15s",
   },
   exitPreviewButton: {
     padding: "var(--space-1) var(--space-2)",
