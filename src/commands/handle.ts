@@ -389,8 +389,14 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       return { ok: false, error: "Player not found" };
     }
 
-    // Root cause - ending turn
+    // Root cause - ending turn (add explicit TURN_ENDED event)
     const endTurnId = generateEventId();
+    events.push({
+      type: "TURN_ENDED",
+      player: player as Player,
+      turn: state.turn,
+      id: endTurnId,
+    });
 
     // Discard hand and in-play cards
     const handCards = [...playerState.hand];
@@ -431,13 +437,14 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       gameOverEvent.causedBy = endTurnId;
       events.push(gameOverEvent);
     } else {
-      // Start next turn
+      // Start next turn - caused by ending the previous turn
       const nextPlayer = getNextPlayer(stateAfterDraw, player as Player);
       events.push({
         type: "TURN_STARTED",
         turn: state.turn + 1,
         player: nextPlayer,
         id: generateEventId(),
+        causedBy: endTurnId,
       });
     }
   }

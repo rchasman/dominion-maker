@@ -111,6 +111,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       };
     }
 
+    case "TURN_ENDED": {
+      // Turn ended event doesn't change state, just serves as causal root
+      return state;
+    }
+
     case "PHASE_CHANGED": {
       return {
         ...state,

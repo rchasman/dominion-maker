@@ -50,6 +50,12 @@ export type TurnStartedEvent = EventMetadata & {
   player: PlayerId;
 };
 
+export type TurnEndedEvent = EventMetadata & {
+  type: "TURN_ENDED";
+  player: PlayerId;
+  turn: number;
+};
+
 export type PhaseChangedEvent = EventMetadata & {
   type: "PHASE_CHANGED";
   phase: Phase;
@@ -198,6 +204,7 @@ export type GameEvent =
   | InitialHandDrawnEvent
   // Turn structure
   | TurnStartedEvent
+  | TurnEndedEvent
   | PhaseChangedEvent
   // Card movements
   | CardsDrawnEvent
@@ -283,9 +290,15 @@ export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<str
 }
 
 /**
- * Remove an event and all events it caused from the event log
+ * Remove an event and all events that came after it (undo/rewind semantics)
  */
 export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameEvent[] {
-  const toRemove = getCausalChain(eventId, allEvents);
-  return allEvents.filter(e => !toRemove.has(e.id));
+  const targetIndex = allEvents.findIndex(e => e.id === eventId);
+  if (targetIndex === -1) {
+    console.warn(`[removeEventChain] Event ${eventId} not found`);
+    return allEvents;
+  }
+
+  // Remove target event and everything after it
+  return allEvents.slice(0, targetIndex);
 }
