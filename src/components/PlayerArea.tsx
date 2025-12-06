@@ -15,6 +15,7 @@ interface PlayerAreaProps {
   pendingDecision?: PendingDecision | null;
   phase: Phase;
   subPhase: TurnSubPhase;
+  loading?: boolean;
 }
 
 function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
@@ -66,6 +67,7 @@ export function PlayerArea({
   pendingDecision,
   phase,
   subPhase,
+  loading = false,
 }: PlayerAreaProps) {
   const size = compact ? "small" : "medium";
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
@@ -126,7 +128,11 @@ export function PlayerArea({
     >
       <div style={{ marginBlockEnd: "var(--space-3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
-          <strong style={{ fontSize: "0.8125rem", color: "var(--color-text-primary)" }}>{label}</strong>
+          {loading ? (
+            <span style={{ fontSize: "0.8125rem", color: "var(--color-text-tertiary)" }}>Reconnecting...</span>
+          ) : (
+            <strong style={{ fontSize: "0.8125rem", color: "var(--color-text-primary)" }}>{label}</strong>
+          )}
         </div>
         {vpCount !== undefined && (
           <div style={{
@@ -138,7 +144,19 @@ export function PlayerArea({
             gap: "var(--space-2)",
           }}>
             <span style={{ color: "var(--color-text-secondary)", fontWeight: 400, fontSize: "0.75rem" }}>VP:</span>
-            {vpCount}
+            {loading ? (
+              <div
+                style={{
+                  width: "24px",
+                  height: "16px",
+                  background: "var(--color-bg-secondary)",
+                  borderRadius: "4px",
+                  opacity: 0.5,
+                }}
+              />
+            ) : (
+              vpCount
+            )}
           </div>
         )}
       </div>
@@ -166,7 +184,7 @@ export function PlayerArea({
             In Play {player.inPlay.length === 0 && "(empty)"}
           </div>
           <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", minBlockSize: "100%", justifyContent: "center", alignItems: "center", alignContent: "center", minInlineSize: 0 }}>
-            {player.inPlay.map((card, i) => (
+            {!loading && player.inPlay.map((card, i) => (
               <Card
                 key={`${card}-${i}`}
                 name={card}
@@ -208,17 +226,25 @@ export function PlayerArea({
               justifyContent: "center",
               minInlineSize: 0
             }}>
-              {player.hand.map((card, i) => (
-                <Card
-                  key={`${card}-${i}`}
-                  name={card}
-                  size="large"
-                  onClick={() => onCardClick?.(card, i)}
-                  selected={selectedCards.some((c, idx) => c === card && idx === i)}
-                  highlightMode={getHandCardHighlightMode(card)}
-                  disabled={isHandCardDisabled(card)}
-                />
-              ))}
+              {loading ? (
+                [...Array(5)].map((_, i) => (
+                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+                    <Card name="Copper" showBack={true} size="large" disabled={true} />
+                  </div>
+                ))
+              ) : (
+                player.hand.map((card, i) => (
+                  <Card
+                    key={`${card}-${i}`}
+                    name={card}
+                    size="large"
+                    onClick={() => onCardClick?.(card, i)}
+                    selected={selectedCards.some((c, idx) => c === card && idx === i)}
+                    highlightMode={getHandCardHighlightMode(card)}
+                    disabled={isHandCardDisabled(card)}
+                  />
+                ))
+              )}
             </div>
           </div>
         )}
@@ -257,7 +283,11 @@ export function PlayerArea({
           }}>
             Deck
           </div>
-          {player.deck.length > 0 ? (
+          {loading ? (
+            <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+              <Card name="Copper" showBack={true} size={size} disabled={true} />
+            </div>
+          ) : player.deck.length > 0 ? (
             <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} disabled={!isActive} />
           ) : (
             <div style={{
@@ -292,7 +322,11 @@ export function PlayerArea({
           }}>
             Discard
           </div>
-          {player.discard.length > 0 ? (
+          {loading ? (
+            <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+              <Card name="Copper" showBack={true} size={size} disabled={true} />
+            </div>
+          ) : player.discard.length > 0 ? (
             // If there's a decision to choose from discard, show all cards
             (pendingDecision && pendingDecision.type === "choose_card_from_options" &&
              isHuman && player.discard.some(c => pendingDecision.options.includes(c))) ? (
@@ -340,6 +374,16 @@ export function PlayerArea({
           </div>
         )}
       </div>
+
+      {/* CSS Animations */}
+      {loading && (
+        <style>{`
+          @keyframes subtlePulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.2; }
+          }
+        `}</style>
+      )}
     </div>
   );
 }

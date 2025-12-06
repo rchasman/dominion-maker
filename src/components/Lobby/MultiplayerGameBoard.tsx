@@ -8,7 +8,6 @@ import { useState, useCallback } from "react";
 import { useMultiplayer } from "../../context/MultiplayerContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
-import { PlayerAreaSkeleton } from "../PlayerAreaSkeleton";
 import { EventDevtools } from "../EventDevtools";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { isActionCard, isTreasureCard } from "../../data/cards";
@@ -261,22 +260,19 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         )}
 
         {/* My hand */}
-        {myPlayerState ? (
-          <PlayerArea
-            player={myPlayerState}
-            label="You"
-            vpCount={myVP}
-            isActive={isMyTurn}
-            isHuman={true}
-            selectedCards={selectedCards}
-            onCardClick={handleCardClick}
-            pendingDecision={displayState.pendingDecision}
-            phase={displayState.phase}
-            subPhase={displayState.subPhase}
-          />
-        ) : (
-          <PlayerAreaSkeleton />
-        )}
+        <PlayerArea
+          player={myPlayerState ?? { hand: [], deck: [], discard: [], inPlay: [], deckTopRevealed: false }}
+          label="You"
+          vpCount={myPlayerState ? myVP : 0}
+          isActive={isMyTurn}
+          isHuman={true}
+          selectedCards={selectedCards}
+          onCardClick={handleCardClick}
+          pendingDecision={displayState.pendingDecision}
+          phase={displayState.phase}
+          subPhase={displayState.subPhase}
+          loading={!myPlayerState}
+        />
       </div>
 
       {/* Sidebar */}
@@ -404,15 +400,30 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         )}
 
         {/* Navigation buttons */}
-        <button
-          onClick={() => {
-            leaveRoom();
-            onBackToHome();
-          }}
-          style={styles.homeButton}
-        >
-          ← Back to Home
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          {isHost && (
+            <button
+              onClick={() => {
+                if (confirm("End game for all players?")) {
+                  leaveRoom();
+                  onBackToHome();
+                }
+              }}
+              style={styles.endGameButton}
+            >
+              End Game
+            </button>
+          )}
+          <button
+            onClick={() => {
+              leaveRoom();
+              onBackToHome();
+            }}
+            style={styles.homeButton}
+          >
+            ← Back to Home
+          </button>
+        </div>
 
         {isHost && (
           <div style={styles.hostBadge}>You are the host</div>
@@ -733,6 +744,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid var(--color-border-primary)",
     borderRadius: "6px",
     color: "var(--color-text-primary)",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: "0.875rem",
+  },
+  endGameButton: {
+    padding: "var(--space-2) var(--space-3)",
+    background: "rgba(239, 68, 68, 0.2)",
+    border: "1px solid rgba(239, 68, 68, 0.5)",
+    borderRadius: "6px",
+    color: "#ef4444",
     cursor: "pointer",
     fontFamily: "inherit",
     fontSize: "0.875rem",
