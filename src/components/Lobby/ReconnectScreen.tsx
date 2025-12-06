@@ -1,9 +1,9 @@
 /**
  * Reconnect Screen
  *
- * Shows when there's a saved multiplayer session and auto-reconnects.
+ * Shows options when there's a saved multiplayer session.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMultiplayer } from "../../context/MultiplayerContext";
 
 interface ReconnectScreenProps {
@@ -11,35 +11,25 @@ interface ReconnectScreenProps {
 }
 
 export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
-  const { reconnectToSavedRoom, error, leaveRoom } = useMultiplayer();
+  const { reconnectToSavedRoom, error } = useMultiplayer();
   const [isReconnecting, setIsReconnecting] = useState(false);
 
-  // Auto-reconnect on mount
-  useEffect(() => {
-    let cancelled = false;
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    try {
+      await reconnectToSavedRoom();
+    } catch (e) {
+      console.error("[ReconnectScreen] Reconnect failed:", e);
+      setIsReconnecting(false);
+    }
+  };
 
-    const doReconnect = async () => {
-      setIsReconnecting(true);
-      try {
-        await reconnectToSavedRoom();
-      } catch (e) {
-        console.error("[ReconnectScreen] Reconnect failed:", e);
-        if (!cancelled) {
-          setIsReconnecting(false);
-        }
-      }
-    };
-
-    doReconnect();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [reconnectToSavedRoom]);
-
-  const handleCancel = () => {
-    leaveRoom();
-    onBack();
+  const handleStartNew = () => {
+    // Clear saved session
+    localStorage.removeItem("dominion-maker-multiplayer-events");
+    localStorage.removeItem("dominion-maker-multiplayer-room");
+    // Reload to reset MultiplayerProvider state
+    window.location.reload();
   };
 
   return (
@@ -52,94 +42,114 @@ export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
         minHeight: "100dvh",
         background: "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
         padding: "var(--space-4)",
+        gap: "var(--space-6)",
       }}
     >
-      <div
+      <h1
         style={{
-          maxWidth: "400px",
-          padding: "var(--space-6)",
-          background: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-border-primary)",
-          borderRadius: "12px",
-          textAlign: "center",
+          margin: 0,
+          fontSize: "3rem",
+          color: "var(--color-gold)",
+          textShadow: "var(--shadow-glow-gold)",
+          letterSpacing: "0.25rem",
         }}
       >
-        <h1
+        MULTIPLAYER
+      </h1>
+
+      {error && (
+        <div
           style={{
-            margin: "0 0 var(--space-4) 0",
-            fontSize: "1.5rem",
-            color: "var(--color-gold)",
+            padding: "var(--space-4)",
+            background: "rgba(220, 38, 38, 0.2)",
+            border: "1px solid rgba(220, 38, 38, 0.5)",
+            borderRadius: "4px",
+            color: "#fca5a5",
+            fontSize: "0.875rem",
           }}
         >
-          {isReconnecting ? "Reconnecting..." : "Reconnect Failed"}
-        </h1>
+          {error}
+        </div>
+      )}
 
-        {isReconnecting ? (
-          <>
-            <div
-              style={{
-                marginBottom: "var(--space-4)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              Reconnecting to your game...
-            </div>
-            <div
-              style={{
-                display: "inline-block",
-                width: "32px",
-                height: "32px",
-                border: "3px solid var(--color-border-primary)",
-                borderTop: "3px solid var(--color-gold)",
-                borderRadius: "50%",
-                animation: "spin 1s linear infinite",
-              }}
-            />
-          </>
-        ) : (
-          <>
-            <div
-              style={{
-                marginBottom: "var(--space-4)",
-                color: "var(--color-text-secondary)",
-              }}
-            >
-              {error || "Could not reconnect to the game room."}
-            </div>
-            <div
-              style={{
-                fontSize: "0.875rem",
-                color: "var(--color-text-tertiary)",
-                marginBottom: "var(--space-4)",
-              }}
-            >
-              The host may have left or the room may have closed.
-            </div>
-            <button
-              onClick={handleCancel}
-              style={{
-                padding: "var(--space-2) var(--space-4)",
-                background: "var(--color-bg-tertiary)",
-                border: "1px solid var(--color-border-primary)",
-                borderRadius: "6px",
-                color: "var(--color-text-primary)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: "0.875rem",
-              }}
-            >
-              Back to Home
-            </button>
-          </>
-        )}
+      <p
+        style={{
+          color: "var(--color-text-secondary)",
+          margin: 0,
+          fontSize: "0.875rem",
+        }}
+      >
+        You have an active game session
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-3)",
+          alignItems: "stretch",
+          minWidth: "300px",
+        }}
+      >
+        <button
+          onClick={handleReconnect}
+          disabled={isReconnecting}
+          style={{
+            padding: "var(--space-6) var(--space-10)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+            color: "#fff",
+            border: "2px solid #3b82f6",
+            cursor: isReconnecting ? "wait" : "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+            fontFamily: "inherit",
+            boxShadow: "var(--shadow-lg)",
+            opacity: isReconnecting ? 0.7 : 1,
+            borderRadius: "4px",
+          }}
+        >
+          {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
+        </button>
+
+        <button
+          onClick={handleStartNew}
+          disabled={isReconnecting}
+          style={{
+            padding: "var(--space-4) var(--space-8)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background: "var(--color-bg-secondary)",
+            color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)",
+            cursor: isReconnecting ? "not-allowed" : "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+            fontFamily: "inherit",
+            borderRadius: "4px",
+          }}
+        >
+          Start New Game
+        </button>
       </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <button
+        onClick={onBack}
+        style={{
+          marginTop: "var(--space-4)",
+          padding: "var(--space-2) var(--space-4)",
+          fontSize: "0.75rem",
+          background: "transparent",
+          color: "var(--color-text-tertiary)",
+          border: "1px solid var(--color-border-primary)",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          borderRadius: "4px",
+        }}
+      >
+        Back to Main Menu
+      </button>
     </div>
   );
 }

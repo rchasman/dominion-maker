@@ -2,16 +2,14 @@
  * Multiplayer Lobby Screen
  *
  * Orchestrates the multiplayer flow:
- * 1. Reconnect screen (saved session)
- * 2. Create/Join screen (not connected)
- * 3. Lobby room (connected, waiting)
- * 4. Game (playing)
+ * 1. Create/Join screen (not connected) - includes rejoin if saved session
+ * 2. Lobby room (connected, waiting)
+ * 3. Game (playing)
  */
 import { useMultiplayer } from "../../context/MultiplayerContext";
 import { CreateJoinScreen } from "./CreateJoinScreen";
 import { LobbyRoom } from "./LobbyRoom";
 import { MultiplayerGameBoard } from "./MultiplayerGameBoard";
-import { ReconnectScreen } from "./ReconnectScreen";
 
 interface MultiplayerScreenProps {
   onBack: () => void;
@@ -19,14 +17,9 @@ interface MultiplayerScreenProps {
 }
 
 export function MultiplayerScreen({ onBack, onGameStart }: MultiplayerScreenProps) {
-  const { isConnected, isInLobby, isPlaying, gameState, hasSavedSession } = useMultiplayer();
+  const { isConnected, isInLobby, isPlaying, gameState } = useMultiplayer();
 
-  // Saved session but not connected yet - show reconnect screen
-  if (hasSavedSession && !isConnected) {
-    return <ReconnectScreen onBack={onBack} />;
-  }
-
-  // Not connected and no saved session - show create/join
+  // Not connected - show create/join (includes rejoin if available)
   if (!isConnected) {
     return <CreateJoinScreen onBack={onBack} />;
   }
