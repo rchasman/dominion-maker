@@ -471,6 +471,12 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       const message = e instanceof Error ? e.message : "Failed to reconnect";
       setError(message);
       setIsReconnecting(false);
+
+      // Clear saved session if reconnect fails
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_ROOM_KEY);
+      setHasSavedSession(false);
+
       throw e;
     }
   }, []);
@@ -479,6 +485,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
    * Leave room
    */
   const leaveRoom = useCallback(() => {
+    const wasHost = isHost;
+
+    if (wasHost) {
+      // Host leaving - end the game for everyone
+      roomRef.current?.endGame("Host left the room");
+    }
+
     roomRef.current?.leave();
     roomRef.current = null;
     engineRef.current = null;
@@ -490,9 +503,11 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setRoomState({ players: [], gameState: null, events: [], pendingUndo: null, isStarted: false });
     setError(null);
 
-    // Don't clear localStorage - keep it for reconnect
-    // Only clear when creating/joining a new room
-  }, []);
+    // Clear localStorage to prevent rejoining
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_ROOM_KEY);
+    setHasSavedSession(false);
+  }, [isHost]);
 
   /**
    * End game (anyone can call)
