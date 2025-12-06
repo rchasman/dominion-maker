@@ -41,16 +41,16 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     requestUndo,
     approveUndo,
     denyUndo,
-    getStateAt,
+    getStateAtEvent,
   } = useMultiplayer();
 
   const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
-  const [previewEventIndex, setPreviewEventIndex] = useState<number | null>(null);
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [showDevtools, setShowDevtools] = useState(false);
 
   // Use preview state if in time travel mode
-  const displayState = previewEventIndex !== null
-    ? getStateAt(previewEventIndex)
+  const displayState = previewEventId
+    ? getStateAtEvent(previewEventId)
     : gameState;
 
   if (!displayState) {
@@ -68,7 +68,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   // Computed values
   const isActionPhase = displayState.phase === "action";
   const isBuyPhase = displayState.phase === "buy";
-  const canBuy = isMyTurn && isBuyPhase && displayState.buys > 0 && previewEventIndex === null;
+  const canBuy = isMyTurn && isBuyPhase && displayState.buys > 0 && !previewEventId;
 
   const hasPlayableActions = myPlayerState?.hand.some(isActionCard) && displayState.actions > 0;
   const hasTreasuresInHand = myPlayerState?.hand.some(isTreasureCard);
@@ -78,7 +78,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
   // Card click handler
   const handleCardClick = useCallback((card: CardName) => {
-    if (previewEventIndex !== null) return; // No actions in preview mode
+    if (previewEventId !== null) return; // No actions in preview mode
     if (!isMyTurn) return;
 
     // If we have a pending decision, add to selection
@@ -111,40 +111,40 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       }
       return;
     }
-  }, [isMyTurn, displayState, selectedCards, isActionPhase, isBuyPhase, playAction, playTreasure, previewEventIndex]);
+  }, [isMyTurn, displayState, selectedCards, isActionPhase, isBuyPhase, playAction, playTreasure, previewEventId]);
 
   // Buy card handler
   const handleBuyCard = useCallback((card: CardName) => {
-    if (previewEventIndex !== null) return;
+    if (previewEventId !== null) return;
     if (!canBuy) return;
 
     const result = buyCard(card);
     if (!result.ok) {
       console.error("Failed to buy card:", result.error);
     }
-  }, [canBuy, buyCard, previewEventIndex]);
+  }, [canBuy, buyCard, previewEventId]);
 
   // End phase handler
   const handleEndPhase = useCallback(() => {
-    if (previewEventIndex !== null) return;
+    if (previewEventId !== null) return;
     if (!isMyTurn) return;
 
     const result = endPhase();
     if (!result.ok) {
       console.error("Failed to end phase:", result.error);
     }
-  }, [isMyTurn, endPhase, previewEventIndex]);
+  }, [isMyTurn, endPhase, previewEventId]);
 
   // Play all treasures handler
   const handlePlayAllTreasures = useCallback(() => {
-    if (previewEventIndex !== null) return;
+    if (previewEventId !== null) return;
     if (!isMyTurn || !isBuyPhase) return;
 
     const result = playAllTreasures();
     if (!result.ok) {
       console.error("Failed to play treasures:", result.error);
     }
-  }, [isMyTurn, isBuyPhase, playAllTreasures, previewEventIndex]);
+  }, [isMyTurn, isBuyPhase, playAllTreasures, previewEventId]);
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {
@@ -170,8 +170,8 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
   // Get hint text
   const getHint = () => {
-    if (previewEventIndex !== null) {
-      return `Previewing turn ${Math.floor(previewEventIndex / 10) + 1} (event ${previewEventIndex})`;
+    if (previewEventId) {
+      return `Previewing @ ${previewEventId}`;
     }
     if (displayState.pendingDecision && displayState.pendingDecision.player === myPlayer) {
       return displayState.pendingDecision.prompt;
@@ -220,7 +220,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         />
 
         {/* Action bar */}
-        {isMyTurn && previewEventIndex === null && (
+        {isMyTurn && previewEventId === null && (
           <div style={styles.actionBar}>
             <div style={styles.hint}>{getHint()}</div>
             <div style={styles.actionButtons}>
@@ -320,10 +320,13 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         {/* Event log / Time travel */}
         <div style={styles.logSection}>
           <h3 style={styles.sectionTitle}>
-            Event Log ({events.length})
-            {previewEventIndex !== null && (
+            Event Log ({previewEventId ? (() => {
+              const previewIndex = events.findIndex(e => e.id === previewEventId);
+              return previewIndex + 1;
+            })() : events.length})
+            {previewEventId && (
               <button
-                onClick={() => setPreviewEventIndex(null)}
+                onClick={() => setPreviewEventId(null)}
                 style={styles.exitPreviewButton}
               >
                 Exit Preview
@@ -331,54 +334,55 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
             )}
           </h3>
           <div style={styles.eventList}>
-            {events
-              .slice(-20)
-              .map((event, i) => {
-                const actualIndex = events.length - 20 + i;
-                const isPreview = previewEventIndex === actualIndex;
-                const isSetupEvent = ["GAME_INITIALIZED", "INITIAL_DECK_DEALT", "INITIAL_HAND_DRAWN"].includes(event.type);
-                const isInitialTurn = event.type === "TURN_STARTED" && (event as any).turn === 1;
+            {(() => {
+              // Filter events up to preview point if scrubbing
+              const visibleEvents = previewEventId
+                ? events.slice(0, events.findIndex(e => e.id === previewEventId) + 1)
+                : events;
 
-                // Find first TURN_STARTED event to use as index 0
-                const firstTurnIndex = events.findIndex(e => e.type === "TURN_STARTED");
-                const displayIndex = actualIndex - firstTurnIndex;
-                const eventIndex = actualIndex; // Use actual index for undo
+              return visibleEvents
+                .slice(-20)
+                .map((event) => {
+                  const isPreview = previewEventId === event.id;
+                  const isSetupEvent = ["GAME_INITIALIZED", "INITIAL_DECK_DEALT", "INITIAL_HAND_DRAWN"].includes(event.type);
+                  const isInitialTurn = event.type === "TURN_STARTED" && (event as any).turn === 1;
+                  const isRootEvent = !event.causedBy;
+                  const hasParent = !!event.causedBy;
 
-                return (
-                  <div
-                    key={eventIndex}
-                    style={{
-                      ...styles.eventItem,
-                      background: isPreview ? "rgba(99, 102, 241, 0.2)" : undefined,
-                    }}
-                  >
-                    <span
-                      style={styles.eventIndex}
-                      onClick={() => setPreviewEventIndex(eventIndex)}
+                  return (
+                    <div
+                      key={event.id}
+                      style={{
+                        ...styles.eventItem,
+                        background: isPreview ? "rgba(99, 102, 241, 0.2)" : undefined,
+                        paddingLeft: hasParent ? "24px" : "var(--space-2)",
+                      }}
                     >
-                      {displayIndex}
-                    </span>
-                    <span
-                      style={styles.eventType}
-                      onClick={() => setPreviewEventIndex(eventIndex)}
-                    >
-                      {event.type}
-                    </span>
-                    {!pendingUndo && !isSetupEvent && !isInitialTurn && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestUndo(eventIndex, "Request from event log");
-                        }}
-                        style={styles.undoEventButton}
-                        title="Request undo to here"
+                      {hasParent && (
+                        <span style={{
+                          marginRight: "var(--space-1)",
+                          color: "var(--color-text-tertiary)",
+                          fontSize: "0.75rem",
+                        }}>
+                          └
+                        </span>
+                      )}
+                      <span
+                        style={styles.eventIdStyle}
+                        onClick={() => setPreviewEventId(event.id)}
                       >
-                        ↶
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                        {event.id}
+                      </span>
+                      <span
+                        style={styles.eventType}
+                        onClick={() => setPreviewEventId(event.id)}
+                      >
+                        {event.type}
+                      </span>
+                    </div>
+                  );
+                });
+            })()}
           </div>
         </div>
 
@@ -387,7 +391,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           <div style={styles.undoRequest}>
             <div style={styles.undoTitle}>Undo Requested</div>
             <div style={styles.undoInfo}>
-              {players.find(p => p.id === pendingUndo.byPlayer)?.name ?? pendingUndo.byPlayer} wants to undo to event {pendingUndo.toEventIndex}
+              {players.find(p => p.id === pendingUndo.byPlayer)?.name ?? pendingUndo.byPlayer} wants to undo {pendingUndo.toEventId}
               {pendingUndo.reason && `: "${pendingUndo.reason}"`}
             </div>
             <div style={styles.undoProgress}>
@@ -477,8 +481,11 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         currentState={gameState}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
-        onBranchFrom={(eventIndex) => {
-          requestUndo(eventIndex, "Branch from event timeline");
+        onBranchFrom={(eventId) => {
+          requestUndo(eventId, "Branch from event timeline");
+        }}
+        onScrub={(eventId) => {
+          setPreviewEventId(eventId);
         }}
       />
 
@@ -675,10 +682,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "0.75rem",
     borderRadius: "4px",
     alignItems: "center",
+    position: "relative",
   },
   eventIndex: {
     color: "var(--color-text-tertiary)",
     minWidth: "24px",
+    cursor: "pointer",
+  },
+  eventIdStyle: {
+    color: "#6b7280",
+    minWidth: "50px",
+    fontSize: "10px",
+    fontFamily: "monospace",
     cursor: "pointer",
   },
   eventType: {

@@ -3,10 +3,11 @@
  *
  * Features:
  * - Live event stream with color-coded event types
+ * - Timeline scrubber for replay control
  * - Click any event to see state at that point
+ * - Branch from any point to create alternate timelines
  * - Diff view showing what changed
  * - Filter events by type
- * - Export/import event logs
  */
 import { useState, useMemo, useEffect, useRef } from "react";
 import type { GameEvent } from "../events/types";
@@ -19,6 +20,8 @@ interface EventDevtoolsProps {
   currentState: GameState | null;
   isOpen?: boolean;
   onToggle?: () => void;
+  onBranchFrom?: (eventId: string) => void;
+  onScrub?: (eventId: string | null) => void;
 }
 
 // Color mapping for event types
@@ -71,19 +74,48 @@ const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
   decisions: ["DECISION_REQUIRED", "DECISION_RESOLVED"],
 };
 
-export function EventDevtools({ events, currentState, isOpen = true, onToggle }: EventDevtoolsProps) {
+export function EventDevtools({ events, currentState, isOpen = true, onToggle, onBranchFrom, onScrub }: EventDevtoolsProps) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventCategory>("all");
   const [showDiff, setShowDiff] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-scroll to bottom when new events arrive
+  // Get root events only (for scrubbing)
+  const rootEvents = useMemo(() => {
+    return events.filter(e => isRootCauseEvent(e));
+  }, [events]);
+
+  // Auto-scroll to bottom when new events arrive (unless pinned or scrubbing)
   useEffect(() => {
-    if (!isPinned && listRef.current) {
+    if (!isPinned && scrubberIndex === null && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [events.length, isPinned]);
+  }, [events.length, isPinned, scrubberIndex]);
+
+  // Scroll to bottom on initial mount
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, []);
+
+  // Scroll to scrubber position when scrubbing
+  useEffect(() => {
+    if (scrubberIndex !== null && listRef.current) {
+      // Find the event element and scroll it into view
+      const eventElements = listRef.current.querySelectorAll('[data-event-index]');
+      const targetElement = Array.from(eventElements).find(
+        el => el.getAttribute('data-event-index') === String(scrubberIndex)
+      );
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [scrubberIndex]);
 
   // Filtered events
   const filteredEvents = useMemo(() => {
@@ -92,21 +124,21 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
     return events.filter(e => types.includes(e.type));
   }, [events, filter]);
 
-  // Selected state
+  // Display state from scrubber or selected event
+  const displayIndex = scrubberIndex ?? (selectedEventId ? events.findIndex(e => e.id === selectedEventId) : null);
+
+  // Selected state (from scrubber or clicked event)
   const selectedState = useMemo(() => {
-    if (!selectedEventId) return null;
-    const eventIndex = events.findIndex(e => e.id === selectedEventId);
-    if (eventIndex === -1) return null;
-    return projectState(events.slice(0, eventIndex + 1));
-  }, [events, selectedEventId]);
+    if (displayIndex === null) return null;
+    if (displayIndex === -1) return null;
+    return projectState(events.slice(0, displayIndex + 1));
+  }, [events, displayIndex]);
 
   // Previous state (for diff)
   const prevState = useMemo(() => {
-    if (!selectedEventId) return null;
-    const eventIndex = events.findIndex(e => e.id === selectedEventId);
-    if (eventIndex <= 0) return null;
-    return projectState(events.slice(0, eventIndex));
-  }, [events, selectedEventId]);
+    if (displayIndex === null || displayIndex <= 0) return null;
+    return projectState(events.slice(0, displayIndex));
+  }, [events, displayIndex]);
 
   // Format event for display
   const formatEvent = (event: GameEvent): string => {
@@ -140,16 +172,127 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
     }
   };
 
-  // Export events as JSON
-  const handleExport = () => {
-    const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dominion-events-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  // Handle timeline scrubbing (scrub through root events only)
+  const handleScrubberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rootIndex = parseInt(e.target.value);
+    const rootEvent = rootEvents[rootIndex];
+    if (!rootEvent) return;
+
+    // Find this root event's actual index in the full event list
+    const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
+
+    setScrubberIndex(actualIndex);
+    setIsPinned(true); // Auto-pin when scrubbing
+
+    // Notify parent to update game board preview (pass event ID)
+    if (onScrub) {
+      onScrub(rootEvent.id);
+    }
   };
+
+  // Reset scrubber to live mode
+  const handleResetScrubber = () => {
+    setScrubberIndex(null);
+    setSelectedEventId(null);
+    setIsPinned(false);
+
+    // Reset parent preview
+    if (onScrub) {
+      onScrub(null);
+    }
+  };
+
+  // Jump to beginning (first root event)
+  const handleRewindToBeginning = () => {
+    if (rootEvents.length > 0) {
+      const firstRoot = rootEvents[0];
+      const actualIndex = events.findIndex(evt => evt.id === firstRoot.id);
+      setScrubberIndex(actualIndex);
+      setIsPinned(true);
+      if (onScrub) {
+        onScrub(firstRoot.id);
+      }
+    }
+  };
+
+  // Branch from current scrubber position
+  const handleBranch = (eventId: string) => {
+    if (onBranchFrom) {
+      onBranchFrom(eventId);
+      handleResetScrubber();
+    }
+  };
+
+  // Play/pause replay
+  const handlePlayPause = () => {
+    if (isPlaying) {
+      // Pause
+      setIsPlaying(false);
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+        playIntervalRef.current = null;
+      }
+    } else {
+      // Start playing
+      setIsPlaying(true);
+      setIsPinned(true);
+
+      // If at end or live, start from beginning
+      if (scrubberIndex === null || scrubberIndex >= events.findIndex(evt => evt.id === rootEvents[rootEvents.length - 1]?.id)) {
+        handleRewindToBeginning();
+      }
+    }
+  };
+
+  // Auto-advance during playback
+  useEffect(() => {
+    if (isPlaying && rootEvents.length > 0) {
+      playIntervalRef.current = setInterval(() => {
+        setScrubberIndex(prev => {
+          const currentRootIndex = prev !== null
+            ? rootEvents.findIndex(e => e.id === events[prev]?.id)
+            : -1;
+
+          const nextRootIndex = currentRootIndex + 1;
+
+          if (nextRootIndex >= rootEvents.length) {
+            // Reached the end
+            setIsPlaying(false);
+            if (playIntervalRef.current) {
+              clearInterval(playIntervalRef.current);
+              playIntervalRef.current = null;
+            }
+            return prev;
+          }
+
+          const nextRoot = rootEvents[nextRootIndex];
+          const nextActualIndex = events.findIndex(evt => evt.id === nextRoot.id);
+
+          if (onScrub) {
+            onScrub(nextRoot.id);
+          }
+
+          return nextActualIndex;
+        });
+      }, 500); // Advance every 500ms
+
+      return () => {
+        if (playIntervalRef.current) {
+          clearInterval(playIntervalRef.current);
+          playIntervalRef.current = null;
+        }
+      };
+    }
+  }, [isPlaying, rootEvents, events, onScrub]);
+
+  // Stop playing when unmounting
+  useEffect(() => {
+    return () => {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+      }
+    };
+  }, []);
 
   if (!isOpen) {
     return (
@@ -168,23 +311,98 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
           <span style={styles.titleIcon}>{"{ }"}</span>
           Event Devtools
           <span style={styles.badge}>{events.length}</span>
+          {scrubberIndex !== null && (
+            <span style={styles.replayBadge}>
+              @ {scrubberIndex}
+            </span>
+          )}
         </div>
         <div style={styles.headerActions}>
-          <button onClick={handleExport} style={styles.headerButton} title="Export events">
-            Export
-          </button>
           <button
             onClick={() => setIsPinned(!isPinned)}
             style={{ ...styles.headerButton, background: isPinned ? "rgba(99, 102, 241, 0.3)" : undefined }}
             title={isPinned ? "Unpin (auto-scroll)" : "Pin (stop auto-scroll)"}
           >
-            {isPinned ? "Pinned" : "Auto"}
+            {isPinned ? "📌" : "🔄"}
           </button>
           {onToggle && (
             <button onClick={onToggle} style={styles.closeButton}>×</button>
           )}
         </div>
       </div>
+
+      {/* Timeline Scrubber */}
+      {rootEvents.length > 0 && (
+        <div style={styles.scrubber}>
+          <div style={styles.scrubberControls}>
+            <button
+              onClick={handleRewindToBeginning}
+              style={styles.scrubberButton}
+              title="Rewind to beginning"
+              disabled={scrubberIndex === events.findIndex(evt => evt.id === rootEvents[0]?.id)}
+            >
+              ⏮
+            </button>
+            <button
+              onClick={handlePlayPause}
+              style={{
+                ...styles.scrubberButton,
+                background: isPlaying ? "rgba(99, 102, 241, 0.3)" : "transparent",
+                borderColor: isPlaying ? "rgba(99, 102, 241, 0.5)" : "#2d2d44",
+              }}
+              title={isPlaying ? "Pause replay" : "Play replay"}
+            >
+              {isPlaying ? "⏸" : "▶"}
+            </button>
+            <div style={styles.scrubberSliderContainer}>
+              <input
+                type="range"
+                min="0"
+                max={rootEvents.length - 1}
+                value={
+                  scrubberIndex !== null
+                    ? rootEvents.findIndex(e => e.id === events[scrubberIndex]?.id)
+                    : rootEvents.length - 1
+                }
+                onChange={(e) => {
+                  // Stop playing when manually scrubbing
+                  if (isPlaying) {
+                    setIsPlaying(false);
+                    if (playIntervalRef.current) {
+                      clearInterval(playIntervalRef.current);
+                      playIntervalRef.current = null;
+                    }
+                  }
+                  handleScrubberChange(e);
+                }}
+                style={styles.scrubberInput}
+              />
+              <span style={styles.scrubberLabel}>
+                {scrubberIndex !== null
+                  ? `Action ${rootEvents.findIndex(e => e.id === events[scrubberIndex]?.id) + 1}/${rootEvents.length}`
+                  : `Live (${rootEvents.length} actions)`}
+              </span>
+            </div>
+            {scrubberIndex !== null ? (
+              <button
+                onClick={handleResetScrubber}
+                style={styles.liveButtonInline}
+                title="Jump to live"
+              >
+                ⏭
+              </button>
+            ) : (
+              <button
+                style={{ ...styles.scrubberButton, opacity: 0.3, cursor: 'not-allowed' }}
+                disabled
+                title="Already at live"
+              >
+                ⏭
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div style={styles.filters}>
@@ -205,44 +423,71 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle }:
 
       {/* Event list */}
       <div ref={listRef} style={styles.eventList}>
-        {filteredEvents.map((event) => {
-          const isSelected = selectedEventId === event.id;
+        {filteredEvents.map((event, idx) => {
+          const eventIndex = events.indexOf(event);
+          const isSelected = selectedEventId === event.id || scrubberIndex === eventIndex;
           const isRoot = isRootCauseEvent(event);
           const hasParent = !!event.causedBy;
+          const isScrubberPosition = scrubberIndex === eventIndex;
 
           return (
             <div
-              key={event.id}
-              onClick={() => setSelectedEventId(isSelected ? null : event.id)}
+              key={`${event.id}-${eventIndex}`}
+              data-event-index={eventIndex}
+              onClick={() => {
+                setSelectedEventId(isSelected && !isScrubberPosition ? null : event.id);
+                setScrubberIndex(eventIndex);
+                setIsPinned(true);
+
+                // Update parent preview (pass event ID)
+                if (onScrub) {
+                  onScrub(event.id);
+                }
+              }}
               style={{
                 ...styles.eventItem,
                 background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
                 borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
                 paddingLeft: hasParent ? "32px" : "12px",
                 position: "relative",
+                borderRight: isScrubberPosition ? "3px solid #6366f1" : "none",
               }}
             >
               {hasParent && (
-                <span style={styles.causalArrow}>↶</span>
-              )}
-              {isRoot && (
-                <span style={styles.rootBadge}>ROOT</span>
+                <span style={styles.causalArrow}>└</span>
               )}
               <span style={styles.eventId}>{event.id}</span>
               <span style={{ ...styles.eventType, color: EVENT_COLORS[event.type] || "#6b7280" }}>
                 {event.type}
               </span>
               <span style={styles.eventDetail}>{formatEvent(event)}</span>
+              {isScrubberPosition && isRoot && onBranchFrom ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBranch(event.id);
+                  }}
+                  style={styles.inlineBranchButton}
+                  title="Branch from here"
+                >
+                  ⎌
+                </button>
+              ) : isScrubberPosition ? (
+                <span style={styles.playhead}>▶</span>
+              ) : null}
             </div>
           );
         })}
       </div>
 
       {/* State inspector */}
-      {selectedEventId && selectedState && (
+      {displayIndex !== null && selectedState && (
         <div style={styles.inspector}>
           <div style={styles.inspectorHeader}>
-            <span>State @ {selectedEventId}</span>
+            <span>
+              State @ Event {displayIndex}
+              {scrubberIndex !== null && " (scrubbing)"}
+            </span>
             <button
               onClick={() => setShowDiff(!showDiff)}
               style={{
@@ -434,6 +679,94 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "10px",
     fontSize: "10px",
   },
+  replayBadge: {
+    background: "#f59e0b",
+    color: "white",
+    padding: "2px 6px",
+    borderRadius: "10px",
+    fontSize: "10px",
+  },
+  liveButton: {
+    padding: "4px 8px",
+    background: "#22c55e",
+    border: "none",
+    borderRadius: "4px",
+    color: "white",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: 600,
+  },
+  scrubber: {
+    padding: "8px 12px",
+    borderBottom: "1px solid #2d2d44",
+    background: "#16162a",
+  },
+  scrubberControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  scrubberButton: {
+    padding: "4px 8px",
+    background: "transparent",
+    border: "1px solid #2d2d44",
+    borderRadius: "4px",
+    color: "#a0a0b0",
+    cursor: "pointer",
+    fontSize: "14px",
+    lineHeight: 1,
+    transition: "all 0.15s",
+  },
+  liveButtonInline: {
+    padding: "4px 8px",
+    background: "#22c55e",
+    border: "none",
+    borderRadius: "4px",
+    color: "white",
+    cursor: "pointer",
+    fontSize: "14px",
+    lineHeight: 1,
+    fontWeight: 600,
+    transition: "all 0.15s",
+  },
+  scrubberSliderContainer: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  scrubberInput: {
+    width: "100%",
+    height: "4px",
+    background: "#2d2d44",
+    outline: "none",
+    borderRadius: "2px",
+    cursor: "pointer",
+  },
+  scrubberLabel: {
+    fontSize: "10px",
+    color: "#a0a0b0",
+    textAlign: "center",
+  },
+  inlineBranchButton: {
+    marginLeft: "auto",
+    padding: "2px 6px",
+    background: "rgba(34, 197, 94, 0.2)",
+    border: "1px solid rgba(34, 197, 94, 0.5)",
+    borderRadius: "3px",
+    color: "#22c55e",
+    cursor: "pointer",
+    fontSize: "14px",
+    lineHeight: 1,
+    fontWeight: 600,
+    transition: "all 0.15s",
+  },
+  playhead: {
+    marginLeft: "auto",
+    color: "#6366f1",
+    fontSize: "12px",
+    fontWeight: "bold",
+  },
   header: {
     display: "flex",
     justifyContent: "space-between",
@@ -516,17 +849,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "monospace",
   },
   causalArrow: {
-    position: "absolute",
-    left: "12px",
-    color: "#6366f1",
-    fontSize: "14px",
-  },
-  rootBadge: {
-    position: "absolute",
-    left: "2px",
-    fontSize: "8px",
-    color: "#22c55e",
-    fontWeight: 600,
+    marginRight: "4px",
+    color: "var(--color-text-tertiary)",
+    fontSize: "0.75rem",
   },
   eventType: {
     fontWeight: 600,
