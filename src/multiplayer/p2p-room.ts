@@ -67,6 +67,7 @@ export class P2PRoom {
   private sendCommand: (command: GameCommand, peerId?: string) => void;
   private sendJoin: (info: { playerId: string; name: string }, peerId?: string) => void;
   private sendUndoUpdate: (update: { type: "request" | "approve" | "deny" | "execute"; data: any }, peerId?: string) => void;
+  private sendGameEnd: (data: { reason: string }, peerId?: string) => void;
 
   constructor(roomCode: string, isHost: boolean, savedPeerId?: string) {
     this.roomCode = roomCode;
@@ -97,11 +98,15 @@ export class P2PRoom {
     const [sendEvents, receiveEvents] = this.room.makeAction<GameEvent[]>("events");
     const [sendCommand, receiveCommand] = this.room.makeAction<GameCommand>("command");
     const [sendJoin, receiveJoin] = this.room.makeAction<{ playerId: string; name: string }>("join");
+    const [sendGameEnd, receiveGameEnd] = this.room.makeAction<{ reason: string }>("gameEnd");
+    const [sendUndoUpdate, receiveUndoUpdate] = this.room.makeAction<{ type: string; data: any }>("undo");
 
     this.sendFullState = sendFullState;
     this.sendEvents = sendEvents;
     this.sendCommand = sendCommand;
     this.sendJoin = sendJoin;
+    this.sendGameEnd = sendGameEnd;
+    this.sendUndoUpdate = sendUndoUpdate;
 
     // Handle full state sync (for initial sync / rejoins)
     receiveFullState((state, peerId) => {
@@ -208,6 +213,22 @@ export class P2PRoom {
         this.players.clear();
         this.notifyStateChange();
       }
+    });
+
+    // Handle game end broadcast (all peers)
+    receiveGameEnd((data, _peerId) => {
+      console.log(`[P2PRoom] Game ended by peer: ${data.reason}`);
+
+      // Set game state to game over
+      if (this.gameState) {
+        this.gameState = {
+          ...this.gameState,
+          gameOver: true,
+          winner: null,
+        };
+      }
+
+      this.notifyStateChange();
     });
 
     // If host, add ourselves to players immediately
@@ -429,6 +450,27 @@ export class P2PRoom {
   onCommand(handler: CommandHandler): () => void {
     this.commandHandlers.add(handler);
     return () => this.commandHandlers.delete(handler);
+  }
+
+  /**
+   * End the game and notify all players (anyone can call)
+   */
+  endGame(reason: string = "Player ended game"): void {
+    console.log(`[P2PRoom] ${this.isHost ? "Host" : "Client"} ending game: ${reason}`);
+
+    // Broadcast game end to all peers
+    this.sendGameEnd({ reason });
+
+    // Set our own game state to game over
+    if (this.gameState) {
+      this.gameState = {
+        ...this.gameState,
+        gameOver: true,
+        winner: null,
+      };
+    }
+
+    this.notifyStateChange();
   }
 
   /**

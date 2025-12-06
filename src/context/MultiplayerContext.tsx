@@ -26,6 +26,7 @@ const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
 interface MultiplayerContextValue {
   // Connection
   isConnected: boolean;
+  isReconnecting: boolean;
   roomCode: string | null;
   error: string | null;
   hasSavedSession: boolean;
@@ -50,6 +51,7 @@ interface MultiplayerContextValue {
   joinRoom: (code: string, playerName: string) => Promise<void>;
   reconnectToSavedRoom: () => Promise<void>;
   leaveRoom: () => void;
+  endGame: () => void;
   setMyName: (name: string) => void;
   startGame: () => void;
 
@@ -83,6 +85,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const engineRef = useRef<DominionEngine | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
@@ -155,9 +158,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Persist room state to localStorage
+  // Persist room state to localStorage (but not when game is over)
   useEffect(() => {
-    if (isPlaying && events.length > 0) {
+    if (isPlaying && events.length > 0 && !gameState?.gameOver) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
         localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
@@ -171,13 +174,28 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         console.error("[MultiplayerContext] Failed to save to localStorage:", e);
       }
     }
-  }, [isPlaying, events, roomCode, myPeerId, isHost, players]);
+  }, [isPlaying, events, roomCode, myPeerId, isHost, players, gameState?.gameOver]);
+
+  // Clear saved session when game ends
+  useEffect(() => {
+    if (gameState?.gameOver) {
+      console.log("[MultiplayerContext] Game over detected, clearing saved session");
+      console.log("[MultiplayerContext] Winner:", gameState.winner);
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_ROOM_KEY);
+      setHasSavedSession(false);
+    }
+  }, [gameState?.gameOver, gameState?.winner]);
 
   /**
    * Create room as host
    */
   const createRoom = useCallback(async (playerName: string): Promise<string> => {
     setError(null);
+
+    // Clear any previous session
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_ROOM_KEY);
 
     try {
       const code = generateRoomCode();
@@ -206,6 +224,15 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       // Set my name
       room.setMyName(playerName);
 
+      // Save to localStorage for reconnect
+      localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
+        roomCode: code,
+        myPeerId: peerId,
+        isHost: true,
+        players: [{ id: peerId, name: playerName, isAI: false, connected: true }],
+      }));
+      setHasSavedSession(true);
+
       return code;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to create room";
@@ -220,6 +247,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const joinRoom = useCallback(
     async (code: string, playerName: string): Promise<void> => {
       setError(null);
+
+      // Clear any previous session
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_ROOM_KEY);
 
       try {
         const room = new P2PRoom(code.toUpperCase(), false);
@@ -260,6 +291,15 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         // Announce join (will queue until connection established)
         console.log(`[MultiplayerContext] Client announcing join to host`);
         room.setMyName(playerName);
+
+        // Save to localStorage for reconnect
+        localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
+          roomCode: code.toUpperCase(),
+          myPeerId: peerId,
+          isHost: false,
+          players: [{ id: peerId, name: playerName, isAI: false, connected: true }],
+        }));
+        setHasSavedSession(true);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to join room";
         setError(message);
@@ -274,6 +314,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
    */
   const reconnectToSavedRoom = useCallback(async (): Promise<void> => {
     setError(null);
+    setIsReconnecting(true);
 
     try {
       const savedEvents = localStorage.getItem(STORAGE_KEY);
@@ -421,9 +462,12 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       // Set name (will trigger rejoin message to host)
       const myName = roomInfo.players.find(p => p.id === roomInfo.myPeerId)?.name || "Player";
       room.setMyName(myName);
+
+      setIsReconnecting(false);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to reconnect";
       setError(message);
+      setIsReconnecting(false);
       throw e;
     }
   }, []);
@@ -443,11 +487,28 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setRoomState({ players: [], gameState: null, events: [], pendingUndo: null, isStarted: false });
     setError(null);
 
+    // Don't clear localStorage - keep it for reconnect
+    // Only clear when creating/joining a new room
+  }, []);
+
+  /**
+   * End game (anyone can call)
+   */
+  const endGame = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) return;
+
+    // Broadcast game end - this will set gameOver flag
+    room.endGame("Player ended game");
+
     // Clear localStorage
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_ROOM_KEY);
     setHasSavedSession(false);
+
+    // Don't leave immediately - let the game over modal show
   }, []);
+
 
   /**
    * Update my name
@@ -687,6 +748,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const value: MultiplayerContextValue = {
     // Connection
     isConnected,
+    isReconnecting,
     roomCode,
     error,
     hasSavedSession,
@@ -711,6 +773,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     joinRoom,
     reconnectToSavedRoom,
     leaveRoom,
+    endGame,
     setMyName,
     startGame,
 

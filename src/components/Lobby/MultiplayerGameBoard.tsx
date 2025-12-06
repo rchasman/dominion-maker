@@ -28,6 +28,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     isMyTurn,
     isHost,
     leaveRoom,
+    endGame,
     players,
     // Game actions
     playAction,
@@ -401,19 +402,16 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
         {/* Navigation buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          {isHost && (
-            <button
-              onClick={() => {
-                if (confirm("End game for all players?")) {
-                  leaveRoom();
-                  onBackToHome();
-                }
-              }}
-              style={styles.endGameButton}
-            >
-              End Game
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (confirm("End game for all players?")) {
+                endGame();
+              }
+            }}
+            style={styles.endGameButton}
+          >
+            End Game
+          </button>
           <button
             onClick={() => {
               leaveRoom();
@@ -434,22 +432,32 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       {displayState.gameOver && (
         <div style={styles.modal}>
           <div style={styles.modalContent}>
-            <h2 style={styles.modalTitle}>Game Over!</h2>
-            <div style={styles.winner}>
-              Winner: {players.find(p => p.id === (displayState.playerOrder?.indexOf(displayState.winner!) ?? -1).toString())?.name ?? displayState.winner}
-            </div>
-            <div style={styles.scores}>
-              {displayState.playerOrder?.map((playerId, idx) => {
-                const pState = displayState.players[playerId];
-                const vp = pState ? countVP(getAllCards(pState)) : 0;
-                const playerName = players[idx]?.name ?? playerId;
-                return (
-                  <div key={playerId} style={styles.scoreRow}>
-                    {playerName}: {vp} VP
-                  </div>
-                );
-              })}
-            </div>
+            <h2 style={styles.modalTitle}>
+              {displayState.winner ? "Game Over!" : "Game Ended"}
+            </h2>
+            {displayState.winner ? (
+              <>
+                <div style={styles.winner}>
+                  Winner: {players.find(p => p.id === (displayState.playerOrder?.indexOf(displayState.winner!) ?? -1).toString())?.name ?? displayState.winner}
+                </div>
+                <div style={styles.scores}>
+                  {displayState.playerOrder?.map((playerId, idx) => {
+                    const pState = displayState.players[playerId];
+                    const vp = pState ? countVP(getAllCards(pState)) : 0;
+                    const playerName = players[idx]?.name ?? playerId;
+                    return (
+                      <div key={playerId} style={styles.scoreRow}>
+                        {playerName}: {vp} VP
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div style={styles.winner}>
+                A player ended the game
+              </div>
+            )}
             <button
               onClick={() => {
                 leaveRoom();
@@ -457,7 +465,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
               }}
               style={styles.button}
             >
-              Back to Home
+              OK
             </button>
           </div>
         </div>
@@ -469,6 +477,9 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         currentState={gameState}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
+        onBranchFrom={(eventIndex) => {
+          requestUndo(eventIndex, "Branch from event timeline");
+        }}
       />
 
       {/* CSS Animations */}
@@ -788,6 +799,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "1.25rem",
     fontWeight: 600,
     marginBottom: "var(--space-4)",
+    color: "var(--color-text-primary)",
   },
   scores: {
     marginBottom: "var(--space-4)",
