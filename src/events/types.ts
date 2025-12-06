@@ -12,8 +12,18 @@ export type Zone = z.infer<typeof Zone>;
 // GAME EVENTS - Immutable facts (past tense)
 // ============================================
 
+/**
+ * Base event metadata for causality tracking
+ */
+export type EventMetadata = {
+  /** Unique event ID for causality tracking */
+  id: string;
+  /** ID of the event that caused this event (for atomic undo) */
+  causedBy?: string;
+};
+
 // Game Setup
-export type GameInitializedEvent = {
+export type GameInitializedEvent = EventMetadata & {
   type: "GAME_INITIALIZED";
   players: PlayerId[];
   kingdomCards: CardName[];
@@ -21,78 +31,79 @@ export type GameInitializedEvent = {
   seed?: number;
 };
 
-export type InitialDeckDealtEvent = {
+export type InitialDeckDealtEvent = EventMetadata & {
   type: "INITIAL_DECK_DEALT";
   player: PlayerId;
   cards: CardName[];
 };
 
-export type InitialHandDrawnEvent = {
+export type InitialHandDrawnEvent = EventMetadata & {
   type: "INITIAL_HAND_DRAWN";
   player: PlayerId;
   cards: CardName[];
 };
 
 // Turn Structure
-export type TurnStartedEvent = {
+export type TurnStartedEvent = EventMetadata & {
   type: "TURN_STARTED";
   turn: number;
   player: PlayerId;
 };
 
-export type PhaseChangedEvent = {
+export type PhaseChangedEvent = EventMetadata & {
   type: "PHASE_CHANGED";
   phase: Phase;
 };
 
 // Card Movements (atomic primitives)
-export type CardsDrawnEvent = {
+export type CardsDrawnEvent = EventMetadata & {
   type: "CARDS_DRAWN";
   player: PlayerId;
   cards: CardName[];
 };
 
-export type CardPlayedEvent = {
+export type CardPlayedEvent = EventMetadata & {
   type: "CARD_PLAYED";
   player: PlayerId;
   card: CardName;
 };
 
-export type CardsDiscardedEvent = {
+export type CardsDiscardedEvent = EventMetadata & {
   type: "CARDS_DISCARDED";
   player: PlayerId;
   cards: CardName[];
   from: "hand" | "inPlay" | "deck";
 };
 
-export type CardsTrashedEvent = {
+export type CardsTrashedEvent = EventMetadata & {
   type: "CARDS_TRASHED";
   player: PlayerId;
   cards: CardName[];
   from: "hand" | "deck" | "inPlay";
 };
 
-export type CardGainedEvent = {
+export type CardGainedEvent = EventMetadata & {
   type: "CARD_GAINED";
   player: PlayerId;
   card: CardName;
   to: "hand" | "discard" | "deck";
 };
 
-export type CardsRevealedEvent = {
+export type CardsRevealedEvent = EventMetadata & {
   type: "CARDS_REVEALED";
   player: PlayerId;
   cards: CardName[];
   from: "hand" | "deck";
 };
 
-export type DeckShuffledEvent = {
+export type DeckShuffledEvent = EventMetadata & {
   type: "DECK_SHUFFLED";
   player: PlayerId;
-  // Note: We don't store the shuffle result - that's derived from RNG seed or stored in deck state
+  /** New deck order after shuffle (for perfect replay fidelity) */
+  newDeckOrder?: CardName[];
 };
 
-export type CardsPutOnDeckEvent = {
+export type CardsPutOnDeckEvent = EventMetadata & {
   type: "CARDS_PUT_ON_DECK";
   player: PlayerId;
   cards: CardName[];
@@ -100,17 +111,17 @@ export type CardsPutOnDeckEvent = {
 };
 
 // Resources
-export type ActionsModifiedEvent = {
+export type ActionsModifiedEvent = EventMetadata & {
   type: "ACTIONS_MODIFIED";
   delta: number;
 };
 
-export type BuysModifiedEvent = {
+export type BuysModifiedEvent = EventMetadata & {
   type: "BUYS_MODIFIED";
   delta: number;
 };
 
-export type CoinsModifiedEvent = {
+export type CoinsModifiedEvent = EventMetadata & {
   type: "COINS_MODIFIED";
   delta: number;
 };
@@ -133,19 +144,19 @@ export type DecisionChoice = {
   selectedCards: CardName[];
 };
 
-export type DecisionRequiredEvent = {
+export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
   decision: DecisionRequest;
 };
 
-export type DecisionResolvedEvent = {
+export type DecisionResolvedEvent = EventMetadata & {
   type: "DECISION_RESOLVED";
   player: PlayerId;
   choice: DecisionChoice;
 };
 
 // Game End
-export type GameEndedEvent = {
+export type GameEndedEvent = EventMetadata & {
   type: "GAME_ENDED";
   winner: PlayerId | null;
   scores: Record<PlayerId, number>;
@@ -153,30 +164,30 @@ export type GameEndedEvent = {
 };
 
 // Undo System
-export type UndoRequestedEvent = {
+export type UndoRequestedEvent = EventMetadata & {
   type: "UNDO_REQUESTED";
   requestId: string;
   byPlayer: PlayerId;
-  toEventIndex: number;
+  toEventId: string;  // Changed from toEventIndex to toEventId
   reason?: string;
 };
 
-export type UndoApprovedEvent = {
+export type UndoApprovedEvent = EventMetadata & {
   type: "UNDO_APPROVED";
   requestId: string;
   byPlayer: PlayerId;
 };
 
-export type UndoDeniedEvent = {
+export type UndoDeniedEvent = EventMetadata & {
   type: "UNDO_DENIED";
   requestId: string;
   byPlayer: PlayerId;
 };
 
-export type UndoExecutedEvent = {
+export type UndoExecutedEvent = EventMetadata & {
   type: "UNDO_EXECUTED";
-  fromEventIndex: number;
-  toEventIndex: number;
+  fromEventId: string;  // Changed from index to ID
+  toEventId: string;    // Changed from index to ID
 };
 
 // Union of all events
@@ -235,4 +246,46 @@ export function isResourceEvent(event: GameEvent): event is
   | BuysModifiedEvent
   | CoinsModifiedEvent {
   return ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"].includes(event.type);
+}
+
+// ============================================
+// CAUSALITY HELPERS
+// ============================================
+
+/**
+ * Check if an event is a root cause (user action) vs an effect
+ * Root causes are valid undo checkpoints
+ *
+ * Simple rule: An event is a root if nothing caused it
+ */
+export function isRootCauseEvent(event: GameEvent): boolean {
+  return !event.causedBy;
+}
+
+/**
+ * Get all events in a causal chain (event + all events it caused, recursively)
+ */
+export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<string> {
+  const chain = new Set([eventId]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const evt of allEvents) {
+      if (evt.causedBy && chain.has(evt.causedBy) && !chain.has(evt.id)) {
+        chain.add(evt.id);
+        changed = true;
+      }
+    }
+  }
+
+  return chain;
+}
+
+/**
+ * Remove an event and all events it caused from the event log
+ */
+export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameEvent[] {
+  const toRemove = getCausalChain(eventId, allEvents);
+  return allEvents.filter(e => !toRemove.has(e.id));
 }
