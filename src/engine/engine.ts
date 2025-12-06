@@ -238,6 +238,14 @@ export class DominionEngine {
   }
 
   /**
+   * Load events silently without notifying listeners (for undo).
+   */
+  loadEventsSilently(events: GameEvent[]): void {
+    this.events = [...events];
+    this._state = null;
+  }
+
+  /**
    * Apply events from external source (e.g., network).
    */
   applyExternalEvents(events: GameEvent[]): void {
