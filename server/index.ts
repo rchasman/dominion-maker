@@ -119,6 +119,10 @@ const app = new Elysia()
 
         try {
           const parsed = JSON.parse(jsonStr);
+          // Fix common LLM mistakes: cards field should be array or omitted
+          if (parsed.cards && typeof parsed.cards === 'string') {
+            parsed.cards = [parsed.cards];
+          }
           const action = ActionSchema.parse(parsed);
           return { action };
         } catch (parseErr) {
@@ -146,7 +150,14 @@ const app = new Elysia()
         }),
       });
 
-      return { action: result.object };
+      // Fix common LLM mistakes: cards field should be array or omitted
+      const action = result.object;
+      if (action.cards && typeof action.cards === 'string') {
+        // Coerce string to array
+        (action as any).cards = [action.cards];
+      }
+
+      return { action };
     } catch (err) {
       // Ministral sometimes echoes the schema before/instead of the actual JSON
       // Try to extract and parse just the actual response object
@@ -167,6 +178,10 @@ const app = new Elysia()
                 }
                 // Validate it's an action with 'type' being a string (not "object")
                 if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
+                  // Fix common LLM mistakes: cards field should be array or omitted
+                  if (parsed.cards && typeof parsed.cards === 'string') {
+                    parsed.cards = [parsed.cards];
+                  }
                   const validated = ActionSchema.parse(parsed);
                   console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
                   return { action: validated };
