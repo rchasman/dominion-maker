@@ -58,7 +58,7 @@ interface GameContextValue {
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
-  requestUndo: (toEventId: string, reason?: string) => void;
+  requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
 }
 
@@ -192,7 +192,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       timestamp: Date.now(),
       data: {
         ...entry.data,
-        eventCount: engine?.events.length, // Track event count when log was created
+        eventCount: engine?.eventLog.length, // Track event count when log was created
       },
     };
     setLLMLogs(prev => [...prev, logEntry]);
@@ -243,7 +243,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     } else {
       console.error("Failed to start game:", result.error);
@@ -262,7 +262,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
@@ -280,7 +280,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
@@ -298,7 +298,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
@@ -326,10 +326,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    setEvents(engine.events);
+    setEvents([...engine.eventLog]);
     setGameState(engine.state);
 
-    return { ok: true };
+    return { ok: true, events: [] };
   }, [gameState]);
 
   const buyCard = useCallback((card: CardName): CommandResult => {
@@ -343,7 +343,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
@@ -360,7 +360,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
@@ -378,28 +378,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, "human");
 
     if (result.ok) {
-      setEvents(engine.events);
+      setEvents([...engine.eventLog]);
       setGameState(engine.state);
     }
 
     return result;
   }, []);
 
-  const requestUndo = useCallback((toEventId: string, _reason?: string) => {
+  const requestUndo = useCallback((toEventId: string) => {
     const engine = engineRef.current;
     if (!engine) return;
 
     // In single-player, undo immediately (no consensus needed)
     engine.undoToEvent(toEventId);
-    const eventsAfterUndo = engine.events.length;
-    setEvents(engine.events);
+    const eventsAfterUndo = engine.eventLog.length;
+    setEvents([...engine.eventLog]);
     setGameState(engine.state);
 
     // Clear LLM logs that were created after the undo point
     setLLMLogs(prev => prev.filter(log => {
       const logEventCount = log.data?.eventCount;
       // Keep logs that were created when event count was <= current count
-      return logEventCount === undefined || logEventCount <= eventsAfterUndo;
+      return logEventCount === undefined || (typeof logEventCount === 'number' && logEventCount <= eventsAfterUndo);
     }));
   }, []);
 
@@ -424,7 +424,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         await strategy.runAITurn(engine, (state) => {
           setGameState(state);
         });
-        setEvents(engine.events);
+        setEvents([...engine.eventLog]);
         setGameState(engine.state);
       } catch (error) {
         console.error("AI turn error:", error);
@@ -449,7 +449,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setIsProcessing(true);
       try {
         await strategy.resolveAIPendingDecision(engine);
-        setEvents(engine.events);
+        setEvents([...engine.eventLog]);
         setGameState(engine.state);
       } catch (error) {
         console.error("AI pending decision error:", error);
@@ -483,7 +483,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const timer = setTimeout(() => {
         console.log("[GameContext] Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
-        setEvents(engine.events);
+        setEvents([...engine.eventLog]);
         setGameState(engine.state);
       }, 300); // Small delay to make it feel natural
 

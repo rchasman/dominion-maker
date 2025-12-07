@@ -1,5 +1,5 @@
 import type { GameEvent } from "./types";
-import type { LogEntry, Player } from "../types/game-state";
+import type { LogEntry } from "../types/game-state";
 import { CARDS } from "../data/cards";
 
 /**
@@ -7,13 +7,13 @@ import { CARDS } from "../data/cards";
  * Root events become top-level entries, effects nest under their causes.
  * This replaces the flat log building in applyEvent.
  */
-export function buildLogFromEvents(events: GameEvent[], currentPlayer: Player = "human"): LogEntry[] {
+export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = "human"): LogEntry[] {
   const logMap = new Map<string, LogEntry>();
   const rootLogs: LogEntry[] = [];
 
   for (const event of events) {
     const logEntry = eventToLogEntry(event, currentPlayer);
-    if (!logEntry) continue;
+    if (!logEntry || !event.id) continue;
 
     logMap.set(event.id, logEntry);
 
@@ -39,7 +39,7 @@ export function buildLogFromEvents(events: GameEvent[], currentPlayer: Player = 
 /**
  * Convert a single event to a log entry (without nesting).
  */
-function eventToLogEntry(event: GameEvent, currentPlayer: Player): LogEntry | null {
+function eventToLogEntry(event: GameEvent, currentPlayer: string): LogEntry | null {
   switch (event.type) {
     case "TURN_STARTED":
       return { type: "turn-start", turn: event.turn, player: event.player, eventId: event.id };

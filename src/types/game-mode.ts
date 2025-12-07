@@ -2,12 +2,13 @@ import type { DominionEngine } from "../engine";
 import type { GameState } from "./game-state";
 
 /**
- * Game modes for single-player
+ * Game modes
  * - engine: Simple random AI
  * - llm: LLM-powered AI with consensus voting
  * - hybrid: Mix of LLM and simple AI
+ * - multiplayer: P2P multiplayer mode
  */
-export type GameMode = "engine" | "llm" | "hybrid";
+export type GameMode = "engine" | "llm" | "hybrid" | "multiplayer";
 
 /**
  * Strategy interface for AI behavior

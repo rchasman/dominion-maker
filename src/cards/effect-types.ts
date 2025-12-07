@@ -1,4 +1,4 @@
-import type { GameState, CardName, Player, PlayerState } from "../types/game-state";
+import type { GameState, CardName, PlayerState } from "../types/game-state";
 import type { GameEvent, DecisionRequest, DecisionChoice } from "../events/types";
 import { shuffle } from "../lib/game-utils";
 
@@ -6,10 +6,10 @@ import { shuffle } from "../lib/game-utils";
  * Result of executing a card effect.
  */
 export type CardEffectResult = {
-  /** Events to emit */
+  /** Events to emit (IDs will be added by engine) */
   events: GameEvent[];
   /** If set, pause for player decision before continuing */
-  pendingDecision?: Omit<DecisionRequest, "cardBeingPlayed">;
+  pendingDecision?: DecisionRequest;
 };
 
 /**
@@ -18,8 +18,8 @@ export type CardEffectResult = {
 export type CardEffectContext = {
   /** Current game state (read-only for effect logic) */
   state: GameState;
-  /** Player who played the card */
-  player: Player;
+  /** Player who played the card (can be custom peer ID in multiplayer) */
+  player: string;
   /** The card being played (for multi-stage effects) */
   card: CardName;
   /** Decision from player (if resuming a multi-stage effect) */
@@ -86,7 +86,7 @@ export function getGainableCards(state: GameState, maxCost: number): CardName[] 
 /**
  * Get opponents for attack cards.
  */
-export function getOpponents(state: GameState, player: Player): Player[] {
+export function getOpponents(state: GameState, player: string): string[] {
   const playerOrder = state.playerOrder || ["human", "ai"];
   return playerOrder.filter(p => p !== player && state.players[p]);
 }
@@ -95,7 +95,7 @@ export function getOpponents(state: GameState, player: Player): Player[] {
  * Create draw events for a player.
  */
 export function createDrawEvents(
-  player: Player,
+  player: string,
   playerState: PlayerState,
   count: number
 ): GameEvent[] {

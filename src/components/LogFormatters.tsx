@@ -18,9 +18,9 @@ export function getCardColor(card: CardName): string {
   return "var(--color-text-primary)";
 }
 
-export function PlayerName({ player }: { player: Player }) {
+export function PlayerName({ player }: { player: string }) {
   return (
-    <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
+    <span style={{ color: getPlayerColor(player as Player), fontWeight: 600 }}>
       {player}
     </span>
   );

@@ -266,7 +266,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
         {/* My hand */}
         <PlayerArea
-          player={myPlayerState ?? { hand: [], deck: [], discard: [], inPlay: [], deckTopRevealed: false }}
+          player={myPlayerState ?? { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [], deckTopRevealed: false }}
           label="You"
           vpCount={myPlayerState ? myVP : 0}
           isActive={isMyTurn}
@@ -345,11 +345,10 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       {/* Event Devtools */}
       <EventDevtools
         events={events}
-        currentState={gameState}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
         onBranchFrom={(eventId) => {
-          requestUndo(eventId, "Branch from event timeline");
+          requestUndo(eventId);
         }}
         onScrub={(eventId) => {
           setPreviewEventId(eventId);

@@ -185,7 +185,7 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
 
     // Notify parent to update game board preview (pass event ID)
     if (onScrub) {
-      onScrub(rootEvent.id);
+      onScrub(rootEvent.id ?? null);
     }
   };
 
@@ -218,17 +218,16 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
       setScrubberIndex(actualIndex);
       setIsPinned(true);
       if (onScrub) {
-        onScrub(firstRoot.id);
+        onScrub(firstRoot.id ?? null);
       }
     }
   };
 
   // Branch from current scrubber position
-  const handleBranch = (eventId: string) => {
-    if (onBranchFrom) {
-      onBranchFrom(eventId);
-      handleResetScrubber();
-    }
+  const handleBranch = (eventId: string | undefined) => {
+    if (!eventId || !onBranchFrom) return;
+    onBranchFrom(eventId);
+    handleResetScrubber();
   };
 
   // Play/pause replay
@@ -278,7 +277,7 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
           const nextActualIndex = events.findIndex(evt => evt.id === nextRoot.id);
 
           if (onScrub) {
-            onScrub(nextRoot.id);
+            onScrub(nextRoot.id ?? null);
           }
 
           return nextActualIndex;
@@ -444,13 +443,13 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
               key={`${event.id}-${eventIndex}`}
               data-event-index={eventIndex}
               onClick={() => {
-                setSelectedEventId(isSelected && !isScrubberPosition ? null : event.id);
+                setSelectedEventId(isSelected && !isScrubberPosition ? null : event.id ?? null);
                 setScrubberIndex(eventIndex);
                 setIsPinned(true);
 
                 // Update parent preview (pass event ID)
                 if (onScrub) {
-                  onScrub(event.id);
+                  onScrub(event.id ?? null);
                 }
               }}
               style={{

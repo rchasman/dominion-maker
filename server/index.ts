@@ -7,14 +7,13 @@ import { ActionSchema } from "../src/types/action";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
-import { GameState, HumanChoice } from "../src/types/game-state";
-import type { Action } from "../src/types/action";
+import { GameState as GameStateType, HumanChoice } from "../src/types/game-state";
 import { z } from "zod";
 
-// Request body schema
+// Request body schema - use z.any() for GameState due to type override complexity
 const GenerateActionRequestSchema = z.object({
   provider: z.string(),
-  currentState: GameState,
+  currentState: z.any() as z.ZodType<GameStateType>,
   humanChoice: HumanChoice.optional(),
   legalActions: z.array(ActionSchema).optional(),
 });
@@ -28,16 +27,18 @@ const app = new Elysia()
   .use(cors())
   .use(opentelemetry())
   .use(serverTiming())
-  .post("/api/generate-action", async ({ body, error }) => {
+  .post("/api/generate-action", async ({ body, set }) => {
     const { provider, currentState, humanChoice, legalActions } = body;
 
     if (!provider || !currentState) {
-      return error(400, "Missing required fields: provider, currentState");
+      set.status = 400;
+      return { error: "Missing required fields: provider, currentState" };
     }
 
     const modelName = MODEL_MAP[provider];
     if (!modelName) {
-      return error(400, "Invalid provider");
+      set.status = 400;
+      return { error: "Invalid provider" };
     }
 
     const model = gateway(modelName);

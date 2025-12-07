@@ -29,17 +29,6 @@ export interface PendingUndoRequest {
   needed: number;
 }
 
-interface UndoUpdateData {
-  requestId: string;
-  toEventId?: string;
-  reason?: string;
-}
-
-interface UndoUpdate {
-  type: "request" | "approve" | "deny" | "execute";
-  data: UndoUpdateData;
-}
-
 export interface RoomState {
   players: PlayerInfo[];
   gameState: GameState | null;
@@ -55,7 +44,6 @@ type CommandHandler = (command: GameCommand, fromPlayerId: string) => void;
 export class P2PRoom {
   private room: Room;
   private isHost: boolean;
-  private roomCode: string;
   private myPeerId: string | null = null;
 
   private players: Map<string, PlayerInfo> = new Map(); // Keyed by custom player ID
@@ -78,11 +66,9 @@ export class P2PRoom {
   private sendEvents: (events: GameEvent[], peerId?: string) => void;
   private sendCommand: (command: GameCommand, peerId?: string) => void;
   private sendJoin: (info: { playerId: string; name: string }, peerId?: string) => void;
-  private sendUndoUpdate: (update: UndoUpdate, peerId?: string) => void;
   private sendGameEnd: (data: { reason: string }, peerId?: string) => void;
 
   constructor(roomCode: string, isHost: boolean, savedPeerId?: string) {
-    this.roomCode = roomCode;
     this.isHost = isHost;
 
     // Use saved peer ID if reconnecting, otherwise generate new one
@@ -105,26 +91,26 @@ export class P2PRoom {
       }
     });
 
-    // Set up message channels
+    // Set up message channels (types don't satisfy Trystero's strict DataPayload constraint)
+    // @ts-expect-error - RoomState has complex nested types that don't match JsonValue constraint
     const [sendFullState, receiveFullState] = this.room.makeAction<RoomState>("fullState");
+    // @ts-expect-error - GameEvent[] has complex nested types that don't match JsonValue constraint
     const [sendEvents, receiveEvents] = this.room.makeAction<GameEvent[]>("events");
     const [sendCommand, receiveCommand] = this.room.makeAction<GameCommand>("command");
     const [sendJoin, receiveJoin] = this.room.makeAction<{ playerId: string; name: string }>("join");
     const [sendGameEnd, receiveGameEnd] = this.room.makeAction<{ reason: string }>("gameEnd");
-    const [sendUndoUpdate] = this.room.makeAction<UndoUpdate>("undo");
 
     this.sendFullState = sendFullState;
     this.sendEvents = sendEvents;
     this.sendCommand = sendCommand;
     this.sendJoin = sendJoin;
     this.sendGameEnd = sendGameEnd;
-    this.sendUndoUpdate = sendUndoUpdate;
 
     // Handle full state sync (for initial sync / rejoins)
     receiveFullState((state, peerId) => {
       if (!this.isHost) {
         console.log(`[P2PRoom] Received full state from ${peerId}: ${state.players.length} players, ${state.events.length} events, pendingUndo: ${state.pendingUndo?.requestId || "none"}`);
-        this.players = new Map(state.players.map(p => [p.id, p]));
+        this.players = new Map(state.players.map((p: PlayerInfo) => [p.id, p]));
         this.events = state.events;
         this.pendingUndo = state.pendingUndo;
         this.isStarted = state.isStarted;
@@ -157,15 +143,16 @@ export class P2PRoom {
     // Handle incremental events (clients only)
     receiveEvents((newEvents, peerId) => {
       if (!this.isHost) {
-        console.log(`[P2PRoom] Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`);
-        this.events.push(...newEvents);
+        const events = newEvents as unknown as GameEvent[];
+        console.log(`[P2PRoom] Received ${events.length} events from ${peerId}, total: ${this.events.length + events.length}`);
+        this.events.push(...events);
 
         // Recompute game state from full event log
         this.gameState = projectState(this.events);
 
         // Notify event handlers
         for (const handler of this.eventHandlers) {
-          handler(newEvents);
+          handler(events);
         }
 
         // Notify state change handlers

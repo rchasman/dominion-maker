@@ -5,14 +5,15 @@ import type { DecisionRequest } from "../events/types";
 export const DecisionRequestSchema = z.object({
   type: z.literal("select_cards"),
   player: z.string(),
-  from: z.enum(["hand", "supply", "revealed", "options"]),
+  from: z.enum(["hand", "supply", "revealed", "options", "discard"]),
   prompt: z.string(),
   cardOptions: z.array(z.string()).optional(),
   min: z.number(),
   max: z.number(),
   cardBeingPlayed: z.string(),
   stage: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  canSkip: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Card names for base game
@@ -87,23 +88,23 @@ export type TurnSubPhase = z.infer<typeof TurnSubPhase>;
 export type LogEntry = {
   type: "turn-start";
   turn: number;
-  player: Player;
+  player: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "turn-end";
-  player: Player;
+  player: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "phase-change";
-  player: Player;
+  player: string;
   phase: Phase;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "play-treasure";
-  player: Player;
+  player: string;
   card: CardName;
   coins: number;
   reasoning?: string;
@@ -111,21 +112,21 @@ export type LogEntry = {
   children?: LogEntry[];
 } | {
   type: "unplay-treasure";
-  player: Player;
+  player: string;
   card: CardName;
   coins: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "play-action";
-  player: Player;
+  player: string;
   card: CardName;
   reasoning?: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "buy-card";
-  player: Player;
+  player: string;
   card: CardName;
   vp?: number;
   reasoning?: string;
@@ -133,27 +134,27 @@ export type LogEntry = {
   children?: LogEntry[];
 } | {
   type: "draw-cards";
-  player: Player;
+  player: string;
   count: number;
   cards?: CardName[];
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "gain-card";
-  player: Player;
+  player: string;
   card: CardName;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "discard-cards";
-  player: Player;
+  player: string;
   count: number;
   cards?: CardName[];
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "trash-card";
-  player: Player;
+  player: string;
   card?: CardName;
   cards?: CardName[];
   count?: number;
@@ -161,25 +162,25 @@ export type LogEntry = {
   children?: LogEntry[];
 } | {
   type: "shuffle-deck";
-  player: Player;
+  player: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "end-turn";
-  player: Player;
-  nextPlayer: Player;
+  player: string;
+  nextPlayer: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "game-over";
   humanVP: number;
   aiVP: number;
-  winner: Player;
+  winner: string;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "start-game";
-  player: Player;
+  player: string;
   coppers: number;
   estates: number;
   eventId?: string;
@@ -191,37 +192,37 @@ export type LogEntry = {
   children?: LogEntry[];
 } | {
   type: "get-actions";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "get-buys";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "use-actions";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "use-buys";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "get-coins";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
 } | {
   type: "spend-coins";
-  player: Player;
+  player: string;
   count: number;
   eventId?: string;
   children?: LogEntry[];
@@ -233,25 +234,25 @@ const LogEntrySchema: z.ZodType<LogEntry> = z.lazy(() =>
     z.object({
       type: z.literal("turn-start"),
       turn: z.number(),
-      player: Player,
+      player: z.string(),
       eventId: z.string().optional(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("turn-end"),
-      player: Player,
+      player: z.string(),
       eventId: z.string().optional(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("phase-change"),
-      player: Player,
+      player: z.string(),
       phase: Phase,
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("play-treasure"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       coins: z.number(),
       eventId: z.string().optional(),
@@ -259,21 +260,21 @@ const LogEntrySchema: z.ZodType<LogEntry> = z.lazy(() =>
     }),
     z.object({
       type: z.literal("unplay-treasure"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       coins: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("play-action"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       eventId: z.string().optional(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("buy-card"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       vp: z.number().optional(),
       eventId: z.string().optional(),
@@ -281,51 +282,51 @@ const LogEntrySchema: z.ZodType<LogEntry> = z.lazy(() =>
     }),
     z.object({
       type: z.literal("draw-cards"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       cards: z.array(CardName).optional(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("gain-card"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("discard-cards"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       cards: z.array(CardName).optional(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("trash-card"),
-      player: Player,
+      player: z.string(),
       card: CardName,
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("shuffle-deck"),
-      player: Player,
+      player: z.string(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("end-turn"),
-      player: Player,
-      nextPlayer: Player,
+      player: z.string(),
+      nextPlayer: z.string(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("game-over"),
       humanVP: z.number(),
       aiVP: z.number(),
-      winner: Player,
+      winner: z.string(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("start-game"),
-      player: Player,
+      player: z.string(),
       coppers: z.number(),
       estates: z.number(),
       children: z.array(LogEntrySchema).optional(),
@@ -337,37 +338,37 @@ const LogEntrySchema: z.ZodType<LogEntry> = z.lazy(() =>
     }),
     z.object({
       type: z.literal("get-actions"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("get-buys"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("use-actions"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("use-buys"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("get-coins"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
     z.object({
       type: z.literal("spend-coins"),
-      player: Player,
+      player: z.string(),
       count: z.number(),
       children: z.array(LogEntrySchema).optional(),
     }),
@@ -406,12 +407,12 @@ export const GameState = z.object({
   turn: z.number(),
   phase: Phase,
   subPhase: TurnSubPhase,
-  activePlayer: Player,
+  activePlayer: z.string(),
 
   // Single-player mode: { human, ai }
   // Multiplayer mode: { player0, player1, player2?, player3? }
   // Partial record to allow 2-4 players
-  players: z.record(Player, PlayerState),
+  players: z.record(z.string(), PlayerState),
 
   supply: z.record(z.string(), z.number()),
   trash: z.array(CardName),
@@ -424,14 +425,14 @@ export const GameState = z.object({
   pendingDecision: DecisionRequestSchema.nullable(),
 
   gameOver: z.boolean(),
-  winner: Player.nullable(),
+  winner: z.string().nullable(),
 
   log: z.array(LogEntry),
   turnHistory: z.array(TurnAction), // Actions taken this turn (reset on cleanup)
 
   // Multiplayer extensions (optional for single-player)
-  playerOrder: z.array(Player).optional(), // Turn order for N-player games
-  playerInfo: z.record(Player, PlayerInfo).optional(), // Player names, types, connection status
+  playerOrder: z.array(z.string()).optional(), // Turn order for N-player games
+  playerInfo: z.record(z.string(), PlayerInfo).optional(), // Player names, types, connection status
   isMultiplayer: z.boolean().optional(), // Flag to indicate multiplayer mode
 });
 

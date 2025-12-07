@@ -65,7 +65,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
       }
       buildingTurn = {
         turnNumber: turns.length + 1,
-        gameTurn: entry.data?.turn,
+        gameTurn: entry.data?.turn as number | undefined,
         decisions: [],
       };
       stepNumber = 0;
@@ -77,14 +77,14 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         turns.push(buildingTurn);
       }
       const decisionType = entry.data?.decisionType || "decision";
-      const prompt = entry.data?.prompt || "";
+      const prompt = (entry.data?.prompt as string) || "";
       // Extract card name from prompt if present (e.g., "Militia: Discard..." or "Militia attack: Discard...")
       const cardMatch = prompt.match(/^(\w+)(?:\s+attack)?:/i);
       const cardName = cardMatch ? cardMatch[1] : null;
 
       buildingTurn = {
         turnNumber: turns.length + 1,
-        gameTurn: entry.data?.turn,
+        gameTurn: entry.data?.turn as number | undefined,
         decisions: [],
         isSubPhase: true,
         subPhaseLabel: cardName ? `Response to ${cardName}` : `AI ${decisionType}`,
@@ -98,7 +98,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         // Create a new turn if none exists
         buildingTurn = {
           turnNumber: turns.length + 1,
-          gameTurn: entry.data?.turn,
+          gameTurn: entry.data?.turn as number | undefined,
           decisions: [],
           pending: true,
           pendingData: entry.data as PendingData | undefined,
@@ -116,7 +116,10 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Track individual model starts
     if (entry.type === "consensus-model-pending" && buildingTurn) {
-      const { provider, index, startTime } = entry.data || {};
+      const data = entry.data || {};
+      const provider = data.provider as string;
+      const index = data.index as number;
+      const startTime = data.startTime as number;
       if (index !== undefined) {
         buildingTurn.modelStatuses?.set(index, {
           provider,
@@ -129,7 +132,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Track individual model completions
     if (entry.type === "consensus-model-complete" && buildingTurn) {
-      const { index, duration, success, action, aborted } = entry.data || {};
+      const data = entry.data || {};
+      const index = data.index as number | undefined;
+      const duration = data.duration as number | undefined;
+      const success = data.success as boolean | undefined;
+      const action = data.action as Action | undefined;
+      const aborted = data.aborted as boolean | undefined;
       if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
         const status = buildingTurn.modelStatuses.get(index)!;
         status.duration = duration;
@@ -142,7 +150,9 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
     // Track aborted models (skipped due to early consensus)
     if (entry.type === "consensus-model-aborted" && buildingTurn) {
-      const { index, duration } = entry.data || {};
+      const data = entry.data || {};
+      const index = data.index as number | undefined;
+      const duration = data.duration as number | undefined;
       if (index !== undefined && buildingTurn.modelStatuses?.has(index)) {
         const status = buildingTurn.modelStatuses.get(index)!;
         status.duration = duration;
@@ -423,6 +433,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
         .filter(s => s.completed && (s.success === false || !s.action)).length;
 
       for (const status of successfulStatuses) {
+        if (!status.action) continue;
         // Exclude reasoning from signature so actions with different reasoning group together
         const signature = JSON.stringify(stripReasoning(status.action));
         const existing = voteGroups.get(signature);
@@ -908,6 +919,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     const groups = new Map<string, { action: Action; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
 
     for (const status of completedStatuses) {
+      if (!status.action) continue;
       const signature = JSON.stringify(stripReasoning(status.action));
 
       if (!groups.has(signature)) {
@@ -920,7 +932,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
       const group = groups.get(signature)!;
       group.voters.push(status.provider);
-      if (status.action.reasoning) {
+      if (status.action?.reasoning) {
         group.reasonings.push({ provider: status.provider, reasoning: status.action.reasoning });
       }
     }
@@ -1350,7 +1362,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                     </>
                   )}
                   <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
-                    ({((currentDecision.timingEntry?.data?.parallelDuration || 0) / 1000).toFixed(2)}s)
+                    ({((Number(currentDecision.timingEntry?.data?.parallelDuration) || 0) / 1000).toFixed(2)}s)
                   </span>
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
@@ -1476,11 +1488,11 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
             </div>
 
             <PaneContent
-              votingData={currentDecision.votingEntry.data}
-              timingData={currentDecision.timingEntry?.data}
+              votingData={currentDecision.votingEntry.data as unknown as ConsensusVotingData}
+              timingData={currentDecision.timingEntry?.data as TimingData | undefined}
               modelStatuses={currentDecision.modelStatuses}
-              gameStateData={currentDecision.votingEntry.data?.gameState}
-              totalModels={currentDecision.votingEntry.data?.topResult?.totalVotes}
+              gameStateData={currentDecision.votingEntry.data?.gameState as GameStateSnapshot | undefined}
+              totalModels={Number((currentDecision.votingEntry.data as unknown as { topResult?: { totalVotes?: number } })?.topResult?.totalVotes) || 0}
             />
           </>
         ) : null}

@@ -259,9 +259,13 @@ export class DominionEngine {
    * Apply events from external source (e.g., network).
    */
   applyExternalEvents(events: GameEvent[]): void {
-    this.events.push(...events);
+    // Add IDs to events that don't have them
+    const eventsWithIds = events.map(event =>
+      event.id ? event : { ...event, id: generateEventId() }
+    );
+    this.events.push(...eventsWithIds as GameEvent[]);
     this._state = null;
-    this.notifyListeners(events);
+    this.notifyListeners(eventsWithIds as GameEvent[]);
   }
 
   /**
@@ -277,9 +281,13 @@ export class DominionEngine {
   // ============================================
 
   private appendEvents(events: GameEvent[]): void {
-    this.events.push(...events);
+    // Add IDs to events that don't have them
+    const eventsWithIds = events.map(event =>
+      event.id ? event : { ...event, id: generateEventId() }
+    );
+    this.events.push(...eventsWithIds as GameEvent[]);
     this._state = null;
-    this.notifyListeners(events);
+    this.notifyListeners(eventsWithIds as GameEvent[]);
   }
 
   private notifyListeners(events: GameEvent[]): void {

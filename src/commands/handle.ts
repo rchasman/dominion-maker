@@ -48,7 +48,7 @@ export function handleCommand(
       return handleSubmitDecision(state, command.player, command.choice);
 
     case "REQUEST_UNDO":
-      return handleRequestUndo(state, command.player, command.toEventIndex, command.reason);
+      return handleRequestUndo(state, command.player, command.toEventId, command.reason);
 
     case "APPROVE_UNDO":
     case "DENY_UNDO":
@@ -56,7 +56,7 @@ export function handleCommand(
       return { ok: false, error: "Undo approval handled by engine" };
 
     default: {
-      const _exhaustive: never = command;
+      const _exhaustive: never = command; void _exhaustive;
       return { ok: false, error: "Unknown command type" };
     }
   }
@@ -739,7 +739,7 @@ function createDrawEventsForCleanup(
   return events;
 }
 
-function getNextPlayer(state: GameState, currentPlayer: Player): Player {
+function getNextPlayer(state: GameState, currentPlayer: string): string {
   const playerOrder = state.playerOrder || ["human", "ai"];
   const currentIdx = playerOrder.indexOf(currentPlayer);
   const nextIdx = (currentIdx + 1) % playerOrder.length;

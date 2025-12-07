@@ -5,7 +5,7 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { DominionEngine } from "../engine";
 import type { GameState } from "../types/game-state";
-import { runAITurnWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
+import { runAITurnWithConsensus, advanceGameStateWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
 
 export class LLMStrategy implements GameStrategy {
   private logger?: LLMLogger;
@@ -43,7 +43,6 @@ export class LLMStrategy implements GameStrategy {
 
     // Consensus system handles decisions within runAITurnWithConsensus
     // For standalone decision resolution, run one consensus step
-    const { advanceGameStateWithConsensus } = await import("../agent/game-agent");
     return advanceGameStateWithConsensus(engine, "ai", undefined, models, this.logger);
   }
 

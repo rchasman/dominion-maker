@@ -178,7 +178,7 @@ export function Board({ onBackToHome }: BoardProps) {
           <Supply
             state={displayState}
             onBuyCard={isPreviewMode ? undefined : onBuyCard}
-            canBuy={isPreviewMode ? () => false : canBuy}
+            canBuy={isPreviewMode ? false : canBuy}
             availableCoins={displayState.coins}
             pendingDecision={displayState.pendingDecision}
           />
@@ -306,11 +306,10 @@ export function Board({ onBackToHome }: BoardProps) {
       {/* Event Devtools */}
       <EventDevtools
         events={events}
-        currentState={state}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
         onBranchFrom={(eventId) => {
-          requestUndo(eventId, "Branch from event timeline");
+          requestUndo(eventId);
         }}
         onScrub={(eventId) => {
           setPreviewEventId(eventId);

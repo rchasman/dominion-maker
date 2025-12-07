@@ -457,7 +457,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
           }
 
           const gamePlayerId = `player${playerIndex}` as Player;
-          const commandPlayerId = command.player;
+          const commandPlayerId = 'player' in command ? command.player : undefined;
 
           if (commandPlayerId && commandPlayerId !== gamePlayerId) {
             console.error(`[MultiplayerContext] Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
@@ -660,7 +660,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       }
 
       const gamePlayerId = `player${playerIndex}` as Player;
-      const commandPlayerId = command.player;
+      const commandPlayerId = 'player' in command ? command.player : undefined;
 
       if (commandPlayerId && commandPlayerId !== gamePlayerId) {
         console.error(`[MultiplayerContext] Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
@@ -783,7 +783,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       console.log(`[MultiplayerContext] Client sending REQUEST_UNDO for event ${toEventId}`);
       room.sendCommandToHost({
         type: "REQUEST_UNDO",
-        player: myPeerId,
+        player: myPeerId as Player,
         toEventId,
         reason,
       });

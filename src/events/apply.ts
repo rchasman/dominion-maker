@@ -1,7 +1,6 @@
-import type { GameState, PlayerState, Player, CardName, LogEntry } from "../types/game-state";
+import type { GameState, PlayerState, Player, LogEntry } from "../types/game-state";
 import type {
   GameEvent,
-  DecisionRequest,
 } from "./types";
 
 /**
@@ -340,7 +339,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             deck: event.newDeckOrder,
             discard: [],
           },
-        },
+        } as Record<string, typeof playerState>,
       };
     }
 
@@ -516,6 +515,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
     default: {
       // Exhaustiveness check
       const _exhaustive: never = event;
+      void _exhaustive;
       return state;
     }
   }

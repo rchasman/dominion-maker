@@ -15,7 +15,7 @@ function LogEntryWithUndo({
   lastEventId
 }: {
   entry: LogEntryType & { eventId?: string; eventIds?: string[] };
-  onRequestUndo?: (eventId: string, reason: string) => void;
+  onRequestUndo?: (eventId: string) => void;
   lastEventId?: string;
 }) {
   const eventId = entry.eventId;
@@ -50,7 +50,7 @@ function LogEntryWithUndo({
           className="undo-button"
           onClick={(e) => {
             e.stopPropagation();
-            onRequestUndo(targetEventId, "Undo from game log");
+            if (targetEventId) onRequestUndo(targetEventId);
           }}
           style={{
             padding: 0,
@@ -96,7 +96,7 @@ interface GameSidebarProps {
   onNewGame?: () => void; // Optional (single-player)
   onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
-  onRequestUndo?: (eventId: string, reason: string) => void; // Makes log entries clickable for undo
+  onRequestUndo?: (eventId: string) => void; // Makes log entries clickable for undo
 }
 
 export function GameSidebar({

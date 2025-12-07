@@ -5,8 +5,7 @@
 import type { GameStrategy } from "../types/game-mode";
 import type { DominionEngine } from "../engine";
 import type { GameState } from "../types/game-state";
-import { runAITurnWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
-import { EngineStrategy } from "./engine-strategy";
+import { runAITurnWithConsensus, advanceGameStateWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
 
 /**
  * Hybrid: Uses hard-coded engine for routine moves,
@@ -15,7 +14,6 @@ import { EngineStrategy } from "./engine-strategy";
 export class HybridStrategy implements GameStrategy {
   private logger?: LLMLogger;
   private modelSettings: ModelSettings;
-  private engineStrategy: EngineStrategy;
 
   constructor(_provider?: unknown, logger?: LLMLogger, modelSettings?: ModelSettings) {
     this.logger = logger;
@@ -23,7 +21,6 @@ export class HybridStrategy implements GameStrategy {
       enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]),
       consensusCount: 8
     };
-    this.engineStrategy = new EngineStrategy();
   }
 
   async runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void> {
@@ -50,7 +47,6 @@ export class HybridStrategy implements GameStrategy {
       });
     }
 
-    const { advanceGameStateWithConsensus } = await import("../agent/game-agent");
     return advanceGameStateWithConsensus(engine, "ai", undefined, models, this.logger);
   }
 

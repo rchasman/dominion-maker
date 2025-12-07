@@ -1,5 +1,5 @@
 interface GameOverModalProps {
-  winner: "human" | "ai" | null;
+  winner: string | null;
   humanVP: number;
   opponentVP: number;
   onNewGame: () => void;

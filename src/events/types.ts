@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { CardName, Phase, Player } from "../types/game-state";
+import type { CardName, Phase } from "../types/game-state";
 
-// PlayerId - string for multiplayer flexibility
-export type PlayerId = Player; // Will migrate to string later
+// PlayerId - string for multiplayer flexibility (can be custom peer IDs or Player enum values)
+export type PlayerId = string;
 
 // Zones where cards can exist
 export const Zone = z.enum(["hand", "deck", "discard", "inPlay", "supply", "trash"]);
@@ -16,8 +16,8 @@ export type Zone = z.infer<typeof Zone>;
  * Base event metadata for causality tracking
  */
 export type EventMetadata = {
-  /** Unique event ID for causality tracking */
-  id: string;
+  /** Unique event ID for causality tracking (optional when creating, required when stored) */
+  id?: string;
   /** ID of the event that caused this event (for atomic undo) */
   causedBy?: string;
 };
@@ -143,13 +143,14 @@ export type CoinsModifiedEvent = EventMetadata & {
 export type DecisionRequest = {
   type: "select_cards";
   player: PlayerId;
-  from: "hand" | "supply" | "revealed" | "options";
+  from: "hand" | "supply" | "revealed" | "options" | "discard";
   prompt: string;
   cardOptions?: CardName[]; // For supply/options selections
   min: number;
   max: number;
   cardBeingPlayed: CardName;
   stage?: string;
+  canSkip?: boolean; // For optional decisions
   metadata?: Record<string, unknown>;
 };
 
@@ -287,7 +288,7 @@ export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<str
   while (changed) {
     changed = false;
     for (const evt of allEvents) {
-      if (evt.causedBy && chain.has(evt.causedBy) && !chain.has(evt.id)) {
+      if (evt.id && evt.causedBy && chain.has(evt.causedBy) && !chain.has(evt.id)) {
         chain.add(evt.id);
         changed = true;
       }
@@ -316,7 +317,7 @@ export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameE
 
   for (let i = targetIndex + 1; i < allEvents.length; i++) {
     const event = allEvents[i];
-    if (event.causedBy && causedIds.has(event.causedBy)) {
+    if (event.id && event.causedBy && causedIds.has(event.causedBy)) {
       causedIds.add(event.id);
       lastRelatedIndex = i;
     }

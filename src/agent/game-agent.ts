@@ -10,6 +10,7 @@ import type { DominionEngine } from "../engine";
 import { MODEL_IDS, type ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
+import type { DecisionRequest } from "../events/types";
 
 // Re-export for convenience
 export type { ModelProvider } from "../config/models";
@@ -187,7 +188,7 @@ function getLegalActions(state: GameState): Action[] {
 async function generateActionViaBackend(
   provider: ModelProvider,
   currentState: GameState,
-  humanChoice?: { selectedCards: string[] },
+  humanChoice?: { selectedCards: CardName[] },
   signal?: AbortSignal
 ): Promise<Action> {
   const legalActions = getLegalActions(currentState);
@@ -202,7 +203,14 @@ async function generateActionViaBackend(
   });
 
   if (error) {
-    throw new Error(error.value || "Backend request failed");
+    const errorMsg = typeof error === 'object' && error && 'value' in error
+      ? String(error.value)
+      : "Backend request failed";
+    throw new Error(errorMsg);
+  }
+
+  if (!data?.action) {
+    throw new Error("Backend returned no action");
   }
 
   return data.action;
@@ -257,7 +265,7 @@ function executeActionWithEngine(engine: DominionEngine, action: Action, playerI
 export async function advanceGameStateWithConsensus(
   engine: DominionEngine,
   playerId: string,
-  humanChoice?: { selectedCards: string[] },
+  humanChoice?: { selectedCards: CardName[] },
   providers: ModelProvider[] = ALL_FAST_MODELS,
   logger?: LLMLogger
 ): Promise<void> {
@@ -503,7 +511,7 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
     engine.dispatch({
       type: "SUBMIT_DECISION",
       player: playerId,
-      choice: { selectedCards: selected },
+      choice: { selectedCards: selected as CardName[] },
     }, playerId);
     return;
   }
@@ -574,7 +582,7 @@ export async function runAITurnWithConsensus(
       await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
 
       // Handle AI pending decisions
-      while (engine.state.pendingDecision && engine.state.pendingDecision.player === playerId) {
+      while (engine.state.pendingDecision && (engine.state.pendingDecision as DecisionRequest).player === playerId) {
         console.log("⚙ AI has pendingDecision, resolving via consensus");
         await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
         onStateChange?.(engine.state);
