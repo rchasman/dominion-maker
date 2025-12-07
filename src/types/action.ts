@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CardName } from "./game-state";
 
-// Discriminated union: card vs cards based on action type
+// Discriminated union: all actions operate on single cards (atomic)
 export const ActionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("play_action"),
@@ -24,13 +24,13 @@ export const ActionSchema = z.discriminatedUnion("type", [
     reasoning: z.string().optional(),
   }),
   z.object({
-    type: z.literal("discard_cards"),
-    cards: z.array(CardName).describe("Array of cards to discard"),
+    type: z.literal("discard_card"),
+    card: CardName.describe("The card to discard"),
     reasoning: z.string().optional(),
   }),
   z.object({
-    type: z.literal("trash_cards"),
-    cards: z.array(CardName).describe("Array of cards to trash"),
+    type: z.literal("trash_card"),
+    card: CardName.describe("The card to trash"),
     reasoning: z.string().optional(),
   }),
   z.object({

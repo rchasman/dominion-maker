@@ -396,12 +396,11 @@ export const TurnAction = z.object({
     "play_treasure",
     "buy_card",
     "end_phase",
-    "discard_cards",
-    "trash_cards",
+    "discard_card",
+    "trash_card",
     "gain_card",
   ]),
   card: CardName.nullish(),
-  cards: z.array(CardName).nullish(),
 });
 export type TurnAction = z.infer<typeof TurnAction>;
 

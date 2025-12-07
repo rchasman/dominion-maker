@@ -84,7 +84,7 @@ function createTestState(hand: CardName[], deck: CardName[] = [], discard: CardN
   };
 }
 
-function executeCard(cardName: CardName, state: GameState, decision?: any, stage?: string): GameState {
+function executeCard(cardName: CardName, state: GameState, decision?: unknown, stage?: string): GameState {
   const effect = getCardEffect(cardName);
   if (!effect) throw new Error(`No effect for ${cardName}`);
 

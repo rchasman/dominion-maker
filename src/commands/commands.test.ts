@@ -138,13 +138,13 @@ describe("Command System - PLAY_ACTION", () => {
     resetEventCounter();
   });
 
-  function createGameWithCardsInHand(cards: string[]): GameState {
+  function createGameWithCardsInHand(cards: CardName[]): GameState {
     return {
       ...createEmptyState(),
       players: {
         human: {
           deck: [],
-          hand: cards as any[],
+          hand: cards,
           discard: [],
           inPlay: [],
           inPlaySourceIndices: [],
@@ -256,13 +256,13 @@ describe("Command System - PLAY_TREASURE", () => {
     resetEventCounter();
   });
 
-  function createBuyPhaseState(treasures: string[]): GameState {
+  function createBuyPhaseState(treasures: CardName[]): GameState {
     return {
       ...createEmptyState(),
       players: {
         human: {
           deck: [],
-          hand: treasures as any[],
+          hand: treasures,
           discard: [],
           inPlay: [],
           inPlaySourceIndices: [],
@@ -351,7 +351,7 @@ describe("Command System - PLAY_TREASURE", () => {
 
   it("should handle Merchant bonus on first Silver", () => {
     const state = createBuyPhaseState(["Silver"]);
-    state.players.human.inPlay = ["Merchant" as any];
+    state.players.human.inPlay = ["Merchant"];
 
     const command: GameCommand = {
       type: "PLAY_TREASURE",
@@ -751,8 +751,6 @@ describe("Command System - Event Causality", () => {
     const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
     expect(cardPlayed).toBeDefined();
     expect(cardPlayed!.id).toBeDefined();
-
-    const rootId = cardPlayed!.id;
 
     // All effect events should be caused by the card played
     const effectEvents = result.events!.filter(e =>

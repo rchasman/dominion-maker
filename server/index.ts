@@ -73,16 +73,16 @@ const app = new Elysia()
       if (isMistral) {
         const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching this exact format (no schema, no explanation):
 
-For play_action/play_treasure/buy_card/gain_card:
+ALL actions are atomic (single card):
 { "type": "play_action", "card": "CardName", "reasoning": "..." }
-
-For discard_cards/trash_cards:
-{ "type": "discard_cards", "cards": ["CardName"], "reasoning": "..." }
-
-For end_phase:
+{ "type": "play_treasure", "card": "CardName", "reasoning": "..." }
+{ "type": "buy_card", "card": "CardName", "reasoning": "..." }
+{ "type": "gain_card", "card": "CardName", "reasoning": "..." }
+{ "type": "discard_card", "card": "CardName", "reasoning": "..." }
+{ "type": "trash_card", "card": "CardName", "reasoning": "..." }
 { "type": "end_phase", "reasoning": "..." }
 
-IMPORTANT: Use "card" (singular) for single-card actions, "cards" (array) for multi-card actions. Never use both.`;
+IMPORTANT: Always use "card" (singular), never "cards" (plural). One card per action.`;
 
         const result = await generateText({
           model,

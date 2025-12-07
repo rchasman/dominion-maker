@@ -85,24 +85,6 @@ export function buildModelsFromSettings(settings: ModelSettings): ModelProvider[
  * Get legal actions from current game state for LLM context
  * Adapted to work with event-sourced state
  */
-/**
- * Generate all combinations of k items from array
- */
-function generateCombinations<T>(arr: T[], k: number): T[][] {
-  if (k === 0) return [[]];
-  if (k > arr.length) return [];
-
-  const result: T[][] = [];
-  for (let i = 0; i <= arr.length - k; i++) {
-    const head = arr[i];
-    const tailCombos = generateCombinations(arr.slice(i + 1), k - 1);
-    for (const combo of tailCombos) {
-      result.push([head, ...combo]);
-    }
-  }
-  return result;
-}
-
 function getLegalActions(state: GameState): Action[] {
   const actions: Action[] = [];
 
@@ -118,28 +100,15 @@ function getLegalActions(state: GameState): Action[] {
 
     if (decision.stage === "trash") {
       for (const card of options) {
-        actions.push({ type: "trash_cards", cards: [card] });
+        actions.push({ type: "trash_card", card });
       }
-      if (decision.min === 0) {
-        actions.push({ type: "trash_cards", cards: [] });
-      }
+      // Can't skip trashing by selecting nothing - that would be end_phase or a different action
     } else if (decision.stage === "discard" || decision.stage === "opponent_discard") {
-      // For multi-card selections (like Militia), need to generate combinations
-      if (decision.min === decision.max && decision.min > 1) {
-        // Generate all combinations of exactly N cards
-        const combinations = generateCombinations(options, decision.min);
-        for (const combo of combinations) {
-          actions.push({ type: "discard_cards", cards: combo });
-        }
-      } else {
-        // Single card or variable number - list individual options
-        for (const card of options) {
-          actions.push({ type: "discard_cards", cards: [card] });
-        }
-        if (decision.min === 0) {
-          actions.push({ type: "discard_cards", cards: [] });
-        }
+      // Single card at a time (atomic)
+      for (const card of options) {
+        actions.push({ type: "discard_card", card });
       }
+      // Can't skip discarding by selecting nothing - that would be end_phase or a different action
     } else if (decision.stage === "gain" || decision.from === "supply") {
       for (const card of options) {
         actions.push({ type: "gain_card", card });
@@ -239,19 +208,11 @@ function executeActionWithEngine(engine: DominionEngine, action: Action, playerI
     case "end_phase":
       result = engine.dispatch({ type: "END_PHASE", player: playerId }, playerId);
       break;
-    case "discard_cards":
-    case "trash_cards":
-      // These are decision responses for multiple cards
-      if (!action.cards) throw new Error(`${action.type} requires cards array`);
-      result = engine.dispatch({
-        type: "SUBMIT_DECISION",
-        player: playerId,
-        choice: { selectedCards: action.cards },
-      }, playerId);
-      break;
+    case "discard_card":
+    case "trash_card":
     case "gain_card":
-      // Decision response for single card
-      if (!action.card) throw new Error("gain_card requires card");
+      // All decision responses are single cards (atomic)
+      if (!action.card) throw new Error(`${action.type} requires card`);
       result = engine.dispatch({
         type: "SUBMIT_DECISION",
         player: playerId,
@@ -443,18 +404,14 @@ export async function advanceGameStateWithConsensus(
     return legalActions.some(legal => {
       if (legal.type !== action.type) return false;
 
-      // Actions with singular card field
+      // All actions with card field (atomic)
       if (action.type === "play_action" || action.type === "play_treasure" ||
-          action.type === "buy_card" || action.type === "gain_card") {
+          action.type === "buy_card" || action.type === "gain_card" ||
+          action.type === "discard_card" || action.type === "trash_card") {
         return "card" in legal && legal.card === action.card;
       }
 
-      // Actions with plural cards field
-      if (action.type === "discard_cards" || action.type === "trash_cards") {
-        return "cards" in legal && JSON.stringify(legal.cards) === JSON.stringify(action.cards);
-      }
-
-      // end_phase has no card/cards
+      // end_phase has no card
       return action.type === "end_phase";
     });
   };
