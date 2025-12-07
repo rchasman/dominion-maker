@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -41,6 +41,23 @@ export function Board({ onBackToHome }: BoardProps) {
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [showDevtools, setShowDevtools] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
+
+  // Wrap requestUndo to clear preview state and selections when undoing
+  const handleRequestUndo = (eventId: string) => {
+    setPreviewEventId(null); // Clear preview when undoing
+    setSelectedCardIndices([]); // Clear selected cards when undoing
+    requestUndo(eventId);
+  };
+
+  // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
+  useEffect(() => {
+    const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
+    const isNewGame = hasGameInit && events.length < 10; // New game has few events
+    if (isNewGame) {
+      setPreviewEventId(null);
+      setSelectedCardIndices([]);
+    }
+  }, [events]);
 
   if (!state) return null;
 

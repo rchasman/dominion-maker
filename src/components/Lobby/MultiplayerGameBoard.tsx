@@ -43,6 +43,23 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [showDevtools, setShowDevtools] = useState(false);
 
+  // Wrap requestUndo to clear preview state and selections when undoing
+  const handleRequestUndo = useCallback((eventId: string) => {
+    setPreviewEventId(null); // Clear preview when undoing
+    setSelectedCardIndices([]); // Clear selected cards when undoing
+    requestUndo(eventId);
+  }, [requestUndo]);
+
+  // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
+  useEffect(() => {
+    const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
+    const isNewGame = hasGameInit && events.length < 10; // New game has few events
+    if (isNewGame) {
+      setPreviewEventId(null);
+      setSelectedCardIndices([]);
+    }
+  }, [events]);
+
   // Clear preview if the event no longer exists (after undo)
   useEffect(() => {
     if (previewEventId && !events.find(e => e.id === previewEventId)) {
