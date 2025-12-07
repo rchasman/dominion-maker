@@ -1,4 +1,4 @@
-import type { CardName, Player } from "../types/game-state";
+import type { CardName } from "../types/game-state";
 import type { DecisionChoice, PlayerId } from "../events/types";
 
 /**
@@ -31,6 +31,12 @@ export type PlayTreasureCommand = {
 export type PlayAllTreasuresCommand = {
   type: "PLAY_ALL_TREASURES";
   player: PlayerId;
+};
+
+export type UnplayTreasureCommand = {
+  type: "UNPLAY_TREASURE";
+  player: PlayerId;
+  card: CardName;
 };
 
 export type BuyCardCommand = {
@@ -78,6 +84,7 @@ export type GameCommand =
   | PlayActionCommand
   | PlayTreasureCommand
   | PlayAllTreasuresCommand
+  | UnplayTreasureCommand
   | BuyCardCommand
   | EndPhaseCommand
   | SubmitDecisionCommand

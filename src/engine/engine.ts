@@ -2,7 +2,6 @@ import type { GameState, Player, CardName } from "../types/game-state";
 import type { GameEvent, PlayerId, DecisionChoice } from "../events/types";
 import type { GameCommand, CommandResult } from "../commands/types";
 import { handleCommand } from "../commands/handle";
-import { applyEvents } from "../events/apply";
 import { projectState, createEmptyState } from "../events/project";
 import { removeEventChain } from "../events/types";
 import { generateEventId } from "../events/id-generator";
@@ -188,6 +187,17 @@ export class DominionEngine {
    */
   denyUndo(player: PlayerId, requestId: string): CommandResult {
     return this.handleUndoResponse({ type: "DENY_UNDO", player, requestId });
+  }
+
+  /**
+   * Immediate undo to event (single-player, no approval needed).
+   * Removes the event and its causal chain.
+   */
+  undoToEvent(toEventId: string): void {
+    console.log("[Engine] Immediate undo to", toEventId);
+    this.events = removeEventChain(toEventId, this.events);
+    this._state = null; // Invalidate cached state
+    this.notifyListeners(this.events);
   }
 
   /**

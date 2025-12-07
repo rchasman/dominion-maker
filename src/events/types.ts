@@ -116,6 +116,13 @@ export type CardsPutOnDeckEvent = EventMetadata & {
   from: "hand" | "discard";
 };
 
+export type CardReturnedToHandEvent = EventMetadata & {
+  type: "CARD_RETURNED_TO_HAND";
+  player: PlayerId;
+  card: CardName;
+  from: "inPlay" | "discard" | "deck";
+};
+
 // Resources
 export type ActionsModifiedEvent = EventMetadata & {
   type: "ACTIONS_MODIFIED";
@@ -215,6 +222,7 @@ export type GameEvent =
   | CardsRevealedEvent
   | DeckShuffledEvent
   | CardsPutOnDeckEvent
+  | CardReturnedToHandEvent
   // Resources
   | ActionsModifiedEvent
   | BuysModifiedEvent
@@ -299,6 +307,21 @@ export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameE
     return allEvents;
   }
 
-  // Remove target event and everything after it
-  return allEvents.slice(0, targetIndex);
+  // "Undo to here" means: keep this event and all its direct effects (causedBy this event)
+  // Find the last event that is caused by (or transitively caused by) the target event
+  let lastRelatedIndex = targetIndex;
+
+  // Collect all events directly or transitively caused by target
+  const causedIds = new Set<string>([eventId]);
+
+  for (let i = targetIndex + 1; i < allEvents.length; i++) {
+    const event = allEvents[i];
+    if (event.causedBy && causedIds.has(event.causedBy)) {
+      causedIds.add(event.id);
+      lastRelatedIndex = i;
+    }
+  }
+
+  // Keep everything up to and including the last related event
+  return allEvents.slice(0, lastRelatedIndex + 1);
 }

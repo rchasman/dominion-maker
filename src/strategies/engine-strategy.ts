@@ -1,183 +1,140 @@
+/**
+ * Engine Strategy - Simple priority-based AI using event-sourced DominionEngine
+ */
+
 import type { GameStrategy } from "../types/game-mode";
-import type { GameState, CardName } from "../types/game-state";
-import { playAction, resolveDecision } from "../lib/game-engine/actions";
-import { playTreasure, playAllTreasures, unplayTreasure } from "../lib/game-engine/treasures";
-import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
+import type { DominionEngine } from "../engine";
+import type { CardName, GameState } from "../types/game-state";
 import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
 
 export class EngineStrategy implements GameStrategy {
-  async handleCardPlay(state: GameState, card: CardName): Promise<GameState> {
-    // If there's a pending decision, this is resolving it
-    if (state.pendingDecision) {
-      // Check if this is a valid option (could be card name or text option)
-      if (state.pendingDecision.options.includes(card)) {
-        return resolveDecision(state, [card]);
-      }
-
-      // For choose_card_from_options with text choices, card parameter is the text choice
-      if (state.pendingDecision.type === "choose_card_from_options") {
-        // The "card" parameter is actually the text choice (e.g., "Trash", "Keep")
-        return resolveDecision(state, [card]);
-      }
-    }
-
-    const { phase, actions } = state;
-
-    // Action phase: play action cards
-    if (phase === "action" && isActionCard(card) && actions > 0) {
-      return playAction(state, card);
-    }
-
-    // Buy phase: play treasures
-    if (phase === "buy" && isTreasureCard(card)) {
-      return playTreasure(state, card);
-    }
-
-    return state;
-  }
-
-  async handleBuyCard(state: GameState, card: CardName): Promise<GameState> {
-    // If there's a pending decision for gaining, this resolves it
-    if (state.pendingDecision && state.pendingDecision.type === "gain" && state.pendingDecision.options.includes(card)) {
-      return resolveDecision(state, [card]);
-    }
-
-    if (state.phase !== "buy" || state.buys < 1) {
-      return state;
-    }
-    return buyCard(state, card);
-  }
-
-  async handlePlayAllTreasures(state: GameState): Promise<GameState> {
-    if (state.phase !== "buy") {
-      return state;
-    }
-    return playAllTreasures(state);
-  }
-
-  async handleUnplayTreasure(state: GameState, card: CardName): Promise<GameState> {
-    if (state.phase !== "buy") {
-      return state;
-    }
-    return unplayTreasure(state, card);
-  }
-
-  async handleEndPhase(state: GameState): Promise<GameState> {
-    // If there's a skippable pending decision, resolve it with empty selection
-    if (state.pendingDecision && state.pendingDecision.canSkip) {
-      return resolveDecision(state, []);
-    }
-
-    if (state.phase === "action") {
-      return endActionPhase(state);
-    } else if (state.phase === "buy") {
-      return endBuyPhase(state);
-    }
-    return state;
-  }
-
-  async runAITurn(state: GameState, onStateChange?: (state: GameState) => void): Promise<GameState> {
-    // Run incrementally so UI can update after each action
-    let current = state;
+  async runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void> {
     const delay = () => new Promise(resolve => setTimeout(resolve, 300));
 
-    // ACTION PHASE: Play action cards
-    while (current.phase === "action" && current.actions > 0 && !current.gameOver) {
-      const hand = current.players.ai.hand;
+    // ACTION PHASE: Play action cards with priority
+    while (engine.state.phase === "action" && engine.state.actions > 0 && !engine.state.gameOver) {
+      const hand = engine.state.players.ai?.hand || [];
       const actionCards = hand.filter(isActionCard);
       if (actionCards.length === 0) break;
 
-      // Pick best action by priority
+      // Priority: Village/cantrips > draw > money > attacks > gain/trash
       const priorities: Record<string, number> = {
         "Village": 100, "Festival": 95, "Market": 90,
-        "Laboratory": 80, "Smithy": 75, "Council Room": 70, "Moat": 65, "Witch": 60,
-        "Moneylender": 45, "Mine": 40, "Militia": 25,
+        "Laboratory": 80, "Smithy": 75, "Council Room": 70,
+        "Moat": 65, "Witch": 60, "Militia": 25,
+        "Moneylender": 45, "Mine": 40,
         "Workshop": 20, "Remodel": 18, "Chapel": 12,
       };
       actionCards.sort((a, b) => (priorities[b] ?? 0) - (priorities[a] ?? 0));
 
-      current = playAction(current, actionCards[0]);
-      onStateChange?.(current);
+      const result = engine.dispatch({ type: "PLAY_ACTION", player: "ai", card: actionCards[0] }, "ai");
+      if (!result.ok) break;
+
+      onStateChange?.(engine.state);
       await delay();
     }
 
     // End action phase
-    current = endActionPhase(current);
-    onStateChange?.(current);
+    engine.dispatch({ type: "END_PHASE", player: "ai" }, "ai");
+    onStateChange?.(engine.state);
     await delay();
 
     // BUY PHASE: Play all treasures
-    current = playAllTreasures(current);
-    onStateChange?.(current);
+    const treasures = (engine.state.players.ai?.hand || []).filter(isTreasureCard);
+    for (const treasure of treasures) {
+      engine.dispatch({ type: "PLAY_TREASURE", player: "ai", card: treasure }, "ai");
+    }
+    onStateChange?.(engine.state);
     await delay();
 
-    // Buy best card we can afford
+    // Buy best cards we can afford
     const buyPriority: CardName[] = [
       "Province", "Gold", "Duchy", "Laboratory", "Market", "Festival",
       "Silver", "Smithy", "Village", "Workshop", "Chapel", "Estate"
     ];
 
-    while (current.buys > 0 && current.coins > 0 && !current.gameOver) {
+    while (engine.state.buys > 0 && engine.state.coins > 0 && !engine.state.gameOver) {
       let bought = false;
       for (const card of buyPriority) {
-        if (current.supply[card] > 0 && CARDS[card].cost <= current.coins) {
-          current = buyCard(current, card);
-          onStateChange?.(current);
-          await delay();
-          bought = true;
-          break;
+        const supply = engine.state.supply[card] || 0;
+        const cost = CARDS[card].cost;
+        if (supply > 0 && cost <= engine.state.coins) {
+          const result = engine.dispatch({ type: "BUY_CARD", player: "ai", card }, "ai");
+          if (result.ok) {
+            onStateChange?.(engine.state);
+            await delay();
+            bought = true;
+            break;
+          }
         }
       }
       if (!bought) break;
     }
 
     // End turn
-    current = endBuyPhase(current);
-    onStateChange?.(current);
-
-    return current;
+    engine.dispatch({ type: "END_PHASE", player: "ai" }, "ai");
+    onStateChange?.(engine.state);
   }
 
-  async resolveAIPendingDecision(state: GameState): Promise<GameState> {
-    const decision = state.pendingDecision;
-    if (!decision || decision.player !== "ai") {
-      return state;
-    }
+  async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
+    const decision = engine.state.pendingDecision;
+    if (!decision || decision.player !== "ai") return;
 
-    // For discard decisions (e.g., Militia attack), use hardcoded logic
-    if (decision.type === "discard" && decision.metadata?.cardBeingPlayed === "Militia") {
-      const aiPlayer = state.players.ai;
+    // For discard decisions (e.g., Militia attack), discard worst cards
+    if (decision.stage === "opponent_discard" || decision.stage === "discard") {
+      const aiPlayer = engine.state.players.ai;
+      if (!aiPlayer) return;
 
-      // Priority: Victory cards > Curses > Coppers > others
+      const numToDiscard = decision.min;
+
+      // Priority for discarding: Victory cards > Curses > Coppers > expensive cards > cheap cards
       const priorities = ["Estate", "Duchy", "Province", "Curse", "Copper"];
-      let selectedCard: CardName | null = null;
+      const selected: CardName[] = [];
+      const options = decision.cardOptions || aiPlayer.hand;
 
+      // First pick priority discard cards
       for (const priority of priorities) {
-        if (aiPlayer.hand.includes(priority as CardName)) {
-          selectedCard = priority as CardName;
-          break;
+        const card = options.find(c => c === priority);
+        if (card && selected.length < numToDiscard) {
+          selected.push(card);
         }
       }
 
-      // If no priority cards, just pick first card
-      if (!selectedCard && aiPlayer.hand.length > 0) {
-        selectedCard = aiPlayer.hand[0];
+      // Fill remaining with most expensive cards (they're worth less early)
+      if (selected.length < numToDiscard) {
+        const remaining = options
+          .filter(c => !selected.includes(c))
+          .sort((a, b) => CARDS[b].cost - CARDS[a].cost);
+
+        selected.push(...remaining.slice(0, numToDiscard - selected.length));
       }
 
-      if (selectedCard) {
-        // Resolve the decision with the selected card
-        return resolveDecision(state, [selectedCard]);
-      }
+      engine.dispatch({
+        type: "SUBMIT_DECISION",
+        player: "ai",
+        choice: { selectedCards: selected },
+      }, "ai");
+      return;
     }
 
-    // For other AI decisions, just skip if possible or pick first option
-    if (decision.canSkip) {
-      return resolveDecision(state, []);
-    } else if (decision.options.length > 0) {
-      return resolveDecision(state, [decision.options[0] as CardName]);
+    // For other decisions, pick first min options or skip
+    const options = decision.cardOptions || [];
+    if (decision.min === 0) {
+      // Skip if possible
+      engine.dispatch({
+        type: "SUBMIT_DECISION",
+        player: "ai",
+        choice: { selectedCards: [] },
+      }, "ai");
+    } else {
+      // Pick first min options
+      const selected = options.slice(0, decision.min);
+      engine.dispatch({
+        type: "SUBMIT_DECISION",
+        player: "ai",
+        choice: { selectedCards: selected },
+      }, "ai");
     }
-
-    return state;
   }
 
   getModeName(): string {

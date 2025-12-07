@@ -1,43 +1,31 @@
-import type { GameState, CardName } from "./game-state";
+import type { DominionEngine } from "../engine";
+import type { GameState } from "./game-state";
 
+/**
+ * Game modes for single-player
+ * - engine: Simple random AI
+ * - llm: LLM-powered AI with consensus voting
+ * - hybrid: Mix of LLM and simple AI
+ */
 export type GameMode = "engine" | "llm" | "hybrid";
 
+/**
+ * Strategy interface for AI behavior
+ * Strategies dispatch commands to the DominionEngine
+ */
 export interface GameStrategy {
   /**
-   * Handle a card being played from hand
-   */
-  handleCardPlay(state: GameState, card: CardName): Promise<GameState>;
-
-  /**
-   * Handle buying a card from supply
-   */
-  handleBuyCard(state: GameState, card: CardName): Promise<GameState>;
-
-  /**
-   * Handle playing all treasures at once
-   */
-  handlePlayAllTreasures(state: GameState): Promise<GameState>;
-
-  /**
-   * Handle unplaying a treasure (putting it back in hand)
-   */
-  handleUnplayTreasure(state: GameState, card: CardName): Promise<GameState>;
-
-  /**
-   * Handle ending the current phase
-   */
-  handleEndPhase(state: GameState): Promise<GameState>;
-
-  /**
-   * Run a full AI turn
+   * Run a full AI turn using the engine
+   * @param engine - The game engine to dispatch commands to
    * @param onStateChange - Optional callback for incremental UI updates
    */
-  runAITurn(state: GameState, onStateChange?: (state: GameState) => void): Promise<GameState>;
+  runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void>;
 
   /**
-   * Resolve a pendingDecision for the AI player (e.g., responding to opponent's attack)
+   * Resolve a pending decision for the AI player
+   * @param engine - The game engine to dispatch commands to
    */
-  resolveAIPendingDecision(state: GameState): Promise<GameState>;
+  resolveAIPendingDecision(engine: DominionEngine): Promise<void>;
 
   /**
    * Get the mode name for display

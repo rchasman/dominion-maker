@@ -119,14 +119,17 @@ describe("Causality Tracking", () => {
       },
     ];
 
-    // Undo playing Market (evt-4)
+    // "Undo to Market (evt-4)" means: keep up to and including Market + its effects
     const afterUndo = removeEventChain("evt-4", events);
 
-    // Should remove Market and its effects, but keep Festival chain
-    expect(afterUndo.length).toBe(3);
-    expect(afterUndo[0].id).toBe("evt-1");
-    expect(afterUndo[1].id).toBe("evt-2");
-    expect(afterUndo[2].id).toBe("evt-3");
+    // Should keep Festival chain + Market chain (Market + its effects)
+    expect(afterUndo.length).toBe(6);
+    expect(afterUndo[0].id).toBe("evt-1"); // Festival CARD_PLAYED
+    expect(afterUndo[1].id).toBe("evt-2"); // Festival ACTIONS_MODIFIED
+    expect(afterUndo[2].id).toBe("evt-3"); // Festival COINS_MODIFIED
+    expect(afterUndo[3].id).toBe("evt-4"); // Market CARD_PLAYED
+    expect(afterUndo[4].id).toBe("evt-5"); // Market ACTIONS_MODIFIED (caused by Market)
+    expect(afterUndo[5].id).toBe("evt-6"); // Market COINS_MODIFIED (caused by Market)
   });
 
   it("should handle nested causality chains", () => {
@@ -229,12 +232,14 @@ describe("Causality Tracking", () => {
     expect(validUndoPoints.length).toBe(3);
     expect(validUndoPoints.map(e => e.id)).toEqual(["evt-1", "evt-3", "evt-5"]);
 
-    // Undoing to evt-3 (Silver) removes Gold chain
+    // "Undo to evt-5 (Gold)" means: keep up to and including Gold, remove everything after
     const afterUndo = removeEventChain("evt-5", events);
 
-    // Should have: Copper + effect, Silver + effect
-    expect(afterUndo.length).toBe(4);
+    // Should have: Copper + effect, Silver + effect, Gold + effect
+    expect(afterUndo.length).toBe(6);
     expect(afterUndo.map(e => e.type)).toEqual([
+      "CARD_PLAYED",
+      "COINS_MODIFIED",
       "CARD_PLAYED",
       "COINS_MODIFIED",
       "CARD_PLAYED",
