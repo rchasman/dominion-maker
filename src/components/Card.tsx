@@ -83,6 +83,7 @@ export function Card({
           inlineSize: "100%",
           blockSize: "auto",
           display: "block",
+          objectFit: "contain",
         }}
         onError={(e) => {
           (e.target as HTMLImageElement).style.display = "none";

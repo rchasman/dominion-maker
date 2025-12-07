@@ -9,7 +9,7 @@ interface PlayerAreaProps {
   vpCount?: number;
   isActive: boolean;
   isHuman: boolean;
-  selectedCards: CardName[];
+  selectedCardIndices: number[];
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName, index: number) => void;
   compact?: boolean;
@@ -61,7 +61,7 @@ export function PlayerArea({
   vpCount,
   isActive,
   isHuman,
-  selectedCards,
+  selectedCardIndices,
   onCardClick,
   onInPlayClick,
   compact,
@@ -224,8 +224,8 @@ export function PlayerArea({
               Hand ({player.hand.length})
             </div>
             <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(0, var(--card-width-large)))",
+              display: "flex",
+              flexWrap: "wrap",
               gap: "var(--space-2)",
               alignContent: "flex-start",
               justifyContent: "center",
@@ -233,21 +233,23 @@ export function PlayerArea({
             }}>
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite", flexShrink: 0 }}>
                     <Card name="Copper" showBack={true} size="large" disabled={true} />
                   </div>
                 ))
               ) : (
                 player.hand.map((card, i) => (
-                  <Card
-                    key={`${card}-${i}`}
-                    name={card}
-                    size="large"
-                    onClick={() => onCardClick?.(card, i)}
-                    selected={selectedCards.some((c, idx) => c === card && idx === i)}
-                    highlightMode={getHandCardHighlightMode(card)}
-                    disabled={isHandCardDisabled(card)}
-                  />
+                  <div key={`${card}-${i}-wrapper`} style={{ flexShrink: 0 }}>
+                    <Card
+                      key={`${card}-${i}`}
+                      name={card}
+                      size="large"
+                      onClick={() => onCardClick?.(card, i)}
+                      selected={selectedCardIndices.includes(i)}
+                      highlightMode={getHandCardHighlightMode(card)}
+                      disabled={isHandCardDisabled(card)}
+                    />
+                  </div>
                 ))
               )}
             </div>
