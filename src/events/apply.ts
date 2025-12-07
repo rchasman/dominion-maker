@@ -327,14 +327,20 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
     }
 
     case "DECK_SHUFFLED": {
-      // Note: The actual shuffle is handled by the command handler
-      // This event just logs that it happened
+      const playerState = state.players[event.player];
+      if (!playerState) return state;
+
+      // Move discard into deck with new shuffled order
       return {
         ...state,
-        log: [
-          ...state.log,
-          { type: "shuffle-deck", player: event.player },
-        ],
+        players: {
+          ...state.players,
+          [event.player]: {
+            ...playerState,
+            deck: event.newDeckOrder,
+            discard: [],
+          },
+        },
       };
     }
 
