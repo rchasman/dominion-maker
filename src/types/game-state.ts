@@ -154,7 +154,9 @@ export type LogEntry = {
 } | {
   type: "trash-card";
   player: Player;
-  card: CardName;
+  card?: CardName;
+  cards?: CardName[];
+  count?: number;
   eventId?: string;
   children?: LogEntry[];
 } | {

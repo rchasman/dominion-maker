@@ -22,6 +22,7 @@ export const moneylender: CardEffect = ({ state, player, decision }): CardEffect
         cardOptions: ["Copper"],
         min: 0,
         max: 1,
+        cardBeingPlayed: "Moneylender",
         stage: "trash",
       },
     };

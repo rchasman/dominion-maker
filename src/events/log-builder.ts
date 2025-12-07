@@ -70,9 +70,8 @@ function eventToLogEntry(event: GameEvent, currentPlayer: Player): LogEntry | nu
       return null;
 
     case "CARDS_TRASHED":
-      // Create log entry for first card (in apply.ts we create separate entries)
       return event.cards.length > 0
-        ? { type: "trash-card", player: event.player, card: event.cards[0], eventId: event.id }
+        ? { type: "trash-card", player: event.player, cards: event.cards, count: event.cards.length, eventId: event.id }
         : null;
 
     case "CARD_GAINED": {

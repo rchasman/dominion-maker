@@ -24,6 +24,7 @@ export const remodel: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: [...playerState.hand],
         min: 1,
         max: 1,
+        cardBeingPlayed: "Remodel",
         stage: "trash",
       },
     };
@@ -56,6 +57,7 @@ export const remodel: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: gainOptions,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Remodel",
         stage: "gain",
         metadata: { trashedCard: toTrash, maxCost },
       },

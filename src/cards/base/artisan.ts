@@ -23,6 +23,7 @@ export const artisan: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: gainOptions,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Artisan",
         stage: "gain",
       },
     };
@@ -47,6 +48,7 @@ export const artisan: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: handAfterGain,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Artisan",
         stage: "topdeck",
       },
     };

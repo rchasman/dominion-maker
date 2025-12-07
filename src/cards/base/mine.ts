@@ -27,6 +27,7 @@ export const mine: CardEffect = ({ state, player, decision, stage }): CardEffect
         cardOptions: treasures,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Mine",
         stage: "trash",
       },
     };
@@ -68,6 +69,7 @@ export const mine: CardEffect = ({ state, player, decision, stage }): CardEffect
         cardOptions: gainableTreasures,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Mine",
         stage: "gain",
       },
     };

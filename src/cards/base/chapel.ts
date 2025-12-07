@@ -21,6 +21,7 @@ export const chapel: CardEffect = ({ state, player, decision }): CardEffectResul
         cardOptions: [...playerState.hand],
         min: 0,
         max: Math.min(4, playerState.hand.length),
+        cardBeingPlayed: "Chapel",
         stage: "trash",
       },
     };

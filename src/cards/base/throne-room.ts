@@ -33,6 +33,7 @@ export const throneRoom: CardEffect = ({ state, player, decision, stage }): Card
         cardOptions: actions,
         min: 0,
         max: 1,
+        cardBeingPlayed: "Throne Room",
         stage: "choose_action",
       },
     };
@@ -59,6 +60,7 @@ export const throneRoom: CardEffect = ({ state, player, decision, stage }): Card
         cardOptions: [],
         min: 0,
         max: 0,
+        cardBeingPlayed: "Throne Room",
         stage: "execute_first",
         metadata: { throneRoomTarget: cardToPlay },
       },

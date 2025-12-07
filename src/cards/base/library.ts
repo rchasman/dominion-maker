@@ -47,6 +47,7 @@ export const library: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: actionsInDraw,
         min: 0,
         max: actionsInDraw.length,
+        cardBeingPlayed: "Library",
         stage: "skip_actions",
         metadata: { cardsNeeded, peekedCards: peeked },
       },

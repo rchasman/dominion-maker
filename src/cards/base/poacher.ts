@@ -35,6 +35,7 @@ export const poacher: CardEffect = ({ state, player, decision, stage }): CardEff
         cardOptions: [...playerState.hand],
         min: discardCount,
         max: discardCount,
+        cardBeingPlayed: "Poacher",
         stage: "discard",
       },
     };

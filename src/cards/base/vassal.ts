@@ -39,6 +39,7 @@ export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffe
           cardOptions: [topCard],
           min: 0,
           max: 1,
+          cardBeingPlayed: "Vassal",
           stage: "play_action",
           metadata: { discardedCard: topCard },
         },

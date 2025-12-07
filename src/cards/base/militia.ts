@@ -30,6 +30,7 @@ export const militia: CardEffect = ({ state, player, decision, stage }): CardEff
             cardOptions: [...oppState.hand],
             min: discardCount,
             max: discardCount,
+            cardBeingPlayed: "Militia",
             stage: "opponent_discard",
             metadata: {
               remainingOpponents: opponents.filter(o => o !== opp),
@@ -45,8 +46,8 @@ export const militia: CardEffect = ({ state, player, decision, stage }): CardEff
   }
 
   // Process opponent discard
-  if (stage === "opponent_discard") {
-    const toDiscard = decision.selectedCards;
+  if (stage === "opponent_discard" && decision) {
+    const toDiscard = decision.selectedCards || [];
     const discardingPlayer = state.pendingDecision?.player as Player;
 
     if (toDiscard.length > 0) {
@@ -76,6 +77,7 @@ export const militia: CardEffect = ({ state, player, decision, stage }): CardEff
             cardOptions: [...oppState.hand],
             min: discardCount,
             max: discardCount,
+            cardBeingPlayed: "Militia",
             stage: "opponent_discard",
             metadata: {
               remainingOpponents: remainingOpponents.filter(o => o !== opp),

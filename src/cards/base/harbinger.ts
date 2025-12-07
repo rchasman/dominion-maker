@@ -30,6 +30,7 @@ export const harbinger: CardEffect = ({ state, player, decision, stage }): CardE
         cardOptions: [...playerState.discard],
         min: 0,
         max: 1,
+        cardBeingPlayed: "Harbinger",
         stage: "topdeck",
       },
     };

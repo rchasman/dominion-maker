@@ -21,6 +21,7 @@ export const workshop: CardEffect = ({ state, player, decision }): CardEffectRes
         cardOptions: gainOptions,
         min: 1,
         max: 1,
+        cardBeingPlayed: "Workshop",
         stage: "gain",
       },
     };

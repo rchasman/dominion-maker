@@ -28,6 +28,7 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
         cardOptions: [...playerState.hand],
         min: 0,
         max: playerState.hand.length,
+        cardBeingPlayed: "Cellar",
         stage: "discard",
       },
     };
