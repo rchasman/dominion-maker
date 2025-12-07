@@ -7,6 +7,7 @@ import { stripReasoning } from "../../types/action";
 import { getModelColor } from "../../config/models";
 import { AVAILABLE_MODELS, type ModelSettings } from "../../agent/game-agent";
 import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, TimingData } from "./types";
+import { formatActionDescription } from "../../lib/action-utils";
 
 export type { LLMLogEntry } from "./types";
 
@@ -38,6 +39,16 @@ const getModelDisplayName = (model: string): string => {
     default:
       return model;
   }
+};
+
+// Helper to group voters by model name and show counts
+const groupVotersByModel = (voters: string[]) => {
+  const counts = new Map<string, number>();
+  voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
+  return Array.from(counts.entries())
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
+    .join(", ");
 };
 
 export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps) {
@@ -843,23 +854,11 @@ export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps
   const renderReasoning = (data: ConsensusVotingData | null | undefined) => {
     if (!data?.allResults) return null;
 
-    // Helper to group voters by model name and show counts
-    const groupVotersByModel = (voters: string[]) => {
-      const counts = new Map<string, number>();
-      voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
-      return Array.from(counts.entries())
-        .sort(([, a], [, b]) => b - a)
-        .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
-        .join(", ");
-    };
-
     return (
       <div>
         {data.allResults.map((result, idx) => {
           const isWinner = idx === 0;
-          const actionStr = result.action.type === "play_action" || result.action.type === "play_treasure" || result.action.type === "buy_card" || result.action.type === "gain_card"
-            ? `${result.action.type}(${result.action.card})`
-            : result.action.type;
+          const actionStr = formatActionDescription(result.action);
 
           return (
             <div key={idx} style={{
@@ -966,23 +965,11 @@ export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps
 
     const sortedGroups = Array.from(groups.values()).sort((a, b) => b.voters.length - a.voters.length);
 
-    // Helper to group voters by model name and show counts
-    const groupVotersByModel = (voters: string[]) => {
-      const counts = new Map<string, number>();
-      voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
-      return Array.from(counts.entries())
-        .sort(([, a], [, b]) => b - a)
-        .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
-        .join(", ");
-    };
-
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
         {sortedGroups.map((group, idx) => {
           const isWinner = idx === 0;
-          const actionStr = group.action.type === "play_action" || group.action.type === "play_treasure" || group.action.type === "buy_card" || group.action.type === "gain_card"
-            ? `${group.action.type}(${group.action.card})`
-            : group.action.type;
+          const actionStr = formatActionDescription(group.action);
 
           return (
             <div key={idx} style={{

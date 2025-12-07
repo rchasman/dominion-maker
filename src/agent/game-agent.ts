@@ -11,6 +11,7 @@ import { MODEL_IDS, type ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
 import type { DecisionRequest } from "../events/types";
+import { formatActionDescription } from "../lib/action-utils";
 
 // Re-export for convenience
 export type { ModelProvider } from "../config/models";
@@ -428,9 +429,7 @@ export async function advanceGameStateWithConsensus(
   const votesConsidered = earlyConsensus ? completedResults.length : successfulResults.length;
   const consensusStrength = winner.count / votesConsidered;
 
-  const actionDesc = winner.action.type === "play_action" || winner.action.type === "play_treasure" || winner.action.type === "buy_card" || winner.action.type === "gain_card"
-    ? `${winner.action.type}(${winner.action.card})`
-    : winner.action.type;
+  const actionDesc = formatActionDescription(winner.action);
 
   logger?.({
     type: "consensus-voting",
