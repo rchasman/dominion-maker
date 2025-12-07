@@ -54,7 +54,7 @@ export interface TimingData {
 export interface LLMLogEntry {
   id: string;
   timestamp: number;
-  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted" | "ai-decision-resolving" | "ai-decision-continuing" | "ai-decision-resolved";
+  type: "ai-turn-start" | "ai-turn-end" | "llm-call-start" | "llm-call-end" | "state-change" | "error" | "warning" | "consensus-start" | "consensus-compare" | "consensus-validation" | "consensus-agree" | "consensus-success" | "consensus-step" | "consensus-step-error" | "consensus-voting" | "consensus-complete" | "consensus-model-pending" | "consensus-model-complete" | "consensus-model-aborted" | "ai-decision-resolving" | "ai-decision-continuing" | "ai-decision-resolved";
   message: string;
   data?: Record<string, unknown>;
   children?: LLMLogEntry[];

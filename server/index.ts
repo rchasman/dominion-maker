@@ -3,13 +3,12 @@ import { cors } from "@elysiajs/cors";
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { serverTiming } from "@elysiajs/server-timing";
 import { generateObject, generateText, createGateway } from "ai";
-import type { GameState } from "../src/types/game-state";
-import type { Action } from "../src/types/action";
 import { ActionSchema } from "../src/types/action";
-import type { ModelProvider } from "../src/config/models";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
+import type { GameState } from "../src/types/game-state";
+import type { Action } from "../src/types/action";
 
 // Configure AI Gateway with server-side API key
 const gateway = createGateway({
@@ -112,11 +111,12 @@ const app = new Elysia()
           const parsed = JSON.parse(jsonStr);
           const action = ActionSchema.parse(parsed);
           return { action };
-        } catch (parseErr: any) {
+        } catch (parseErr) {
+          const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
           console.error(`[${provider}] Failed to parse JSON response`);
           console.error(`Full response text:`, result.text);
           console.error(`Extracted JSON string:`, jsonStr);
-          throw new Error(`Failed to parse Ministral response: ${parseErr.message}\nFull text: ${result.text}`);
+          throw new Error(`Failed to parse Ministral response: ${errorMessage}\nFull text: ${result.text}`);
         }
       }
 
@@ -137,12 +137,13 @@ const app = new Elysia()
       });
 
       return { action: result.object };
-    } catch (err: any) {
+    } catch (err) {
       // Ministral sometimes echoes the schema before/instead of the actual JSON
       // Try to extract and parse just the actual response object
-      if (err.text && provider === "ministral-3b") {
+      const errorWithText = err as { text?: string };
+      if (errorWithText.text && provider === "ministral-3b") {
         try {
-          const text = err.text;
+          const text = errorWithText.text;
           // Split by double newlines and try parsing each chunk
           const chunks = text.split(/\n\n+/);
           for (let i = chunks.length - 1; i >= 0; i--) {
@@ -170,24 +171,31 @@ const app = new Elysia()
         }
       }
 
-      console.error(`[${provider}] Error generating action:`, err.message);
-      if (err.cause) {
-        console.error("Cause:", err.cause);
+      const error = err as Error & { cause?: unknown; text?: string };
+      console.error(`[${provider}] Error generating action:`, error.message);
+      if (error.cause) {
+        console.error("Cause:", error.cause);
       }
-      if (err.text) {
-        console.error("Response text:", err.text);
+      if (error.text) {
+        console.error("Response text:", error.text);
       }
 
       // For Ministral, return error instead of throwing to allow consensus to continue
       if (provider === "ministral-3b") {
-        return error(500, `Model failed: ${err.message}`);
+        return { error: 500, message: `Model failed: ${error.message}` };
       }
 
       throw err;
     }
-  })
-  .listen(5174);
+  });
 
-console.log(`🦊 Elysia server running at http://${app.server?.hostname}:${app.server?.port}`);
+// For local development
+if (import.meta.main) {
+  app.listen(5174);
+  console.log(`🦊 Elysia server running at http://${app.server?.hostname}:${app.server?.port}`);
+}
+
+// For Vercel deployment
+export default app;
 
 export type App = typeof app;

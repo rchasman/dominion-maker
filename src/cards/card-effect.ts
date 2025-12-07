@@ -8,7 +8,7 @@ export interface CardEffectContext {
   decision?: {
     stage?: string;
     selectedCards?: CardName[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
 }
 

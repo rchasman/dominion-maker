@@ -13,11 +13,10 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import type { GameEvent } from "../events/types";
 import type { GameState } from "../types/game-state";
 import { projectState } from "../events/project";
-import { isRootCauseEvent, getCausalChain } from "../events/types";
+import { isRootCauseEvent } from "../events/types";
 
 interface EventDevtoolsProps {
   events: GameEvent[];
-  currentState: GameState | null;
   isOpen?: boolean;
   onToggle?: () => void;
   onBranchFrom?: (eventId: string) => void;
@@ -74,7 +73,7 @@ const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
   decisions: ["DECISION_REQUIRED", "DECISION_RESOLVED"],
 };
 
-export function EventDevtools({ events, currentState, isOpen = true, onToggle, onBranchFrom, onScrub }: EventDevtoolsProps) {
+export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, onScrub }: EventDevtoolsProps) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventCategory>("all");
   const [showDiff, setShowDiff] = useState(false);
@@ -433,7 +432,7 @@ export function EventDevtools({ events, currentState, isOpen = true, onToggle, o
 
       {/* Event list */}
       <div ref={listRef} style={styles.eventList}>
-        {filteredEvents.map((event, idx) => {
+        {filteredEvents.map((event) => {
           const eventIndex = events.indexOf(event);
           const isSelected = selectedEventId === event.id || scrubberIndex === eventIndex;
           const isRoot = isRootCauseEvent(event);

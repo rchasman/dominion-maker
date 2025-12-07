@@ -19,3 +19,12 @@ export const ActionSchema = z
   .describe("A single atomic game action");
 
 export type Action = z.infer<typeof ActionSchema>;
+
+/**
+ * Strip reasoning field from an action to get its core signature.
+ * Useful for comparing actions or creating action signatures.
+ */
+export function stripReasoning(action: Action): Omit<Action, "reasoning"> {
+  const { reasoning: _reasoning, ...actionCore } = action;
+  return actionCore;
+}

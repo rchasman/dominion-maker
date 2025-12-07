@@ -10,7 +10,7 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { DominionEngine } from "../engine";
 import type { GameState, CardName, Player } from "../types/game-state";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
-import type { GameCommand, CommandResult } from "../commands/types";
+import type { CommandResult } from "../commands/types";
 import { projectState } from "../events/project";
 
 interface UseMultiplayerEngineOptions {
