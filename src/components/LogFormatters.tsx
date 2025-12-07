@@ -4,6 +4,10 @@ import { getPlayerColor } from "../lib/board-utils";
 
 export function getCardColor(card: CardName): string {
   const cardDef = CARDS[card];
+  if (!cardDef) {
+    console.error(`Card definition not found for: ${card}`);
+    return "var(--color-text-primary)";
+  }
   // Priority order: curse > attack > reaction > treasure > victory > action
   if (cardDef.types.includes("curse")) return "var(--color-curse)";
   if (cardDef.types.includes("attack")) return "var(--color-attack)";
