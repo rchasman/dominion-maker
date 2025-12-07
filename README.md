@@ -80,9 +80,10 @@ type Action =
   | { type: "play_action", card: CardName, reasoning?: string }
   | { type: "play_treasure", card: CardName }
   | { type: "buy_card", card: CardName, reasoning?: string }
+  | { type: "gain_card", card: CardName }
+  | { type: "discard_card", card: CardName }
+  | { type: "trash_card", card: CardName }
   | { type: "end_phase" }
-  | { type: "discard_cards", cards: CardName[] }
-  | { type: "trash_cards", cards: CardName[] }
 ```
 
 ### Early Consensus
