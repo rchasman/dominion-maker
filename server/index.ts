@@ -71,7 +71,18 @@ const app = new Elysia()
       const isMistral = provider.includes("ministral");
 
       if (isMistral) {
-        const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching this exact format (no schema, no explanation):\n{\n  "type": "play_action" | "play_treasure" | "buy_card" | "end_phase" | "discard_cards" | "trash_cards" | "gain_card",\n  "card": "CardName" (optional),\n  "cards": ["CardName"] (optional),\n  "reasoning": "brief explanation" (optional)\n}`;
+        const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching this exact format (no schema, no explanation):
+
+For play_action/play_treasure/buy_card/gain_card:
+{ "type": "play_action", "card": "CardName", "reasoning": "..." }
+
+For discard_cards/trash_cards:
+{ "type": "discard_cards", "cards": ["CardName"], "reasoning": "..." }
+
+For end_phase:
+{ "type": "end_phase", "reasoning": "..." }
+
+IMPORTANT: Use "card" (singular) for single-card actions, "cards" (array) for multi-card actions. Never use both.`;
 
         const result = await generateText({
           model,
@@ -119,10 +130,6 @@ const app = new Elysia()
 
         try {
           const parsed = JSON.parse(jsonStr);
-          // Fix common LLM mistakes: cards field should be array or omitted
-          if (parsed.cards && typeof parsed.cards === 'string') {
-            parsed.cards = [parsed.cards];
-          }
           const action = ActionSchema.parse(parsed);
           return { action };
         } catch (parseErr) {
@@ -150,14 +157,7 @@ const app = new Elysia()
         }),
       });
 
-      // Fix common LLM mistakes: cards field should be array or omitted
-      const action = result.object;
-      if (action.cards && typeof action.cards === 'string') {
-        // Coerce string to array
-        (action as any).cards = [action.cards];
-      }
-
-      return { action };
+      return { action: result.object };
     } catch (err) {
       // Ministral sometimes echoes the schema before/instead of the actual JSON
       // Try to extract and parse just the actual response object
@@ -178,10 +178,6 @@ const app = new Elysia()
                 }
                 // Validate it's an action with 'type' being a string (not "object")
                 if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
-                  // Fix common LLM mistakes: cards field should be array or omitted
-                  if (parsed.cards && typeof parsed.cards === 'string') {
-                    parsed.cards = [parsed.cards];
-                  }
                   const validated = ActionSchema.parse(parsed);
                   console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
                   return { action: validated };

@@ -241,13 +241,21 @@ function executeActionWithEngine(engine: DominionEngine, action: Action, playerI
       break;
     case "discard_cards":
     case "trash_cards":
-    case "gain_card":
-      // These are decision responses
-      const cards = action.cards || (action.card ? [action.card] : []);
+      // These are decision responses for multiple cards
+      if (!action.cards) throw new Error(`${action.type} requires cards array`);
       result = engine.dispatch({
         type: "SUBMIT_DECISION",
         player: playerId,
-        choice: { selectedCards: cards },
+        choice: { selectedCards: action.cards },
+      }, playerId);
+      break;
+    case "gain_card":
+      // Decision response for single card
+      if (!action.card) throw new Error("gain_card requires card");
+      result = engine.dispatch({
+        type: "SUBMIT_DECISION",
+        player: playerId,
+        choice: { selectedCards: [action.card] },
       }, playerId);
       break;
     default:
@@ -432,12 +440,23 @@ export async function advanceGameStateWithConsensus(
 
   // Validate actions
   const isActionValid = (action: Action): boolean => {
-    const matchesLegal = legalActions.some(legal =>
-      legal.type === action.type &&
-      (action.card ? legal.card === action.card : true) &&
-      (action.cards ? JSON.stringify(action.cards) === JSON.stringify(legal.cards) : true)
-    );
-    return matchesLegal;
+    return legalActions.some(legal => {
+      if (legal.type !== action.type) return false;
+
+      // Actions with singular card field
+      if (action.type === "play_action" || action.type === "play_treasure" ||
+          action.type === "buy_card" || action.type === "gain_card") {
+        return "card" in legal && legal.card === action.card;
+      }
+
+      // Actions with plural cards field
+      if (action.type === "discard_cards" || action.type === "trash_cards") {
+        return "cards" in legal && JSON.stringify(legal.cards) === JSON.stringify(action.cards);
+      }
+
+      // end_phase has no card/cards
+      return action.type === "end_phase";
+    });
   };
 
   const validRankedGroups = rankedGroups.filter(g => isActionValid(g.action));
