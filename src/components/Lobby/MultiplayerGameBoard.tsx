@@ -296,7 +296,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           leaveRoom();
           onBackToHome();
         }}
-        onRequestUndo={requestUndo}
+        onRequestUndo={handleRequestUndo}
       />
 
       {/* Game over modal */}
@@ -347,9 +347,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         events={events}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
-        onBranchFrom={(eventId) => {
-          requestUndo(eventId);
-        }}
+        onBranchFrom={handleRequestUndo}
         onScrub={(eventId) => {
           setPreviewEventId(eventId);
         }}

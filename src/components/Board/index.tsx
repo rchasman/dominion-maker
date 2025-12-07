@@ -184,86 +184,28 @@ export function Board({ onBackToHome }: BoardProps) {
           />
         </div>
 
-        {isHumanTurn && !state.pendingDecision && !isPreviewMode && (
+        {isHumanTurn && !isPreviewMode && (
           <ActionBar
             state={displayState}
             hint={getHint()}
             hasTreasuresInHand={hasTreasuresInHand}
             onPlayAllTreasures={onPlayAllTreasures}
             onEndPhase={onEndPhase}
+            selectedCardIndices={selectedCardIndices}
+            onConfirmDecision={() => {
+              const selectedCards = selectedCardIndices.map(i => human.hand[i]);
+              const result = submitDecision({ selectedCards });
+              if (result.ok) {
+                setSelectedCardIndices([]);
+              }
+            }}
+            onSkipDecision={() => {
+              const result = submitDecision({ selectedCards: [] });
+              if (result.ok) {
+                setSelectedCardIndices([]);
+              }
+            }}
           />
-        )}
-
-        {/* Decision panel */}
-        {state.pendingDecision && state.pendingDecision.player === "human" && (
-          <div style={{
-            padding: "var(--space-4)",
-            background: "rgba(99, 102, 241, 0.1)",
-            borderRadius: "8px",
-            border: "1px solid rgba(99, 102, 241, 0.3)",
-          }}>
-            <div style={{
-              color: "var(--color-text-primary)",
-              fontWeight: 600,
-              marginBottom: "var(--space-2)",
-            }}>
-              {state.pendingDecision.prompt}
-            </div>
-            <div style={{
-              color: "var(--color-text-secondary)",
-              fontSize: "0.875rem",
-              marginBottom: "var(--space-3)",
-            }}>
-              Selected: {selectedCardIndices.length > 0 ? selectedCardIndices.map(i => human.hand[i]).join(", ") : "(none)"}
-            </div>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <button
-                onClick={() => {
-                  const selectedCards = selectedCardIndices.map(i => human.hand[i]);
-                  const result = submitDecision({ selectedCards });
-                  if (result.ok) {
-                    setSelectedCardIndices([]);
-                  }
-                }}
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  background: "rgba(99, 102, 241, 0.8)",
-                  border: "none",
-                  borderRadius: "6px",
-                  color: "white",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                }}
-                disabled={selectedCardIndices.length < state.pendingDecision.min}
-              >
-                Confirm
-              </button>
-              {state.pendingDecision.min === 0 && (
-                <button
-                  onClick={() => {
-                    const result = submitDecision({ selectedCards: [] });
-                    if (result.ok) {
-                      setSelectedCardIndices([]);
-                    }
-                  }}
-                  style={{
-                    padding: "var(--space-2) var(--space-4)",
-                    background: "var(--color-bg-tertiary)",
-                    border: "1px solid var(--color-border-primary)",
-                    borderRadius: "6px",
-                    color: "var(--color-text-primary)",
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  Skip
-                </button>
-              )}
-            </div>
-          </div>
         )}
 
         <PlayerArea
@@ -291,7 +233,7 @@ export function Board({ onBackToHome }: BoardProps) {
         onModelSettingsChange={onModelSettingsChange}
         onNewGame={onNewGame}
         onBackToHome={onBackToHome}
-        onRequestUndo={requestUndo}
+        onRequestUndo={handleRequestUndo}
       />
 
       {state.gameOver && (
@@ -308,9 +250,7 @@ export function Board({ onBackToHome }: BoardProps) {
         events={events}
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
-        onBranchFrom={(eventId) => {
-          requestUndo(eventId);
-        }}
+        onBranchFrom={handleRequestUndo}
         onScrub={(eventId) => {
           setPreviewEventId(eventId);
         }}
