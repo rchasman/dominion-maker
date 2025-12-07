@@ -1,192 +1,36 @@
-import type { CardEffect } from "../card-effect";
-import type { CardName } from "../../types/game-state";
+/**
+ * Chapel - Trash up to 4 cards from your hand
+ */
 
-export const chapel: CardEffect = ({ state, player, children, decision }) => {
-  // Trash up to 4 cards from hand
-  const currentPlayer = state.players[player];
-  const MAX_TRASH = 4;
+import type { CardEffect, CardEffectResult } from "../effect-types";
 
-  // For human players, iterative trash decisions
-  if (player === "human") {
-    // Track trashed cards from metadata
-    const trashedCards: CardName[] =
-      (decision?.metadata?.trashedCards as CardName[]) || [];
+export const chapel: CardEffect = ({ state, player, decision }): CardEffectResult => {
+  const playerState = state.players[player];
 
-    // If we just made a selection, process it
-    if (decision && decision.selectedCards) {
-      // Skip was clicked (empty selection)
-      if (decision.selectedCards.length === 0) {
-        return { ...state, pendingDecision: null };
-      }
-
-      // Card was selected to trash
-      const toTrash = decision.selectedCards[0];
-      const newHand = [...currentPlayer.hand];
-      const idx = newHand.indexOf(toTrash);
-
-      // Validate card is in hand
-      if (idx === -1) {
-        console.error(`Chapel: Card ${toTrash} not found in hand`);
-        return state;
-      }
-
-      // Remove from hand and add to trash
-      newHand.splice(idx, 1);
-      const newTrashedCards = [...trashedCards, toTrash];
-
-      const newState = {
-        ...state,
-        players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-        trash: [...state.trash, toTrash],
-      };
-      children.push({ type: "trash-card", player, card: toTrash });
-
-      // Update currentPlayer reference
-      const updatedPlayer = newState.players[player];
-
-      // Auto-complete if reached max or hand is empty
-      if (newTrashedCards.length >= MAX_TRASH || updatedPlayer.hand.length === 0) {
-        return { ...newState, pendingDecision: null };
-      }
-
-      // Prompt for more trashing
-      const remaining = MAX_TRASH - newTrashedCards.length;
-      return {
-        ...newState,
-        pendingDecision: {
-          type: "trash",
-          player: "human",
-          prompt: `Chapel: Trash up to ${remaining} more cards (or skip)`,
-          options: [...updatedPlayer.hand],
-          minCount: 0,
-          maxCount: 1,
-          canSkip: true,
-          metadata: {
-            cardBeingPlayed: "Chapel",
-            trashedCards: newTrashedCards,
-            maxTrash: MAX_TRASH,
-          },
-        },
-      };
-    }
-
-    // Initial prompt (no decision yet)
-    if (!decision) {
-      // Auto-complete if hand is empty
-      if (currentPlayer.hand.length === 0) {
-        return { ...state, pendingDecision: null };
-      }
-
-      return {
-        ...state,
-        pendingDecision: {
-          type: "trash",
-          player: "human",
-          prompt: "Chapel: Trash up to 4 cards from your hand (or skip)",
-          options: [...currentPlayer.hand],
-          minCount: 0,
-          maxCount: 1,
-          canSkip: true,
-          metadata: {
-            cardBeingPlayed: "Chapel",
-            trashedCards: [],
-            maxTrash: MAX_TRASH,
-          },
-        },
-      };
-    }
-
-    return state;
-  }
-
-  // For AI: Use same iterative process as human (allows LLM reasoning)
-  // Track trashed cards from metadata
-  const trashedCards: CardName[] =
-    (decision?.metadata?.trashedCards as CardName[]) || [];
-
-  // If we just made a selection, process it
-  if (decision && decision.selectedCards) {
-    // Skip was clicked (empty selection)
-    if (decision.selectedCards.length === 0) {
-      return { ...state, pendingDecision: null };
-    }
-
-    // Card was selected to trash
-    const toTrash = decision.selectedCards[0];
-    const newHand = [...currentPlayer.hand];
-    const idx = newHand.indexOf(toTrash);
-
-    // Validate card is in hand
-    if (idx === -1) {
-      console.error(`Chapel: Card ${toTrash} not found in hand`);
-      return state;
-    }
-
-    // Remove from hand and add to trash
-    newHand.splice(idx, 1);
-    const newTrashedCards = [...trashedCards, toTrash];
-
-    const newState = {
-      ...state,
-      players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-      trash: [...state.trash, toTrash],
-    };
-    children.push({ type: "trash-card", player, card: toTrash });
-
-    // Update currentPlayer reference
-    const updatedPlayer = newState.players[player];
-
-    // Auto-complete if reached max or hand is empty
-    if (newTrashedCards.length >= MAX_TRASH || updatedPlayer.hand.length === 0) {
-      return { ...newState, pendingDecision: null };
-    }
-
-    // Prompt for more trashing
-    const remaining = MAX_TRASH - newTrashedCards.length;
-    return {
-      ...newState,
-      pendingDecision: {
-        type: "trash",
-        player: "ai",
-        prompt: `Chapel: Trash up to ${remaining} more cards (or skip)`,
-        options: [...updatedPlayer.hand],
-        minCount: 0,
-        maxCount: 1,
-        canSkip: true,
-        metadata: {
-          cardBeingPlayed: "Chapel",
-          trashedCards: newTrashedCards,
-          maxTrash: MAX_TRASH,
-        },
-      },
-    };
-  }
-
-  // Initial prompt (no decision yet)
+  // Request trash choice
   if (!decision) {
-    // Auto-complete if hand is empty
-    if (currentPlayer.hand.length === 0) {
-      return { ...state, pendingDecision: null };
-    }
+    if (playerState.hand.length === 0) return { events: [] };
 
     return {
-      ...state,
+      events: [],
       pendingDecision: {
-        type: "trash",
-        player: "ai",
-        prompt: "Chapel: Trash up to 4 cards from your hand (or skip)",
-        options: [...currentPlayer.hand],
-        minCount: 0,
-        maxCount: 1,
-        canSkip: true,
-        metadata: {
-          cardBeingPlayed: "Chapel",
-          trashedCards: [],
-          maxTrash: MAX_TRASH,
-        },
+        type: "select_cards",
+        player,
+        from: "hand",
+        prompt: "Chapel: Trash up to 4 cards from your hand",
+        cardOptions: [...playerState.hand],
+        min: 0,
+        max: Math.min(4, playerState.hand.length),
+        stage: "trash",
       },
     };
   }
 
-  return state;
+  // Execute trash
+  const toTrash = decision.selectedCards;
+  if (toTrash.length === 0) return { events: [] };
+
+  return {
+    events: [{ type: "CARDS_TRASHED", player, cards: toTrash, from: "hand" }],
+  };
 };

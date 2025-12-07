@@ -1,64 +1,53 @@
-import type { CardEffect } from "../card-effect";
-import type { Player } from "../../types/game-state";
+/**
+ * Bandit - Gain a Gold. Each other player reveals top 2 cards, trashes a non-Copper Treasure
+ */
 
-export const bandit: CardEffect = ({ state, player, children }) => {
-  // Gain Gold. Attack: others reveal top 2, trash a Treasure (not Copper)
-  const currentPlayer = state.players[player];
-  const opponent: Player = player === "human" ? "ai" : "human";
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { getOpponents, peekDraw } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+import { CARDS } from "../../data/cards";
 
-  let newState = state;
+export const bandit: CardEffect = ({ state, player }): CardEffectResult => {
+  const events: GameEvent[] = [];
+  const opponents = getOpponents(state, player);
 
   // Gain Gold
   if (state.supply.Gold > 0) {
-    newState = {
-      ...state,
-      players: {
-        ...state.players,
-        [player]: {
-          ...currentPlayer,
-          discard: [...currentPlayer.discard, "Gold"],
-        },
-      },
-      supply: {
-        ...state.supply,
-        Gold: state.supply.Gold - 1,
-      },
-    };
-    children.push({ type: "gain-card", player, card: "Gold" });
+    events.push({ type: "CARD_GAINED", player, card: "Gold", to: "discard" });
   }
 
-  // Attack: reveal top 2 cards from opponent's deck
-  const oppPlayer = newState.players[opponent];
-  let deck = [...oppPlayer.deck];
-  let discard = [...oppPlayer.discard];
+  // Attack each opponent
+  for (const opp of opponents) {
+    const oppState = state.players[opp];
+    if (!oppState) continue;
 
-  // Shuffle if needed
-  if (deck.length < 2 && discard.length > 0) {
-    deck = [...deck, ...discard];
-    discard = [];
+    // Reveal top 2 cards
+    const { cards: revealed } = peekDraw(oppState, 2);
+
+    if (revealed.length > 0) {
+      events.push({ type: "CARDS_REVEALED", player: opp, cards: revealed, from: "deck" });
+
+      // Find non-Copper treasures to trash (Silver or Gold)
+      const trashable = revealed.filter(
+        c => CARDS[c].types.includes("treasure") && c !== "Copper"
+      );
+
+      if (trashable.length > 0) {
+        // Trash the first one (prefer Gold > Silver if multiple)
+        const toTrash = trashable.includes("Gold") ? "Gold" : trashable[0];
+        events.push({ type: "CARDS_TRASHED", player: opp, cards: [toTrash], from: "deck" });
+
+        // Remaining revealed cards go to discard
+        const remaining = revealed.filter(c => c !== toTrash);
+        if (remaining.length > 0) {
+          events.push({ type: "CARDS_DISCARDED", player: opp, cards: remaining, from: "deck" });
+        }
+      } else {
+        // No treasures to trash, all revealed go to discard
+        events.push({ type: "CARDS_DISCARDED", player: opp, cards: revealed, from: "deck" });
+      }
+    }
   }
 
-  const revealed = [deck[0], deck[1]].filter(c => c !== undefined);
-  const treasureToTrash = revealed.find(c => c === "Silver" || c === "Gold");
-
-  if (treasureToTrash) {
-    const idx = deck.indexOf(treasureToTrash);
-    deck.splice(idx, 1);
-
-    newState = {
-      ...newState,
-      players: {
-        ...newState.players,
-        [opponent]: {
-          ...oppPlayer,
-          deck,
-          discard,
-        },
-      },
-      trash: [...newState.trash, treasureToTrash],
-    };
-    children.push({ type: "text", message: `${opponent} trashed ${treasureToTrash}` });
-  }
-
-  return newState;
+  return { events };
 };

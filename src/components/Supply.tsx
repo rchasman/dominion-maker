@@ -1,4 +1,5 @@
-import type { CardName, GameState, PendingDecision } from "../types/game-state";
+import type { CardName, GameState } from "../types/game-state";
+import type { DecisionRequest } from "../events/types";
 import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 
@@ -7,7 +8,7 @@ interface SupplyProps {
   onBuyCard?: (card: CardName) => void;
   canBuy: boolean;
   availableCoins: number;
-  pendingDecision?: PendingDecision | null;
+  pendingDecision?: DecisionRequest | null;
 }
 
 export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecision }: SupplyProps) {
@@ -15,9 +16,10 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
   const victory: CardName[] = ["Estate", "Duchy", "Province", "Curse"];
 
   const canInteract = (card: CardName) => {
-    // If there's a gain decision, only enable cards in the options
-    if (pendingDecision && pendingDecision.type === "gain") {
-      return pendingDecision.options.includes(card) && state.supply[card] > 0;
+    // If there's a gain decision from supply, only enable cards in the options
+    if (pendingDecision && pendingDecision.from === "supply") {
+      const options = pendingDecision.cardOptions || [];
+      return options.includes(card) && state.supply[card] > 0;
     }
 
     // Normal buy phase logic
@@ -26,10 +28,11 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
 
   // Determine highlight mode for supply cards
   const getSupplyCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
-    if (!pendingDecision || pendingDecision.type !== "gain") return undefined;
+    if (!pendingDecision || pendingDecision.from !== "supply") return undefined;
 
     // Check if this card is in the gain options
-    const isGainable = pendingDecision.options.includes(card);
+    const options = pendingDecision.cardOptions || [];
+    const isGainable = options.includes(card);
     return isGainable ? "gain" : undefined;
   };
 

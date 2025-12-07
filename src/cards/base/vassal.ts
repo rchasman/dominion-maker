@@ -1,48 +1,64 @@
-import type { CardEffect } from "../card-effect";
-import { isActionCard } from "../../data/cards";
+/**
+ * Vassal - +$2. Discard top card. If it's an Action, you may play it
+ */
 
-export const vassal: CardEffect = ({ state, player, children }) => {
-  // +$2. Discard top of deck; if Action, may play it free
-  const currentPlayer = state.players[player];
-  let deck = [...currentPlayer.deck];
-  let discard = [...currentPlayer.discard];
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { peekDraw } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+import { CARDS } from "../../data/cards";
+import type { CardName } from "../../types/game-state";
 
-  // If deck empty, shuffle discard
-  if (deck.length === 0 && discard.length > 0) {
-    deck = [...discard];
-    discard = [];
-  }
+function isActionCard(card: CardName): boolean {
+  return CARDS[card].types.includes("action");
+}
 
-  if (deck.length > 0) {
-    const topCard = deck.shift()!;
+export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
+  const events: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
 
-    const newState = {
-      ...state,
-      players: {
-        ...state.players,
-        [player]: {
-          ...currentPlayer,
-          deck,
-          discard: [...discard, topCard],
-        },
-      },
-      coins: state.coins + 2,
-    };
-    children.push({ type: "get-coins", player, count: 2 });
-    children.push({ type: "text", message: `Discarded ${topCard}` });
+  // Initial: +$2, reveal and discard top card
+  if (!decision || stage === undefined) {
+    const { cards: revealed } = peekDraw(playerState, 1);
 
-    // If action card, play it (simplified: always play if possible)
-    if (isActionCard(topCard)) {
-      // Move to inPlay and recursively apply effect would be complex
-      children.push({ type: "text", message: `(${topCard} played from discard - not fully implemented)` });
+    if (revealed.length === 0) {
+      return { events };
     }
-    return newState;
-  } else {
-    const newState = {
-      ...state,
-      coins: state.coins + 2,
-    };
-    children.push({ type: "get-coins", player, count: 2 });
-    return newState;
+
+    const topCard = revealed[0];
+    events.push({ type: "CARDS_DISCARDED", player, cards: [topCard], from: "deck" });
+
+    // If it's an action, offer to play it
+    if (isActionCard(topCard)) {
+      return {
+        events,
+        pendingDecision: {
+          type: "select_cards",
+          player,
+          from: "options",
+          prompt: `Vassal: Play ${topCard} from discard?`,
+          cardOptions: [topCard],
+          min: 0,
+          max: 1,
+          stage: "play_action",
+          metadata: { discardedCard: topCard },
+        },
+      };
+    }
+
+    return { events };
   }
+
+  // Play the action from discard
+  if (stage === "play_action") {
+    // Note: The actual playing of the action card is handled by the engine
+    // This just signals the intent
+    if (decision.selectedCards.length > 0) {
+      const cardToPlay = decision.selectedCards[0];
+      // Move from discard to play area (the effect will be executed by engine)
+      events.push({ type: "CARD_PLAYED", player, card: cardToPlay });
+    }
+    return { events };
+  }
+
+  return { events: [] };
 };

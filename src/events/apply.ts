@@ -423,20 +423,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       return {
         ...state,
         subPhase: decision.player !== state.activePlayer ? "opponent_decision" : null,
-        pendingDecision: {
-          type: mapDecisionType(decision.type),
-          player: decision.player,
-          prompt: decision.prompt,
-          options: decision.cardOptions || [],
-          minCount: decision.min,
-          maxCount: decision.max,
-          canSkip: decision.min === 0,
-          metadata: {
-            cardBeingPlayed: decision.cardBeingPlayed,
-            stage: decision.stage,
-            ...decision.metadata,
-          },
-        },
+        pendingDecision: decision,
       };
     }
 
@@ -495,12 +482,3 @@ export function applyEvents(state: GameState, events: GameEvent[]): GameState {
   return events.reduce(applyEvent, state);
 }
 
-// Helper to map event decision types to legacy PendingDecision types
-function mapDecisionType(type: DecisionRequest["type"]): "discard" | "trash" | "gain" | "choose_card_from_options" {
-  switch (type) {
-    case "select_cards":
-      return "choose_card_from_options";
-    default:
-      return "choose_card_from_options";
-  }
-}

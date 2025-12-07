@@ -1,4 +1,5 @@
-import type { CardName, PlayerState, PendingDecision, Phase, TurnSubPhase } from "../types/game-state";
+import type { CardName, PlayerState, Phase, TurnSubPhase } from "../types/game-state";
+import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
 import { CARDS } from "../data/cards";
 
@@ -12,7 +13,7 @@ interface PlayerAreaProps {
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName, index: number) => void;
   compact?: boolean;
-  pendingDecision?: PendingDecision | null;
+  pendingDecision?: DecisionRequest | null;
   phase: Phase;
   subPhase: TurnSubPhase;
   loading?: boolean;
@@ -79,13 +80,16 @@ export function PlayerArea({
     // Only highlight if the decision is for this player (human)
     if (pendingDecision.player !== "human") return undefined;
 
+    // Only apply highlights when selecting from hand
+    if (pendingDecision.from !== "hand") return undefined;
+
     // Check if this card is in the options
-    const isSelectable = pendingDecision.options.includes(card);
+    const isSelectable = pendingDecision.cardOptions?.includes(card) ?? true;
     if (!isSelectable) return undefined;
 
-    // Return highlight mode based on decision type
-    if (pendingDecision.type === "trash") return "trash";
-    if (pendingDecision.type === "discard") return "discard";
+    // Return highlight mode based on stage (trash/discard)
+    if (pendingDecision.stage === "trash") return "trash";
+    if (pendingDecision.stage === "discard") return "discard";
 
     return undefined;
   };
@@ -98,8 +102,9 @@ export function PlayerArea({
     if (!isActive) return true;
 
     // If there's a pending decision for the human player, only cards in options are clickable
-    if (pendingDecision && pendingDecision.player === "human") {
-      return !pendingDecision.options.includes(card);
+    if (pendingDecision && pendingDecision.player === "human" && pendingDecision.from === "hand") {
+      const cardOptions = pendingDecision.cardOptions ?? [];
+      return cardOptions.length > 0 && !cardOptions.includes(card);
     }
 
     const cardDef = CARDS[card];
@@ -328,8 +333,7 @@ export function PlayerArea({
             </div>
           ) : player.discard.length > 0 ? (
             // If there's a decision to choose from discard, show all cards
-            (pendingDecision && pendingDecision.type === "choose_card_from_options" &&
-             isHuman && player.discard.some(c => pendingDecision.options.includes(c))) ? (
+            (pendingDecision && pendingDecision.from === "discard" && isHuman) ? (
               <div style={{
                 display: "flex",
                 flexWrap: "wrap",
@@ -341,16 +345,19 @@ export function PlayerArea({
                 border: "2px dashed #10b981",
                 borderRadius: "4px",
               }}>
-                {player.discard.map((card, i) => (
-                  <Card
-                    key={`${card}-${i}`}
-                    name={card}
-                    size="small"
-                    onClick={() => onCardClick?.(card, i)}
-                    highlightMode={pendingDecision.options.includes(card) ? "gain" : undefined}
-                    disabled={!pendingDecision.options.includes(card)}
-                  />
-                ))}
+                {player.discard.map((card, i) => {
+                  const isOption = pendingDecision.cardOptions?.includes(card) ?? true;
+                  return (
+                    <Card
+                      key={`${card}-${i}`}
+                      name={card}
+                      size="small"
+                      onClick={() => onCardClick?.(card, i)}
+                      highlightMode={isOption ? "gain" : undefined}
+                      disabled={!isOption}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} disabled={!isActive} />

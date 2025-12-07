@@ -1,156 +1,76 @@
-import type { CardEffect } from "../card-effect";
-import type { CardName } from "../../types/game-state";
+/**
+ * Remodel - Trash a card from hand, gain a card costing up to $2 more
+ */
+
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { getGainableCards } from "../effect-types";
+import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
-export const remodel: CardEffect = ({ state, player, children, decision }) => {
-  // Trash a card, gain one costing up to $2 more
-  const currentPlayer = state.players[player];
+export const remodel: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
 
-  // For human players, use multi-stage decision process
-  if (player === "human") {
-    // Stage 1: Choose card to trash
-    if (!decision) {
-      if (currentPlayer.hand.length === 0) return state;
+  // Stage 1: Choose card to trash
+  if (!decision || stage === undefined) {
+    if (playerState.hand.length === 0) return { events: [] };
 
-      return {
-        ...state,
-        pendingDecision: {
-          type: "trash",
-          player: "human",
-          prompt: "Remodel: Choose a card to trash",
-          options: [...currentPlayer.hand],
-          minCount: 1,
-          maxCount: 1,
-          canSkip: false,
-          metadata: { cardBeingPlayed: "Remodel", stage: "trash" },
-        },
-      };
-    }
-
-    // Stage 2: Card trashed, now choose what to gain
-    if (decision.stage === "trash" && decision.selectedCards && decision.selectedCards.length > 0) {
-      const toTrash = decision.selectedCards[0];
-      const newHand = [...currentPlayer.hand];
-      const idx = newHand.indexOf(toTrash);
-      if (idx === -1) return state;
-
-      newHand.splice(idx, 1);
-
-      const trashCost = CARDS[toTrash].cost;
-      const maxCost = trashCost + 2;
-
-      // Find all cards we can gain (up to maxCost)
-      const gainOptions: CardName[] = [];
-      for (const [card, count] of Object.entries(state.supply)) {
-        if (count > 0 && CARDS[card as CardName].cost <= maxCost) {
-          gainOptions.push(card as CardName);
-        }
-      }
-
-      const newState = {
-        ...state,
-        players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-        trash: [...state.trash, toTrash],
-      };
-      children.push({ type: "trash-card", player, card: toTrash });
-
-      if (gainOptions.length === 0) {
-        // No cards to gain
-        return newState;
-      }
-
-      return {
-        ...newState,
-        pendingDecision: {
-          type: "gain",
-          player: "human",
-          prompt: `Remodel: Gain a card costing up to $${maxCost}`,
-          options: gainOptions,
-          minCount: 1,
-          maxCount: 1,
-          canSkip: false,
-          metadata: { cardBeingPlayed: "Remodel", stage: "gain", trashed: toTrash },
-        },
-      };
-    }
-
-    // Stage 3: Gain the chosen card
-    if (decision.stage === "gain" && decision.selectedCards && decision.selectedCards.length > 0) {
-      const gained = decision.selectedCards[0];
-
-      const newState = {
-        ...state,
-        pendingDecision: null, // Clear decision - we're done!
-        players: {
-          ...state.players,
-          [player]: {
-            ...currentPlayer,
-            discard: [...currentPlayer.discard, gained],
-          },
-        },
-        supply: {
-          ...state.supply,
-          [gained]: state.supply[gained] - 1,
-        },
-      };
-      children.push({ type: "gain-card", player, card: gained });
-      return newState;
-    }
-
-    return state;
+    return {
+      events: [],
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "hand",
+        prompt: "Remodel: Choose a card to trash",
+        cardOptions: [...playerState.hand],
+        min: 1,
+        max: 1,
+        stage: "trash",
+      },
+    };
   }
 
-  // For AI: simplified auto-choose behavior
-  const toTrash = currentPlayer.hand.find(c => c === "Curse") ||
-                  currentPlayer.hand.find(c => c === "Copper") ||
-                  currentPlayer.hand.find(c => c === "Estate");
-
-  if (toTrash) {
-    const newHand = [...currentPlayer.hand];
-    const idx = newHand.indexOf(toTrash);
-    newHand.splice(idx, 1);
+  // Stage 2: Trash chosen, now choose gain
+  if (stage === "trash") {
+    const toTrash = decision.selectedCards[0];
+    if (!toTrash) return { events: [] };
 
     const trashCost = CARDS[toTrash].cost;
     const maxCost = trashCost + 2;
+    const gainOptions = getGainableCards(state, maxCost);
 
-    // Gain best card up to maxCost (prioritize: Gold > Silver > Duchy > action cards)
-    const options: CardName[] = ["Gold", "Silver", "Duchy", "Smithy", "Market", "Estate"];
-    let gained: CardName | null = null;
+    const events: GameEvent[] = [
+      { type: "CARDS_TRASHED", player, cards: [toTrash], from: "hand" },
+    ];
 
-    for (const option of options) {
-      if (state.supply[option] > 0 && CARDS[option].cost <= maxCost) {
-        gained = option;
-        break;
-      }
+    if (gainOptions.length === 0) {
+      return { events };
     }
 
-    let newState = {
-      ...state,
-      players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-      trash: [...state.trash, toTrash],
+    return {
+      events,
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "supply",
+        prompt: `Remodel: Gain a card costing up to $${maxCost}`,
+        cardOptions: gainOptions,
+        min: 1,
+        max: 1,
+        stage: "gain",
+        metadata: { trashedCard: toTrash, maxCost },
+      },
     };
-    children.push({ type: "trash-card", player, card: toTrash });
-
-    if (gained) {
-      newState = {
-        ...newState,
-        players: {
-          ...newState.players,
-          [player]: {
-            ...newState.players[player],
-            discard: [...newState.players[player].discard, gained],
-          },
-        },
-        supply: {
-          ...newState.supply,
-          [gained]: newState.supply[gained] - 1,
-        },
-      };
-      children.push({ type: "gain-card", player, card: gained });
-    }
-
-    return newState;
   }
 
-  return state;
+  // Stage 3: Execute gain
+  if (stage === "gain") {
+    const gained = decision.selectedCards[0];
+    if (!gained) return { events: [] };
+
+    return {
+      events: [{ type: "CARD_GAINED", player, card: gained, to: "discard" }],
+    };
+  }
+
+  return { events: [] };
 };

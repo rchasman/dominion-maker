@@ -1,49 +1,52 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
+/**
+ * Poacher - +1 Card, +1 Action, +$1. Discard 1 card per empty supply pile
+ */
 
-export const poacher: CardEffect = ({ state, player, children }) => {
-  // +1 Card, +1 Action, +$1. Discard per empty Supply pile
-  const drawResult = drawCards(state.players[player], 1);
-  const emptyPiles = Object.values(state.supply).filter(n => n === 0).length;
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+import type { GameEvent } from "../../events/types";
 
-  let newState = {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-    actions: state.actions + 1,
-    coins: state.coins + 1,
-  };
-  logDraw(children, drawResult, player);
-  children.push({ type: "get-actions", player, count: 1 });
-  children.push({ type: "get-coins", player, count: 1 });
+export const poacher: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
+  const events: GameEvent[] = [];
 
-  // Discard cards equal to empty piles (simplified: discard worst cards)
-  if (emptyPiles > 0) {
-    const currentPlayer = newState.players[player];
-    const toDiscard = currentPlayer.hand
-      .filter(c => c === "Copper" || c === "Estate" || c === "Curse")
-      .slice(0, emptyPiles);
+  // Count empty supply piles
+  const emptyPiles = Object.values(state.supply).filter(count => count === 0).length;
 
-    if (toDiscard.length > 0) {
-      const newHand = [...currentPlayer.hand];
-      for (const card of toDiscard) {
-        const idx = newHand.indexOf(card);
-        if (idx !== -1) newHand.splice(idx, 1);
-      }
+  // Initial: +1 Card, +1 Action, +$1
+  if (!decision || stage === undefined) {
+    events.push(...createDrawEvents(player, playerState, 1));
+    events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
+    events.push({ type: "COINS_MODIFIED", delta: 1 });
 
-      newState = {
-        ...newState,
-        players: {
-          ...newState.players,
-          [player]: {
-            ...currentPlayer,
-            hand: newHand,
-            discard: [...currentPlayer.discard, ...toDiscard],
-          },
-        },
-      };
-      children.push({ type: "discard-cards", player, count: toDiscard.length, cards: toDiscard });
+    if (emptyPiles === 0 || playerState.hand.length === 0) {
+      return { events };
     }
+
+    const discardCount = Math.min(emptyPiles, playerState.hand.length);
+
+    return {
+      events,
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "hand",
+        prompt: `Poacher: Discard ${discardCount} card(s) (${emptyPiles} empty pile(s))`,
+        cardOptions: [...playerState.hand],
+        min: discardCount,
+        max: discardCount,
+        stage: "discard",
+      },
+    };
   }
 
-  return newState;
+  // Discard
+  if (stage === "discard") {
+    if (decision.selectedCards.length > 0) {
+      events.push({ type: "CARDS_DISCARDED", player, cards: decision.selectedCards, from: "hand" });
+    }
+    return { events };
+  }
+
+  return { events: [] };
 };

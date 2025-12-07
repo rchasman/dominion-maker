@@ -2,7 +2,7 @@ import type { GameState, CardName, Player } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
-import { getCardEffect } from "../cards/effects";
+import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { peekDraw } from "../cards/effect-types";
 import { shuffle } from "../lib/game-utils";

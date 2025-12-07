@@ -1,15 +1,14 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
+/**
+ * Merchant - +1 Card, +1 Action. First Silver you play this turn: +$1
+ */
 
-export const merchant: CardEffect = ({ state, player, children }) => {
-  // +1 Card, +1 Action. First Silver played = +$1
-  // Note: The +$1 bonus would need to be tracked in state, simplified for now
-  const drawResult = drawCards(state.players[player], 1);
-  logDraw(children, drawResult, player);
-  children.push({ type: "get-actions", player, count: 1 });
-  return {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-    actions: state.actions + 1,
-  };
+import type { CardEffect } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+
+export const merchant: CardEffect = ({ state, player }): CardEffectResult => {
+  const events: GameEvent[] = createDrawEvents(player, state.players[player], 1);
+  events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
+  // The +$1 for Silver is tracked by the engine during buy phase
+  return { events };
 };

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { DecisionRequest } from "../events/types";
 
 // Card names for base game
 export const CardName = z.enum([
@@ -290,19 +291,6 @@ const LogEntrySchema: z.ZodType<LogEntry> = z.lazy(() =>
 
 export const LogEntry = LogEntrySchema;
 
-export const DecisionType = z.enum([
-  "play_action",
-  "buy_card",
-  "discard",
-  "trash",
-  "gain",
-  "end_actions",
-  "end_buys",
-  "reveal_reaction",
-  "choose_card_from_options",
-]);
-export type DecisionType = z.infer<typeof DecisionType>;
-
 export const PlayerState = z.object({
   deck: z.array(CardName),
   hand: z.array(CardName),
@@ -312,18 +300,6 @@ export const PlayerState = z.object({
   deckTopRevealed: z.boolean().optional(), // true when top card is known (e.g. from Bureaucrat)
 });
 export type PlayerState = z.infer<typeof PlayerState>;
-
-export const PendingDecision = z.object({
-  type: DecisionType,
-  player: Player,
-  prompt: z.string(),
-  options: z.array(z.union([CardName, z.string()])),
-  minCount: z.number().optional(),
-  maxCount: z.number().optional(),
-  canSkip: z.boolean().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
-export type PendingDecision = z.infer<typeof PendingDecision>;
 
 // Action history entry (subset of Action without reasoning)
 export const TurnAction = z.object({
@@ -360,7 +336,7 @@ export const GameState = z.object({
   buys: z.number(),
   coins: z.number(),
 
-  pendingDecision: PendingDecision.nullable(),
+  pendingDecision: z.any().nullable(), // DecisionRequest from events/types.ts
 
   gameOver: z.boolean(),
   winner: Player.nullable(),
@@ -373,7 +349,12 @@ export const GameState = z.object({
   playerInfo: z.record(Player, PlayerInfo).optional(), // Player names, types, connection status
   isMultiplayer: z.boolean().optional(), // Flag to indicate multiplayer mode
 });
-export type GameState = z.infer<typeof GameState>;
+
+// Override the inferred type to use DecisionRequest
+type BaseGameState = z.infer<typeof GameState>;
+export type GameState = Omit<BaseGameState, 'pendingDecision'> & {
+  pendingDecision: DecisionRequest | null;
+};
 
 export const HumanChoice = z.object({
   selectedCards: z.array(CardName),

@@ -1,8 +1,9 @@
-import type { PendingDecision, CardName } from "../types/game-state";
+import type { CardName } from "../types/game-state";
+import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
 
 interface ActionPromptProps {
-  decision: PendingDecision;
+  decision: DecisionRequest;
   selectedCards: CardName[];
   onToggleCard: (card: CardName) => void;
   onConfirm: () => void;
@@ -16,8 +17,8 @@ export function ActionPrompt({
   onConfirm,
   onSkip,
 }: ActionPromptProps) {
-  const minCount = decision.minCount ?? 1;
-  const maxCount = decision.maxCount ?? 1;
+  const minCount = decision.min;
+  const maxCount = decision.max;
   const canConfirm =
     selectedCards.length >= minCount && selectedCards.length <= maxCount;
 
@@ -42,7 +43,7 @@ export function ActionPrompt({
         </p>
 
         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-          {decision.options.map((card) => {
+          {(decision.cardOptions || []).map((card) => {
             const cardName = card as CardName;
             return (
               <Card
@@ -71,7 +72,7 @@ export function ActionPrompt({
           >
             Confirm
           </button>
-          {decision.canSkip && (
+          {decision.min === 0 && (
             <button
               onClick={onSkip}
               style={{

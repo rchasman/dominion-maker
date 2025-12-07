@@ -26,10 +26,12 @@ interface GameSidebarProps {
   state: GameState;
   isProcessing: boolean;
   gameMode: GameMode;
-  modelSettings: ModelSettings;
-  onModelSettingsChange: (settings: ModelSettings) => void;
-  onNewGame: () => void;
+  modelSettings?: ModelSettings; // Optional for multiplayer
+  onModelSettingsChange?: (settings: ModelSettings) => void; // Optional for multiplayer
+  onNewGame?: () => void; // Optional (single-player)
+  onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
+  onRequestUndo?: (eventId: string, reason: string) => void; // New for clickable log
 }
 
 export function GameSidebar({
@@ -39,7 +41,9 @@ export function GameSidebar({
   modelSettings,
   onModelSettingsChange,
   onNewGame,
+  onEndGame,
   onBackToHome,
+  onRequestUndo,
 }: GameSidebarProps) {
   const { llmLogs } = useLLMLogs();
   const isHumanTurn = state.activePlayer === "human";
@@ -201,17 +205,19 @@ export function GameSidebar({
         }} />
       </div>
 
-      {/* LLM Debug Log */}
-      <div style={{
-        height: `${100 - gameLogHeight}%`,
-        minBlockSize: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--color-bg-primary)",
-        overflow: "hidden",
-      }}>
-        <LLMLog entries={llmLogs} gameMode={gameMode} />
-      </div>
+      {/* LLM Debug Log - only show in single-player LLM/hybrid modes */}
+      {(gameMode === "llm" || gameMode === "hybrid") && (
+        <div style={{
+          height: `${100 - gameLogHeight}%`,
+          minBlockSize: 0,
+          display: "flex",
+          flexDirection: "column",
+          background: "var(--color-bg-primary)",
+          overflow: "hidden",
+        }}>
+          <LLMLog entries={llmLogs} gameMode={gameMode} />
+        </div>
+      )}
 
       {/* Game status */}
       <div style={{
@@ -246,7 +252,7 @@ export function GameSidebar({
           <span>Opp: <strong style={{ color: "var(--color-ai)" }}>{opponentVP} VP</strong></span>
         </div>
 
-        {(gameMode === "llm" || gameMode === "hybrid") && (
+        {modelSettings && onModelSettingsChange && (
           <div style={{ marginBlockStart: "var(--space-3)" }}>
             <ModelSettingsAccordion
               settings={modelSettings}
@@ -276,26 +282,51 @@ export function GameSidebar({
           </button>
         )}
 
-        <button
-          onClick={onNewGame}
-          style={{
-            marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
-            padding: "var(--space-2)",
-            background: "transparent",
-            color: "var(--color-text-secondary)",
-            border: "1px solid var(--color-border)",
-            cursor: "pointer",
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            fontFamily: "inherit",
-            borderRadius: "4px",
-            width: "100%",
-          }}
-          title="Start a new game"
-        >
-          ↻ New Game
-        </button>
+        {onNewGame && (
+          <button
+            onClick={onNewGame}
+            style={{
+              marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
+              padding: "var(--space-2)",
+              background: "transparent",
+              color: "var(--color-text-secondary)",
+              border: "1px solid var(--color-border)",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+              width: "100%",
+            }}
+            title="Start a new game"
+          >
+            ↻ New Game
+          </button>
+        )}
+
+        {onEndGame && (
+          <button
+            onClick={onEndGame}
+            style={{
+              marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
+              padding: "var(--space-2)",
+              background: "rgba(239, 68, 68, 0.2)",
+              color: "#ef4444",
+              border: "1px solid rgba(239, 68, 68, 0.5)",
+              cursor: "pointer",
+              fontSize: "0.75rem",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+              width: "100%",
+            }}
+            title="End the game"
+          >
+            End Game
+          </button>
+        )}
       </div>
     </div>
   );

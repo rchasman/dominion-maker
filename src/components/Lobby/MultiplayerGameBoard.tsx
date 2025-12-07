@@ -9,6 +9,7 @@ import { useMultiplayer } from "../../context/MultiplayerContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
+import { GameSidebar } from "../Board/GameSidebar";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import type { CardName, Player } from "../../types/game-state";
@@ -284,173 +285,22 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         />
       </div>
 
-      {/* Sidebar */}
-      <div style={styles.sidebar}>
-        {/* Game info */}
-        <div style={styles.infoBox}>
-          <InfoRow label="Turn" value={displayState.turn.toString()} />
-          <InfoRow label="Actions" value={displayState.actions.toString()} />
-          <InfoRow label="Buys" value={displayState.buys.toString()} />
-          <InfoRow label="Coins" value={`$${displayState.coins}`} />
-        </div>
-
-        {/* Players */}
-        <div style={styles.playersSection}>
-          <h3 style={styles.sectionTitle}>Players</h3>
-          {displayState.playerOrder?.map((playerId) => {
-            const info = playerInfo?.[playerId];
-            const pState = displayState.players[playerId];
-            const isActive = displayState.activePlayer === playerId;
-            const isMe = playerId === myPlayer;
-            const vp = pState ? countVP(getAllCards(pState)) : 0;
-
-            return (
-              <div
-                key={playerId}
-                style={{
-                  ...styles.playerCard,
-                  borderColor: isActive ? "var(--color-gold)" : isMe ? "rgba(34, 197, 94, 0.3)" : "var(--color-border-primary)",
-                  background: isMe ? "rgba(34, 197, 94, 0.1)" : "var(--color-bg-tertiary)",
-                }}
-              >
-                <div style={styles.playerName}>
-                  {info?.name ?? playerId}
-                  {isMe && " (you)"}
-                </div>
-                <div style={styles.playerStats}>
-                  Hand: {pState?.hand.length ?? 0} | Deck: {pState?.deck.length ?? 0} | VP: {vp}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Event log / Time travel */}
-        <div style={styles.logSection}>
-          <h3 style={styles.sectionTitle}>
-            Event Log ({previewEventId ? (() => {
-              const previewIndex = events.findIndex(e => e.id === previewEventId);
-              return previewIndex + 1;
-            })() : events.length})
-            {previewEventId && (
-              <button
-                onClick={() => setPreviewEventId(null)}
-                style={styles.exitPreviewButton}
-              >
-                Exit Preview
-              </button>
-            )}
-          </h3>
-          <div style={styles.eventList}>
-            {(() => {
-              // Filter events up to preview point if scrubbing
-              const visibleEvents = previewEventId
-                ? events.slice(0, events.findIndex(e => e.id === previewEventId) + 1)
-                : events;
-
-              return visibleEvents
-                .slice(-20)
-                .map((event) => {
-                  const isPreview = previewEventId === event.id;
-                  const isSetupEvent = ["GAME_INITIALIZED", "INITIAL_DECK_DEALT", "INITIAL_HAND_DRAWN"].includes(event.type);
-                  const isInitialTurn = event.type === "TURN_STARTED" && (event as any).turn === 1;
-                  const isRootEvent = !event.causedBy;
-                  const hasParent = !!event.causedBy;
-
-                  return (
-                    <div
-                      key={event.id}
-                      style={{
-                        ...styles.eventItem,
-                        background: isPreview ? "rgba(99, 102, 241, 0.2)" : undefined,
-                        paddingLeft: hasParent ? "24px" : "var(--space-2)",
-                      }}
-                    >
-                      {hasParent && (
-                        <span style={{
-                          marginRight: "var(--space-1)",
-                          color: "var(--color-text-tertiary)",
-                          fontSize: "0.75rem",
-                        }}>
-                          └
-                        </span>
-                      )}
-                      <span
-                        style={styles.eventIdStyle}
-                        onClick={() => setPreviewEventId(event.id)}
-                      >
-                        {event.id}
-                      </span>
-                      <span
-                        style={styles.eventType}
-                        onClick={() => setPreviewEventId(event.id)}
-                      >
-                        {event.type}
-                      </span>
-                      {!pendingUndo && !isSetupEvent && !isInitialTurn && isRootEvent && event.id && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            requestUndo(event.id, "Request from event log");
-                          }}
-                          style={styles.undoEventButton}
-                          title="Undo to here"
-                        >
-                          ⎌
-                        </button>
-                      )}
-                    </div>
-                  );
-                });
-            })()}
-          </div>
-        </div>
-
-        {/* Undo request */}
-        {pendingUndo && pendingUndo.byPlayer !== myPeerId && (
-          <div style={styles.undoRequest}>
-            <div style={styles.undoTitle}>Undo Requested</div>
-            <div style={styles.undoInfo}>
-              {players.find(p => p.id === pendingUndo.byPlayer)?.name ?? pendingUndo.byPlayer} wants to undo {pendingUndo.toEventId}
-              {pendingUndo.reason && `: "${pendingUndo.reason}"`}
-            </div>
-            <div style={styles.undoProgress}>
-              Approvals: {pendingUndo.approvals.length} / {pendingUndo.needed}
-            </div>
-            <div style={styles.undoButtons}>
-              <button onClick={approveUndo} style={styles.approveButton}>Approve</button>
-              <button onClick={denyUndo} style={styles.denyButton}>Deny</button>
-            </div>
-          </div>
-        )}
-
-        {/* Navigation buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-          <button
-            onClick={() => {
-              if (confirm("End game for all players?")) {
-                endGame();
-              }
-            }}
-            style={styles.endGameButton}
-          >
-            End Game
-          </button>
-          <button
-            onClick={() => {
-              leaveRoom();
-              onBackToHome();
-            }}
-            style={styles.homeButton}
-          >
-            ← Back to Home
-          </button>
-        </div>
-
-        {isHost && (
-          <div style={styles.hostBadge}>You are the host</div>
-        )}
-      </div>
+      {/* Sidebar - using unified GameSidebar */}
+      <GameSidebar
+        state={displayState}
+        isProcessing={false}
+        gameMode="multiplayer"
+        onEndGame={() => {
+          if (confirm("End game for all players?")) {
+            endGame();
+          }
+        }}
+        onBackToHome={() => {
+          leaveRoom();
+          onBackToHome();
+        }}
+        onRequestUndo={requestUndo}
+      />
 
       {/* Game over modal */}
       {displayState.gameOver && (
@@ -516,15 +366,6 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           to { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={styles.infoRow}>
-      <span style={styles.infoLabel}>{label}</span>
-      <span style={styles.infoValue}>{value}</span>
     </div>
   );
 }

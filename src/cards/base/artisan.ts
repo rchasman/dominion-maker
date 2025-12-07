@@ -1,161 +1,66 @@
-import type { CardEffect } from "../card-effect";
-import type { CardName } from "../../types/game-state";
-import { CARDS } from "../../data/cards";
+/**
+ * Artisan - Gain a card costing up to $5 to your hand, put a card from hand onto your deck
+ */
 
-export const artisan: CardEffect = ({ state, player, children, decision }) => {
-  // Gain card to hand (up to $5). Put a card from hand onto deck
-  const currentPlayer = state.players[player];
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { getGainableCards } from "../effect-types";
 
-  // For human players, use multi-stage decision
-  if (player === "human") {
-    // Stage 1: Choose card to gain (up to $5)
-    if (!decision) {
-      const gainOptions: CardName[] = [];
-      for (const [card, count] of Object.entries(state.supply)) {
-        if (count > 0 && CARDS[card as CardName].cost <= 5) {
-          gainOptions.push(card as CardName);
-        }
-      }
+export const artisan: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
 
-      if (gainOptions.length === 0) return state;
+  // Stage 1: Choose card to gain
+  if (!decision || stage === undefined) {
+    const gainOptions = getGainableCards(state, 5);
+    if (gainOptions.length === 0) return { events: [] };
 
-      return {
-        ...state,
-        pendingDecision: {
-          type: "gain",
-          player: "human",
-          prompt: "Artisan: Gain a card costing up to $5 to your hand",
-          options: gainOptions,
-          minCount: 1,
-          maxCount: 1,
-          canSkip: false,
-          metadata: { cardBeingPlayed: "Artisan", stage: "gain" },
-        },
-      };
-    }
-
-    // Stage 2: Card gained to hand, now choose card to topdeck
-    if (decision.stage === "gain" && decision.selectedCards && decision.selectedCards.length > 0) {
-      const gained = decision.selectedCards[0];
-
-      const newState = {
-        ...state,
-        players: {
-          ...state.players,
-          [player]: {
-            ...currentPlayer,
-            hand: [...currentPlayer.hand, gained],
-          },
-        },
-        supply: {
-          ...state.supply,
-          [gained]: state.supply[gained] - 1,
-        },
-      };
-      children.push({ type: "gain-card", player, card: gained });
-
-      // Now prompt to topdeck a card from the updated hand
-      const updatedPlayer = newState.players[player];
-
-      return {
-        ...newState,
-        pendingDecision: {
-          type: "choose_card_from_options",
-          player: "human",
-          prompt: "Artisan: Put a card from your hand onto your deck",
-          options: [...updatedPlayer.hand],
-          minCount: 1,
-          maxCount: 1,
-          canSkip: false,
-          metadata: { cardBeingPlayed: "Artisan", stage: "topdeck" },
-        },
-      };
-    }
-
-    // Stage 3: Topdeck the chosen card
-    if (decision.stage === "topdeck" && decision.selectedCards && decision.selectedCards.length > 0) {
-      const toPutBack = decision.selectedCards[0];
-      const newHand = [...currentPlayer.hand];
-      const idx = newHand.indexOf(toPutBack);
-      if (idx === -1) return state;
-
-      newHand.splice(idx, 1);
-
-      const newState = {
-        ...state,
-        pendingDecision: null,
-        players: {
-          ...state.players,
-          [player]: {
-            ...currentPlayer,
-            hand: newHand,
-            deck: [toPutBack, ...currentPlayer.deck],
-          },
-        },
-      };
-      children.push({ type: "text", message: `Put ${toPutBack} on deck` });
-      return newState;
-    }
-
-    return state;
-  }
-
-  // For AI: auto-choose
-  const options: CardName[] = ["Silver", "Smithy", "Market", "Village"];
-  let gained: CardName | null = null;
-
-  for (const option of options) {
-    if (state.supply[option] > 0 && CARDS[option].cost <= 5) {
-      gained = option;
-      break;
-    }
-  }
-
-  if (gained) {
-    let newState = {
-      ...state,
-      players: {
-        ...state.players,
-        [player]: {
-          ...currentPlayer,
-          hand: [...currentPlayer.hand, gained],
-        },
-      },
-      supply: {
-        ...state.supply,
-        [gained]: state.supply[gained] - 1,
+    return {
+      events: [],
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "supply",
+        prompt: "Artisan: Gain a card costing up to $5 to your hand",
+        cardOptions: gainOptions,
+        min: 1,
+        max: 1,
+        stage: "gain",
       },
     };
-    children.push({ type: "gain-card", player, card: gained });
-
-    // Put a card from hand onto deck (worst card: Curse/Copper/Estate)
-    const updatedPlayer = newState.players[player];
-    const toPutBack = updatedPlayer.hand.find(c => c === "Curse") ||
-                      updatedPlayer.hand.find(c => c === "Copper") ||
-                      updatedPlayer.hand.find(c => c === "Estate") ||
-                      updatedPlayer.hand[0];
-
-    if (toPutBack) {
-      const newHand = [...updatedPlayer.hand];
-      const idx = newHand.indexOf(toPutBack);
-      newHand.splice(idx, 1);
-
-      newState = {
-        ...newState,
-        players: {
-          ...newState.players,
-          [player]: {
-            ...updatedPlayer,
-            hand: newHand,
-            deck: [toPutBack, ...updatedPlayer.deck],
-          },
-        },
-      };
-      children.push({ type: "text", message: `Put ${toPutBack} on deck` });
-    }
-
-    return newState;
   }
 
-  return state;
+  // Stage 2: Gain to hand, then choose card to put on deck
+  if (stage === "gain") {
+    const gained = decision.selectedCards[0];
+    if (!gained) return { events: [] };
+
+    // Gain to hand, then must put a card from hand on deck
+    // Note: hand now includes the gained card
+    const handAfterGain = [...playerState.hand, gained];
+
+    return {
+      events: [{ type: "CARD_GAINED", player, card: gained, to: "hand" }],
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "hand",
+        prompt: "Artisan: Put a card from your hand onto your deck",
+        cardOptions: handAfterGain,
+        min: 1,
+        max: 1,
+        stage: "topdeck",
+      },
+    };
+  }
+
+  // Stage 3: Put card on deck
+  if (stage === "topdeck") {
+    const toPutOnDeck = decision.selectedCards[0];
+    if (!toPutOnDeck) return { events: [] };
+
+    return {
+      events: [{ type: "CARDS_PUT_ON_DECK", player, cards: [toPutOnDeck], from: "hand" }],
+    };
+  }
+
+  return { events: [] };
 };

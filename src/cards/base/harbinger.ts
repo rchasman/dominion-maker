@@ -1,84 +1,48 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
-import { isActionCard } from "../../data/cards";
+/**
+ * Harbinger - +1 Card, +1 Action. Look through discard, may put a card on deck
+ */
 
-export const harbinger: CardEffect = ({ state, player, children, decision }) => {
-  // +1 Card, +1 Action. May put a card from discard onto deck
-  const drawResult = drawCards(state.players[player], 1);
-  const currentPlayer = drawResult.player;
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+import type { GameEvent } from "../../events/types";
 
-  let newState = {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-    actions: state.actions + 1,
-  };
-  logDraw(children, drawResult, player);
-  children.push({ type: "get-actions", player, count: 1 });
+export const harbinger: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
+  const events: GameEvent[] = [];
 
-  // For human players, prompt to choose from discard (optional)
-  if (player === "human") {
-    if (!decision && currentPlayer.discard.length > 0) {
-      return {
-        ...newState,
-        pendingDecision: {
-          type: "choose_card_from_options",
-          player: "human",
-          prompt: "Harbinger: Put a card from discard onto your deck (or skip)",
-          options: [...currentPlayer.discard],
-          minCount: 0,
-          maxCount: 1,
-          canSkip: true,
-          metadata: { cardBeingPlayed: "Harbinger", stage: "topdeck" },
-        },
-      };
+  // Initial: +1 Card, +1 Action
+  if (!decision || stage === undefined) {
+    events.push(...createDrawEvents(player, playerState, 1));
+    events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
+
+    // If discard pile is empty, we're done
+    if (playerState.discard.length === 0) {
+      return { events };
     }
 
-    // Topdeck chosen card
-    if (decision && decision.selectedCards && decision.selectedCards.length > 0) {
-      const toTopdeck = decision.selectedCards[0];
-      const newDiscard = currentPlayer.discard.filter((_c, i) =>
-        i !== currentPlayer.discard.indexOf(toTopdeck)
-      );
-
-      newState = {
-        ...newState,
-        pendingDecision: null,
-        players: {
-          ...newState.players,
-          [player]: {
-            ...currentPlayer,
-            deck: [toTopdeck, ...currentPlayer.deck],
-            discard: newDiscard,
-          },
-        },
-      };
-      children.push({ type: "text", message: `Put ${toTopdeck} on deck` });
-      return newState;
-    }
-
-    return newState;
-  }
-
-  // For AI: auto-choose best card from discard
-  if (currentPlayer.discard.length > 0) {
-    const bestCard = currentPlayer.discard.find(c => isActionCard(c)) || currentPlayer.discard[0];
-    const newDiscard = currentPlayer.discard.filter((_c, i) =>
-      i !== currentPlayer.discard.indexOf(bestCard)
-    );
-
-    newState = {
-      ...newState,
-      players: {
-        ...newState.players,
-        [player]: {
-          ...currentPlayer,
-          deck: [bestCard, ...currentPlayer.deck],
-          discard: newDiscard,
-        },
+    return {
+      events,
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "discard",
+        prompt: "Harbinger: Put a card from your discard onto your deck (or skip)",
+        cardOptions: [...playerState.discard],
+        min: 0,
+        max: 1,
+        stage: "topdeck",
       },
     };
-    children.push({ type: "text", message: `Put ${bestCard} on deck` });
   }
 
-  return newState;
+  // Put card on deck
+  if (stage === "topdeck") {
+    if (decision.selectedCards.length > 0) {
+      const card = decision.selectedCards[0];
+      events.push({ type: "CARDS_PUT_ON_DECK", player, cards: [card], from: "discard" });
+    }
+    return { events };
+  }
+
+  return { events: [] };
 };

@@ -1,12 +1,11 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
+/**
+ * Smithy - +3 Cards
+ */
 
-export const smithy: CardEffect = ({ state, player, children }) => {
-  // +3 Cards
-  const drawResult = drawCards(state.players[player], 3);
-  logDraw(children, drawResult, player);
-  return {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-  };
+import type { CardEffect } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+
+export const smithy: CardEffect = ({ state, player }) => {
+  const events = createDrawEvents(player, state.players[player], 3);
+  return { events };
 };

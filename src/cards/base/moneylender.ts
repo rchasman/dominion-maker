@@ -1,26 +1,41 @@
-import type { CardEffect } from "../card-effect";
-import type { CardName } from "../../types/game-state";
+/**
+ * Moneylender - Trash a Copper from your hand for +$3
+ */
 
-export const moneylender: CardEffect = ({ state, player, children }) => {
-  // May trash Copper for +$3
-  const currentPlayer = state.players[player];
-  const copperIndex = currentPlayer.hand.indexOf("Copper");
+import type { CardEffect, CardEffectResult } from "../effect-types";
 
-  if (copperIndex !== -1) {
-    const newHand = [...currentPlayer.hand];
-    newHand.splice(copperIndex, 1);
+export const moneylender: CardEffect = ({ state, player, decision }): CardEffectResult => {
+  const playerState = state.players[player];
+  const hasCopperInHand = playerState.hand.includes("Copper");
 
-    const copper: CardName = "Copper";
-    const newState = {
-      ...state,
-      players: { ...state.players, [player]: { ...currentPlayer, hand: newHand } },
-      trash: [...state.trash, copper],
-      coins: state.coins + 3,
+  if (!hasCopperInHand) return { events: [] };
+
+  // Request confirmation (or auto-trash for AI)
+  if (!decision) {
+    return {
+      events: [],
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "hand",
+        prompt: "Moneylender: Trash a Copper for +$3?",
+        cardOptions: ["Copper"],
+        min: 0,
+        max: 1,
+        stage: "trash",
+      },
     };
-    children.push({ type: "trash-card", player, card: copper });
-    children.push({ type: "get-coins", player, count: 3 });
-    return newState;
   }
 
-  return state;
+  // Execute trash + coins
+  if (decision.selectedCards.includes("Copper")) {
+    return {
+      events: [
+        { type: "CARDS_TRASHED", player, cards: ["Copper"], from: "hand" },
+        { type: "COINS_MODIFIED", delta: 3 },
+      ],
+    };
+  }
+
+  return { events: [] };
 };

@@ -1,12 +1,11 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
+/**
+ * Moat - +2 Cards (Reaction: reveal to be unaffected by attack)
+ */
 
-export const moat: CardEffect = ({ state, player, children }) => {
-  // +2 Cards
-  const drawResult = drawCards(state.players[player], 2);
-  logDraw(children, drawResult, player);
-  return {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-  };
+import type { CardEffect } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+
+export const moat: CardEffect = ({ state, player }) => {
+  const events = createDrawEvents(player, state.players[player], 2);
+  return { events };
 };

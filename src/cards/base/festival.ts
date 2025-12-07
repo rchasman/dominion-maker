@@ -1,15 +1,15 @@
-import type { CardEffect } from "../card-effect";
+/**
+ * Festival - +2 Actions, +1 Buy, +$2
+ */
 
-export const festival: CardEffect = ({ state, player, children }) => {
-  // +2 Actions, +1 Buy, +$2
-  const newState = {
-    ...state,
-    actions: state.actions + 2,
-    buys: state.buys + 1,
-    coins: state.coins + 2,
-  };
-  children.push({ type: "get-actions", player, count: 2 });
-  children.push({ type: "get-buys", player, count: 1 });
-  children.push({ type: "get-coins", player, count: 2 });
-  return newState;
+import type { CardEffect } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+
+export const festival: CardEffect = () => {
+  const events: GameEvent[] = [
+    { type: "ACTIONS_MODIFIED", delta: 2 },
+    { type: "BUYS_MODIFIED", delta: 1 },
+    { type: "COINS_MODIFIED", delta: 2 },
+  ];
+  return { events };
 };

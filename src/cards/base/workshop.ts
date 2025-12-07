@@ -1,94 +1,36 @@
-import type { CardEffect } from "../card-effect";
-import type { CardName } from "../../types/game-state";
-import { CARDS } from "../../data/cards";
+/**
+ * Workshop - Gain a card costing up to $4
+ */
 
-export const workshop: CardEffect = ({ state, player, children, decision }) => {
-  // Gain a card costing up to $4
-  const currentPlayer = state.players[player];
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { getGainableCards } from "../effect-types";
 
-  // For human players, prompt for choice
-  if (player === "human") {
-    if (!decision) {
-      // Find all cards we can gain (up to $4)
-      const gainOptions: CardName[] = [];
-      for (const [card, count] of Object.entries(state.supply)) {
-        if (count > 0 && CARDS[card as CardName].cost <= 4) {
-          gainOptions.push(card as CardName);
-        }
-      }
+export const workshop: CardEffect = ({ state, player, decision }): CardEffectResult => {
+  // Stage 1: Request gain choice
+  if (!decision) {
+    const gainOptions = getGainableCards(state, 4);
+    if (gainOptions.length === 0) return { events: [] };
 
-      if (gainOptions.length === 0) return state;
-
-      return {
-        ...state,
-        pendingDecision: {
-          type: "gain",
-          player: "human",
-          prompt: "Workshop: Gain a card costing up to $4",
-          options: gainOptions,
-          minCount: 1,
-          maxCount: 1,
-          canSkip: false,
-          metadata: { cardBeingPlayed: "Workshop", stage: "gain" },
-        },
-      };
-    }
-
-    // Gain the chosen card
-    if (decision.selectedCards && decision.selectedCards.length > 0) {
-      const gained = decision.selectedCards[0];
-
-      const newState = {
-        ...state,
-        pendingDecision: null,
-        players: {
-          ...state.players,
-          [player]: {
-            ...currentPlayer,
-            discard: [...currentPlayer.discard, gained],
-          },
-        },
-        supply: {
-          ...state.supply,
-          [gained]: state.supply[gained] - 1,
-        },
-      };
-      children.push({ type: "gain-card", player, card: gained });
-      return newState;
-    }
-
-    return state;
-  }
-
-  // For AI: simplified auto-choose
-  const options: CardName[] = ["Silver", "Village", "Smithy", "Cellar", "Chapel", "Moat", "Estate"];
-  let gained: CardName | null = null;
-
-  for (const option of options) {
-    if (state.supply[option] > 0 && CARDS[option].cost <= 4) {
-      gained = option;
-      break;
-    }
-  }
-
-  if (gained) {
-    const newState = {
-      ...state,
-      players: {
-        ...state.players,
-        [player]: {
-          ...currentPlayer,
-          discard: [...currentPlayer.discard, gained],
-        },
-      },
-      supply: {
-        ...state.supply,
-        [gained]: state.supply[gained] - 1,
+    return {
+      events: [],
+      pendingDecision: {
+        type: "select_cards",
+        player,
+        from: "supply",
+        prompt: "Workshop: Gain a card costing up to $4",
+        cardOptions: gainOptions,
+        min: 1,
+        max: 1,
+        stage: "gain",
       },
     };
-    children.push({ type: "gain-card", player, card: gained });
-    return newState;
   }
 
-  return state;
+  // Stage 2: Execute gain
+  const gained = decision.selectedCards[0];
+  if (!gained) return { events: [] };
+
+  return {
+    events: [{ type: "CARD_GAINED", player, card: gained, to: "discard" }],
+  };
 };

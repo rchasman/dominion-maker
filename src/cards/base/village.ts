@@ -1,14 +1,15 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards, logDraw } from "../../lib/game-utils";
+/**
+ * Village - +1 Card, +2 Actions
+ */
 
-export const village: CardEffect = ({ state, player, children }) => {
-  // +1 Card, +2 Actions
-  const drawResult = drawCards(state.players[player], 1);
-  logDraw(children, drawResult, player);
-  children.push({ type: "get-actions", player, count: 2 });
-  return {
-    ...state,
-    players: { ...state.players, [player]: drawResult.player },
-    actions: state.actions + 2,
-  };
+import type { CardEffect } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+
+export const village: CardEffect = ({ state, player }) => {
+  const events: GameEvent[] = [
+    ...createDrawEvents(player, state.players[player], 1),
+    { type: "ACTIONS_MODIFIED", delta: 2 },
+  ];
+  return { events };
 };

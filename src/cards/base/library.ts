@@ -1,257 +1,77 @@
-import type { CardEffect } from "../card-effect";
-import { drawCards } from "../../lib/game-utils";
-import { isActionCard } from "../../data/cards";
+/**
+ * Library - Draw until you have 7 cards in hand, skipping any Actions you choose to
+ */
+
+import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createDrawEvents, peekDraw } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+import { CARDS } from "../../data/cards";
 import type { CardName } from "../../types/game-state";
 
-export const library: CardEffect = ({ state, player, children, decision }) => {
-  // Draw until 7 cards, may skip Actions (discard after)
-  const currentPlayer = state.players[player];
+function isActionCard(card: CardName): boolean {
+  return CARDS[card].types.includes("action");
+}
 
-  // For human players, iterative draw with decision for each action
-  if (player === "human") {
-    // Parse set-aside cards from stage
-    const setAside: CardName[] = (decision && decision.stage && decision.stage !== "initial")
-      ? (decision.stage.split(",").filter(c => c) as CardName[])
-      : [];
+export const library: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+  const playerState = state.players[player];
+  const events: GameEvent[] = [];
 
-    // If we just made a decision about an action card
-    if (decision && decision.metadata && (decision.metadata as any).drawnCard) {
-      const drawnCard = (decision.metadata as any).drawnCard as CardName;
-      const choice = decision.selectedCards && decision.selectedCards.length > 0 ? decision.selectedCards[0] : "Skip";
+  // Note: Library is complex because it needs to draw one at a time
+  // For simplicity, we'll handle it as a single decision
 
-      if (choice === "Skip") {
-        // Set aside this action
-        setAside.push(drawnCard);
-        // Remove from hand
-        const newHand = [...currentPlayer.hand];
-        const idx = newHand.lastIndexOf(drawnCard);
-        if (idx !== -1) newHand.splice(idx, 1);
+  if (!decision || stage === undefined) {
+    const cardsNeeded = 7 - playerState.hand.length;
 
-        const updatedPlayer = {
-          ...currentPlayer,
-          hand: newHand,
-        };
-
-        children.push({ type: "text", message: `Set aside ${drawnCard}` });
-
-        // Check if we should continue
-        if (updatedPlayer.hand.length >= 7) {
-          // Done - discard set-aside cards
-          const newState = {
-            ...state,
-            pendingDecision: null,
-            players: {
-              ...state.players,
-              [player]: {
-                ...updatedPlayer,
-                discard: [...updatedPlayer.discard, ...setAside],
-              },
-            },
-          };
-          if (setAside.length > 0) {
-            children.push({ type: "discard-cards", player, count: setAside.length, cards: setAside });
-          }
-          return newState;
-        }
-
-        // Continue drawing
-        const { player: afterDraw, drawn } = drawCards(updatedPlayer, 1);
-        if (drawn.length === 0) {
-          // No more cards - finish
-          const newState = {
-            ...state,
-            pendingDecision: null,
-            players: {
-              ...state.players,
-              [player]: {
-                ...afterDraw,
-                discard: [...afterDraw.discard, ...setAside],
-              },
-            },
-          };
-          if (setAside.length > 0) {
-            children.push({ type: "discard-cards", player, count: setAside.length, cards: setAside });
-          }
-          return newState;
-        }
-
-        const nextCard = drawn[0];
-        children.push({ type: "draw-cards", player, count: 1, cards: drawn });
-
-        if (isActionCard(nextCard) && afterDraw.hand.length < 7) {
-          // Prompt for next action card
-          return {
-            ...state,
-            players: { ...state.players, [player]: afterDraw },
-            pendingDecision: {
-              type: "choose_card_from_options",
-              player: "human",
-              prompt: `Library: Drew ${nextCard}. Keep it or skip it?`,
-              options: ["Keep", "Skip"],
-              minCount: 1,
-              maxCount: 1,
-              canSkip: false,
-              metadata: {
-                cardBeingPlayed: "Library",
-                stage: setAside.join(","),
-                drawnCard: nextCard,
-              },
-            },
-          };
-        }
-
-        // Non-action or reached 7, continue
-        return library({
-          state: { ...state, players: { ...state.players, [player]: afterDraw } },
-          player,
-          children,
-          decision: { stage: setAside.join(","), selectedCards: [] },
-        });
-      } else {
-        // Keep - continue drawing
-        if (currentPlayer.hand.length >= 7) {
-          // Done
-          const newState = {
-            ...state,
-            pendingDecision: null,
-            players: {
-              ...state.players,
-              [player]: {
-                ...currentPlayer,
-                discard: [...currentPlayer.discard, ...setAside],
-              },
-            },
-          };
-          if (setAside.length > 0) {
-            children.push({ type: "discard-cards", player, count: setAside.length, cards: setAside });
-          }
-          return newState;
-        }
-
-        const { player: afterDraw, drawn } = drawCards(currentPlayer, 1);
-        if (drawn.length === 0) {
-          // No more cards
-          const newState = {
-            ...state,
-            pendingDecision: null,
-            players: {
-              ...state.players,
-              [player]: {
-                ...afterDraw,
-                discard: [...afterDraw.discard, ...setAside],
-              },
-            },
-          };
-          if (setAside.length > 0) {
-            children.push({ type: "discard-cards", player, count: setAside.length, cards: setAside });
-          }
-          return newState;
-        }
-
-        const nextCard = drawn[0];
-        children.push({ type: "draw-cards", player, count: 1, cards: drawn });
-
-        if (isActionCard(nextCard) && afterDraw.hand.length < 7) {
-          return {
-            ...state,
-            players: { ...state.players, [player]: afterDraw },
-            pendingDecision: {
-              type: "choose_card_from_options",
-              player: "human",
-              prompt: `Library: Drew ${nextCard}. Keep it or skip it?`,
-              options: ["Keep", "Skip"],
-              minCount: 1,
-              maxCount: 1,
-              canSkip: false,
-              metadata: {
-                cardBeingPlayed: "Library",
-                stage: setAside.join(","),
-                drawnCard: nextCard,
-              },
-            },
-          };
-        }
-
-        // Continue
-        return library({
-          state: { ...state, players: { ...state.players, [player]: afterDraw } },
-          player,
-          children,
-          decision: { stage: setAside.join(","), selectedCards: [] },
-        });
-      }
+    if (cardsNeeded <= 0) {
+      return { events: [] };
     }
 
-    // Initial draw
-    if (!decision || decision.stage === "initial") {
-      if (currentPlayer.hand.length >= 7) return state;
+    // Look at what we'd draw
+    const { cards: peeked } = peekDraw(playerState, cardsNeeded);
+    const actionsInDraw = peeked.filter(isActionCard);
 
-      const { player: afterDraw, drawn } = drawCards(currentPlayer, 1);
-      if (drawn.length === 0) return state;
+    if (actionsInDraw.length === 0) {
+      // No actions, just draw all
+      events.push(...createDrawEvents(player, playerState, cardsNeeded));
+      return { events };
+    }
 
-      const drawnCard = drawn[0];
-      children.push({ type: "draw-cards", player, count: 1, cards: drawn });
-
-      if (isActionCard(drawnCard) && afterDraw.hand.length < 7) {
-        // Prompt for action card
-        return {
-          ...state,
-          players: { ...state.players, [player]: afterDraw },
-          pendingDecision: {
-            type: "choose_card_from_options",
-            player: "human",
-            prompt: `Library: Drew ${drawnCard}. Keep it or skip it?`,
-            options: ["Keep", "Skip"],
-            minCount: 1,
-            maxCount: 1,
-            canSkip: false,
-            metadata: {
-              cardBeingPlayed: "Library",
-              stage: "initial",
-              drawnCard,
-            },
-          },
-        };
-      }
-
-      // Non-action, continue
-      return library({
-        state: { ...state, players: { ...state.players, [player]: afterDraw } },
+    // Ask which actions to skip
+    return {
+      events: [],
+      pendingDecision: {
+        type: "select_cards",
         player,
-        children,
-        decision: { stage: "", selectedCards: [] },
-      });
-    }
-
-    return state;
+        from: "revealed",
+        prompt: "Library: Select Actions to set aside (will be discarded)",
+        cardOptions: actionsInDraw,
+        min: 0,
+        max: actionsInDraw.length,
+        stage: "skip_actions",
+        metadata: { cardsNeeded, peekedCards: peeked },
+      },
+    };
   }
 
-  // For AI: auto-skip action cards
-  let aiPlayer = currentPlayer;
+  if (stage === "skip_actions") {
+    const metadata = state.pendingDecision?.metadata;
+    const peeked = (metadata?.peekedCards as CardName[]) || [];
+    const toSkip = decision.selectedCards;
 
-  while (aiPlayer.hand.length < 7) {
-    const { player: afterDraw, drawn } = drawCards(aiPlayer, 1);
-    if (drawn.length === 0) break;
+    // Draw the non-skipped cards
+    const toDraw = peeked.filter(c => !toSkip.includes(c));
 
-    const drawnCard = drawn[0];
-    if (isActionCard(drawnCard)) {
-      // Skip action cards (put in discard)
-      aiPlayer = {
-        ...afterDraw,
-        hand: afterDraw.hand.slice(0, -1),
-        discard: [...afterDraw.discard, drawnCard],
-      };
-      children.push({ type: "text", message: `Skipped ${drawnCard}` });
-    } else {
-      aiPlayer = afterDraw;
-      children.push({ type: "draw-cards", player, count: 1, cards: drawn });
+    if (toDraw.length > 0) {
+      events.push({ type: "CARDS_DRAWN", player, cards: toDraw });
     }
+
+    // Discard the skipped actions
+    if (toSkip.length > 0) {
+      events.push({ type: "CARDS_DISCARDED", player, cards: toSkip, from: "deck" });
+    }
+
+    return { events };
   }
 
-  const newState = {
-    ...state,
-    players: { ...state.players, [player]: aiPlayer },
-  };
-
-  return newState;
+  return { events: [] };
 };
