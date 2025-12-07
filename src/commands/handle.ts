@@ -9,6 +9,43 @@ import { shuffle } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
 
 /**
+ * Helper to create resource modification events with proper ID and causality.
+ */
+function createResourceEvents(
+  modifications: Array<{ type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED"; delta: number }>,
+  causedBy: string
+): GameEvent[] {
+  return modifications.map(mod => ({
+    ...mod,
+    id: generateEventId(),
+    causedBy,
+  }));
+}
+
+/**
+ * Calculate Merchant bonus for Silver cards.
+ * Returns the coin delta to apply (positive when playing, negative when unplaying).
+ */
+function calculateMerchantBonus(
+  playerState: { inPlay: CardName[] },
+  card: CardName,
+  isPlaying: boolean
+): number {
+  if (card !== "Silver") return 0;
+
+  const merchantsInPlay = playerState.inPlay.filter(c => c === "Merchant").length;
+  const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
+
+  if (isPlaying) {
+    // When playing: first Silver gets +$1 per Merchant
+    return silversInPlay === 0 && merchantsInPlay > 0 ? merchantsInPlay : 0;
+  } else {
+    // When unplaying: if we had exactly 1 Silver, remove the bonus
+    return silversInPlay === 1 && merchantsInPlay > 0 ? -merchantsInPlay : 0;
+  }
+}
+
+/**
  * Handle a command and return the resulting events.
  * Validates the command against current state before producing events.
  */
@@ -146,18 +183,10 @@ function handleStartGame(
   });
 
   // Add initial resources as explicit events for log clarity
-  events.push({
-    type: "ACTIONS_MODIFIED",
-    delta: 1,
-    id: generateEventId(),
-    causedBy: turnStartId,
-  });
-  events.push({
-    type: "BUYS_MODIFIED",
-    delta: 1,
-    id: generateEventId(),
-    causedBy: turnStartId,
-  });
+  events.push(...createResourceEvents([
+    { type: "ACTIONS_MODIFIED", delta: 1 },
+    { type: "BUYS_MODIFIED", delta: 1 },
+  ], turnStartId));
 
   return { ok: true, events };
 }
@@ -198,12 +227,9 @@ function handlePlayAction(
   });
 
   // Action cost - caused by playing the card
-  events.push({
-    type: "ACTIONS_MODIFIED",
-    delta: -1,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events.push(...createResourceEvents([
+    { type: "ACTIONS_MODIFIED", delta: -1 },
+  ], rootEventId));
 
   // Apply these events to get intermediate state
   const midState = applyEvents(state, events);
@@ -280,28 +306,17 @@ function handlePlayTreasure(
   // Add coins - caused by playing the treasure
   const coins = CARDS[card].coins || 0;
   if (coins > 0) {
-    events.push({
-      type: "COINS_MODIFIED",
-      delta: coins,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    });
+    events.push(...createResourceEvents([
+      { type: "COINS_MODIFIED", delta: coins },
+    ], rootEventId));
   }
 
   // Check for Merchant bonus (first Silver = +$1)
-  if (card === "Silver") {
-    const merchantsInPlay = playerState.inPlay.filter(c => c === "Merchant").length;
-    const silversPlayed = playerState.inPlay.filter(c => c === "Silver").length;
-
-    // If this is the first Silver and we have Merchants in play
-    if (silversPlayed === 0 && merchantsInPlay > 0) {
-      events.push({
-        type: "COINS_MODIFIED",
-        delta: merchantsInPlay,
-        id: generateEventId(),
-        causedBy: rootEventId,
-      });
-    }
+  const merchantBonus = calculateMerchantBonus(playerState, card, true);
+  if (merchantBonus > 0) {
+    events.push(...createResourceEvents([
+      { type: "COINS_MODIFIED", delta: merchantBonus },
+    ], rootEventId));
   }
 
   return { ok: true, events };
@@ -377,29 +392,13 @@ function handleUnplayTreasure(
 
   // Subtract coins - caused by unplaying the treasure
   const coins = CARDS[card].coins || 0;
-  if (coins > 0) {
-    events.push({
-      type: "COINS_MODIFIED",
-      delta: -coins,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    });
-  }
+  const merchantBonus = calculateMerchantBonus(playerState, card, false);
+  const totalDelta = -coins + merchantBonus; // merchantBonus is already negative
 
-  // Check for Merchant bonus removal (if this was the first Silver)
-  if (card === "Silver") {
-    const merchantsInPlay = playerState.inPlay.filter(c => c === "Merchant").length;
-    const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
-
-    // If this is the only Silver and we have Merchants in play
-    if (silversInPlay === 1 && merchantsInPlay > 0) {
-      events.push({
-        type: "COINS_MODIFIED",
-        delta: -merchantsInPlay,
-        id: generateEventId(),
-        causedBy: rootEventId,
-      });
-    }
+  if (totalDelta !== 0) {
+    events.push(...createResourceEvents([
+      { type: "COINS_MODIFIED", delta: totalDelta },
+    ], rootEventId));
   }
 
   return { ok: true, events };
@@ -438,18 +437,10 @@ function handleBuyCard(
       to: "discard",
       id: rootEventId,
     },
-    {
-      type: "BUYS_MODIFIED",
-      delta: -1,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    },
-    {
-      type: "COINS_MODIFIED",
-      delta: -cardDef.cost,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    },
+    ...createResourceEvents([
+      { type: "BUYS_MODIFIED", delta: -1 },
+      { type: "COINS_MODIFIED", delta: -cardDef.cost },
+    ], rootEventId),
   ];
 
   return { ok: true, events };
@@ -532,18 +523,10 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       });
 
       // Add initial resources as explicit events for log clarity
-      events.push({
-        type: "ACTIONS_MODIFIED",
-        delta: 1,
-        id: generateEventId(),
-        causedBy: turnStartId,
-      });
-      events.push({
-        type: "BUYS_MODIFIED",
-        delta: 1,
-        id: generateEventId(),
-        causedBy: turnStartId,
-      });
+      events.push(...createResourceEvents([
+        { type: "ACTIONS_MODIFIED", delta: 1 },
+        { type: "BUYS_MODIFIED", delta: 1 },
+      ], turnStartId));
     }
   }
 
@@ -678,27 +661,40 @@ function selectRandomKingdomCards(_seed?: number): CardName[] {
   return shuffled.slice(0, 10);
 }
 
+const SUPPLY_CONSTANTS = {
+  COPPER_BASE: 60,
+  COPPER_PER_PLAYER: 7,
+  SILVER_COUNT: 40,
+  GOLD_COUNT: 30,
+  CURSE_PER_OPPONENT: 10,
+  KINGDOM_CARD_COUNT: 10,
+  VICTORY_CARD_COUNT_2P: 8,
+  VICTORY_CARD_COUNT_3P_PLUS: 12,
+};
+
 function calculateSupply(playerCount: number, kingdomCards: CardName[]): Record<string, number> {
   const supply: Record<string, number> = {};
 
   // Victory cards scale with player count
-  const victoryCount = playerCount <= 2 ? 8 : 12;
+  const victoryCount = playerCount <= 2
+    ? SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_2P
+    : SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_3P_PLUS;
 
   supply.Estate = victoryCount;
   supply.Duchy = victoryCount;
   supply.Province = victoryCount;
 
   // Treasure cards
-  supply.Copper = 60 - (playerCount * 7); // Players start with 7 each
-  supply.Silver = 40;
-  supply.Gold = 30;
+  supply.Copper = SUPPLY_CONSTANTS.COPPER_BASE - (playerCount * SUPPLY_CONSTANTS.COPPER_PER_PLAYER);
+  supply.Silver = SUPPLY_CONSTANTS.SILVER_COUNT;
+  supply.Gold = SUPPLY_CONSTANTS.GOLD_COUNT;
 
   // Curses scale with player count
-  supply.Curse = (playerCount - 1) * 10;
+  supply.Curse = (playerCount - 1) * SUPPLY_CONSTANTS.CURSE_PER_OPPONENT;
 
   // Kingdom cards (10 each)
   for (const card of kingdomCards) {
-    supply[card] = card === "Gardens" ? victoryCount : 10;
+    supply[card] = card === "Gardens" ? victoryCount : SUPPLY_CONSTANTS.KINGDOM_CARD_COUNT;
   }
 
   return supply;

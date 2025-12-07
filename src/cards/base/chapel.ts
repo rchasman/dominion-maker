@@ -3,18 +3,18 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
+import { isInitialCall, createCardSelectionDecision } from "../effect-types";
 
-export const chapel: CardEffect = ({ state, player, decision }): CardEffectResult => {
+export const chapel: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const playerState = state.players[player];
 
   // Request trash choice
-  if (!decision) {
+  if (isInitialCall(decision, stage)) {
     if (playerState.hand.length === 0) return { events: [] };
 
     return {
       events: [],
-      pendingDecision: {
-        type: "select_cards",
+      pendingDecision: createCardSelectionDecision({
         player,
         from: "hand",
         prompt: "Chapel: Trash up to 4 cards from your hand",
@@ -23,7 +23,7 @@ export const chapel: CardEffect = ({ state, player, decision }): CardEffectResul
         max: Math.min(4, playerState.hand.length),
         cardBeingPlayed: "Chapel",
         stage: "trash",
-      },
+      }),
     };
   }
 

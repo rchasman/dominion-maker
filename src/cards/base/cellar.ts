@@ -3,7 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents } from "../effect-types";
+import { createDrawEvents, isInitialCall, createCardSelectionDecision } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
 export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
@@ -11,7 +11,7 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
   const events: GameEvent[] = [];
 
   // Initial call: +1 Action, then request discards
-  if (!decision || stage === undefined) {
+  if (isInitialCall(decision, stage)) {
     events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
 
     if (playerState.hand.length === 0) {
@@ -20,8 +20,7 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
 
     return {
       events,
-      pendingDecision: {
-        type: "select_cards",
+      pendingDecision: createCardSelectionDecision({
         player,
         from: "hand",
         prompt: "Cellar: Discard any number of cards to draw that many",
@@ -30,7 +29,7 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
         max: playerState.hand.length,
         cardBeingPlayed: "Cellar",
         stage: "discard",
-      },
+      }),
     };
   }
 

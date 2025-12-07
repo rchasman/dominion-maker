@@ -6,7 +6,7 @@ import type { ModelSettings } from "../../agent/game-agent";
 import { useLLMLogs } from "../../context/GameContext";
 import { LogEntry } from "../LogEntry";
 import { LLMLog } from "../LLMLog";
-import { aggregateLogEntries, countVP, getAllCards, getPlayerColor } from "../../lib/board-utils";
+import { aggregateLogEntries, getPlayerColor } from "../../lib/board-utils";
 
 function LogEntryWithUndo({
   entry,

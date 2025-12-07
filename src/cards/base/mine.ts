@@ -3,18 +3,16 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
+import { getGainableTreasures, isTreasureCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
-import type { CardName } from "../../types/game-state";
 
 export const mine: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const playerState = state.players[player];
 
   // Stage 1: Choose treasure to trash
   if (!decision || stage === undefined) {
-    const treasures = playerState.hand.filter(
-      c => CARDS[c].types.includes("treasure")
-    );
+    const treasures = playerState.hand.filter(isTreasureCard);
     if (treasures.length === 0) return { events: [] };
 
     return {
@@ -42,14 +40,7 @@ export const mine: CardEffect = ({ state, player, decision, stage }): CardEffect
     const maxCost = trashCost + 3;
 
     // Find gainable treasures
-    const gainableTreasures = Object.entries(state.supply)
-      .filter(([card, count]) => {
-        const cardDef = CARDS[card as CardName];
-        return count > 0 &&
-          cardDef.types.includes("treasure") &&
-          cardDef.cost <= maxCost;
-      })
-      .map(([card]) => card as CardName);
+    const gainableTreasures = getGainableTreasures(state, maxCost);
 
     const events: GameEvent[] = [
       { type: "CARD_TRASHED", player, card: toTrash, from: "hand" },

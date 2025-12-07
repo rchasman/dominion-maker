@@ -4,15 +4,10 @@
 
 import type { CardName } from "../../types/game-state";
 import type { CardEffect } from "../effect-types";
+import { createSimpleCardEffect } from "../effect-types";
 
-// Import all cards
-import { smithy } from "./smithy";
-import { village } from "./village";
-import { laboratory } from "./laboratory";
-import { festival } from "./festival";
-import { market } from "./market";
+// Import complex cards
 import { councilRoom } from "./council-room";
-import { moat } from "./moat";
 import { workshop } from "./workshop";
 import { remodel } from "./remodel";
 import { artisan } from "./artisan";
@@ -41,13 +36,13 @@ export const CARD_EFFECTS: Partial<Record<CardName, CardEffect>> = {
   // $2 Cost
   Cellar: cellar,
   Chapel: chapel,
-  Moat: moat,
+  Moat: createSimpleCardEffect({ cards: 2 }),
 
   // $3 Cost
   Harbinger: harbinger,
   Merchant: merchant,
   Vassal: vassal,
-  Village: village,
+  Village: createSimpleCardEffect({ cards: 1, actions: 2 }),
   Workshop: workshop,
 
   // $4 Cost
@@ -57,16 +52,16 @@ export const CARD_EFFECTS: Partial<Record<CardName, CardEffect>> = {
   Moneylender: moneylender,
   Poacher: poacher,
   Remodel: remodel,
-  Smithy: smithy,
+  Smithy: createSimpleCardEffect({ cards: 3 }),
   "Throne Room": throneRoom,
 
   // $5 Cost
   Bandit: bandit,
   "Council Room": councilRoom,
-  Festival: festival,
-  Laboratory: laboratory,
+  Festival: createSimpleCardEffect({ actions: 2, buys: 1, coins: 2 }),
+  Laboratory: createSimpleCardEffect({ cards: 2, actions: 1 }),
   Library: library,
-  Market: market,
+  Market: createSimpleCardEffect({ cards: 1, actions: 1, buys: 1, coins: 1 }),
   Mine: mine,
   Sentry: sentry,
   Witch: witch,

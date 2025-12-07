@@ -2,11 +2,11 @@
  * Council Room - +4 Cards, +1 Buy, each other player draws a card
  */
 
-import type { CardEffect } from "../effect-types";
+import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const councilRoom: CardEffect = ({ state, player }) => {
+export const councilRoom: CardEffect = ({ state, player }): CardEffectResult => {
   const events: GameEvent[] = createDrawEvents(player, state.players[player], 4);
   events.push({ type: "BUYS_MODIFIED", delta: 1 });
 

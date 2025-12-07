@@ -3,14 +3,8 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { peekDraw } from "../effect-types";
+import { peekDraw, isActionCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
-import { CARDS } from "../../data/cards";
-import type { CardName } from "../../types/game-state";
-
-function isActionCard(card: CardName): boolean {
-  return CARDS[card].types.includes("action");
-}
 
 export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const playerState = state.players[player];
