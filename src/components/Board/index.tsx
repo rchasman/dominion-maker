@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
+import { EventDevtools } from "../EventDevtools";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
@@ -17,6 +18,7 @@ interface BoardProps {
 export function Board({ onBackToHome }: BoardProps) {
   const {
     gameState: state,
+    events,
     playAction,
     playTreasure,
     buyCard: onBuyCard,
@@ -32,11 +34,18 @@ export function Board({ onBackToHome }: BoardProps) {
     modelSettings,
     setModelSettings: onModelSettingsChange,
     requestUndo,
+    getStateAtEvent,
   } = useGame();
 
   const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
+  const [showDevtools, setShowDevtools] = useState(false);
+  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
 
   if (!state) return null;
+
+  // Use preview state when scrubbing, otherwise use live state
+  const displayState = previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
+  const isPreviewMode = previewEventId !== null;
 
   const isHumanTurn = state.activePlayer === "human";
 
@@ -82,9 +91,9 @@ export function Board({ onBackToHome }: BoardProps) {
     // TODO: Add UNPLAY_TREASURE command
   }, []);
 
-  const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0;
-  const opponent = state.players.ai;
-  const human = state.players.human;
+  const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
+  const opponent = displayState.players.ai;
+  const human = displayState.players.human;
   const humanVP = countVP(getAllCards(human));
   const opponentVP = countVP(getAllCards(opponent));
 
@@ -117,8 +126,29 @@ export function Board({ onBackToHome }: BoardProps) {
       inlineSize: "100vw",
       blockSize: "100dvh",
       overflow: "hidden",
-      background: "var(--color-bg-primary)"
+      background: "var(--color-bg-primary)",
+      position: "relative"
     }}>
+      {/* Preview mode indicator */}
+      {isPreviewMode && (
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          background: "rgba(99, 102, 241, 0.9)",
+          color: "white",
+          padding: "var(--space-3)",
+          textAlign: "center",
+          fontWeight: 600,
+          fontSize: "0.875rem",
+          zIndex: 1000,
+          borderBottom: "2px solid #6366f1",
+        }}>
+          ⏸ PREVIEW MODE - Scrubbing through history
+        </div>
+      )}
+
       {/* Main game area */}
       <div style={{
         display: "grid",
@@ -126,30 +156,32 @@ export function Board({ onBackToHome }: BoardProps) {
         rowGap: "var(--space-3)",
         padding: "var(--space-5)",
         minInlineSize: 0,
-        overflow: "hidden"
+        overflow: "hidden",
+        paddingTop: isPreviewMode ? "calc(var(--space-5) + 2.5rem)" : "var(--space-5)",
       }}>
         <OpponentBar
           opponent={opponent}
+          opponentId="ai"
           isHumanTurn={isHumanTurn}
           gameMode={gameMode}
           onGameModeChange={onGameModeChange}
-          phase={state.phase}
-          subPhase={state.subPhase}
+          phase={displayState.phase}
+          subPhase={displayState.subPhase}
         />
 
         <div style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}>
           <Supply
-            state={state}
-            onBuyCard={onBuyCard}
-            canBuy={canBuy}
-            availableCoins={state.coins}
-            pendingDecision={state.pendingDecision}
+            state={displayState}
+            onBuyCard={isPreviewMode ? undefined : onBuyCard}
+            canBuy={isPreviewMode ? () => false : canBuy}
+            availableCoins={displayState.coins}
+            pendingDecision={displayState.pendingDecision}
           />
         </div>
 
-        {isHumanTurn && !state.pendingDecision && (
+        {isHumanTurn && !state.pendingDecision && !isPreviewMode && (
           <ActionBar
-            state={state}
+            state={displayState}
             hint={getHint()}
             hasTreasuresInHand={hasTreasuresInHand}
             onPlayAllTreasures={onPlayAllTreasures}
@@ -234,17 +266,18 @@ export function Board({ onBackToHome }: BoardProps) {
           vpCount={humanVP}
           isActive={isHumanTurn}
           isHuman={true}
-          selectedCards={selectedCards}
-          onCardClick={onCardClick}
-          onInPlayClick={state.phase === "buy" ? onInPlayClick : undefined}
-          pendingDecision={state.pendingDecision}
-          phase={state.phase}
-          subPhase={state.subPhase}
+          selectedCards={isPreviewMode ? [] : selectedCards}
+          onCardClick={isPreviewMode ? undefined : onCardClick}
+          onInPlayClick={!isPreviewMode && displayState.phase === "buy" ? onInPlayClick : undefined}
+          pendingDecision={displayState.pendingDecision}
+          phase={displayState.phase}
+          subPhase={displayState.subPhase}
         />
       </div>
 
       <GameSidebar
-        state={state}
+        state={displayState}
+        events={events}
         isProcessing={isProcessing}
         gameMode={gameMode}
         modelSettings={modelSettings}
@@ -262,6 +295,20 @@ export function Board({ onBackToHome }: BoardProps) {
           onNewGame={onNewGame}
         />
       )}
+
+      {/* Event Devtools */}
+      <EventDevtools
+        events={events}
+        currentState={state}
+        isOpen={showDevtools}
+        onToggle={() => setShowDevtools(!showDevtools)}
+        onBranchFrom={(eventId) => {
+          requestUndo(eventId, "Branch from event timeline");
+        }}
+        onScrub={(eventId) => {
+          setPreviewEventId(eventId);
+        }}
+      />
     </div>
   );
 }
