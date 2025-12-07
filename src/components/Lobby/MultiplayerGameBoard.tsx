@@ -294,6 +294,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           phase={displayState.phase}
           subPhase={displayState.subPhase}
           loading={!myPlayerState}
+          playerId={myPlayer || undefined}
         />
       </div>
 

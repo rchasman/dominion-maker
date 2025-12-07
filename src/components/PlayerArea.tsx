@@ -2,6 +2,7 @@ import type { CardName, PlayerState, Phase, TurnSubPhase } from "../types/game-s
 import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
 import { CARDS } from "../data/cards";
+import { getPlayerColor } from "../lib/board-utils";
 
 interface PlayerAreaProps {
   player: PlayerState;
@@ -17,6 +18,7 @@ interface PlayerAreaProps {
   phase: Phase;
   subPhase: TurnSubPhase;
   loading?: boolean;
+  playerId?: string;
 }
 
 function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
@@ -66,6 +68,7 @@ export function PlayerArea({
   onInPlayClick,
   compact,
   pendingDecision,
+  playerId,
   phase,
   subPhase,
   loading = false,
@@ -142,7 +145,7 @@ export function PlayerArea({
         {vpCount !== undefined && (
           <div style={{
             fontSize: "0.875rem",
-            color: "var(--color-victory)",
+            color: playerId ? getPlayerColor(playerId) : "var(--color-victory)",
             fontWeight: 600,
             display: "flex",
             alignItems: "center",

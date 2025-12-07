@@ -185,8 +185,6 @@ export function Board({ onBackToHome }: BoardProps) {
           opponent={opponent}
           opponentId="ai"
           isHumanTurn={isHumanTurn}
-          gameMode={gameMode}
-          onGameModeChange={onGameModeChange}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
         />
@@ -237,6 +235,7 @@ export function Board({ onBackToHome }: BoardProps) {
           pendingDecision={displayState.pendingDecision}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
+          playerId="human"
         />
       </div>
 
@@ -245,6 +244,7 @@ export function Board({ onBackToHome }: BoardProps) {
         events={events}
         isProcessing={isProcessing}
         gameMode={gameMode}
+        onGameModeChange={onGameModeChange}
         localPlayer="human"
         modelSettings={modelSettings}
         onModelSettingsChange={onModelSettingsChange}

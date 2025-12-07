@@ -6,7 +6,6 @@ import type { ModelSettings } from "../../agent/game-agent";
 import { useLLMLogs } from "../../context/GameContext";
 import { LogEntry } from "../LogEntry";
 import { LLMLog } from "../LLMLog";
-import { ModelSettingsAccordion } from "../ModelSettings";
 import { aggregateLogEntries, countVP, getAllCards, getPlayerColor } from "../../lib/board-utils";
 
 function LogEntryWithUndo({
@@ -90,6 +89,7 @@ interface GameSidebarProps {
   events?: GameEvent[]; // Optional events array for clickable undo
   isProcessing: boolean;
   gameMode: GameMode;
+  onGameModeChange?: (mode: GameMode) => void;
   localPlayer?: string; // The player viewing this UI (e.g., "human", "player0")
   modelSettings?: ModelSettings; // Optional for multiplayer
   onModelSettingsChange?: (settings: ModelSettings) => void; // Optional for multiplayer
@@ -104,6 +104,7 @@ export function GameSidebar({
   events,
   isProcessing,
   gameMode,
+  onGameModeChange,
   localPlayer = "human",
   modelSettings,
   onModelSettingsChange,
@@ -116,17 +117,6 @@ export function GameSidebar({
 
   // Check if it's the local player's turn
   const isLocalPlayerTurn = state.activePlayer === localPlayer;
-
-  // Get player states - handle both single-player (human/ai) and multiplayer (player0/player1/etc)
-  const humanPlayer = state.players.human || state.players.player0;
-  const opponentPlayer = state.players.ai || state.players.player1;
-
-  // Determine player IDs for coloring
-  const humanPlayerId = state.players.human ? "human" : "player0";
-  const opponentPlayerId = state.players.ai ? "ai" : "player1";
-
-  const humanVP = humanPlayer ? countVP(getAllCards(humanPlayer)) : 0;
-  const opponentVP = opponentPlayer ? countVP(getAllCards(opponentPlayer)) : 0;
   const gameLogScrollRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -297,7 +287,14 @@ export function GameSidebar({
           background: "var(--color-bg-primary)",
           overflow: "hidden",
         }}>
-          <LLMLog entries={llmLogs} gameMode={gameMode} />
+          <LLMLog
+            entries={llmLogs}
+            gameMode={gameMode}
+            modelSettings={modelSettings && onModelSettingsChange ? {
+              settings: modelSettings,
+              onChange: onModelSettingsChange
+            } : undefined}
+          />
         </div>
       )}
 
@@ -307,108 +304,102 @@ export function GameSidebar({
         borderBlockStart: "1px solid var(--color-border)",
         background: "var(--color-bg-surface)",
       }}>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBlockEnd: "var(--space-3)",
-        }}>
-          <span style={{ color: "var(--color-gold)", fontWeight: 600, fontSize: "0.875rem" }}>
-            Turn {state.turn}
-          </span>
-          <span style={{
-            fontSize: "0.625rem",
-            color: getPlayerColor(state.activePlayer),
-            fontWeight: 600,
-          }}>
-            {isLocalPlayerTurn ? "Your Turn" : "Opponent"}
-          </span>
-        </div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          fontSize: "0.75rem",
-          color: "var(--color-text-secondary)",
-        }}>
-          <span>You: <strong style={{ color: getPlayerColor(humanPlayerId) }}>{humanVP} VP</strong></span>
-          <span>Opp: <strong style={{ color: getPlayerColor(opponentPlayerId) }}>{opponentVP} VP</strong></span>
-        </div>
-
-        {modelSettings && onModelSettingsChange && (
-          <div style={{ marginBlockStart: "var(--space-3)" }}>
-            <ModelSettingsAccordion
-              settings={modelSettings}
-              onChange={onModelSettingsChange}
-            />
+        {/* Mode Switcher */}
+        {onGameModeChange && (
+          <div style={{ marginBlockEnd: "var(--space-3)" }}>
+            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05rem" }}>
+                Mode:
+              </span>
+              {(["engine", "hybrid", "llm"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => onGameModeChange(mode)}
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "0.65rem",
+                    fontWeight: gameMode === mode ? 700 : 400,
+                    background: gameMode === mode ? "var(--color-victory-dark)" : "transparent",
+                    color: gameMode === mode ? "#fff" : "var(--color-text-secondary)",
+                    border: "1px solid",
+                    borderColor: gameMode === mode ? "var(--color-victory)" : "var(--color-border-secondary)",
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05rem",
+                    fontFamily: "inherit",
+                    borderRadius: "3px",
+                  }}
+                >
+                  {mode === "engine" ? "Engine" : mode === "hybrid" ? "Hybrid" : "LLM"}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {onBackToHome && (
-          <button
-            onClick={onBackToHome}
-            style={{
-              marginBlockStart: "var(--space-3)",
-              padding: "var(--space-2)",
-              background: "transparent",
-              color: "var(--color-text-primary)",
-              border: "1px solid var(--color-border)",
-              cursor: "pointer",
-              fontSize: "0.875rem",
-              fontFamily: "inherit",
-              borderRadius: "4px",
-              width: "100%",
-            }}
-            title="Return to home screen"
-          >
-            ← Back to Home
-          </button>
-        )}
+        {/* Action Buttons - side by side at bottom */}
+        <div style={{
+          display: "flex",
+          gap: "var(--space-2)",
+          justifyContent: "center",
+        }}>
+          {onNewGame && (
+            <button
+              onClick={onNewGame}
+              style={{
+                padding: "var(--space-2) var(--space-3)",
+                background: "transparent",
+                color: "var(--color-text-secondary)",
+                border: "1px solid var(--color-border)",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                fontFamily: "inherit",
+                borderRadius: "4px",
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-1)",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-action)"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+              title="New Game"
+            >
+              <span style={{ fontSize: "0.875rem" }}>⊕</span>
+              <span>New Game</span>
+            </button>
+          )}
 
-        {onNewGame && (
-          <button
-            onClick={onNewGame}
-            style={{
-              marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
-              padding: "var(--space-2)",
-              background: "transparent",
-              color: "var(--color-text-secondary)",
-              border: "1px solid var(--color-border)",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              fontFamily: "inherit",
-              borderRadius: "4px",
-              width: "100%",
-            }}
-            title="Start a new game"
-          >
-            ↻ New Game
-          </button>
-        )}
-
-        {onEndGame && (
-          <button
-            onClick={onEndGame}
-            style={{
-              marginBlockStart: onBackToHome ? "var(--space-2)" : "var(--space-3)",
-              padding: "var(--space-2)",
-              background: "rgba(239, 68, 68, 0.2)",
-              color: "#ef4444",
-              border: "1px solid rgba(239, 68, 68, 0.5)",
-              cursor: "pointer",
-              fontSize: "0.75rem",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              fontFamily: "inherit",
-              borderRadius: "4px",
-              width: "100%",
-            }}
-            title="End the game"
-          >
-            End Game
-          </button>
-        )}
+          {/* Always show End button - calls onEndGame or onBackToHome */}
+          {(onEndGame || onBackToHome) && (
+            <button
+              onClick={onEndGame || onBackToHome}
+              style={{
+                padding: "var(--space-2) var(--space-3)",
+                background: "transparent",
+                color: "var(--color-text-secondary)",
+                border: "1px solid var(--color-border)",
+                cursor: "pointer",
+                fontSize: "0.75rem",
+                fontFamily: "inherit",
+                borderRadius: "4px",
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "var(--space-1)",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+              title="End Game"
+            >
+              <span style={{ fontSize: "0.875rem" }}>⊗</span>
+              <span>End Game</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,13 +1,10 @@
 import type { PlayerState, Phase, TurnSubPhase } from "../../types/game-state";
-import type { GameMode } from "../../types/game-mode";
 import { countVP, getAllCards, getPlayerColor } from "../../lib/board-utils";
 
 interface OpponentBarProps {
   opponent: PlayerState;
   opponentId?: string; // Optional opponent ID for color
   isHumanTurn: boolean;
-  gameMode: GameMode;
-  onGameModeChange: (mode: GameMode) => void;
   phase: Phase;
   subPhase: TurnSubPhase;
 }
@@ -24,7 +21,7 @@ function getPhaseBorderColor(isAiTurn: boolean, phase: Phase, subPhase: TurnSubP
   return "var(--color-border)";
 }
 
-export function OpponentBar({ opponent, opponentId = "ai", isHumanTurn, gameMode, onGameModeChange, phase, subPhase }: OpponentBarProps) {
+export function OpponentBar({ opponent, opponentId = "ai", isHumanTurn, phase, subPhase }: OpponentBarProps) {
   const opponentVP = countVP(getAllCards(opponent));
   const borderColor = getPhaseBorderColor(!isHumanTurn, phase, subPhase);
   const playerColor = getPlayerColor(opponentId);
@@ -54,12 +51,10 @@ export function OpponentBar({ opponent, opponentId = "ai", isHumanTurn, gameMode
           <span>Hand: <strong style={{ color: "var(--color-gold)" }}>{opponent.hand.length}</strong></span>
           <span>Discard: <strong style={{ color: "var(--color-gold)" }}>{opponent.discard.length}</strong></span>
         </div>
-
-        <ModeSwitcher gameMode={gameMode} onGameModeChange={onGameModeChange} />
       </div>
       <div style={{
         fontSize: "0.875rem",
-        color: "var(--color-victory)",
+        color: playerColor,
         fontWeight: 600,
         display: "flex",
         alignItems: "center",
@@ -68,38 +63,6 @@ export function OpponentBar({ opponent, opponentId = "ai", isHumanTurn, gameMode
         <span style={{ color: "var(--color-text-secondary)", fontWeight: 400, fontSize: "0.75rem" }}>VP:</span>
         {opponentVP}
       </div>
-    </div>
-  );
-}
-
-function ModeSwitcher({ gameMode, onGameModeChange }: { gameMode: GameMode; onGameModeChange: (mode: GameMode) => void }) {
-  return (
-    <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-      <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05rem" }}>
-        Mode:
-      </span>
-      {(["engine", "hybrid", "llm"] as const).map((mode) => (
-        <button
-          key={mode}
-          onClick={() => onGameModeChange(mode)}
-          style={{
-            padding: "3px 8px",
-            fontSize: "0.65rem",
-            fontWeight: gameMode === mode ? 700 : 400,
-            background: gameMode === mode ? "var(--color-victory-dark)" : "transparent",
-            color: gameMode === mode ? "#fff" : "var(--color-text-secondary)",
-            border: "1px solid",
-            borderColor: gameMode === mode ? "var(--color-victory)" : "var(--color-border-secondary)",
-            cursor: "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.05rem",
-            fontFamily: "inherit",
-            borderRadius: "3px",
-          }}
-        >
-          {mode === "engine" ? "Engine" : mode === "hybrid" ? "Hybrid" : "LLM"}
-        </button>
-      ))}
     </div>
   );
 }
