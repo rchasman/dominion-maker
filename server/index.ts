@@ -71,18 +71,14 @@ const app = new Elysia()
       const isMistral = provider.includes("ministral");
 
       if (isMistral) {
-        const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching this exact format (no schema, no explanation):
-
-ALL actions are atomic (single card):
+        const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
 { "type": "play_action", "card": "CardName", "reasoning": "..." }
 { "type": "play_treasure", "card": "CardName", "reasoning": "..." }
 { "type": "buy_card", "card": "CardName", "reasoning": "..." }
 { "type": "gain_card", "card": "CardName", "reasoning": "..." }
 { "type": "discard_card", "card": "CardName", "reasoning": "..." }
 { "type": "trash_card", "card": "CardName", "reasoning": "..." }
-{ "type": "end_phase", "reasoning": "..." }
-
-IMPORTANT: Always use "card" (singular), never "cards" (plural). One card per action.`;
+{ "type": "end_phase", "reasoning": "..." }`;
 
         const result = await generateText({
           model,
