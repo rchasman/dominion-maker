@@ -1,4 +1,4 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { serverTiming } from "@elysiajs/server-timing";
@@ -7,8 +7,17 @@ import { ActionSchema } from "../src/types/action";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
-import type { GameState } from "../src/types/game-state";
+import { GameState, HumanChoice } from "../src/types/game-state";
 import type { Action } from "../src/types/action";
+import { z } from "zod";
+
+// Request body schema
+const GenerateActionRequestSchema = z.object({
+  provider: z.string(),
+  currentState: GameState,
+  humanChoice: HumanChoice.optional(),
+  legalActions: z.array(ActionSchema).optional(),
+});
 
 // Configure AI Gateway with server-side API key
 const gateway = createGateway({
@@ -187,6 +196,8 @@ const app = new Elysia()
 
       throw err;
     }
+  }, {
+    body: GenerateActionRequestSchema
   });
 
 // For local development
