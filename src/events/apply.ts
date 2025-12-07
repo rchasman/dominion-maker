@@ -100,8 +100,8 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         turn: event.turn,
         activePlayer: event.player,
         phase: "action",
-        actions: 1,
-        buys: 1,
+        actions: 0, // Will be set by ACTIONS_MODIFIED event
+        buys: 0, // Will be set by BUYS_MODIFIED event
         coins: 0,
         turnHistory: [],
         log: [
@@ -372,6 +372,46 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             discard: newDiscard,
             // Add to top of deck (end of array)
             deck: [...playerState.deck, ...event.cards],
+          },
+        },
+      };
+    }
+
+    case "CARD_RETURNED_TO_HAND": {
+      const playerState = state.players[event.player];
+      if (!playerState) return state;
+
+      let newInPlay = [...playerState.inPlay];
+      let newInPlaySourceIndices = [...playerState.inPlaySourceIndices];
+      let newDiscard = [...playerState.discard];
+      let newDeck = [...playerState.deck];
+
+      // Remove from source zone
+      if (event.from === "inPlay") {
+        const idx = newInPlay.indexOf(event.card);
+        if (idx !== -1) {
+          newInPlay.splice(idx, 1);
+          newInPlaySourceIndices.splice(idx, 1);
+        }
+      } else if (event.from === "discard") {
+        const idx = newDiscard.indexOf(event.card);
+        if (idx !== -1) newDiscard.splice(idx, 1);
+      } else if (event.from === "deck") {
+        const idx = newDeck.lastIndexOf(event.card);
+        if (idx !== -1) newDeck.splice(idx, 1);
+      }
+
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          [event.player]: {
+            ...playerState,
+            hand: [...playerState.hand, event.card],
+            inPlay: newInPlay,
+            inPlaySourceIndices: newInPlaySourceIndices,
+            discard: newDiscard,
+            deck: newDeck,
           },
         },
       };

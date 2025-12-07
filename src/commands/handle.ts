@@ -35,6 +35,9 @@ export function handleCommand(
     case "PLAY_ALL_TREASURES":
       return handlePlayAllTreasures(state, command.player);
 
+    case "UNPLAY_TREASURE":
+      return handleUnplayTreasure(state, command.player, command.card);
+
     case "BUY_CARD":
       return handleBuyCard(state, command.player, command.card);
 
@@ -134,11 +137,26 @@ function handleStartGame(
   }
 
   // Start turn 1
+  const turnStartId = generateEventId();
   events.push({
     type: "TURN_STARTED",
     turn: 1,
     player: players[0] as Player,
+    id: turnStartId,
+  });
+
+  // Add initial resources as explicit events for log clarity
+  events.push({
+    type: "ACTIONS_MODIFIED",
+    delta: 1,
     id: generateEventId(),
+    causedBy: turnStartId,
+  });
+  events.push({
+    type: "BUYS_MODIFIED",
+    delta: 1,
+    id: generateEventId(),
+    causedBy: turnStartId,
   });
 
   return { ok: true, events };
@@ -214,6 +232,10 @@ function handlePlayAction(
         decision: {
           ...result.pendingDecision,
           cardBeingPlayed: card,
+          metadata: {
+            ...result.pendingDecision.metadata,
+            originalCause: rootEventId, // Store original PLAY_ACTION event ID for causality chain
+          },
         },
         id: generateEventId(),
         causedBy: rootEventId,
@@ -315,6 +337,68 @@ function handlePlayAllTreasures(state: GameState, player: PlayerId): CommandResu
     if (result.ok) {
       events.push(...result.events);
       currentState = applyEvents(currentState, result.events);
+    }
+  }
+
+  return { ok: true, events };
+}
+
+function handleUnplayTreasure(
+  state: GameState,
+  player: PlayerId,
+  card: CardName
+): CommandResult {
+  if (state.phase !== "buy") {
+    return { ok: false, error: "Not in buy phase" };
+  }
+  if (!isTreasureCard(card)) {
+    return { ok: false, error: "Not a treasure card" };
+  }
+
+  const playerState = state.players[player as Player];
+  if (!playerState) {
+    return { ok: false, error: "Player not found" };
+  }
+  if (!playerState.inPlay.includes(card)) {
+    return { ok: false, error: "Card not in play" };
+  }
+
+  const events: GameEvent[] = [];
+
+  // Root cause event - returning the treasure to hand
+  const rootEventId = generateEventId();
+  events.push({
+    type: "CARD_RETURNED_TO_HAND",
+    player: player as Player,
+    card,
+    from: "inPlay",
+    id: rootEventId,
+  });
+
+  // Subtract coins - caused by unplaying the treasure
+  const coins = CARDS[card].coins || 0;
+  if (coins > 0) {
+    events.push({
+      type: "COINS_MODIFIED",
+      delta: -coins,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    });
+  }
+
+  // Check for Merchant bonus removal (if this was the first Silver)
+  if (card === "Silver") {
+    const merchantsInPlay = playerState.inPlay.filter(c => c === "Merchant").length;
+    const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
+
+    // If this is the only Silver and we have Merchants in play
+    if (silversInPlay === 1 && merchantsInPlay > 0) {
+      events.push({
+        type: "COINS_MODIFIED",
+        delta: -merchantsInPlay,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      });
     }
   }
 
@@ -437,14 +521,28 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       gameOverEvent.causedBy = endTurnId;
       events.push(gameOverEvent);
     } else {
-      // Start next turn - caused by ending the previous turn
+      // Start next turn - new root event (not caused by previous turn for log clarity)
       const nextPlayer = getNextPlayer(stateAfterDraw, player as Player);
+      const turnStartId = generateEventId();
       events.push({
         type: "TURN_STARTED",
         turn: state.turn + 1,
         player: nextPlayer,
+        id: turnStartId,
+      });
+
+      // Add initial resources as explicit events for log clarity
+      events.push({
+        type: "ACTIONS_MODIFIED",
+        delta: 1,
         id: generateEventId(),
-        causedBy: endTurnId,
+        causedBy: turnStartId,
+      });
+      events.push({
+        type: "BUYS_MODIFIED",
+        delta: 1,
+        id: generateEventId(),
+        causedBy: turnStartId,
       });
     }
   }
@@ -466,6 +564,15 @@ function handleSubmitDecision(
 
   const events: GameEvent[] = [];
 
+  // Save decision info before resolving (we'll need it after the decision is cleared)
+  const decisionPlayer = state.pendingDecision.player;
+  const cardBeingPlayed = state.pendingDecision.cardBeingPlayed;
+  const stage = state.pendingDecision.stage;
+  const metadata = state.pendingDecision.metadata;
+
+  // Get the original cause from metadata (set when DECISION_REQUIRED was created)
+  const originalCause = metadata?.originalCause as string | undefined;
+
   // Root cause event - resolving the decision
   const rootEventId = generateEventId();
   events.push({
@@ -476,25 +583,41 @@ function handleSubmitDecision(
   });
 
   // Continue the card effect with the decision
-  const cardBeingPlayed = state.pendingDecision.metadata?.cardBeingPlayed as CardName;
-  const stage = state.pendingDecision.metadata?.stage as string | undefined;
-
   if (cardBeingPlayed) {
     const effect = getCardEffect(cardBeingPlayed);
     if (effect) {
       const midState = applyEvents(state, events);
+      // Reconstruct minimal pendingDecision for card effect to use
+      // (midState.pendingDecision is null after DECISION_RESOLVED, but card effects need it)
+      const effectState: GameState = {
+        ...midState,
+        pendingDecision: {
+          type: "select_cards",
+          player: decisionPlayer,
+          from: "hand",
+          prompt: "",
+          cardOptions: [],
+          min: 0,
+          max: 0,
+          cardBeingPlayed: cardBeingPlayed,
+          stage: stage,
+          metadata: metadata,
+        },
+      };
+
       const result = effect({
-        state: midState,
+        state: effectState,
         player: state.activePlayer, // Original player who played the card
         card: cardBeingPlayed,
         decision: choice,
         stage,
       });
 
-      // Link all continuation effects to the decision resolution
+      // Link all continuation effects to the original cause (PLAY_ACTION), not the DECISION_RESOLVED
+      // This makes the log show discards nested under the attack card, not as separate entries
       for (const effectEvent of result.events) {
         effectEvent.id = generateEventId();
-        effectEvent.causedBy = rootEventId;
+        effectEvent.causedBy = originalCause || rootEventId; // Fall back to rootEventId if no original cause
       }
 
       events.push(...result.events);

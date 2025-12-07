@@ -30,6 +30,13 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
         </div>
       );
 
+    case "turn-end":
+      return (
+        <span>
+          <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
+        </span>
+      );
+
     case "phase-change":
       return (
         <span>
@@ -49,7 +56,7 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
             <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
-            </span>{suffix} <CoinValue coins={entry.coins} />
+            </span>{suffix}
           </span>
           {entry.reasoning && (
             <div style={{
@@ -67,12 +74,21 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       );
     }
 
-    case "unplay-treasure":
+    case "unplay-treasure": {
+      // Check if there's a count child (for aggregated unplays)
+      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
+      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const suffix = count > 1 ? ` x${count}` : "";
+
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>takes back</Verb> <CardNameSpan card={entry.card} /> <CoinValue coins={-entry.coins} />
+          <PlayerName player={entry.player} /> <Verb>takes back</Verb>{" "}
+          <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
+            {entry.card}
+          </span>{suffix}
         </span>
       );
+    }
 
     case "play-action": {
       // Check if there's a count child (for aggregated actions)
@@ -140,7 +156,8 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       if (isOpponent) {
         return (
           <span>
-            <Verb>draws</Verb> {entry.count} new cards
+            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            <Verb>draws</Verb> {entry.count} cards
           </span>
         );
       }
@@ -177,12 +194,14 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
         return (
           <span>
+            {depth === 0 && <><PlayerName player={entry.player} /> </>}
             <Verb>draws</Verb> {parts}
           </span>
         );
       }
       return (
         <span>
+          {depth === 0 && <><PlayerName player={entry.player} /> </>}
           <Verb>draws</Verb> {entry.count} cards
         </span>
       );
@@ -195,16 +214,7 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       const suffix = count > 1 ? ` x${count}` : "";
 
       const cardDef = CARDS[entry.card];
-      const isTreasure = cardDef.types.includes("treasure");
       const isVictory = cardDef.types.includes("victory") || cardDef.types.includes("curse");
-
-      // Show coin value for treasures
-      const coinDisplay = isTreasure && cardDef.coins !== undefined ? (
-        <>
-          {" "}
-          <CoinValue coins={cardDef.coins} showSign={false} />
-        </>
-      ) : null;
 
       // Show VP for victory/curse cards
       const vpValue = typeof cardDef.vp === "number" ? cardDef.vp * count : undefined;
@@ -223,22 +233,46 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
           <Verb>gains</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
             {entry.card}
-          </span>{suffix}{coinDisplay}{vpDisplay}
+          </span>{suffix}{vpDisplay}
         </span>
       );
     }
 
     case "discard-cards":
       if (entry.cards) {
+        // Group cards by name for compact display
+        const cardCounts = new Map<string, number>();
+        for (const card of entry.cards) {
+          cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
+        }
+
+        const parts: ReactNode[] = [];
+        let idx = 0;
+        for (const [card, count] of cardCounts) {
+          if (idx > 0) parts.push(<span key={`comma-${idx}`}>{", "}</span>);
+          if (count > 1) {
+            parts.push(
+              <span key={idx}>
+                <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
+                  {card}
+                </span>
+                {` x${count}`}
+              </span>
+            );
+          } else {
+            parts.push(
+              <span key={idx}>
+                <CardNameSpan card={card as typeof entry.cards[0]} />
+              </span>
+            );
+          }
+          idx++;
+        }
+
         return (
           <span>
             {depth === 0 && <><PlayerName player={entry.player} /> </>}
-            <Verb>discards</Verb> {entry.cards.map((card, i) => (
-              <span key={i}>
-                {i > 0 && ", "}
-                <CardNameSpan card={card} />
-              </span>
-            ))}
+            <Verb>discards</Verb> {parts}
           </span>
         );
       }
@@ -305,21 +339,42 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
     case "get-actions":
       return (
         <span>
-          <Verb>gets</Verb> <ActionValue count={entry.count} />
+          <Verb>earns</Verb> <ActionValue count={entry.count} />
         </span>
       );
 
     case "get-buys":
       return (
         <span>
-          <Verb>gets</Verb> <BuyValue count={entry.count} />
+          <Verb>earns</Verb> <BuyValue count={entry.count} />
+        </span>
+      );
+
+    case "use-actions":
+      return (
+        <span>
+          <Verb>spends</Verb> <ActionValue count={-entry.count} />
+        </span>
+      );
+
+    case "use-buys":
+      return (
+        <span>
+          <Verb>spends</Verb> <BuyValue count={-entry.count} />
         </span>
       );
 
     case "get-coins":
       return (
         <span>
-          <Verb>gets</Verb> <CoinValue coins={entry.count} />
+          <Verb>earns</Verb> <CoinValue coins={entry.count} />
+        </span>
+      );
+
+    case "spend-coins":
+      return (
+        <span>
+          <Verb>spends</Verb> <CoinValue coins={-entry.count} />
         </span>
       );
 

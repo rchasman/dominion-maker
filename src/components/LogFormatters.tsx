@@ -1,10 +1,6 @@
 import type { Player, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
-
-// Simple hash function to assign consistent colors to player names
-function getPlayerColor(player: Player): string {
-  return player === "human" ? "var(--color-human)" : "var(--color-ai)";
-}
+import { getPlayerColor } from "../lib/board-utils";
 
 export function getCardColor(card: CardName): string {
   const cardDef = CARDS[card];
@@ -35,10 +31,11 @@ export function CardNameSpan({ card }: { card: CardName }) {
 }
 
 export function CoinValue({ coins, showSign = true }: { coins: number; showSign?: boolean }) {
-  const sign = showSign ? (coins >= 0 ? "+" : "") : "";
+  const sign = coins >= 0 ? "+" : "-";
+  const absCoins = Math.abs(coins);
   return (
     <span style={{ color: "var(--color-gold-bright)", fontWeight: 700 }}>
-      {sign}${coins}
+      {showSign && sign}{absCoins} {absCoins === 1 ? "Coin" : "Coins"}
     </span>
   );
 }
@@ -52,17 +49,21 @@ export function VPValue({ vp }: { vp: number }) {
 }
 
 export function ActionValue({ count }: { count: number }) {
+  const sign = count >= 0 ? "+" : "-";
+  const absCount = Math.abs(count);
   return (
     <span style={{ color: "var(--color-action-phase)", fontWeight: 700 }}>
-      +{count} {count === 1 ? "Action" : "Actions"}
+      {sign}{absCount} {absCount === 1 ? "Action" : "Actions"}
     </span>
   );
 }
 
 export function BuyValue({ count }: { count: number }) {
+  const sign = count >= 0 ? "+" : "-";
+  const absCount = Math.abs(count);
   return (
     <span style={{ color: "var(--color-buy-phase)", fontWeight: 700 }}>
-      +{count} {count === 1 ? "Buy" : "Buys"}
+      {sign}{absCount} {absCount === 1 ? "Buy" : "Buys"}
     </span>
   );
 }
