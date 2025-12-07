@@ -23,8 +23,12 @@ export function Card({
   highlightMode,
 }: CardProps) {
   const imageUrl = showBack
-    ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
+    ? "/cards/Card_back.jpg"
     : getCardImageUrl(name);
+
+  const fallbackUrl = showBack
+    ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
+    : `https://robinzigmond.github.io/Dominion-app/images/card_images/${name.replace(/ /g, "_")}.jpg`;
 
   // Determine border style based on state
   const getBorderStyle = () => {
@@ -86,7 +90,12 @@ export function Card({
           objectFit: "contain",
         }}
         onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
+          const img = e.target as HTMLImageElement;
+          if (img.src !== fallbackUrl) {
+            img.src = fallbackUrl;
+          } else {
+            img.style.display = "none";
+          }
         }}
       />
       {count !== undefined && (
