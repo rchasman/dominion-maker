@@ -1,5 +1,5 @@
 /**
- * LLM Strategy - Full LLM consensus for all moves using event-sourced DominionEngine
+ * MAKER Strategy - Multi-model consensus for AI turns
  */
 
 import type { GameStrategy } from "../types/game-mode";
@@ -7,7 +7,10 @@ import type { DominionEngine } from "../engine";
 import type { GameState } from "../types/game-state";
 import { runAITurnWithConsensus, advanceGameStateWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
 
-export class LLMStrategy implements GameStrategy {
+/**
+ * MAKER: Uses multi-model consensus voting for AI turns
+ */
+export class MakerStrategy implements GameStrategy {
   private logger?: LLMLogger;
   private modelSettings: ModelSettings;
 
@@ -20,11 +23,13 @@ export class LLMStrategy implements GameStrategy {
   }
 
   async runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void> {
+    // Use LLM consensus for strategic decisions
     const models = buildModelsFromSettings(this.modelSettings);
     return runAITurnWithConsensus(engine, "ai", models, this.logger, onStateChange);
   }
 
   async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
+    // Use LLM consensus for decisions
     const models = buildModelsFromSettings(this.modelSettings);
     const pendingDecision = engine.state.pendingDecision;
 
@@ -41,12 +46,10 @@ export class LLMStrategy implements GameStrategy {
       });
     }
 
-    // Consensus system handles decisions within runAITurnWithConsensus
-    // For standalone decision resolution, run one consensus step
     return advanceGameStateWithConsensus(engine, "ai", undefined, models, this.logger);
   }
 
   getModeName(): string {
-    return "LLM Consensus";
+    return "MAKER";
   }
 }

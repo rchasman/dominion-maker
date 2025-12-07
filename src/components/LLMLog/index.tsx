@@ -1329,22 +1329,13 @@ export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps
                   AI uses hard-coded rules. No LLM calls are made.
                 </div>
               </>
-            ) : gameMode === "hybrid" ? (
-              <>
-                <div style={{ marginBottom: "var(--space-2)" }}>
-                  Hybrid Mode Active
-                </div>
-                <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
-                  Consensus decisions will appear when AI takes its turn.
-                </div>
-              </>
             ) : (
               <>
                 <div style={{ marginBottom: "var(--space-2)" }}>
-                  LLM Mode Active
+                  MAKER Mode Active
                 </div>
                 <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
-                  Consensus decisions will appear when any player takes their turn.
+                  Consensus decisions will appear when AI takes its turn.
                 </div>
               </>
             )}

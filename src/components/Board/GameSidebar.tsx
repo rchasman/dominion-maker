@@ -179,8 +179,8 @@ export function GameSidebar({
     >
       {/* Game Log */}
       <div style={{
-        height: (gameMode === "llm" || gameMode === "hybrid") ? `${gameLogHeight}%` : "auto",
-        flex: (gameMode === "llm" || gameMode === "hybrid") ? "none" : 1,
+        height: gameMode === "maker" ? `${gameLogHeight}%` : "auto",
+        flex: gameMode === "maker" ? "none" : 1,
         minBlockSize: 0,
         display: "flex",
         flexDirection: "column",
@@ -251,8 +251,8 @@ export function GameSidebar({
         </div>
       </div>
 
-      {/* Resize Handle - only show in LLM modes */}
-      {(gameMode === "llm" || gameMode === "hybrid") && (
+      {/* Resize Handle - only show in MAKER mode */}
+      {gameMode === "maker" && (
         <div
           onMouseDown={() => setIsDragging(true)}
           style={{
@@ -277,8 +277,8 @@ export function GameSidebar({
         </div>
       )}
 
-      {/* LLM Debug Log - only show in single-player LLM/hybrid modes */}
-      {(gameMode === "llm" || gameMode === "hybrid") && (
+      {/* LLM Debug Log - only show in single-player MAKER mode */}
+      {gameMode === "maker" && (
         <div style={{
           height: `${100 - gameLogHeight}%`,
           minBlockSize: 0,
@@ -311,7 +311,7 @@ export function GameSidebar({
               <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05rem" }}>
                 Mode:
               </span>
-              {(["engine", "hybrid", "llm"] as const).map((mode) => (
+              {(["engine", "maker"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => onGameModeChange(mode)}
@@ -330,7 +330,7 @@ export function GameSidebar({
                     borderRadius: "3px",
                   }}
                 >
-                  {mode === "engine" ? "Engine" : mode === "hybrid" ? "Hybrid" : "LLM"}
+                  {mode === "engine" ? "Engine" : "MAKER"}
                 </button>
               ))}
             </div>

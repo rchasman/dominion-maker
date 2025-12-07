@@ -25,8 +25,7 @@ import { DEFAULT_MODEL_SETTINGS, abortOngoingConsensus } from "../agent/game-age
 import { DominionEngine } from "../engine";
 import { isActionCard, isTreasureCard } from "../data/cards";
 import { EngineStrategy } from "../strategies/engine-strategy";
-import { LLMStrategy } from "../strategies/llm-strategy";
-import { HybridStrategy } from "../strategies/hybrid-strategy";
+import { MakerStrategy } from "../strategies/maker-strategy";
 
 const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -89,9 +88,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
       const savedSettings = localStorage.getItem(STORAGE_MODEL_SETTINGS_KEY);
 
-      if (savedMode && (savedMode === "engine" || savedMode === "llm" || savedMode === "hybrid")) {
+      if (savedMode && (savedMode === "engine" || savedMode === "maker" || savedMode === "hybrid")) {
+        // Migrate old "hybrid"/"llm" to "maker"
+        const mode = (savedMode === "hybrid" || savedMode === "llm") ? "maker" : savedMode;
         modeRestoredFromStorage.current = true;
-        setGameModeState(savedMode);
+        setGameModeState(mode);
       }
 
       if (savedLogs) {
@@ -202,10 +203,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const strategy: GameStrategy = useMemo(() => {
     if (gameMode === "engine") {
       return new EngineStrategy();
-    } else if (gameMode === "llm") {
-      return new LLMStrategy("openai", llmLogger, modelSettings);
     } else {
-      return new HybridStrategy("openai", llmLogger, modelSettings);
+      return new MakerStrategy("openai", llmLogger, modelSettings);
     }
   }, [gameMode, llmLogger, modelSettings]);
 

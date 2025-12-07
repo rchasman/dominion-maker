@@ -55,11 +55,8 @@ export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartSc
         <ModeButton mode="engine" current={gameMode} onClick={setGameMode}>
           Engine Mode
         </ModeButton>
-        <ModeButton mode="hybrid" current={gameMode} onClick={setGameMode}>
-          Hybrid Mode
-        </ModeButton>
-        <ModeButton mode="llm" current={gameMode} onClick={setGameMode}>
-          LLM Mode
+        <ModeButton mode="maker" current={gameMode} onClick={setGameMode}>
+          MAKER Mode
         </ModeButton>
       </div>
 
@@ -73,9 +70,7 @@ export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartSc
       }}>
         {gameMode === "engine"
           ? "Hard-coded rules engine with explicit card implementations"
-          : gameMode === "hybrid"
-          ? "Engine for human moves, MAKER consensus for AI turns (GPT-4o + Claude)"
-          : "Pure MAKER consensus for all moves (GPT-4o + Claude validate each step)"}
+          : "Human plays, AI opponent uses multi-LLM consensus voting (different models vote on each decision)"}
       </p>
 
       <div style={{ display: "flex", gap: "var(--space-4)" }}>
@@ -129,9 +124,9 @@ function ModeButton({
   onClick,
   children
 }: {
-  mode: "engine" | "hybrid" | "llm";
+  mode: "engine" | "maker";
   current: string;
-  onClick: (mode: "engine" | "hybrid" | "llm") => void;
+  onClick: (mode: "engine" | "maker") => void;
   children: React.ReactNode;
 }) {
   const isActive = mode === current;
