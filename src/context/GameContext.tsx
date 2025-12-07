@@ -15,15 +15,18 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { GameState, CardName, Player } from "../types/game-state";
+import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameMode } from "../types/game-mode";
+import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings, ModelProvider } from "../agent/game-agent";
 import { DEFAULT_MODEL_SETTINGS, abortOngoingConsensus } from "../agent/game-agent";
 import { DominionEngine } from "../engine";
-import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
+import { isActionCard, isTreasureCard } from "../data/cards";
+import { EngineStrategy } from "../strategies/engine-strategy";
+import { LLMStrategy } from "../strategies/llm-strategy";
+import { HybridStrategy } from "../strategies/hybrid-strategy";
 
 const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -36,11 +39,13 @@ interface GameContextValue {
   events: GameEvent[];
   gameMode: GameMode;
   isProcessing: boolean;
+  isLoading: boolean; // Loading from localStorage
   modelSettings: ModelSettings;
 
   // Derived state
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
+  strategy: GameStrategy;
 
   // Actions
   setGameMode: (mode: GameMode) => void;
@@ -48,6 +53,7 @@ interface GameContextValue {
   startGame: () => void;
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
+  unplayTreasure: (card: CardName) => CommandResult;
   playAllTreasures: () => CommandResult;
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
@@ -69,6 +75,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [gameMode, setGameModeState] = useState<GameMode>("engine");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Track loading state
   const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>([]);
   const [modelSettings, setModelSettingsState] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
   const modeRestoredFromStorage = useRef(false);
@@ -107,6 +114,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         engineRef.current = engine;
         setEvents(parsedEvents);
         setGameState(engine.state);
+        console.log("[GameContext] Restored game from", parsedEvents.length, "events");
       }
     } catch (error) {
       console.error("Failed to restore game state:", error);
@@ -114,6 +122,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_MODE_KEY);
       localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
       localStorage.removeItem(STORAGE_MODEL_SETTINGS_KEY);
+    } finally {
+      setIsLoading(false); // Done loading
     }
   }, []);
 
@@ -172,32 +182,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Subscribe to engine events
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    const listener = (newEvents: GameEvent[], newState: GameState) => {
-      setEvents(engine.events);
-      setGameState(newState);
-    };
-
-    engine.subscribe(listener);
-    return () => {
-      // No unsubscribe in current engine implementation
-    };
-  }, [engineRef.current]);
 
   // LLM Logger
   const llmLogger = useCallback((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+    const engine = engineRef.current;
     const logEntry: LLMLogEntry = {
       ...entry,
       id: `${Date.now()}-${Math.random()}`,
       timestamp: Date.now(),
+      data: {
+        ...entry.data,
+        eventCount: engine?.events.length, // Track event count when log was created
+      },
     };
     setLLMLogs(prev => [...prev, logEntry]);
   }, []);
 
+  // Strategy
+  const strategy: GameStrategy = useMemo(() => {
+    if (gameMode === "engine") {
+      return new EngineStrategy();
+    } else if (gameMode === "llm") {
+      return new LLMStrategy("openai", llmLogger, modelSettings);
+    } else {
+      return new HybridStrategy("openai", llmLogger, modelSettings);
+    }
+  }, [gameMode, llmLogger, modelSettings]);
 
   // Derived state
   const hasPlayableActionsValue = useMemo(() => {
@@ -228,7 +238,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // Start game with human vs AI
     const result = engine.dispatch({
       type: "START_GAME",
-      playerIds: ["human", "ai"],
+      players: ["human", "ai"],
       kingdomCards: undefined, // Will use random 10
     });
 
@@ -247,6 +257,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const result = engine.dispatch({
       type: "PLAY_ACTION",
+      player: "human",
       card,
     }, "human");
 
@@ -264,6 +275,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const result = engine.dispatch({
       type: "PLAY_TREASURE",
+      player: "human",
+      card,
+    }, "human");
+
+    if (result.ok) {
+      setEvents(engine.events);
+      setGameState(engine.state);
+    }
+
+    return result;
+  }, []);
+
+  const unplayTreasure = useCallback((card: CardName): CommandResult => {
+    const engine = engineRef.current;
+    if (!engine) return { ok: false, error: "No engine" };
+
+    const result = engine.dispatch({
+      type: "UNPLAY_TREASURE",
+      player: "human",
       card,
     }, "human");
 
@@ -287,6 +317,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     for (const treasure of treasures) {
       const result = engine.dispatch({
         type: "PLAY_TREASURE",
+        player: "human",
         card: treasure,
       }, "human");
 
@@ -307,6 +338,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const result = engine.dispatch({
       type: "BUY_CARD",
+      player: "human",
       card,
     }, "human");
 
@@ -324,6 +356,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const result = engine.dispatch({
       type: "END_PHASE",
+      player: "human",
     }, "human");
 
     if (result.ok) {
@@ -340,6 +373,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const result = engine.dispatch({
       type: "SUBMIT_DECISION",
+      player: "human",
       choice,
     }, "human");
 
@@ -357,8 +391,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // In single-player, undo immediately (no consensus needed)
     engine.undoToEvent(toEventId);
+    const eventsAfterUndo = engine.events.length;
     setEvents(engine.events);
     setGameState(engine.state);
+
+    // Clear LLM logs that were created after the undo point
+    setLLMLogs(prev => prev.filter(log => {
+      const logEventCount = log.data?.eventCount;
+      // Keep logs that were created when event count was <= current count
+      return logEventCount === undefined || logEventCount <= eventsAfterUndo;
+    }));
   }, []);
 
   const getStateAtEvent = useCallback((eventId: string): GameState => {
@@ -368,7 +410,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return engine.getStateAtEvent(eventId);
   }, [gameState]);
 
-  // Auto-run AI turn - simple random AI for now
+  // Auto-run AI turn using strategy
   useEffect(() => {
     if (!gameState || gameState.gameOver || isProcessing) return;
     if (gameState.activePlayer !== "ai") return;
@@ -376,45 +418,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const engine = engineRef.current;
     if (!engine) return;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       setIsProcessing(true);
       try {
-        // Simple AI: play all actions, play all treasures, buy random affordable card, end turn
-        const aiState = gameState.players.ai;
-        if (!aiState) return;
-
-        // Action phase: play all actions
-        if (gameState.phase === "action") {
-          const actions = aiState.hand.filter(isActionCard);
-          for (const action of actions) {
-            if (gameState.actions > 0) {
-              engine.dispatch({ type: "PLAY_ACTION", card: action }, "ai");
-            }
-          }
-          engine.dispatch({ type: "END_PHASE" }, "ai");
-        }
-
-        // Buy phase: play all treasures, buy random card, end
-        if (gameState.phase === "buy") {
-          const treasures = aiState.hand.filter(isTreasureCard);
-          for (const treasure of treasures) {
-            engine.dispatch({ type: "PLAY_TREASURE", card: treasure }, "ai");
-          }
-
-          // Buy a random affordable card
-          const affordable = Object.entries(gameState.supply)
-            .filter(([_card, count]) => count > 0)
-            .filter(([card]) => CARDS[card as CardName].cost <= gameState.coins)
-            .map(([card]) => card as CardName);
-
-          if (affordable.length > 0 && gameState.buys > 0) {
-            const randomCard = affordable[Math.floor(Math.random() * affordable.length)];
-            engine.dispatch({ type: "BUY_CARD", card: randomCard }, "ai");
-          }
-
-          engine.dispatch({ type: "END_PHASE" }, "ai");
-        }
-
+        await strategy.runAITurn(engine, (state) => {
+          setGameState(state);
+        });
         setEvents(engine.events);
         setGameState(engine.state);
       } catch (error) {
@@ -425,32 +434,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [gameState, isProcessing]);
+  }, [gameState, isProcessing, strategy]);
 
-  // Auto-resolve AI pending decisions - pick first valid option
+  // Auto-resolve opponent decisions during turn (e.g., AI responding to Militia attack)
   useEffect(() => {
     if (!gameState || gameState.gameOver || isProcessing) return;
+    if (gameState.subPhase !== "opponent_decision") return;
     if (gameState.pendingDecision?.player !== "ai") return;
 
     const engine = engineRef.current;
     if (!engine) return;
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       setIsProcessing(true);
       try {
-        const decision = gameState.pendingDecision;
-        if (!decision) return;
-
-        // Simple AI: pick first N valid options (or random subset)
-        const options = decision.cardOptions || [];
-        const numToPick = Math.min(decision.min, options.length);
-        const selectedCards = options.slice(0, numToPick);
-
-        engine.dispatch({
-          type: "SUBMIT_DECISION",
-          choice: { selectedCards },
-        }, "ai");
-
+        await strategy.resolveAIPendingDecision(engine);
         setEvents(engine.events);
         setGameState(engine.state);
       } catch (error) {
@@ -461,6 +459,36 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, 500);
 
     return () => clearTimeout(timer);
+  }, [gameState, isProcessing, strategy]);
+
+  // Auto-transition to buy phase when human has no actions to play
+  useEffect(() => {
+    if (!gameState || gameState.gameOver || isProcessing) return;
+    if (gameState.activePlayer !== "human") return;
+    if (gameState.phase !== "action") return;
+    if (gameState.pendingDecision) return; // Don't auto-transition during decisions
+
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    // Check if player can play any actions
+    const humanPlayer = gameState.players.human;
+    if (!humanPlayer) return;
+
+    const hasActionCards = humanPlayer.hand.some(card => isActionCard(card));
+    const hasActions = gameState.actions > 0;
+
+    // Auto-transition if no actions available OR no action cards to play
+    if (!hasActions || !hasActionCards) {
+      const timer = setTimeout(() => {
+        console.log("[GameContext] Auto-transitioning to buy phase (no playable actions)");
+        engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
+        setEvents(engine.events);
+        setGameState(engine.state);
+      }, 300); // Small delay to make it feel natural
+
+      return () => clearTimeout(timer);
+    }
   }, [gameState, isProcessing]);
 
   const gameValue: GameContextValue = useMemo(() => ({
@@ -468,14 +496,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
     events,
     gameMode,
     isProcessing,
+    isLoading,
     modelSettings,
     hasPlayableActions: hasPlayableActionsValue,
     hasTreasuresInHand: hasTreasuresInHandValue,
+    strategy,
     setGameMode: setGameModeState,
     setModelSettings: setModelSettingsState,
     startGame,
     playAction,
     playTreasure,
+    unplayTreasure,
     playAllTreasures,
     buyCard,
     endPhase,
@@ -487,12 +518,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     events,
     gameMode,
     isProcessing,
+    isLoading,
     modelSettings,
     hasPlayableActionsValue,
     hasTreasuresInHandValue,
+    strategy,
     startGame,
     playAction,
     playTreasure,
+    unplayTreasure,
     playAllTreasures,
     buyCard,
     endPhase,
@@ -525,7 +559,8 @@ export function useGame() {
 export function useLLMLogs() {
   const context = useContext(LLMLogsContext);
   if (!context) {
-    throw new Error("useLLMLogs must be used within a GameProvider");
+    // Return empty logs for multiplayer mode (no GameProvider)
+    return { llmLogs: [] };
   }
   return context;
 }

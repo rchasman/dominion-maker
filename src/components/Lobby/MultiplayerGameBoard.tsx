@@ -12,7 +12,7 @@ import { EventDevtools } from "../EventDevtools";
 import { GameSidebar } from "../Board/GameSidebar";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { isActionCard, isTreasureCard } from "../../data/cards";
-import type { CardName, Player } from "../../types/game-state";
+import type { CardName } from "../../types/game-state";
 
 interface MultiplayerGameBoardProps {
   onBackToHome: () => void;
@@ -22,12 +22,8 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   const {
     gameState,
     events,
-    pendingUndo,
-    myPeerId,
-    myPlayerIndex,
     myGamePlayerId,
     isMyTurn,
-    isHost,
     leaveRoom,
     endGame,
     players,
@@ -40,12 +36,10 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     submitDecision,
     // Undo / Time travel
     requestUndo,
-    approveUndo,
-    denyUndo,
     getStateAtEvent,
   } = useMultiplayer();
 
-  const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
+  const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [showDevtools, setShowDevtools] = useState(false);
 
@@ -86,19 +80,19 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   const myVP = myPlayerState ? countVP(getAllCards(myPlayerState)) : 0;
 
   // Card click handler
-  const handleCardClick = useCallback((card: CardName) => {
+  const handleCardClick = useCallback((card: CardName, index: number) => {
     if (previewEventId !== null) return; // No actions in preview mode
     if (!isMyTurn) return;
 
     // If we have a pending decision, add to selection
     if (displayState.pendingDecision) {
       const decision = displayState.pendingDecision;
-      const maxCount = decision.maxCount || 1;
+      const maxCount = decision.max || 1;
 
-      if (selectedCards.includes(card)) {
-        setSelectedCards(prev => prev.filter(c => c !== card));
-      } else if (selectedCards.length < maxCount) {
-        setSelectedCards(prev => [...prev, card]);
+      if (selectedCardIndices.includes(index)) {
+        setSelectedCardIndices(prev => prev.filter(i => i !== index));
+      } else if (selectedCardIndices.length < maxCount) {
+        setSelectedCardIndices(prev => [...prev, index]);
       }
       return;
     }
@@ -120,7 +114,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       }
       return;
     }
-  }, [isMyTurn, displayState, selectedCards, isActionPhase, isBuyPhase, playAction, playTreasure, previewEventId]);
+  }, [isMyTurn, displayState, selectedCardIndices, isActionPhase, isBuyPhase, playAction, playTreasure, previewEventId]);
 
   // Buy card handler
   const handleBuyCard = useCallback((card: CardName) => {
@@ -157,15 +151,16 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {
-    if (!displayState.pendingDecision) return;
+    if (!displayState.pendingDecision || !myPlayerState) return;
 
+    const selectedCards = selectedCardIndices.map(i => myPlayerState.hand[i]);
     const result = submitDecision({ selectedCards });
     if (result.ok) {
-      setSelectedCards([]);
+      setSelectedCardIndices([]);
     } else {
       console.error("Failed to submit decision:", result.error);
     }
-  }, [displayState.pendingDecision, selectedCards, submitDecision]);
+  }, [displayState.pendingDecision, myPlayerState, selectedCardIndices, submitDecision]);
 
   // Skip decision handler
   const handleSkipDecision = useCallback(() => {
@@ -173,7 +168,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
     const result = submitDecision({ selectedCards: [] });
     if (result.ok) {
-      setSelectedCards([]);
+      setSelectedCardIndices([]);
     }
   }, [displayState.pendingDecision, submitDecision]);
 
@@ -250,13 +245,13 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           <div style={styles.decisionPanel}>
             <div style={styles.decisionPrompt}>{displayState.pendingDecision.prompt}</div>
             <div style={styles.selectedCards}>
-              Selected: {selectedCards.length > 0 ? selectedCards.join(", ") : "(none)"}
+              Selected: {selectedCardIndices.length > 0 && myPlayerState ? selectedCardIndices.map(i => myPlayerState.hand[i]).join(", ") : "(none)"}
             </div>
             <div style={styles.decisionButtons}>
               <button
                 onClick={handleSubmitDecision}
                 style={styles.submitButton}
-                disabled={selectedCards.length < (displayState.pendingDecision.minCount || 0)}
+                disabled={selectedCardIndices.length < (displayState.pendingDecision.min || 0)}
               >
                 Confirm
               </button>
@@ -276,7 +271,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
           vpCount={myPlayerState ? myVP : 0}
           isActive={isMyTurn}
           isHuman={true}
-          selectedCards={selectedCards}
+          selectedCardIndices={selectedCardIndices}
           onCardClick={handleCardClick}
           pendingDecision={displayState.pendingDecision}
           phase={displayState.phase}
@@ -288,8 +283,10 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       {/* Sidebar - using unified GameSidebar */}
       <GameSidebar
         state={displayState}
+        events={events}
         isProcessing={false}
         gameMode="multiplayer"
+        localPlayer={myGamePlayerId || undefined}
         onEndGame={() => {
           if (confirm("End game for all players?")) {
             endGame();

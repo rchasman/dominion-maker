@@ -1,129 +1,60 @@
+/**
+ * Hybrid Strategy - Engine for simple moves, LLM consensus for complex decisions
+ */
+
 import type { GameStrategy } from "../types/game-mode";
-import type { GameState, CardName } from "../types/game-state";
-import { runAITurnWithConsensus, advanceGameStateWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
-import { playAction, resolveDecision } from "../lib/game-engine/actions";
-import { playTreasure, playAllTreasures, unplayTreasure } from "../lib/game-engine/treasures";
-import { buyCard, endActionPhase, endBuyPhase } from "../lib/game-engine/phases";
-import { isActionCard, isTreasureCard } from "../data/cards";
+import type { DominionEngine } from "../engine";
+import type { GameState } from "../types/game-state";
+import { runAITurnWithConsensus, buildModelsFromSettings, type LLMLogger, type ModelSettings } from "../agent/game-agent";
+import { EngineStrategy } from "./engine-strategy";
 
 /**
- * Hybrid Strategy: Uses hard-coded engine for human moves,
- * but delegates to model consensus for AI turns with full validation
+ * Hybrid: Uses hard-coded engine for routine moves,
+ * but delegates to LLM consensus for complex decisions
  */
 export class HybridStrategy implements GameStrategy {
   private logger?: LLMLogger;
   private modelSettings: ModelSettings;
+  private engineStrategy: EngineStrategy;
 
   constructor(_provider?: unknown, logger?: LLMLogger, modelSettings?: ModelSettings) {
-    // _provider param deprecated - now uses model settings
     this.logger = logger;
-    this.modelSettings = modelSettings || { enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]), consensusCount: 8 };
+    this.modelSettings = modelSettings || {
+      enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite", "ministral-3b"]),
+      consensusCount: 8
+    };
+    this.engineStrategy = new EngineStrategy();
   }
 
-  async handleCardPlay(state: GameState, card: CardName): Promise<GameState> {
-    // Use engine logic for human moves
-    if (state.pendingDecision && state.pendingDecision.options.includes(card)) {
-      return resolveDecision(state, [card]);
-    }
-
-    const { phase, actions } = state;
-
-    if (phase === "action" && isActionCard(card) && actions > 0) {
-      return playAction(state, card);
-    }
-
-    if (phase === "buy" && isTreasureCard(card)) {
-      return playTreasure(state, card);
-    }
-
-    return state;
-  }
-
-  async handleBuyCard(state: GameState, card: CardName): Promise<GameState> {
-    // Use engine logic for human moves
-    if (state.pendingDecision && state.pendingDecision.type === "gain" && state.pendingDecision.options.includes(card)) {
-      return resolveDecision(state, [card]);
-    }
-
-    if (state.phase !== "buy" || state.buys < 1) {
-      return state;
-    }
-    return buyCard(state, card);
-  }
-
-  async handlePlayAllTreasures(state: GameState): Promise<GameState> {
-    // Use engine logic for human moves
-    if (state.phase !== "buy") {
-      return state;
-    }
-    return playAllTreasures(state);
-  }
-
-  async handleUnplayTreasure(state: GameState, card: CardName): Promise<GameState> {
-    // Use engine logic for human moves
-    if (state.phase !== "buy") {
-      return state;
-    }
-    return unplayTreasure(state, card);
-  }
-
-  async handleEndPhase(state: GameState): Promise<GameState> {
-    // Use engine logic for human moves
-    if (state.pendingDecision && state.pendingDecision.canSkip) {
-      return resolveDecision(state, []);
-    }
-
-    if (state.phase === "action") {
-      return endActionPhase(state);
-    } else if (state.phase === "buy") {
-      return endBuyPhase(state);
-    }
-    return state;
-  }
-
-  async runAITurn(state: GameState, onStateChange?: (state: GameState) => void): Promise<GameState> {
-    // Use model consensus for AI turns with validation
+  async runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void> {
+    // Use LLM consensus for strategic decisions
     const models = buildModelsFromSettings(this.modelSettings);
-    return runAITurnWithConsensus(state, models, this.logger, onStateChange);
+    return runAITurnWithConsensus(engine, "ai", models, this.logger, onStateChange);
   }
 
-  async resolveAIPendingDecision(state: GameState): Promise<GameState> {
-    const decision = state.pendingDecision;
-    if (!decision || decision.player !== "ai") {
-      return state;
-    }
-
-    this.logger?.({
-      type: "ai-decision-resolving" as any,
-      message: `AI resolving ${decision.type} decision`,
-      data: { decisionType: decision.type, prompt: decision.prompt, optionsCount: decision.options.length },
-    });
-
-    // Use LLM consensus to generate discard_cards/trash_cards/gain_card action
-    // The LLMs will vote on which cards to select from the options
+  async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
+    // Use LLM consensus for decisions
     const models = buildModelsFromSettings(this.modelSettings);
-    const newState = await advanceGameStateWithConsensus(state, undefined, models, this.logger);
+    const pendingDecision = engine.state.pendingDecision;
 
-    // If there's still a pending decision (multi-card discard), recursively resolve
-    if (newState.pendingDecision && newState.pendingDecision.player === "ai") {
+    // Log ai-decision-resolving to create a new "turn" in consensus viewer
+    if (pendingDecision) {
       this.logger?.({
-        type: "ai-decision-continuing" as any,
-        message: `AI decision continues (multi-select)`,
-        data: { remaining: newState.pendingDecision.metadata?.totalNeeded },
+        type: "ai-decision-resolving",
+        message: `AI resolving ${pendingDecision.type}`,
+        data: {
+          turn: engine.state.turn,
+          decisionType: pendingDecision.type,
+          prompt: pendingDecision.prompt,
+        },
       });
-      return this.resolveAIPendingDecision(newState);
     }
 
-    // Decision fully resolved - subPhase cleared by card effect
-    this.logger?.({
-      type: "ai-decision-resolved" as any,
-      message: `AI decision fully resolved`,
-      data: { decisionType: decision.type },
-    });
-    return newState;
+    const { advanceGameStateWithConsensus } = await import("../agent/game-agent");
+    return advanceGameStateWithConsensus(engine, "ai", undefined, models, this.logger);
   }
 
   getModeName(): string {
-    return "Hybrid (Engine + MAKER Consensus)";
+    return "Hybrid (LLM + Engine)";
   }
 }

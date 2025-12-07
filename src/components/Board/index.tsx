@@ -21,6 +21,7 @@ export function Board({ onBackToHome }: BoardProps) {
     events,
     playAction,
     playTreasure,
+    unplayTreasure,
     buyCard: onBuyCard,
     endPhase: onEndPhase,
     playAllTreasures: onPlayAllTreasures,
@@ -37,7 +38,7 @@ export function Board({ onBackToHome }: BoardProps) {
     getStateAtEvent,
   } = useGame();
 
-  const [selectedCards, setSelectedCards] = useState<CardName[]>([]);
+  const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [showDevtools, setShowDevtools] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
 
@@ -50,7 +51,7 @@ export function Board({ onBackToHome }: BoardProps) {
   const isHumanTurn = state.activePlayer === "human";
 
   // Card click handler
-  const onCardClick = useCallback((card: CardName, _index: number) => {
+  const onCardClick = useCallback((card: CardName, index: number) => {
     if (!isHumanTurn) return;
 
     // If we have a pending decision, add to selection
@@ -58,10 +59,10 @@ export function Board({ onBackToHome }: BoardProps) {
       const decision = state.pendingDecision;
       const max = decision.max || 1;
 
-      if (selectedCards.includes(card)) {
-        setSelectedCards(prev => prev.filter(c => c !== card));
-      } else if (selectedCards.length < max) {
-        setSelectedCards(prev => [...prev, card]);
+      if (selectedCardIndices.includes(index)) {
+        setSelectedCardIndices(prev => prev.filter(i => i !== index));
+      } else if (selectedCardIndices.length < max) {
+        setSelectedCardIndices(prev => [...prev, index]);
       }
       return;
     }
@@ -83,13 +84,17 @@ export function Board({ onBackToHome }: BoardProps) {
       }
       return;
     }
-  }, [state, selectedCards, playAction, playTreasure]);
+  }, [state, selectedCardIndices, playAction, playTreasure]);
 
   // Handle in-play clicks (unplay treasures)
-  const onInPlayClick = useCallback((card: CardName, _index: number) => {
-    // Unplay treasure - not yet implemented in event system
-    // TODO: Add UNPLAY_TREASURE command
-  }, []);
+  const onInPlayClick = useCallback((card: CardName) => {
+    if (!isHumanTurn || state.phase !== "buy") return;
+
+    const result = unplayTreasure(card);
+    if (!result.ok) {
+      console.error("Failed to unplay treasure:", result.error);
+    }
+  }, [state?.phase, unplayTreasure, isHumanTurn]);
 
   const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
   const opponent = displayState.players.ai;
@@ -209,14 +214,15 @@ export function Board({ onBackToHome }: BoardProps) {
               fontSize: "0.875rem",
               marginBottom: "var(--space-3)",
             }}>
-              Selected: {selectedCards.length > 0 ? selectedCards.join(", ") : "(none)"}
+              Selected: {selectedCardIndices.length > 0 ? selectedCardIndices.map(i => human.hand[i]).join(", ") : "(none)"}
             </div>
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <button
                 onClick={() => {
+                  const selectedCards = selectedCardIndices.map(i => human.hand[i]);
                   const result = submitDecision({ selectedCards });
                   if (result.ok) {
-                    setSelectedCards([]);
+                    setSelectedCardIndices([]);
                   }
                 }}
                 style={{
@@ -230,7 +236,7 @@ export function Board({ onBackToHome }: BoardProps) {
                   fontSize: "0.875rem",
                   fontWeight: 600,
                 }}
-                disabled={selectedCards.length < state.pendingDecision.min}
+                disabled={selectedCardIndices.length < state.pendingDecision.min}
               >
                 Confirm
               </button>
@@ -239,7 +245,7 @@ export function Board({ onBackToHome }: BoardProps) {
                   onClick={() => {
                     const result = submitDecision({ selectedCards: [] });
                     if (result.ok) {
-                      setSelectedCards([]);
+                      setSelectedCardIndices([]);
                     }
                   }}
                   style={{
@@ -266,7 +272,7 @@ export function Board({ onBackToHome }: BoardProps) {
           vpCount={humanVP}
           isActive={isHumanTurn}
           isHuman={true}
-          selectedCards={isPreviewMode ? [] : selectedCards}
+          selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
           onCardClick={isPreviewMode ? undefined : onCardClick}
           onInPlayClick={!isPreviewMode && displayState.phase === "buy" ? onInPlayClick : undefined}
           pendingDecision={displayState.pendingDecision}
@@ -280,6 +286,7 @@ export function Board({ onBackToHome }: BoardProps) {
         events={events}
         isProcessing={isProcessing}
         gameMode={gameMode}
+        localPlayer="human"
         modelSettings={modelSettings}
         onModelSettingsChange={onModelSettingsChange}
         onNewGame={onNewGame}

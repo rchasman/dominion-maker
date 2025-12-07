@@ -1,12 +1,75 @@
 import { useRef, useEffect, useState } from "react";
-import type { GameState } from "../../types/game-state";
+import type { GameState, LogEntry as LogEntryType } from "../../types/game-state";
+import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import { useLLMLogs } from "../../context/GameContext";
 import { LogEntry } from "../LogEntry";
 import { LLMLog } from "../LLMLog";
 import { ModelSettingsAccordion } from "../ModelSettings";
-import { aggregateLogEntries, countVP, getAllCards } from "../../lib/board-utils";
+import { aggregateLogEntries, countVP, getAllCards, getPlayerColor } from "../../lib/board-utils";
+
+function LogEntryWithUndo({
+  entry,
+  onRequestUndo,
+  lastEventId
+}: {
+  entry: LogEntryType & { eventId?: string; eventIds?: string[] };
+  onRequestUndo?: (eventId: string, reason: string) => void;
+  lastEventId?: string;
+}) {
+  const eventId = entry.eventId;
+  const eventIds = entry.eventIds;
+
+  // Get the target eventId (last in group for aggregated entries)
+  const targetEventId = eventIds && eventIds.length > 0 ? eventIds[eventIds.length - 1] : eventId;
+
+  // Disable undo if this is the current state (last event)
+  const isCurrentState = targetEventId === lastEventId;
+
+  const hasUndo = onRequestUndo && (eventId || (eventIds && eventIds.length > 0)) && !isCurrentState;
+
+  return (
+    <div
+      className="log-entry-with-undo"
+      style={{
+        color: "var(--color-text-secondary)",
+        marginBlockEnd: "var(--space-2)",
+        lineHeight: 1.4,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "var(--space-2)",
+        position: "relative",
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <LogEntry entry={entry} />
+      </div>
+      {hasUndo && (
+        <button
+          className="undo-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestUndo(targetEventId, "Undo from game log");
+          }}
+          style={{
+            padding: 0,
+            background: "transparent",
+            border: "none",
+            color: "#22c55e",
+            cursor: "pointer",
+            fontSize: "1rem",
+            lineHeight: 1,
+            marginTop: "2px",
+          }}
+          title={eventIds && eventIds.length > 1 ? `Undo all ${eventIds.length}` : "Undo to here"}
+        >
+          ⎌
+        </button>
+      )}
+    </div>
+  );
+}
 
 function CyclingSquare() {
   const glyphs = ['▤', '▥', '▦'];
@@ -24,20 +87,24 @@ function CyclingSquare() {
 
 interface GameSidebarProps {
   state: GameState;
+  events?: GameEvent[]; // Optional events array for clickable undo
   isProcessing: boolean;
   gameMode: GameMode;
+  localPlayer?: string; // The player viewing this UI (e.g., "human", "player0")
   modelSettings?: ModelSettings; // Optional for multiplayer
   onModelSettingsChange?: (settings: ModelSettings) => void; // Optional for multiplayer
   onNewGame?: () => void; // Optional (single-player)
   onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
-  onRequestUndo?: (eventId: string, reason: string) => void; // New for clickable log
+  onRequestUndo?: (eventId: string, reason: string) => void; // Makes log entries clickable for undo
 }
 
 export function GameSidebar({
   state,
+  events,
   isProcessing,
   gameMode,
+  localPlayer = "human",
   modelSettings,
   onModelSettingsChange,
   onNewGame,
@@ -46,9 +113,20 @@ export function GameSidebar({
   onRequestUndo,
 }: GameSidebarProps) {
   const { llmLogs } = useLLMLogs();
-  const isHumanTurn = state.activePlayer === "human";
-  const humanVP = countVP(getAllCards(state.players.human));
-  const opponentVP = countVP(getAllCards(state.players.ai));
+
+  // Check if it's the local player's turn
+  const isLocalPlayerTurn = state.activePlayer === localPlayer;
+
+  // Get player states - handle both single-player (human/ai) and multiplayer (player0/player1/etc)
+  const humanPlayer = state.players.human || state.players.player0;
+  const opponentPlayer = state.players.ai || state.players.player1;
+
+  // Determine player IDs for coloring
+  const humanPlayerId = state.players.human ? "human" : "player0";
+  const opponentPlayerId = state.players.ai ? "ai" : "player1";
+
+  const humanVP = humanPlayer ? countVP(getAllCards(humanPlayer)) : 0;
+  const opponentVP = opponentPlayer ? countVP(getAllCards(opponentPlayer)) : 0;
   const gameLogScrollRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -111,7 +189,8 @@ export function GameSidebar({
     >
       {/* Game Log */}
       <div style={{
-        height: `${gameLogHeight}%`,
+        height: (gameMode === "llm" || gameMode === "hybrid") ? `${gameLogHeight}%` : "auto",
+        flex: (gameMode === "llm" || gameMode === "hybrid") ? "none" : 1,
         minBlockSize: 0,
         display: "flex",
         flexDirection: "column",
@@ -145,14 +224,15 @@ export function GameSidebar({
             overflowWrap: "break-word",
           }}
         >
-          {aggregateLogEntries(state.log).map((entry, i) => (
-            <div key={i} style={{ color: "var(--color-text-secondary)", marginBlockEnd: "var(--space-2)", lineHeight: 1.4 }}>
-              <LogEntry entry={entry} />
-            </div>
-          ))}
-          {isProcessing && state.activePlayer === "ai" && (
+          {aggregateLogEntries(state.log).map((entry, i) => {
+            const lastEventId = events && events.length > 0 ? events[events.length - 1].id : undefined;
+            return (
+              <LogEntryWithUndo key={i} entry={entry} onRequestUndo={onRequestUndo} lastEventId={lastEventId} />
+            );
+          })}
+          {(isProcessing || state.subPhase === "opponent_decision") && !isLocalPlayerTurn && (
             <div style={{
-              color: "var(--color-ai)",
+              color: getPlayerColor(state.activePlayer),
               fontSize: "0.75rem",
               display: "flex",
               alignItems: "center",
@@ -165,9 +245,9 @@ export function GameSidebar({
               <span>AI thinking...</span>
             </div>
           )}
-          {!isProcessing && state.activePlayer === "human" && (
+          {!isProcessing && isLocalPlayerTurn && state.subPhase !== "opponent_decision" && (
             <div style={{
-              color: "var(--color-human)",
+              color: getPlayerColor(state.activePlayer),
               fontSize: "0.75rem",
               display: "flex",
               alignItems: "center",
@@ -175,35 +255,37 @@ export function GameSidebar({
               marginBlockStart: "var(--space-2)",
             }}>
               <span style={{ display: "inline-block" }}><CyclingSquare /></span>
-              <span>Human is thinking...</span>
+              <span>Your turn...</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Resize Handle */}
-      <div
-        onMouseDown={() => setIsDragging(true)}
-        style={{
-          height: "8px",
-          background: isDragging ? "var(--color-gold)" : "var(--color-border)",
-          cursor: "ns-resize",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "background 0.15s",
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-gold)"}
-        onMouseLeave={(e) => !isDragging && (e.currentTarget.style.background = "var(--color-border)")}
-      >
-        <div style={{
-          width: "40px",
-          height: "3px",
-          background: "var(--color-text-secondary)",
-          borderRadius: "2px",
-          opacity: 0.5,
-        }} />
-      </div>
+      {/* Resize Handle - only show in LLM modes */}
+      {(gameMode === "llm" || gameMode === "hybrid") && (
+        <div
+          onMouseDown={() => setIsDragging(true)}
+          style={{
+            height: "8px",
+            background: isDragging ? "var(--color-gold)" : "var(--color-border)",
+            cursor: "ns-resize",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-gold)"}
+          onMouseLeave={(e) => !isDragging && (e.currentTarget.style.background = "var(--color-border)")}
+        >
+          <div style={{
+            width: "40px",
+            height: "3px",
+            background: "var(--color-text-secondary)",
+            borderRadius: "2px",
+            opacity: 0.5,
+          }} />
+        </div>
+      )}
 
       {/* LLM Debug Log - only show in single-player LLM/hybrid modes */}
       {(gameMode === "llm" || gameMode === "hybrid") && (
@@ -236,10 +318,10 @@ export function GameSidebar({
           </span>
           <span style={{
             fontSize: "0.625rem",
-            color: isHumanTurn ? "var(--color-human)" : "var(--color-ai)",
+            color: getPlayerColor(state.activePlayer),
             fontWeight: 600,
           }}>
-            {isHumanTurn ? "Your Turn" : "Opponent"}
+            {isLocalPlayerTurn ? "Your Turn" : "Opponent"}
           </span>
         </div>
         <div style={{
@@ -248,8 +330,8 @@ export function GameSidebar({
           fontSize: "0.75rem",
           color: "var(--color-text-secondary)",
         }}>
-          <span>You: <strong style={{ color: "var(--color-victory)" }}>{humanVP} VP</strong></span>
-          <span>Opp: <strong style={{ color: "var(--color-ai)" }}>{opponentVP} VP</strong></span>
+          <span>You: <strong style={{ color: getPlayerColor(humanPlayerId) }}>{humanVP} VP</strong></span>
+          <span>Opp: <strong style={{ color: getPlayerColor(opponentPlayerId) }}>{opponentVP} VP</strong></span>
         </div>
 
         {modelSettings && onModelSettingsChange && (

@@ -3,8 +3,9 @@ import type { GameMode } from "../../types/game-mode";
 import { CARDS } from "../../data/cards";
 import type { CardName } from "../../types/game-state";
 import type { Action } from "../../types/action";
+import { stripReasoning } from "../../types/action";
 import { getModelColor } from "../../config/models";
-import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, VotingResult, TimingData } from "./types";
+import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, TimingData } from "./types";
 
 export type { LLMLogEntry } from "./types";
 
@@ -77,8 +78,8 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
       }
       const decisionType = entry.data?.decisionType || "decision";
       const prompt = entry.data?.prompt || "";
-      // Extract card name from prompt if present (e.g., "Militia attack: Discard...")
-      const cardMatch = prompt.match(/^(\w+)\s+attack:/i);
+      // Extract card name from prompt if present (e.g., "Militia: Discard..." or "Militia attack: Discard...")
+      const cardMatch = prompt.match(/^(\w+)(?:\s+attack)?:/i);
       const cardName = cardMatch ? cardMatch[1] : null;
 
       buildingTurn = {
@@ -205,6 +206,30 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
       }
     }
   }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending, userNavigatedAway]);
+
+  // Reset to latest when current indices become invalid (e.g., after undo)
+  useEffect(() => {
+    if (turns.length === 0) return;
+
+    const isCurrentTurnValid = currentTurnIndex >= 0 && currentTurnIndex < turns.length;
+    const currentTurn = turns[currentTurnIndex];
+    const isCurrentActionValid = currentTurn && currentActionIndex >= 0 &&
+      (currentActionIndex < currentTurn.decisions.length ||
+       (currentTurn.pending && currentActionIndex === currentTurn.decisions.length));
+
+    if (!isCurrentTurnValid || !isCurrentActionValid) {
+      // Current position is invalid, jump to latest
+      const lastTurnIndex = turns.length - 1;
+      const lastTurn = turns[lastTurnIndex];
+      const lastActionIndex = lastTurn.pending
+        ? lastTurn.decisions.length
+        : lastTurn.decisions.length - 1;
+
+      setCurrentTurnIndex(lastTurnIndex);
+      setCurrentActionIndex(lastActionIndex);
+      setUserNavigatedAway(false);
+    }
+  }, [turns, currentTurnIndex, currentActionIndex]);
 
   const currentTurn = turns[currentTurnIndex];
   const currentDecision = currentTurn?.decisions[currentActionIndex];
@@ -399,13 +424,12 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
       for (const status of successfulStatuses) {
         // Exclude reasoning from signature so actions with different reasoning group together
-        const { reasoning, ...actionCore } = status.action;
-        const signature = JSON.stringify(actionCore);
+        const signature = JSON.stringify(stripReasoning(status.action));
         const existing = voteGroups.get(signature);
         if (existing) {
           existing.voters.push(status.provider);
         } else {
-          voteGroups.set(signature, { action: actionCore, voters: [status.provider] });
+          voteGroups.set(signature, { action: status.action, voters: [status.provider] });
         }
       }
 
@@ -489,8 +513,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
             const percentage = (result.votes / maxVotes) * 100;
             const isWinner = idx === 0;
             // Strip reasoning from display
-            const { reasoning, ...actionCore } = result.action;
-            const actionStr = JSON.stringify(actionCore);
+            const actionStr = JSON.stringify(stripReasoning(result.action));
 
             // Check if action is valid (winner is always valid since it was executed)
             const isValid = result.valid !== false; // Assume valid unless explicitly marked invalid
@@ -885,8 +908,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
     const groups = new Map<string, { action: Action; voters: string[], reasonings: Array<{ provider: string; reasoning?: string }> }>();
 
     for (const status of completedStatuses) {
-      const { reasoning, ...actionCore } = status.action;
-      const signature = JSON.stringify(actionCore);
+      const signature = JSON.stringify(stripReasoning(status.action));
 
       if (!groups.has(signature)) {
         groups.set(signature, {
@@ -898,8 +920,8 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
 
       const group = groups.get(signature)!;
       group.voters.push(status.provider);
-      if (reasoning) {
-        group.reasonings.push({ provider: status.provider, reasoning });
+      if (status.action.reasoning) {
+        group.reasonings.push({ provider: status.provider, reasoning: status.action.reasoning });
       }
     }
 
@@ -1165,8 +1187,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 <span>
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
-                      {currentTurn.subPhaseLabel || "Sub-phase"} {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}: {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
                     </span>
                   ) : (
                     <>
@@ -1320,8 +1341,7 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
                 <span>
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn} `}
-                      {currentTurn.subPhaseLabel || "Sub-phase"} {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}: {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
                     </span>
                   ) : (
                     <>
