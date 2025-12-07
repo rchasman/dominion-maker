@@ -41,10 +41,10 @@ export const poacher: CardEffect = ({ state, player, decision, stage }): CardEff
     };
   }
 
-  // Discard
+  // Discard (atomic events)
   if (stage === "discard") {
-    if (decision.selectedCards.length > 0) {
-      events.push({ type: "CARDS_DISCARDED", player, cards: decision.selectedCards, from: "hand" });
+    for (const card of decision.selectedCards) {
+      events.push({ type: "CARD_DISCARDED", player, card, from: "hand" });
     }
     return { events };
   }

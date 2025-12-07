@@ -40,7 +40,7 @@ export const harbinger: CardEffect = ({ state, player, decision, stage }): CardE
   if (stage === "topdeck") {
     if (decision.selectedCards.length > 0) {
       const card = decision.selectedCards[0];
-      events.push({ type: "CARDS_PUT_ON_DECK", player, cards: [card], from: "discard" });
+      events.push({ type: "CARD_PUT_ON_DECK", player, card, from: "discard" });
     }
     return { events };
   }

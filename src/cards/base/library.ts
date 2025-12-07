@@ -59,16 +59,15 @@ export const library: CardEffect = ({ state, player, decision, stage }): CardEff
     const peeked = (metadata?.peekedCards as CardName[]) || [];
     const toSkip = decision.selectedCards;
 
-    // Draw the non-skipped cards
+    // Draw the non-skipped cards (atomic events)
     const toDraw = peeked.filter(c => !toSkip.includes(c));
-
-    if (toDraw.length > 0) {
-      events.push({ type: "CARDS_DRAWN", player, cards: toDraw });
+    for (const card of toDraw) {
+      events.push({ type: "CARD_DRAWN", player, card });
     }
 
-    // Discard the skipped actions
-    if (toSkip.length > 0) {
-      events.push({ type: "CARDS_DISCARDED", player, cards: toSkip, from: "deck" });
+    // Discard the skipped actions (atomic events)
+    for (const card of toSkip) {
+      events.push({ type: "CARD_DISCARDED", player, card, from: "deck" });
     }
 
     return { events };

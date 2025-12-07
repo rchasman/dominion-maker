@@ -40,7 +40,7 @@ export const remodel: CardEffect = ({ state, player, decision, stage }): CardEff
     const gainOptions = getGainableCards(state, maxCost);
 
     const events: GameEvent[] = [
-      { type: "CARDS_TRASHED", player, cards: [toTrash], from: "hand" },
+      { type: "CARD_TRASHED", player, card: toTrash, from: "hand" },
     ];
 
     if (gainOptions.length === 0) {

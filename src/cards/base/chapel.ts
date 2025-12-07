@@ -27,11 +27,16 @@ export const chapel: CardEffect = ({ state, player, decision }): CardEffectResul
     };
   }
 
-  // Execute trash
+  // Execute trash (atomic events)
   const toTrash = decision.selectedCards;
   if (toTrash.length === 0) return { events: [] };
 
-  return {
-    events: [{ type: "CARDS_TRASHED", player, cards: toTrash, from: "hand" }],
-  };
+  const events = toTrash.map(card => ({
+    type: "CARD_TRASHED" as const,
+    player,
+    card,
+    from: "hand" as const,
+  }));
+
+  return { events };
 };

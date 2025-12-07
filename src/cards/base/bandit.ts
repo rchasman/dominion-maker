@@ -25,7 +25,10 @@ export const bandit: CardEffect = ({ state, player }): CardEffectResult => {
     const { cards: revealed } = peekDraw(oppState, 2);
 
     if (revealed.length > 0) {
-      events.push({ type: "CARDS_REVEALED", player: opp, cards: revealed, from: "deck" });
+      // Reveal cards (atomic events)
+      for (const card of revealed) {
+        events.push({ type: "CARD_REVEALED", player: opp, card, from: "deck" });
+      }
 
       // Find non-Copper treasures to trash (Silver or Gold)
       const trashable = revealed.filter(
@@ -35,16 +38,18 @@ export const bandit: CardEffect = ({ state, player }): CardEffectResult => {
       if (trashable.length > 0) {
         // Trash the first one (prefer Gold > Silver if multiple)
         const toTrash = trashable.includes("Gold") ? "Gold" : trashable[0];
-        events.push({ type: "CARDS_TRASHED", player: opp, cards: [toTrash], from: "deck" });
+        events.push({ type: "CARD_TRASHED", player: opp, card: toTrash, from: "deck" });
 
-        // Remaining revealed cards go to discard
+        // Remaining revealed cards go to discard (atomic events)
         const remaining = revealed.filter(c => c !== toTrash);
-        if (remaining.length > 0) {
-          events.push({ type: "CARDS_DISCARDED", player: opp, cards: remaining, from: "deck" });
+        for (const card of remaining) {
+          events.push({ type: "CARD_DISCARDED", player: opp, card, from: "deck" });
         }
       } else {
-        // No treasures to trash, all revealed go to discard
-        events.push({ type: "CARDS_DISCARDED", player: opp, cards: revealed, from: "deck" });
+        // No treasures to trash, all revealed go to discard (atomic events)
+        for (const card of revealed) {
+          events.push({ type: "CARD_DISCARDED", player: opp, card, from: "deck" });
+        }
       }
     }
   }

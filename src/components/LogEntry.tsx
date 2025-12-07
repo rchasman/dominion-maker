@@ -163,23 +163,29 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       }
 
       if (entry.cards) {
-        // Group cards by name for compact display
-        const cardCounts = new Map<string, number>();
-        for (const card of entry.cards) {
-          cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
-        }
+        // Use pre-computed cardCounts from aggregation if available, otherwise compute
+        const aggregated = entry as typeof entry & { cardCounts?: Record<string, number> };
+        const cardCounts = aggregated.cardCounts
+          ? new Map(Object.entries(aggregated.cardCounts))
+          : (() => {
+              const counts = new Map<string, number>();
+              for (const card of entry.cards!) {
+                counts.set(card, (counts.get(card) || 0) + 1);
+              }
+              return counts;
+            })();
 
         const parts: ReactNode[] = [];
         let idx = 0;
         for (const [card, count] of cardCounts) {
           if (idx > 0) parts.push(<span key={`comma-${idx}`}>{", "}</span>);
-          if (count > 1) {
+          if ((count as number) > 1) {
             parts.push(
               <span key={idx}>
                 <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
                   {card}
                 </span>
-                {` x${count}`}
+                {` x${count as number}`}
               </span>
             );
           } else {
@@ -240,23 +246,29 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
     case "discard-cards":
       if (entry.cards) {
-        // Group cards by name for compact display
-        const cardCounts = new Map<string, number>();
-        for (const card of entry.cards) {
-          cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
-        }
+        // Use pre-computed cardCounts from aggregation if available, otherwise compute
+        const aggregated = entry as typeof entry & { cardCounts?: Record<string, number> };
+        const cardCounts = aggregated.cardCounts
+          ? new Map(Object.entries(aggregated.cardCounts))
+          : (() => {
+              const counts = new Map<string, number>();
+              for (const card of entry.cards!) {
+                counts.set(card, (counts.get(card) || 0) + 1);
+              }
+              return counts;
+            })();
 
         const parts: ReactNode[] = [];
         let idx = 0;
         for (const [card, count] of cardCounts) {
           if (idx > 0) parts.push(<span key={`comma-${idx}`}>{", "}</span>);
-          if (count > 1) {
+          if ((count as number) > 1) {
             parts.push(
               <span key={idx}>
                 <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
                   {card}
                 </span>
-                {` x${count}`}
+                {` x${count as number}`}
               </span>
             );
           } else {

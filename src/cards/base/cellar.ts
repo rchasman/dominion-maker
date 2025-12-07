@@ -42,13 +42,15 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
       return { events: [] };
     }
 
-    // Discard selected cards
-    events.push({
-      type: "CARDS_DISCARDED",
-      player,
-      cards: toDiscard,
-      from: "hand",
-    });
+    // Discard selected cards (atomic events)
+    for (const card of toDiscard) {
+      events.push({
+        type: "CARD_DISCARDED",
+        player,
+        card,
+        from: "hand",
+      });
+    }
 
     // Draw equal number
     // Need to compute draw from state AFTER discards

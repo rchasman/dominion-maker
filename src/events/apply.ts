@@ -130,12 +130,12 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
     // CARD MOVEMENTS
     // ==================
 
-    case "CARDS_DRAWN": {
+    case "CARD_DRAWN": {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
       // Remove from end of deck (top), add to hand
-      const newDeck = playerState.deck.slice(0, -event.cards.length);
+      const newDeck = playerState.deck.slice(0, -1);
 
       return {
         ...state,
@@ -144,12 +144,12 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           [event.player]: {
             ...playerState,
             deck: newDeck,
-            hand: [...playerState.hand, ...event.cards],
+            hand: [...playerState.hand, event.card],
           },
         },
         log: [
           ...state.log,
-          { type: "draw-cards", player: event.player, count: event.cards.length, cards: event.cards },
+          { type: "draw-cards", player: event.player, count: 1, cards: [event.card] },
         ],
       };
     }
@@ -179,7 +179,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       };
     }
 
-    case "CARDS_DISCARDED": {
+    case "CARD_DISCARDED": {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
@@ -188,22 +188,20 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       let newDeck = [...playerState.deck];
       let newInPlaySourceIndices = [...playerState.inPlaySourceIndices];
 
-      // Remove cards from source zone
-      for (const card of event.cards) {
-        if (event.from === "hand") {
-          const idx = newHand.indexOf(card);
-          if (idx !== -1) newHand.splice(idx, 1);
-        } else if (event.from === "inPlay") {
-          const idx = newInPlay.indexOf(card);
-          if (idx !== -1) {
-            newInPlay.splice(idx, 1);
-            newInPlaySourceIndices.splice(idx, 1);
-          }
-        } else if (event.from === "deck") {
-          // Remove from top of deck (end of array)
-          const idx = newDeck.lastIndexOf(card);
-          if (idx !== -1) newDeck.splice(idx, 1);
+      // Remove card from source zone
+      if (event.from === "hand") {
+        const idx = newHand.indexOf(event.card);
+        if (idx !== -1) newHand.splice(idx, 1);
+      } else if (event.from === "inPlay") {
+        const idx = newInPlay.indexOf(event.card);
+        if (idx !== -1) {
+          newInPlay.splice(idx, 1);
+          newInPlaySourceIndices.splice(idx, 1);
         }
+      } else if (event.from === "deck") {
+        // Remove from top of deck (end of array)
+        const idx = newDeck.lastIndexOf(event.card);
+        if (idx !== -1) newDeck.splice(idx, 1);
       }
 
       return {
@@ -216,17 +214,17 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
             deck: newDeck,
-            discard: [...playerState.discard, ...event.cards],
+            discard: [...playerState.discard, event.card],
           },
         },
         log: [
           ...state.log,
-          { type: "discard-cards", player: event.player, count: event.cards.length, cards: event.cards },
+          { type: "discard-cards", player: event.player, count: 1, cards: [event.card] },
         ],
       };
     }
 
-    case "CARDS_TRASHED": {
+    case "CARD_TRASHED": {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
@@ -235,29 +233,20 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       let newInPlay = [...playerState.inPlay];
       let newInPlaySourceIndices = [...playerState.inPlaySourceIndices];
 
-      // Remove cards from source zone
-      for (const card of event.cards) {
-        if (event.from === "hand") {
-          const idx = newHand.indexOf(card);
-          if (idx !== -1) newHand.splice(idx, 1);
-        } else if (event.from === "deck") {
-          const idx = newDeck.lastIndexOf(card);
-          if (idx !== -1) newDeck.splice(idx, 1);
-        } else if (event.from === "inPlay") {
-          const idx = newInPlay.indexOf(card);
-          if (idx !== -1) {
-            newInPlay.splice(idx, 1);
-            newInPlaySourceIndices.splice(idx, 1);
-          }
+      // Remove card from source zone
+      if (event.from === "hand") {
+        const idx = newHand.indexOf(event.card);
+        if (idx !== -1) newHand.splice(idx, 1);
+      } else if (event.from === "deck") {
+        const idx = newDeck.lastIndexOf(event.card);
+        if (idx !== -1) newDeck.splice(idx, 1);
+      } else if (event.from === "inPlay") {
+        const idx = newInPlay.indexOf(event.card);
+        if (idx !== -1) {
+          newInPlay.splice(idx, 1);
+          newInPlaySourceIndices.splice(idx, 1);
         }
       }
-
-      // Add log entries for each trashed card
-      const trashLogs: LogEntry[] = event.cards.map(card => ({
-        type: "trash-card" as const,
-        player: event.player,
-        card,
-      }));
 
       return {
         ...state,
@@ -271,8 +260,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             inPlaySourceIndices: newInPlaySourceIndices,
           },
         },
-        trash: [...state.trash, ...event.cards],
-        log: [...state.log, ...trashLogs],
+        trash: [...state.trash, event.card],
+        log: [
+          ...state.log,
+          { type: "trash-card", player: event.player, card: event.card },
+        ],
       };
     }
 
@@ -314,13 +306,13 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       };
     }
 
-    case "CARDS_REVEALED": {
+    case "CARD_REVEALED": {
       // Reveal doesn't change zones, just logs
       return {
         ...state,
         log: [
           ...state.log,
-          { type: "text", message: `${event.player} reveals ${event.cards.join(", ")}` },
+          { type: "text", message: `${event.player} reveals ${event.card}` },
         ],
       };
     }
@@ -343,7 +335,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       };
     }
 
-    case "CARDS_PUT_ON_DECK": {
+    case "CARD_PUT_ON_DECK": {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
@@ -351,14 +343,12 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       let newDiscard = [...playerState.discard];
 
       // Remove from source
-      for (const card of event.cards) {
-        if (event.from === "hand") {
-          const idx = newHand.indexOf(card);
-          if (idx !== -1) newHand.splice(idx, 1);
-        } else if (event.from === "discard") {
-          const idx = newDiscard.indexOf(card);
-          if (idx !== -1) newDiscard.splice(idx, 1);
-        }
+      if (event.from === "hand") {
+        const idx = newHand.indexOf(event.card);
+        if (idx !== -1) newHand.splice(idx, 1);
+      } else if (event.from === "discard") {
+        const idx = newDiscard.indexOf(event.card);
+        if (idx !== -1) newDiscard.splice(idx, 1);
       }
 
       return {
@@ -370,7 +360,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             hand: newHand,
             discard: newDiscard,
             // Add to top of deck (end of array)
-            deck: [...playerState.deck, ...event.cards],
+            deck: [...playerState.deck, event.card],
           },
         },
       };

@@ -25,7 +25,7 @@ export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffe
     }
 
     const topCard = revealed[0];
-    events.push({ type: "CARDS_DISCARDED", player, cards: [topCard], from: "deck" });
+    events.push({ type: "CARD_DISCARDED", player, card: topCard, from: "deck" });
 
     // If it's an action, offer to play it
     if (isActionCard(topCard)) {

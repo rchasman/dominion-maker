@@ -54,7 +54,7 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
     const affectedPlayer = state.pendingDecision?.player as Player;
 
     if (toPutOnDeck) {
-      events.push({ type: "CARDS_PUT_ON_DECK", player: affectedPlayer, cards: [toPutOnDeck], from: "hand" });
+      events.push({ type: "CARD_PUT_ON_DECK", player: affectedPlayer, card: toPutOnDeck, from: "hand" });
     }
 
     // Check for more opponents

@@ -5,6 +5,7 @@ import type { CardName } from "../../types/game-state";
 import type { Action } from "../../types/action";
 import { stripReasoning } from "../../types/action";
 import { getModelColor } from "../../config/models";
+import { AVAILABLE_MODELS, type ModelSettings } from "../../agent/game-agent";
 import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, TimingData } from "./types";
 
 export type { LLMLogEntry } from "./types";
@@ -12,11 +13,37 @@ export type { LLMLogEntry } from "./types";
 interface LLMLogProps {
   entries: LLMLogEntry[];
   gameMode?: GameMode;
+  modelSettings?: { settings: ModelSettings; onChange: (settings: ModelSettings) => void };
 }
 
-export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
+// Helper to get display name for a model
+const getModelDisplayName = (model: string): string => {
+  switch (model) {
+    case "claude-haiku":
+      return "Claude Haiku";
+    case "claude-sonnet":
+      return "Claude Sonnet";
+    case "gpt-4o-mini":
+      return "GPT-4o Mini";
+    case "gpt-4o":
+      return "GPT-4o";
+    case "gpt-oss-20b":
+      return "GPT OSS 20B";
+    case "gpt-oss-120b":
+      return "GPT OSS 120B";
+    case "gemini-2.5-flash-lite":
+      return "Gemini Flash";
+    case "ministral-3b":
+      return "Ministral 3B (unstable)";
+    default:
+      return model;
+  }
+};
+
+export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps) {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [currentActionIndex, setCurrentActionIndex] = useState(0);
+  const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
   const [activePaneState, setActivePaneState] = useState<"voting" | "performance" | "state" | "reasoning">(() => {
     const saved = localStorage.getItem("llm-log-active-pane");
     return (saved as "voting" | "performance" | "state" | "reasoning" | null) || "voting";
@@ -1081,11 +1108,33 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
             userSelect: "none",
           }}
         >
-          <span>Consensus Viewer</span>
-          {turns.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", width: "100%" }}>
+            <span style={{ flex: 1 }}>Consensus Viewer</span>
+            {modelSettings && (
               <button
-                onClick={handlePrevTurn}
+                onClick={() => setIsModelSettingsExpanded(!isModelSettingsExpanded)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: isModelSettingsExpanded ? "var(--color-action)" : "var(--color-text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: 400,
+                  fontFamily: "inherit",
+                  padding: "0",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => !isModelSettingsExpanded && (e.currentTarget.style.color = "var(--color-gold)")}
+                onMouseLeave={(e) => !isModelSettingsExpanded && (e.currentTarget.style.color = "var(--color-text-secondary)")}
+                title="Model Settings"
+              >
+                ⚙
+              </button>
+            )}
+            {turns.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                <button
+                  onClick={handlePrevTurn}
                 disabled={!hasPrevTurn}
                 onMouseEnter={(e) => hasPrevTurn && (e.currentTarget.style.opacity = "0.5")}
                 onMouseLeave={(e) => hasPrevTurn && (e.currentTarget.style.opacity = "1")}
@@ -1127,10 +1176,128 @@ export function LLMLog({ entries, gameMode = "llm" }: LLMLogProps) {
               >
                 ↷
               </button>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Model Settings Panel */}
+      {isModelSettingsExpanded && modelSettings && (
+        <div style={{
+          padding: "var(--space-4)",
+          borderBottom: "1px solid var(--color-border)",
+          background: "var(--color-bg-secondary)",
+        }}>
+          <div style={{
+            border: "1px solid var(--color-border)",
+            borderRadius: "4px",
+            background: "var(--color-bg-tertiary)",
+          }}>
+            {/* Settings Content - directly show without accordion header */}
+            <div style={{
+              padding: "var(--space-4)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-4)",
+            }}>
+              {/* Consensus Count */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <label style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                }}>
+                  Consensus Count: {modelSettings.settings.consensusCount}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={modelSettings.settings.consensusCount}
+                  onChange={(e) => modelSettings.onChange({ ...modelSettings.settings, consensusCount: Number(e.target.value) })}
+                  style={{
+                    width: "100%",
+                    cursor: "pointer",
+                  }}
+                />
+                <div style={{
+                  fontSize: "0.625rem",
+                  color: "var(--color-text-tertiary)",
+                  lineHeight: 1.4,
+                }}>
+                  Total models to run (may include duplicates)
+                </div>
+              </div>
+
+              {/* Model Checkboxes */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <label style={{
+                  fontSize: "0.6875rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                }}>
+                  Enabled Models ({modelSettings.settings.enabledModels.size}/{AVAILABLE_MODELS.length})
+                </label>
+                {AVAILABLE_MODELS.map((model) => {
+                  const isEnabled = modelSettings.settings.enabledModels.has(model);
+                  return (
+                    <label
+                      key={model}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "var(--space-2)",
+                        cursor: "pointer",
+                        padding: "var(--space-2)",
+                        borderRadius: "3px",
+                        background: isEnabled ? "rgba(100, 181, 246, 0.1)" : "transparent",
+                        border: "1px solid",
+                        borderColor: isEnabled ? "var(--color-ai)" : "var(--color-border-secondary)",
+                        fontSize: "0.6875rem",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={() => {
+                          const newEnabled = new Set(modelSettings.settings.enabledModels);
+                          if (isEnabled) {
+                            newEnabled.delete(model);
+                          } else {
+                            newEnabled.add(model);
+                          }
+                          modelSettings.onChange({ ...modelSettings.settings, enabledModels: newEnabled });
+                        }}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ color: "var(--color-text-primary)" }}>
+                        {getModelDisplayName(model)}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Warning if no models enabled */}
+              {modelSettings.settings.enabledModels.size === 0 && (
+                <div style={{
+                  padding: "var(--space-2)",
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid #ef4444",
+                  borderRadius: "3px",
+                  fontSize: "0.625rem",
+                  color: "#ef4444",
+                }}>
+                  ⚠ At least one model must be enabled
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div

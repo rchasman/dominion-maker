@@ -62,10 +62,10 @@ export type PhaseChangedEvent = EventMetadata & {
 };
 
 // Card Movements (atomic primitives)
-export type CardsDrawnEvent = EventMetadata & {
-  type: "CARDS_DRAWN";
+export type CardDrawnEvent = EventMetadata & {
+  type: "CARD_DRAWN";
   player: PlayerId;
-  cards: CardName[];
+  card: CardName;
 };
 
 export type CardPlayedEvent = EventMetadata & {
@@ -74,17 +74,17 @@ export type CardPlayedEvent = EventMetadata & {
   card: CardName;
 };
 
-export type CardsDiscardedEvent = EventMetadata & {
-  type: "CARDS_DISCARDED";
+export type CardDiscardedEvent = EventMetadata & {
+  type: "CARD_DISCARDED";
   player: PlayerId;
-  cards: CardName[];
+  card: CardName;
   from: "hand" | "inPlay" | "deck";
 };
 
-export type CardsTrashedEvent = EventMetadata & {
-  type: "CARDS_TRASHED";
+export type CardTrashedEvent = EventMetadata & {
+  type: "CARD_TRASHED";
   player: PlayerId;
-  cards: CardName[];
+  card: CardName;
   from: "hand" | "deck" | "inPlay";
 };
 
@@ -95,10 +95,10 @@ export type CardGainedEvent = EventMetadata & {
   to: "hand" | "discard" | "deck";
 };
 
-export type CardsRevealedEvent = EventMetadata & {
-  type: "CARDS_REVEALED";
+export type CardRevealedEvent = EventMetadata & {
+  type: "CARD_REVEALED";
   player: PlayerId;
-  cards: CardName[];
+  card: CardName;
   from: "hand" | "deck";
 };
 
@@ -109,10 +109,10 @@ export type DeckShuffledEvent = EventMetadata & {
   newDeckOrder?: CardName[];
 };
 
-export type CardsPutOnDeckEvent = EventMetadata & {
-  type: "CARDS_PUT_ON_DECK";
+export type CardPutOnDeckEvent = EventMetadata & {
+  type: "CARD_PUT_ON_DECK";
   player: PlayerId;
-  cards: CardName[];
+  card: CardName;
   from: "hand" | "discard";
 };
 
@@ -215,14 +215,14 @@ export type GameEvent =
   | TurnEndedEvent
   | PhaseChangedEvent
   // Card movements
-  | CardsDrawnEvent
+  | CardDrawnEvent
   | CardPlayedEvent
-  | CardsDiscardedEvent
-  | CardsTrashedEvent
+  | CardDiscardedEvent
+  | CardTrashedEvent
   | CardGainedEvent
-  | CardsRevealedEvent
+  | CardRevealedEvent
   | DeckShuffledEvent
-  | CardsPutOnDeckEvent
+  | CardPutOnDeckEvent
   | CardReturnedToHandEvent
   // Resources
   | ActionsModifiedEvent
@@ -241,19 +241,19 @@ export type GameEvent =
 
 // Event type guard helpers
 export function isCardMovementEvent(event: GameEvent): event is
-  | CardsDrawnEvent
+  | CardDrawnEvent
   | CardPlayedEvent
-  | CardsDiscardedEvent
-  | CardsTrashedEvent
+  | CardDiscardedEvent
+  | CardTrashedEvent
   | CardGainedEvent
-  | CardsPutOnDeckEvent {
+  | CardPutOnDeckEvent {
   return [
-    "CARDS_DRAWN",
+    "CARD_DRAWN",
     "CARD_PLAYED",
-    "CARDS_DISCARDED",
-    "CARDS_TRASHED",
+    "CARD_DISCARDED",
+    "CARD_TRASHED",
     "CARD_GAINED",
-    "CARDS_PUT_ON_DECK"
+    "CARD_PUT_ON_DECK"
   ].includes(event.type);
 }
 

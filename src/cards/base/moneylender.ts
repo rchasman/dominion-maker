@@ -32,7 +32,7 @@ export const moneylender: CardEffect = ({ state, player, decision }): CardEffect
   if (decision.selectedCards.includes("Copper")) {
     return {
       events: [
-        { type: "CARDS_TRASHED", player, cards: ["Copper"], from: "hand" },
+        { type: "CARD_TRASHED", player, card: "Copper", from: "hand" },
         { type: "COINS_MODIFIED", delta: 3 },
       ],
     };

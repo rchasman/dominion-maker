@@ -42,9 +42,9 @@ describe("Causality Tracking", () => {
         causedBy: "evt-1",
       },
       {
-        type: "CARDS_DRAWN",
+        type: "CARD_DRAWN",
         player: "human",
-        cards: ["Estate"],
+        card: "Estate",
         id: "evt-3",
         causedBy: "evt-1",
       },
@@ -147,9 +147,9 @@ describe("Causality Tracking", () => {
         causedBy: "evt-1",
       },
       {
-        type: "CARDS_DRAWN",
+        type: "CARD_DRAWN",
         player: "human",
-        cards: ["Copper"],
+        card: "Copper",
         id: "evt-3",
         causedBy: "evt-1",
       },
@@ -162,9 +162,9 @@ describe("Causality Tracking", () => {
         causedBy: "evt-1", // Second play caused by Throne Room
       },
       {
-        type: "CARDS_DRAWN",
+        type: "CARD_DRAWN",
         player: "human",
-        cards: ["Estate"],
+        card: "Estate",
         id: "evt-5",
         causedBy: "evt-4",
       },

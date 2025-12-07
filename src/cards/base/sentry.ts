@@ -22,7 +22,10 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
       return { events };
     }
 
-    events.push({ type: "CARDS_REVEALED", player, cards: revealed, from: "deck" });
+    // Reveal cards (atomic events)
+    for (const card of revealed) {
+      events.push({ type: "CARD_REVEALED", player, card, from: "deck" });
+    }
 
     return {
       events,
@@ -47,8 +50,9 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
     const revealed = (metadata?.revealedCards as CardName[]) || [];
     const toTrash = decision.selectedCards;
 
-    if (toTrash.length > 0) {
-      events.push({ type: "CARDS_TRASHED", player, cards: toTrash, from: "deck" });
+    // Trash selected cards (atomic events)
+    for (const card of toTrash) {
+      events.push({ type: "CARD_TRASHED", player, card, from: "deck" });
     }
 
     const remaining = revealed.filter(c => !toTrash.includes(c));
@@ -80,8 +84,9 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
     const remaining = (metadata?.remainingCards as CardName[]) || [];
     const toDiscard = decision.selectedCards;
 
-    if (toDiscard.length > 0) {
-      events.push({ type: "CARDS_DISCARDED", player, cards: toDiscard, from: "deck" });
+    // Discard selected cards (atomic events)
+    for (const card of toDiscard) {
+      events.push({ type: "CARD_DISCARDED", player, card, from: "deck" });
     }
 
     const toReturn = remaining.filter(c => !toDiscard.includes(c));
@@ -107,18 +112,17 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
     // Single card or no cards, just put back
     if (toReturn.length === 1) {
-      events.push({ type: "CARDS_PUT_ON_DECK", player, cards: toReturn, from: "hand" });
+      events.push({ type: "CARD_PUT_ON_DECK", player, card: toReturn[0], from: "hand" });
     }
 
     return { events };
   }
 
-  // Order and return to deck
+  // Order and return to deck (atomic events, reversed so first = top)
   if (stage === "order") {
-    const orderedCards = decision.selectedCards;
-    if (orderedCards.length > 0) {
-      // Put in reverse order so first selected ends up on top
-      events.push({ type: "CARDS_PUT_ON_DECK", player, cards: [...orderedCards].reverse(), from: "hand" });
+    const orderedCards = [...decision.selectedCards].reverse();
+    for (const card of orderedCards) {
+      events.push({ type: "CARD_PUT_ON_DECK", player, card, from: "hand" });
     }
     return { events };
   }

@@ -52,7 +52,7 @@ export const mine: CardEffect = ({ state, player, decision, stage }): CardEffect
       .map(([card]) => card as CardName);
 
     const events: GameEvent[] = [
-      { type: "CARDS_TRASHED", player, cards: [toTrash], from: "hand" },
+      { type: "CARD_TRASHED", player, card: toTrash, from: "hand" },
     ];
 
     if (gainableTreasures.length === 0) {

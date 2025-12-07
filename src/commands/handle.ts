@@ -482,26 +482,26 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       id: endTurnId,
     });
 
-    // Discard hand and in-play cards
+    // Discard hand and in-play cards (atomic events)
     const handCards = [...playerState.hand];
     const inPlayCards = [...playerState.inPlay];
 
-    if (handCards.length > 0) {
+    for (const card of handCards) {
       events.push({
-        type: "CARDS_DISCARDED",
+        type: "CARD_DISCARDED",
         player: player as Player,
-        cards: handCards,
+        card,
         from: "hand",
         id: generateEventId(),
         causedBy: endTurnId,
       });
     }
 
-    if (inPlayCards.length > 0) {
+    for (const card of inPlayCards) {
       events.push({
-        type: "CARDS_DISCARDED",
+        type: "CARD_DISCARDED",
         player: player as Player,
-        cards: inPlayCards,
+        card,
         from: "inPlay",
         id: generateEventId(),
         causedBy: endTurnId,
@@ -714,9 +714,21 @@ function createDrawEventsForCleanup(
   if (!playerState) return [];
 
   const events: GameEvent[] = [];
-  const { cards, shuffled, newDeckOrder } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(playerState, count);
 
-  if (shuffled) {
+  if (shuffled && cardsBeforeShuffle) {
+    // Draw cards before shuffle
+    for (const card of cardsBeforeShuffle) {
+      events.push({
+        type: "CARD_DRAWN",
+        player,
+        card,
+        id: generateEventId(),
+        causedBy,
+      });
+    }
+
+    // Then shuffle
     events.push({
       type: "DECK_SHUFFLED",
       player,
@@ -724,16 +736,29 @@ function createDrawEventsForCleanup(
       id: generateEventId(),
       causedBy,
     });
-  }
 
-  if (cards.length > 0) {
-    events.push({
-      type: "CARDS_DRAWN",
-      player,
-      cards,
-      id: generateEventId(),
-      causedBy,
-    });
+    // Then draw remaining cards after shuffle
+    const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
+    for (const card of cardsAfterShuffle) {
+      events.push({
+        type: "CARD_DRAWN",
+        player,
+        card,
+        id: generateEventId(),
+        causedBy,
+      });
+    }
+  } else {
+    // No shuffle, just draw all cards
+    for (const card of cards) {
+      events.push({
+        type: "CARD_DRAWN",
+        player,
+        card,
+        id: generateEventId(),
+        causedBy,
+      });
+    }
   }
 
   return events;

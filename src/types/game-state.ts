@@ -137,6 +137,7 @@ export type LogEntry = {
   player: string;
   count: number;
   cards?: CardName[];
+  cardCounts?: Record<string, number>; // For aggregated display
   eventId?: string;
   children?: LogEntry[];
 } | {
@@ -150,6 +151,7 @@ export type LogEntry = {
   player: string;
   count: number;
   cards?: CardName[];
+  cardCounts?: Record<string, number>; // For aggregated display
   eventId?: string;
   children?: LogEntry[];
 } | {

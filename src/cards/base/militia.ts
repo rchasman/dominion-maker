@@ -50,11 +50,12 @@ export const militia: CardEffect = ({ state, player, decision, stage }): CardEff
     const toDiscard = decision.selectedCards || [];
     const discardingPlayer = state.pendingDecision?.player as Player;
 
-    if (toDiscard.length > 0) {
+    // Discard (atomic events)
+    for (const card of toDiscard) {
       events.push({
-        type: "CARDS_DISCARDED",
+        type: "CARD_DISCARDED",
         player: discardingPlayer,
-        cards: toDiscard,
+        card,
         from: "hand",
       });
     }

@@ -60,7 +60,7 @@ export const artisan: CardEffect = ({ state, player, decision, stage }): CardEff
     if (!toPutOnDeck) return { events: [] };
 
     return {
-      events: [{ type: "CARDS_PUT_ON_DECK", player, cards: [toPutOnDeck], from: "hand" }],
+      events: [{ type: "CARD_PUT_ON_DECK", player, card: toPutOnDeck, from: "hand" }],
     };
   }
 

@@ -46,8 +46,9 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
 export function peekDraw(
   playerState: PlayerState,
   count: number
-): { cards: CardName[]; shuffled: boolean; newDeckOrder?: CardName[] } {
+): { cards: CardName[]; shuffled: boolean; newDeckOrder?: CardName[]; cardsBeforeShuffle?: CardName[] } {
   const cards: CardName[] = [];
+  const cardsBeforeShuffle: CardName[] = [];
   let deck = [...playerState.deck];
   let discard = [...playerState.discard];
   let shuffled = false;
@@ -56,6 +57,8 @@ export function peekDraw(
   for (let i = 0; i < count; i++) {
     if (deck.length === 0) {
       if (discard.length === 0) break;
+      // Mark how many cards we drew before shuffling
+      cardsBeforeShuffle.push(...cards);
       deck = shuffle(discard);
       discard = [];
       shuffled = true;
@@ -67,7 +70,7 @@ export function peekDraw(
     if (card) cards.push(card);
   }
 
-  return { cards, shuffled, newDeckOrder };
+  return { cards, shuffled, newDeckOrder, cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined };
 }
 
 /**
@@ -93,21 +96,35 @@ export function getOpponents(state: GameState, player: string): string[] {
 
 /**
  * Create draw events for a player.
+ * Properly handles shuffles that occur mid-draw.
  */
 export function createDrawEvents(
   player: string,
   playerState: PlayerState,
   count: number
 ): GameEvent[] {
-  const { cards, shuffled, newDeckOrder } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(playerState, count);
   const events: GameEvent[] = [];
 
-  if (shuffled) {
-    events.push({ type: "DECK_SHUFFLED", player, newDeckOrder });
-  }
+  if (shuffled && cardsBeforeShuffle) {
+    // Draw cards before shuffle
+    for (const card of cardsBeforeShuffle) {
+      events.push({ type: "CARD_DRAWN", player, card });
+    }
 
-  if (cards.length > 0) {
-    events.push({ type: "CARDS_DRAWN", player, cards });
+    // Then shuffle
+    events.push({ type: "DECK_SHUFFLED", player, newDeckOrder });
+
+    // Then draw remaining cards after shuffle
+    const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
+    for (const card of cardsAfterShuffle) {
+      events.push({ type: "CARD_DRAWN", player, card });
+    }
+  } else {
+    // No shuffle, just draw all cards
+    for (const card of cards) {
+      events.push({ type: "CARD_DRAWN", player, card });
+    }
   }
 
   return events;

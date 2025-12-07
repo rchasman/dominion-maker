@@ -68,7 +68,7 @@ type EventCategory = "all" | "turns" | "cards" | "resources" | "decisions";
 const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
   all: [],
   turns: ["TURN_STARTED", "PHASE_CHANGED", "GAME_ENDED"],
-  cards: ["CARDS_DRAWN", "CARD_PLAYED", "CARDS_DISCARDED", "CARDS_TRASHED", "CARD_GAINED", "DECK_SHUFFLED"],
+  cards: ["CARD_DRAWN", "CARD_PLAYED", "CARD_DISCARDED", "CARD_TRASHED", "CARD_GAINED", "DECK_SHUFFLED"],
   resources: ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"],
   decisions: ["DECISION_REQUIRED", "DECISION_RESOLVED"],
 };
@@ -142,12 +142,12 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
   // Format event for display
   const formatEvent = (event: GameEvent): string => {
     switch (event.type) {
-      case "CARDS_DRAWN":
-        return `${event.player} drew ${event.cards.join(", ")}`;
+      case "CARD_DRAWN":
+        return `${event.player} drew ${event.card}`;
       case "CARD_PLAYED":
         return `${event.player} played ${event.card}`;
-      case "CARDS_DISCARDED":
-        return `${event.player} discarded ${event.cards.join(", ")}`;
+      case "CARD_DISCARDED":
+        return `${event.player} discarded ${event.card}`;
       case "CARD_GAINED":
         return `${event.player} gained ${event.card} to ${event.to}`;
       case "TURN_STARTED":
@@ -647,12 +647,12 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     position: "fixed",
     bottom: 0,
-    right: 0,
+    left: 0,
     width: "400px",
     maxHeight: "60vh",
     background: "#1a1a2e",
     border: "1px solid #2d2d44",
-    borderRadius: "8px 0 0 0",
+    borderRadius: "0 8px 0 0",
     display: "flex",
     flexDirection: "column",
     fontFamily: "ui-monospace, monospace",
@@ -663,7 +663,7 @@ const styles: Record<string, React.CSSProperties> = {
   toggleButton: {
     position: "fixed",
     bottom: "16px",
-    right: "16px",
+    left: "16px",
     display: "flex",
     alignItems: "center",
     gap: "8px",
