@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { serverTiming } from "@elysiajs/server-timing";
-import { generateObject, createGateway } from "ai";
+import { generateObject, generateText, createGateway } from "ai";
 import type { GameState } from "../src/types/game-state";
 import type { Action } from "../src/types/action";
 import { ActionSchema } from "../src/types/action";
@@ -58,6 +58,69 @@ const app = new Elysia()
       : `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 
     try {
+      // Ministral struggles with generateObject - use generateText with explicit JSON instructions
+      const isMistral = provider.includes("ministral");
+
+      if (isMistral) {
+        const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching this exact format (no schema, no explanation):\n{\n  "type": "play_action" | "play_treasure" | "buy_card" | "end_phase" | "discard_cards" | "trash_cards" | "gain_card",\n  "card": "CardName" (optional),\n  "cards": ["CardName"] (optional),\n  "reasoning": "brief explanation" (optional)\n}`;
+
+        const result = await generateText({
+          model,
+          system: DOMINION_SYSTEM_PROMPT,
+          prompt: jsonPrompt,
+          maxRetries: 0,
+        });
+
+        // Extract JSON from text (may be wrapped in markdown code blocks)
+        let text = result.text.trim();
+
+        // Remove markdown code blocks if present
+        if (text.startsWith('```')) {
+          const match = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+          if (match) {
+            text = match[1].trim();
+          }
+        }
+
+        let jsonStr = text;
+
+        // If there are multiple JSON objects, try to find the action (not schema)
+        if (text.includes('}\n') || text.includes('}\r\n')) {
+          const chunks = text.split(/\n\n+/);
+          for (const chunk of chunks) {
+            const trimmed = chunk.trim();
+            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+              try {
+                const parsed = JSON.parse(trimmed);
+                // Skip if it's a schema
+                if (parsed.properties || (parsed.type === "object" && parsed.description)) {
+                  continue;
+                }
+                // Found a candidate action
+                if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
+                  jsonStr = trimmed;
+                  break;
+                }
+              } catch {
+                continue;
+              }
+            }
+          }
+        }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const action = ActionSchema.parse(parsed);
+          return { action };
+        } catch (parseErr: any) {
+          console.error(`[${provider}] Failed to parse JSON response`);
+          console.error(`Full response text:`, result.text);
+          console.error(`Extracted JSON string:`, jsonStr);
+          throw new Error(`Failed to parse Ministral response: ${parseErr.message}\nFull text: ${result.text}`);
+        }
+      }
+
+      // Use generateObject for other models
       const result = await generateObject({
         model,
         schema: ActionSchema,
@@ -75,6 +138,38 @@ const app = new Elysia()
 
       return { action: result.object };
     } catch (err: any) {
+      // Ministral sometimes echoes the schema before/instead of the actual JSON
+      // Try to extract and parse just the actual response object
+      if (err.text && provider === "ministral-3b") {
+        try {
+          const text = err.text;
+          // Split by double newlines and try parsing each chunk
+          const chunks = text.split(/\n\n+/);
+          for (let i = chunks.length - 1; i >= 0; i--) {
+            const chunk = chunks[i].trim();
+            if (chunk.startsWith("{") && chunk.endsWith("}")) {
+              try {
+                const parsed = JSON.parse(chunk);
+                // Reject if it's a schema (has properties/description/required at root)
+                if (parsed.properties || parsed.description && parsed.required) {
+                  continue;
+                }
+                // Validate it's an action with 'type' being a string (not "object")
+                if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
+                  const validated = ActionSchema.parse(parsed);
+                  console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
+                  return { action: validated };
+                }
+              } catch {
+                continue;
+              }
+            }
+          }
+        } catch (recoveryErr) {
+          console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
+        }
+      }
+
       console.error(`[${provider}] Error generating action:`, err.message);
       if (err.cause) {
         console.error("Cause:", err.cause);
@@ -82,6 +177,12 @@ const app = new Elysia()
       if (err.text) {
         console.error("Response text:", err.text);
       }
+
+      // For Ministral, return error instead of throwing to allow consensus to continue
+      if (provider === "ministral-3b") {
+        return error(500, `Model failed: ${err.message}`);
+      }
+
       throw err;
     }
   })
