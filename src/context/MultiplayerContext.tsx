@@ -27,6 +27,7 @@ const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
 interface MultiplayerContextValue {
   // Connection
   isConnected: boolean;
+  isConnecting: boolean;
   isReconnecting: boolean;
   roomCode: string | null;
   error: string | null;
@@ -86,6 +87,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const engineRef = useRef<DominionEngine | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +197,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
    */
   const createRoom = useCallback(async (playerName: string): Promise<string> => {
     setError(null);
+    setIsConnecting(true);
 
     // Clear any previous session
     localStorage.removeItem(STORAGE_KEY);
@@ -212,6 +215,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       setRoomCode(code);
       setIsHost(true);
       setIsConnected(true);
+      setIsConnecting(false);
 
       // Subscribe to state changes
       room.onStateChange((state) => {
@@ -240,6 +244,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to create room";
       setError(message);
+      setIsConnecting(false);
       throw e;
     }
   }, []);
@@ -250,6 +255,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const joinRoom = useCallback(
     async (code: string, playerName: string): Promise<void> => {
       setError(null);
+      setIsConnecting(true);
 
       // Clear any previous session
       localStorage.removeItem(STORAGE_KEY);
@@ -266,6 +272,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         setRoomCode(code.toUpperCase());
         setIsHost(false);
         setIsConnected(true);
+        setIsConnecting(false);
 
         // Set optimistic state immediately (will be replaced by real state)
         setRoomState({
@@ -306,6 +313,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to join room";
         setError(message);
+        setIsConnecting(false);
         throw e;
       }
     },
@@ -848,6 +856,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const value: MultiplayerContextValue = {
     // Connection
     isConnected,
+    isConnecting,
     isReconnecting,
     roomCode,
     error,

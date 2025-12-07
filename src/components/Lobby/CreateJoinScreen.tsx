@@ -3,7 +3,7 @@
  *
  * Initial screen for multiplayer - create a new room or join existing.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMultiplayer } from "../../context/MultiplayerContext";
 
 interface CreateJoinScreenProps {
@@ -12,6 +12,16 @@ interface CreateJoinScreenProps {
 
 export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
   const { createRoom, joinRoom, isConnecting, isReconnecting, error, hasSavedSession, reconnectToSavedRoom } = useMultiplayer();
+
+  // Auto-reconnect on mount if saved session exists
+  useEffect(() => {
+    if (hasSavedSession && !isConnecting && !isReconnecting) {
+      console.log("[CreateJoinScreen] Auto-reconnecting to saved session");
+      reconnectToSavedRoom().catch((e) => {
+        console.error("[CreateJoinScreen] Auto-reconnect failed:", e);
+      });
+    }
+  }, [hasSavedSession, reconnectToSavedRoom, isConnecting, isReconnecting]);
 
   const [joinCode, setJoinCode] = useState("");
   const [showJoinInput, setShowJoinInput] = useState(false);

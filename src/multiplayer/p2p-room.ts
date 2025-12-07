@@ -29,6 +29,17 @@ export interface PendingUndoRequest {
   needed: number;
 }
 
+interface UndoUpdateData {
+  requestId: string;
+  toEventId?: string;
+  reason?: string;
+}
+
+interface UndoUpdate {
+  type: "request" | "approve" | "deny" | "execute";
+  data: UndoUpdateData;
+}
+
 export interface RoomState {
   players: PlayerInfo[];
   gameState: GameState | null;
@@ -67,7 +78,7 @@ export class P2PRoom {
   private sendEvents: (events: GameEvent[], peerId?: string) => void;
   private sendCommand: (command: GameCommand, peerId?: string) => void;
   private sendJoin: (info: { playerId: string; name: string }, peerId?: string) => void;
-  private sendUndoUpdate: (update: { type: "request" | "approve" | "deny" | "execute"; data: any }, peerId?: string) => void;
+  private sendUndoUpdate: (update: UndoUpdate, peerId?: string) => void;
   private sendGameEnd: (data: { reason: string }, peerId?: string) => void;
 
   constructor(roomCode: string, isHost: boolean, savedPeerId?: string) {
@@ -100,7 +111,7 @@ export class P2PRoom {
     const [sendCommand, receiveCommand] = this.room.makeAction<GameCommand>("command");
     const [sendJoin, receiveJoin] = this.room.makeAction<{ playerId: string; name: string }>("join");
     const [sendGameEnd, receiveGameEnd] = this.room.makeAction<{ reason: string }>("gameEnd");
-    const [sendUndoUpdate, receiveUndoUpdate] = this.room.makeAction<{ type: string; data: any }>("undo");
+    const [sendUndoUpdate] = this.room.makeAction<UndoUpdate>("undo");
 
     this.sendFullState = sendFullState;
     this.sendEvents = sendEvents;
@@ -229,7 +240,7 @@ export class P2PRoom {
     });
 
     // Handle game end broadcast (all peers)
-    receiveGameEnd((data, _peerId) => {
+    receiveGameEnd((data) => {
       console.log(`[P2PRoom] Game ended by peer: ${data.reason}`);
 
       // Set game state to game over
@@ -504,7 +515,7 @@ export class P2PRoom {
    * Leave the room
    */
   leave(): void {
-    this.room.leave();
+    void this.room.leave();
   }
 
   /**
