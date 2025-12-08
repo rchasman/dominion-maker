@@ -259,7 +259,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should request discard decision
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.type).toBe("select_cards");
+      expect(result.pendingDecision!.type).toBe("card_decision");
       expect(result.pendingDecision!.from).toBe("hand");
       expect(result.pendingDecision!.stage).toBe("discard");
     });
@@ -312,7 +312,7 @@ describe("Multi-Stage Decision Cards", () => {
       });
 
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.type).toBe("select_cards");
+      expect(result.pendingDecision!.type).toBe("card_decision");
       expect(result.pendingDecision!.min).toBe(0);
       expect(result.pendingDecision!.max).toBe(4);
     });
@@ -736,9 +736,10 @@ describe("Complex Card Interactions", () => {
       expect(result.pendingDecision || result.events.length > 0).toBeTruthy();
 
       // If there are no actions, should have draw events
-      // If there are actions, should have pending decision
+      // If there are actions, should have pending decision with actions
       if (result.pendingDecision) {
-        expect(result.pendingDecision.stage).toBe("skip_actions");
+        expect(result.pendingDecision.actions).toBeDefined();
+        expect(result.pendingDecision.actions?.length).toBe(2);
       } else {
         expect(result.events.length).toBeGreaterThan(0);
       }
@@ -782,9 +783,11 @@ describe("Complex Card Interactions", () => {
 
       const newState = executeCard("Sentry", state);
 
-      // Should reveal 2 cards
+      // Should reveal 2 cards with decision
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.from).toBe("revealed");
+      expect(newState.pendingDecision!.type).toBe("card_decision");
+      expect(newState.pendingDecision!.cardOptions.length).toBe(2);
+      expect(newState.pendingDecision!.actions).toHaveLength(3);
     });
   });
 
