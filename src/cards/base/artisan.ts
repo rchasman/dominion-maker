@@ -21,7 +21,7 @@ export const artisan: CardEffect = ({
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "supply",
         prompt: "Artisan: Gain a card costing up to $5 to your hand",
@@ -46,7 +46,7 @@ export const artisan: CardEffect = ({
     return {
       events: [{ type: "CARD_GAINED", player, card: gained, to: "hand" }],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "hand",
         prompt: "Artisan: Put a card from your hand onto your deck",

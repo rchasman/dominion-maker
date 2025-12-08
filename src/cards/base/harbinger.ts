@@ -28,7 +28,7 @@ export const harbinger: CardEffect = ({
     return {
       events,
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "discard",
         prompt:

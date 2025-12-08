@@ -19,7 +19,7 @@ export const moneylender: CardEffect = ({
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "hand",
         prompt: "Moneylender: Trash a Copper for +$3?",

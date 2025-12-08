@@ -23,7 +23,7 @@ export const mine: CardEffect = ({
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "hand",
         prompt: "Mine: Trash a Treasure from your hand",
@@ -58,7 +58,7 @@ export const mine: CardEffect = ({
     return {
       events,
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "supply",
         prompt: `Mine: Gain a Treasure costing up to $${maxCost} to your hand`,

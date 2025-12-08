@@ -22,7 +22,7 @@ export const remodel: CardEffect = ({
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "hand",
         prompt: "Remodel: Choose a card to trash",
@@ -55,7 +55,7 @@ export const remodel: CardEffect = ({
     return {
       events,
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "supply",
         prompt: `Remodel: Gain a card costing up to $${maxCost}`,

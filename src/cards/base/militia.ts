@@ -27,7 +27,7 @@ export const militia: CardEffect = ({
         return {
           events,
           pendingDecision: {
-            type: "select_cards",
+            type: "card_decision",
             player: opp,
             from: "hand",
             prompt: `Militia: Discard down to 3 cards (discard ${discardCount})`,
@@ -77,7 +77,7 @@ export const militia: CardEffect = ({
         return {
           events,
           pendingDecision: {
-            type: "select_cards",
+            type: "card_decision",
             player: opp,
             from: "hand",
             prompt: `Militia: Discard down to 3 cards (discard ${discardCount})`,

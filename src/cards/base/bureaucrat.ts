@@ -35,7 +35,7 @@ export const bureaucrat: CardEffect = ({
         return {
           events,
           pendingDecision: {
-            type: "select_cards",
+            type: "card_decision",
             player: opp,
             from: "hand",
             prompt: "Bureaucrat: Put a Victory card on your deck",
@@ -86,7 +86,7 @@ export const bureaucrat: CardEffect = ({
         return {
           events,
           pendingDecision: {
-            type: "select_cards",
+            type: "card_decision",
             player: opp,
             from: "hand",
             prompt: "Bureaucrat: Put a Victory card on your deck",

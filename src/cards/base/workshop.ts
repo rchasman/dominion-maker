@@ -18,7 +18,7 @@ export const workshop: CardEffect = ({
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
         from: "supply",
         prompt: "Workshop: Gain a card costing up to $4",

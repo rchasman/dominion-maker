@@ -36,7 +36,7 @@ export const vassal: CardEffect = ({
       return {
         events,
         pendingDecision: {
-          type: "select_cards",
+          type: "card_decision",
           player,
           from: "options",
           prompt: `Vassal: Play ${topCard} from discard?`,
