@@ -17,8 +17,13 @@ export function ActionPrompt({
   onConfirm,
   onSkip,
 }: ActionPromptProps) {
-  const minCount = decision.min;
-  const maxCount = decision.max;
+  // Only show for simple selection mode (no actions)
+  if (decision.actions) {
+    return null;
+  }
+
+  const minCount = decision.min ?? 0;
+  const maxCount = decision.max ?? 1;
   const canConfirm =
     selectedCards.length >= minCount && selectedCards.length <= maxCount;
 

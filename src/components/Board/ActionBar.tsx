@@ -7,8 +7,15 @@ interface ActionBarProps {
   onPlayAllTreasures: () => void;
   onEndPhase: () => void;
   selectedCardIndices: number[];
-  onConfirmDecision: () => void;
+  onConfirmDecision: (complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void;
   onSkipDecision: () => void;
+  complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  };
 }
 
 export function ActionBar({
@@ -20,6 +27,7 @@ export function ActionBar({
   selectedCardIndices,
   onConfirmDecision,
   onSkipDecision,
+  complexDecisionData,
 }: ActionBarProps) {
   // Determine if there's nothing left to do in the turn
   const isTurnComplete =
@@ -107,19 +115,24 @@ export function ActionBar({
         {hasPendingDecision ? (
           <>
             <button
-              onClick={onConfirmDecision}
-              disabled={selectedCardIndices.length < state.pendingDecision!.min}
+              onClick={() => onConfirmDecision(complexDecisionData)}
+              disabled={
+                !complexDecisionData &&
+                selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+              }
               style={{
                 padding: "var(--space-2) var(--space-4)",
                 background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
                 color: "#fff",
                 border: "1px solid #a5b4fc",
                 cursor:
-                  selectedCardIndices.length < state.pendingDecision!.min
+                  !complexDecisionData &&
+                  selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
                     ? "not-allowed"
                     : "pointer",
                 opacity:
-                  selectedCardIndices.length < state.pendingDecision!.min
+                  !complexDecisionData &&
+                  selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
                     ? 0.5
                     : 1,
                 fontSize: "0.6875rem",

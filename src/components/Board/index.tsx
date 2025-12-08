@@ -3,7 +3,7 @@ import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
-import { RevealedCardsModal } from "../RevealedCardsModal";
+import { CardDecisionModal } from "../CardDecisionModal";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
@@ -43,6 +43,10 @@ export function Board({ onBackToHome }: BoardProps) {
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [showDevtools, setShowDevtools] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
+  const [complexDecisionData, setComplexDecisionData] = useState<{
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  } | null>(null);
 
   // Wrap requestUndo to clear preview state and selections when undoing
   const handleRequestUndo = useCallback(
@@ -206,6 +210,7 @@ export function Board({ onBackToHome }: BoardProps) {
           paddingTop: isPreviewMode
             ? "calc(var(--space-5) + 2.5rem)"
             : "var(--space-5)",
+          position: "relative",
         }}
       >
         <OpponentBar
@@ -236,11 +241,28 @@ export function Board({ onBackToHome }: BoardProps) {
             onPlayAllTreasures={onPlayAllTreasures}
             onEndPhase={onEndPhase}
             selectedCardIndices={selectedCardIndices}
-            onConfirmDecision={() => {
-              const selectedCards = selectedCardIndices.map(i => human.hand[i]);
-              const result = submitDecision({ selectedCards });
-              if (result.ok) {
-                setSelectedCardIndices([]);
+            complexDecisionData={complexDecisionData}
+            onConfirmDecision={data => {
+              if (data) {
+                // Complex decision with cardActions and cardOrder
+                const result = submitDecision({
+                  selectedCards: [],
+                  cardActions: data.cardActions,
+                  cardOrder: data.cardOrder,
+                });
+                if (result.ok) {
+                  setSelectedCardIndices([]);
+                  setComplexDecisionData(null);
+                }
+              } else {
+                // Simple card selection
+                const selectedCards = selectedCardIndices.map(
+                  i => human.hand[i],
+                );
+                const result = submitDecision({ selectedCards });
+                if (result.ok) {
+                  setSelectedCardIndices([]);
+                }
               }
             }}
             onSkipDecision={() => {
@@ -252,25 +274,41 @@ export function Board({ onBackToHome }: BoardProps) {
           />
         )}
 
-        <PlayerArea
-          player={human}
-          label="You"
-          vpCount={humanVP}
-          isActive={isHumanTurn}
-          isHuman={true}
-          selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
-          onCardClick={isPreviewMode ? undefined : onCardClick}
-          onInPlayClick={
-            !isPreviewMode && displayState.phase === "buy"
-              ? onInPlayClick
-              : undefined
-          }
-          pendingDecision={displayState.pendingDecision}
-          phase={displayState.phase}
-          subPhase={displayState.subPhase}
-          playerId="human"
-          turnHistory={displayState.turnHistory}
-        />
+        <div style={{ position: "relative" }}>
+          <PlayerArea
+            player={human}
+            label="You"
+            vpCount={humanVP}
+            isActive={isHumanTurn}
+            isHuman={true}
+            selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
+            onCardClick={isPreviewMode ? undefined : onCardClick}
+            onInPlayClick={
+              !isPreviewMode && displayState.phase === "buy"
+                ? onInPlayClick
+                : undefined
+            }
+            pendingDecision={displayState.pendingDecision}
+            phase={displayState.phase}
+            subPhase={displayState.subPhase}
+            playerId="human"
+            turnHistory={displayState.turnHistory}
+          />
+
+          {/* Card Decision Overlay */}
+          {displayState.pendingDecision &&
+            displayState.pendingDecision.actions &&
+            !isPreviewMode && (
+              <CardDecisionModal
+                cards={displayState.pendingDecision.cardOptions}
+                actions={displayState.pendingDecision.actions}
+                requiresOrdering={displayState.pendingDecision.requiresOrdering}
+                onDataChange={data => {
+                  setComplexDecisionData(data);
+                }}
+              />
+            )}
+        </div>
       </div>
 
       <GameSidebar
@@ -286,17 +324,6 @@ export function Board({ onBackToHome }: BoardProps) {
         onBackToHome={onBackToHome}
         onRequestUndo={handleRequestUndo}
       />
-
-      {/* Revealed Cards Modal */}
-      {displayState.pendingDecision &&
-        displayState.pendingDecision.from === "revealed" &&
-        !isPreviewMode && (
-          <RevealedCardsModal
-            pendingDecision={displayState.pendingDecision}
-            selectedCardIndices={selectedCardIndices}
-            onCardClick={onCardClick}
-          />
-        )}
 
       {state.gameOver && (
         <GameOverModal
