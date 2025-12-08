@@ -580,7 +580,7 @@ describe("Decision Helper Functions", () => {
   beforeEach(() => resetEventCounter());
 
   it("isInitialCall should detect initial calls", () => {
-    expect(isInitialCall(undefined, undefined)).toBe(true);
+    expect(isInitialCall()).toBe(true);
     expect(isInitialCall(undefined, "trash")).toBe(true);
     expect(isInitialCall(undefined, "gain")).toBe(true);
   });
