@@ -1,5 +1,5 @@
-import type { ModelSettings, ModelProvider } from "../agent/game-agent";
-import { AVAILABLE_MODELS } from "../agent/game-agent";
+import type { ModelSettings, ModelProvider } from "../agent/types";
+import { AVAILABLE_MODELS } from "../agent/types";
 import { MODELS } from "../config/models";
 
 interface ModelPickerProps {
