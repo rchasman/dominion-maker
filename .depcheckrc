@@ -9,7 +9,9 @@
     "@floating-ui/react",
     "babel-plugin-react-compiler",
     "stylelint-config-standard",
-    "bun:test"
+    "bun:test",
+    "react",
+    "react-dom"
   ],
   "ignore-patterns": [
     "dist",
