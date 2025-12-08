@@ -50,10 +50,17 @@ export function Board({ onBackToHome }: BoardProps) {
   } | null>(null);
 
   // Determine player IDs early so callbacks can use them
+  // If a game is active, use ACTUAL player IDs from game state
+  // Otherwise, use expected player IDs from config
+  const actualPlayerIds = state
+    ? (Object.keys(state.players) as PlayerId[])
+    : [];
   const playerIds =
-    gameMode === "multiplayer"
-      ? (["human", "ai"] as PlayerId[])
-      : GAME_MODE_CONFIG[gameMode].players;
+    actualPlayerIds.length > 0
+      ? actualPlayerIds
+      : gameMode === "multiplayer"
+        ? (["human", "ai"] as PlayerId[])
+        : GAME_MODE_CONFIG[gameMode].players;
   const mainPlayerId = playerIds[0];
   const isHumanPlayer = mainPlayerId === "human";
 

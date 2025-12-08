@@ -228,10 +228,34 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [gameMode, llmLogger, modelSettings]);
 
-  // Handle mode changes: abort ongoing consensus and reset processing
+  // Handle mode changes: abort ongoing consensus, reset processing, and restart game
   useEffect(() => {
     abortOngoingConsensus();
     setIsProcessing(false);
+
+    // If a game is already active and mode changed, restart with new player configuration
+    if (gameState && !gameState.gameOver && events.length > 0) {
+      const engine = new DominionEngine();
+      engineRef.current = engine;
+
+      // Determine players based on new game mode
+      const players =
+        gameMode === "multiplayer"
+          ? ["human", "ai"]
+          : GAME_MODE_CONFIG[gameMode].players;
+
+      const result = engine.dispatch({
+        type: "START_GAME",
+        players,
+        kingdomCards: gameState.kingdomCards, // Reuse same kingdom cards
+      });
+
+      if (result.ok) {
+        setEvents([...engine.eventLog]);
+        setGameState(engine.state);
+        setLLMLogs([]); // Clear LLM logs on restart
+      }
+    }
   }, [gameMode]);
 
   // Derived state
