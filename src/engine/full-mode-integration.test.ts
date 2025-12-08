@@ -1,12 +1,10 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "./engine";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
 import { buildStrategicContext } from "../agent/strategic-context";
 
 describe("Full mode integration", () => {
   it("should complete a full turn cycle with ai1 and ai2", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     // Start game
     const startResult = engine.startGame(["ai1", "ai2"]);
@@ -35,7 +33,6 @@ describe("Full mode integration", () => {
 
   it("should allow ai2 to complete their turn", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -56,7 +53,6 @@ describe("Full mode integration", () => {
 
   it("should maintain separate player states for ai1 and ai2", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -73,7 +69,6 @@ describe("Full mode integration", () => {
 
   it("should generate valid strategic context for ai1", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -88,7 +83,6 @@ describe("Full mode integration", () => {
 
   it("should generate valid strategic context for ai2", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -109,7 +103,6 @@ describe("Full mode integration", () => {
 
   it("should allow both AIs to buy cards", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -142,7 +135,6 @@ describe("Full mode integration", () => {
 
   it("should track VP correctly for both AI players", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -164,7 +156,6 @@ describe("Full mode integration", () => {
 
   it("should handle game over condition with ai1 and ai2", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -182,7 +173,6 @@ describe("Full mode integration", () => {
 
   it("should not allow human or ai players to act in full mode", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 
@@ -196,7 +186,6 @@ describe("Full mode integration", () => {
 
   it("should alternate between ai1 and ai2 for multiple turns", () => {
     const engine = new DominionEngine();
-    const config = GAME_MODE_CONFIG.full;
 
     engine.startGame(["ai1", "ai2"]);
 

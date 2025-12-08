@@ -144,8 +144,7 @@ describe("Game initialization with different modes", () => {
         { mode: "full", engine: new DominionEngine() },
       ];
 
-      engines.forEach(({ mode, engine }) => {
-        const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
+      engines.forEach(({ engine }) => {
         engine.startGame(["ai1", "ai2"]);
 
         // Check each player has the expected structure
@@ -164,7 +163,6 @@ describe("Game initialization with different modes", () => {
 
     it("should start each player with same deck composition", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.full;
 
       engine.startGame(["ai1", "ai2"]);
 
@@ -199,9 +197,8 @@ describe("Game initialization with different modes", () => {
 
   describe("game state consistency", () => {
     it("should have valid activePlayer for all modes", () => {
-      ["engine", "hybrid", "full"].forEach(mode => {
+      ["engine", "hybrid", "full"].forEach(() => {
         const engine = new DominionEngine();
-        const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
 
         engine.startGame(["ai1", "ai2"]);
 
@@ -249,9 +246,8 @@ describe("Game initialization with different modes", () => {
 
   describe("dynamic player lookup", () => {
     it("should be able to access any player by activePlayer ID", () => {
-      ["engine", "hybrid", "full"].forEach(mode => {
+      ["engine", "hybrid", "full"].forEach(() => {
         const engine = new DominionEngine();
-        const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
 
         engine.startGame(["ai1", "ai2"]);
 

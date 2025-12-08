@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "../engine/engine";
-import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
+import { getPlayersForMode } from "../types/game-mode";
 
 describe("Mode switching during active game", () => {
   it("should handle player ID lookup with actual game state players", () => {

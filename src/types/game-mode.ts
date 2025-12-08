@@ -33,7 +33,9 @@ export function getPlayersForMode(
   mode: Exclude<GameMode, "multiplayer">,
 ): PlayerId[] {
   const config = GAME_MODE_CONFIG[mode];
-  return typeof config.players === "function" ? config.players() : config.players;
+  return typeof config.players === "function"
+    ? config.players()
+    : config.players;
 }
 
 export const GAME_MODE_CONFIG: Record<

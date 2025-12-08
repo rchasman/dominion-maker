@@ -299,7 +299,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // Determine players based on game mode
     const players =
-      gameMode === "multiplayer" ? ["human", "ai"] : getPlayersForMode(gameMode);
+      gameMode === "multiplayer"
+        ? ["human", "ai"]
+        : getPlayersForMode(gameMode);
 
     const result = engine.dispatch({
       type: "START_GAME",
