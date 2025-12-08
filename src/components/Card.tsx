@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
+import { CardTooltip } from "./CardTooltip";
 
 interface CardProps {
   name: CardName;
@@ -22,6 +24,8 @@ export function Card({
   size = "medium",
   highlightMode,
 }: CardProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const imageUrl = showBack
     ? "/cards/Card_back.jpg"
     : getCardImageUrl(name);
@@ -64,21 +68,37 @@ export function Card({
 
   const borderStyle = getBorderStyle();
 
+  const handleMouseEnter = () => {
+    setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  };
+
   return (
-    <div
-      onClick={disabled ? undefined : onClick}
-      style={{
-        position: "relative",
-        cursor: onClick && !disabled ? "pointer" : "default",
-        opacity: disabled ? 0.4 : 1,
-        transform: selected ? "translateY(calc(-1 * var(--space-2)))" : "none",
-        transition: "transform var(--transition-fast), box-shadow var(--transition-fast)",
-        ...borderStyle,
-        minInlineSize: 0,
-        flexShrink: 1,
-        userSelect: "none",
-      }}
-    >
+    <>
+      <div
+        onClick={disabled ? undefined : onClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onMouseMove={handleMouseMove}
+        style={{
+          position: "relative",
+          cursor: onClick && !disabled ? "pointer" : "default",
+          opacity: disabled ? 0.4 : 1,
+          transform: selected ? "translateY(calc(-1 * var(--space-2)))" : "none",
+          transition: "transform var(--transition-fast), box-shadow var(--transition-fast)",
+          ...borderStyle,
+          minInlineSize: 0,
+          flexShrink: 1,
+          userSelect: "none",
+        }}
+      >
       <img
         src={imageUrl}
         alt={showBack ? "Card back" : name}
@@ -121,6 +141,15 @@ export function Card({
           {count}
         </div>
       )}
-    </div>
+      </div>
+      {showTooltip && (
+        <CardTooltip
+          cardName={name}
+          mouseX={mousePosition.x}
+          mouseY={mousePosition.y}
+          showBack={showBack}
+        />
+      )}
+    </>
   );
 }
