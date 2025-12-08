@@ -194,7 +194,9 @@ export function PlayerArea({
             <strong
               style={{
                 fontSize: "0.8125rem",
-                color: "var(--color-text-primary)",
+                color: playerId
+                  ? getPlayerColor(playerId)
+                  : "var(--color-text-primary)",
               }}
             >
               {label}
