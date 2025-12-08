@@ -89,7 +89,6 @@ export default async function handler(req: Request) {
 
     // Ministral struggles with generateObject - use generateText with explicit JSON instructions
     const isMistral = provider.includes("ministral");
-    const isGemini = provider.includes("gemini");
 
     if (isMistral) {
       const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
@@ -185,13 +184,6 @@ export default async function handler(req: Request) {
           },
         },
       }),
-      ...(isGemini && {
-        providerOptions: {
-          google: {
-            structuredOutputs: false,
-          },
-        },
-      }),
     });
 
     return new Response(JSON.stringify({ action: result.object }), {
@@ -199,8 +191,22 @@ export default async function handler(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    // Recovery logic for Ministral
-    const errorWithText = err as { text?: string };
+    // Recovery logic for Ministral and Gemini
+    const errorWithText = err as { text?: string; value?: { action?: unknown } };
+
+    // Handle Gemini wrapping response in extra "action" key
+    if (errorWithText.value?.action && provider.includes("gemini")) {
+      try {
+        const validated = ActionSchema.parse(errorWithText.value.action);
+        console.log(`[${provider}] Recovered from wrapped response`);
+        return new Response(JSON.stringify({ action: validated }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (recoveryErr) {
+        console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
+      }
+    }
 
     if (errorWithText.text && provider === "ministral-3b") {
       try {

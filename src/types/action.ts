@@ -1,43 +1,13 @@
 import { z } from "zod";
 import { CardName } from "./game-state";
 
-// Discriminated union: all actions operate on single cards (atomic)
-export const ActionSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("play_action"),
-    card: CardName.describe("The action card to play"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("play_treasure"),
-    card: CardName.describe("The treasure card to play"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("buy_card"),
-    card: CardName.describe("The card to buy from supply"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("gain_card"),
-    card: CardName.describe("The card to gain"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("discard_card"),
-    card: CardName.describe("The card to discard"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("trash_card"),
-    card: CardName.describe("The card to trash"),
-    reasoning: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal("end_phase"),
-    reasoning: z.string().optional(),
-  }),
-]).describe("A single atomic game action");
+// Simplified action schema - no unions
+export const ActionSchema = z.object({
+  type: z.enum(["play_action", "play_treasure", "buy_card", "gain_card", "discard_card", "trash_card", "end_phase"])
+    .describe("The type of action to perform"),
+  card: CardName.optional().describe("The card to act on (not needed for end_phase)"),
+  reasoning: z.string().describe("Explanation for why this action was chosen"),
+}).describe("A single atomic game action");
 
 export type Action = z.infer<typeof ActionSchema>;
 
