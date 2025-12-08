@@ -1,0 +1,20 @@
+{
+  "ignores": [
+    "@types/*",
+    "eslint-*",
+    "typescript-eslint",
+    "globals",
+    "oxlint-tsgolint",
+    "@ai-sdk/*",
+    "@floating-ui/react",
+    "babel-plugin-react-compiler",
+    "stylelint-config-standard",
+    "bun:test"
+  ],
+  "ignore-patterns": [
+    "dist",
+    "node_modules",
+    "*.test.ts",
+    "*.test.tsx"
+  ]
+}
