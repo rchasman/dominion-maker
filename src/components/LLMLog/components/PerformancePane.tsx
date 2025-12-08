@@ -7,28 +7,50 @@ interface PerformancePaneProps {
   now?: number;
 }
 
-export function PerformancePane({ data, liveStatuses, now = Date.now() }: PerformancePaneProps) {
+export function PerformancePane({ data, liveStatuses, now }: PerformancePaneProps) {
+  // eslint-disable-next-line react-hooks/purity
+  const currentTime = now ?? Date.now();
   // Build timings array from either final data or live statuses
   let timings: Array<{ provider: string; duration: number; pending?: boolean; failed?: boolean; aborted?: boolean }>;
 
   if (liveStatuses && liveStatuses.size > 0) {
     // Use live model statuses with countup for pending
-    timings = Array.from(liveStatuses.values())
-      .map(status => ({
-        provider: status.provider,
-        duration: status.completed ? (status.duration || 0) : (now - status.startTime),
-        pending: !status.completed,
-        failed: status.completed && status.success === false && !status.aborted,
-        aborted: status.aborted,
-      }))
+    const statusArray = Array.from(liveStatuses.values());
+    const hasAnyNonAbortedPending = statusArray.some(s => !s.completed && !s.aborted);
+
+    // Find current max duration among non-aborted requests (for aborted items to track)
+    const nonAbortedDurations = statusArray
+      .filter(s => !s.aborted)
+      .map(s => s.completed ? (s.duration || 0) : (currentTime - s.startTime));
+    const maxNonAbortedDuration = nonAbortedDurations.length > 0 ? Math.max(...nonAbortedDurations) : 0;
+
+    timings = statusArray
+      .map(status => {
+        const isAborted = status.aborted;
+        const showAsAborted = isAborted && !hasAnyNonAbortedPending;
+        const actualDuration = status.completed ? (status.duration || 0) : (currentTime - status.startTime);
+
+        // Aborted items that are still showing as pending should track the longest non-aborted duration
+        const displayDuration = (isAborted && hasAnyNonAbortedPending)
+          ? maxNonAbortedDuration
+          : actualDuration;
+
+        return {
+          provider: status.provider,
+          duration: displayDuration,
+          pending: !status.completed || (isAborted && hasAnyNonAbortedPending),
+          failed: status.completed && status.success === false && !status.aborted,
+          aborted: showAsAborted,
+        };
+      })
       .sort((a, b) => {
-        // Completed first, then by duration, failures/aborted last
-        if (a.pending && !b.pending) return 1;
-        if (!a.pending && b.pending) return -1;
-        if (a.aborted && !b.aborted) return 1;
-        if (!a.aborted && b.aborted) return -1;
+        // Failed and aborted at bottom, then completed before pending, then by duration
         if (a.failed && !b.failed) return 1;
         if (!a.failed && b.failed) return -1;
+        if (a.aborted && !b.aborted) return 1;
+        if (!a.aborted && b.aborted) return -1;
+        if (a.pending && !b.pending) return 1;
+        if (!a.pending && b.pending) return -1;
         return a.duration - b.duration;
       });
   } else if (data?.timings) {
@@ -38,7 +60,6 @@ export function PerformancePane({ data, liveStatuses, now = Date.now() }: Perfor
   }
 
   const completedTimings = timings.filter(t => !t.pending && !t.aborted);
-  // Include pending durations in max so bars grow relative to all models
   const allDurations = timings.map(t => t.duration);
   const maxDuration = allDurations.length > 0 ? Math.max(...allDurations) : 1;
   const minDuration = completedTimings.length > 0

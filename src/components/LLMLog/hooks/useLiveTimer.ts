@@ -6,7 +6,7 @@ import type { LLMLogEntry } from "../types";
  * Returns current timestamp that updates every 50ms when there are pending operations
  */
 export const useLiveTimer = (entries: LLMLogEntry[]): number => {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     // Check if there are any consensus-start entries without corresponding consensus-complete

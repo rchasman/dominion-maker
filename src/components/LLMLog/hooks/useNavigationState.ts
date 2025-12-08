@@ -26,7 +26,9 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
 
   // Reset userNavigatedAway when a new turn starts
   useEffect(() => {
-    setUserNavigatedAway(false);
+    queueMicrotask(() => {
+      setUserNavigatedAway(false);
+    });
   }, [turns.length]);
 
   // Auto-advance to latest turn and action when new data arrives
@@ -40,8 +42,10 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
 
       // Jump to latest unless user has manually navigated away
       if (!userNavigatedAway) {
-        setCurrentTurnIndex(lastTurnIndex);
-        setCurrentActionIndex(lastActionIndex);
+        queueMicrotask(() => {
+          setCurrentTurnIndex(lastTurnIndex);
+          setCurrentActionIndex(lastActionIndex);
+        });
       }
     }
   }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending, userNavigatedAway]);
@@ -64,9 +68,11 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
         ? lastTurn.decisions.length
         : lastTurn.decisions.length - 1;
 
-      setCurrentTurnIndex(lastTurnIndex);
-      setCurrentActionIndex(lastActionIndex);
-      setUserNavigatedAway(false);
+      queueMicrotask(() => {
+        setCurrentTurnIndex(lastTurnIndex);
+        setCurrentActionIndex(lastActionIndex);
+        setUserNavigatedAway(false);
+      });
     }
   }, [turns, currentTurnIndex, currentActionIndex]);
 
