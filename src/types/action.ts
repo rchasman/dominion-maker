@@ -5,7 +5,7 @@ import { CardName } from "./game-state";
 export const ActionSchema = z.object({
   type: z.enum(["play_action", "play_treasure", "buy_card", "gain_card", "discard_card", "trash_card", "end_phase"])
     .describe("The type of action to perform"),
-  card: CardName.optional().describe("The card to act on (not needed for end_phase)"),
+  card: CardName.nullish().describe("The card to act on (not needed for end_phase)"),
   reasoning: z.string().optional().describe("Explanation for why this action was chosen"),
 }).describe("A single atomic game action");
 

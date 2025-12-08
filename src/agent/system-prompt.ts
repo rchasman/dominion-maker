@@ -4,6 +4,7 @@ export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic 
 - Choose ONE atomic action only (no plans, no sequences)
 - **CRITICAL: You will receive a LEGAL ACTIONS list. You MUST choose EXACTLY one action from that list. Do NOT invent actions not in the list.**
 - **BUY PHASE CRITICAL: Always play ALL treasures BEFORE attempting to buy. Never buy with 0 coins.**
+- **ACTION FORMAT: For end_phase actions, omit the "card" field entirely. Example: {"type": "end_phase", "reasoning": "..."}**
 
 ## Phases
 - Action: Play action cards from hand (costs 1 action). End when actions=0.
