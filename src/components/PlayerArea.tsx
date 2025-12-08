@@ -441,7 +441,7 @@ export function PlayerArea({
                   </div>
                 ) : player.deck.length > 0 ? (
                   <Card
-                    name={player.deck[0]}
+                    name={player.deck[player.deck.length - 1]}
                     showBack={!player.deckTopRevealed}
                     size={size}
                     count={player.deck.length}

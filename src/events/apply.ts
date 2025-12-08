@@ -187,6 +187,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             ...playerState,
             deck: newDeck,
             hand: [...playerState.hand, event.card],
+            deckTopRevealed: false, // After drawing, you don't know what's on top
           },
         },
         log: [
@@ -380,6 +381,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         ...playerState,
         deck: event.newDeckOrder ?? [],
         discard: [],
+        deckTopRevealed: false, // After shuffling, you don't know what's on top
       };
       return {
         ...state,
@@ -409,6 +411,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
                 ? removeCardFromZone(playerState.discard, event.card)
                 : playerState.discard,
             deck: [...playerState.deck, event.card],
+            deckTopRevealed: true, // You know what's on top since you put it there
           },
         },
       };
