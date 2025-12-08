@@ -66,11 +66,11 @@ export function aggregateLogEntries(log: LogEntry[]): (LogEntry & { eventIds?: s
     const [first] = entries;
     const count = entries.length;
 
-    const eventIds = entries.map(e => e.eventId).filter(Boolean) as string[];
+    const eventIds = entries.map(e => e.eventId).filter((id): id is string => id !== undefined);
     const allCards = entries.flatMap(e =>
       (e.type === "discard-cards" || e.type === "draw-cards") && e.cards ? e.cards : []
     );
-    const allChildren = entries.flatMap(e => e.children || []) as LogEntry[];
+    const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
     const aggregatedChildren = allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
 
     if (first.type === "play-treasure" || first.type === "unplay-treasure") {

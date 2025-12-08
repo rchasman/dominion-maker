@@ -1,7 +1,20 @@
 import type { GameState, PlayerState, LogEntry, CardName } from "../types/game-state";
-import type {
-  GameEvent,
-} from "./types";
+import type { GameEvent } from "./types";
+
+// Helper to create the players record with proper typing
+function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
+  const players: Record<string, PlayerState> = {};
+  for (const playerId of playerIds) {
+    players[playerId] = {
+      deck: [],
+      hand: [],
+      discard: [],
+      inPlay: [],
+      inPlaySourceIndices: [],
+    };
+  }
+  return players;
+}
 
 /**
  * Helper: Remove a card from a zone (hand, deck, discard) immutably.
@@ -35,18 +48,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
     // ==================
 
     case "GAME_INITIALIZED": {
-      const players = Object.fromEntries(
-        event.players.map(playerId => [
-          playerId,
-          {
-            deck: [],
-            hand: [],
-            discard: [],
-            inPlay: [],
-            inPlaySourceIndices: [],
-          }
-        ])
-      ) as GameState["players"];
+      const players = createPlayersRecord(event.players);
 
       return {
         ...state,
@@ -318,16 +320,17 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       if (!playerState) return state;
 
       // Move discard into deck with new shuffled order
+      const updatedPlayer: PlayerState = {
+        ...playerState,
+        deck: event.newDeckOrder ?? [],
+        discard: [],
+      };
       return {
         ...state,
         players: {
           ...state.players,
-          [event.player]: {
-            ...playerState,
-            deck: event.newDeckOrder,
-            discard: [],
-          },
-        } as Record<string, typeof playerState>,
+          [event.player]: updatedPlayer,
+        },
       };
     }
 

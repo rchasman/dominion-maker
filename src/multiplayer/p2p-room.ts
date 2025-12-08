@@ -141,18 +141,17 @@ export class P2PRoom {
     });
 
     // Handle incremental events (clients only)
-    receiveEvents((newEvents, peerId) => {
+    receiveEvents((newEvents: GameEvent[], peerId) => {
       if (!this.isHost) {
-        const events = newEvents as unknown as GameEvent[];
-        console.log(`[P2PRoom] Received ${events.length} events from ${peerId}, total: ${this.events.length + events.length}`);
-        this.events.push(...events);
+        console.log(`[P2PRoom] Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`);
+        this.events.push(...newEvents);
 
         // Recompute game state from full event log
         this.gameState = projectState(this.events);
 
         // Notify event handlers
         for (const handler of this.eventHandlers) {
-          handler(events);
+          handler(newEvents);
         }
 
         // Notify state change handlers

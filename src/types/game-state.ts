@@ -1,39 +1,5 @@
 import { z } from "zod";
 
-// Decision types (moved here to break circular dependency with events/types)
-export type DecisionRequest = {
-  type: "select_cards";
-  player: string; // PlayerId
-  from: "hand" | "supply" | "revealed" | "options" | "discard";
-  prompt: string;
-  cardOptions?: string[]; // CardName[]
-  min: number;
-  max: number;
-  cardBeingPlayed: string; // CardName
-  stage?: string;
-  canSkip?: boolean;
-  metadata?: Record<string, unknown>;
-};
-
-export type DecisionChoice = {
-  selectedCards: string[]; // CardName[]
-};
-
-// Zod schema for DecisionRequest
-export const DecisionRequestSchema = z.object({
-  type: z.literal("select_cards"),
-  player: z.string(),
-  from: z.enum(["hand", "supply", "revealed", "options", "discard"]),
-  prompt: z.string(),
-  cardOptions: z.array(z.string()).optional(),
-  min: z.number(),
-  max: z.number(),
-  cardBeingPlayed: z.string(),
-  stage: z.string().optional(),
-  canSkip: z.boolean().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
-
 // Card names for base game
 export const CardName = z.enum([
   // Treasures
@@ -101,6 +67,40 @@ export type PlayerInfo = z.infer<typeof PlayerInfo>;
 // Turn sub-phases for handling interruptions (attacks, reactions, etc.)
 export const TurnSubPhase = z.enum(["opponent_decision", "waiting_for_reactions"]).nullable();
 export type TurnSubPhase = z.infer<typeof TurnSubPhase>;
+
+// Decision types (moved here to break circular dependency with events/types)
+export type DecisionRequest = {
+  type: "select_cards";
+  player: string; // PlayerId
+  from: "hand" | "supply" | "revealed" | "options" | "discard";
+  prompt: string;
+  cardOptions?: CardName[];
+  min: number;
+  max: number;
+  cardBeingPlayed: CardName;
+  stage?: string;
+  canSkip?: boolean;
+  metadata?: Record<string, unknown>;
+};
+
+export type DecisionChoice = {
+  selectedCards: CardName[];
+};
+
+// Zod schema for DecisionRequest
+export const DecisionRequestSchema = z.object({
+  type: z.literal("select_cards"),
+  player: z.string(),
+  from: z.enum(["hand", "supply", "revealed", "options", "discard"]),
+  prompt: z.string(),
+  cardOptions: z.array(z.string()).optional(),
+  min: z.number(),
+  max: z.number(),
+  cardBeingPlayed: z.string(),
+  stage: z.string().optional(),
+  canSkip: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 // Log entry types with recursive children support
 export type LogEntry = {

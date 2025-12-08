@@ -90,7 +90,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (savedMode && (savedMode === "engine" || savedMode === "maker" || savedMode === "hybrid" || savedMode === "llm")) {
         // Migrate old "hybrid"/"llm" to "maker"
-        const mode = (savedMode === "hybrid" || savedMode === "llm") ? "maker" : savedMode as GameMode;
+        const mode: GameMode = (savedMode === "hybrid" || savedMode === "llm") ? "maker" : savedMode;
         modeRestoredFromStorage.current = true;
         setGameModeState(mode);
       }

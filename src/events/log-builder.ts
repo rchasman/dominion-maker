@@ -1,6 +1,23 @@
-import type { GameEvent } from "./types";
-import type { LogEntry } from "../types/game-state";
+import type { GameEvent, CardDrawnEvent, CardDiscardedEvent, CardTrashedEvent } from "./types";
+import type { LogEntry, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
+
+// Extended event type for aggregated card operations
+type AggregatedCardEvent = (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent) & {
+  cards: CardName[];
+  cardCounts: Record<string, number>;
+  count: number;
+};
+
+type MaybeAggregatedEvent = GameEvent | AggregatedCardEvent;
+
+function isPlayerEvent(event: GameEvent): event is GameEvent & { player: string } {
+  return "player" in event;
+}
+
+function isCardEvent(event: GameEvent): event is CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent {
+  return event.type === "CARD_DRAWN" || event.type === "CARD_DISCARDED" || event.type === "CARD_TRASHED";
+}
 
 /**
  * Build nested log entries from events using causality chains.
@@ -16,9 +33,10 @@ export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = 
   }>(
     (acc, event) => {
       const logEntry = eventToLogEntry(event, currentPlayer);
-      if (!logEntry || !event.id) return acc;
+      const eventId = event.id;
+      if (!logEntry || !eventId) return acc;
 
-      const newLogMap = new Map(acc.logMap).set(event.id, logEntry);
+      const newLogMap = new Map(acc.logMap).set(eventId, logEntry);
 
       if (event.causedBy) {
         const parent = acc.logMap.get(event.causedBy);
@@ -42,16 +60,12 @@ export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = 
  * Splits on different event types, shuffles, or different players/sources.
  * Groups cards by name and shows counts (e.g., "Copper x3, Estate x2")
  */
-function aggregateCardEvents(events: GameEvent[]): GameEvent[] {
-  const isAggregatable = (event: GameEvent) =>
-    event.type === "CARD_DRAWN" || event.type === "CARD_DISCARDED" || event.type === "CARD_TRASHED";
-
+function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
   const canMatchNext = (current: GameEvent, next: GameEvent): boolean => {
     if (next.type === "DECK_SHUFFLED") return false;
     if (next.type !== current.type) return false;
-    const currentPlayer = (current as { player?: string }).player;
-    const nextPlayer = (next as { player?: string }).player;
-    return currentPlayer === nextPlayer && next.causedBy === current.causedBy;
+    if (!isPlayerEvent(current) || !isPlayerEvent(next)) return false;
+    return current.player === next.player && next.causedBy === current.causedBy;
   };
 
   const collectConsecutive = (startIndex: number): { events: GameEvent[]; count: number } => {
@@ -65,13 +79,14 @@ function aggregateCardEvents(events: GameEvent[]): GameEvent[] {
     return { events: events.slice(startIndex, startIndex + count), count };
   };
 
-  const aggregateGroup = (groupEvents: GameEvent[]): GameEvent => {
+  const aggregateGroup = (groupEvents: (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[]): AggregatedCardEvent => {
     const [first] = groupEvents;
-    const cards = groupEvents.map(e => (e as { card: string }).card);
+    const cards = groupEvents.map(e => e.card);
+    const initial: Record<string, number> = {};
     const cardCounts = cards.reduce((acc, card) => ({
       ...acc,
       [card]: (acc[card] || 0) + 1
-    }), {} as Record<string, number>);
+    }), initial);
 
     return {
       ...first,
@@ -79,18 +94,18 @@ function aggregateCardEvents(events: GameEvent[]): GameEvent[] {
       cards,
       cardCounts,
       count: cards.length,
-    } as unknown as GameEvent;
+    };
   };
 
-  const result: GameEvent[] = [];
+  const result: MaybeAggregatedEvent[] = [];
   let i = 0;
 
   while (i < events.length) {
     const event = events[i];
 
-    if (isAggregatable(event)) {
+    if (isCardEvent(event)) {
       const { events: groupEvents, count } = collectConsecutive(i);
-      result.push(aggregateGroup(groupEvents));
+      result.push(aggregateGroup(groupEvents as (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[]));
       i += count;
     } else {
       result.push(event);
@@ -101,10 +116,14 @@ function aggregateCardEvents(events: GameEvent[]): GameEvent[] {
   return result;
 }
 
+function isAggregatedEvent(event: MaybeAggregatedEvent): event is AggregatedCardEvent {
+  return "cards" in event && "cardCounts" in event && "count" in event;
+}
+
 /**
  * Convert a single event to a log entry (without nesting).
  */
-function eventToLogEntry(event: GameEvent, currentPlayer: string): LogEntry | null {
+function eventToLogEntry(event: MaybeAggregatedEvent, currentPlayer: string): LogEntry | null {
   switch (event.type) {
     case "TURN_STARTED":
       return { type: "turn-start", turn: event.turn, player: event.player, eventId: event.id };
@@ -126,33 +145,24 @@ function eventToLogEntry(event: GameEvent, currentPlayer: string): LogEntry | nu
     }
 
     case "CARD_DRAWN": {
-      // Check if this is an aggregated event (has cardCounts from aggregation)
-      const aggregated = event as typeof event & { cardCounts?: Record<string, number>; cards?: string[]; count?: number };
-      const cardCounts = aggregated.cardCounts;
-      const cards = (aggregated.cards || [event.card]) as typeof event.card[];
-      const count = aggregated.count || 1;
-      return { type: "draw-cards", player: event.player, count, cards, cardCounts, eventId: event.id };
+      if (isAggregatedEvent(event)) {
+        return { type: "draw-cards", player: event.player, count: event.count, cards: event.cards, cardCounts: event.cardCounts, eventId: event.id };
+      }
+      return { type: "draw-cards", player: event.player, count: 1, cards: [event.card], eventId: event.id };
     }
 
     case "CARD_DISCARDED": {
-      // Check if this is an aggregated event
-      const aggregated = event as typeof event & { cardCounts?: Record<string, number>; cards?: string[]; count?: number };
-      const cardCounts = aggregated.cardCounts;
-      const cards = (aggregated.cards || [event.card]) as typeof event.card[];
-      const count = aggregated.count || 1;
-      return { type: "discard-cards", player: event.player, count, cards, cardCounts, eventId: event.id };
+      if (isAggregatedEvent(event)) {
+        return { type: "discard-cards", player: event.player, count: event.count, cards: event.cards, cardCounts: event.cardCounts, eventId: event.id };
+      }
+      return { type: "discard-cards", player: event.player, count: 1, cards: [event.card], eventId: event.id };
     }
 
     case "CARD_TRASHED": {
-      // Check if this is an aggregated event
-      const aggregated = event as typeof event & { cards?: string[]; count?: number };
-      const cards = (aggregated.cards || [event.card]) as typeof event.card[];
-      const count = aggregated.count || 1;
-      if (count === 1) {
-        return { type: "trash-card", player: event.player, card: event.card, eventId: event.id };
-      } else {
-        return { type: "trash-card", player: event.player, card: cards[0] as typeof event.card, cards, count, eventId: event.id };
+      if (isAggregatedEvent(event)) {
+        return { type: "trash-card", player: event.player, card: event.cards[0], cards: event.cards, count: event.count, eventId: event.id };
       }
+      return { type: "trash-card", player: event.player, card: event.card, eventId: event.id };
     }
 
     case "CARD_GAINED": {

@@ -24,6 +24,13 @@ import { resetEventCounter, syncEventCounter } from "../events/id-generator";
 const STORAGE_KEY = "dominion-maker-multiplayer-events";
 const STORAGE_ROOM_KEY = "dominion-maker-multiplayer-room";
 
+// Player ID mapping - ensures type safety when converting index to Player
+const PLAYER_IDS: Player[] = ["player0", "player1", "player2", "player3"];
+
+function getPlayerIdByIndex(index: number): Player | null {
+  return PLAYER_IDS[index] ?? null;
+}
+
 interface MultiplayerContextValue {
   // Connection
   isConnected: boolean;
@@ -128,7 +135,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
   const myGamePlayerId: Player | null =
     myPlayerIndex !== null && myPlayerIndex >= 0
-      ? (`player${myPlayerIndex}` as Player)
+      ? getPlayerIdByIndex(myPlayerIndex)
       : null;
 
   // Debug logging for player mapping
@@ -456,7 +463,11 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          const gamePlayerId = `player${playerIndex}` as Player;
+          const gamePlayerId = getPlayerIdByIndex(playerIndex);
+          if (!gamePlayerId) {
+            console.error(`[MultiplayerContext] Invalid player index: ${playerIndex}`);
+            return;
+          }
           const commandPlayerId = 'player' in command ? command.player : undefined;
 
           if (commandPlayerId && commandPlayerId !== gamePlayerId) {
@@ -583,7 +594,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     engineRef.current = engine;
 
     // Start game with player IDs
-    const playerIds = players.map((_, i) => `player${i}` as Player);
+    const playerIds = players.map((_, i) => getPlayerIdByIndex(i)).filter((id): id is Player => id !== null);
     engine.startGame(playerIds);
 
     // Get initial state and events
@@ -659,7 +670,11 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const gamePlayerId = `player${playerIndex}` as Player;
+      const gamePlayerId = getPlayerIdByIndex(playerIndex);
+      if (!gamePlayerId) {
+        console.error(`[MultiplayerContext] Invalid player index: ${playerIndex}`);
+        return;
+      }
       const commandPlayerId = 'player' in command ? command.player : undefined;
 
       if (commandPlayerId && commandPlayerId !== gamePlayerId) {
@@ -783,7 +798,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       console.log(`[MultiplayerContext] Client sending REQUEST_UNDO for event ${toEventId}`);
       room.sendCommandToHost({
         type: "REQUEST_UNDO",
-        player: myPeerId as Player,
+        player: myPeerId,
         toEventId,
         reason,
       });

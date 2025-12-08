@@ -3,6 +3,11 @@ import type { GameEvent, DecisionRequest, DecisionChoice } from "../events/types
 import { shuffle } from "../lib/game-utils";
 import { CARDS } from "../data/cards";
 
+// Type guard for CardName - validates that a string is a known card
+function isCardName(card: string): card is CardName {
+  return card in CARDS;
+}
+
 /**
  * Result of executing a card effect.
  */
@@ -86,11 +91,12 @@ export function peekDraw(
  */
 export function getGainableCards(state: GameState, maxCost: number): CardName[] {
   return Object.entries(state.supply)
-    .filter(([card, count]) => {
-      const cost = CARDS[card as CardName]?.cost ?? Infinity;
-      return count > 0 && cost <= maxCost;
+    .filter((entry): entry is [CardName, number] => {
+      const [card, count] = entry;
+      if (!isCardName(card)) return false;
+      return count > 0 && CARDS[card].cost <= maxCost;
     })
-    .map(([card]) => card as CardName);
+    .map(([card]) => card);
 }
 
 /**
@@ -98,13 +104,15 @@ export function getGainableCards(state: GameState, maxCost: number): CardName[] 
  */
 export function getGainableTreasures(state: GameState, maxCost: number): CardName[] {
   return Object.entries(state.supply)
-    .filter(([card, count]) => {
-      const cardDef = CARDS[card as CardName];
+    .filter((entry): entry is [CardName, number] => {
+      const [card, count] = entry;
+      if (!isCardName(card)) return false;
+      const cardDef = CARDS[card];
       return count > 0 &&
         cardDef.types.includes("treasure") &&
         cardDef.cost <= maxCost;
     })
-    .map(([card]) => card as CardName);
+    .map(([card]) => card);
 }
 
 /**

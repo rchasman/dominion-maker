@@ -131,7 +131,7 @@ function handleStartGame(
   const events: GameEvent[] = [];
 
   // Select kingdom cards if not provided
-  const selectedKingdom = kingdomCards || selectRandomKingdomCards(seed);
+  const selectedKingdom = kingdomCards || selectRandomKingdomCards();
 
   // Calculate supply based on player count
   const supply = calculateSupply(players.length, selectedKingdom);

@@ -260,12 +260,12 @@ export class DominionEngine {
    */
   applyExternalEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
-    const eventsWithIds = events.map(event =>
+    const eventsWithIds: GameEvent[] = events.map(event =>
       event.id ? event : { ...event, id: generateEventId() }
     );
-    this.events.push(...eventsWithIds as GameEvent[]);
+    this.events.push(...eventsWithIds);
     this._state = null;
-    this.notifyListeners(eventsWithIds as GameEvent[]);
+    this.notifyListeners(eventsWithIds);
   }
 
   /**
@@ -282,12 +282,12 @@ export class DominionEngine {
 
   private appendEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
-    const eventsWithIds = events.map(event =>
+    const eventsWithIds: GameEvent[] = events.map(event =>
       event.id ? event : { ...event, id: generateEventId() }
     );
-    this.events.push(...eventsWithIds as GameEvent[]);
+    this.events.push(...eventsWithIds);
     this._state = null;
-    this.notifyListeners(eventsWithIds as GameEvent[]);
+    this.notifyListeners(eventsWithIds);
   }
 
   private notifyListeners(events: GameEvent[]): void {

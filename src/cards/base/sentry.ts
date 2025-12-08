@@ -7,6 +7,15 @@ import { createDrawEvents, peekDraw } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
+// Helper to safely extract CardName[] from metadata
+function getCardNamesFromMetadata(metadata: Record<string, unknown> | undefined, key: string): CardName[] {
+  const value = metadata?.[key];
+  if (Array.isArray(value)) {
+    return value as CardName[];
+  }
+  return [];
+}
+
 export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
@@ -46,8 +55,7 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
   // Trash selected cards
   if (stage === "trash") {
-    const metadata = state.pendingDecision?.metadata;
-    const revealed = (metadata?.revealedCards as CardName[]) || [];
+    const revealed = getCardNamesFromMetadata(state.pendingDecision?.metadata, "revealedCards");
     const toTrash = decision.selectedCards;
 
     // Trash selected cards (atomic events)
@@ -80,8 +88,7 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
   // Discard selected, rest go back on deck
   if (stage === "discard") {
-    const metadata = state.pendingDecision?.metadata;
-    const remaining = (metadata?.remainingCards as CardName[]) || [];
+    const remaining = getCardNamesFromMetadata(state.pendingDecision?.metadata, "remainingCards");
     const toDiscard = decision.selectedCards;
 
     // Discard selected cards (atomic events)

@@ -1,4 +1,4 @@
-import type { Player, CardName } from "../types/game-state";
+import type { CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { getPlayerColor } from "../lib/board-utils";
 
@@ -20,7 +20,7 @@ export function getCardColor(card: CardName): string {
 
 export function PlayerName({ player }: { player: string }) {
   return (
-    <span style={{ color: getPlayerColor(player as Player), fontWeight: 600 }}>
+    <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
       {player}
     </span>
   );

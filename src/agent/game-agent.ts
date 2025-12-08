@@ -10,12 +10,11 @@ import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
-import type { DecisionRequest } from "../types/game-state";
 import { formatActionDescription } from "../lib/action-utils";
-import { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, type ModelSettings } from "./types";
+import { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings, type ModelSettings } from "./types";
 
 // Re-export for convenience
-export { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS };
+export { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings };
 export type { ModelSettings, ModelProvider };
 
 // Global abort controller for canceling ongoing consensus operations
@@ -95,8 +94,9 @@ function getLegalActions(state: GameState): Action[] {
 
     // Buyable cards
     for (const [card, count] of Object.entries(state.supply)) {
-      if (count > 0 && CARDS[card as CardName].cost <= state.coins && state.buys > 0) {
-        actions.push({ type: "buy_card", card: card as CardName });
+      const cardName = card as CardName;
+      if (count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0) {
+        actions.push({ type: "buy_card", card: cardName });
       }
     }
 
@@ -432,13 +432,13 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
 
     // Pick first min cards or skip if allowed
     const numToSelect = decision.min === 0 ? 0 : Math.min(decision.min, options.length);
-    const selected = options.slice(0, numToSelect);
+    const selected: CardName[] = options.slice(0, numToSelect);
 
     console.log("[SimpleAI] Resolving decision:", decision.stage, "selecting:", selected);
     engine.dispatch({
       type: "SUBMIT_DECISION",
       player: playerId,
-      choice: { selectedCards: selected as CardName[] },
+      choice: { selectedCards: selected },
     }, playerId);
     return;
   }
@@ -509,7 +509,12 @@ export async function runAITurnWithConsensus(
       await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
 
       // Handle AI pending decisions
-      while (engine.state.pendingDecision && (engine.state.pendingDecision as DecisionRequest).player === playerId) {
+      const hasAIDecision = (): boolean => {
+        const d = engine.state.pendingDecision;
+        return d !== null && d.player === playerId;
+      };
+
+      while (hasAIDecision()) {
         console.log("⚙ AI has pendingDecision, resolving via consensus");
         await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
         onStateChange?.(engine.state);

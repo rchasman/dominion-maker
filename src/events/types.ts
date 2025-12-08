@@ -1,5 +1,7 @@
 import { z } from "zod";
-import type { CardName, Phase } from "../types/game-state";
+import type { CardName, Phase, DecisionRequest, DecisionChoice } from "../types/game-state";
+
+export type { DecisionRequest, DecisionChoice };
 
 // PlayerId - string for multiplayer flexibility (can be custom peer IDs or Player enum values)
 export type PlayerId = string;
@@ -142,19 +144,7 @@ export type CoinsModifiedEvent = EventMetadata & {
 // Decisions (DecisionRequest and DecisionChoice moved to types/game-state to break circular dep)
 export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
-  decision: {
-    type: "select_cards";
-    player: PlayerId;
-    from: "hand" | "supply" | "revealed" | "options" | "discard";
-    prompt: string;
-    cardOptions?: CardName[];
-    min: number;
-    max: number;
-    cardBeingPlayed: CardName;
-    stage?: string;
-    canSkip?: boolean;
-    metadata?: Record<string, unknown>;
-  };
+  decision: DecisionRequest;
 };
 
 export type DecisionResolvedEvent = EventMetadata & {

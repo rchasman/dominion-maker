@@ -13,6 +13,13 @@ import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { projectState } from "../events/project";
 
+// Player ID mapping - ensures type safety when converting index to Player
+const PLAYER_IDS: Player[] = ["player0", "player1", "player2", "player3"];
+
+function getPlayerIdByIndex(index: number): Player | null {
+  return PLAYER_IDS[index] ?? null;
+}
+
 interface UseMultiplayerEngineOptions {
   /** Whether this client is the host */
   isHost: boolean;
@@ -67,7 +74,7 @@ export function useMultiplayerEngine({
 
   // Compute my player ID
   const myPlayerId: Player | null = myPlayerIndex !== null
-    ? (`player${myPlayerIndex}` as Player)
+    ? getPlayerIdByIndex(myPlayerIndex)
     : null;
 
   // Check if it's my turn

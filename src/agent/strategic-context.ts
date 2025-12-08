@@ -32,7 +32,7 @@ Terminals: ${aiAnalysis.terminals}, Villages: ${aiAnalysis.villages}`);
   // 4. Supply Status - only show relevant piles
   const provincesLeft = state.supply["Province"] ?? 8;
   const duchiesLeft = state.supply["Duchy"] ?? 8;
-  const supplyEntries = Object.entries(state.supply) as [string, number][];
+  const supplyEntries = Object.entries(state.supply);
   const lowPiles = supplyEntries
     .filter(([, count]) => count <= 3 && count > 0)
     .map(([card, count]) => `${card}: ${count}`)
@@ -77,7 +77,16 @@ interface DeckAnalysis {
   villages: number;
 }
 
+interface DeckAccumulator {
+  counts: Record<string, number>;
+  treasureValue: number;
+  treasureCount: number;
+  terminals: number;
+  villages: number;
+}
+
 function analyzeDeck(cards: CardName[]): DeckAnalysis {
+  const initial: DeckAccumulator = { counts: {}, treasureValue: 0, treasureCount: 0, terminals: 0, villages: 0 };
   const { counts, treasureValue, treasureCount, terminals, villages } = cards.reduce(
     (acc, card) => {
       const { coins, description } = CARDS[card];
@@ -99,7 +108,7 @@ function analyzeDeck(cards: CardName[]): DeckAnalysis {
         counts: newCounts,
       };
     },
-    { counts: {} as Record<string, number>, treasureValue: 0, treasureCount: 0, terminals: 0, villages: 0 }
+    initial
   );
 
   const breakdown = Object.entries(counts)
