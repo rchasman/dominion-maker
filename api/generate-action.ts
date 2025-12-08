@@ -17,56 +17,61 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   console.log("✓ AI_GATEWAY_API_KEY is configured");
 }
 
-type RequestInput = Request | { method?: string; body?: unknown; text?: () => Promise<string> };
+interface VercelRequest {
+  method?: string;
+  body?: unknown;
+  text?: () => Promise<string>;
+}
 
-export default async function handler(req: RequestInput): Promise<Response> {
-  const method = req instanceof Request ? req.method : req.method;
+interface VercelResponse {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => VercelResponse;
+  send: (data: string) => VercelResponse;
+  setHeader: (key: string, value: string) => VercelResponse;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log(`[${new Date().toISOString()}] Handler called - method: ${req.method}`);
+  console.log(`[${new Date().toISOString()}] Request has body: ${typeof req.body}, has text: ${typeof req.text}`);
 
   // CORS headers
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
   }
 
-  if (method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   let provider: string = "";
 
   try {
-    // Parse body based on request type
-    const rawBody = req instanceof Request ? await req.text() : (req.body || (req.text ? await req.text() : "{}"));
+    console.log(`[${new Date().toISOString()}] Parsing request body...`);
+    // Vercel with Bun runtime passes body as req.body, not req.json()
+    const rawBody = req.body || (req.text ? await req.text() : "{}");
     const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+    console.log(`[${new Date().toISOString()}] Body parsed - provider: ${(body as { provider?: string }).provider}`);
 
     const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = bodyProvider;
 
     if (!provider || !currentState) {
-      return new Response(JSON.stringify({ error: "Missing required fields: provider, currentState" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return res.status(400).json({ error: "Missing required fields: provider, currentState" });
     }
 
     const modelName = MODEL_MAP[provider];
     if (!modelName) {
-      return new Response(JSON.stringify({ error: "Invalid provider" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return res.status(400).json({ error: "Invalid provider" });
     }
 
+    console.log(`[${new Date().toISOString()}] Creating model gateway for: ${modelName}`);
     const model = gateway(modelName);
     const isAnthropic = provider.startsWith("claude");
+    console.log(`[${new Date().toISOString()}] Model created, isAnthropic: ${isAnthropic}`);
 
     const legalActionsStr = legalActions && legalActions.length > 0
       ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
@@ -150,27 +155,22 @@ export default async function handler(req: RequestInput): Promise<Response> {
       try {
         const parsed = JSON.parse(jsonStr);
         const action = ActionSchema.parse(parsed);
-        return new Response(JSON.stringify({ action }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return res.status(200).json({ action });
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
         console.error(`[${provider}] Failed to parse JSON response`);
         console.error(`Full response text:`, result.text);
         console.error(`Extracted JSON string:`, jsonStr);
 
-        return new Response(JSON.stringify({
+        return res.status(500).json({
           error: 500,
           message: `Failed to parse model response: ${errorMessage}`,
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
     // Use generateObject for other models
+    console.log(`[${new Date().toISOString()}] Calling generateObject...`);
     const result = await generateObject({
       model,
       schema: ActionSchema,
@@ -185,11 +185,10 @@ export default async function handler(req: RequestInput): Promise<Response> {
         },
       }),
     });
+    console.log(`[${new Date().toISOString()}] generateObject completed`);
 
-    return new Response(JSON.stringify({ action: result.object }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.log(`[${new Date().toISOString()}] Returning response with action`);
+    return res.status(200).json({ action: result.object });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
     const errorWithText = err as { text?: string; value?: { action?: unknown } };
@@ -199,10 +198,7 @@ export default async function handler(req: RequestInput): Promise<Response> {
       try {
         const validated = ActionSchema.parse(errorWithText.value.action);
         console.log(`[${provider}] Recovered from wrapped response`);
-        return new Response(JSON.stringify({ action: validated }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return res.status(200).json({ action: validated });
       } catch (recoveryErr) {
         console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
       }
@@ -223,10 +219,7 @@ export default async function handler(req: RequestInput): Promise<Response> {
               if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
                 const validated = ActionSchema.parse(parsed);
                 console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
-                return new Response(JSON.stringify({ action: validated }), {
-                  status: 200,
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
-                });
+                return res.status(200).json({ action: validated });
               }
             } catch {
               continue;
@@ -249,12 +242,9 @@ export default async function handler(req: RequestInput): Promise<Response> {
     }
     console.error(`Stack:`, error.stack);
 
-    return new Response(JSON.stringify({
+    return res.status(500).json({
       error: 500,
       message: `Model failed: ${error.message}`,
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 }

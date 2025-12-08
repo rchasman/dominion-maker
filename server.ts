@@ -20,7 +20,48 @@ const server = Bun.serve({
 
     // Route API requests
     if (url.pathname === "/api/generate-action") {
-      return handler(req);
+      // Adapt Bun Request to Vercel-style request/response
+      const body = await req.text();
+      const vercelReq = {
+        method: req.method,
+        body: JSON.parse(body),
+      };
+
+      let statusCode = 200;
+      let responseData: unknown = null;
+      const responseHeaders: Record<string, string> = {};
+
+      const vercelRes = {
+        status: (code: number) => {
+          statusCode = code;
+          return vercelRes;
+        },
+        json: (data: unknown) => {
+          responseData = data;
+          return vercelRes;
+        },
+        send: (data: string) => {
+          responseData = data;
+          return vercelRes;
+        },
+        setHeader: (key: string, value: string) => {
+          responseHeaders[key] = value;
+          return vercelRes;
+        },
+      };
+
+      await handler(vercelReq, vercelRes);
+
+      return new Response(
+        typeof responseData === "string" ? responseData : JSON.stringify(responseData),
+        {
+          status: statusCode,
+          headers: {
+            ...responseHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     return new Response("Not Found", { status: 404 });
