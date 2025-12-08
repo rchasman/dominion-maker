@@ -17,8 +17,15 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   console.log("✓ AI_GATEWAY_API_KEY is configured");
 }
 
-export default async function handler(req: Request) {
+interface VercelRequest {
+  method?: string;
+  body?: unknown;
+  text?: () => Promise<string>;
+}
+
+export default async function handler(req: VercelRequest) {
   console.log(`[${new Date().toISOString()}] Handler called - method: ${req.method}`);
+  console.log(`[${new Date().toISOString()}] Request has body: ${typeof req.body}, has text: ${typeof req.text}`);
 
   // CORS headers
   if (req.method === "OPTIONS") {
@@ -43,10 +50,13 @@ export default async function handler(req: Request) {
 
   try {
     console.log(`[${new Date().toISOString()}] Parsing request body...`);
-    const body = await req.json() as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
-    console.log(`[${new Date().toISOString()}] Body parsed - provider: ${body.provider}`);
-    provider = body.provider;
-    const { currentState, humanChoice, legalActions } = body;
+    // Vercel with Bun runtime passes body as req.body, not req.json()
+    const rawBody = req.body || (req.text ? await req.text() : "{}");
+    const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+    console.log(`[${new Date().toISOString()}] Body parsed - provider: ${(body as { provider?: string }).provider}`);
+
+    const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
+    provider = bodyProvider;
 
     if (!provider || !currentState) {
       return new Response(
