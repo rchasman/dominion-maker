@@ -10,8 +10,9 @@
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "test": "bun test",
-    "check": "bun run type & bun run lint & bun test & wait",
-    "check:full": "bun run type & bun run lint & bun test & bun run build & wait",
+    "check:server": "bun server.ts & SERVER_PID=$! && sleep 2 && kill $SERVER_PID",
+    "check": "bun run type & bun run lint & bun test & wait && bun run check:server",
+    "check:full": "bun run type & bun run lint & bun test & bun run build & wait && bun run check:server",
     "preview": "vite preview"
   },
   "dependencies": {
