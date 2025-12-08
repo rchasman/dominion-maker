@@ -189,6 +189,15 @@ export async function advanceGameStateWithConsensus(
 
   const legalActions = getLegalActions(currentState);
 
+  const playerState = currentState.players[playerId];
+  const hand = playerState?.hand || [];
+  const inPlay = playerState?.inPlay || [];
+  const handCounts = {
+    treasures: hand.filter(isTreasureCard).length,
+    actions: hand.filter(isActionCard).length,
+    total: hand.length,
+  };
+
   logger?.({
     type: "consensus-start",
     message: `Starting consensus with ${providers.length} models`,
@@ -198,6 +207,18 @@ export async function advanceGameStateWithConsensus(
       phase: currentState.phase,
       legalActionsCount: legalActions.length,
       turn: currentState.turn,
+      gameState: {
+        turn: currentState.turn,
+        phase: currentState.phase,
+        activePlayer: playerState || { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [] },
+        actions: currentState.actions,
+        buys: currentState.buys,
+        coins: currentState.coins,
+        hand,
+        inPlay,
+        handCounts,
+        turnHistory: currentState.turnHistory,
+      },
     },
   });
 
@@ -385,13 +406,40 @@ export async function advanceGameStateWithConsensus(
         votes: winner.count,
         voters: winner.voters,
         percentage: ((consensusStrength * 100).toFixed(1)) + "%",
+        totalVotes: votesConsidered,
+        completed: votesConsidered,
+        earlyConsensus: !!validEarlyConsensus,
       },
       allResults: rankedGroups.map(g => ({
         action: g.action,
         votes: g.count,
         voters: g.voters,
         valid: isActionValid(g.action),
+        reasonings: g.voters.map(voter => {
+          const result = completedResults.find(r => {
+            if (!r.result) return false;
+            return r.provider === voter && JSON.stringify(stripReasoning(r.result)) === JSON.stringify(stripReasoning(g.action));
+          });
+          return {
+            provider: voter,
+            reasoning: result?.result?.reasoning,
+          };
+        }),
       })),
+      votingDuration: performance.now() - overallStart,
+      currentPhase: currentState.phase,
+      gameState: {
+        turn: currentState.turn,
+        phase: currentState.phase,
+        activePlayer: playerState || { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [] },
+        actions: currentState.actions,
+        buys: currentState.buys,
+        coins: currentState.coins,
+        hand,
+        inPlay,
+        handCounts,
+        turnHistory: currentState.turnHistory,
+      },
     },
   });
 
