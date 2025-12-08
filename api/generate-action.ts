@@ -17,7 +17,7 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   console.log("✓ AI_GATEWAY_API_KEY is configured");
 }
 
-export default async function handler(req: Request) {
+export default async function handler(req: { method?: string; body?: unknown }) {
   // CORS headers
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -40,7 +40,7 @@ export default async function handler(req: Request) {
   let provider: string = "";
 
   try {
-    const body = await req.json() as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
+    const body = req.body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = body.provider;
     const { currentState, humanChoice, legalActions } = body;
 
