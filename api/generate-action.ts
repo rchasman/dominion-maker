@@ -36,11 +36,11 @@ export default async function handler(req: Request) {
     });
   }
 
-  let body: any;
+  let body: unknown;
   let provider: string = "";
 
   try {
-    body = await req.json();
+    body = await req.json() as { provider: string; currentState: unknown; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = body.provider;
     const { currentState, humanChoice, legalActions } = body;
 
@@ -89,6 +89,7 @@ export default async function handler(req: Request) {
 
     // Ministral struggles with generateObject - use generateText with explicit JSON instructions
     const isMistral = provider.includes("ministral");
+    const isGemini = provider.includes("gemini");
 
     if (isMistral) {
       const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
@@ -160,7 +161,7 @@ export default async function handler(req: Request) {
         return new Response(
           JSON.stringify({
             error: 500,
-            message: `Failed to parse Ministral response: ${errorMessage}`,
+            message: `Failed to parse model response: ${errorMessage}`,
           }),
           {
             status: 500,
@@ -181,6 +182,13 @@ export default async function handler(req: Request) {
         providerOptions: {
           anthropic: {
             structuredOutputMode: "outputFormat",
+          },
+        },
+      }),
+      ...(isGemini && {
+        providerOptions: {
+          google: {
+            structuredOutputs: false,
           },
         },
       }),
@@ -225,7 +233,15 @@ export default async function handler(req: Request) {
     }
 
     const error = err as Error & { cause?: unknown; text?: string };
-    console.error(`Error generating action:`, error.message);
+    console.error(`\n❌ [${provider}] Error generating action`);
+    console.error(`Message: ${error.message}`);
+    if (error.cause) {
+      console.error(`Cause:`, JSON.stringify(error.cause, null, 2));
+    }
+    if (error.text) {
+      console.error(`Raw response text:`, error.text);
+    }
+    console.error(`Stack:`, error.stack);
 
     return new Response(
       JSON.stringify({
@@ -240,6 +256,4 @@ export default async function handler(req: Request) {
   }
 }
 
-export const config = {
-  runtime: "edge",
-};
+// Bun runtime configured globally in vercel.json via bunVersion
