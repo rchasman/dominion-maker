@@ -7,29 +7,16 @@ import { createDrawEvents, peekDraw } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
-// Helper to safely extract CardName[] from metadata
-function getCardNamesFromMetadata(
-  metadata: Record<string, unknown> | undefined,
-  key: string,
-): CardName[] {
-  const value = metadata?.[key];
-  if (Array.isArray(value)) {
-    return value as CardName[];
-  }
-  return [];
-}
-
 export const sentry: CardEffect = ({
   state,
   player,
   decision,
-  stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
   // Initial: +1 Card, +1 Action, look at top 2
-  if (!decision || stage === undefined) {
+  if (!decision) {
     events.push(...createDrawEvents(player, playerState, 1));
     events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
 
@@ -47,112 +34,89 @@ export const sentry: CardEffect = ({
     return {
       events,
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
-        from: "revealed",
-        prompt:
-          "Sentry: Select cards to TRASH (others will be discarded or kept)",
+        prompt: "Sentry: Choose what to do with each card",
         cardOptions: revealed,
-        min: 0,
-        max: revealed.length,
+        actions: [
+          {
+            id: "topdeck",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: true,
+          },
+          {
+            id: "trash",
+            label: "Trash",
+            color: "#EF4444",
+          },
+          {
+            id: "discard",
+            label: "Discard",
+            color: "#9CA3AF",
+          },
+        ],
+        requiresOrdering: true,
+        orderingPrompt:
+          "Cards to topdeck will return in this order (first = top)",
         cardBeingPlayed: "Sentry",
-        stage: "trash",
         metadata: { revealedCards: revealed },
       },
     };
   }
 
-  // Trash selected cards
-  if (stage === "trash") {
-    const revealed = getCardNamesFromMetadata(
-      state.pendingDecision?.metadata,
-      "revealedCards",
-    );
-    const toTrash = decision.selectedCards;
+  // Process the decision - cardActions uses indices as keys
+  const revealed =
+    (state.pendingDecision?.metadata?.revealedCards as CardName[]) || [];
+  const cardActions = decision.cardActions || {};
+  const cardOrder = (decision.cardOrder || []) as number[];
 
-    // Trash selected cards (atomic events)
-    for (const card of toTrash) {
-      events.push({ type: "CARD_TRASHED", player, card, from: "deck" });
-    }
-
-    const remaining = revealed.filter(c => !toTrash.includes(c));
-
-    if (remaining.length === 0) {
-      return { events };
-    }
-
-    return {
-      events,
-      pendingDecision: {
-        type: "select_cards",
+  // Trash cards by index
+  for (const [indexStr, action] of Object.entries(cardActions)) {
+    const index = parseInt(indexStr);
+    if (action === "trash" && revealed[index]) {
+      events.push({
+        type: "CARD_TRASHED",
         player,
-        from: "revealed",
-        prompt: "Sentry: Select cards to DISCARD (rest go back on deck)",
-        cardOptions: remaining,
-        min: 0,
-        max: remaining.length,
-        cardBeingPlayed: "Sentry",
-        stage: "discard",
-        metadata: { remainingCards: remaining },
-      },
-    };
+        card: revealed[index],
+        from: "deck",
+      });
+    }
   }
 
-  // Discard selected, rest go back on deck
-  if (stage === "discard") {
-    const remaining = getCardNamesFromMetadata(
-      state.pendingDecision?.metadata,
-      "remainingCards",
-    );
-    const toDiscard = decision.selectedCards;
-
-    // Discard selected cards (atomic events)
-    for (const card of toDiscard) {
-      events.push({ type: "CARD_DISCARDED", player, card, from: "deck" });
+  // Discard cards by index
+  for (const [indexStr, action] of Object.entries(cardActions)) {
+    const index = parseInt(indexStr);
+    if (action === "discard" && revealed[index]) {
+      events.push({
+        type: "CARD_DISCARDED",
+        player,
+        card: revealed[index],
+        from: "deck",
+      });
     }
+  }
 
-    const toReturn = remaining.filter(c => !toDiscard.includes(c));
+  // Return topdecked cards to deck in order (reversed so first = top)
+  // If cardOrder is provided, use it; otherwise use all topdeck cards in original order
+  const topdeckIndices =
+    cardOrder.length > 0
+      ? cardOrder
+      : Object.entries(cardActions)
+          .filter(([_, action]) => action === "topdeck")
+          .map(([indexStr]) => parseInt(indexStr));
 
-    if (toReturn.length > 1) {
-      // Need to choose order
-      return {
-        events,
-        pendingDecision: {
-          type: "select_cards",
-          player,
-          from: "options",
-          prompt: "Sentry: Choose order to put cards back (first = top)",
-          cardOptions: toReturn,
-          min: toReturn.length,
-          max: toReturn.length,
-          cardBeingPlayed: "Sentry",
-          stage: "order",
-          metadata: { cardsToReturn: toReturn },
-        },
-      };
-    }
-
-    // Single card or no cards, just put back
-    if (toReturn.length === 1) {
+  for (let i = topdeckIndices.length - 1; i >= 0; i--) {
+    const index = topdeckIndices[i];
+    if (revealed[index]) {
       events.push({
         type: "CARD_PUT_ON_DECK",
         player,
-        card: toReturn[0],
+        card: revealed[index],
         from: "hand",
       });
     }
-
-    return { events };
   }
 
-  // Order and return to deck (atomic events, reversed so first = top)
-  if (stage === "order") {
-    const orderedCards = [...decision.selectedCards].reverse();
-    for (const card of orderedCards) {
-      events.push({ type: "CARD_PUT_ON_DECK", player, card, from: "hand" });
-    }
-    return { events };
-  }
-
-  return { events: [] };
+  return { events };
 };
