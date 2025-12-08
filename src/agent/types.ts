@@ -1,3 +1,4 @@
+import { uiLogger } from "../lib/logger";
 /**
  * Shared agent types to avoid circular dependencies
  */
@@ -45,7 +46,7 @@ export function buildModelsFromSettings({ enabledModels, consensusCount }: Model
   const enabled = Array.from(enabledModels);
 
   if (enabled.length === 0) {
-    console.warn("No models enabled, using defaults");
+    uiLogger.warn("No models enabled, using defaults");
     return ALL_FAST_MODELS;
   }
 

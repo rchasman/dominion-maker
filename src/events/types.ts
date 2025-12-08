@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CardName, Phase, DecisionRequest, DecisionChoice } from "../types/game-state";
+import { multiplayerLogger } from "../lib/logger";
 
 export type { DecisionRequest, DecisionChoice };
 
@@ -288,7 +289,7 @@ export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<str
 export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameEvent[] {
   const targetIndex = allEvents.findIndex(e => e.id === eventId);
   if (targetIndex === -1) {
-    console.warn(`[removeEventChain] Event ${eventId} not found`);
+    multiplayerLogger.warn(`[removeEventChain] Event ${eventId} not found`);
     return allEvents;
   }
 

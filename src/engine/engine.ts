@@ -5,6 +5,7 @@ import { handleCommand } from "../commands/handle";
 import { projectState, createEmptyState } from "../events/project";
 import { removeEventChain } from "../events/types";
 import { generateEventId } from "../events/id-generator";
+import { engineLogger } from "../lib/logger";
 
 /**
  * Pending undo request awaiting approval.
@@ -194,7 +195,7 @@ export class DominionEngine {
    * Removes the event and its causal chain.
    */
   undoToEvent(toEventId: string): void {
-    console.log("[Engine] Immediate undo to", toEventId);
+    engineLogger.info(`Undo to ${toEventId}`);
     this.events = removeEventChain(toEventId, this.events);
     this._state = null; // Invalidate cached state
     this.notifyListeners(this.events);

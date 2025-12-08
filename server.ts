@@ -1,5 +1,6 @@
 // Simple Bun HTTP server for local API development
 import handler from "./api/generate-action";
+import { serverLogger } from "./src/lib/logger";
 
 const server = Bun.serve({
   port: 5174,
@@ -68,4 +69,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`🦊 API server running at http://localhost:${server.port}`);
+serverLogger.info(`API server running at http://localhost:${server.port}`);

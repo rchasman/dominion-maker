@@ -4,6 +4,7 @@ import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { Board } from "./components/Board/index";
 import { StartScreen } from "./components/StartScreen";
 import { MultiplayerScreen } from "./components/Lobby";
+import { uiLogger } from "./lib/logger";
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -15,11 +16,11 @@ function App() {
     try {
       const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
       if (savedMode === "multiplayer" || savedMode === "singleplayer") {
-        console.log("[App] Restoring saved mode:", savedMode);
+        uiLogger.debug("Restoring saved mode", { savedMode });
         return savedMode;
       }
     } catch (e) {
-      console.error("[App] Failed to check for saved mode:", e);
+      uiLogger.error("Failed to check for saved mode", { error: e });
     }
     return "menu";
   });

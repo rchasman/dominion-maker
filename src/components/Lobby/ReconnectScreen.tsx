@@ -1,3 +1,4 @@
+import { uiLogger } from "../../lib/logger";
 /**
  * Reconnect Screen
  *
@@ -19,7 +20,7 @@ export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
     try {
       await reconnectToSavedRoom();
     } catch (e) {
-      console.error("[ReconnectScreen] Reconnect failed:", e);
+      uiLogger.error("[ReconnectScreen] Reconnect failed:", e);
       setIsReconnecting(false);
     }
   };

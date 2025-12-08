@@ -12,6 +12,7 @@ import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
 import { formatActionDescription } from "../lib/action-utils";
 import { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings, type ModelSettings } from "./types";
+import { agentLogger } from "../lib/logger";
 
 // Re-export for convenience
 export { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings };
@@ -23,7 +24,7 @@ let globalAbortController: AbortController | null = null;
 // Abort any ongoing consensus operations (e.g., when starting new game)
 export function abortOngoingConsensus() {
   if (globalAbortController) {
-    console.log("🛑 Aborting ongoing consensus operations");
+    agentLogger.info("Aborting consensus");
     globalAbortController.abort();
     globalAbortController = null;
   }
@@ -166,7 +167,7 @@ function executeActionWithEngine(engine: DominionEngine, action: Action, playerI
         choice: { selectedCards: [action.card] },
       }, playerId).ok;
     default:
-      console.error("Unknown action type:", action);
+      agentLogger.error(`Unknown action type: ${action.type}`);
       return false;
   }
 }
@@ -185,7 +186,7 @@ export async function advanceGameStateWithConsensus(
   const currentState = engine.state;
   const overallStart = performance.now();
 
-  console.log(`\n🎯 Consensus: Running ${providers.length} models in parallel`, { providers });
+  agentLogger.info(`Starting consensus with ${providers.length} models`);
 
   const legalActions = getLegalActions(currentState);
 
@@ -357,7 +358,7 @@ export async function advanceGameStateWithConsensus(
   const successfulResults = results.filter(r => r.result !== null && !r.error);
 
   if (!earlyConsensus && successfulResults.length === 0) {
-    console.error("✗ All models failed to generate actions");
+    agentLogger.error("All models failed to generate actions");
     // Fall back to simple engine AI
     return runSimpleAITurnWithEngine(engine, playerId);
   }
@@ -385,7 +386,7 @@ export async function advanceGameStateWithConsensus(
   const validEarlyConsensus = earlyConsensus && isActionValid(earlyConsensus.action) ? earlyConsensus : null;
 
   if (!validEarlyConsensus && validRankedGroups.length === 0) {
-    console.warn("⚠ All LLM actions were invalid, falling back to simple AI");
+    agentLogger.warn("All LLM actions were invalid, falling back to simple AI");
     return runSimpleAITurnWithEngine(engine, playerId);
   }
 
@@ -447,15 +448,11 @@ export async function advanceGameStateWithConsensus(
   const success = executeActionWithEngine(engine, winner.action, playerId);
 
   if (!success) {
-    console.error("Failed to execute consensus action:", winner.action);
+    agentLogger.error(`Failed to execute: ${actionDesc}`);
   }
 
   const overallDuration = performance.now() - overallStart;
-  console.log(`✓ Consensus complete in ${overallDuration.toFixed(0)}ms`, {
-    action: actionDesc,
-    votes: `${winner.count}/${votesConsidered}`,
-    earlyConsensus: !!earlyConsensus,
-  });
+  agentLogger.info(`${actionDesc} (${winner.count}/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`);
 }
 
 /**
@@ -473,7 +470,7 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
     const numToSelect = decision.min === 0 ? 0 : Math.min(decision.min, options.length);
     const selected: CardName[] = options.slice(0, numToSelect);
 
-    console.log("[SimpleAI] Resolving decision:", decision.stage, "selecting:", selected);
+    agentLogger.debug(`SimpleAI decision: ${decision.stage} → [${selected.join(', ')}]`);
     engine.dispatch({
       type: "SUBMIT_DECISION",
       player: playerId,
@@ -525,7 +522,7 @@ export async function runAITurnWithConsensus(
   logger?: LLMLogger,
   onStateChange?: (state: GameState) => void
 ): Promise<void> {
-  console.log(`\n🤖 Consensus AI turn starting`, { phase: engine.state.phase });
+  agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
     type: "ai-turn-start",
@@ -554,7 +551,7 @@ export async function runAITurnWithConsensus(
       };
 
       while (hasAIDecision()) {
-        console.log("⚙ AI has pendingDecision, resolving via consensus");
+        agentLogger.debug("Resolving pending decision");
         await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
         onStateChange?.(engine.state);
 
@@ -564,7 +561,7 @@ export async function runAITurnWithConsensus(
 
       onStateChange?.(engine.state);
     } catch (error) {
-      console.error("Error during consensus step:", error);
+      agentLogger.error(`Consensus step failed: ${error}`);
       logger?.({
         type: "consensus-step-error",
         message: `Error: ${String(error)}`,
@@ -574,5 +571,5 @@ export async function runAITurnWithConsensus(
     }
   }
 
-  console.log(`✓ Consensus AI turn complete after ${stepCount} steps`);
+  agentLogger.info(`AI turn complete (${stepCount} steps)`);
 }

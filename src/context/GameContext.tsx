@@ -26,6 +26,7 @@ import { DominionEngine } from "../engine";
 import { isActionCard, isTreasureCard } from "../data/cards";
 import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
+import { uiLogger } from "../lib/logger";
 
 const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -115,10 +116,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         engineRef.current = engine;
         setEvents(parsedEvents);
         setGameState(engine.state);
-        console.log("[GameContext] Restored game from", parsedEvents.length, "events");
+        uiLogger.info(`Restored game from ${parsedEvents.length} events`);
       }
     } catch (error) {
-      console.error("Failed to restore game state:", error);
+      uiLogger.error("Failed to restore game state", { error });
       localStorage.removeItem(STORAGE_EVENTS_KEY);
       localStorage.removeItem(STORAGE_MODE_KEY);
       localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
@@ -134,7 +135,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       try {
         localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events));
       } catch (error) {
-        console.error("Failed to save events:", error);
+        uiLogger.error("Failed to save events", { error });
       }
     }
   }, [events]);
@@ -154,7 +155,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       try {
         localStorage.setItem(STORAGE_LLM_LOGS_KEY, JSON.stringify(llmLogs));
       } catch (error) {
-        console.error("Failed to save LLM logs:", error);
+        uiLogger.error("Failed to save LLM logs", { error });
       }
     }
   }, [llmLogs]);
@@ -172,7 +173,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       };
       localStorage.setItem(STORAGE_MODEL_SETTINGS_KEY, JSON.stringify(serializable));
     } catch (error) {
-      console.error("Failed to save model settings:", error);
+      uiLogger.error("Failed to save model settings", { error });
     }
   }, [modelSettings]);
 
@@ -245,7 +246,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setEvents([...engine.eventLog]);
       setGameState(engine.state);
     } else {
-      console.error("Failed to start game:", result.error);
+      uiLogger.error("Failed to start game", { error: result.error });
     }
   }, []);
 
@@ -321,7 +322,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }, "human");
 
       if (!result.ok) {
-        console.error(`Failed to play ${treasure}:`, result.error);
+        uiLogger.error(`Failed to play ${treasure}`, { error: result.error });
       }
     }
 
@@ -426,7 +427,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setEvents([...engine.eventLog]);
         setGameState(engine.state);
       } catch (error) {
-        console.error("AI turn error:", error);
+        uiLogger.error("AI turn error", { error });
       } finally {
         setIsProcessing(false);
       }
@@ -451,7 +452,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setEvents([...engine.eventLog]);
         setGameState(engine.state);
       } catch (error) {
-        console.error("AI pending decision error:", error);
+        uiLogger.error("AI pending decision error", { error });
       } finally {
         setIsProcessing(false);
       }
@@ -480,7 +481,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // Auto-transition if no actions available OR no action cards to play
     if (!hasActions || !hasActionCards) {
       const timer = setTimeout(() => {
-        console.log("[GameContext] Auto-transitioning to buy phase (no playable actions)");
+        uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
         setEvents([...engine.eventLog]);
         setGameState(engine.state);

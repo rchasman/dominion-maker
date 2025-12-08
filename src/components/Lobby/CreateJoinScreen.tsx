@@ -1,3 +1,4 @@
+import { uiLogger } from "../../lib/logger";
 /**
  * Create/Join Room Screen
  *
@@ -16,9 +17,9 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
   // Auto-reconnect on mount if saved session exists
   useEffect(() => {
     if (hasSavedSession && !isConnecting && !isReconnecting) {
-      console.log("[CreateJoinScreen] Auto-reconnecting to saved session");
+      uiLogger.debug("[CreateJoinScreen] Auto-reconnecting to saved session");
       reconnectToSavedRoom().catch((e) => {
-        console.error("[CreateJoinScreen] Auto-reconnect failed:", e);
+        uiLogger.error("[CreateJoinScreen] Auto-reconnect failed:", e);
       });
     }
   }, [hasSavedSession, reconnectToSavedRoom, isConnecting, isReconnecting]);

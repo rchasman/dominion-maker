@@ -22,4 +22,25 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_VERCEL_URL': JSON.stringify(process.env.VERCEL_URL),
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            return 'vendor';
+          }
+          if (id.includes('/engine/') || id.includes('/commands/')) {
+            return 'game-engine';
+          }
+          if (id.includes('/cards/') || id.includes('/data/cards')) {
+            return 'cards';
+          }
+        },
+      },
+    },
+  },
 })

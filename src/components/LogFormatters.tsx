@@ -1,11 +1,12 @@
 import type { CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { getPlayerColor } from "../lib/board-utils";
+import { uiLogger } from "../lib/logger";
 
 export function getCardColor(card: CardName): string {
   const cardDef = CARDS[card];
   if (!cardDef) {
-    console.error(`Card definition not found for: ${card}`);
+    uiLogger.error(`Card definition not found: ${card}`);
     return "var(--color-text-primary)";
   }
   // Priority order: curse > attack > reaction > treasure > victory > action

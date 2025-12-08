@@ -10,6 +10,7 @@ import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
 import type { CardName } from "../../types/game-state";
 import { isActionCard, isTreasureCard } from "../../data/cards";
+import { uiLogger } from "../../lib/logger";
 
 interface BoardProps {
   onBackToHome?: () => void;
@@ -88,7 +89,7 @@ export function Board({ onBackToHome }: BoardProps) {
     if (state.phase === "action" && isActionCard(card) && state.actions > 0) {
       const result = playAction(card);
       if (!result.ok) {
-        console.error("Failed to play action:", result.error);
+        uiLogger.error("Failed to play action:", result.error);
       }
       return;
     }
@@ -97,7 +98,7 @@ export function Board({ onBackToHome }: BoardProps) {
     if (state.phase === "buy" && isTreasureCard(card)) {
       const result = playTreasure(card);
       if (!result.ok) {
-        console.error("Failed to play treasure:", result.error);
+        uiLogger.error("Failed to play treasure:", result.error);
       }
       return;
     }
@@ -109,7 +110,7 @@ export function Board({ onBackToHome }: BoardProps) {
 
     const result = unplayTreasure(card);
     if (!result.ok) {
-      console.error("Failed to unplay treasure:", result.error);
+      uiLogger.error("Failed to unplay treasure:", result.error);
     }
   }, [state?.phase, unplayTreasure, isHumanTurn]);
 

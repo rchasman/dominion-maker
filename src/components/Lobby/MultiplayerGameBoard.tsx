@@ -1,3 +1,4 @@
+import { uiLogger } from "../../lib/logger";
 /**
  * Multiplayer Game Board
  *
@@ -63,7 +64,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   // Clear preview if the event no longer exists (after undo)
   useEffect(() => {
     if (previewEventId && !events.find(e => e.id === previewEventId)) {
-      console.log(`[MultiplayerGameBoard] Preview event ${previewEventId} no longer exists, clearing preview`);
+      uiLogger.debug(`Preview event ${previewEventId} no longer exists, clearing preview`);
       setPreviewEventId(null);
     }
   }, [previewEventId, events]);
@@ -118,7 +119,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     if (isActionPhase && isActionCard(card) && displayState.actions > 0) {
       const result = playAction(card);
       if (!result.ok) {
-        console.error("Failed to play action:", result.error);
+        uiLogger.error("Failed to play action:", result.error);
       }
       return;
     }
@@ -127,7 +128,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     if (isBuyPhase && isTreasureCard(card)) {
       const result = playTreasure(card);
       if (!result.ok) {
-        console.error("Failed to play treasure:", result.error);
+        uiLogger.error("Failed to play treasure:", result.error);
       }
       return;
     }
@@ -140,7 +141,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
     const result = buyCard(card);
     if (!result.ok) {
-      console.error("Failed to buy card:", result.error);
+      uiLogger.error("Failed to buy card:", result.error);
     }
   }, [canBuy, buyCard, previewEventId]);
 
@@ -151,7 +152,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
     const result = endPhase();
     if (!result.ok) {
-      console.error("Failed to end phase:", result.error);
+      uiLogger.error("Failed to end phase:", result.error);
     }
   }, [isMyTurn, endPhase, previewEventId]);
 
@@ -162,7 +163,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
     const result = playAllTreasures();
     if (!result.ok) {
-      console.error("Failed to play treasures:", result.error);
+      uiLogger.error("Failed to play treasures:", result.error);
     }
   }, [isMyTurn, isBuyPhase, playAllTreasures, previewEventId]);
 
@@ -175,7 +176,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     if (result.ok) {
       setSelectedCardIndices([]);
     } else {
-      console.error("Failed to submit decision:", result.error);
+      uiLogger.error("Failed to submit decision:", result.error);
     }
   }, [displayState.pendingDecision, myPlayerState, selectedCardIndices, submitDecision]);
 

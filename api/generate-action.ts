@@ -4,6 +4,7 @@ import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
+import { apiLogger } from "../src/lib/logger";
 
 // Configure AI Gateway with server-side API key
 const gateway = createGateway({
@@ -12,9 +13,9 @@ const gateway = createGateway({
 
 // Debug logging for deployment
 if (!process.env.AI_GATEWAY_API_KEY) {
-  console.error("⚠️  AI_GATEWAY_API_KEY is not set!");
+  apiLogger.error("AI_GATEWAY_API_KEY is not set");
 } else {
-  console.log("✓ AI_GATEWAY_API_KEY is configured");
+  apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
 interface VercelRequest {
@@ -31,8 +32,6 @@ interface VercelResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log(`[${new Date().toISOString()}] Handler called - method: ${req.method}`);
-  console.log(`[${new Date().toISOString()}] Request has body: ${typeof req.body}, has text: ${typeof req.text}`);
 
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -50,11 +49,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let provider: string = "";
 
   try {
-    console.log(`[${new Date().toISOString()}] Parsing request body...`);
     // Vercel with Bun runtime passes body as req.body, not req.json()
     const rawBody = req.body || (req.text ? await req.text() : "{}");
     const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-    console.log(`[${new Date().toISOString()}] Body parsed - provider: ${(body as { provider?: string }).provider}`);
 
     const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = bodyProvider;
@@ -68,10 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid provider" });
     }
 
-    console.log(`[${new Date().toISOString()}] Creating model gateway for: ${modelName}`);
     const model = gateway(modelName);
     const isAnthropic = provider.startsWith("claude");
-    console.log(`[${new Date().toISOString()}] Model created, isAnthropic: ${isAnthropic}`);
 
     const legalActionsStr = legalActions && legalActions.length > 0
       ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
@@ -158,9 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ action });
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
-        console.error(`[${provider}] Failed to parse JSON response`);
-        console.error(`Full response text:`, result.text);
-        console.error(`Extracted JSON string:`, jsonStr);
+        apiLogger.error(`${provider} parse failed: ${errorMessage}`);
 
         return res.status(500).json({
           error: 500,
@@ -170,7 +163,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Use generateObject for other models
-    console.log(`[${new Date().toISOString()}] Calling generateObject...`);
     const result = await generateObject({
       model,
       schema: ActionSchema,
@@ -185,9 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       }),
     });
-    console.log(`[${new Date().toISOString()}] generateObject completed`);
 
-    console.log(`[${new Date().toISOString()}] Returning response with action`);
     return res.status(200).json({ action: result.object });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
@@ -197,10 +187,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (errorWithText.value?.action && provider.includes("gemini")) {
       try {
         const validated = ActionSchema.parse(errorWithText.value.action);
-        console.log(`[${provider}] Recovered from wrapped response`);
         return res.status(200).json({ action: validated });
-      } catch (recoveryErr) {
-        console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
+      } catch {
+        apiLogger.error(`${provider} recovery failed`);
       }
     }
 
@@ -218,7 +207,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               }
               if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
                 const validated = ActionSchema.parse(parsed);
-                console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
                 return res.status(200).json({ action: validated });
               }
             } catch {
@@ -226,21 +214,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           }
         }
-      } catch (recoveryErr) {
-        console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
+      } catch {
+        apiLogger.error(`${provider} recovery failed`);
       }
     }
 
     const error = err as Error & { cause?: unknown; text?: string };
-    console.error(`\n❌ [${provider}] Error generating action`);
-    console.error(`Message: ${error.message}`);
-    if (error.cause) {
-      console.error(`Cause:`, JSON.stringify(error.cause, null, 2));
-    }
-    if (error.text) {
-      console.error(`Raw response text:`, error.text);
-    }
-    console.error(`Stack:`, error.stack);
+    apiLogger.error(`${provider} failed: ${error.message}`);
 
     return res.status(500).json({
       error: 500,

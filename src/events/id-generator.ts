@@ -1,3 +1,4 @@
+import { engineLogger } from "../lib/logger";
 /**
  * Event ID generation for causality tracking
  */
@@ -34,5 +35,5 @@ export function syncEventCounter(events: Array<{ id?: string }>): void {
     }
   }
   eventCounter = maxId;
-  console.log(`[id-generator] Synced counter to ${maxId} from ${events.length} events`);
+  engineLogger.debug(`[id-generator] Synced counter to ${maxId} from ${events.length} events`);
 }
