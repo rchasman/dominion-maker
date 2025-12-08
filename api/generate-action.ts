@@ -1,5 +1,4 @@
 import { generateObject, generateText, createGateway } from "ai";
-import { ActionSchema } from "../src/types/action";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
@@ -8,6 +7,25 @@ import { apiLogger } from "../src/lib/logger";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
 import { parse as parseBestEffort } from "best-effort-json-parser";
+import { z } from "zod";
+
+// Zod schemas for runtime validation (server-side only)
+const CardNameSchema = z.enum([
+  "Copper", "Silver", "Gold",
+  "Estate", "Duchy", "Province",
+  "Curse",
+  "Cellar", "Chapel", "Moat", "Harbinger", "Merchant", "Vassal", "Village", "Workshop",
+  "Bureaucrat", "Gardens", "Militia", "Moneylender", "Poacher", "Remodel", "Smithy",
+  "Throne Room", "Bandit", "Council Room", "Festival", "Laboratory", "Library",
+  "Market", "Mine", "Sentry", "Witch", "Artisan"
+]);
+
+const ActionSchema = z.object({
+  type: z.enum(["play_action", "play_treasure", "buy_card", "gain_card", "discard_card", "trash_card", "end_phase"])
+    .describe("The type of action to perform"),
+  card: CardNameSchema.nullish().describe("The card to act on (not needed for end_phase)"),
+  reasoning: z.string().optional().describe("Explanation for why this action was chosen"),
+}).describe("A single atomic game action");
 
 // Create HTTP agents with unlimited concurrent connections
 // Default is 5 connections per host - we increase to Infinity
