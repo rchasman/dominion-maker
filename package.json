@@ -11,8 +11,8 @@
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "test": "bun test",
     "check:server": "bun server.ts & SERVER_PID=$! && sleep 2 && kill $SERVER_PID",
-    "check": "bun run type & bun run lint & bun test & wait && bun run check:server",
-    "check:full": "bun run type & bun run lint & bun test & bun run build & wait && bun run check:server",
+    "check": "bun run type & bun run lint & bun test & bun run check:server & wait",
+    "check:full": "bun run type & bun run lint & bun test & bun run build & bun run check:server & wait",
     "preview": "vite preview"
   },
   "dependencies": {
