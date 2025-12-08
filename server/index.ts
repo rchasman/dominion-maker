@@ -25,7 +25,7 @@ const gateway = createGateway({
 
 const app = new Elysia()
   .use(cors({
-    origin: "https://dominion-maker.vercel.app",
+    origin: true, // Allow same-origin requests from any Vercel deployment
     credentials: true,
   }))
   .use(opentelemetry())
