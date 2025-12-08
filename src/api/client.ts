@@ -4,13 +4,13 @@
 
 interface GenerateActionRequest {
   provider: string;
-  currentState: any;
+  currentState: unknown;
   humanChoice?: { selectedCards: string[] };
-  legalActions?: any[];
+  legalActions?: unknown[];
 }
 
 interface GenerateActionResponse {
-  action?: any;
+  action?: unknown;
   error?: number;
   message?: string;
 }

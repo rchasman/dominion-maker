@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun server.ts & sleep 1 && vite",
     "build": "tsc -b && vite build",
     "type": "tsc --noEmit",
     "lint": "bunx oxlint --type-aware",
