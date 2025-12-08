@@ -46,14 +46,54 @@ describe("EventDevtools - scrubbing", () => {
       // No setIsPinned(false) needed - scrubberIndex being null is enough
     };
 
-    // Test scrubbing
+    // Mock handleRewindToBeginning - should only need to set scrubberIndex
+    const handleRewindToBeginning = () => {
+      scrubberIndex = 0; // Jump to first event
+      // No setIsPinned(true) needed
+    };
+
+    // Mock handlePlayPause - should only need to manage isPlaying and scrubberIndex
+    let isPlaying = false;
+    const handlePlayPause = () => {
+      if (isPlaying) {
+        isPlaying = false;
+      } else {
+        isPlaying = true;
+        // No setIsPinned(true) needed
+        if (scrubberIndex === null) {
+          handleRewindToBeginning();
+        }
+      }
+    };
+
+    // Mock event item click - should only need to set scrubberIndex
+    const handleEventClick = (index: number) => {
+      scrubberIndex = index;
+      // No setIsPinned(true) needed
+    };
+
+    // Test scrubbing via slider
     handleScrubberChange(1);
     expect(scrubberIndex).toBe(1);
-    expect(scrubberIndex === null).toBe(false); // Scrubbing mode
 
-    // Test reset
+    // Test reset to live
     handleResetScrubber();
     expect(scrubberIndex).toBe(null);
-    expect(scrubberIndex === null).toBe(true); // Live mode
+
+    // Test rewind to beginning
+    handleRewindToBeginning();
+    expect(scrubberIndex).toBe(0);
+
+    // Test play/pause
+    handlePlayPause();
+    expect(isPlaying).toBe(true);
+    expect(scrubberIndex).toBe(0); // Should jump to beginning when starting
+
+    handlePlayPause();
+    expect(isPlaying).toBe(false);
+
+    // Test clicking on event
+    handleEventClick(5);
+    expect(scrubberIndex).toBe(5);
   });
 });

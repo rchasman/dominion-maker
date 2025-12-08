@@ -233,7 +233,6 @@ export function EventDevtools({
       const firstRoot = rootEvents[0];
       const actualIndex = events.findIndex(evt => evt.id === firstRoot.id);
       setScrubberIndex(actualIndex);
-      setIsPinned(true);
       if (onScrub) {
         onScrub(firstRoot.id ?? null);
       }
@@ -259,7 +258,6 @@ export function EventDevtools({
     } else {
       // Start playing
       setIsPlaying(true);
-      setIsPinned(true);
 
       // If at end or live, start from beginning
       const lastRootIndex = events.findIndex(
@@ -484,7 +482,6 @@ export function EventDevtools({
                   isSelected && !isScrubberPosition ? null : (event.id ?? null),
                 );
                 setScrubberIndex(eventIndex);
-                setIsPinned(true);
 
                 // Update parent preview (pass event ID)
                 if (onScrub) {
