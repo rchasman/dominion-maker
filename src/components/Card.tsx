@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { CardTooltip } from "./CardTooltip";
+import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 
 interface CardProps {
   name: CardName;
@@ -26,6 +27,7 @@ export function Card({
 }: CardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const imageUrl = showBack
     ? "/cards/Card_back.jpg"
     : getCardImageUrl(name);
@@ -69,11 +71,28 @@ export function Card({
   const borderStyle = getBorderStyle();
 
   const handleMouseEnter = () => {
-    setShowTooltip(true);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    if (isTooltipActive()) {
+      setShowTooltip(true);
+      setTooltipActive(true);
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        setShowTooltip(true);
+        setTooltipActive(true);
+      }, 320);
+    }
   };
 
   const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     setShowTooltip(false);
+    setTooltipActive(false);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
