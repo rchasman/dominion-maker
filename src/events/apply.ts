@@ -289,6 +289,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         updates = { deck: [...playerState.deck, event.card] };
       }
 
+      // Track purchases in turnHistory (cards gained to discard are purchases)
+      const newTurnHistory = event.to === "discard"
+        ? [...state.turnHistory, { type: "buy_card" as const, card: event.card }]
+        : state.turnHistory;
+
       return {
         ...state,
         players: {
@@ -299,6 +304,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           },
         },
         supply: newSupply,
+        turnHistory: newTurnHistory,
         log: [
           ...state.log,
           { type: "gain-card", player: event.player, card: event.card },

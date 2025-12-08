@@ -378,6 +378,12 @@ function handleUnplayTreasure(
     return { ok: false, error: "Card not in play" };
   }
 
+  // Check if any purchases have been made this turn
+  const hasMadePurchases = state.turnHistory.some(action => action.type === "buy_card");
+  if (hasMadePurchases) {
+    return { ok: false, error: "Cannot unplay treasures after already made purchases" };
+  }
+
   const events: GameEvent[] = [];
 
   // Root cause event - returning the treasure to hand
