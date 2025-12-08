@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { CardName, Phase, DecisionRequest, DecisionChoice } from "../types/game-state";
 import { multiplayerLogger } from "../lib/logger";
 
@@ -8,8 +7,7 @@ export type { DecisionRequest, DecisionChoice };
 export type PlayerId = string;
 
 // Zones where cards can exist
-export const Zone = z.enum(["hand", "deck", "discard", "inPlay", "supply", "trash"]);
-export type Zone = z.infer<typeof Zone>;
+export type Zone = "hand" | "deck" | "discard" | "inPlay" | "supply" | "trash";
 
 // ============================================
 // GAME EVENTS - Immutable facts (past tense)

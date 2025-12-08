@@ -1,15 +1,13 @@
-import { z } from "zod";
-import { CardName } from "./game-state";
+import type { CardName } from "./game-state";
 
-// Simplified action schema - no unions
-export const ActionSchema = z.object({
-  type: z.enum(["play_action", "play_treasure", "buy_card", "gain_card", "discard_card", "trash_card", "end_phase"])
-    .describe("The type of action to perform"),
-  card: CardName.nullish().describe("The card to act on (not needed for end_phase)"),
-  reasoning: z.string().optional().describe("Explanation for why this action was chosen"),
-}).describe("A single atomic game action");
-
-export type Action = z.infer<typeof ActionSchema>;
+export type Action = {
+  /** The type of action to perform */
+  type: "play_action" | "play_treasure" | "buy_card" | "gain_card" | "discard_card" | "trash_card" | "end_phase";
+  /** The card to act on (not needed for end_phase) */
+  card?: CardName | null;
+  /** Explanation for why this action was chosen */
+  reasoning?: string;
+};
 
 /**
  * Strip reasoning field from an action to get its core signature.
