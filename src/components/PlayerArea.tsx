@@ -207,7 +207,7 @@ export function PlayerArea({
       <div style={{ display: "grid", gridTemplateColumns: "75% 25%", gap: "var(--space-3)", alignItems: "stretch" }}>
         {/* Hand - only for human */}
         {isHuman && (
-          <div style={{
+          <div className="hand-container" style={{
             position: "relative",
             minInlineSize: 0,
             padding: "var(--space-2)",
@@ -226,23 +226,16 @@ export function PlayerArea({
             }}>
               Hand ({player.hand.length})
             </div>
-            <div style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--space-2)",
-              alignContent: "flex-start",
-              justifyContent: "center",
-              minInlineSize: 0
-            }}>
+            <div className="hand-grid">
               {loading ? (
                 [...Array(5)].map((_, i) => (
-                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite", flexShrink: 0 }}>
+                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
                     <Card name="Copper" showBack={true} size="large" disabled={true} />
                   </div>
                 ))
               ) : (
                 player.hand.map((card, i) => (
-                  <div key={`${card}-${i}-wrapper`} style={{ flexShrink: 0 }}>
+                  <div key={`${card}-${i}-wrapper`}>
                     <Card
                       key={`${card}-${i}`}
                       name={card}
@@ -276,113 +269,113 @@ export function PlayerArea({
 
         {/* Deck & Discard box */}
         {isHuman && (
-          <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: "var(--space-5)", padding: "var(--space-3)", background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", justifyContent: "center" }}>
-        {/* Deck */}
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <div style={{
-            fontSize: "0.5625rem",
-            color: "rgb(205 133 63)",
-            marginBlockEnd: "var(--space-2)",
-            fontWeight: 600,
-            textTransform: "uppercase"
-          }}>
-            Deck
-          </div>
-          {loading ? (
-            <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
-              <Card name="Copper" showBack={true} size={size} disabled={true} />
-            </div>
-          ) : player.deck.length > 0 ? (
-            <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} disabled={!isActive} />
-          ) : (
-            <div style={{
-              inlineSize: size === "small" ? "var(--card-width-small)" : "var(--card-width-medium)",
-              blockSize: size === "small" ? "5.9375rem" : "7.8125rem",
-              border: "1px dashed var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-muted)",
-              fontSize: "0.5625rem",
-              background: "var(--color-bg-primary)",
-            }}>
-              Empty
-            </div>
-          )}
-        </div>
-
-        {/* Discard */}
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-          <div style={{
-            fontSize: "0.5625rem",
-            color: "rgb(180 180 180)",
-            marginBlockEnd: "var(--space-2)",
-            fontWeight: 600,
-            textTransform: "uppercase"
-          }}>
-            Discard
-          </div>
-          {loading ? (
-            <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
-              <Card name="Copper" showBack={true} size={size} disabled={true} />
-            </div>
-          ) : player.discard.length > 0 ? (
-            // If there's a decision to choose from discard, show all cards
-            (pendingDecision && pendingDecision.from === "discard" && isHuman) ? (
+          <div className="deck-discard-container" style={{ padding: "var(--space-3)", background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", minHeight: 0 }}>
+            <div className="deck-discard-wrapper" style={{ width: "100%" }}>
+              {/* Deck */}
               <div style={{
                 display: "flex",
-                flexWrap: "wrap",
-                gap: "var(--space-1)",
-                maxInlineSize: "12rem",
-                justifyContent: "center",
-                padding: "var(--space-2)",
-                background: "rgba(16, 185, 129, 0.1)",
-                border: "2px dashed #10b981",
-                borderRadius: "4px",
+                flexDirection: "column",
+                alignItems: "center",
               }}>
-                {player.discard.map((card, i) => {
-                  const isOption = pendingDecision.cardOptions?.includes(card) ?? true;
-                  return (
-                    <Card
-                      key={`${card}-${i}`}
-                      name={card}
-                      size="small"
-                      onClick={() => onCardClick?.(card, i)}
-                      highlightMode={isOption ? "gain" : undefined}
-                      disabled={!isOption}
-                    />
-                  );
-                })}
+                <div style={{
+                  fontSize: "0.5625rem",
+                  color: "rgb(205 133 63)",
+                  marginBlockEnd: "var(--space-2)",
+                  fontWeight: 600,
+                  textTransform: "uppercase"
+                }}>
+                  Deck
+                </div>
+                {loading ? (
+                  <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+                    <Card name="Copper" showBack={true} size={size} disabled={true} />
+                  </div>
+                ) : player.deck.length > 0 ? (
+                  <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} disabled={!isActive} />
+                ) : (
+                  <div style={{
+                    inlineSize: "100%",
+                    aspectRatio: "5 / 7.8",
+                    border: "1px dashed var(--color-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--color-text-muted)",
+                    fontSize: "0.5625rem",
+                    background: "var(--color-bg-primary)",
+                  }}>
+                    Empty
+                  </div>
+                )}
               </div>
-            ) : (
-              <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} disabled={!isActive} />
-            )
-          ) : (
-            <div style={{
-              inlineSize: size === "small" ? "var(--card-width-small)" : "var(--card-width-medium)",
-              blockSize: size === "small" ? "5.9375rem" : "7.8125rem",
-              border: "1px dashed var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-muted)",
-              fontSize: "0.5625rem",
-              background: "var(--color-bg-primary)",
-            }}>
-              Empty
+
+              {/* Discard */}
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}>
+                <div style={{
+                  fontSize: "0.5625rem",
+                  color: "rgb(180 180 180)",
+                  marginBlockEnd: "var(--space-2)",
+                  fontWeight: 600,
+                  textTransform: "uppercase"
+                }}>
+                  Discard
+                </div>
+                {loading ? (
+                  <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
+                    <Card name="Copper" showBack={true} size={size} disabled={true} />
+                  </div>
+                ) : player.discard.length > 0 ? (
+                  // If there's a decision to choose from discard, show all cards
+                  (pendingDecision && pendingDecision.from === "discard" && isHuman) ? (
+                    <div style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "var(--space-1)",
+                      maxInlineSize: "12rem",
+                      justifyContent: "center",
+                      padding: "var(--space-2)",
+                      background: "rgba(16, 185, 129, 0.1)",
+                      border: "2px dashed #10b981",
+                      borderRadius: "4px",
+                    }}>
+                      {player.discard.map((card, i) => {
+                        const isOption = pendingDecision.cardOptions?.includes(card) ?? true;
+                        return (
+                          <Card
+                            key={`${card}-${i}`}
+                            name={card}
+                            size="small"
+                            onClick={() => onCardClick?.(card, i)}
+                            highlightMode={isOption ? "gain" : undefined}
+                            disabled={!isOption}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} disabled={!isActive} />
+                  )
+                ) : (
+                  <div style={{
+                    inlineSize: "100%",
+                    aspectRatio: "5 / 7.8",
+                    border: "1px dashed var(--color-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--color-text-muted)",
+                    fontSize: "0.5625rem",
+                    background: "var(--color-bg-primary)",
+                  }}>
+                    Empty
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
           </div>
         )}
       </div>

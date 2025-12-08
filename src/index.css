@@ -142,6 +142,32 @@ body {
   }
 }
 
+.hand-container {
+  container-type: inline-size;
+}
+
+.hand-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, var(--card-width-large));
+  gap: 0.5rem;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.deck-discard-container {
+  container-type: inline-size;
+}
+
+.deck-discard-wrapper {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, var(--card-width-medium));
+  gap: var(--space-3);
+  justify-content: center;
+  align-items: start;
+}
+
 /* Game log undo button - show on hover */
 .log-entry-with-undo .undo-button {
   opacity: 0;
