@@ -45,33 +45,40 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
  * Returns the cards, whether a shuffle occurred, and the new deck order.
  */
 export function peekDraw(
-  playerState: PlayerState,
+  { deck: playerDeck, discard: playerDiscard }: PlayerState,
   count: number
 ): { cards: CardName[]; shuffled: boolean; newDeckOrder?: CardName[]; cardsBeforeShuffle?: CardName[] } {
   const cards: CardName[] = [];
   const cardsBeforeShuffle: CardName[] = [];
-  let deck = [...playerState.deck];
-  let discard = [...playerState.discard];
+  let deck = [...playerDeck];
+  let discard = [...playerDiscard];
   let shuffled = false;
   let newDeckOrder: CardName[] | undefined;
 
-  for (let i = 0; i < count; i++) {
+  let remaining = count;
+  while (remaining > 0) {
     if (deck.length === 0) {
       if (discard.length === 0) break;
-      // Mark how many cards we drew before shuffling
+
+      // Capture state before shuffle
       cardsBeforeShuffle.push(...cards);
       deck = shuffle(discard);
       discard = [];
       shuffled = true;
-      // Capture full deck order BEFORE drawing for perfect replay
       newDeckOrder = [...deck];
     }
-    // Top of deck is end of array
+
     const card = deck.pop();
     if (card) cards.push(card);
+    remaining--;
   }
 
-  return { cards, shuffled, newDeckOrder, cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined };
+  return {
+    cards,
+    shuffled,
+    newDeckOrder,
+    cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined
+  };
 }
 
 /**
@@ -118,30 +125,17 @@ export function createDrawEvents(
   count: number
 ): GameEvent[] {
   const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(playerState, count);
-  const events: GameEvent[] = [];
 
   if (shuffled && cardsBeforeShuffle) {
-    // Draw cards before shuffle
-    for (const card of cardsBeforeShuffle) {
-      events.push({ type: "CARD_DRAWN", player, card });
-    }
-
-    // Then shuffle
-    events.push({ type: "DECK_SHUFFLED", player, newDeckOrder });
-
-    // Then draw remaining cards after shuffle
     const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
-    for (const card of cardsAfterShuffle) {
-      events.push({ type: "CARD_DRAWN", player, card });
-    }
-  } else {
-    // No shuffle, just draw all cards
-    for (const card of cards) {
-      events.push({ type: "CARD_DRAWN", player, card });
-    }
+    return [
+      ...cardsBeforeShuffle.map(card => ({ type: "CARD_DRAWN" as const, player, card })),
+      { type: "DECK_SHUFFLED" as const, player, newDeckOrder },
+      ...cardsAfterShuffle.map(card => ({ type: "CARD_DRAWN" as const, player, card })),
+    ];
   }
 
-  return events;
+  return cards.map(card => ({ type: "CARD_DRAWN" as const, player, card }));
 }
 
 /**

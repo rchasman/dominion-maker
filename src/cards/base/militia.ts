@@ -5,7 +5,6 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getOpponents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
-import type { Player } from "../../types/game-state";
 
 export const militia: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const events: GameEvent[] = [];
@@ -48,21 +47,23 @@ export const militia: CardEffect = ({ state, player, decision, stage }): CardEff
   // Process opponent discard
   if (stage === "opponent_discard" && decision) {
     const toDiscard = decision.selectedCards || [];
-    const discardingPlayer = state.pendingDecision?.player as Player;
+    const discardingPlayer = state.pendingDecision?.player;
 
-    // Discard (atomic events)
-    for (const card of toDiscard) {
-      events.push({
-        type: "CARD_DISCARDED",
-        player: discardingPlayer,
-        card,
-        from: "hand",
-      });
+    if (discardingPlayer) {
+      // Discard (atomic events)
+      for (const card of toDiscard) {
+        events.push({
+          type: "CARD_DISCARDED",
+          player: discardingPlayer,
+          card,
+          from: "hand",
+        });
+      }
     }
 
     // Check for more opponents
     const metadata = state.pendingDecision?.metadata;
-    const remainingOpponents = (metadata?.remainingOpponents as Player[]) || [];
+    const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
 
     for (const opp of remainingOpponents) {
       const oppState = state.players[opp];

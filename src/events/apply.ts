@@ -1,4 +1,4 @@
-import type { GameState, PlayerState, Player, LogEntry, CardName } from "../types/game-state";
+import type { GameState, PlayerState, LogEntry, CardName } from "../types/game-state";
 import type {
   GameEvent,
 } from "./types";
@@ -53,10 +53,10 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         players,
         supply: event.supply,
         kingdomCards: event.kingdomCards,
-        playerOrder: event.players as Player[],
+        playerOrder: event.players,
         turn: 0,
         phase: "action",
-        activePlayer: event.players[0] as Player,
+        activePlayer: event.players[0],
         actions: 1,
         buys: 1,
         coins: 0,
@@ -445,14 +445,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       return {
         ...state,
         gameOver: true,
-        winner: event.winner as Player | null,
+        winner: event.winner,
         log: [
           ...state.log,
           {
             type: "game-over",
             humanVP: event.scores["human"] || event.scores["player0"] || 0,
             aiVP: event.scores["ai"] || event.scores["player1"] || 0,
-            winner: (event.winner || "human") as Player,
+            winner: event.winner || "human",
           },
         ],
       };

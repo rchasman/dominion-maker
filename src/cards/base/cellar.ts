@@ -35,34 +35,27 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
 
   // Process discards and draw
   if (stage === "discard" && decision) {
-    const toDiscard = decision.selectedCards;
+    const { selectedCards: toDiscard } = decision;
 
     if (toDiscard.length === 0) {
       return { events: [] };
     }
 
     // Discard selected cards (atomic events)
-    for (const card of toDiscard) {
-      events.push({
-        type: "CARD_DISCARDED",
-        player,
-        card,
-        from: "hand",
-      });
-    }
+    const discardEvents = toDiscard.map(card => ({
+      type: "CARD_DISCARDED" as const,
+      player,
+      card,
+      from: "hand" as const,
+    }));
+    events.push(...discardEvents);
 
-    // Draw equal number
-    // Need to compute draw from state AFTER discards
-    const handAfterDiscard = playerState.hand.filter(c => !toDiscard.includes(c));
-    const discardAfterDiscard = [...playerState.discard, ...toDiscard];
-    const deckForDraw = [...playerState.deck];
-
-    // Simulate the deck state after discarding
+    // Draw equal number - compute from state AFTER discards
     const simulatedState = {
       ...playerState,
-      hand: handAfterDiscard,
-      discard: discardAfterDiscard,
-      deck: deckForDraw,
+      hand: playerState.hand.filter(c => !toDiscard.includes(c)),
+      discard: [...playerState.discard, ...toDiscard],
+      deck: [...playerState.deck],
     };
 
     const drawEvents = createDrawEvents(player, simulatedState, toDiscard.length);

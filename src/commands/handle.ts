@@ -1,8 +1,9 @@
-import type { GameState, CardName, Player } from "../types/game-state";
+import type { GameState, CardName } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { getCardEffect } from "../cards/base";
+import { countVP } from "../lib/game-utils";
 import { applyEvents } from "../events/apply";
 import { peekDraw } from "../cards/effect-types";
 import { shuffle } from "../lib/game-utils";
@@ -139,7 +140,7 @@ function handleStartGame(
   const rootEventId = generateEventId();
   events.push({
     type: "GAME_INITIALIZED",
-    players: players as Player[],
+    players,
     kingdomCards: selectedKingdom,
     supply,
     seed,
@@ -156,7 +157,7 @@ function handleStartGame(
     const shuffledDeck = shuffle([...startingDeck]);
     events.push({
       type: "INITIAL_DECK_DEALT",
-      player: player as Player,
+      player: player,
       cards: shuffledDeck,
       id: generateEventId(),
       causedBy: rootEventId,
@@ -166,7 +167,7 @@ function handleStartGame(
     const initialHand = shuffledDeck.slice(-5);
     events.push({
       type: "INITIAL_HAND_DRAWN",
-      player: player as Player,
+      player: player,
       cards: initialHand,
       id: generateEventId(),
       causedBy: rootEventId,
@@ -178,7 +179,7 @@ function handleStartGame(
   events.push({
     type: "TURN_STARTED",
     turn: 1,
-    player: players[0] as Player,
+    player: players[0],
     id: turnStartId,
   });
 
@@ -207,7 +208,7 @@ function handlePlayAction(
     return { ok: false, error: "Not an action card" };
   }
 
-  const playerState = state.players[player as Player];
+  const playerState = state.players[player];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -221,7 +222,7 @@ function handlePlayAction(
   const rootEventId = generateEventId();
   events.push({
     type: "CARD_PLAYED",
-    player: player as Player,
+    player: player,
     card,
     id: rootEventId,
   });
@@ -239,7 +240,7 @@ function handlePlayAction(
   if (effect) {
     const result = effect({
       state: midState,
-      player: player as Player,
+      player: player,
       card,
     });
 
@@ -284,7 +285,7 @@ function handlePlayTreasure(
     return { ok: false, error: "Not a treasure card" };
   }
 
-  const playerState = state.players[player as Player];
+  const playerState = state.players[player];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -298,7 +299,7 @@ function handlePlayTreasure(
   const rootEventId = generateEventId();
   events.push({
     type: "CARD_PLAYED",
-    player: player as Player,
+    player: player,
     card,
     id: rootEventId,
   });
@@ -323,7 +324,7 @@ function handlePlayTreasure(
 }
 
 function handlePlayAllTreasures(state: GameState, player: PlayerId): CommandResult {
-  const playerState = state.players[player as Player];
+  const playerState = state.players[player];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -370,7 +371,7 @@ function handleUnplayTreasure(
     return { ok: false, error: "Not a treasure card" };
   }
 
-  const playerState = state.players[player as Player];
+  const playerState = state.players[player];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -390,7 +391,7 @@ function handleUnplayTreasure(
   const rootEventId = generateEventId();
   events.push({
     type: "CARD_RETURNED_TO_HAND",
-    player: player as Player,
+    player: player,
     card,
     from: "inPlay",
     id: rootEventId,
@@ -438,7 +439,7 @@ function handleBuyCard(
   const events: GameEvent[] = [
     {
       type: "CARD_GAINED",
-      player: player as Player,
+      player: player,
       card,
       to: "discard",
       id: rootEventId,
@@ -465,7 +466,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
     });
   } else if (state.phase === "buy") {
     // End turn - cleanup and start next player's turn
-    const playerState = state.players[player as Player];
+    const playerState = state.players[player];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
@@ -474,7 +475,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
     const endTurnId = generateEventId();
     events.push({
       type: "TURN_ENDED",
-      player: player as Player,
+      player: player,
       turn: state.turn,
       id: endTurnId,
     });
@@ -486,7 +487,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
     for (const card of handCards) {
       events.push({
         type: "CARD_DISCARDED",
-        player: player as Player,
+        player: player,
         card,
         from: "hand",
         id: generateEventId(),
@@ -497,7 +498,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
     for (const card of inPlayCards) {
       events.push({
         type: "CARD_DISCARDED",
-        player: player as Player,
+        player: player,
         card,
         from: "inPlay",
         id: generateEventId(),
@@ -507,7 +508,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
     // Draw 5 new cards
     const afterDiscard = applyEvents(state, events);
-    const drawEvents = createDrawEventsForCleanup(afterDiscard, player as Player, 5, endTurnId);
+    const drawEvents = createDrawEventsForCleanup(afterDiscard, player, 5, endTurnId);
     events.push(...drawEvents);
 
     // Check game over
@@ -519,7 +520,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       events.push(gameOverEvent);
     } else {
       // Start next turn - new root event (not caused by previous turn for log clarity)
-      const nextPlayer = getNextPlayer(stateAfterDraw, player as Player);
+      const nextPlayer = getNextPlayer(stateAfterDraw, player);
       const turnStartId = generateEventId();
       events.push({
         type: "TURN_STARTED",
@@ -566,7 +567,7 @@ function handleSubmitDecision(
   const rootEventId = generateEventId();
   events.push({
     type: "DECISION_RESOLVED",
-    player: player as Player,
+    player: player,
     choice,
     id: rootEventId,
   });
@@ -640,7 +641,7 @@ function handleRequestUndo(
     {
       type: "UNDO_REQUESTED",
       requestId,
-      byPlayer: player as Player,
+      byPlayer: player,
       toEventId,
       reason,
       id: generateEventId(),
@@ -654,7 +655,7 @@ function handleRequestUndo(
 // HELPERS
 // ============================================
 
-function selectRandomKingdomCards(_seed?: number): CardName[] {
+function selectRandomKingdomCards(): CardName[] {
   const allKingdom: CardName[] = [
     "Cellar", "Chapel", "Moat", "Harbinger", "Merchant", "Vassal", "Village",
     "Workshop", "Bureaucrat", "Gardens", "Militia", "Moneylender", "Poacher",
@@ -708,7 +709,7 @@ function calculateSupply(playerCount: number, kingdomCards: CardName[]): Record<
 
 function createDrawEventsForCleanup(
   state: GameState,
-  player: Player,
+  player: string,
   count: number,
   causedBy?: string
 ): GameEvent[] {
@@ -792,11 +793,10 @@ function createGameOverEvent(
   state: GameState,
   reason: "provinces_empty" | "three_piles_empty"
 ): GameEvent {
-  const { countVP } = require("../lib/game-utils");
   const scores: Record<string, number> = {};
 
   let maxScore = -Infinity;
-  let winner: Player | null = null;
+  let winner: string | null = null;
 
   for (const [playerId, playerState] of Object.entries(state.players)) {
     if (!playerState) continue;
@@ -805,7 +805,7 @@ function createGameOverEvent(
 
     if (score > maxScore) {
       maxScore = score;
-      winner = playerId as Player;
+      winner = playerId;
     }
   }
 

@@ -6,7 +6,6 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getOpponents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
-import type { Player } from "../../types/game-state";
 
 export const bureaucrat: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
   const events: GameEvent[] = [];
@@ -51,15 +50,15 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
   // Process opponent's card to deck
   if (stage === "opponent_topdeck") {
     const toPutOnDeck = decision.selectedCards[0];
-    const affectedPlayer = state.pendingDecision?.player as Player;
+    const affectedPlayer = state.pendingDecision?.player;
 
-    if (toPutOnDeck) {
+    if (toPutOnDeck && affectedPlayer) {
       events.push({ type: "CARD_PUT_ON_DECK", player: affectedPlayer, card: toPutOnDeck, from: "hand" });
     }
 
     // Check for more opponents
     const metadata = state.pendingDecision?.metadata;
-    const remainingOpponents = (metadata?.remainingOpponents as Player[]) || [];
+    const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
 
     for (const opp of remainingOpponents) {
       const oppState = state.players[opp];

@@ -1,5 +1,6 @@
 import type { GameState, CardName } from "../types/game-state";
 import { CARDS, isActionCard, isTreasureCard, isVictoryCard } from "../data/cards";
+import { countVP as countVPFromCards } from "../lib/board-utils";
 
 /**
  * Builds human-readable game facts that a real Dominion player would track.
@@ -33,11 +34,11 @@ Terminals: ${aiAnalysis.terminals}, Villages: ${aiAnalysis.villages}`);
   const duchiesLeft = state.supply["Duchy"] ?? 8;
   const supplyEntries = Object.entries(state.supply) as [string, number][];
   const lowPiles = supplyEntries
-    .filter(([_, count]) => count <= 3 && count > 0)
+    .filter(([, count]) => count <= 3 && count > 0)
     .map(([card, count]) => `${card}: ${count}`)
     .join(", ");
   const emptyPiles = supplyEntries
-    .filter(([_, count]) => count === 0)
+    .filter(([, count]) => count === 0)
     .map(([card]) => card)
     .join(", ");
 
@@ -62,22 +63,8 @@ Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
   return sections.join("\n");
 }
 
-function calculateVP(deck: CardName[], hand: CardName[], discard: CardName[], inPlay: CardName[]): number {
-  const allCards = [...deck, ...hand, ...discard, ...inPlay];
-  let vp = 0;
-
-  for (const card of allCards) {
-    const def = CARDS[card];
-    if (def.vp === "variable") {
-      // Gardens: 1 VP per 10 cards
-      vp += Math.floor(allCards.length / 10);
-    } else if (typeof def.vp === "number") {
-      vp += def.vp;
-    }
-  }
-
-  return vp;
-}
+const calculateVP = (deck: CardName[], hand: CardName[], discard: CardName[], inPlay: CardName[]): number =>
+  countVPFromCards([...deck, ...hand, ...discard, ...inPlay]);
 
 interface DeckAnalysis {
   treasures: number;
@@ -91,39 +78,39 @@ interface DeckAnalysis {
 }
 
 function analyzeDeck(cards: CardName[]): DeckAnalysis {
-  const counts: Record<string, number> = {};
-  let treasureValue = 0;
-  let treasureCount = 0;
-  let terminals = 0;
-  let villages = 0;
+  const { counts, treasureValue, treasureCount, terminals, villages } = cards.reduce(
+    (acc, card) => {
+      const { coins, description } = CARDS[card];
+      const newCounts = { ...acc.counts, [card]: (acc.counts[card] || 0) + 1 };
+      const hasTreasure = coins ? { treasureValue: acc.treasureValue + coins, treasureCount: acc.treasureCount + 1 } : {};
 
-  for (const card of cards) {
-    counts[card] = (counts[card] || 0) + 1;
-    const def = CARDS[card];
+      const actionUpdate = isActionCard(card)
+        ? description.includes("+2 Actions")
+          ? { villages: acc.villages + 1 }
+          : !description.includes("+1 Action")
+          ? { terminals: acc.terminals + 1 }
+          : {}
+        : {};
 
-    if (def.coins) {
-      treasureValue += def.coins;
-      treasureCount++;
-    }
-
-    if (isActionCard(card)) {
-      if (def.description.includes("+2 Actions")) {
-        villages++;
-      } else if (!def.description.includes("+1 Action")) {
-        terminals++;
-      }
-    }
-  }
+      return {
+        ...acc,
+        ...hasTreasure,
+        ...actionUpdate,
+        counts: newCounts,
+      };
+    },
+    { counts: {} as Record<string, number>, treasureValue: 0, treasureCount: 0, terminals: 0, villages: 0 }
+  );
 
   const breakdown = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
+    .sort(([, a], [, b]) => b - a)
     .map(([card, count]) => `${count} ${card}`)
     .join(", ");
 
   return {
-    treasures: cards.filter(c => isTreasureCard(c)).length,
-    actions: cards.filter(c => isActionCard(c)).length,
-    victory: cards.filter(c => isVictoryCard(c)).length,
+    treasures: cards.filter(isTreasureCard).length,
+    actions: cards.filter(isActionCard).length,
+    victory: cards.filter(isVictoryCard).length,
     breakdown,
     totalTreasureValue: treasureValue,
     avgTreasureValue: treasureCount > 0 ? treasureValue / treasureCount : 0,

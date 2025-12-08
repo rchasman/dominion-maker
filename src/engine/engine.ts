@@ -1,4 +1,4 @@
-import type { GameState, Player, CardName } from "../types/game-state";
+import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, PlayerId, DecisionChoice } from "../events/types";
 import type { GameCommand, CommandResult } from "../commands/types";
 import { handleCommand } from "../commands/handle";
@@ -298,23 +298,23 @@ export class DominionEngine {
   }
 
   private handleUndoResponse(
-    command: { type: "APPROVE_UNDO" | "DENY_UNDO"; player: PlayerId; requestId: string }
+    { type, player: playerId, requestId }: { type: "APPROVE_UNDO" | "DENY_UNDO"; player: PlayerId; requestId: string }
   ): CommandResult {
     if (!this.pendingUndo) {
       return { ok: false, error: "No pending undo request" };
     }
 
-    if (this.pendingUndo.requestId !== command.requestId) {
+    if (this.pendingUndo.requestId !== requestId) {
       return { ok: false, error: "Request ID mismatch" };
     }
 
     const events: GameEvent[] = [];
 
-    if (command.type === "DENY_UNDO") {
+    if (type === "DENY_UNDO") {
       events.push({
         type: "UNDO_DENIED",
-        requestId: command.requestId,
-        byPlayer: command.player as Player,
+        requestId,
+        byPlayer: playerId,
         id: generateEventId(),
       });
       this.pendingUndo = null;
@@ -323,11 +323,11 @@ export class DominionEngine {
     }
 
     // APPROVE_UNDO
-    this.pendingUndo.approvals.add(command.player);
+    this.pendingUndo.approvals.add(playerId);
     events.push({
       type: "UNDO_APPROVED",
-      requestId: command.requestId,
-      byPlayer: command.player as Player,
+      requestId,
+      byPlayer: playerId,
       id: generateEventId(),
     });
 

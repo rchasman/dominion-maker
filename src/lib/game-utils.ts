@@ -74,13 +74,13 @@ export function logDraw(
   { events }: { events: DrawEvent[] },
   player: Player
 ): void {
-  events.forEach((event) => {
-    children.push(
+  children.push(
+    ...events.map((event) =>
       event.type === 'shuffle'
-        ? { type: "shuffle-deck", player }
-        : { type: "draw-cards", player, count: event.cards.length, cards: event.cards }
-    );
-  });
+        ? { type: "shuffle-deck" as const, player }
+        : { type: "draw-cards" as const, player, count: event.cards.length, cards: event.cards }
+    )
+  );
 }
 
 export function countVP({ deck, hand, discard, inPlay }: PlayerState): number {

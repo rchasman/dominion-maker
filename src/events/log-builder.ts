@@ -8,33 +8,31 @@ import { CARDS } from "../data/cards";
  * Aggregates consecutive identical card operations (draw/discard/trash).
  */
 export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = "human"): LogEntry[] {
-  // First pass: aggregate consecutive card events
   const aggregatedEvents = aggregateCardEvents(events);
 
-  const logMap = new Map<string, LogEntry>();
-  const rootLogs: LogEntry[] = [];
+  const { rootLogs } = aggregatedEvents.reduce<{
+    logMap: Map<string, LogEntry>;
+    rootLogs: LogEntry[];
+  }>(
+    (acc, event) => {
+      const logEntry = eventToLogEntry(event, currentPlayer);
+      if (!logEntry || !event.id) return acc;
 
-  for (const event of aggregatedEvents) {
-    const logEntry = eventToLogEntry(event, currentPlayer);
-    if (!logEntry || !event.id) continue;
+      const newLogMap = new Map(acc.logMap).set(event.id, logEntry);
 
-    logMap.set(event.id, logEntry);
-
-    if (event.causedBy) {
-      // This is an effect - nest it under its cause
-      const parent = logMap.get(event.causedBy);
-      if (parent) {
-        parent.children = parent.children || [];
-        parent.children.push(logEntry);
-      } else {
-        // Parent not found yet, add as root (shouldn't happen if events are ordered)
-        rootLogs.push(logEntry);
+      if (event.causedBy) {
+        const parent = acc.logMap.get(event.causedBy);
+        if (parent) {
+          parent.children = [...(parent.children || []), logEntry];
+          return { logMap: newLogMap, rootLogs: acc.rootLogs };
+        }
+        return { logMap: newLogMap, rootLogs: [...acc.rootLogs, logEntry] };
       }
-    } else {
-      // Root cause - add as top-level entry
-      rootLogs.push(logEntry);
-    }
-  }
+
+      return { logMap: newLogMap, rootLogs: [...acc.rootLogs, logEntry] };
+    },
+    { logMap: new Map(), rootLogs: [] }
+  );
 
   return rootLogs;
 }
@@ -45,55 +43,56 @@ export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = 
  * Groups cards by name and shows counts (e.g., "Copper x3, Estate x2")
  */
 function aggregateCardEvents(events: GameEvent[]): GameEvent[] {
+  const isAggregatable = (event: GameEvent) =>
+    event.type === "CARD_DRAWN" || event.type === "CARD_DISCARDED" || event.type === "CARD_TRASHED";
+
+  const canMatchNext = (current: GameEvent, next: GameEvent): boolean => {
+    if (next.type === "DECK_SHUFFLED") return false;
+    if (next.type !== current.type) return false;
+    const currentPlayer = (current as { player?: string }).player;
+    const nextPlayer = (next as { player?: string }).player;
+    return currentPlayer === nextPlayer && next.causedBy === current.causedBy;
+  };
+
+  const collectConsecutive = (startIndex: number): { events: GameEvent[]; count: number } => {
+    const consecutiveCount = events.slice(startIndex + 1)
+      .findIndex((next) => !canMatchNext(events[startIndex], next));
+
+    const count = consecutiveCount === -1
+      ? events.length - startIndex
+      : consecutiveCount + 1;
+
+    return { events: events.slice(startIndex, startIndex + count), count };
+  };
+
+  const aggregateGroup = (groupEvents: GameEvent[]): GameEvent => {
+    const [first] = groupEvents;
+    const cards = groupEvents.map(e => (e as { card: string }).card);
+    const cardCounts = cards.reduce((acc, card) => ({
+      ...acc,
+      [card]: (acc[card] || 0) + 1
+    }), {} as Record<string, number>);
+
+    return {
+      ...first,
+      card: cards[0],
+      cards,
+      cardCounts,
+      count: cards.length,
+    } as unknown as GameEvent;
+  };
+
   const result: GameEvent[] = [];
   let i = 0;
 
   while (i < events.length) {
     const event = events[i];
 
-    // Only aggregate drawable/discardable card events
-    if (event.type === "CARD_DRAWN" || event.type === "CARD_DISCARDED" || event.type === "CARD_TRASHED") {
-      const cards: string[] = [event.card];
-      const player = event.player;
-      const causedBy = event.causedBy;
-      let j = i + 1;
-
-      // Collect consecutive same-type events (same player, same causality)
-      while (j < events.length) {
-        const next = events[j];
-
-        // Stop if we hit a shuffle event (splits aggregation)
-        if (next.type === "DECK_SHUFFLED") break;
-
-        // Stop if different type
-        if (next.type !== event.type) break;
-
-        // Stop if different player or causality
-        if ((next as { player?: string }).player !== player || next.causedBy !== causedBy) break;
-
-        // Same type, aggregate it (ignore source - aggregate hand+inPlay discards together)
-        cards.push((next as { card: string }).card);
-        j++;
-      }
-
-      // Count cards by name for compact display
-      const cardCounts = new Map<string, number>();
-      for (const card of cards) {
-        cardCounts.set(card, (cardCounts.get(card) || 0) + 1);
-      }
-
-      // Create aggregated log event with card counts
-      result.push({
-        ...event,
-        card: cards[0], // Keep for type compatibility
-        cards, // Full array for compatibility
-        cardCounts: Object.fromEntries(cardCounts), // Map of card name -> count
-        count: cards.length,
-      } as unknown as GameEvent);
-
-      i = j; // Skip all aggregated events
+    if (isAggregatable(event)) {
+      const { events: groupEvents, count } = collectConsecutive(i);
+      result.push(aggregateGroup(groupEvents));
+      i += count;
     } else {
-      // Not a card event, pass through as-is
       result.push(event);
       i++;
     }
