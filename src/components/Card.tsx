@@ -70,7 +70,7 @@ export function Card({
       style={{
         position: "relative",
         cursor: onClick && !disabled ? "pointer" : "default",
-        opacity: disabled ? 0.6 : 1,
+        opacity: disabled ? 0.4 : 1,
         transform: selected ? "translateY(calc(-1 * var(--space-2)))" : "none",
         transition: "transform var(--transition-fast), box-shadow var(--transition-fast)",
         ...borderStyle,

@@ -55,11 +55,11 @@
 
   /* Card Sizes (rem-based for font size scaling) */
   --card-width-small: 3.75rem;
-  --card-width-medium: 5rem;
-  --card-width-large: 7.5rem;
+  --card-width-medium: 6rem;
+  --card-width-large: 8.25rem;
   --card-height-small: 5.9375rem;
-  --card-height-medium: 7.8125rem;
-  --card-height-large: 11.7188rem;
+  --card-height-medium: 9.375rem;
+  --card-height-large: 12.8906rem;
 
   /* Border Radius */
   --radius-sm: 0.125rem;
