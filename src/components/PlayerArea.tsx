@@ -24,6 +24,7 @@ interface PlayerAreaProps {
   subPhase: TurnSubPhase;
   loading?: boolean;
   playerId?: string;
+  turnHistory?: Array<{ type: string; card?: CardName | null }>;
 }
 
 function getPhaseBorderColor(
@@ -91,10 +92,16 @@ export function PlayerArea({
   phase,
   subPhase,
   loading = false,
+  turnHistory = [],
 }: PlayerAreaProps) {
   const size = compact ? "small" : "medium";
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
+
+  // Check if any purchases have been made this turn (treasures become non-take-backable)
+  const hasMadePurchases = turnHistory.some(
+    action => action.type === "buy_card",
+  );
 
   // Determine highlight mode for hand cards
   const getHandCardHighlightMode = (
@@ -278,16 +285,20 @@ export function PlayerArea({
             }}
           >
             {!loading &&
-              player.inPlay.map((card, i) => (
-                <Card
-                  key={`${card}-${i}`}
-                  name={card}
-                  size="small"
-                  onClick={
-                    onInPlayClick ? () => onInPlayClick(card, i) : undefined
-                  }
-                />
-              ))}
+              player.inPlay.map((card, i) => {
+                const isTreasure = CARDS[card]?.types.includes("treasure");
+                return (
+                  <Card
+                    key={`${card}-${i}`}
+                    name={card}
+                    size="small"
+                    onClick={
+                      onInPlayClick ? () => onInPlayClick(card, i) : undefined
+                    }
+                    dimmed={isTreasure && hasMadePurchases}
+                  />
+                );
+              })}
           </div>
         </div>
       )}
