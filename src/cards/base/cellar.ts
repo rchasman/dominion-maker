@@ -34,7 +34,7 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
   }
 
   // Process discards and draw
-  if (stage === "discard") {
+  if (stage === "discard" && decision) {
     const toDiscard = decision.selectedCards;
 
     if (toDiscard.length === 0) {

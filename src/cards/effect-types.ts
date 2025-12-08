@@ -209,7 +209,7 @@ export function createCardSelectionDecision(params: {
   max: number;
   cardBeingPlayed: CardName;
   stage: string;
-  metadata?: unknown;
+  metadata?: Record<string, unknown>;
 }): DecisionRequest {
   return {
     type: "select_cards",
@@ -221,7 +221,7 @@ export function createCardSelectionDecision(params: {
     max: params.max,
     cardBeingPlayed: params.cardBeingPlayed,
     stage: params.stage,
-    ...(params.metadata && { metadata: params.metadata }),
+    metadata: params.metadata,
   };
 }
 

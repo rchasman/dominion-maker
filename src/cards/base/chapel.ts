@@ -28,6 +28,7 @@ export const chapel: CardEffect = ({ state, player, decision, stage }): CardEffe
   }
 
   // Execute trash (atomic events)
+  if (!decision) return { events: [] };
   const toTrash = decision.selectedCards;
   if (toTrash.length === 0) return { events: [] };
 

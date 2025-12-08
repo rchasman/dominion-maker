@@ -51,7 +51,7 @@ const groupVotersByModel = (voters: string[]) => {
     .join(", ");
 };
 
-export function LLMLog({ entries, gameMode = "llm", modelSettings }: LLMLogProps) {
+export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogProps) {
   const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
   const [currentActionIndex, setCurrentActionIndex] = useState(0);
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);

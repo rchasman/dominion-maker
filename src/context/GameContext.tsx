@@ -88,9 +88,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
       const savedSettings = localStorage.getItem(STORAGE_MODEL_SETTINGS_KEY);
 
-      if (savedMode && (savedMode === "engine" || savedMode === "maker" || savedMode === "hybrid")) {
+      if (savedMode && (savedMode === "engine" || savedMode === "maker" || savedMode === "hybrid" || savedMode === "llm")) {
         // Migrate old "hybrid"/"llm" to "maker"
-        const mode = (savedMode === "hybrid" || savedMode === "llm") ? "maker" : savedMode;
+        const mode = (savedMode === "hybrid" || savedMode === "llm") ? "maker" : savedMode as GameMode;
         modeRestoredFromStorage.current = true;
         setGameModeState(mode);
       }
