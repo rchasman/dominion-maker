@@ -101,12 +101,12 @@ export function EventDevtools({
     return events.filter(e => isRootCauseEvent(e));
   }, [events]);
 
-  // Auto-scroll to bottom when new events arrive (unless pinned or scrubbing)
+  // Auto-scroll to bottom when new events arrive (unless scrubbing)
   useEffect(() => {
-    if (!isPinned && scrubberIndex === null && listRef.current) {
+    if (scrubberIndex === null && listRef.current && isOpen) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [events.length, isPinned, scrubberIndex]);
+  }, [events.length, scrubberIndex, isOpen]);
 
   // Scroll to bottom on initial mount
   useEffect(() => {
@@ -137,12 +137,16 @@ export function EventDevtools({
     return events.filter(e => types.includes(e.type));
   }, [events, filter]);
 
-  // Display state from scrubber or selected event
+  // Display state from scrubber or selected event, or current live state
   const displayIndex =
     scrubberIndex ??
-    (selectedEventId ? events.findIndex(e => e.id === selectedEventId) : null);
+    (selectedEventId
+      ? events.findIndex(e => e.id === selectedEventId)
+      : events.length > 0
+        ? events.length - 1
+        : null);
 
-  // Selected state (from scrubber or clicked event)
+  // Selected state (from scrubber or clicked event or live state)
   const selectedState = useMemo(() => {
     if (displayIndex === null) return null;
     if (displayIndex === -1) return null;
@@ -345,16 +349,6 @@ export function EventDevtools({
           )}
         </div>
         <div style={styles.headerActions}>
-          <button
-            onClick={() => setIsPinned(!isPinned)}
-            style={{
-              ...styles.headerButton,
-              background: isPinned ? "rgba(99, 102, 241, 0.3)" : undefined,
-            }}
-            title={isPinned ? "Unpin (auto-scroll)" : "Pin (stop auto-scroll)"}
-          >
-            {isPinned ? "📌" : "🔄"}
-          </button>
           {onToggle && (
             <button onClick={onToggle} style={styles.closeButton}>
               ×
@@ -469,7 +463,13 @@ export function EventDevtools({
       </div>
 
       {/* Event list */}
-      <div ref={listRef} style={styles.eventList}>
+      <div
+        ref={listRef}
+        style={{
+          ...styles.eventList,
+          flex: "0 1 50%",
+        }}
+      >
         {filteredEvents.map(event => {
           const eventIndex = events.indexOf(event);
           const isSelected =
@@ -533,13 +533,14 @@ export function EventDevtools({
         })}
       </div>
 
-      {/* State inspector */}
-      {displayIndex !== null && selectedState && (
+      {/* State inspector - always visible */}
+      {selectedState && (
         <div style={styles.inspector}>
           <div style={styles.inspectorHeader}>
             <span>
-              State @ Event {displayIndex}
-              {scrubberIndex !== null && " (scrubbing)"}
+              {scrubberIndex !== null
+                ? `State @ Event ${displayIndex} (scrubbing)`
+                : "Live State"}
             </span>
             <button
               onClick={() => setShowDiff(!showDiff)}
@@ -742,19 +743,20 @@ function StateDiff({ prev, next }: { prev: GameState; next: GameState }) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: "fixed",
-    bottom: 0,
-    left: 0,
-    width: "400px",
-    maxHeight: "60vh",
-    background: "#1a1a2e",
+    bottom: "16px",
+    left: "16px",
+    width: "450px",
+    height: "80vh",
+    background: "rgba(26, 26, 46, 0.92)",
+    backdropFilter: "blur(16px)",
     border: "1px solid #2d2d44",
-    borderRadius: "0 8px 0 0",
+    borderRadius: "8px",
     display: "flex",
     flexDirection: "column",
     fontFamily: "ui-monospace, monospace",
     fontSize: "12px",
     zIndex: 9999,
-    boxShadow: "0 -4px 20px rgba(0,0,0,0.3)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
   },
   toggleButton: {
     position: "fixed",
@@ -935,8 +937,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   eventList: {
     flex: 1,
-    overflow: "auto",
-    maxHeight: "200px",
+    overflowY: "scroll",
+    minHeight: 0,
   },
   eventItem: {
     display: "flex",
@@ -970,9 +972,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   inspector: {
     borderTop: "1px solid #2d2d44",
-    maxHeight: "200px",
+    flex: "0 1 50%",
     display: "flex",
     flexDirection: "column",
+    minHeight: 0,
   },
   inspectorHeader: {
     display: "flex",
@@ -984,7 +987,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   stateView: {
     flex: 1,
-    overflow: "auto",
+    overflowY: "scroll",
     padding: "8px",
   },
   stateContent: {
