@@ -20,14 +20,7 @@ const server = Bun.serve({
 
     // Route API requests
     if (url.pathname === "/api/generate-action") {
-      const response = await handler(req);
-      const headers = new Headers(response.headers);
-      headers.set("Access-Control-Allow-Origin", "*");
-
-      return new Response(response.body, {
-        status: response.status,
-        headers,
-      });
+      return handler(req);
     }
 
     return new Response("Not Found", { status: 404 });

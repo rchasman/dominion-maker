@@ -17,50 +17,52 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   console.log("✓ AI_GATEWAY_API_KEY is configured");
 }
 
-interface VercelRequest {
-  method?: string;
-  body?: unknown;
-  text?: () => Promise<string>;
-}
+type RequestInput = Request | { method?: string; body?: unknown; text?: () => Promise<string> };
 
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  send: (data: string) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
-}
+export default async function handler(req: RequestInput): Promise<Response> {
+  const method = req instanceof Request ? req.method : req.method;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
+  if (method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let provider: string = "";
 
   try {
-    // Vercel with Bun runtime passes body as req.body, not req.json()
-    const rawBody = req.body || (req.text ? await req.text() : "{}");
+    // Parse body based on request type
+    const rawBody = req instanceof Request ? await req.text() : (req.body || (req.text ? await req.text() : "{}"));
     const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
 
     const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = bodyProvider;
 
     if (!provider || !currentState) {
-      return res.status(400).json({ error: "Missing required fields: provider, currentState" });
+      return new Response(JSON.stringify({ error: "Missing required fields: provider, currentState" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const modelName = MODEL_MAP[provider];
     if (!modelName) {
-      return res.status(400).json({ error: "Invalid provider" });
+      return new Response(JSON.stringify({ error: "Invalid provider" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const model = gateway(modelName);
@@ -148,16 +150,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const parsed = JSON.parse(jsonStr);
         const action = ActionSchema.parse(parsed);
-        return res.status(200).json({ action });
+        return new Response(JSON.stringify({ action }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
         console.error(`[${provider}] Failed to parse JSON response`);
         console.error(`Full response text:`, result.text);
         console.error(`Extracted JSON string:`, jsonStr);
 
-        return res.status(500).json({
+        return new Response(JSON.stringify({
           error: 500,
           message: `Failed to parse model response: ${errorMessage}`,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
@@ -178,7 +186,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    return res.status(200).json({ action: result.object });
+    return new Response(JSON.stringify({ action: result.object }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
     const errorWithText = err as { text?: string; value?: { action?: unknown } };
@@ -188,7 +199,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const validated = ActionSchema.parse(errorWithText.value.action);
         console.log(`[${provider}] Recovered from wrapped response`);
-        return res.status(200).json({ action: validated });
+        return new Response(JSON.stringify({ action: validated }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       } catch (recoveryErr) {
         console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
       }
@@ -209,7 +223,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
                 const validated = ActionSchema.parse(parsed);
                 console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
-                return res.status(200).json({ action: validated });
+                return new Response(JSON.stringify({ action: validated }), {
+                  status: 200,
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
               }
             } catch {
               continue;
@@ -232,9 +249,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     console.error(`Stack:`, error.stack);
 
-    return res.status(500).json({
+    return new Response(JSON.stringify({
       error: 500,
       message: `Model failed: ${error.message}`,
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 }
