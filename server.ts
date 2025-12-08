@@ -70,3 +70,16 @@ const server = Bun.serve({
 });
 
 serverLogger.info(`API server running at http://localhost:${server.port}`);
+
+// Graceful shutdown handling
+process.on("SIGTERM", () => {
+  serverLogger.info("SIGTERM received, shutting down gracefully");
+  server.stop();
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  serverLogger.info("SIGINT received, shutting down gracefully");
+  server.stop();
+  process.exit(0);
+});
