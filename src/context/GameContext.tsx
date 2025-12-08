@@ -19,6 +19,7 @@ import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
+import { GAME_MODE_CONFIG } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings, ModelProvider } from "../agent/game-agent";
 import {
@@ -99,11 +100,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         (savedMode === "engine" ||
           savedMode === "maker" ||
           savedMode === "hybrid" ||
+          savedMode === "full" ||
           savedMode === "llm")
       ) {
-        // Migrate old "hybrid"/"llm" to "maker"
-        const mode: GameMode =
-          savedMode === "hybrid" || savedMode === "llm" ? "maker" : savedMode;
+        // Migrate old "maker" to "hybrid"
+        const mode: GameMode = savedMode === "maker" ? "hybrid" : savedMode;
         modeRestoredFromStorage.current = true;
         setGameModeState(mode);
       }
@@ -222,6 +223,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (gameMode === "engine") {
       return new EngineStrategy();
     } else {
+      // Both hybrid and full modes use MAKER strategy
       return new MakerStrategy("openai", llmLogger, modelSettings);
     }
   }, [gameMode, llmLogger, modelSettings]);
@@ -258,10 +260,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const engine = new DominionEngine();
     engineRef.current = engine;
 
-    // Start game with human vs AI
+    // Determine players based on game mode
+    const players =
+      gameMode === "multiplayer" ? ["human", "ai"] : GAME_MODE_CONFIG[gameMode].players;
+
     const result = engine.dispatch({
       type: "START_GAME",
-      players: ["human", "ai"],
+      players,
       kingdomCards: undefined, // Will use random 10
     });
 
@@ -271,7 +276,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     } else {
       uiLogger.error("Failed to start game", { error: result.error });
     }
-  }, []);
+  }, [gameMode]);
 
   // Game actions - all dispatch commands to engine
   const playAction = useCallback((card: CardName): CommandResult => {
@@ -469,7 +474,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Auto-run AI turn using strategy
   useEffect(() => {
     if (!gameState || gameState.gameOver || isProcessing) return;
-    if (gameState.activePlayer !== "ai") return;
+
+    // Check if current active player is an AI player based on game mode
+    const isAITurn =
+      gameMode !== "multiplayer" &&
+      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
+
+    if (!isAITurn) return;
 
     const engine = engineRef.current;
     if (!engine) return;
@@ -490,13 +501,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [gameState, isProcessing, strategy]);
+  }, [gameState, isProcessing, strategy, gameMode]);
 
   // Auto-resolve opponent decisions during turn (e.g., AI responding to Militia attack)
   useEffect(() => {
     if (!gameState || gameState.gameOver || isProcessing) return;
     if (gameState.subPhase !== "opponent_decision") return;
-    if (gameState.pendingDecision?.player !== "ai") return;
+
+    // Check if pending decision is for an AI player based on game mode
+    const isAIDecision =
+      gameMode !== "multiplayer" &&
+      gameState.pendingDecision?.player &&
+      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
+
+    if (!isAIDecision) return;
 
     const engine = engineRef.current;
     if (!engine) return;
@@ -515,7 +533,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [gameState, isProcessing, strategy]);
+  }, [gameState, isProcessing, strategy, gameMode]);
 
   // Auto-transition to buy phase when human has no actions to play
   useEffect(() => {
