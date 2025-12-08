@@ -30,7 +30,7 @@
   --color-reaction: #4db6ac;
 
   --color-border: #4a4a6a;
-  --color-border-secondary: rgba(255, 255, 255, 0.15);
+  --color-border-secondary: rgb(255 255 255 / 15%);
   --color-border-supply: #3d5c3d;
   --color-border-highlight: #64b5f6;
 
@@ -59,7 +59,7 @@
   --card-width-large: 7.5rem;
   --card-height-small: 5.9375rem;
   --card-height-medium: 7.8125rem;
-  --card-height-large: 11.71875rem;
+  --card-height-large: 11.7188rem;
 
   /* Border Radius */
   --radius-sm: 0.125rem;
@@ -67,11 +67,11 @@
   --radius-lg: 0.5rem;
 
   /* Shadows */
-  --shadow-sm: 0 2px 8px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 4px 12px rgb(124 179 66 / 0.4);
-  --shadow-lg: 0 4px 20px rgb(124 179 66 / 0.3);
-  --shadow-glow-gold: 0 2px 20px rgb(201 162 39 / 0.4);
-  --shadow-game-over: 0 0 40px rgb(201 162 39 / 0.3);
+  --shadow-sm: 0 2px 8px rgb(0 0 0 / 30%);
+  --shadow-md: 0 4px 12px rgb(124 179 66 / 40%);
+  --shadow-lg: 0 4px 20px rgb(124 179 66 / 30%);
+  --shadow-glow-gold: 0 2px 20px rgb(201 162 39 / 40%);
+  --shadow-game-over: 0 0 40px rgb(201 162 39 / 30%);
 
   /* Transitions */
   --transition-fast: 0.1s;
@@ -82,7 +82,7 @@
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -97,6 +97,7 @@ body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -106,6 +107,7 @@ body {
   0%, 100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -113,10 +115,11 @@ body {
 
 @keyframes glow {
   0%, 100% {
-    box-shadow: 0 0 0.125rem currentColor;
+    box-shadow: 0 0 0.125rem currentcolor;
   }
+
   50% {
-    box-shadow: 0 0 0.25rem currentColor;
+    box-shadow: 0 0 0.25rem currentcolor;
   }
 }
 
