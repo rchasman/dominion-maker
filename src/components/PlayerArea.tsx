@@ -1,4 +1,9 @@
-import type { CardName, PlayerState, Phase, TurnSubPhase } from "../types/game-state";
+import type {
+  CardName,
+  PlayerState,
+  Phase,
+  TurnSubPhase,
+} from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
 import { CARDS } from "../data/cards";
@@ -21,11 +26,18 @@ interface PlayerAreaProps {
   playerId?: string;
 }
 
-function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
+function getPhaseBorderColor(
+  isActive: boolean,
+  phase: Phase,
+  subPhase: TurnSubPhase,
+): string {
   if (!isActive) return "var(--color-border)";
 
   // Reaction or opponent decision takes precedence
-  if (subPhase === "waiting_for_reactions" || subPhase === "opponent_decision") {
+  if (
+    subPhase === "waiting_for_reactions" ||
+    subPhase === "opponent_decision"
+  ) {
     return "var(--color-reaction)";
   }
 
@@ -36,14 +48,21 @@ function getPhaseBorderColor(isActive: boolean, phase: Phase, subPhase: TurnSubP
   return "var(--color-border)";
 }
 
-function getPhaseBackground(isActive: boolean, phase: Phase, subPhase: TurnSubPhase): string {
+function getPhaseBackground(
+  isActive: boolean,
+  phase: Phase,
+  subPhase: TurnSubPhase,
+): string {
   // Inactive: default gradient
   if (!isActive) {
     return "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)";
   }
 
   // Active: use phase-tinted gradients that maintain darkness
-  if (subPhase === "waiting_for_reactions" || subPhase === "opponent_decision") {
+  if (
+    subPhase === "waiting_for_reactions" ||
+    subPhase === "opponent_decision"
+  ) {
     // Teal-tinted gradient (reaction)
     return "linear-gradient(180deg, #253837 0%, #1a2628 100%)";
   } else if (phase === "action") {
@@ -78,7 +97,9 @@ export function PlayerArea({
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
 
   // Determine highlight mode for hand cards
-  const getHandCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
+  const getHandCardHighlightMode = (
+    card: CardName,
+  ): "trash" | "discard" | "gain" | undefined => {
     if (!pendingDecision || !isHuman) return undefined;
     // Only highlight if the decision is for this player (human)
     if (pendingDecision.player !== "human") return undefined;
@@ -105,7 +126,11 @@ export function PlayerArea({
     if (!isActive) return true;
 
     // If there's a pending decision for the human player, only cards in options are clickable
-    if (pendingDecision && pendingDecision.player === "human" && pendingDecision.from === "hand") {
+    if (
+      pendingDecision &&
+      pendingDecision.player === "human" &&
+      pendingDecision.from === "hand"
+    ) {
       const cardOptions = pendingDecision.cardOptions ?? [];
       return cardOptions.length > 0 && !cardOptions.includes(card);
     }
@@ -134,24 +159,63 @@ export function PlayerArea({
         boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
       }}
     >
-      <div style={{ marginBlockEnd: "var(--space-3)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
+      <div
+        style={{
+          marginBlockEnd: "var(--space-3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-4)",
+          }}
+        >
           {loading ? (
-            <span style={{ fontSize: "0.8125rem", color: "var(--color-text-tertiary)" }}>Reconnecting...</span>
+            <span
+              style={{
+                fontSize: "0.8125rem",
+                color: "var(--color-text-tertiary)",
+              }}
+            >
+              Reconnecting...
+            </span>
           ) : (
-            <strong style={{ fontSize: "0.8125rem", color: "var(--color-text-primary)" }}>{label}</strong>
+            <strong
+              style={{
+                fontSize: "0.8125rem",
+                color: "var(--color-text-primary)",
+              }}
+            >
+              {label}
+            </strong>
           )}
         </div>
         {vpCount !== undefined && (
-          <div style={{
-            fontSize: "0.875rem",
-            color: playerId ? getPlayerColor(playerId) : "var(--color-victory)",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}>
-            <span style={{ color: "var(--color-text-secondary)", fontWeight: 400, fontSize: "0.75rem" }}>VP:</span>
+          <div
+            style={{
+              fontSize: "0.875rem",
+              color: playerId
+                ? getPlayerColor(playerId)
+                : "var(--color-victory)",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+            }}
+          >
+            <span
+              style={{
+                color: "var(--color-text-secondary)",
+                fontWeight: 400,
+                fontSize: "0.75rem",
+              }}
+            >
+              VP:
+            </span>
             {loading ? (
               <div
                 style={{
@@ -171,179 +235,270 @@ export function PlayerArea({
 
       {/* In Play - always shown to prevent layout jump */}
       {isHuman && (
-        <div style={{
-          position: "relative",
-          padding: "var(--space-3)",
-          marginBlockEnd: "var(--space-3)",
-          background: player.inPlay.length > 0 ? "rgb(255 255 255 / 0.05)" : "rgb(255 255 255 / 0.02)",
-          border: player.inPlay.length > 0 ? "1px solid var(--color-border)" : "1px dashed var(--color-border)",
-          minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            position: "absolute",
-            insetBlockStart: "var(--space-1)",
-            insetInlineStart: "var(--space-2)",
-            fontSize: "0.5625rem",
-            color: "var(--color-text-muted)",
-            textTransform: "uppercase",
-            fontWeight: 600
-          }}>
-            In Play {player.inPlay.length === 0 && "(empty)"}
-          </div>
-          <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", minBlockSize: "100%", justifyContent: "center", alignItems: "center", alignContent: "center", minInlineSize: 0 }}>
-            {!loading && player.inPlay.map((card, i) => (
-              <Card
-                key={`${card}-${i}`}
-                name={card}
-                size="small"
-                onClick={onInPlayClick ? () => onInPlayClick(card, i) : undefined}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "75% 25%", gap: "var(--space-3)", alignItems: "stretch" }}>
-        {/* Hand - only for human */}
-        {isHuman && (
-          <div className="hand-container" style={{
+        <div
+          style={{
             position: "relative",
-            minInlineSize: 0,
-            padding: "var(--space-2)",
-            background: "rgb(255 255 255 / 0.05)",
-            border: "1px solid var(--color-border)",
+            padding: "var(--space-3)",
+            marginBlockEnd: "var(--space-3)",
+            background:
+              player.inPlay.length > 0
+                ? "rgb(255 255 255 / 0.05)"
+                : "rgb(255 255 255 / 0.02)",
+            border:
+              player.inPlay.length > 0
+                ? "1px solid var(--color-border)"
+                : "1px dashed var(--color-border)",
+            minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
             overflow: "hidden",
-          }}>
-            <div style={{
+          }}
+        >
+          <div
+            style={{
               position: "absolute",
               insetBlockStart: "var(--space-1)",
               insetInlineStart: "var(--space-2)",
               fontSize: "0.5625rem",
               color: "var(--color-text-muted)",
+              textTransform: "uppercase",
               fontWeight: 600,
-              textTransform: "uppercase"
-            }}>
+            }}
+          >
+            In Play {player.inPlay.length === 0 && "(empty)"}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--space-1)",
+              flexWrap: "wrap",
+              minBlockSize: "100%",
+              justifyContent: "center",
+              alignItems: "center",
+              alignContent: "center",
+              minInlineSize: 0,
+            }}
+          >
+            {!loading &&
+              player.inPlay.map((card, i) => (
+                <Card
+                  key={`${card}-${i}`}
+                  name={card}
+                  size="small"
+                  onClick={
+                    onInPlayClick ? () => onInPlayClick(card, i) : undefined
+                  }
+                />
+              ))}
+          </div>
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "75% 25%",
+          gap: "var(--space-3)",
+          alignItems: "stretch",
+        }}
+      >
+        {/* Hand - only for human */}
+        {isHuman && (
+          <div
+            className="hand-container"
+            style={{
+              position: "relative",
+              minInlineSize: 0,
+              padding: "var(--space-2)",
+              background: "rgb(255 255 255 / 0.05)",
+              border: "1px solid var(--color-border)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                insetBlockStart: "var(--space-1)",
+                insetInlineStart: "var(--space-2)",
+                fontSize: "0.5625rem",
+                color: "var(--color-text-muted)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+              }}
+            >
               Hand ({player.hand.length})
             </div>
             <div className="hand-grid">
-              {loading ? (
-                [...Array(5)].map((_, i) => (
-                  <div key={i} style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
-                    <Card name="Copper" showBack={true} size="large" disabled={true} />
-                  </div>
-                ))
-              ) : (
-                player.hand.map((card, i) => (
-                  <div key={`${card}-${i}-wrapper`}>
-                    <Card
-                      key={`${card}-${i}`}
-                      name={card}
-                      size="large"
-                      onClick={() => onCardClick?.(card, i)}
-                      selected={selectedCardIndices.includes(i)}
-                      highlightMode={getHandCardHighlightMode(card)}
-                      disabled={isHandCardDisabled(card)}
-                    />
-                  </div>
-                ))
-              )}
+              {loading
+                ? [...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        animation: "subtlePulse 3s ease-in-out infinite",
+                      }}
+                    >
+                      <Card
+                        name="Copper"
+                        showBack={true}
+                        size="large"
+                        disabled={true}
+                      />
+                    </div>
+                  ))
+                : player.hand.map((card, i) => (
+                    <div key={`${card}-${i}-wrapper`}>
+                      <Card
+                        key={`${card}-${i}`}
+                        name={card}
+                        size="large"
+                        onClick={() => onCardClick?.(card, i)}
+                        selected={selectedCardIndices.includes(i)}
+                        highlightMode={getHandCardHighlightMode(card)}
+                        disabled={isHandCardDisabled(card)}
+                      />
+                    </div>
+                  ))}
             </div>
           </div>
         )}
 
         {/* For AI, just show card count */}
         {!isHuman && (
-          <div style={{
-            padding: "var(--space-3) var(--space-6)",
-            background: "rgb(255 255 255 / 0.05)",
-            border: "1px solid var(--color-border)",
-            display: "flex",
-            alignItems: "center",
-            color: "var(--color-text-secondary)",
-            fontSize: "0.75rem",
-          }}>
+          <div
+            style={{
+              padding: "var(--space-3) var(--space-6)",
+              background: "rgb(255 255 255 / 0.05)",
+              border: "1px solid var(--color-border)",
+              display: "flex",
+              alignItems: "center",
+              color: "var(--color-text-secondary)",
+              fontSize: "0.75rem",
+            }}
+          >
             {player.hand.length} cards in hand
           </div>
         )}
 
         {/* Deck & Discard box */}
         {isHuman && (
-          <div className="deck-discard-container" style={{ padding: "var(--space-3)", background: "var(--color-bg-surface)", border: "1px solid var(--color-border)", display: "flex", alignItems: "center", minHeight: 0 }}>
+          <div
+            className="deck-discard-container"
+            style={{
+              padding: "var(--space-3)",
+              background: "var(--color-bg-surface)",
+              border: "1px solid var(--color-border)",
+              display: "flex",
+              alignItems: "center",
+              minHeight: 0,
+            }}
+          >
             <div className="deck-discard-wrapper" style={{ width: "100%" }}>
               {/* Deck */}
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}>
-                <div style={{
-                  fontSize: "0.5625rem",
-                  color: "rgb(205 133 63)",
-                  marginBlockEnd: "var(--space-2)",
-                  fontWeight: 600,
-                  textTransform: "uppercase"
-                }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.5625rem",
+                    color: "rgb(205 133 63)",
+                    marginBlockEnd: "var(--space-2)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
                   Deck
                 </div>
                 {loading ? (
-                  <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
-                    <Card name="Copper" showBack={true} size={size} disabled={true} />
+                  <div
+                    style={{ animation: "subtlePulse 3s ease-in-out infinite" }}
+                  >
+                    <Card
+                      name="Copper"
+                      showBack={true}
+                      size={size}
+                      disabled={true}
+                    />
                   </div>
                 ) : player.deck.length > 0 ? (
-                  <Card name={player.deck[0]} showBack={!player.deckTopRevealed} size={size} count={player.deck.length} disabled={!isActive} />
+                  <Card
+                    name={player.deck[0]}
+                    showBack={!player.deckTopRevealed}
+                    size={size}
+                    count={player.deck.length}
+                    disabled={!isActive}
+                  />
                 ) : (
-                  <div style={{
-                    inlineSize: "100%",
-                    aspectRatio: "5 / 7.8",
-                    border: "1px dashed var(--color-border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.5625rem",
-                    background: "var(--color-bg-primary)",
-                  }}>
+                  <div
+                    style={{
+                      inlineSize: "100%",
+                      aspectRatio: "5 / 7.8",
+                      border: "1px dashed var(--color-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--color-text-muted)",
+                      fontSize: "0.5625rem",
+                      background: "var(--color-bg-primary)",
+                    }}
+                  >
                     Empty
                   </div>
                 )}
               </div>
 
               {/* Discard */}
-              <div style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}>
-                <div style={{
-                  fontSize: "0.5625rem",
-                  color: "rgb(180 180 180)",
-                  marginBlockEnd: "var(--space-2)",
-                  fontWeight: 600,
-                  textTransform: "uppercase"
-                }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.5625rem",
+                    color: "rgb(180 180 180)",
+                    marginBlockEnd: "var(--space-2)",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
                   Discard
                 </div>
                 {loading ? (
-                  <div style={{ animation: "subtlePulse 3s ease-in-out infinite" }}>
-                    <Card name="Copper" showBack={true} size={size} disabled={true} />
+                  <div
+                    style={{ animation: "subtlePulse 3s ease-in-out infinite" }}
+                  >
+                    <Card
+                      name="Copper"
+                      showBack={true}
+                      size={size}
+                      disabled={true}
+                    />
                   </div>
                 ) : player.discard.length > 0 ? (
                   // If there's a decision to choose from discard, show all cards
-                  (pendingDecision && pendingDecision.from === "discard" && isHuman) ? (
-                    <div style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "var(--space-1)",
-                      maxInlineSize: "12rem",
-                      justifyContent: "center",
-                      padding: "var(--space-2)",
-                      background: "rgba(16, 185, 129, 0.1)",
-                      border: "2px dashed #10b981",
-                      borderRadius: "4px",
-                    }}>
+                  pendingDecision &&
+                  pendingDecision.from === "discard" &&
+                  isHuman ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "var(--space-1)",
+                        maxInlineSize: "12rem",
+                        justifyContent: "center",
+                        padding: "var(--space-2)",
+                        background: "rgba(16, 185, 129, 0.1)",
+                        border: "2px dashed #10b981",
+                        borderRadius: "4px",
+                      }}
+                    >
                       {player.discard.map((card, i) => {
-                        const isOption = pendingDecision.cardOptions?.includes(card) ?? true;
+                        const isOption =
+                          pendingDecision.cardOptions?.includes(card) ?? true;
                         return (
                           <Card
                             key={`${card}-${i}`}
@@ -357,20 +512,27 @@ export function PlayerArea({
                       })}
                     </div>
                   ) : (
-                    <Card name={player.discard[player.discard.length - 1]} size={size} count={player.discard.length} disabled={!isActive} />
+                    <Card
+                      name={player.discard[player.discard.length - 1]}
+                      size={size}
+                      count={player.discard.length}
+                      disabled={!isActive}
+                    />
                   )
                 ) : (
-                  <div style={{
-                    inlineSize: "100%",
-                    aspectRatio: "5 / 7.8",
-                    border: "1px dashed var(--color-border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.5625rem",
-                    background: "var(--color-bg-primary)",
-                  }}>
+                  <div
+                    style={{
+                      inlineSize: "100%",
+                      aspectRatio: "5 / 7.8",
+                      border: "1px dashed var(--color-border)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--color-text-muted)",
+                      fontSize: "0.5625rem",
+                      background: "var(--color-bg-primary)",
+                    }}
+                  >
                     Empty
                   </div>
                 )}

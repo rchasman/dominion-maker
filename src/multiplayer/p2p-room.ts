@@ -66,7 +66,10 @@ export class P2PRoom {
   private sendFullState: (state: RoomState, peerId?: string) => void;
   private sendEvents: (events: GameEvent[], peerId?: string) => void;
   private sendCommand: (command: GameCommand, peerId?: string) => void;
-  private sendJoin: (info: { playerId: string; name: string }, peerId?: string) => void;
+  private sendJoin: (
+    info: { playerId: string; name: string },
+    peerId?: string,
+  ) => void;
   private sendGameEnd: (data: { reason: string }, peerId?: string) => void;
 
   constructor(roomCode: string, isHost: boolean, savedPeerId?: string) {
@@ -75,31 +78,43 @@ export class P2PRoom {
     // Use saved peer ID if reconnecting, otherwise generate new one
     this.myPeerId = savedPeerId || crypto.randomUUID();
 
-    multiplayerLogger.debug(`Creating room: ${roomCode}, isHost: ${isHost}, myPeerId: ${this.myPeerId}${savedPeerId ? " (restored)" : " (new)"}`);
+    multiplayerLogger.debug(
+      `Creating room: ${roomCode}, isHost: ${isHost}, myPeerId: ${this.myPeerId}${savedPeerId ? " (restored)" : " (new)"}`,
+    );
 
     // Join Trystero room
     this.room = joinTrysteroRoom({ appId: APP_ID }, roomCode);
 
     // When a peer connects, send them our current state (host only)
-    this.room.onPeerJoin((trysteroPeerId) => {
+    this.room.onPeerJoin(trysteroPeerId => {
       multiplayerLogger.debug(`✅ Trystero peer connected: ${trysteroPeerId}`);
 
       if (this.isHost) {
         // Send current state to the newly connected peer immediately
         const state = this.getState();
-        multiplayerLogger.debug(`Sending initial state to new peer: ${state.players.length} players`);
+        multiplayerLogger.debug(
+          `Sending initial state to new peer: ${state.players.length} players`,
+        );
         this.sendFullState(state, trysteroPeerId);
       }
     });
 
     // Set up message channels (types don't satisfy Trystero's strict DataPayload constraint)
     // @ts-expect-error - RoomState has complex nested types that don't match JsonValue constraint
-    const [sendFullState, receiveFullState] = this.room.makeAction<RoomState>("fullState");
+    const [sendFullState, receiveFullState] =
+      this.room.makeAction<RoomState>("fullState");
     // @ts-expect-error - GameEvent[] has complex nested types that don't match JsonValue constraint
-    const [sendEvents, receiveEvents] = this.room.makeAction<GameEvent[]>("events");
-    const [sendCommand, receiveCommand] = this.room.makeAction<GameCommand>("command");
-    const [sendJoin, receiveJoin] = this.room.makeAction<{ playerId: string; name: string }>("join");
-    const [sendGameEnd, receiveGameEnd] = this.room.makeAction<{ reason: string }>("gameEnd");
+    const [sendEvents, receiveEvents] =
+      this.room.makeAction<GameEvent[]>("events");
+    const [sendCommand, receiveCommand] =
+      this.room.makeAction<GameCommand>("command");
+    const [sendJoin, receiveJoin] = this.room.makeAction<{
+      playerId: string;
+      name: string;
+    }>("join");
+    const [sendGameEnd, receiveGameEnd] = this.room.makeAction<{
+      reason: string;
+    }>("gameEnd");
 
     this.sendFullState = sendFullState;
     this.sendEvents = sendEvents;
@@ -110,16 +125,19 @@ export class P2PRoom {
     // Handle full state sync (for initial sync / rejoins)
     receiveFullState((state, peerId) => {
       if (!this.isHost) {
-        multiplayerLogger.debug(`Received full state from ${peerId}: ${state.players.length} players, ${state.events.length} events, pendingUndo: ${state.pendingUndo?.requestId || "none"}`);
+        multiplayerLogger.debug(
+          `Received full state from ${peerId}: ${state.players.length} players, ${state.events.length} events, pendingUndo: ${state.pendingUndo?.requestId || "none"}`,
+        );
         this.players = new Map(state.players.map((p: PlayerInfo) => [p.id, p]));
         this.events = state.events;
         this.pendingUndo = state.pendingUndo;
         this.isStarted = state.isStarted;
 
         // Recompute game state from events (important for undo)
-        this.gameState = state.events.length > 0
-          ? projectState(state.events)
-          : state.gameState;
+        this.gameState =
+          state.events.length > 0
+            ? projectState(state.events)
+            : state.gameState;
 
         multiplayerLogger.debug(`Client recomputed state:`, {
           turn: this.gameState?.turn,
@@ -134,8 +152,13 @@ export class P2PRoom {
 
         // If we have a pending join name, send it now
         if (this.pendingJoinName && this.myPeerId) {
-          multiplayerLogger.debug(`Connection established, sending pending join message`);
-          this.sendJoin({ playerId: this.myPeerId, name: this.pendingJoinName });
+          multiplayerLogger.debug(
+            `Connection established, sending pending join message`,
+          );
+          this.sendJoin({
+            playerId: this.myPeerId,
+            name: this.pendingJoinName,
+          });
           this.pendingJoinName = null;
         }
       }
@@ -144,7 +167,9 @@ export class P2PRoom {
     // Handle incremental events (clients only)
     receiveEvents((newEvents: GameEvent[], peerId) => {
       if (!this.isHost) {
-        multiplayerLogger.debug(`Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`);
+        multiplayerLogger.debug(
+          `Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`,
+        );
         this.events.push(...newEvents);
 
         // Recompute game state from full event log
@@ -166,10 +191,15 @@ export class P2PRoom {
         // Translate Trystero peer ID to custom player ID
         const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
         if (!playerId) {
-          multiplayerLogger.error(`Received command from unknown Trystero peer: ${trysteroPeerId}`);
+          multiplayerLogger.error(
+            `Received command from unknown Trystero peer: ${trysteroPeerId}`,
+          );
           return;
         }
-        multiplayerLogger.debug(`Received command from ${playerId} (Trystero: ${trysteroPeerId}):`, command.type);
+        multiplayerLogger.debug(
+          `Received command from ${playerId} (Trystero: ${trysteroPeerId}):`,
+          command.type,
+        );
         for (const handler of this.commandHandlers) {
           handler(command, playerId);
         }
@@ -178,7 +208,9 @@ export class P2PRoom {
 
     // Handle player joins
     receiveJoin((info, trysteroPeerId) => {
-      multiplayerLogger.debug(`Player joined: ${info.playerId} (Trystero: ${trysteroPeerId}) - ${info.name}`);
+      multiplayerLogger.debug(
+        `Player joined: ${info.playerId} (Trystero: ${trysteroPeerId}) - ${info.name}`,
+      );
 
       if (this.isHost) {
         // Map Trystero peer ID to custom player ID
@@ -198,7 +230,7 @@ export class P2PRoom {
     });
 
     // Handle peer leaves
-    this.room.onPeerLeave((trysteroPeerId) => {
+    this.room.onPeerLeave(trysteroPeerId => {
       multiplayerLogger.debug(`Trystero peer left: ${trysteroPeerId}`);
 
       if (this.isHost) {
@@ -227,7 +259,7 @@ export class P2PRoom {
     });
 
     // Handle game end broadcast (all peers)
-    receiveGameEnd((data) => {
+    receiveGameEnd(data => {
       multiplayerLogger.debug(`Game ended by peer: ${data.reason}`);
 
       // Set game state to game over
@@ -279,10 +311,14 @@ export class P2PRoom {
     } else {
       // Client: Wait for connection before sending join
       if (this.isConnectedToHost) {
-        multiplayerLogger.debug(`Client sending join message: ${this.myPeerId} - ${name}`);
+        multiplayerLogger.debug(
+          `Client sending join message: ${this.myPeerId} - ${name}`,
+        );
         this.sendJoin({ playerId: this.myPeerId, name });
       } else {
-        multiplayerLogger.debug(`Client queuing join message (not connected yet): ${name}`);
+        multiplayerLogger.debug(
+          `Client queuing join message (not connected yet): ${name}`,
+        );
         this.pendingJoinName = name;
       }
     }
@@ -322,10 +358,15 @@ export class P2PRoom {
   /**
    * Start the game with initial events (host only)
    */
-  startGameWithEvents(initialState: GameState, initialEvents: GameEvent[]): void {
+  startGameWithEvents(
+    initialState: GameState,
+    initialEvents: GameEvent[],
+  ): void {
     if (!this.isHost) return;
 
-    multiplayerLogger.debug(`Starting game with ${this.players.size} players, ${initialEvents.length} initial events`);
+    multiplayerLogger.debug(
+      `Starting game with ${this.players.size} players, ${initialEvents.length} initial events`,
+    );
     this.gameState = initialState;
     this.events = initialEvents;
     this.isStarted = true;
@@ -364,7 +405,9 @@ export class P2PRoom {
     const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const playerCount = this.players.size;
 
-    multiplayerLogger.debug(`Undo requested by ${playerId} to event ${toEventId}, needs ${playerCount - 1} approvals`);
+    multiplayerLogger.debug(
+      `Undo requested by ${playerId} to event ${toEventId}, needs ${playerCount - 1} approvals`,
+    );
 
     this.pendingUndo = {
       requestId,
@@ -388,12 +431,22 @@ export class P2PRoom {
       return false;
     }
     if (this.pendingUndo.approvals.includes(playerId)) {
-      multiplayerLogger.debug(`${playerId} already approved (current approvals:`, this.pendingUndo.approvals, `)`);
+      multiplayerLogger.debug(
+        `${playerId} already approved (current approvals:`,
+        this.pendingUndo.approvals,
+        `)`,
+      );
       return false;
     }
 
-    multiplayerLogger.debug(`${playerId} approved undo (${this.pendingUndo.approvals.length + 1}/${this.pendingUndo.needed})`);
-    multiplayerLogger.debug(`Current approvals:`, this.pendingUndo.approvals, `+ ${playerId}`);
+    multiplayerLogger.debug(
+      `${playerId} approved undo (${this.pendingUndo.approvals.length + 1}/${this.pendingUndo.needed})`,
+    );
+    multiplayerLogger.debug(
+      `Current approvals:`,
+      this.pendingUndo.approvals,
+      `+ ${playerId}`,
+    );
     this.pendingUndo.approvals.push(playerId);
 
     // Check if we have enough approvals
@@ -401,25 +454,35 @@ export class P2PRoom {
       // Execute undo - remove causal chain
       const toEventId = this.pendingUndo.toEventId;
       const eventsBefore = this.events.length;
-      multiplayerLogger.debug(`✓ Undo approved! Removing event chain for ${toEventId}, events before: ${eventsBefore}`);
+      multiplayerLogger.debug(
+        `✓ Undo approved! Removing event chain for ${toEventId}, events before: ${eventsBefore}`,
+      );
 
       // Find the target event index
       const targetIndex = this.events.findIndex(e => e.id === toEventId);
       const targetEvent = this.events[targetIndex];
-      multiplayerLogger.debug(`Removing event ${toEventId} at index ${targetIndex} and all events after it`);
+      multiplayerLogger.debug(
+        `Removing event ${toEventId} at index ${targetIndex} and all events after it`,
+      );
       multiplayerLogger.debug(`Target event:`, targetEvent);
 
       // Remove the target event and everything after it
       this.events = removeEventChain(toEventId, this.events);
       const eventsAfter = this.events.length;
-      multiplayerLogger.debug(`Events after removal: ${eventsAfter} (removed ${eventsBefore - eventsAfter})`);
+      multiplayerLogger.debug(
+        `Events after removal: ${eventsAfter} (removed ${eventsBefore - eventsAfter})`,
+      );
       this.pendingUndo = null;
 
       // Return true - caller must recompute state and broadcast
-      multiplayerLogger.debug(`Undo executed, returning control to caller for state recomputation`);
+      multiplayerLogger.debug(
+        `Undo executed, returning control to caller for state recomputation`,
+      );
       return true;
     } else {
-      multiplayerLogger.debug(`Waiting for more approvals... (need ${this.pendingUndo.needed - this.pendingUndo.approvals.length} more)`);
+      multiplayerLogger.debug(
+        `Waiting for more approvals... (need ${this.pendingUndo.needed - this.pendingUndo.approvals.length} more)`,
+      );
       this.broadcastState();
       return false;
     }
@@ -481,7 +544,9 @@ export class P2PRoom {
    * End the game and notify all players (anyone can call)
    */
   endGame(reason: string = "Player ended game"): void {
-    multiplayerLogger.debug(`${this.isHost ? "Host" : "Client"} ending game: ${reason}`);
+    multiplayerLogger.debug(
+      `${this.isHost ? "Host" : "Client"} ending game: ${reason}`,
+    );
 
     // Broadcast game end to all peers
     this.sendGameEnd({ reason });
@@ -512,12 +577,14 @@ export class P2PRoom {
     if (!this.isHost) return;
 
     const state = this.getState();
-    multiplayerLogger.debug(`Broadcasting full state: ${this.players.size} players, ${this.events.length} events`);
+    multiplayerLogger.debug(
+      `Broadcasting full state: ${this.players.size} players, ${this.events.length} events`,
+    );
     multiplayerLogger.debug(`Broadcasting game state:`, {
       turn: state.gameState?.turn,
       phase: state.gameState?.phase,
       activePlayer: state.gameState?.activePlayer,
-      pendingUndo: state.pendingUndo ? 'pending' : 'null',
+      pendingUndo: state.pendingUndo ? "pending" : "null",
     });
     this.sendFullState(state);
     this.notifyStateChange();

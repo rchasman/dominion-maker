@@ -11,7 +11,13 @@ interface SupplyProps {
   pendingDecision?: DecisionRequest | null;
 }
 
-export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecision }: SupplyProps) {
+export function Supply({
+  state,
+  onBuyCard,
+  canBuy,
+  availableCoins,
+  pendingDecision,
+}: SupplyProps) {
   const treasures: CardName[] = ["Copper", "Silver", "Gold"];
   const victory: CardName[] = ["Estate", "Duchy", "Province", "Curse"];
 
@@ -23,11 +29,15 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
     }
 
     // Normal buy phase logic
-    return canBuy && CARDS[card].cost <= availableCoins && state.supply[card] > 0;
+    return (
+      canBuy && CARDS[card].cost <= availableCoins && state.supply[card] > 0
+    );
   };
 
   // Determine highlight mode for supply cards
-  const getSupplyCardHighlightMode = (card: CardName): "trash" | "discard" | "gain" | undefined => {
+  const getSupplyCardHighlightMode = (
+    card: CardName,
+  ): "trash" | "discard" | "gain" | undefined => {
     if (!pendingDecision || pendingDecision.from !== "supply") return undefined;
 
     // Check if this card is in the gain options
@@ -37,41 +47,52 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
   };
 
   // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
-  const sorted = [...state.kingdomCards].sort((a, b) => CARDS[a].cost - CARDS[b].cost);
+  const sorted = [...state.kingdomCards].sort(
+    (a, b) => CARDS[a].cost - CARDS[b].cost,
+  );
   const sortedKingdom = [...sorted.slice(5), ...sorted.slice(0, 5)];
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "auto auto 1fr",
-      gridTemplateAreas: '"victory treasure kingdom"',
-      gap: "var(--space-6)",
-      padding: "var(--space-6) var(--space-5)",
-      background: "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
-      border: "1px solid var(--color-border-supply)",
-      alignItems: "start",
-      alignContent: "start",
-    }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto auto 1fr",
+        gridTemplateAreas: '"victory treasure kingdom"',
+        gap: "var(--space-6)",
+        padding: "var(--space-6) var(--space-5)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
+        border: "1px solid var(--color-border-supply)",
+        alignItems: "start",
+        alignContent: "start",
+      }}
+    >
       {/* Victory column */}
-      <div style={{ gridArea: "victory", paddingInlineStart: "var(--space-4)" }}>
-        <div style={{
-          fontSize: "0.625rem",
-          color: "var(--color-victory)",
-          marginBlockEnd: "var(--space-2)",
-          textTransform: "uppercase",
-          fontWeight: 600
-        }}>
+      <div
+        style={{ gridArea: "victory", paddingInlineStart: "var(--space-4)" }}
+      >
+        <div
+          style={{
+            fontSize: "0.625rem",
+            color: "var(--color-victory)",
+            marginBlockEnd: "var(--space-2)",
+            textTransform: "uppercase",
+            fontWeight: 600,
+          }}
+        >
           Victory
         </div>
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          flexWrap: "wrap",
-          gap: "var(--space-1)",
-          maxBlockSize: "30rem",
-          alignContent: "start"
-        }}>
-          {victory.map((card) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flexWrap: "wrap",
+            gap: "var(--space-1)",
+            maxBlockSize: "30rem",
+            alignContent: "start",
+          }}
+        >
+          {victory.map(card => (
             <Card
               key={card}
               name={card}
@@ -87,24 +108,28 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
 
       {/* Treasure column */}
       <div style={{ gridArea: "treasure" }}>
-        <div style={{
-          fontSize: "0.625rem",
-          color: "var(--color-gold)",
-          marginBlockEnd: "var(--space-2)",
-          textTransform: "uppercase",
-          fontWeight: 600
-        }}>
+        <div
+          style={{
+            fontSize: "0.625rem",
+            color: "var(--color-gold)",
+            marginBlockEnd: "var(--space-2)",
+            textTransform: "uppercase",
+            fontWeight: 600,
+          }}
+        >
           Treasure
         </div>
-        <div style={{
-          display: "flex",
-          flexDirection: "column",
-          flexWrap: "wrap",
-          gap: "var(--space-1)",
-          maxBlockSize: "30rem",
-          alignContent: "start"
-        }}>
-          {treasures.map((card) => (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flexWrap: "wrap",
+            gap: "var(--space-1)",
+            maxBlockSize: "30rem",
+            alignContent: "start",
+          }}
+        >
+          {treasures.map(card => (
             <Card
               key={card}
               name={card}
@@ -120,23 +145,28 @@ export function Supply({ state, onBuyCard, canBuy, availableCoins, pendingDecisi
 
       {/* Kingdom cards */}
       <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, minmax(0, var(--card-width-large)))",
-          justifyContent: "center",
-          marginBlockEnd: "var(--space-2)",
-        }}>
-          <div style={{
-            fontSize: "0.625rem",
-            color: "var(--color-text-primary)",
-            textTransform: "uppercase",
-            fontWeight: 600,
-          }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(5, minmax(0, var(--card-width-large)))",
+            justifyContent: "center",
+            marginBlockEnd: "var(--space-2)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.625rem",
+              color: "var(--color-text-primary)",
+              textTransform: "uppercase",
+              fontWeight: 600,
+            }}
+          >
             Kingdom
           </div>
         </div>
         <div className="kingdom-grid">
-          {sortedKingdom.map((card) => (
+          {sortedKingdom.map(card => (
             <Card
               key={card}
               name={card}

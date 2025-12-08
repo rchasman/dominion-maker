@@ -4,7 +4,11 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 
-export const moneylender: CardEffect = ({ state, player, decision }): CardEffectResult => {
+export const moneylender: CardEffect = ({
+  state,
+  player,
+  decision,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const hasCopperInHand = playerState.hand.includes("Copper");
 

@@ -13,8 +13,11 @@ import { generateEventId } from "../events/id-generator";
  * Helper to create resource modification events with proper ID and causality.
  */
 function createResourceEvents(
-  modifications: Array<{ type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED"; delta: number }>,
-  causedBy: string
+  modifications: Array<{
+    type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED";
+    delta: number;
+  }>,
+  causedBy: string,
 ): GameEvent[] {
   return modifications.map(mod => ({
     ...mod,
@@ -30,11 +33,13 @@ function createResourceEvents(
 function calculateMerchantBonus(
   playerState: { inPlay: CardName[] },
   card: CardName,
-  isPlaying: boolean
+  isPlaying: boolean,
 ): number {
   if (card !== "Silver") return 0;
 
-  const merchantsInPlay = playerState.inPlay.filter(c => c === "Merchant").length;
+  const merchantsInPlay = playerState.inPlay.filter(
+    c => c === "Merchant",
+  ).length;
   const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
 
   if (isPlaying) {
@@ -53,7 +58,7 @@ function calculateMerchantBonus(
 export function handleCommand(
   state: GameState,
   command: GameCommand,
-  fromPlayer?: PlayerId
+  fromPlayer?: PlayerId,
 ): CommandResult {
   // Validate player turn (unless it's a decision response or undo)
   if (fromPlayer && !isValidPlayer(state, command, fromPlayer)) {
@@ -62,7 +67,12 @@ export function handleCommand(
 
   switch (command.type) {
     case "START_GAME":
-      return handleStartGame(state, command.players, command.kingdomCards, command.seed);
+      return handleStartGame(
+        state,
+        command.players,
+        command.kingdomCards,
+        command.seed,
+      );
 
     case "PLAY_ACTION":
       return handlePlayAction(state, command.player, command.card);
@@ -86,7 +96,12 @@ export function handleCommand(
       return handleSubmitDecision(state, command.player, command.choice);
 
     case "REQUEST_UNDO":
-      return handleRequestUndo(state, command.player, command.toEventId, command.reason);
+      return handleRequestUndo(
+        state,
+        command.player,
+        command.toEventId,
+        command.reason,
+      );
 
     case "APPROVE_UNDO":
     case "DENY_UNDO":
@@ -94,7 +109,8 @@ export function handleCommand(
       return { ok: false, error: "Undo approval handled by engine" };
 
     default: {
-      const _exhaustive: never = command; void _exhaustive;
+      const _exhaustive: never = command;
+      void _exhaustive;
       return { ok: false, error: "Unknown command type" };
     }
   }
@@ -103,14 +119,22 @@ export function handleCommand(
 /**
  * Check if a player can issue this command.
  */
-function isValidPlayer(state: GameState, command: GameCommand, fromPlayer: PlayerId): boolean {
+function isValidPlayer(
+  state: GameState,
+  command: GameCommand,
+  fromPlayer: PlayerId,
+): boolean {
   // Decision responses can come from the decision's player
   if (command.type === "SUBMIT_DECISION") {
     return state.pendingDecision?.player === fromPlayer;
   }
 
   // Undo requests can come from any player
-  if (command.type === "REQUEST_UNDO" || command.type === "APPROVE_UNDO" || command.type === "DENY_UNDO") {
+  if (
+    command.type === "REQUEST_UNDO" ||
+    command.type === "APPROVE_UNDO" ||
+    command.type === "DENY_UNDO"
+  ) {
     return true;
   }
 
@@ -126,7 +150,7 @@ function handleStartGame(
   _state: GameState,
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number
+  seed?: number,
 ): CommandResult {
   const events: GameEvent[] = [];
 
@@ -149,8 +173,16 @@ function handleStartGame(
 
   // Deal starting decks (7 Copper, 3 Estate)
   const startingDeck: CardName[] = [
-    "Copper", "Copper", "Copper", "Copper", "Copper", "Copper", "Copper",
-    "Estate", "Estate", "Estate",
+    "Copper",
+    "Copper",
+    "Copper",
+    "Copper",
+    "Copper",
+    "Copper",
+    "Copper",
+    "Estate",
+    "Estate",
+    "Estate",
   ];
 
   for (const player of players) {
@@ -184,10 +216,15 @@ function handleStartGame(
   });
 
   // Add initial resources as explicit events for log clarity
-  events.push(...createResourceEvents([
-    { type: "ACTIONS_MODIFIED", delta: 1 },
-    { type: "BUYS_MODIFIED", delta: 1 },
-  ], turnStartId));
+  events.push(
+    ...createResourceEvents(
+      [
+        { type: "ACTIONS_MODIFIED", delta: 1 },
+        { type: "BUYS_MODIFIED", delta: 1 },
+      ],
+      turnStartId,
+    ),
+  );
 
   return { ok: true, events };
 }
@@ -195,7 +232,7 @@ function handleStartGame(
 function handlePlayAction(
   state: GameState,
   player: PlayerId,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   // Validate
   if (state.phase !== "action") {
@@ -228,9 +265,12 @@ function handlePlayAction(
   });
 
   // Action cost - caused by playing the card
-  events.push(...createResourceEvents([
-    { type: "ACTIONS_MODIFIED", delta: -1 },
-  ], rootEventId));
+  events.push(
+    ...createResourceEvents(
+      [{ type: "ACTIONS_MODIFIED", delta: -1 }],
+      rootEventId,
+    ),
+  );
 
   // Apply these events to get intermediate state
   const midState = applyEvents(state, events);
@@ -276,7 +316,7 @@ function handlePlayAction(
 function handlePlayTreasure(
   state: GameState,
   player: PlayerId,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   if (state.phase !== "buy") {
     return { ok: false, error: "Not in buy phase" };
@@ -307,23 +347,32 @@ function handlePlayTreasure(
   // Add coins - caused by playing the treasure
   const coins = CARDS[card].coins || 0;
   if (coins > 0) {
-    events.push(...createResourceEvents([
-      { type: "COINS_MODIFIED", delta: coins },
-    ], rootEventId));
+    events.push(
+      ...createResourceEvents(
+        [{ type: "COINS_MODIFIED", delta: coins }],
+        rootEventId,
+      ),
+    );
   }
 
   // Check for Merchant bonus (first Silver = +$1)
   const merchantBonus = calculateMerchantBonus(playerState, card, true);
   if (merchantBonus > 0) {
-    events.push(...createResourceEvents([
-      { type: "COINS_MODIFIED", delta: merchantBonus },
-    ], rootEventId));
+    events.push(
+      ...createResourceEvents(
+        [{ type: "COINS_MODIFIED", delta: merchantBonus }],
+        rootEventId,
+      ),
+    );
   }
 
   return { ok: true, events };
 }
 
-function handlePlayAllTreasures(state: GameState, player: PlayerId): CommandResult {
+function handlePlayAllTreasures(
+  state: GameState,
+  player: PlayerId,
+): CommandResult {
   const playerState = state.players[player];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
@@ -362,7 +411,7 @@ function handlePlayAllTreasures(state: GameState, player: PlayerId): CommandResu
 function handleUnplayTreasure(
   state: GameState,
   player: PlayerId,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   if (state.phase !== "buy") {
     return { ok: false, error: "Not in buy phase" };
@@ -380,9 +429,14 @@ function handleUnplayTreasure(
   }
 
   // Check if any purchases have been made this turn
-  const hasMadePurchases = state.turnHistory.some(action => action.type === "buy_card");
+  const hasMadePurchases = state.turnHistory.some(
+    action => action.type === "buy_card",
+  );
   if (hasMadePurchases) {
-    return { ok: false, error: "Cannot unplay treasures after already made purchases" };
+    return {
+      ok: false,
+      error: "Cannot unplay treasures after already made purchases",
+    };
   }
 
   const events: GameEvent[] = [];
@@ -403,9 +457,12 @@ function handleUnplayTreasure(
   const totalDelta = -coins + merchantBonus; // merchantBonus is already negative
 
   if (totalDelta !== 0) {
-    events.push(...createResourceEvents([
-      { type: "COINS_MODIFIED", delta: totalDelta },
-    ], rootEventId));
+    events.push(
+      ...createResourceEvents(
+        [{ type: "COINS_MODIFIED", delta: totalDelta }],
+        rootEventId,
+      ),
+    );
   }
 
   return { ok: true, events };
@@ -414,7 +471,7 @@ function handleUnplayTreasure(
 function handleBuyCard(
   state: GameState,
   player: PlayerId,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   if (state.phase !== "buy") {
     return { ok: false, error: "Not in buy phase" };
@@ -444,10 +501,13 @@ function handleBuyCard(
       to: "discard",
       id: rootEventId,
     },
-    ...createResourceEvents([
-      { type: "BUYS_MODIFIED", delta: -1 },
-      { type: "COINS_MODIFIED", delta: -cardDef.cost },
-    ], rootEventId),
+    ...createResourceEvents(
+      [
+        { type: "BUYS_MODIFIED", delta: -1 },
+        { type: "COINS_MODIFIED", delta: -cardDef.cost },
+      ],
+      rootEventId,
+    ),
   ];
 
   return { ok: true, events };
@@ -508,7 +568,12 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
     // Draw 5 new cards
     const afterDiscard = applyEvents(state, events);
-    const drawEvents = createDrawEventsForCleanup(afterDiscard, player, 5, endTurnId);
+    const drawEvents = createDrawEventsForCleanup(
+      afterDiscard,
+      player,
+      5,
+      endTurnId,
+    );
     events.push(...drawEvents);
 
     // Check game over
@@ -530,10 +595,15 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       });
 
       // Add initial resources as explicit events for log clarity
-      events.push(...createResourceEvents([
-        { type: "ACTIONS_MODIFIED", delta: 1 },
-        { type: "BUYS_MODIFIED", delta: 1 },
-      ], turnStartId));
+      events.push(
+        ...createResourceEvents(
+          [
+            { type: "ACTIONS_MODIFIED", delta: 1 },
+            { type: "BUYS_MODIFIED", delta: 1 },
+          ],
+          turnStartId,
+        ),
+      );
     }
   }
 
@@ -543,7 +613,7 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 function handleSubmitDecision(
   state: GameState,
   player: PlayerId,
-  choice: DecisionChoice
+  choice: DecisionChoice,
 ): CommandResult {
   if (!state.pendingDecision) {
     return { ok: false, error: "No pending decision" };
@@ -633,7 +703,7 @@ function handleRequestUndo(
   _state: GameState,
   player: PlayerId,
   toEventId: string,
-  reason?: string
+  reason?: string,
 ): CommandResult {
   const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
@@ -657,10 +727,32 @@ function handleRequestUndo(
 
 function selectRandomKingdomCards(): CardName[] {
   const allKingdom: CardName[] = [
-    "Cellar", "Chapel", "Moat", "Harbinger", "Merchant", "Vassal", "Village",
-    "Workshop", "Bureaucrat", "Gardens", "Militia", "Moneylender", "Poacher",
-    "Remodel", "Smithy", "Throne Room", "Bandit", "Council Room", "Festival",
-    "Laboratory", "Library", "Market", "Mine", "Sentry", "Witch", "Artisan",
+    "Cellar",
+    "Chapel",
+    "Moat",
+    "Harbinger",
+    "Merchant",
+    "Vassal",
+    "Village",
+    "Workshop",
+    "Bureaucrat",
+    "Gardens",
+    "Militia",
+    "Moneylender",
+    "Poacher",
+    "Remodel",
+    "Smithy",
+    "Throne Room",
+    "Bandit",
+    "Council Room",
+    "Festival",
+    "Laboratory",
+    "Library",
+    "Market",
+    "Mine",
+    "Sentry",
+    "Witch",
+    "Artisan",
   ];
 
   // Simple shuffle for now (could use seeded RNG)
@@ -679,20 +771,26 @@ const SUPPLY_CONSTANTS = {
   VICTORY_CARD_COUNT_3P_PLUS: 12,
 };
 
-function calculateSupply(playerCount: number, kingdomCards: CardName[]): Record<string, number> {
+function calculateSupply(
+  playerCount: number,
+  kingdomCards: CardName[],
+): Record<string, number> {
   const supply: Record<string, number> = {};
 
   // Victory cards scale with player count
-  const victoryCount = playerCount <= 2
-    ? SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_2P
-    : SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_3P_PLUS;
+  const victoryCount =
+    playerCount <= 2
+      ? SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_2P
+      : SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_3P_PLUS;
 
   supply.Estate = victoryCount;
   supply.Duchy = victoryCount;
   supply.Province = victoryCount;
 
   // Treasure cards
-  supply.Copper = SUPPLY_CONSTANTS.COPPER_BASE - (playerCount * SUPPLY_CONSTANTS.COPPER_PER_PLAYER);
+  supply.Copper =
+    SUPPLY_CONSTANTS.COPPER_BASE -
+    playerCount * SUPPLY_CONSTANTS.COPPER_PER_PLAYER;
   supply.Silver = SUPPLY_CONSTANTS.SILVER_COUNT;
   supply.Gold = SUPPLY_CONSTANTS.GOLD_COUNT;
 
@@ -701,7 +799,8 @@ function calculateSupply(playerCount: number, kingdomCards: CardName[]): Record<
 
   // Kingdom cards (10 each)
   for (const card of kingdomCards) {
-    supply[card] = card === "Gardens" ? victoryCount : SUPPLY_CONSTANTS.KINGDOM_CARD_COUNT;
+    supply[card] =
+      card === "Gardens" ? victoryCount : SUPPLY_CONSTANTS.KINGDOM_CARD_COUNT;
   }
 
   return supply;
@@ -711,13 +810,16 @@ function createDrawEventsForCleanup(
   state: GameState,
   player: string,
   count: number,
-  causedBy?: string
+  causedBy?: string,
 ): GameEvent[] {
   const playerState = state.players[player];
   if (!playerState) return [];
 
   const events: GameEvent[] = [];
-  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
+    playerState,
+    count,
+  );
 
   if (shuffled && cardsBeforeShuffle) {
     // Draw cards before shuffle
@@ -781,7 +883,9 @@ function checkGameOver(state: GameState): GameEvent | null {
   }
 
   // Three piles empty
-  const emptyPiles = Object.values(state.supply).filter(count => count <= 0).length;
+  const emptyPiles = Object.values(state.supply).filter(
+    count => count <= 0,
+  ).length;
   if (emptyPiles >= 3) {
     return createGameOverEvent(state, "three_piles_empty");
   }
@@ -791,7 +895,7 @@ function checkGameOver(state: GameState): GameEvent | null {
 
 function createGameOverEvent(
   state: GameState,
-  reason: "provinces_empty" | "three_piles_empty"
+  reason: "provinces_empty" | "three_piles_empty",
 ): GameEvent {
   const scores: Record<string, number> = {};
 

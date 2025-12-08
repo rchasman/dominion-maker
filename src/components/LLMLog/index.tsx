@@ -1,7 +1,12 @@
 import { useState } from "react";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/types";
-import type { LLMLogEntry, ConsensusVotingData, TimingData, GameStateSnapshot } from "./types";
+import type {
+  LLMLogEntry,
+  ConsensusVotingData,
+  TimingData,
+  GameStateSnapshot,
+} from "./types";
 import { useLiveTimer } from "./hooks/useLiveTimer";
 import { useTurnExtraction } from "./hooks/useTurnExtraction";
 import { useNavigationState } from "./hooks/useNavigationState";
@@ -15,10 +20,17 @@ export type { LLMLogEntry } from "./types";
 interface LLMLogProps {
   entries: LLMLogEntry[];
   gameMode?: GameMode;
-  modelSettings?: { settings: ModelSettings; onChange: (settings: ModelSettings) => void };
+  modelSettings?: {
+    settings: ModelSettings;
+    onChange: (settings: ModelSettings) => void;
+  };
 }
 
-export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogProps) {
+export function LLMLog({
+  entries,
+  gameMode = "maker",
+  modelSettings,
+}: LLMLogProps) {
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
   const [activePaneState, setActivePaneState] = useState<PaneType>(() => {
     const saved = localStorage.getItem("llm-log-active-pane");
@@ -79,15 +91,26 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
             userSelect: "none",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", width: "100%" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+              width: "100%",
+            }}
+          >
             <span style={{ flex: 1 }}>Consensus Viewer</span>
             {modelSettings && (
               <button
-                onClick={() => setIsModelSettingsExpanded(!isModelSettingsExpanded)}
+                onClick={() =>
+                  setIsModelSettingsExpanded(!isModelSettingsExpanded)
+                }
                 style={{
                   background: "none",
                   border: "none",
-                  color: isModelSettingsExpanded ? "var(--color-action)" : "var(--color-text-secondary)",
+                  color: isModelSettingsExpanded
+                    ? "var(--color-action)"
+                    : "var(--color-text-secondary)",
                   cursor: "pointer",
                   fontSize: "0.875rem",
                   fontWeight: 400,
@@ -95,24 +118,42 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
                   padding: "0",
                   transition: "color 0.15s",
                 }}
-                onMouseEnter={(e) => !isModelSettingsExpanded && (e.currentTarget.style.color = "var(--color-gold)")}
-                onMouseLeave={(e) => !isModelSettingsExpanded && (e.currentTarget.style.color = "var(--color-text-secondary)")}
+                onMouseEnter={e =>
+                  !isModelSettingsExpanded &&
+                  (e.currentTarget.style.color = "var(--color-gold)")
+                }
+                onMouseLeave={e =>
+                  !isModelSettingsExpanded &&
+                  (e.currentTarget.style.color = "var(--color-text-secondary)")
+                }
                 title="Model Settings"
               >
                 ⚙
               </button>
             )}
             {turns.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                }}
+              >
                 <button
                   onClick={handlePrevTurn}
                   disabled={!hasPrevTurn}
-                  onMouseEnter={(e) => hasPrevTurn && (e.currentTarget.style.opacity = "0.5")}
-                  onMouseLeave={(e) => hasPrevTurn && (e.currentTarget.style.opacity = "1")}
+                  onMouseEnter={e =>
+                    hasPrevTurn && (e.currentTarget.style.opacity = "0.5")
+                  }
+                  onMouseLeave={e =>
+                    hasPrevTurn && (e.currentTarget.style.opacity = "1")
+                  }
                   style={{
                     background: "none",
                     border: "none",
-                    color: hasPrevTurn ? "var(--color-gold)" : "var(--color-text-secondary)",
+                    color: hasPrevTurn
+                      ? "var(--color-gold)"
+                      : "var(--color-text-secondary)",
                     cursor: hasPrevTurn ? "pointer" : "not-allowed",
                     fontSize: "0.85rem",
                     fontWeight: 700,
@@ -124,18 +165,29 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
                 >
                   ↶
                 </button>
-                <span style={{ color: "var(--color-text-secondary)", fontWeight: 400 }}>
+                <span
+                  style={{
+                    color: "var(--color-text-secondary)",
+                    fontWeight: 400,
+                  }}
+                >
                   Turn {currentTurnIndex + 1} of {turns.length}
                 </span>
                 <button
                   onClick={handleNextTurn}
                   disabled={!hasNextTurn}
-                  onMouseEnter={(e) => hasNextTurn && (e.currentTarget.style.opacity = "0.5")}
-                  onMouseLeave={(e) => hasNextTurn && (e.currentTarget.style.opacity = "1")}
+                  onMouseEnter={e =>
+                    hasNextTurn && (e.currentTarget.style.opacity = "0.5")
+                  }
+                  onMouseLeave={e =>
+                    hasNextTurn && (e.currentTarget.style.opacity = "1")
+                  }
                   style={{
                     background: "none",
                     border: "none",
-                    color: hasNextTurn ? "var(--color-gold)" : "var(--color-text-secondary)",
+                    color: hasNextTurn
+                      ? "var(--color-gold)"
+                      : "var(--color-text-secondary)",
                     cursor: hasNextTurn ? "pointer" : "not-allowed",
                     fontSize: "0.85rem",
                     fontWeight: 700,
@@ -155,26 +207,37 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
 
       {/* Model Settings Panel */}
       {isModelSettingsExpanded && modelSettings && (
-        <div style={{
-          paddingLeft: "var(--space-4)",
-          paddingRight: "var(--space-4)",
-          paddingBottom: "var(--space-4)",
-          borderBottom: "1px solid var(--color-border)",
-          background: "var(--color-bg-secondary)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-4)",
-          maxHeight: "70vh",
-          overflow: "auto",
-        }}>
+        <div
+          style={{
+            paddingLeft: "var(--space-4)",
+            paddingRight: "var(--space-4)",
+            paddingBottom: "var(--space-4)",
+            borderBottom: "1px solid var(--color-border)",
+            background: "var(--color-bg-secondary)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-4)",
+            maxHeight: "70vh",
+            overflow: "auto",
+          }}
+        >
           {/* Consensus Count */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", paddingTop: "var(--space-4)" }}>
-            <label style={{
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-            }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-2)",
+              paddingTop: "var(--space-4)",
+            }}
+          >
+            <label
+              style={{
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+              }}
+            >
               Consensus Count: {modelSettings.settings.consensusCount}
             </label>
             <input
@@ -182,23 +245,33 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
               min="1"
               max="50"
               value={modelSettings.settings.consensusCount}
-              onChange={(e) => modelSettings.onChange({ ...modelSettings.settings, consensusCount: Number(e.target.value) })}
+              onChange={e =>
+                modelSettings.onChange({
+                  ...modelSettings.settings,
+                  consensusCount: Number(e.target.value),
+                })
+              }
               style={{
                 width: "100%",
                 cursor: "pointer",
               }}
             />
-            <div style={{
-              fontSize: "0.625rem",
-              color: "var(--color-text-tertiary)",
-              lineHeight: 1.4,
-            }}>
+            <div
+              style={{
+                fontSize: "0.625rem",
+                color: "var(--color-text-tertiary)",
+                lineHeight: 1.4,
+              }}
+            >
               Total models to run (may include duplicates)
             </div>
           </div>
 
           {/* Model Checkboxes - Grouped by Provider */}
-          <ModelPicker settings={modelSettings.settings} onChange={modelSettings.onChange} />
+          <ModelPicker
+            settings={modelSettings.settings}
+            onChange={modelSettings.onChange}
+          />
         </div>
       )}
 
@@ -243,33 +316,58 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
               </>
             )}
           </div>
-        ) : currentTurn?.pending && currentActionIndex === currentTurn.decisions.length ? (
+        ) : currentTurn?.pending &&
+          currentActionIndex === currentTurn.decisions.length ? (
           /* Show live panes with both Voting and Performance tabs for pending action */
           <>
-            <div style={{ padding: "0 var(--space-4)", marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-              <div style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                marginBottom: "var(--space-2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                userSelect: "none"
-              }}>
+            <div
+              style={{
+                padding: "0 var(--space-4)",
+                marginTop: "var(--space-3)",
+                marginBottom: "var(--space-3)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-primary)",
+                  marginBottom: "var(--space-2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  userSelect: "none",
+                }}
+              >
                 <span>
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.subPhaseLabel || "Sub-phase"}: {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                      {currentActionIndex + 1} of{" "}
+                      {currentTurn.decisions.length + 1}{" "}
                     </span>
                   ) : (
                     <>
-                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
-                      Action {currentActionIndex + 1} of {currentTurn.decisions.length + 1}{" "}
+                      {currentTurn.gameTurn &&
+                        `Turn #${currentTurn.gameTurn}: `}
+                      Action {currentActionIndex + 1} of{" "}
+                      {currentTurn.decisions.length + 1}{" "}
                     </>
                   )}
-                  <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
-                    ({Array.from(currentTurn.modelStatuses?.values() || []).filter(s => s.completed).length}/{currentTurn.pendingData?.totalModels || "?"})
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "var(--color-gold)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    (
+                    {
+                      Array.from(
+                        currentTurn.modelStatuses?.values() || [],
+                      ).filter(s => s.completed).length
+                    }
+                    /{currentTurn.pendingData?.totalModels || "?"})
                   </span>
                 </span>
                 <ActionNavigationControls
@@ -280,7 +378,10 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
                 />
               </div>
             </div>
-            <PaneTabSwitcher activePane={activePane} onPaneChange={setActivePane} />
+            <PaneTabSwitcher
+              activePane={activePane}
+              onPaneChange={setActivePane}
+            />
             <PaneContent
               activePane={activePane}
               votingData={null}
@@ -294,30 +395,58 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
         ) : currentDecision ? (
           <>
             {/* Decision Info with Navigation */}
-            <div style={{ padding: "0 var(--space-4)", marginTop: "var(--space-3)", marginBottom: "var(--space-3)" }}>
-              <div style={{
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                marginBottom: "var(--space-2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                userSelect: "none"
-              }}>
+            <div
+              style={{
+                padding: "0 var(--space-4)",
+                marginTop: "var(--space-3)",
+                marginBottom: "var(--space-3)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  color: "var(--color-text-primary)",
+                  marginBottom: "var(--space-2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  userSelect: "none",
+                }}
+              >
                 <span>
                   {currentTurn.isSubPhase ? (
                     <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.subPhaseLabel || "Sub-phase"}: {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
+                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                      {currentActionIndex + 1} of{" "}
+                      {currentTurn.pending
+                        ? currentTurn.decisions.length + 1
+                        : currentTurn.decisions.length}{" "}
                     </span>
                   ) : (
                     <>
-                      {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
-                      Action {currentActionIndex + 1} of {currentTurn.pending ? currentTurn.decisions.length + 1 : currentTurn.decisions.length}{" "}
+                      {currentTurn.gameTurn &&
+                        `Turn #${currentTurn.gameTurn}: `}
+                      Action {currentActionIndex + 1} of{" "}
+                      {currentTurn.pending
+                        ? currentTurn.decisions.length + 1
+                        : currentTurn.decisions.length}{" "}
                     </>
                   )}
-                  <span style={{ fontSize: "0.7rem", color: "var(--color-gold)", fontWeight: 400 }}>
-                    ({((Number(currentDecision.timingEntry?.data?.parallelDuration) || 0) / 1000).toFixed(2)}s)
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "var(--color-gold)",
+                      fontWeight: 400,
+                    }}
+                  >
+                    (
+                    {(
+                      (Number(
+                        currentDecision.timingEntry?.data?.parallelDuration,
+                      ) || 0) / 1000
+                    ).toFixed(2)}
+                    s)
                   </span>
                 </span>
                 <ActionNavigationControls
@@ -337,11 +466,28 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
 
             <PaneContent
               activePane={activePane}
-              votingData={currentDecision.votingEntry.data as unknown as ConsensusVotingData}
-              timingData={currentDecision.timingEntry?.data as TimingData | undefined}
+              votingData={
+                currentDecision.votingEntry
+                  .data as unknown as ConsensusVotingData
+              }
+              timingData={
+                currentDecision.timingEntry?.data as TimingData | undefined
+              }
               modelStatuses={currentDecision.modelStatuses}
-              gameStateData={currentDecision.votingEntry.data?.gameState as GameStateSnapshot | undefined}
-              totalModels={Number((currentDecision.votingEntry.data as unknown as { topResult?: { totalVotes?: number } })?.topResult?.totalVotes) || 0}
+              gameStateData={
+                currentDecision.votingEntry.data?.gameState as
+                  | GameStateSnapshot
+                  | undefined
+              }
+              totalModels={
+                Number(
+                  (
+                    currentDecision.votingEntry.data as unknown as {
+                      topResult?: { totalVotes?: number };
+                    }
+                  )?.topResult?.totalVotes,
+                ) || 0
+              }
               now={now}
             />
           </>

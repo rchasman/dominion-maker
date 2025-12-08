@@ -6,7 +6,12 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { peekDraw, isActionCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const vassal: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
 
@@ -19,7 +24,12 @@ export const vassal: CardEffect = ({ state, player, decision, stage }): CardEffe
     }
 
     const topCard = revealed[0];
-    events.push({ type: "CARD_DISCARDED", player, card: topCard, from: "deck" });
+    events.push({
+      type: "CARD_DISCARDED",
+      player,
+      card: topCard,
+      from: "deck",
+    });
 
     // If it's an action, offer to play it
     if (isActionCard(topCard)) {

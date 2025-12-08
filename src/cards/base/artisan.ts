@@ -5,7 +5,12 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getGainableCards } from "../effect-types";
 
-export const artisan: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const artisan: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
 
   // Stage 1: Choose card to gain
@@ -60,7 +65,9 @@ export const artisan: CardEffect = ({ state, player, decision, stage }): CardEff
     if (!toPutOnDeck) return { events: [] };
 
     return {
-      events: [{ type: "CARD_PUT_ON_DECK", player, card: toPutOnDeck, from: "hand" }],
+      events: [
+        { type: "CARD_PUT_ON_DECK", player, card: toPutOnDeck, from: "hand" },
+      ],
     };
   }
 

@@ -17,12 +17,12 @@ LLMs make mistakes on long sequential tasks. MAKER addresses this by breaking ta
 **MAKER's Principles**: Break tasks into atomic steps. Vote on each step with multiple agents. First valid move to get k votes ahead wins.
 
 For each decision in the game:
+
 1. 8 different LLMs (Claude, GPT, Gemini, Mistral) receive the game state
 2. Each model votes for an action
 3. Invalid actions are filtered out
 4. First action to get k votes ahead of the runner-up wins
 5. Game engine executes that action and asks "what's next?"
-
 
 ## Why Dominion?
 
@@ -77,13 +77,13 @@ Each turn: play action cards, buy new cards, discard hand, draw 5 new cards. You
 
 ```typescript
 type Action =
-  | { type: "play_action", card: CardName, reasoning?: string }
-  | { type: "play_treasure", card: CardName }
-  | { type: "buy_card", card: CardName, reasoning?: string }
-  | { type: "gain_card", card: CardName }
-  | { type: "discard_card", card: CardName }
-  | { type: "trash_card", card: CardName }
-  | { type: "end_phase" }
+  | { type: "play_action"; card: CardName; reasoning?: string }
+  | { type: "play_treasure"; card: CardName }
+  | { type: "buy_card"; card: CardName; reasoning?: string }
+  | { type: "gain_card"; card: CardName }
+  | { type: "discard_card"; card: CardName }
+  | { type: "trash_card"; card: CardName }
+  | { type: "end_phase" };
 ```
 
 ### Early Consensus
@@ -93,6 +93,7 @@ Models vote in parallel. As votes complete, check if leader is k votes ahead. If
 ### Complex Cards
 
 Cards like Chapel ("trash up to 4 cards") break down into iterative decisions:
+
 1. "Which card should I trash first?" → Vote → "Curse"
 2. "Which card should I trash second?" → Vote → "Estate"
 3. "Trash more or done?" → Vote → "Done"
@@ -100,6 +101,7 @@ Cards like Chapel ("trash up to 4 cards") break down into iterative decisions:
 ## Results
 
 Typical game (300 actions, 8 voters):
+
 - Invalid actions filtered: ~5-7%
 - Illegal moves executed: 0
 - Average consensus: 5.2 votes per action

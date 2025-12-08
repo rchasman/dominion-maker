@@ -1,4 +1,9 @@
-import type { GameState, PlayerState, LogEntry, CardName } from "../types/game-state";
+import type {
+  GameState,
+  PlayerState,
+  LogEntry,
+  CardName,
+} from "../types/game-state";
 import type { GameEvent } from "./types";
 
 // Helper to create the players record with proper typing
@@ -19,7 +24,11 @@ function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
 /**
  * Helper: Remove a card from a zone (hand, deck, discard) immutably.
  */
-const removeCardFromZone = (zone: CardName[], card: CardName, fromDeck: boolean = false): CardName[] => {
+const removeCardFromZone = (
+  zone: CardName[],
+  card: CardName,
+  fromDeck: boolean = false,
+): CardName[] => {
   const idx = fromDeck ? zone.lastIndexOf(card) : zone.indexOf(card);
   return idx === -1 ? zone : [...zone.slice(0, idx), ...zone.slice(idx + 1)];
 };
@@ -27,13 +36,17 @@ const removeCardFromZone = (zone: CardName[], card: CardName, fromDeck: boolean 
 /**
  * Helper: Remove a card from inPlay zone along with its source index.
  */
-const removeCardFromInPlay = (inPlay: CardName[], indices: number[], card: CardName): [CardName[], number[]] => {
+const removeCardFromInPlay = (
+  inPlay: CardName[],
+  indices: number[],
+  card: CardName,
+): [CardName[], number[]] => {
   const idx = inPlay.indexOf(card);
   return idx === -1
     ? [inPlay, indices]
     : [
         [...inPlay.slice(0, idx), ...inPlay.slice(idx + 1)],
-        [...indices.slice(0, idx), ...indices.slice(idx + 1)]
+        [...indices.slice(0, idx), ...indices.slice(idx + 1)],
       ];
 };
 
@@ -146,7 +159,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         phase: event.phase,
         log: [
           ...state.log,
-          { type: "phase-change", player: state.activePlayer, phase: event.phase },
+          {
+            type: "phase-change",
+            player: state.activePlayer,
+            phase: event.phase,
+          },
         ],
       };
     }
@@ -174,7 +191,12 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
         },
         log: [
           ...state.log,
-          { type: "draw-cards", player: event.player, count: 1, cards: [event.card] },
+          {
+            type: "draw-cards",
+            player: event.player,
+            count: 1,
+            cards: [event.card],
+          },
         ],
       };
     }
@@ -198,7 +220,10 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             ...playerState,
             hand: newHand,
             inPlay: [...playerState.inPlay, event.card],
-            inPlaySourceIndices: [...playerState.inPlaySourceIndices, handIndex],
+            inPlaySourceIndices: [
+              ...playerState.inPlaySourceIndices,
+              handIndex,
+            ],
           },
         },
       };
@@ -208,9 +233,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
-      const [newInPlay, newInPlaySourceIndices] = event.from === "inPlay"
-        ? removeCardFromInPlay(playerState.inPlay, playerState.inPlaySourceIndices, event.card)
-        : [playerState.inPlay, playerState.inPlaySourceIndices];
+      const [newInPlay, newInPlaySourceIndices] =
+        event.from === "inPlay"
+          ? removeCardFromInPlay(
+              playerState.inPlay,
+              playerState.inPlaySourceIndices,
+              event.card,
+            )
+          : [playerState.inPlay, playerState.inPlaySourceIndices];
 
       return {
         ...state,
@@ -218,16 +248,27 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           ...state.players,
           [event.player]: {
             ...playerState,
-            hand: event.from === "hand" ? removeCardFromZone(playerState.hand, event.card) : playerState.hand,
+            hand:
+              event.from === "hand"
+                ? removeCardFromZone(playerState.hand, event.card)
+                : playerState.hand,
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
-            deck: event.from === "deck" ? removeCardFromZone(playerState.deck, event.card, true) : playerState.deck,
+            deck:
+              event.from === "deck"
+                ? removeCardFromZone(playerState.deck, event.card, true)
+                : playerState.deck,
             discard: [...playerState.discard, event.card],
           },
         },
         log: [
           ...state.log,
-          { type: "discard-cards", player: event.player, count: 1, cards: [event.card] },
+          {
+            type: "discard-cards",
+            player: event.player,
+            count: 1,
+            cards: [event.card],
+          },
         ],
       };
     }
@@ -236,9 +277,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
-      const [newInPlay, newInPlaySourceIndices] = event.from === "inPlay"
-        ? removeCardFromInPlay(playerState.inPlay, playerState.inPlaySourceIndices, event.card)
-        : [playerState.inPlay, playerState.inPlaySourceIndices];
+      const [newInPlay, newInPlaySourceIndices] =
+        event.from === "inPlay"
+          ? removeCardFromInPlay(
+              playerState.inPlay,
+              playerState.inPlaySourceIndices,
+              event.card,
+            )
+          : [playerState.inPlay, playerState.inPlaySourceIndices];
 
       return {
         ...state,
@@ -246,8 +292,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           ...state.players,
           [event.player]: {
             ...playerState,
-            hand: event.from === "hand" ? removeCardFromZone(playerState.hand, event.card) : playerState.hand,
-            deck: event.from === "deck" ? removeCardFromZone(playerState.deck, event.card, true) : playerState.deck,
+            hand:
+              event.from === "hand"
+                ? removeCardFromZone(playerState.hand, event.card)
+                : playerState.hand,
+            deck:
+              event.from === "deck"
+                ? removeCardFromZone(playerState.deck, event.card, true)
+                : playerState.deck,
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
           },
@@ -282,9 +334,13 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       }
 
       // Track purchases in turnHistory (cards gained to discard are purchases)
-      const newTurnHistory = event.to === "discard"
-        ? [...state.turnHistory, { type: "buy_card" as const, card: event.card }]
-        : state.turnHistory;
+      const newTurnHistory =
+        event.to === "discard"
+          ? [
+              ...state.turnHistory,
+              { type: "buy_card" as const, card: event.card },
+            ]
+          : state.turnHistory;
 
       return {
         ...state,
@@ -344,8 +400,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           ...state.players,
           [event.player]: {
             ...playerState,
-            hand: event.from === "hand" ? removeCardFromZone(playerState.hand, event.card) : playerState.hand,
-            discard: event.from === "discard" ? removeCardFromZone(playerState.discard, event.card) : playerState.discard,
+            hand:
+              event.from === "hand"
+                ? removeCardFromZone(playerState.hand, event.card)
+                : playerState.hand,
+            discard:
+              event.from === "discard"
+                ? removeCardFromZone(playerState.discard, event.card)
+                : playerState.discard,
             deck: [...playerState.deck, event.card],
           },
         },
@@ -356,9 +418,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       const playerState = state.players[event.player];
       if (!playerState) return state;
 
-      const [newInPlay, newInPlaySourceIndices] = event.from === "inPlay"
-        ? removeCardFromInPlay(playerState.inPlay, playerState.inPlaySourceIndices, event.card)
-        : [playerState.inPlay, playerState.inPlaySourceIndices];
+      const [newInPlay, newInPlaySourceIndices] =
+        event.from === "inPlay"
+          ? removeCardFromInPlay(
+              playerState.inPlay,
+              playerState.inPlaySourceIndices,
+              event.card,
+            )
+          : [playerState.inPlay, playerState.inPlaySourceIndices];
 
       return {
         ...state,
@@ -369,8 +436,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             hand: [...playerState.hand, event.card],
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
-            discard: event.from === "discard" ? removeCardFromZone(playerState.discard, event.card) : playerState.discard,
-            deck: event.from === "deck" ? removeCardFromZone(playerState.deck, event.card, true) : playerState.deck,
+            discard:
+              event.from === "discard"
+                ? removeCardFromZone(playerState.discard, event.card)
+                : playerState.discard,
+            deck:
+              event.from === "deck"
+                ? removeCardFromZone(playerState.deck, event.card, true)
+                : playerState.deck,
           },
         },
       };
@@ -382,9 +455,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 
     case "ACTIONS_MODIFIED": {
       const newActions = Math.max(0, state.actions + event.delta);
-      const logEntry: LogEntry | null = event.delta > 0
-        ? { type: "get-actions", player: state.activePlayer, count: event.delta }
-        : null;
+      const logEntry: LogEntry | null =
+        event.delta > 0
+          ? {
+              type: "get-actions",
+              player: state.activePlayer,
+              count: event.delta,
+            }
+          : null;
 
       return {
         ...state,
@@ -395,9 +473,10 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 
     case "BUYS_MODIFIED": {
       const newBuys = Math.max(0, state.buys + event.delta);
-      const logEntry: LogEntry | null = event.delta > 0
-        ? { type: "get-buys", player: state.activePlayer, count: event.delta }
-        : null;
+      const logEntry: LogEntry | null =
+        event.delta > 0
+          ? { type: "get-buys", player: state.activePlayer, count: event.delta }
+          : null;
 
       return {
         ...state,
@@ -408,9 +487,14 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 
     case "COINS_MODIFIED": {
       const newCoins = Math.max(0, state.coins + event.delta);
-      const logEntry: LogEntry | null = event.delta > 0
-        ? { type: "get-coins", player: state.activePlayer, count: event.delta }
-        : null;
+      const logEntry: LogEntry | null =
+        event.delta > 0
+          ? {
+              type: "get-coins",
+              player: state.activePlayer,
+              count: event.delta,
+            }
+          : null;
 
       return {
         ...state,
@@ -427,7 +511,8 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
       const decision = event.decision;
       return {
         ...state,
-        subPhase: decision.player !== state.activePlayer ? "opponent_decision" : null,
+        subPhase:
+          decision.player !== state.activePlayer ? "opponent_decision" : null,
         pendingDecision: decision,
       };
     }
@@ -487,4 +572,3 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 export function applyEvents(state: GameState, events: GameEvent[]): GameState {
   return events.reduce(applyEvent, state);
 }
-

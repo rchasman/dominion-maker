@@ -6,7 +6,12 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getOpponents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const militia: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const militia: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const events: GameEvent[] = [];
   const opponents = getOpponents(state, player);
 

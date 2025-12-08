@@ -11,21 +11,63 @@ import { z } from "zod";
 
 // Zod schemas for runtime validation (server-side only)
 const CardNameSchema = z.enum([
-  "Copper", "Silver", "Gold",
-  "Estate", "Duchy", "Province",
+  "Copper",
+  "Silver",
+  "Gold",
+  "Estate",
+  "Duchy",
+  "Province",
   "Curse",
-  "Cellar", "Chapel", "Moat", "Harbinger", "Merchant", "Vassal", "Village", "Workshop",
-  "Bureaucrat", "Gardens", "Militia", "Moneylender", "Poacher", "Remodel", "Smithy",
-  "Throne Room", "Bandit", "Council Room", "Festival", "Laboratory", "Library",
-  "Market", "Mine", "Sentry", "Witch", "Artisan"
+  "Cellar",
+  "Chapel",
+  "Moat",
+  "Harbinger",
+  "Merchant",
+  "Vassal",
+  "Village",
+  "Workshop",
+  "Bureaucrat",
+  "Gardens",
+  "Militia",
+  "Moneylender",
+  "Poacher",
+  "Remodel",
+  "Smithy",
+  "Throne Room",
+  "Bandit",
+  "Council Room",
+  "Festival",
+  "Laboratory",
+  "Library",
+  "Market",
+  "Mine",
+  "Sentry",
+  "Witch",
+  "Artisan",
 ]);
 
-const ActionSchema = z.object({
-  type: z.enum(["play_action", "play_treasure", "buy_card", "gain_card", "discard_card", "trash_card", "end_phase"])
-    .describe("The type of action to perform"),
-  card: CardNameSchema.nullish().describe("The card to act on (not needed for end_phase)"),
-  reasoning: z.string().optional().describe("Explanation for why this action was chosen"),
-}).describe("A single atomic game action");
+const ActionSchema = z
+  .object({
+    type: z
+      .enum([
+        "play_action",
+        "play_treasure",
+        "buy_card",
+        "gain_card",
+        "discard_card",
+        "trash_card",
+        "end_phase",
+      ])
+      .describe("The type of action to perform"),
+    card: CardNameSchema.nullish().describe(
+      "The card to act on (not needed for end_phase)",
+    ),
+    reasoning: z
+      .string()
+      .optional()
+      .describe("Explanation for why this action was chosen"),
+  })
+  .describe("A single atomic game action");
 
 // Create HTTP agents with unlimited concurrent connections
 // Default is 5 connections per host - we increase to Infinity
@@ -36,8 +78,13 @@ const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
   fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    const isHttps = url.startsWith('https:');
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    const isHttps = url.startsWith("https:");
 
     return fetch(input, {
       ...init,
@@ -68,7 +115,6 @@ interface VercelResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -89,11 +135,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rawBody = req.body || (req.text ? await req.text() : "{}");
     const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
 
-    const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
+    const {
+      provider: bodyProvider,
+      currentState,
+      humanChoice,
+      legalActions,
+    } = body as {
+      provider: string;
+      currentState: GameState;
+      humanChoice?: { selectedCards: string[] };
+      legalActions?: unknown[];
+    };
     provider = bodyProvider;
 
     if (!provider || !currentState) {
-      return res.status(400).json({ error: "Missing required fields: provider, currentState" });
+      return res
+        .status(400)
+        .json({ error: "Missing required fields: provider, currentState" });
     }
 
     const modelName = MODEL_MAP[provider];
@@ -104,13 +162,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const model = gateway(modelName);
     const isAnthropic = provider.startsWith("claude");
 
-    const legalActionsStr = legalActions && legalActions.length > 0
-      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
-      : "";
+    const legalActionsStr =
+      legalActions && legalActions.length > 0
+        ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
+        : "";
 
-    const turnHistoryStr = currentState.turnHistory && currentState.turnHistory.length > 0
-      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
-      : "";
+    const turnHistoryStr =
+      currentState.turnHistory && currentState.turnHistory.length > 0
+        ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
+        : "";
 
     const strategicContext = buildStrategicContext(currentState);
 
@@ -127,7 +187,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 
     // Some models don't support json_schema response format - use generateText with explicit JSON instructions
-    const useTextFallback = provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq");
+    const useTextFallback =
+      provider.includes("ministral") ||
+      provider.includes("cerebras") ||
+      provider.includes("groq");
 
     if (useTextFallback) {
       const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
@@ -161,10 +224,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const action = ActionSchema.parse(parsed);
         return res.status(200).json({ action });
       } catch (parseErr) {
-        const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
+        const errorMessage =
+          parseErr instanceof Error ? parseErr.message : String(parseErr);
         apiLogger.error(`${provider} parse failed: ${errorMessage}`);
         apiLogger.error(`${provider} raw text output: ${result.text}`);
-        apiLogger.error(`${provider} extracted json: ${JSON.stringify(parsed)}`);
+        apiLogger.error(
+          `${provider} extracted json: ${JSON.stringify(parsed)}`,
+        );
 
         return res.status(500).json({
           error: 500,
@@ -192,7 +258,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ action: result.object });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
-    const errorWithText = err as { text?: string; value?: { action?: unknown } };
+    const errorWithText = err as {
+      text?: string;
+      value?: { action?: unknown };
+    };
 
     // Handle Gemini wrapping response in extra "action" key
     if (errorWithText.value?.action && provider.includes("gemini")) {
@@ -204,7 +273,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    if (errorWithText.text && (provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq"))) {
+    if (
+      errorWithText.text &&
+      (provider.includes("ministral") ||
+        provider.includes("cerebras") ||
+        provider.includes("groq"))
+    ) {
       try {
         const text = errorWithText.text;
         const chunks = text.split(/\n\n+/);
@@ -213,10 +287,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (chunk.startsWith("{") && chunk.endsWith("}")) {
             try {
               const parsed = JSON.parse(chunk);
-              if (parsed.properties || parsed.description && parsed.required) {
+              if (
+                parsed.properties ||
+                (parsed.description && parsed.required)
+              ) {
                 continue;
               }
-              if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
+              if (
+                parsed.type &&
+                typeof parsed.type === "string" &&
+                parsed.type !== "object"
+              ) {
                 const validated = ActionSchema.parse(parsed);
                 return res.status(200).json({ action: validated });
               }

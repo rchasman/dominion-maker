@@ -43,7 +43,13 @@ export type Phase = "action" | "buy" | "cleanup";
 // Player identifiers
 // For single-player: "human" vs "ai"
 // For multiplayer: "player0", "player1", etc.
-export type Player = "human" | "ai" | "player0" | "player1" | "player2" | "player3";
+export type Player =
+  | "human"
+  | "ai"
+  | "player0"
+  | "player1"
+  | "player2"
+  | "player3";
 
 // Player type (human or AI-controlled)
 export type PlayerType = "human" | "ai";
@@ -78,152 +84,173 @@ export type DecisionChoice = {
   selectedCards: CardName[];
 };
 
-
 // Log entry types with recursive children support
-export type LogEntry = {
-  type: "turn-start";
-  turn: number;
-  player: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "turn-end";
-  player: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "phase-change";
-  player: string;
-  phase: Phase;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "play-treasure";
-  player: string;
-  card: CardName;
-  coins: number;
-  reasoning?: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "unplay-treasure";
-  player: string;
-  card: CardName;
-  coins: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "play-action";
-  player: string;
-  card: CardName;
-  reasoning?: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "buy-card";
-  player: string;
-  card: CardName;
-  vp?: number;
-  reasoning?: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "draw-cards";
-  player: string;
-  count: number;
-  cards?: CardName[];
-  cardCounts?: Record<string, number>; // For aggregated display
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "gain-card";
-  player: string;
-  card: CardName;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "discard-cards";
-  player: string;
-  count: number;
-  cards?: CardName[];
-  cardCounts?: Record<string, number>; // For aggregated display
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "trash-card";
-  player: string;
-  card?: CardName;
-  cards?: CardName[];
-  count?: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "shuffle-deck";
-  player: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "end-turn";
-  player: string;
-  nextPlayer: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "game-over";
-  humanVP: number;
-  aiVP: number;
-  winner: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "start-game";
-  player: string;
-  coppers: number;
-  estates: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "text";
-  message: string;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "get-actions";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "get-buys";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "use-actions";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "use-buys";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "get-coins";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-} | {
-  type: "spend-coins";
-  player: string;
-  count: number;
-  eventId?: string;
-  children?: LogEntry[];
-};
+export type LogEntry =
+  | {
+      type: "turn-start";
+      turn: number;
+      player: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "turn-end";
+      player: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "phase-change";
+      player: string;
+      phase: Phase;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "play-treasure";
+      player: string;
+      card: CardName;
+      coins: number;
+      reasoning?: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "unplay-treasure";
+      player: string;
+      card: CardName;
+      coins: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "play-action";
+      player: string;
+      card: CardName;
+      reasoning?: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "buy-card";
+      player: string;
+      card: CardName;
+      vp?: number;
+      reasoning?: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "draw-cards";
+      player: string;
+      count: number;
+      cards?: CardName[];
+      cardCounts?: Record<string, number>; // For aggregated display
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "gain-card";
+      player: string;
+      card: CardName;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "discard-cards";
+      player: string;
+      count: number;
+      cards?: CardName[];
+      cardCounts?: Record<string, number>; // For aggregated display
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "trash-card";
+      player: string;
+      card?: CardName;
+      cards?: CardName[];
+      count?: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "shuffle-deck";
+      player: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "end-turn";
+      player: string;
+      nextPlayer: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "game-over";
+      humanVP: number;
+      aiVP: number;
+      winner: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "start-game";
+      player: string;
+      coppers: number;
+      estates: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "text";
+      message: string;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "get-actions";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "get-buys";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "use-actions";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "use-buys";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "get-coins";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    }
+  | {
+      type: "spend-coins";
+      player: string;
+      count: number;
+      eventId?: string;
+      children?: LogEntry[];
+    };
 
 export type PlayerState = {
   deck: CardName[];
@@ -236,7 +263,14 @@ export type PlayerState = {
 
 // Action history entry (subset of Action without reasoning)
 export type TurnAction = {
-  type: "play_action" | "play_treasure" | "buy_card" | "end_phase" | "discard_card" | "trash_card" | "gain_card";
+  type:
+    | "play_action"
+    | "play_treasure"
+    | "buy_card"
+    | "end_phase"
+    | "discard_card"
+    | "trash_card"
+    | "gain_card";
   card?: CardName | null;
 };
 

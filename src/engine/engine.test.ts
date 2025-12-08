@@ -199,7 +199,7 @@ describe("DominionEngine - Event Subscribers", () => {
     let notified = false;
     let receivedEvents: GameEvent[] = [];
 
-    engine.subscribe((events) => {
+    engine.subscribe(events => {
       notified = true;
       receivedEvents = events;
     });
@@ -325,7 +325,13 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.coins).toBeGreaterThan(0);
 
     // End buy phase (ends turn)
-    engine.state.players.human.deck = ["Estate", "Duchy", "Province", "Copper", "Silver"];
+    engine.state.players.human.deck = [
+      "Estate",
+      "Duchy",
+      "Province",
+      "Copper",
+      "Silver",
+    ];
     const endTurnResult = engine.dispatch({
       type: "END_PHASE",
       player: "human",
@@ -342,7 +348,14 @@ describe("DominionEngine - Full Game Flow", () => {
     engine.startGame(["human", "ai"]);
 
     // Give human Chapel and some cards
-    engine.state.players.human.hand = ["Chapel", "Copper", "Copper", "Estate", "Estate", "Estate"];
+    engine.state.players.human.hand = [
+      "Chapel",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+      "Estate",
+    ];
     engine.state.actions = 1;
 
     // Play Chapel

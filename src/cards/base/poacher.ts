@@ -6,12 +6,19 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const poacher: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const poacher: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
   // Count empty supply piles
-  const emptyPiles = Object.values(state.supply).filter(count => count === 0).length;
+  const emptyPiles = Object.values(state.supply).filter(
+    count => count === 0,
+  ).length;
 
   // Initial: +1 Card, +1 Action, +$1
   if (!decision || stage === undefined) {

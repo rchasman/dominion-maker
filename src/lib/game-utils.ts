@@ -1,18 +1,37 @@
-import type { CardName, PlayerState, Player, LogEntry } from "../types/game-state";
+import type {
+  CardName,
+  PlayerState,
+  Player,
+  LogEntry,
+} from "../types/game-state";
 import { countVP as countVPFromCards } from "./board-utils";
 
 export function shuffle<T>(array: T[]): T[] {
-  return [...array].reduceRight<T[]>((result, _, currentIndex) => {
-    if (currentIndex === 0) return result;
-    const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
-    [result[currentIndex], result[randomIndex]] = [result[randomIndex], result[currentIndex]];
-    return result;
-  }, [...array]);
+  return [...array].reduceRight<T[]>(
+    (result, _, currentIndex) => {
+      if (currentIndex === 0) return result;
+      const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+      [result[currentIndex], result[randomIndex]] = [
+        result[randomIndex],
+        result[currentIndex],
+      ];
+      return result;
+    },
+    [...array],
+  );
 }
 
-type DrawEvent = { type: 'draw'; cards: CardName[] } | { type: 'shuffle' };
+type DrawEvent = { type: "draw"; cards: CardName[] } | { type: "shuffle" };
 
-export function drawCards({ deck: playerDeck, discard: playerDiscard, hand: playerHand, ...player }: PlayerState, count: number): { player: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
+export function drawCards(
+  {
+    deck: playerDeck,
+    discard: playerDiscard,
+    hand: playerHand,
+    ...player
+  }: PlayerState,
+  count: number,
+): { player: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
   const result = Array.from({ length: count }).reduce<{
     deck: CardName[];
     discard: CardName[];
@@ -21,19 +40,23 @@ export function drawCards({ deck: playerDeck, discard: playerDiscard, hand: play
     events: DrawEvent[];
     currentBatch: CardName[];
   }>(
-    (acc) => {
+    acc => {
       if (acc.deck.length === 0) {
         if (acc.discard.length === 0) return acc;
 
-        const eventsWithBatch = acc.currentBatch.length > 0
-          ? [...acc.events, { type: 'draw' as const, cards: acc.currentBatch }]
-          : acc.events;
+        const eventsWithBatch =
+          acc.currentBatch.length > 0
+            ? [
+                ...acc.events,
+                { type: "draw" as const, cards: acc.currentBatch },
+              ]
+            : acc.events;
 
         return {
           ...acc,
           deck: shuffle(acc.discard),
           discard: [],
-          events: [...eventsWithBatch, { type: 'shuffle' as const }],
+          events: [...eventsWithBatch, { type: "shuffle" as const }],
           currentBatch: [],
         };
       }
@@ -54,15 +77,25 @@ export function drawCards({ deck: playerDeck, discard: playerDiscard, hand: play
       drawn: [],
       events: [],
       currentBatch: [],
-    }
+    },
   );
 
-  const finalEvents = result.currentBatch.length > 0
-    ? [...result.events, { type: 'draw' as const, cards: result.currentBatch }]
-    : result.events;
+  const finalEvents =
+    result.currentBatch.length > 0
+      ? [
+          ...result.events,
+          { type: "draw" as const, cards: result.currentBatch },
+        ]
+      : result.events;
 
   return {
-    player: { ...player, deck: result.deck, hand: result.hand, discard: result.discard, deckTopRevealed: false },
+    player: {
+      ...player,
+      deck: result.deck,
+      hand: result.hand,
+      discard: result.discard,
+      deckTopRevealed: false,
+    },
     drawn: result.drawn,
     events: finalEvents,
   };
@@ -72,14 +105,19 @@ export function drawCards({ deck: playerDeck, discard: playerDiscard, hand: play
 export function logDraw(
   children: LogEntry[],
   { events }: { events: DrawEvent[] },
-  player: Player
+  player: Player,
 ): void {
   children.push(
-    ...events.map((event) =>
-      event.type === 'shuffle'
+    ...events.map(event =>
+      event.type === "shuffle"
         ? { type: "shuffle-deck" as const, player }
-        : { type: "draw-cards" as const, player, count: event.cards.length, cards: event.cards }
-    )
+        : {
+            type: "draw-cards" as const,
+            player,
+            count: event.cards.length,
+            cards: event.cards,
+          },
+    ),
   );
 }
 

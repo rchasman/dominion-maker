@@ -37,7 +37,7 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
       const lastTurnIndex = turns.length - 1;
       const lastTurn = turns[lastTurnIndex];
       const lastActionIndex = lastTurn.pending
-        ? lastTurn.decisions.length  // Point beyond last decision to show pending
+        ? lastTurn.decisions.length // Point beyond last decision to show pending
         : lastTurn.decisions.length - 1;
 
       // Jump to latest unless user has manually navigated away
@@ -48,17 +48,26 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
         });
       }
     }
-  }, [turns.length, turns[turns.length - 1]?.decisions.length, turns[turns.length - 1]?.pending, userNavigatedAway]);
+  }, [
+    turns.length,
+    turns[turns.length - 1]?.decisions.length,
+    turns[turns.length - 1]?.pending,
+    userNavigatedAway,
+  ]);
 
   // Reset to latest when current indices become invalid (e.g., after undo)
   useEffect(() => {
     if (turns.length === 0) return;
 
-    const isCurrentTurnValid = currentTurnIndex >= 0 && currentTurnIndex < turns.length;
+    const isCurrentTurnValid =
+      currentTurnIndex >= 0 && currentTurnIndex < turns.length;
     const currentTurn = turns[currentTurnIndex];
-    const isCurrentActionValid = currentTurn && currentActionIndex >= 0 &&
+    const isCurrentActionValid =
+      currentTurn &&
+      currentActionIndex >= 0 &&
       (currentActionIndex < currentTurn.decisions.length ||
-       (currentTurn.pending && currentActionIndex === currentTurn.decisions.length));
+        (currentTurn.pending &&
+          currentActionIndex === currentTurn.decisions.length));
 
     if (!isCurrentTurnValid || !isCurrentActionValid) {
       // Current position is invalid, jump to latest
@@ -81,7 +90,11 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   const hasPrevTurn = currentTurnIndex > 0;
   const hasNextTurn = currentTurnIndex < turns.length - 1;
   const hasPrevAction = currentActionIndex > 0;
-  const maxActionIndex = currentTurn?.pending ? currentTurn.decisions.length : currentTurn ? currentTurn.decisions.length - 1 : -1;
+  const maxActionIndex = currentTurn?.pending
+    ? currentTurn.decisions.length
+    : currentTurn
+      ? currentTurn.decisions.length - 1
+      : -1;
   const hasNextAction = currentActionIndex < maxActionIndex;
 
   const handlePrevTurn = () => {
@@ -109,7 +122,9 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
     if (hasNextAction) {
       setCurrentActionIndex(currentActionIndex + 1);
       // If navigating to the latest, clear the flag
-      const maxAction = currentTurn?.pending ? currentTurn.decisions.length : Math.max(0, (currentTurn?.decisions.length || 1) - 1);
+      const maxAction = currentTurn?.pending
+        ? currentTurn.decisions.length
+        : Math.max(0, (currentTurn?.decisions.length || 1) - 1);
       if (currentActionIndex + 1 >= maxAction) {
         setUserNavigatedAway(false);
       }

@@ -48,7 +48,10 @@ export function projectState(events: GameEvent[]): GameState {
  * Get events for a specific turn.
  * Useful for log display and undo granularity.
  */
-export function getEventsForTurn(events: GameEvent[], turn: number): GameEvent[] {
+export function getEventsForTurn(
+  events: GameEvent[],
+  turn: number,
+): GameEvent[] {
   const turnEvents: GameEvent[] = [];
   let currentTurn = 0;
   let inTargetTurn = false;
@@ -76,9 +79,7 @@ export function getEventsForTurn(events: GameEvent[], turn: number): GameEvent[]
  * Returns -1 if turn not found.
  */
 export function findTurnStartIndex(events: GameEvent[], turn: number): number {
-  return events.findIndex(
-    e => e.type === "TURN_STARTED" && e.turn === turn
-  );
+  return events.findIndex(e => e.type === "TURN_STARTED" && e.turn === turn);
 }
 
 /**

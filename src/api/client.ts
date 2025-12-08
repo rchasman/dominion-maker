@@ -20,7 +20,10 @@ interface GenerateActionResponse {
 export const api = {
   api: {
     "generate-action": {
-      post: async (body: GenerateActionRequest, options?: { fetch?: RequestInit }) => {
+      post: async (
+        body: GenerateActionRequest,
+        options?: { fetch?: RequestInit },
+      ) => {
         try {
           const response = await fetch("/api/generate-action", {
             method: "POST",
@@ -34,7 +37,10 @@ export const api = {
           const data: GenerateActionResponse = await response.json();
 
           if (!response.ok) {
-            return { data: null, error: { value: data.message || "Request failed" } };
+            return {
+              data: null,
+              error: { value: data.message || "Request failed" },
+            };
           }
 
           return { data, error: null };

@@ -11,11 +11,22 @@ import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
 import { formatActionDescription } from "../lib/action-utils";
-import { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings, type ModelSettings } from "./types";
+import {
+  AVAILABLE_MODELS,
+  ALL_FAST_MODELS,
+  DEFAULT_MODEL_SETTINGS,
+  buildModelsFromSettings,
+  type ModelSettings,
+} from "./types";
 import { agentLogger } from "../lib/logger";
 
 // Re-export for convenience
-export { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, buildModelsFromSettings };
+export {
+  AVAILABLE_MODELS,
+  ALL_FAST_MODELS,
+  DEFAULT_MODEL_SETTINGS,
+  buildModelsFromSettings,
+};
 export type { ModelSettings, ModelProvider };
 
 // Global abort controller for canceling ongoing consensus operations
@@ -32,7 +43,6 @@ export function abortOngoingConsensus() {
 
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
-
 
 /**
  * Get legal actions from current game state for LLM context
@@ -56,7 +66,10 @@ function getLegalActions(state: GameState): Action[] {
         actions.push({ type: "trash_card", card });
       }
       // Can't skip trashing by selecting nothing - that would be end_phase or a different action
-    } else if (decision.stage === "discard" || decision.stage === "opponent_discard") {
+    } else if (
+      decision.stage === "discard" ||
+      decision.stage === "opponent_discard"
+    ) {
       // Single card at a time (atomic)
       for (const card of options) {
         actions.push({ type: "discard_card", card });
@@ -112,23 +125,27 @@ async function generateActionViaBackend(
   provider: ModelProvider,
   currentState: GameState,
   humanChoice?: { selectedCards: CardName[] },
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<Action> {
   const legalActions = getLegalActions(currentState);
 
-  const { data, error } = await api.api["generate-action"].post({
-    provider,
-    currentState,
-    humanChoice,
-    legalActions,
-  }, {
-    fetch: { signal },
-  });
+  const { data, error } = await api.api["generate-action"].post(
+    {
+      provider,
+      currentState,
+      humanChoice,
+      legalActions,
+    },
+    {
+      fetch: { signal },
+    },
+  );
 
   if (error) {
-    const errorMsg = typeof error === 'object' && error && 'value' in error
-      ? String(error.value)
-      : "Backend request failed";
+    const errorMsg =
+      typeof error === "object" && error && "value" in error
+        ? String(error.value)
+        : "Backend request failed";
     throw new Error(errorMsg);
   }
 
@@ -143,29 +160,46 @@ async function generateActionViaBackend(
  * Execute an action by dispatching command to engine
  * This replaces the old executeAction that mutated state
  */
-function executeActionWithEngine(engine: DominionEngine, action: Action, playerId: string): boolean {
+function executeActionWithEngine(
+  engine: DominionEngine,
+  action: Action,
+  playerId: string,
+): boolean {
   switch (action.type) {
     case "play_action":
       if (!action.card) throw new Error("play_action requires card");
-      return engine.dispatch({ type: "PLAY_ACTION", player: playerId, card: action.card }, playerId).ok;
+      return engine.dispatch(
+        { type: "PLAY_ACTION", player: playerId, card: action.card },
+        playerId,
+      ).ok;
     case "play_treasure":
       if (!action.card) throw new Error("play_treasure requires card");
-      return engine.dispatch({ type: "PLAY_TREASURE", player: playerId, card: action.card }, playerId).ok;
+      return engine.dispatch(
+        { type: "PLAY_TREASURE", player: playerId, card: action.card },
+        playerId,
+      ).ok;
     case "buy_card":
       if (!action.card) throw new Error("buy_card requires card");
-      return engine.dispatch({ type: "BUY_CARD", player: playerId, card: action.card }, playerId).ok;
+      return engine.dispatch(
+        { type: "BUY_CARD", player: playerId, card: action.card },
+        playerId,
+      ).ok;
     case "end_phase":
-      return engine.dispatch({ type: "END_PHASE", player: playerId }, playerId).ok;
+      return engine.dispatch({ type: "END_PHASE", player: playerId }, playerId)
+        .ok;
     case "discard_card":
     case "trash_card":
     case "gain_card":
       // All decision responses are single cards (atomic)
       if (!action.card) throw new Error(`${action.type} requires card`);
-      return engine.dispatch({
-        type: "SUBMIT_DECISION",
-        player: playerId,
-        choice: { selectedCards: [action.card] },
-      }, playerId).ok;
+      return engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: playerId,
+          choice: { selectedCards: [action.card] },
+        },
+        playerId,
+      ).ok;
     default:
       agentLogger.error(`Unknown action type: ${action.type}`);
       return false;
@@ -181,7 +215,7 @@ export async function advanceGameStateWithConsensus(
   playerId: string,
   humanChoice?: { selectedCards: CardName[] },
   providers: ModelProvider[] = ALL_FAST_MODELS,
-  logger?: LLMLogger
+  logger?: LLMLogger,
 ): Promise<void> {
   const currentState = engine.state;
   const overallStart = performance.now();
@@ -211,7 +245,13 @@ export async function advanceGameStateWithConsensus(
       gameState: {
         turn: currentState.turn,
         phase: currentState.phase,
-        activePlayer: playerState || { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [] },
+        activePlayer: playerState || {
+          hand: [],
+          deck: [],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
         actions: currentState.actions,
         buys: currentState.buys,
         coins: currentState.coins,
@@ -223,7 +263,12 @@ export async function advanceGameStateWithConsensus(
     },
   });
 
-  type ModelResult = { provider: ModelProvider; result: Action | null; error: unknown; duration: number };
+  type ModelResult = {
+    provider: ModelProvider;
+    result: Action | null;
+    error: unknown;
+    duration: number;
+  };
   type ActionSignature = string;
   type VoteGroup = {
     signature: ActionSignature;
@@ -248,12 +293,17 @@ export async function advanceGameStateWithConsensus(
   const abortController = globalAbortController;
 
   // Run all models in parallel with early consensus detection
-  const { results, earlyConsensus } = await new Promise<{ results: ModelResult[]; earlyConsensus: VoteGroup | null }>((resolveAll) => {
+  const { results, earlyConsensus } = await new Promise<{
+    results: ModelResult[];
+    earlyConsensus: VoteGroup | null;
+  }>(resolveAll => {
     let resolved = false;
     let completedCount = 0;
 
     const checkEarlyConsensus = (): VoteGroup | null => {
-      const groups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
+      const groups = Array.from(voteGroups.values()).sort(
+        (a, b) => b.count - a.count,
+      );
       if (groups.length === 0) return null;
 
       const leader = groups[0];
@@ -278,30 +328,54 @@ export async function advanceGameStateWithConsensus(
         data: { provider, index, startTime: uiStartTime },
       });
 
-      void generateActionViaBackend(provider, currentState, humanChoice, abortController.signal)
-        .then((action) => {
+      void generateActionViaBackend(
+        provider,
+        currentState,
+        humanChoice,
+        abortController.signal,
+      )
+        .then(action => {
           const modelDuration = performance.now() - modelStart;
           logger?.({
             type: "consensus-model-complete",
             message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
-            data: { provider, index, duration: modelDuration, action, success: true },
+            data: {
+              provider,
+              index,
+              duration: modelDuration,
+              action,
+              success: true,
+            },
           });
-          return { provider, result: action, error: null, duration: modelDuration };
+          return {
+            provider,
+            result: action,
+            error: null,
+            duration: modelDuration,
+          };
         })
-        .catch((error) => {
+        .catch(error => {
           const modelDuration = performance.now() - modelStart;
-          const isAborted = error.name === 'AbortError' || error.message?.includes('abort');
+          const isAborted =
+            error.name === "AbortError" || error.message?.includes("abort");
 
           logger?.({
             type: "consensus-model-complete",
             message: isAborted
               ? `${provider} aborted after ${modelDuration.toFixed(0)}ms`
               : `${provider} failed after ${modelDuration.toFixed(0)}ms`,
-            data: { provider, index, duration: modelDuration, error: String(error), success: false, aborted: isAborted },
+            data: {
+              provider,
+              index,
+              duration: modelDuration,
+              error: String(error),
+              success: false,
+              aborted: isAborted,
+            },
           });
           return { provider, result: null, error, duration: modelDuration };
         })
-        .then((modelResult) => {
+        .then(modelResult => {
           pendingModels.delete(index);
 
           if (resolved) return;
@@ -335,7 +409,11 @@ export async function advanceGameStateWithConsensus(
                 logger?.({
                   type: "consensus-model-aborted",
                   message: `${providers[pendingIndex]} aborted (early consensus)`,
-                  data: { provider: providers[pendingIndex], index: pendingIndex, duration: nowTime - startTime },
+                  data: {
+                    provider: providers[pendingIndex],
+                    index: pendingIndex,
+                    duration: nowTime - startTime,
+                  },
                 });
               }
 
@@ -363,7 +441,9 @@ export async function advanceGameStateWithConsensus(
     return runSimpleAITurnWithEngine(engine, playerId);
   }
 
-  const rankedGroups = Array.from(voteGroups.values()).sort((a, b) => b.count - a.count);
+  const rankedGroups = Array.from(voteGroups.values()).sort(
+    (a, b) => b.count - a.count,
+  );
 
   // Validate actions
   const isActionValid = (action: Action): boolean => {
@@ -371,9 +451,14 @@ export async function advanceGameStateWithConsensus(
       if (legal.type !== action.type) return false;
 
       // All actions with card field (atomic)
-      if (action.type === "play_action" || action.type === "play_treasure" ||
-          action.type === "buy_card" || action.type === "gain_card" ||
-          action.type === "discard_card" || action.type === "trash_card") {
+      if (
+        action.type === "play_action" ||
+        action.type === "play_treasure" ||
+        action.type === "buy_card" ||
+        action.type === "gain_card" ||
+        action.type === "discard_card" ||
+        action.type === "trash_card"
+      ) {
         return "card" in legal && legal.card === action.card;
       }
 
@@ -383,7 +468,10 @@ export async function advanceGameStateWithConsensus(
   };
 
   const validRankedGroups = rankedGroups.filter(g => isActionValid(g.action));
-  const validEarlyConsensus = earlyConsensus && isActionValid(earlyConsensus.action) ? earlyConsensus : null;
+  const validEarlyConsensus =
+    earlyConsensus && isActionValid(earlyConsensus.action)
+      ? earlyConsensus
+      : null;
 
   if (!validEarlyConsensus && validRankedGroups.length === 0) {
     agentLogger.warn("All LLM actions were invalid, falling back to simple AI");
@@ -391,7 +479,9 @@ export async function advanceGameStateWithConsensus(
   }
 
   const winner = validEarlyConsensus || validRankedGroups[0];
-  const votesConsidered = earlyConsensus ? completedResults.length : successfulResults.length;
+  const votesConsidered = earlyConsensus
+    ? completedResults.length
+    : successfulResults.length;
   const consensusStrength = winner.count / votesConsidered;
 
   const actionDesc = formatActionDescription(winner.action);
@@ -406,7 +496,7 @@ export async function advanceGameStateWithConsensus(
         action: winner.action,
         votes: winner.count,
         voters: winner.voters,
-        percentage: ((consensusStrength * 100).toFixed(1)) + "%",
+        percentage: (consensusStrength * 100).toFixed(1) + "%",
         totalVotes: votesConsidered,
         completed: votesConsidered,
         earlyConsensus: !!validEarlyConsensus,
@@ -419,7 +509,11 @@ export async function advanceGameStateWithConsensus(
         reasonings: g.voters.map(voter => {
           const result = completedResults.find(r => {
             if (!r.result) return false;
-            return r.provider === voter && JSON.stringify(stripReasoning(r.result)) === JSON.stringify(stripReasoning(g.action));
+            return (
+              r.provider === voter &&
+              JSON.stringify(stripReasoning(r.result)) ===
+                JSON.stringify(stripReasoning(g.action))
+            );
           });
           return {
             provider: voter,
@@ -432,7 +526,13 @@ export async function advanceGameStateWithConsensus(
       gameState: {
         turn: currentState.turn,
         phase: currentState.phase,
-        activePlayer: playerState || { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [] },
+        activePlayer: playerState || {
+          hand: [],
+          deck: [],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
         actions: currentState.actions,
         buys: currentState.buys,
         coins: currentState.coins,
@@ -452,13 +552,18 @@ export async function advanceGameStateWithConsensus(
   }
 
   const overallDuration = performance.now() - overallStart;
-  agentLogger.info(`${actionDesc} (${winner.count}/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`);
+  agentLogger.info(
+    `${actionDesc} (${winner.count}/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`,
+  );
 }
 
 /**
  * Simple AI fallback using engine commands
  */
-function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): void {
+function runSimpleAITurnWithEngine(
+  engine: DominionEngine,
+  playerId: string,
+): void {
   const state = engine.state;
 
   // If there's a pending decision for this player, resolve it first
@@ -467,15 +572,21 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
     const options = decision.cardOptions || [];
 
     // Pick first min cards or skip if allowed
-    const numToSelect = decision.min === 0 ? 0 : Math.min(decision.min, options.length);
+    const numToSelect =
+      decision.min === 0 ? 0 : Math.min(decision.min, options.length);
     const selected: CardName[] = options.slice(0, numToSelect);
 
-    agentLogger.debug(`SimpleAI decision: ${decision.stage} → [${selected.join(', ')}]`);
-    engine.dispatch({
-      type: "SUBMIT_DECISION",
-      player: playerId,
-      choice: { selectedCards: selected },
-    }, playerId);
+    agentLogger.debug(
+      `SimpleAI decision: ${decision.stage} → [${selected.join(", ")}]`,
+    );
+    engine.dispatch(
+      {
+        type: "SUBMIT_DECISION",
+        player: playerId,
+        choice: { selectedCards: selected },
+      },
+      playerId,
+    );
     return;
   }
 
@@ -487,7 +598,10 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
     const actions = playerState.hand.filter(isActionCard);
     for (const action of actions) {
       if (state.actions > 0) {
-        engine.dispatch({ type: "PLAY_ACTION", player: playerId, card: action }, playerId);
+        engine.dispatch(
+          { type: "PLAY_ACTION", player: playerId, card: action },
+          playerId,
+        );
       }
     }
     engine.dispatch({ type: "END_PHASE", player: playerId }, playerId);
@@ -497,12 +611,25 @@ function runSimpleAITurnWithEngine(engine: DominionEngine, playerId: string): vo
   if (state.phase === "buy") {
     const treasures = playerState.hand.filter(isTreasureCard);
     for (const treasure of treasures) {
-      engine.dispatch({ type: "PLAY_TREASURE", player: playerId, card: treasure }, playerId);
+      engine.dispatch(
+        { type: "PLAY_TREASURE", player: playerId, card: treasure },
+        playerId,
+      );
     }
 
-    const buyPriority: CardName[] = ["Province", "Gold", "Duchy", "Silver", "Estate"];
+    const buyPriority: CardName[] = [
+      "Province",
+      "Gold",
+      "Duchy",
+      "Silver",
+      "Estate",
+    ];
     for (const card of buyPriority) {
-      if (state.supply[card] > 0 && CARDS[card].cost <= state.coins && state.buys > 0) {
+      if (
+        state.supply[card] > 0 &&
+        CARDS[card].cost <= state.coins &&
+        state.buys > 0
+      ) {
         engine.dispatch({ type: "BUY_CARD", player: playerId, card }, playerId);
         break;
       }
@@ -520,7 +647,7 @@ export async function runAITurnWithConsensus(
   playerId: string,
   providers: ModelProvider[],
   logger?: LLMLogger,
-  onStateChange?: (state: GameState) => void
+  onStateChange?: (state: GameState) => void,
 ): Promise<void> {
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
@@ -542,7 +669,13 @@ export async function runAITurnWithConsensus(
     stepCount++;
 
     try {
-      await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
+      await advanceGameStateWithConsensus(
+        engine,
+        playerId,
+        undefined,
+        providers,
+        logger,
+      );
 
       // Handle AI pending decisions
       const hasAIDecision = (): boolean => {
@@ -552,7 +685,13 @@ export async function runAITurnWithConsensus(
 
       while (hasAIDecision()) {
         agentLogger.debug("Resolving pending decision");
-        await advanceGameStateWithConsensus(engine, playerId, undefined, providers, logger);
+        await advanceGameStateWithConsensus(
+          engine,
+          playerId,
+          undefined,
+          providers,
+          logger,
+        );
         onStateChange?.(engine.state);
 
         // Safety check

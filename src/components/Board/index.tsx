@@ -44,11 +44,14 @@ export function Board({ onBackToHome }: BoardProps) {
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
 
   // Wrap requestUndo to clear preview state and selections when undoing
-  const handleRequestUndo = useCallback((eventId: string) => {
-    setPreviewEventId(null); // Clear preview when undoing
-    setSelectedCardIndices([]); // Clear selected cards when undoing
-    requestUndo(eventId);
-  }, [requestUndo]);
+  const handleRequestUndo = useCallback(
+    (eventId: string) => {
+      setPreviewEventId(null); // Clear preview when undoing
+      setSelectedCardIndices([]); // Clear selected cards when undoing
+      requestUndo(eventId);
+    },
+    [requestUndo],
+  );
 
   // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
   useEffect(() => {
@@ -66,60 +69,69 @@ export function Board({ onBackToHome }: BoardProps) {
   }, [events.length]);
 
   // Card click handler - must be defined before early return
-  const onCardClick = useCallback((card: CardName, index: number) => {
-    if (!state?.activePlayer || state.activePlayer !== "human") return;
+  const onCardClick = useCallback(
+    (card: CardName, index: number) => {
+      if (!state?.activePlayer || state.activePlayer !== "human") return;
 
-    // If we have a pending decision, add to selection
-    if (state.pendingDecision) {
-      const decision = state.pendingDecision;
-      const max = decision.max || 1;
+      // If we have a pending decision, add to selection
+      if (state.pendingDecision) {
+        const decision = state.pendingDecision;
+        const max = decision.max || 1;
 
-      if (selectedCardIndices.includes(index)) {
-        setSelectedCardIndices(prev => prev.filter(i => i !== index));
-      } else if (selectedCardIndices.length < max) {
-        setSelectedCardIndices(prev => [...prev, index]);
+        if (selectedCardIndices.includes(index)) {
+          setSelectedCardIndices(prev => prev.filter(i => i !== index));
+        } else if (selectedCardIndices.length < max) {
+          setSelectedCardIndices(prev => [...prev, index]);
+        }
+        return;
       }
-      return;
-    }
 
-    // Action phase - play action cards
-    if (state.phase === "action" && isActionCard(card) && state.actions > 0) {
-      const result = playAction(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play action:", result.error);
+      // Action phase - play action cards
+      if (state.phase === "action" && isActionCard(card) && state.actions > 0) {
+        const result = playAction(card);
+        if (!result.ok) {
+          uiLogger.error("Failed to play action:", result.error);
+        }
+        return;
       }
-      return;
-    }
 
-    // Buy phase - play treasures
-    if (state.phase === "buy" && isTreasureCard(card)) {
-      const result = playTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play treasure:", result.error);
+      // Buy phase - play treasures
+      if (state.phase === "buy" && isTreasureCard(card)) {
+        const result = playTreasure(card);
+        if (!result.ok) {
+          uiLogger.error("Failed to play treasure:", result.error);
+        }
+        return;
       }
-      return;
-    }
-  }, [state, selectedCardIndices, playAction, playTreasure]);
+    },
+    [state, selectedCardIndices, playAction, playTreasure],
+  );
 
   // Handle in-play clicks (unplay treasures)
-  const onInPlayClick = useCallback((card: CardName) => {
-    if (!state || state.activePlayer !== "human" || state.phase !== "buy") return;
+  const onInPlayClick = useCallback(
+    (card: CardName) => {
+      if (!state || state.activePlayer !== "human" || state.phase !== "buy")
+        return;
 
-    const result = unplayTreasure(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to unplay treasure:", result.error);
-    }
-  }, [state, unplayTreasure]);
+      const result = unplayTreasure(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to unplay treasure:", result.error);
+      }
+    },
+    [state, unplayTreasure],
+  );
 
   if (!state) return null;
 
   // Use preview state when scrubbing, otherwise use live state
-  const displayState = previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
+  const displayState =
+    previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
   const isPreviewMode = previewEventId !== null;
 
   const isHumanTurn = state.activePlayer === "human";
 
-  const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
+  const canBuy =
+    isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
   const opponent = displayState.players.ai;
   const human = displayState.players.human;
   const humanVP = countVP(getAllCards(human));
@@ -148,45 +160,53 @@ export function Board({ onBackToHome }: BoardProps) {
   };
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 20rem",
-      inlineSize: "100vw",
-      blockSize: "100dvh",
-      overflow: "hidden",
-      background: "var(--color-bg-primary)",
-      position: "relative"
-    }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 20rem",
+        inlineSize: "100vw",
+        blockSize: "100dvh",
+        overflow: "hidden",
+        background: "var(--color-bg-primary)",
+        position: "relative",
+      }}
+    >
       {/* Preview mode indicator */}
       {isPreviewMode && (
-        <div style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          background: "rgba(99, 102, 241, 0.9)",
-          color: "white",
-          padding: "var(--space-3)",
-          textAlign: "center",
-          fontWeight: 600,
-          fontSize: "0.875rem",
-          zIndex: 1000,
-          borderBottom: "2px solid #6366f1",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            background: "rgba(99, 102, 241, 0.9)",
+            color: "white",
+            padding: "var(--space-3)",
+            textAlign: "center",
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            zIndex: 1000,
+            borderBottom: "2px solid #6366f1",
+          }}
+        >
           ⏸ PREVIEW MODE - Scrubbing through history
         </div>
       )}
 
       {/* Main game area */}
-      <div style={{
-        display: "grid",
-        gridTemplateRows: "auto 1fr auto auto",
-        rowGap: "var(--space-3)",
-        padding: "var(--space-5)",
-        minInlineSize: 0,
-        overflow: "hidden",
-        paddingTop: isPreviewMode ? "calc(var(--space-5) + 2.5rem)" : "var(--space-5)",
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: "auto 1fr auto auto",
+          rowGap: "var(--space-3)",
+          padding: "var(--space-5)",
+          minInlineSize: 0,
+          overflow: "hidden",
+          paddingTop: isPreviewMode
+            ? "calc(var(--space-5) + 2.5rem)"
+            : "var(--space-5)",
+        }}
+      >
         <OpponentBar
           opponent={opponent}
           opponentId="ai"
@@ -195,7 +215,9 @@ export function Board({ onBackToHome }: BoardProps) {
           subPhase={displayState.subPhase}
         />
 
-        <div style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}>
+        <div
+          style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}
+        >
           <Supply
             state={displayState}
             onBuyCard={isPreviewMode ? undefined : onBuyCard}
@@ -237,7 +259,11 @@ export function Board({ onBackToHome }: BoardProps) {
           isHuman={true}
           selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
           onCardClick={isPreviewMode ? undefined : onCardClick}
-          onInPlayClick={!isPreviewMode && displayState.phase === "buy" ? onInPlayClick : undefined}
+          onInPlayClick={
+            !isPreviewMode && displayState.phase === "buy"
+              ? onInPlayClick
+              : undefined
+          }
           pendingDecision={displayState.pendingDecision}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
@@ -274,7 +300,7 @@ export function Board({ onBackToHome }: BoardProps) {
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
         onBranchFrom={handleRequestUndo}
-        onScrub={(eventId) => {
+        onScrub={eventId => {
           setPreviewEventId(eventId);
         }}
       />

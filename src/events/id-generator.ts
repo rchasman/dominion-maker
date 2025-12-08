@@ -27,7 +27,7 @@ export function resetEventCounter(): void {
 export function syncEventCounter(events: Array<{ id?: string }>): void {
   let maxId = 0;
   for (const event of events) {
-    if (event.id && event.id.startsWith('evt-')) {
+    if (event.id && event.id.startsWith("evt-")) {
       const num = parseInt(event.id.slice(4), 10);
       if (!isNaN(num) && num > maxId) {
         maxId = num;
@@ -35,5 +35,7 @@ export function syncEventCounter(events: Array<{ id?: string }>): void {
     }
   }
   eventCounter = maxId;
-  engineLogger.debug(`[id-generator] Synced counter to ${maxId} from ${events.length} events`);
+  engineLogger.debug(
+    `[id-generator] Synced counter to ${maxId} from ${events.length} events`,
+  );
 }

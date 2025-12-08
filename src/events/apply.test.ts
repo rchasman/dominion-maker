@@ -98,7 +98,18 @@ describe("Event Application - Game Setup", () => {
     const event: GameEvent = {
       type: "INITIAL_DECK_DEALT",
       player: "human",
-      cards: ["Copper", "Copper", "Copper", "Copper", "Copper", "Copper", "Copper", "Estate", "Estate", "Estate"],
+      cards: [
+        "Copper",
+        "Copper",
+        "Copper",
+        "Copper",
+        "Copper",
+        "Copper",
+        "Copper",
+        "Estate",
+        "Estate",
+        "Estate",
+      ],
     };
 
     const newState = applyEvent(state, event);
@@ -109,7 +120,15 @@ describe("Event Application - Game Setup", () => {
 
   it("should apply INITIAL_HAND_DRAWN", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper", "Copper", "Copper", "Copper", "Copper", "Estate", "Estate"];
+    state.players.human.deck = [
+      "Copper",
+      "Copper",
+      "Copper",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+    ];
     state.players.human.hand = [];
 
     const event: GameEvent = {

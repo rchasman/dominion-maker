@@ -44,7 +44,9 @@ export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
           gameTurn: entry.data?.turn as number | undefined,
           decisions: [],
           isSubPhase: true,
-          subPhaseLabel: cardName ? `Response to ${cardName}` : `AI ${decisionType}`,
+          subPhaseLabel: cardName
+            ? `Response to ${cardName}`
+            : `AI ${decisionType}`,
         };
         stepNumber = 0;
       }
@@ -148,7 +150,10 @@ export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
     }
 
     // Add the last turn if it has decisions OR is pending
-    if (buildingTurn && (buildingTurn.decisions.length > 0 || buildingTurn.pending)) {
+    if (
+      buildingTurn &&
+      (buildingTurn.decisions.length > 0 || buildingTurn.pending)
+    ) {
       turns.push(buildingTurn);
     }
 

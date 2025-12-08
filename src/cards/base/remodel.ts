@@ -7,7 +7,12 @@ import { getGainableCards } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
-export const remodel: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const remodel: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
 
   // Stage 1: Choose card to trash

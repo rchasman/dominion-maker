@@ -7,7 +7,12 @@ import { getOpponents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
-export const bureaucrat: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const bureaucrat: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const events: GameEvent[] = [];
   const opponents = getOpponents(state, player);
 
@@ -22,7 +27,9 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
       const oppState = state.players[opp];
       if (!oppState) continue;
 
-      const victoryCards = oppState.hand.filter(c => CARDS[c].types.includes("victory"));
+      const victoryCards = oppState.hand.filter(c =>
+        CARDS[c].types.includes("victory"),
+      );
 
       if (victoryCards.length > 0) {
         return {
@@ -37,7 +44,9 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
             max: 1,
             cardBeingPlayed: "Bureaucrat",
             stage: "opponent_topdeck",
-            metadata: { remainingOpponents: opponents.filter(o => o !== opp) },
+            metadata: {
+              remainingOpponents: opponents.filter(o => o !== opp),
+            },
           },
         };
       }
@@ -53,7 +62,12 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
     const affectedPlayer = state.pendingDecision?.player;
 
     if (toPutOnDeck && affectedPlayer) {
-      events.push({ type: "CARD_PUT_ON_DECK", player: affectedPlayer, card: toPutOnDeck, from: "hand" });
+      events.push({
+        type: "CARD_PUT_ON_DECK",
+        player: affectedPlayer,
+        card: toPutOnDeck,
+        from: "hand",
+      });
     }
 
     // Check for more opponents
@@ -64,7 +78,9 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
       const oppState = state.players[opp];
       if (!oppState) continue;
 
-      const victoryCards = oppState.hand.filter(c => CARDS[c].types.includes("victory"));
+      const victoryCards = oppState.hand.filter(c =>
+        CARDS[c].types.includes("victory"),
+      );
 
       if (victoryCards.length > 0) {
         return {
@@ -79,7 +95,9 @@ export const bureaucrat: CardEffect = ({ state, player, decision, stage }): Card
             max: 1,
             cardBeingPlayed: "Bureaucrat",
             stage: "opponent_topdeck",
-            metadata: { remainingOpponents: remainingOpponents.filter(o => o !== opp) },
+            metadata: {
+              remainingOpponents: remainingOpponents.filter(o => o !== opp),
+            },
           },
         };
       }

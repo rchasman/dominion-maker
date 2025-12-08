@@ -72,7 +72,7 @@ describe("Command System - START_GAME", () => {
     expect(gameInit!.supply.Estate).toBe(8);
     expect(gameInit!.supply.Duchy).toBe(8);
     expect(gameInit!.supply.Province).toBe(8);
-    expect(gameInit!.supply.Copper).toBe(60 - (2 * 7)); // 46
+    expect(gameInit!.supply.Copper).toBe(60 - 2 * 7); // 46
     expect(gameInit!.supply.Silver).toBe(40);
     expect(gameInit!.supply.Gold).toBe(30);
     expect(gameInit!.supply.Curse).toBe(10); // (2-1)*10
@@ -86,7 +86,9 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
-    const deckEvents = result.events!.filter(e => e.type === "INITIAL_DECK_DEALT");
+    const deckEvents = result.events!.filter(
+      e => e.type === "INITIAL_DECK_DEALT",
+    );
 
     expect(deckEvents.length).toBe(2);
     expect(deckEvents[0].player).toBe("human");
@@ -103,7 +105,9 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
-    const handEvents = result.events!.filter(e => e.type === "INITIAL_HAND_DRAWN");
+    const handEvents = result.events!.filter(
+      e => e.type === "INITIAL_HAND_DRAWN",
+    );
 
     expect(handEvents.length).toBe(2);
     expect(handEvents[0].cards.length).toBe(5);
@@ -126,7 +130,9 @@ describe("Command System - START_GAME", () => {
     expect(turnStart!.player).toBe("human");
 
     // Should have initial resources
-    const actionsModified = result.events!.filter(e => e.type === "ACTIONS_MODIFIED");
+    const actionsModified = result.events!.filter(
+      e => e.type === "ACTIONS_MODIFIED",
+    );
     const buysModified = result.events!.filter(e => e.type === "BUYS_MODIFIED");
 
     expect(actionsModified.length).toBeGreaterThan(0);
@@ -177,14 +183,14 @@ describe("Command System - PLAY_ACTION", () => {
     expect(cardPlayed!.card).toBe("Village");
 
     // Should deduct action cost
-    const actionCost = result.events!.find(e =>
-      e.type === "ACTIONS_MODIFIED" && e.delta === -1
+    const actionCost = result.events!.find(
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === -1,
     );
     expect(actionCost).toBeDefined();
 
     // Village gives +1 card, +2 actions
-    const actionBonus = result.events!.find(e =>
-      e.type === "ACTIONS_MODIFIED" && e.delta === 2
+    const actionBonus = result.events!.find(
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === 2,
     );
     expect(actionBonus).toBeDefined();
   });
@@ -292,8 +298,8 @@ describe("Command System - PLAY_TREASURE", () => {
     const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
     expect(cardPlayed).toBeDefined();
 
-    const coinsAdded = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === 1
+    const coinsAdded = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === 1,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -310,8 +316,8 @@ describe("Command System - PLAY_TREASURE", () => {
 
     expect(result.ok).toBe(true);
 
-    const coinsAdded = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === 2
+    const coinsAdded = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === 2,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -328,8 +334,8 @@ describe("Command System - PLAY_TREASURE", () => {
 
     expect(result.ok).toBe(true);
 
-    const coinsAdded = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === 3
+    const coinsAdded = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === 3,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -423,13 +429,13 @@ describe("Command System - BUY_CARD", () => {
     expect(cardGained!.card).toBe("Silver");
     expect(cardGained!.to).toBe("discard");
 
-    const buysModified = result.events!.find(e =>
-      e.type === "BUYS_MODIFIED" && e.delta === -1
+    const buysModified = result.events!.find(
+      e => e.type === "BUYS_MODIFIED" && e.delta === -1,
     );
     expect(buysModified).toBeDefined();
 
-    const coinsModified = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === -3
+    const coinsModified = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === -3,
     );
     expect(coinsModified).toBeDefined();
   });
@@ -490,8 +496,8 @@ describe("Command System - BUY_CARD", () => {
 
     expect(result.ok).toBe(true);
 
-    const coinsModified = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === -8
+    const coinsModified = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === -8,
     );
     expect(coinsModified).toBeDefined();
   });
@@ -600,7 +606,9 @@ describe("Command System - END_PHASE", () => {
     expect(discarded.length).toBeGreaterThanOrEqual(2); // hand + in-play
 
     // Should have resource initialization for new turn
-    const actionsModified = result.events!.filter(e => e.type === "ACTIONS_MODIFIED");
+    const actionsModified = result.events!.filter(
+      e => e.type === "ACTIONS_MODIFIED",
+    );
     const buysModified = result.events!.filter(e => e.type === "BUYS_MODIFIED");
     expect(actionsModified.length).toBeGreaterThan(0);
     expect(buysModified.length).toBeGreaterThan(0);
@@ -641,12 +649,14 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     expect(result.ok).toBe(true);
 
-    const returnedToHand = result.events!.find(e => e.type === "CARD_RETURNED_TO_HAND");
+    const returnedToHand = result.events!.find(
+      e => e.type === "CARD_RETURNED_TO_HAND",
+    );
     expect(returnedToHand).toBeDefined();
     expect(returnedToHand!.card).toBe("Copper");
 
-    const coinsRemoved = result.events!.find(e =>
-      e.type === "COINS_MODIFIED" && e.delta === -1
+    const coinsRemoved = result.events!.find(
+      e => e.type === "COINS_MODIFIED" && e.delta === -1,
     );
     expect(coinsRemoved).toBeDefined();
   });
@@ -845,11 +855,12 @@ describe("Command System - Event Causality", () => {
     expect(cardPlayed!.id).toBeDefined();
 
     // All effect events should be caused by the card played
-    const effectEvents = result.events!.filter(e =>
-      e.type === "ACTIONS_MODIFIED" ||
-      e.type === "BUYS_MODIFIED" ||
-      e.type === "COINS_MODIFIED" ||
-      e.type === "CARDS_DRAWN"
+    const effectEvents = result.events!.filter(
+      e =>
+        e.type === "ACTIONS_MODIFIED" ||
+        e.type === "BUYS_MODIFIED" ||
+        e.type === "COINS_MODIFIED" ||
+        e.type === "CARDS_DRAWN",
     );
 
     for (const event of effectEvents) {

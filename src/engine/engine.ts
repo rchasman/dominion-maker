@@ -13,7 +13,7 @@ import { engineLogger } from "../lib/logger";
 export type PendingUndoRequest = {
   requestId: string;
   byPlayer: PlayerId;
-  toEventId: string;  // Changed from toEventIndex to toEventId
+  toEventId: string; // Changed from toEventIndex to toEventId
   reason?: string;
   approvals: Set<PlayerId>;
   needed: number;
@@ -45,9 +45,8 @@ export class DominionEngine {
    */
   get state(): GameState {
     if (!this._state) {
-      this._state = this.events.length > 0
-        ? projectState(this.events)
-        : createEmptyState();
+      this._state =
+        this.events.length > 0 ? projectState(this.events) : createEmptyState();
     }
     return this._state;
   }
@@ -87,7 +86,11 @@ export class DominionEngine {
   /**
    * Start a new game.
    */
-  startGame(players: PlayerId[], kingdomCards?: CardName[], seed?: number): CommandResult {
+  startGame(
+    players: PlayerId[],
+    kingdomCards?: CardName[],
+    seed?: number,
+  ): CommandResult {
     // Clear existing state
     this.events = [];
     this._state = null;
@@ -146,13 +149,20 @@ export class DominionEngine {
   /**
    * Request to undo to a specific event ID (causal root).
    */
-  requestUndo(player: PlayerId, toEventId: string, reason?: string): CommandResult {
-    const result = this.dispatch({
-      type: "REQUEST_UNDO",
+  requestUndo(
+    player: PlayerId,
+    toEventId: string,
+    reason?: string,
+  ): CommandResult {
+    const result = this.dispatch(
+      {
+        type: "REQUEST_UNDO",
+        player,
+        toEventId,
+        reason,
+      },
       player,
-      toEventId,
-      reason,
-    }, player);
+    );
 
     if (result.ok) {
       // Find the request event we just added
@@ -262,7 +272,7 @@ export class DominionEngine {
   applyExternalEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() }
+      event.id ? event : { ...event, id: generateEventId() },
     );
     this.events.push(...eventsWithIds);
     this._state = null;
@@ -284,7 +294,7 @@ export class DominionEngine {
   private appendEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() }
+      event.id ? event : { ...event, id: generateEventId() },
     );
     this.events.push(...eventsWithIds);
     this._state = null;
@@ -298,9 +308,15 @@ export class DominionEngine {
     }
   }
 
-  private handleUndoResponse(
-    { type, player: playerId, requestId }: { type: "APPROVE_UNDO" | "DENY_UNDO"; player: PlayerId; requestId: string }
-  ): CommandResult {
+  private handleUndoResponse({
+    type,
+    player: playerId,
+    requestId,
+  }: {
+    type: "APPROVE_UNDO" | "DENY_UNDO";
+    player: PlayerId;
+    requestId: string;
+  }): CommandResult {
     if (!this.pendingUndo) {
       return { ok: false, error: "No pending undo request" };
     }
@@ -376,7 +392,7 @@ export class DominionEngine {
 export function createGame(
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number
+  seed?: number,
 ): DominionEngine {
   const engine = new DominionEngine();
   engine.startGame(players, kingdomCards, seed);

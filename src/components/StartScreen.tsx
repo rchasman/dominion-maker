@@ -5,7 +5,10 @@ interface StartScreenProps {
   onStartMultiplayer?: () => void;
 }
 
-export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartScreenProps) {
+export function StartScreen({
+  onStartSinglePlayer,
+  onStartMultiplayer,
+}: StartScreenProps) {
   const { gameMode, setGameMode, startGame } = useGame();
 
   const handleStartGame = () => {
@@ -22,36 +25,43 @@ export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartSc
         justifyContent: "center",
         minBlockSize: "100dvh",
         gap: "var(--space-8)",
-        background: "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
       }}
     >
-      <h1 style={{
-        margin: 0,
-        fontSize: "3rem",
-        color: "var(--color-gold)",
-        textShadow: "var(--shadow-glow-gold)",
-        letterSpacing: "0.25rem",
-      }}>
+      <h1
+        style={{
+          margin: 0,
+          fontSize: "3rem",
+          color: "var(--color-gold)",
+          textShadow: "var(--shadow-glow-gold)",
+          letterSpacing: "0.25rem",
+        }}
+      >
         DOMINION
       </h1>
-      <p style={{
-        color: "var(--color-text-secondary)",
-        margin: 0,
-        fontSize: "0.875rem",
-        textTransform: "uppercase",
-        letterSpacing: "0.125rem"
-      }}>
+      <p
+        style={{
+          color: "var(--color-text-secondary)",
+          margin: 0,
+          fontSize: "0.875rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem",
+        }}
+      >
         Base Game
       </p>
 
-      <div style={{
-        display: "flex",
-        gap: "var(--space-4)",
-        padding: "var(--space-4)",
-        background: "var(--color-bg-secondary)",
-        border: "1px solid var(--color-border-primary)",
-        borderRadius: "8px",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-4)",
+          padding: "var(--space-4)",
+          background: "var(--color-bg-secondary)",
+          border: "1px solid var(--color-border-primary)",
+          borderRadius: "8px",
+        }}
+      >
         <ModeButton mode="engine" current={gameMode} onClick={setGameMode}>
           Engine Mode
         </ModeButton>
@@ -60,14 +70,16 @@ export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartSc
         </ModeButton>
       </div>
 
-      <p style={{
-        color: "var(--color-text-tertiary)",
-        margin: 0,
-        fontSize: "0.75rem",
-        maxWidth: "500px",
-        textAlign: "center",
-        lineHeight: 1.6,
-      }}>
+      <p
+        style={{
+          color: "var(--color-text-tertiary)",
+          margin: 0,
+          fontSize: "0.75rem",
+          maxWidth: "500px",
+          textAlign: "center",
+          lineHeight: 1.6,
+        }}
+      >
         {gameMode === "engine"
           ? "Hard-coded rules engine with explicit card implementations"
           : "Human plays, AI opponent uses multi-LLM consensus voting (different models vote on each decision)"}
@@ -80,7 +92,8 @@ export function StartScreen({ onStartSinglePlayer, onStartMultiplayer }: StartSc
             padding: "var(--space-6) var(--space-10)",
             fontSize: "0.875rem",
             fontWeight: 600,
-            background: "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+            background:
+              "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
             color: "#fff",
             border: "2px solid var(--color-victory)",
             cursor: "pointer",
@@ -122,7 +135,7 @@ function ModeButton({
   mode,
   current,
   onClick,
-  children
+  children,
 }: {
   mode: "engine" | "maker";
   current: string;
@@ -140,7 +153,9 @@ function ModeButton({
         background: isActive ? "var(--color-victory-dark)" : "transparent",
         color: isActive ? "#fff" : "var(--color-text-secondary)",
         border: "1px solid",
-        borderColor: isActive ? "var(--color-victory)" : "var(--color-border-primary)",
+        borderColor: isActive
+          ? "var(--color-victory)"
+          : "var(--color-border-primary)",
         cursor: "pointer",
         textTransform: "uppercase",
         letterSpacing: "0.1rem",

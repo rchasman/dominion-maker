@@ -68,12 +68,25 @@ type EventCategory = "all" | "turns" | "cards" | "resources" | "decisions";
 const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
   all: [],
   turns: ["TURN_STARTED", "PHASE_CHANGED", "GAME_ENDED"],
-  cards: ["CARD_DRAWN", "CARD_PLAYED", "CARD_DISCARDED", "CARD_TRASHED", "CARD_GAINED", "DECK_SHUFFLED"],
+  cards: [
+    "CARD_DRAWN",
+    "CARD_PLAYED",
+    "CARD_DISCARDED",
+    "CARD_TRASHED",
+    "CARD_GAINED",
+    "DECK_SHUFFLED",
+  ],
   resources: ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"],
   decisions: ["DECISION_REQUIRED", "DECISION_RESOLVED"],
 };
 
-export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, onScrub }: EventDevtoolsProps) {
+export function EventDevtools({
+  events,
+  isOpen = true,
+  onToggle,
+  onBranchFrom,
+  onScrub,
+}: EventDevtoolsProps) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventCategory>("all");
   const [showDiff, setShowDiff] = useState(false);
@@ -106,12 +119,13 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
   useEffect(() => {
     if (scrubberIndex !== null && listRef.current) {
       // Find the event element and scroll it into view
-      const eventElements = listRef.current.querySelectorAll('[data-event-index]');
+      const eventElements =
+        listRef.current.querySelectorAll("[data-event-index]");
       const targetElement = Array.from(eventElements).find(
-        el => el.getAttribute('data-event-index') === String(scrubberIndex)
+        el => el.getAttribute("data-event-index") === String(scrubberIndex),
       );
       if (targetElement) {
-        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
   }, [scrubberIndex]);
@@ -124,7 +138,9 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
   }, [events, filter]);
 
   // Display state from scrubber or selected event
-  const displayIndex = scrubberIndex ?? (selectedEventId ? events.findIndex(e => e.id === selectedEventId) : null);
+  const displayIndex =
+    scrubberIndex ??
+    (selectedEventId ? events.findIndex(e => e.id === selectedEventId) : null);
 
   // Selected state (from scrubber or clicked event)
   const selectedState = useMemo(() => {
@@ -245,7 +261,9 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
       setIsPinned(true);
 
       // If at end or live, start from beginning
-      const lastRootIndex = events.findIndex(evt => evt.id === rootEvents[rootEvents.length - 1]?.id);
+      const lastRootIndex = events.findIndex(
+        evt => evt.id === rootEvents[rootEvents.length - 1]?.id,
+      );
       if (scrubberIndex === null || scrubberIndex >= lastRootIndex) {
         handleRewindToBeginning();
       }
@@ -257,9 +275,10 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
     if (isPlaying && rootEvents.length > 0) {
       playIntervalRef.current = setInterval(() => {
         setScrubberIndex(prev => {
-          const currentRootIndex = prev !== null
-            ? rootEvents.findIndex(e => e.id === events[prev]?.id)
-            : -1;
+          const currentRootIndex =
+            prev !== null
+              ? rootEvents.findIndex(e => e.id === events[prev]?.id)
+              : -1;
 
           const nextRootIndex = currentRootIndex + 1;
 
@@ -274,7 +293,9 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
           }
 
           const nextRoot = rootEvents[nextRootIndex];
-          const nextActualIndex = events.findIndex(evt => evt.id === nextRoot.id);
+          const nextActualIndex = events.findIndex(
+            evt => evt.id === nextRoot.id,
+          );
 
           if (onScrub) {
             onScrub(nextRoot.id ?? null);
@@ -320,21 +341,24 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
           Event Devtools
           <span style={styles.badge}>{events.length}</span>
           {scrubberIndex !== null && (
-            <span style={styles.replayBadge}>
-              @ {scrubberIndex}
-            </span>
+            <span style={styles.replayBadge}>@ {scrubberIndex}</span>
           )}
         </div>
         <div style={styles.headerActions}>
           <button
             onClick={() => setIsPinned(!isPinned)}
-            style={{ ...styles.headerButton, background: isPinned ? "rgba(99, 102, 241, 0.3)" : undefined }}
+            style={{
+              ...styles.headerButton,
+              background: isPinned ? "rgba(99, 102, 241, 0.3)" : undefined,
+            }}
             title={isPinned ? "Unpin (auto-scroll)" : "Pin (stop auto-scroll)"}
           >
             {isPinned ? "📌" : "🔄"}
           </button>
           {onToggle && (
-            <button onClick={onToggle} style={styles.closeButton}>×</button>
+            <button onClick={onToggle} style={styles.closeButton}>
+              ×
+            </button>
           )}
         </div>
       </div>
@@ -347,7 +371,10 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
               onClick={handleRewindToBeginning}
               style={styles.scrubberButton}
               title="Rewind to beginning"
-              disabled={scrubberIndex === events.findIndex(evt => evt.id === rootEvents[0]?.id)}
+              disabled={
+                scrubberIndex ===
+                events.findIndex(evt => evt.id === rootEvents[0]?.id)
+              }
             >
               ⏮
             </button>
@@ -355,7 +382,9 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
               onClick={handlePlayPause}
               style={{
                 ...styles.scrubberButton,
-                background: isPlaying ? "rgba(99, 102, 241, 0.3)" : "transparent",
+                background: isPlaying
+                  ? "rgba(99, 102, 241, 0.3)"
+                  : "transparent",
                 borderColor: isPlaying ? "rgba(99, 102, 241, 0.5)" : "#2d2d44",
               }}
               title={isPlaying ? "Pause replay" : "Play replay"}
@@ -369,10 +398,12 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
                 max={rootEvents.length - 1}
                 value={
                   scrubberIndex !== null
-                    ? rootEvents.findIndex(e => e.id === events[scrubberIndex]?.id)
+                    ? rootEvents.findIndex(
+                        e => e.id === events[scrubberIndex]?.id,
+                      )
                     : rootEvents.length - 1
                 }
-                onChange={(e) => {
+                onChange={e => {
                   // Stop playing when manually scrubbing
                   if (isPlaying) {
                     setIsPlaying(false);
@@ -401,7 +432,11 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
               </button>
             ) : (
               <button
-                style={{ ...styles.scrubberButton, opacity: 0.3, cursor: 'not-allowed' }}
+                style={{
+                  ...styles.scrubberButton,
+                  opacity: 0.3,
+                  cursor: "not-allowed",
+                }}
                 disabled
                 title="Already at live"
               >
@@ -414,14 +449,18 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
 
       {/* Filters */}
       <div style={styles.filters}>
-        {(["all", "turns", "cards", "resources", "decisions"] as EventCategory[]).map((cat) => (
+        {(
+          ["all", "turns", "cards", "resources", "decisions"] as EventCategory[]
+        ).map(cat => (
           <button
             key={cat}
             onClick={() => setFilter(cat)}
             style={{
               ...styles.filterButton,
-              background: filter === cat ? "rgba(99, 102, 241, 0.3)" : undefined,
-              borderColor: filter === cat ? "rgba(99, 102, 241, 0.5)" : "transparent",
+              background:
+                filter === cat ? "rgba(99, 102, 241, 0.3)" : undefined,
+              borderColor:
+                filter === cat ? "rgba(99, 102, 241, 0.5)" : "transparent",
             }}
           >
             {cat}
@@ -431,9 +470,10 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
 
       {/* Event list */}
       <div ref={listRef} style={styles.eventList}>
-        {filteredEvents.map((event) => {
+        {filteredEvents.map(event => {
           const eventIndex = events.indexOf(event);
-          const isSelected = selectedEventId === event.id || scrubberIndex === eventIndex;
+          const isSelected =
+            selectedEventId === event.id || scrubberIndex === eventIndex;
           const isRoot = isRootCauseEvent(event);
           const hasParent = !!event.causedBy;
           const isScrubberPosition = scrubberIndex === eventIndex;
@@ -443,7 +483,9 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
               key={`${event.id}-${eventIndex}`}
               data-event-index={eventIndex}
               onClick={() => {
-                setSelectedEventId(isSelected && !isScrubberPosition ? null : event.id ?? null);
+                setSelectedEventId(
+                  isSelected && !isScrubberPosition ? null : (event.id ?? null),
+                );
                 setScrubberIndex(eventIndex);
                 setIsPinned(true);
 
@@ -461,17 +503,20 @@ export function EventDevtools({ events, isOpen = true, onToggle, onBranchFrom, o
                 borderRight: isScrubberPosition ? "3px solid #6366f1" : "none",
               }}
             >
-              {hasParent && (
-                <span style={styles.causalArrow}>└</span>
-              )}
+              {hasParent && <span style={styles.causalArrow}>└</span>}
               <span style={styles.eventId}>{event.id}</span>
-              <span style={{ ...styles.eventType, color: EVENT_COLORS[event.type] || "#6b7280" }}>
+              <span
+                style={{
+                  ...styles.eventType,
+                  color: EVENT_COLORS[event.type] || "#6b7280",
+                }}
+              >
                 {event.type}
               </span>
               <span style={styles.eventDetail}>{formatEvent(event)}</span>
               {isScrubberPosition && isRoot && onBranchFrom ? (
                 <button
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     handleBranch(event.id);
                   }}
@@ -524,22 +569,27 @@ function StateView({ state }: { state: GameState }) {
   return (
     <div style={styles.stateContent}>
       <div style={styles.stateSection}>
-        <div style={styles.stateSectionTitle}>Turn {state.turn} - {state.activePlayer}</div>
-        <div style={styles.stateRow}>
-          <span>Phase:</span> <span style={styles.stateValue}>{state.phase}</span>
+        <div style={styles.stateSectionTitle}>
+          Turn {state.turn} - {state.activePlayer}
         </div>
         <div style={styles.stateRow}>
-          <span>Actions:</span> <span style={styles.stateValue}>{state.actions}</span>
+          <span>Phase:</span>{" "}
+          <span style={styles.stateValue}>{state.phase}</span>
+        </div>
+        <div style={styles.stateRow}>
+          <span>Actions:</span>{" "}
+          <span style={styles.stateValue}>{state.actions}</span>
         </div>
         <div style={styles.stateRow}>
           <span>Buys:</span> <span style={styles.stateValue}>{state.buys}</span>
         </div>
         <div style={styles.stateRow}>
-          <span>Coins:</span> <span style={styles.stateValue}>${state.coins}</span>
+          <span>Coins:</span>{" "}
+          <span style={styles.stateValue}>${state.coins}</span>
         </div>
       </div>
 
-      {state.playerOrder?.map((playerId) => {
+      {state.playerOrder?.map(playerId => {
         const player = state.players[playerId];
         if (!player) return null;
 
@@ -547,16 +597,26 @@ function StateView({ state }: { state: GameState }) {
           <div key={playerId} style={styles.stateSection}>
             <div style={styles.stateSectionTitle}>{playerId}</div>
             <div style={styles.stateRow}>
-              <span>Hand:</span> <span style={styles.stateValue}>{player.hand.join(", ") || "(empty)"}</span>
+              <span>Hand:</span>{" "}
+              <span style={styles.stateValue}>
+                {player.hand.join(", ") || "(empty)"}
+              </span>
             </div>
             <div style={styles.stateRow}>
-              <span>Deck:</span> <span style={styles.stateValue}>{player.deck.length} cards</span>
+              <span>Deck:</span>{" "}
+              <span style={styles.stateValue}>{player.deck.length} cards</span>
             </div>
             <div style={styles.stateRow}>
-              <span>Discard:</span> <span style={styles.stateValue}>{player.discard.length} cards</span>
+              <span>Discard:</span>{" "}
+              <span style={styles.stateValue}>
+                {player.discard.length} cards
+              </span>
             </div>
             <div style={styles.stateRow}>
-              <span>In Play:</span> <span style={styles.stateValue}>{player.inPlay.join(", ") || "(none)"}</span>
+              <span>In Play:</span>{" "}
+              <span style={styles.stateValue}>
+                {player.inPlay.join(", ") || "(none)"}
+              </span>
             </div>
           </div>
         );
@@ -564,12 +624,20 @@ function StateView({ state }: { state: GameState }) {
 
       {state.pendingDecision && (
         <div style={styles.stateSection}>
-          <div style={{ ...styles.stateSectionTitle, color: "#f97316" }}>Pending Decision</div>
-          <div style={styles.stateRow}>
-            <span>Player:</span> <span style={styles.stateValue}>{state.pendingDecision.player}</span>
+          <div style={{ ...styles.stateSectionTitle, color: "#f97316" }}>
+            Pending Decision
           </div>
           <div style={styles.stateRow}>
-            <span>Prompt:</span> <span style={styles.stateValue}>{state.pendingDecision.prompt}</span>
+            <span>Player:</span>{" "}
+            <span style={styles.stateValue}>
+              {state.pendingDecision.player}
+            </span>
+          </div>
+          <div style={styles.stateRow}>
+            <span>Prompt:</span>{" "}
+            <span style={styles.stateValue}>
+              {state.pendingDecision.prompt}
+            </span>
           </div>
         </div>
       )}
@@ -582,12 +650,38 @@ function StateDiff({ prev, next }: { prev: GameState; next: GameState }) {
   const changes: { path: string; from: string; to: string }[] = [];
 
   // Compare simple values
-  if (prev.turn !== next.turn) changes.push({ path: "turn", from: String(prev.turn), to: String(next.turn) });
-  if (prev.phase !== next.phase) changes.push({ path: "phase", from: prev.phase, to: next.phase });
-  if (prev.activePlayer !== next.activePlayer) changes.push({ path: "activePlayer", from: prev.activePlayer, to: next.activePlayer });
-  if (prev.actions !== next.actions) changes.push({ path: "actions", from: String(prev.actions), to: String(next.actions) });
-  if (prev.buys !== next.buys) changes.push({ path: "buys", from: String(prev.buys), to: String(next.buys) });
-  if (prev.coins !== next.coins) changes.push({ path: "coins", from: String(prev.coins), to: String(next.coins) });
+  if (prev.turn !== next.turn)
+    changes.push({
+      path: "turn",
+      from: String(prev.turn),
+      to: String(next.turn),
+    });
+  if (prev.phase !== next.phase)
+    changes.push({ path: "phase", from: prev.phase, to: next.phase });
+  if (prev.activePlayer !== next.activePlayer)
+    changes.push({
+      path: "activePlayer",
+      from: prev.activePlayer,
+      to: next.activePlayer,
+    });
+  if (prev.actions !== next.actions)
+    changes.push({
+      path: "actions",
+      from: String(prev.actions),
+      to: String(next.actions),
+    });
+  if (prev.buys !== next.buys)
+    changes.push({
+      path: "buys",
+      from: String(prev.buys),
+      to: String(next.buys),
+    });
+  if (prev.coins !== next.coins)
+    changes.push({
+      path: "coins",
+      from: String(prev.coins),
+      to: String(next.coins),
+    });
 
   // Compare player states
   for (const playerId of next.playerOrder || []) {
@@ -616,7 +710,9 @@ function StateDiff({ prev, next }: { prev: GameState; next: GameState }) {
         to: `${nextPlayer.discard.length} cards`,
       });
     }
-    if (JSON.stringify(prevPlayer.inPlay) !== JSON.stringify(nextPlayer.inPlay)) {
+    if (
+      JSON.stringify(prevPlayer.inPlay) !== JSON.stringify(nextPlayer.inPlay)
+    ) {
       changes.push({
         path: `${playerId}.inPlay`,
         from: prevPlayer.inPlay.join(", ") || "(none)",

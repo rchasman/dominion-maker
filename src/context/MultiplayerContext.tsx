@@ -13,7 +13,13 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { P2PRoom, generateRoomCode, type PlayerInfo, type RoomState, type PendingUndoRequest } from "../multiplayer/p2p-room";
+import {
+  P2PRoom,
+  generateRoomCode,
+  type PlayerInfo,
+  type RoomState,
+  type PendingUndoRequest,
+} from "../multiplayer/p2p-room";
 import type { GameState, CardName, Player } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
@@ -131,7 +137,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
   // Find my player index
   const myPlayerIndex = myPeerId
-    ? players.findIndex((p) => p.id === myPeerId)
+    ? players.findIndex(p => p.id === myPeerId)
     : null;
 
   const myGamePlayerId: Player | null =
@@ -176,18 +182,29 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     if (isPlaying && events.length > 0 && !gameState?.gameOver) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-        localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
-          roomCode,
-          myPeerId,
-          isHost,
-          players,
-        }));
+        localStorage.setItem(
+          STORAGE_ROOM_KEY,
+          JSON.stringify({
+            roomCode,
+            myPeerId,
+            isHost,
+            players,
+          }),
+        );
         setHasSavedSession(true);
       } catch (e) {
         multiplayerLogger.error("Failed to save to localStorage:", e);
       }
     }
-  }, [isPlaying, events, roomCode, myPeerId, isHost, players, gameState?.gameOver]);
+  }, [
+    isPlaying,
+    events,
+    roomCode,
+    myPeerId,
+    isHost,
+    players,
+    gameState?.gameOver,
+  ]);
 
   // Clear saved session when game ends
   useEffect(() => {
@@ -203,59 +220,72 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   /**
    * Create room as host
    */
-  const createRoom = useCallback(async (playerName: string): Promise<string> => {
-    setError(null);
-    setIsConnecting(true);
+  const createRoom = useCallback(
+    async (playerName: string): Promise<string> => {
+      setError(null);
+      setIsConnecting(true);
 
-    // Clear any previous session
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_ROOM_KEY);
+      // Clear any previous session
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_ROOM_KEY);
 
-    try {
-      const code = generateRoomCode();
-      const room = new P2PRoom(code, true);
-      roomRef.current = room;
+      try {
+        const code = generateRoomCode();
+        const room = new P2PRoom(code, true);
+        roomRef.current = room;
 
-      const peerId = room.getMyPeerId();
-      if (!peerId) throw new Error("Failed to get peer ID");
+        const peerId = room.getMyPeerId();
+        if (!peerId) throw new Error("Failed to get peer ID");
 
-      setMyPeerId(peerId);
-      setRoomCode(code);
-      setIsHost(true);
-      setIsConnected(true);
-      setIsConnecting(false);
+        setMyPeerId(peerId);
+        setRoomCode(code);
+        setIsHost(true);
+        setIsConnected(true);
+        setIsConnecting(false);
 
-      // Subscribe to state changes
-      room.onStateChange((state) => {
-        multiplayerLogger.debug(`Host state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? 'pending' : 'null'}`);
-        setRoomState(state);
-      });
+        // Subscribe to state changes
+        room.onStateChange(state => {
+          multiplayerLogger.debug(
+            `Host state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? "pending" : "null"}`,
+          );
+          setRoomState(state);
+        });
 
-      // Get initial state immediately to populate UI
-      const initialState = room.getState();
-      multiplayerLogger.debug(`Initial host state: ${initialState.players.length} players`);
-      setRoomState(initialState);
+        // Get initial state immediately to populate UI
+        const initialState = room.getState();
+        multiplayerLogger.debug(
+          `Initial host state: ${initialState.players.length} players`,
+        );
+        setRoomState(initialState);
 
-      // Set my name
-      room.setMyName(playerName);
+        // Set my name
+        room.setMyName(playerName);
 
-      // Save to localStorage for reconnect
-      localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
-        roomCode: code,
-        myPeerId: peerId,
-        isHost: true,
-        players: [{ id: peerId, name: playerName, isAI: false, connected: true }],
-      }));
-      setHasSavedSession(true);
+        // Save to localStorage for reconnect
+        localStorage.setItem(
+          STORAGE_ROOM_KEY,
+          JSON.stringify({
+            roomCode: code,
+            myPeerId: peerId,
+            isHost: true,
+            players: [
+              { id: peerId, name: playerName, isAI: false, connected: true },
+            ],
+          }),
+        );
+        setHasSavedSession(true);
 
-      return code;
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to create room";
-      setError(message);
-      setIsConnecting(false);
-      throw e;
-    }
-  }, []);
+        return code;
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : "Failed to create room";
+        setError(message);
+        setIsConnecting(false);
+        throw e;
+      }
+    },
+    [],
+  );
 
   /**
    * Join existing room as client
@@ -285,7 +315,12 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         // Set optimistic state immediately (will be replaced by real state)
         setRoomState({
           players: [
-            { id: "host-placeholder", name: "Host", isAI: false, connected: true },
+            {
+              id: "host-placeholder",
+              name: "Host",
+              isAI: false,
+              connected: true,
+            },
             { id: peerId, name: playerName, isAI: false, connected: true },
           ],
           gameState: null,
@@ -295,13 +330,15 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         });
 
         // Subscribe to state changes
-        room.onStateChange((state) => {
-          multiplayerLogger.debug(`Client state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? 'pending' : 'null'}`);
+        room.onStateChange(state => {
+          multiplayerLogger.debug(
+            `Client state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? "pending" : "null"}`,
+          );
           setRoomState(state);
         });
 
         // Subscribe to events and recompute state
-        room.onEvents((newEvents) => {
+        room.onEvents(newEvents => {
           multiplayerLogger.debug(`Received ${newEvents.length} events`);
           // State will be updated via onStateChange
         });
@@ -311,12 +348,17 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         room.setMyName(playerName);
 
         // Save to localStorage for reconnect
-        localStorage.setItem(STORAGE_ROOM_KEY, JSON.stringify({
-          roomCode: code.toUpperCase(),
-          myPeerId: peerId,
-          isHost: false,
-          players: [{ id: peerId, name: playerName, isAI: false, connected: true }],
-        }));
+        localStorage.setItem(
+          STORAGE_ROOM_KEY,
+          JSON.stringify({
+            roomCode: code.toUpperCase(),
+            myPeerId: peerId,
+            isHost: false,
+            players: [
+              { id: peerId, name: playerName, isAI: false, connected: true },
+            ],
+          }),
+        );
         setHasSavedSession(true);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to join room";
@@ -325,7 +367,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         throw e;
       }
     },
-    []
+    [],
   );
 
   /**
@@ -351,16 +393,28 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         players: PlayerInfo[];
       };
 
-      multiplayerLogger.debug(`Reconnecting to room: ${roomInfo.roomCode} as ${roomInfo.isHost ? "host" : "client"}`, { myPeerId: roomInfo.myPeerId });
+      multiplayerLogger.debug(
+        `Reconnecting to room: ${roomInfo.roomCode} as ${roomInfo.isHost ? "host" : "client"}`,
+        { myPeerId: roomInfo.myPeerId },
+      );
 
       // Create new room connection with SAVED peerId (critical for player mapping)
-      const room = new P2PRoom(roomInfo.roomCode, roomInfo.isHost, roomInfo.myPeerId);
+      const room = new P2PRoom(
+        roomInfo.roomCode,
+        roomInfo.isHost,
+        roomInfo.myPeerId,
+      );
       roomRef.current = room;
 
       const peerId = room.getMyPeerId();
       if (!peerId) throw new Error("Failed to get peer ID");
       if (peerId !== roomInfo.myPeerId) {
-        multiplayerLogger.warn("peerId mismatch! Saved:", roomInfo.myPeerId, "Got:", peerId);
+        multiplayerLogger.warn(
+          "peerId mismatch! Saved:",
+          roomInfo.myPeerId,
+          "Got:",
+          peerId,
+        );
       }
 
       setMyPeerId(roomInfo.myPeerId); // Use saved peerId
@@ -387,8 +441,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       setRoomState(initialRoomState);
 
       // Subscribe to state changes (will update when peers connect)
-      room.onStateChange((state) => {
-        multiplayerLogger.debug(`Room state update: ${state.events.length} events, ${state.players.length} players`);
+      room.onStateChange(state => {
+        multiplayerLogger.debug(
+          `Room state update: ${state.events.length} events, ${state.players.length} players`,
+        );
         // Only update if the state has meaningful data (not empty from room initialization)
         if (state.players.length > 0 || state.events.length > 0) {
           setRoomState(state);
@@ -405,7 +461,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         engine.loadEvents(events);
         const engineState = engine.state;
 
-        multiplayerLogger.debug(`Host restored engine with ${events.length} events`);
+        multiplayerLogger.debug(
+          `Host restored engine with ${events.length} events`,
+        );
 
         // Restore players BEFORE starting game (critical!)
         room.restorePlayers(roomInfo.players);
@@ -421,7 +479,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
         // Handle commands from clients
         room.onCommand((command, customPlayerId) => {
-          multiplayerLogger.debug(`Processing command from ${customPlayerId}:`, command.type);
+          multiplayerLogger.debug(
+            `Processing command from ${customPlayerId}:`,
+            command.type,
+          );
 
           // Handle undo commands
           if (command.type === "REQUEST_UNDO") {
@@ -429,14 +490,21 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
             return;
           }
           if (command.type === "APPROVE_UNDO") {
-            multiplayerLogger.debug(`(Reconnect) Processing APPROVE_UNDO from ${customPlayerId}`);
+            multiplayerLogger.debug(
+              `(Reconnect) Processing APPROVE_UNDO from ${customPlayerId}`,
+            );
             const wasExecuted = room.approveUndo(customPlayerId);
 
-            multiplayerLogger.debug(`(Reconnect) After approval, wasExecuted:`, wasExecuted);
+            multiplayerLogger.debug(
+              `(Reconnect) After approval, wasExecuted:`,
+              wasExecuted,
+            );
 
             if (wasExecuted) {
               const newEvents = room.getEvents();
-              multiplayerLogger.debug(`(Reconnect) Undo executed! Reloading engine with ${newEvents.length} events`);
+              multiplayerLogger.debug(
+                `(Reconnect) Undo executed! Reloading engine with ${newEvents.length} events`,
+              );
 
               // Sync event counter to the highest ID in the truncated log
               syncEventCounter(newEvents);
@@ -446,7 +514,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
               engine.loadEventsSilently(newEvents);
 
               // Broadcast full state (events were truncated, clients need full sync)
-              multiplayerLogger.debug(`(Reconnect) Broadcasting full state after undo, activePlayer: ${newState.activePlayer}`);
+              multiplayerLogger.debug(
+                `(Reconnect) Broadcasting full state after undo, activePlayer: ${newState.activePlayer}`,
+              );
               room.broadcastFullState();
             }
             return;
@@ -458,9 +528,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
           // Regular commands
           // Map custom player ID to game player ID (player0, player1, etc.)
-          const playerIndex = roomInfo.players.findIndex(p => p.id === customPlayerId);
+          const playerIndex = roomInfo.players.findIndex(
+            p => p.id === customPlayerId,
+          );
           if (playerIndex < 0) {
-            multiplayerLogger.error(`Unknown custom player ID: ${customPlayerId}`);
+            multiplayerLogger.error(
+              `Unknown custom player ID: ${customPlayerId}`,
+            );
             return;
           }
 
@@ -469,10 +543,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
             multiplayerLogger.error(`Invalid player index: ${playerIndex}`);
             return;
           }
-          const commandPlayerId = 'player' in command ? command.player : undefined;
+          const commandPlayerId =
+            "player" in command ? command.player : undefined;
 
           if (commandPlayerId && commandPlayerId !== gamePlayerId) {
-            multiplayerLogger.error(`Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
+            multiplayerLogger.error(
+              `Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`,
+            );
             return;
           }
 
@@ -486,14 +563,18 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         engineRef.current = engine;
         engine.loadEvents(events);
 
-        multiplayerLogger.debug(`Client restored engine with ${events.length} events`);
+        multiplayerLogger.debug(
+          `Client restored engine with ${events.length} events`,
+        );
 
         // Restore players in room (so getState() works correctly)
         room.restorePlayers(roomInfo.players);
 
         // Subscribe to events from host
-        room.onEvents((newEvents) => {
-          multiplayerLogger.debug(`Client received ${newEvents.length} events, applying locally`);
+        room.onEvents(newEvents => {
+          multiplayerLogger.debug(
+            `Client received ${newEvents.length} events, applying locally`,
+          );
           // Apply to local engine
           engine.applyExternalEvents(newEvents);
 
@@ -510,7 +591,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       }
 
       // Set name (will trigger rejoin message to host)
-      const myName = roomInfo.players.find(p => p.id === roomInfo.myPeerId)?.name || "Player";
+      const myName =
+        roomInfo.players.find(p => p.id === roomInfo.myPeerId)?.name ||
+        "Player";
       room.setMyName(myName);
 
       setIsReconnecting(false);
@@ -547,7 +630,13 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     setRoomCode(null);
     setMyPeerId(null);
     setIsHost(false);
-    setRoomState({ players: [], gameState: null, events: [], pendingUndo: null, isStarted: false });
+    setRoomState({
+      players: [],
+      gameState: null,
+      events: [],
+      pendingUndo: null,
+      isStarted: false,
+    });
     setError(null);
 
     // Clear localStorage to prevent rejoining
@@ -574,7 +663,6 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     // Don't leave immediately - let the game over modal show
   }, []);
 
-
   /**
    * Update my name
    */
@@ -595,14 +683,18 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     engineRef.current = engine;
 
     // Start game with player IDs
-    const playerIds = players.map((_, i) => getPlayerIdByIndex(i)).filter((id): id is Player => id !== null);
+    const playerIds = players
+      .map((_, i) => getPlayerIdByIndex(i))
+      .filter((id): id is Player => id !== null);
     engine.startGame(playerIds);
 
     // Get initial state and events
     const initialState = engine.state;
     const initialEvents = [...engine.eventLog];
 
-    multiplayerLogger.debug(`Starting game with ${playerIds.length} players, ${initialEvents.length} events`);
+    multiplayerLogger.debug(
+      `Starting game with ${playerIds.length} players, ${initialEvents.length} events`,
+    );
 
     // Broadcast to room
     room.startGameWithEvents(initialState, initialEvents);
@@ -615,7 +707,10 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
     // Handle commands from clients
     room.onCommand((command, customPlayerId) => {
-      multiplayerLogger.debug(`Processing command from ${customPlayerId}:`, command.type);
+      multiplayerLogger.debug(
+        `Processing command from ${customPlayerId}:`,
+        command.type,
+      );
 
       // Handle undo commands specially
       if (command.type === "REQUEST_UNDO") {
@@ -624,14 +719,18 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       }
 
       if (command.type === "APPROVE_UNDO") {
-        multiplayerLogger.debug(`Processing APPROVE_UNDO from ${customPlayerId}`);
+        multiplayerLogger.debug(
+          `Processing APPROVE_UNDO from ${customPlayerId}`,
+        );
         const wasExecuted = room.approveUndo(customPlayerId);
 
         multiplayerLogger.debug(`After approval, wasExecuted:`, wasExecuted);
 
         if (wasExecuted) {
           const newEvents = room.getEvents();
-          multiplayerLogger.debug(`Undo executed! Reloading engine with ${newEvents.length} events`);
+          multiplayerLogger.debug(
+            `Undo executed! Reloading engine with ${newEvents.length} events`,
+          );
 
           // Sync event counter to the highest ID in the truncated log
           syncEventCounter(newEvents);
@@ -676,10 +775,12 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         multiplayerLogger.error(`Invalid player index: ${playerIndex}`);
         return;
       }
-      const commandPlayerId = 'player' in command ? command.player : undefined;
+      const commandPlayerId = "player" in command ? command.player : undefined;
 
       if (commandPlayerId && commandPlayerId !== gamePlayerId) {
-        multiplayerLogger.error(`Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`);
+        multiplayerLogger.error(
+          `Player ID mismatch! Custom player ${customPlayerId} (game ${gamePlayerId}) sent command for ${commandPlayerId}`,
+        );
         return;
       }
 
@@ -688,37 +789,50 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     });
   }, [isHost, players]);
 
-
   // Game actions
-  const playAction = useCallback((card: CardName): CommandResult => {
-    if (!myGamePlayerId) return { ok: false, error: "Not in game" };
+  const playAction = useCallback(
+    (card: CardName): CommandResult => {
+      if (!myGamePlayerId) return { ok: false, error: "Not in game" };
 
-    if (isHost && engineRef.current) {
-      return engineRef.current.playAction(myGamePlayerId, card);
-    }
+      if (isHost && engineRef.current) {
+        return engineRef.current.playAction(myGamePlayerId, card);
+      }
 
-    if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "PLAY_ACTION", player: myGamePlayerId, card });
-      return { ok: true, events: [] };
-    }
+      if (!isHost && roomRef.current) {
+        roomRef.current.sendCommandToHost({
+          type: "PLAY_ACTION",
+          player: myGamePlayerId,
+          card,
+        });
+        return { ok: true, events: [] };
+      }
 
-    return { ok: false, error: "Not connected" };
-  }, [isHost, myGamePlayerId]);
+      return { ok: false, error: "Not connected" };
+    },
+    [isHost, myGamePlayerId],
+  );
 
-  const playTreasure = useCallback((card: CardName): CommandResult => {
-    if (!myGamePlayerId) return { ok: false, error: "Not in game" };
+  const playTreasure = useCallback(
+    (card: CardName): CommandResult => {
+      if (!myGamePlayerId) return { ok: false, error: "Not in game" };
 
-    if (isHost && engineRef.current) {
-      return engineRef.current.playTreasure(myGamePlayerId, card);
-    }
+      if (isHost && engineRef.current) {
+        return engineRef.current.playTreasure(myGamePlayerId, card);
+      }
 
-    if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "PLAY_TREASURE", player: myGamePlayerId, card });
-      return { ok: true, events: [] };
-    }
+      if (!isHost && roomRef.current) {
+        roomRef.current.sendCommandToHost({
+          type: "PLAY_TREASURE",
+          player: myGamePlayerId,
+          card,
+        });
+        return { ok: true, events: [] };
+      }
 
-    return { ok: false, error: "Not connected" };
-  }, [isHost, myGamePlayerId]);
+      return { ok: false, error: "Not connected" };
+    },
+    [isHost, myGamePlayerId],
+  );
 
   const playAllTreasures = useCallback((): CommandResult => {
     if (!myGamePlayerId) return { ok: false, error: "Not in game" };
@@ -728,27 +842,37 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     }
 
     if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "PLAY_ALL_TREASURES", player: myGamePlayerId });
+      roomRef.current.sendCommandToHost({
+        type: "PLAY_ALL_TREASURES",
+        player: myGamePlayerId,
+      });
       return { ok: true, events: [] };
     }
 
     return { ok: false, error: "Not connected" };
   }, [isHost, myGamePlayerId]);
 
-  const buyCard = useCallback((card: CardName): CommandResult => {
-    if (!myGamePlayerId) return { ok: false, error: "Not in game" };
+  const buyCard = useCallback(
+    (card: CardName): CommandResult => {
+      if (!myGamePlayerId) return { ok: false, error: "Not in game" };
 
-    if (isHost && engineRef.current) {
-      return engineRef.current.buyCard(myGamePlayerId, card);
-    }
+      if (isHost && engineRef.current) {
+        return engineRef.current.buyCard(myGamePlayerId, card);
+      }
 
-    if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "BUY_CARD", player: myGamePlayerId, card });
-      return { ok: true, events: [] };
-    }
+      if (!isHost && roomRef.current) {
+        roomRef.current.sendCommandToHost({
+          type: "BUY_CARD",
+          player: myGamePlayerId,
+          card,
+        });
+        return { ok: true, events: [] };
+      }
 
-    return { ok: false, error: "Not connected" };
-  }, [isHost, myGamePlayerId]);
+      return { ok: false, error: "Not connected" };
+    },
+    [isHost, myGamePlayerId],
+  );
 
   const endPhase = useCallback((): CommandResult => {
     if (!myGamePlayerId) return { ok: false, error: "Not in game" };
@@ -758,60 +882,79 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     }
 
     if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "END_PHASE", player: myGamePlayerId });
+      roomRef.current.sendCommandToHost({
+        type: "END_PHASE",
+        player: myGamePlayerId,
+      });
       return { ok: true, events: [] };
     }
 
     return { ok: false, error: "Not connected" };
   }, [isHost, myGamePlayerId]);
 
-  const submitDecision = useCallback((choice: DecisionChoice): CommandResult => {
-    if (!gameState?.pendingDecision || !myGamePlayerId) {
-      return { ok: false, error: "No pending decision" };
-    }
+  const submitDecision = useCallback(
+    (choice: DecisionChoice): CommandResult => {
+      if (!gameState?.pendingDecision || !myGamePlayerId) {
+        return { ok: false, error: "No pending decision" };
+      }
 
-    const decisionPlayer = gameState.pendingDecision.player;
+      const decisionPlayer = gameState.pendingDecision.player;
 
-    if (isHost && engineRef.current) {
-      return engineRef.current.submitDecision(decisionPlayer, choice);
-    }
+      if (isHost && engineRef.current) {
+        return engineRef.current.submitDecision(decisionPlayer, choice);
+      }
 
-    if (!isHost && roomRef.current) {
-      roomRef.current.sendCommandToHost({ type: "SUBMIT_DECISION", player: decisionPlayer, choice });
-      return { ok: true, events: [] };
-    }
+      if (!isHost && roomRef.current) {
+        roomRef.current.sendCommandToHost({
+          type: "SUBMIT_DECISION",
+          player: decisionPlayer,
+          choice,
+        });
+        return { ok: true, events: [] };
+      }
 
-    return { ok: false, error: "Not connected" };
-  }, [isHost, myGamePlayerId, gameState?.pendingDecision]);
+      return { ok: false, error: "Not connected" };
+    },
+    [isHost, myGamePlayerId, gameState?.pendingDecision],
+  );
 
   // Undo actions
-  const requestUndo = useCallback((toEventId: string, reason?: string) => {
-    const room = roomRef.current;
-    if (!room || !myPeerId) return;
+  const requestUndo = useCallback(
+    (toEventId: string, reason?: string) => {
+      const room = roomRef.current;
+      if (!room || !myPeerId) return;
 
-    multiplayerLogger.debug(`requestUndo called with toEventId: ${toEventId}, reason: ${reason}`);
+      multiplayerLogger.debug(
+        `requestUndo called with toEventId: ${toEventId}, reason: ${reason}`,
+      );
 
-    if (isHost) {
-      // Host: Update locally and broadcast
-      room.requestUndo(myPeerId, toEventId, reason);
-    } else {
-      // Client: Send command to host
-      multiplayerLogger.debug(`Client sending REQUEST_UNDO for event ${toEventId}`);
-      room.sendCommandToHost({
-        type: "REQUEST_UNDO",
-        player: myPeerId,
-        toEventId,
-        reason,
-      });
-    }
-  }, [myPeerId, isHost]);
+      if (isHost) {
+        // Host: Update locally and broadcast
+        room.requestUndo(myPeerId, toEventId, reason);
+      } else {
+        // Client: Send command to host
+        multiplayerLogger.debug(
+          `Client sending REQUEST_UNDO for event ${toEventId}`,
+        );
+        room.sendCommandToHost({
+          type: "REQUEST_UNDO",
+          player: myPeerId,
+          toEventId,
+          reason,
+        });
+      }
+    },
+    [myPeerId, isHost],
+  );
 
   const approveUndo = useCallback(() => {
     const room = roomRef.current;
     const engine = engineRef.current;
     if (!room || !myPeerId || !pendingUndo) return;
 
-    multiplayerLogger.debug(`approveUndo called by ${isHost ? "host" : "client"}, myPeerId: ${myPeerId}`);
+    multiplayerLogger.debug(
+      `approveUndo called by ${isHost ? "host" : "client"}, myPeerId: ${myPeerId}`,
+    );
 
     if (isHost) {
       // Host: Approve locally
@@ -821,7 +964,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
 
       if (engine && wasExecuted) {
         const newEvents = room.getEvents();
-        multiplayerLogger.debug(`Host reloading engine with ${newEvents.length} events`);
+        multiplayerLogger.debug(
+          `Host reloading engine with ${newEvents.length} events`,
+        );
 
         // Sync event counter to the highest ID in the truncated log
         syncEventCounter(newEvents);
@@ -831,7 +976,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
         engine.loadEventsSilently(newEvents);
 
         // Broadcast full state (events were truncated, clients need full sync)
-        multiplayerLogger.debug(`Host broadcasting full state after undo, activePlayer: ${newState.activePlayer}`);
+        multiplayerLogger.debug(
+          `Host broadcasting full state after undo, activePlayer: ${newState.activePlayer}`,
+        );
         room.broadcastFullState();
       }
     } else {
@@ -861,13 +1008,16 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   }, [myPeerId, isHost, pendingUndo]);
 
   // Time travel
-  const getStateAtEvent = useCallback((eventId: string): GameState => {
-    const eventIndex = events.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) {
-      throw new Error(`Event ${eventId} not found`);
-    }
-    return projectState(events.slice(0, eventIndex + 1));
-  }, [events]);
+  const getStateAtEvent = useCallback(
+    (eventId: string): GameState => {
+      const eventIndex = events.findIndex(e => e.id === eventId);
+      if (eventIndex === -1) {
+        throw new Error(`Event ${eventId} not found`);
+      }
+      return projectState(events.slice(0, eventIndex + 1));
+    },
+    [events],
+  );
 
   const value: MultiplayerContextValue = {
     // Connection

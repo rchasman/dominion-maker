@@ -1,5 +1,14 @@
 import type { LogEntry as LogEntryType } from "../types/game-state";
-import { PlayerName, CardNameSpan, CoinValue, VPValue, ActionValue, BuyValue, Verb, getCardColor } from "./LogFormatters";
+import {
+  PlayerName,
+  CardNameSpan,
+  CoinValue,
+  VPValue,
+  ActionValue,
+  BuyValue,
+  Verb,
+  getCardColor,
+} from "./LogFormatters";
 import { CARDS } from "../data/cards";
 import type { ReactNode } from "react";
 
@@ -11,20 +20,32 @@ interface LogEntryProps {
   viewer?: "human" | "ai";
 }
 
-function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEntryType; depth?: number; viewer?: "human" | "ai" }) {
+function LogEntryContent({
+  entry,
+  depth = 0,
+  viewer = "human",
+}: {
+  entry: LogEntryType;
+  depth?: number;
+  viewer?: "human" | "ai";
+}) {
   switch (entry.type) {
     case "turn-start":
       return (
-        <div style={{
-          fontWeight: 700,
-          fontSize: "0.75rem",
-          color: "var(--color-gold)",
-          marginBlockStart: "var(--space-3)",
-          marginBlockEnd: "var(--space-1)",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}>
-          <span style={{ color: "var(--color-text-secondary)" }}>Turn {entry.turn}</span>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "0.75rem",
+            color: "var(--color-gold)",
+            marginBlockStart: "var(--space-3)",
+            marginBlockEnd: "var(--space-1)",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
+          <span style={{ color: "var(--color-text-secondary)" }}>
+            Turn {entry.turn}
+          </span>
           {" - "}
           <PlayerName player={entry.player} />
         </div>
@@ -40,14 +61,20 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
     case "phase-change":
       return (
         <span>
-          <PlayerName player={entry.player} /> <Verb>moves to</Verb> {entry.phase} phase
+          <PlayerName player={entry.player} /> <Verb>moves to</Verb>{" "}
+          {entry.phase} phase
         </span>
       );
 
     case "play-treasure": {
       // Check if there's a count child (for aggregated treasures)
-      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
-      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const countChild = entry.children?.find(
+        c => c.type === "text" && "message" in c && c.message.endsWith("x"),
+      );
+      const count =
+        countChild && "message" in countChild
+          ? parseInt(countChild.message)
+          : 1;
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
@@ -56,17 +83,20 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
             <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
-            </span>{suffix}
+            </span>
+            {suffix}
           </span>
           {entry.reasoning && (
-            <div style={{
-              marginTop: "2px",
-              paddingLeft: "12px",
-              fontSize: "0.625rem",
-              color: "var(--color-text-secondary)",
-              fontStyle: "italic",
-              opacity: 0.8,
-            }}>
+            <div
+              style={{
+                marginTop: "2px",
+                paddingLeft: "12px",
+                fontSize: "0.625rem",
+                color: "var(--color-text-secondary)",
+                fontStyle: "italic",
+                opacity: 0.8,
+              }}
+            >
               → {entry.reasoning}
             </div>
           )}
@@ -76,8 +106,13 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
     case "unplay-treasure": {
       // Check if there's a count child (for aggregated unplays)
-      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
-      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const countChild = entry.children?.find(
+        c => c.type === "text" && "message" in c && c.message.endsWith("x"),
+      );
+      const count =
+        countChild && "message" in countChild
+          ? parseInt(countChild.message)
+          : 1;
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
@@ -85,15 +120,21 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
           <PlayerName player={entry.player} /> <Verb>takes back</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
             {entry.card}
-          </span>{suffix}
+          </span>
+          {suffix}
         </span>
       );
     }
 
     case "play-action": {
       // Check if there's a count child (for aggregated actions)
-      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
-      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const countChild = entry.children?.find(
+        c => c.type === "text" && "message" in c && c.message.endsWith("x"),
+      );
+      const count =
+        countChild && "message" in countChild
+          ? parseInt(countChild.message)
+          : 1;
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
@@ -102,17 +143,20 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
             <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
-            </span>{suffix}
+            </span>
+            {suffix}
           </span>
           {entry.reasoning && (
-            <div style={{
-              marginTop: "2px",
-              paddingLeft: "12px",
-              fontSize: "0.625rem",
-              color: "var(--color-text-secondary)",
-              fontStyle: "italic",
-              opacity: 0.8,
-            }}>
+            <div
+              style={{
+                marginTop: "2px",
+                paddingLeft: "12px",
+                fontSize: "0.625rem",
+                color: "var(--color-text-secondary)",
+                fontStyle: "italic",
+                opacity: 0.8,
+              }}
+            >
               → {entry.reasoning}
             </div>
           )}
@@ -122,8 +166,13 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
     case "buy-card": {
       // Check if there's a count child (for aggregated buys)
-      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
-      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const countChild = entry.children?.find(
+        c => c.type === "text" && "message" in c && c.message.endsWith("x"),
+      );
+      const count =
+        countChild && "message" in countChild
+          ? parseInt(countChild.message)
+          : 1;
       const suffix = count > 1 ? ` x${count}` : "";
 
       return (
@@ -132,17 +181,20 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
             <PlayerName player={entry.player} /> <Verb>buys</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
-            </span>{suffix}
+            </span>
+            {suffix}
           </span>
           {entry.reasoning && (
-            <div style={{
-              marginTop: "2px",
-              paddingLeft: "12px",
-              fontSize: "0.625rem",
-              color: "var(--color-text-secondary)",
-              fontStyle: "italic",
-              opacity: 0.8,
-            }}>
+            <div
+              style={{
+                marginTop: "2px",
+                paddingLeft: "12px",
+                fontSize: "0.625rem",
+                color: "var(--color-text-secondary)",
+                fontStyle: "italic",
+                opacity: 0.8,
+              }}
+            >
               → {entry.reasoning}
             </div>
           )}
@@ -156,7 +208,11 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       if (isOpponent) {
         return (
           <span>
-            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            {depth === 0 && (
+              <>
+                <PlayerName player={entry.player} />{" "}
+              </>
+            )}
             <Verb>draws</Verb> {entry.count} cards
           </span>
         );
@@ -164,7 +220,9 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
       if (entry.cards) {
         // Use pre-computed cardCounts from aggregation if available, otherwise compute
-        const aggregated = entry as typeof entry & { cardCounts?: Record<string, number> };
+        const aggregated = entry as typeof entry & {
+          cardCounts?: Record<string, number>;
+        };
         const cardCounts = aggregated.cardCounts
           ? new Map(Object.entries(aggregated.cardCounts))
           : (() => {
@@ -182,17 +240,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
           if ((count as number) > 1) {
             parts.push(
               <span key={idx}>
-                <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
+                <span
+                  style={{
+                    color: getCardColor(card as (typeof entry.cards)[0]),
+                    fontWeight: 600,
+                  }}
+                >
                   {card}
                 </span>
                 {` x${count as number}`}
-              </span>
+              </span>,
             );
           } else {
             parts.push(
               <span key={idx}>
-                <CardNameSpan card={card as typeof entry.cards[0]} />
-              </span>
+                <CardNameSpan card={card as (typeof entry.cards)[0]} />
+              </span>,
             );
           }
           idx++;
@@ -200,14 +263,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
         return (
           <span>
-            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            {depth === 0 && (
+              <>
+                <PlayerName player={entry.player} />{" "}
+              </>
+            )}
             <Verb>draws</Verb> {parts}
           </span>
         );
       }
       return (
         <span>
-          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          {depth === 0 && (
+            <>
+              <PlayerName player={entry.player} />{" "}
+            </>
+          )}
           <Verb>draws</Verb> {entry.count} cards
         </span>
       );
@@ -215,31 +286,46 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
     case "gain-card": {
       // Check if there's a count child (for aggregated gains)
-      const countChild = entry.children?.find(c => c.type === "text" && 'message' in c && c.message.endsWith("x"));
-      const count = countChild && 'message' in countChild ? parseInt(countChild.message) : 1;
+      const countChild = entry.children?.find(
+        c => c.type === "text" && "message" in c && c.message.endsWith("x"),
+      );
+      const count =
+        countChild && "message" in countChild
+          ? parseInt(countChild.message)
+          : 1;
       const suffix = count > 1 ? ` x${count}` : "";
 
       const cardDef = CARDS[entry.card];
-      const isVictory = cardDef.types.includes("victory") || cardDef.types.includes("curse");
+      const isVictory =
+        cardDef.types.includes("victory") || cardDef.types.includes("curse");
 
       // Show VP for victory/curse cards
-      const vpValue = typeof cardDef.vp === "number" ? cardDef.vp * count : undefined;
-      const vpDisplay = vpValue !== undefined && isVictory ? (
-        <>
-          {" "}
-          <span style={{ color: "var(--color-victory)", fontWeight: 700 }}>
-            ({vpValue >= 0 ? "+" : ""}{vpValue} VP)
-          </span>
-        </>
-      ) : null;
+      const vpValue =
+        typeof cardDef.vp === "number" ? cardDef.vp * count : undefined;
+      const vpDisplay =
+        vpValue !== undefined && isVictory ? (
+          <>
+            {" "}
+            <span style={{ color: "var(--color-victory)", fontWeight: 700 }}>
+              ({vpValue >= 0 ? "+" : ""}
+              {vpValue} VP)
+            </span>
+          </>
+        ) : null;
 
       return (
         <span>
-          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          {depth === 0 && (
+            <>
+              <PlayerName player={entry.player} />{" "}
+            </>
+          )}
           <Verb>gains</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
             {entry.card}
-          </span>{suffix}{vpDisplay}
+          </span>
+          {suffix}
+          {vpDisplay}
         </span>
       );
     }
@@ -247,7 +333,9 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
     case "discard-cards":
       if (entry.cards) {
         // Use pre-computed cardCounts from aggregation if available, otherwise compute
-        const aggregated = entry as typeof entry & { cardCounts?: Record<string, number> };
+        const aggregated = entry as typeof entry & {
+          cardCounts?: Record<string, number>;
+        };
         const cardCounts = aggregated.cardCounts
           ? new Map(Object.entries(aggregated.cardCounts))
           : (() => {
@@ -265,17 +353,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
           if ((count as number) > 1) {
             parts.push(
               <span key={idx}>
-                <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
+                <span
+                  style={{
+                    color: getCardColor(card as (typeof entry.cards)[0]),
+                    fontWeight: 600,
+                  }}
+                >
                   {card}
                 </span>
                 {` x${count as number}`}
-              </span>
+              </span>,
             );
           } else {
             parts.push(
               <span key={idx}>
-                <CardNameSpan card={card as typeof entry.cards[0]} />
-              </span>
+                <CardNameSpan card={card as (typeof entry.cards)[0]} />
+              </span>,
             );
           }
           idx++;
@@ -283,14 +376,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
         return (
           <span>
-            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            {depth === 0 && (
+              <>
+                <PlayerName player={entry.player} />{" "}
+              </>
+            )}
             <Verb>discards</Verb> {parts}
           </span>
         );
       }
       return (
         <span>
-          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          {depth === 0 && (
+            <>
+              <PlayerName player={entry.player} />{" "}
+            </>
+          )}
           <Verb>discards</Verb> {entry.count} cards
         </span>
       );
@@ -310,17 +411,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
           if (count > 1) {
             parts.push(
               <span key={idx}>
-                <span style={{ color: getCardColor(card as typeof entry.cards[0]), fontWeight: 600 }}>
+                <span
+                  style={{
+                    color: getCardColor(card as (typeof entry.cards)[0]),
+                    fontWeight: 600,
+                  }}
+                >
                   {card}
                 </span>
                 {` x${count}`}
-              </span>
+              </span>,
             );
           } else {
             parts.push(
               <span key={idx}>
-                <CardNameSpan card={card as typeof entry.cards[0]} />
-              </span>
+                <CardNameSpan card={card as (typeof entry.cards)[0]} />
+              </span>,
             );
           }
           idx++;
@@ -328,7 +434,11 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
         return (
           <span>
-            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            {depth === 0 && (
+              <>
+                <PlayerName player={entry.player} />{" "}
+              </>
+            )}
             <Verb>trashes</Verb> {parts}
           </span>
         );
@@ -336,14 +446,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       if (entry.card) {
         return (
           <span>
-            {depth === 0 && <><PlayerName player={entry.player} /> </>}
+            {depth === 0 && (
+              <>
+                <PlayerName player={entry.player} />{" "}
+              </>
+            )}
             <Verb>trashes</Verb> <CardNameSpan card={entry.card} />
           </span>
         );
       }
       return (
         <span>
-          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          {depth === 0 && (
+            <>
+              <PlayerName player={entry.player} />{" "}
+            </>
+          )}
           <Verb>trashes</Verb> {entry.count} cards
         </span>
       );
@@ -351,7 +469,11 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
     case "shuffle-deck":
       return (
         <span>
-          {depth === 0 && <><PlayerName player={entry.player} /> </>}
+          {depth === 0 && (
+            <>
+              <PlayerName player={entry.player} />{" "}
+            </>
+          )}
           <Verb>shuffles</Verb> {depth > 0 ? "deck" : "their deck"}
         </span>
       );
@@ -365,17 +487,22 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
 
     case "game-over":
       return (
-        <div style={{
-          fontWeight: 700,
-          fontSize: "0.875rem",
-          color: "var(--color-gold)",
-          marginBlockStart: "var(--space-4)",
-          paddingBlock: "var(--space-3)",
-          borderBlock: "1px solid var(--color-border)",
-        }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: "0.875rem",
+            color: "var(--color-gold)",
+            marginBlockStart: "var(--space-4)",
+            paddingBlock: "var(--space-3)",
+            borderBlock: "1px solid var(--color-border)",
+          }}
+        >
           <div>Game Over!</div>
-          <div style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}>
-            Human: <VPValue vp={entry.humanVP} />, AI: <VPValue vp={entry.aiVP} />
+          <div
+            style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}
+          >
+            Human: <VPValue vp={entry.humanVP} />, AI:{" "}
+            <VPValue vp={entry.aiVP} />
           </div>
         </div>
       );
@@ -384,8 +511,14 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
       return (
         <span>
           <PlayerName player={entry.player} /> <Verb>starts with</Verb>{" "}
-          <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>{entry.coppers}</span> Coppers and{" "}
-          <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>{entry.estates}</span> Estates
+          <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>
+            {entry.coppers}
+          </span>{" "}
+          Coppers and{" "}
+          <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>
+            {entry.estates}
+          </span>{" "}
+          Estates
         </span>
       );
 
@@ -443,10 +576,21 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
   }
 }
 
-export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "", viewer = "human" }: LogEntryProps) {
+export function LogEntry({
+  entry,
+  depth = 0,
+  isLast = true,
+  parentPrefix = "",
+  viewer = "human",
+}: LogEntryProps) {
   // Filter out count children (e.g., "5x") as they're used for formatting the parent entry
   const childrenToRender = entry.children?.filter(
-    child => !(child.type === "text" && 'message' in child && child.message.endsWith("x"))
+    child =>
+      !(
+        child.type === "text" &&
+        "message" in child &&
+        child.message.endsWith("x")
+      ),
   );
 
   // Don't show tree glyphs for turn headers or game-over
@@ -482,11 +626,13 @@ export function LogEntry({ entry, depth = 0, isLast = true, parentPrefix = "", v
 
   return (
     <>
-      <div style={{
-        color: "var(--color-text-secondary)",
-        fontFamily: "monospace",
-        whiteSpace: "pre"
-      }}>
+      <div
+        style={{
+          color: "var(--color-text-secondary)",
+          fontFamily: "monospace",
+          whiteSpace: "pre",
+        }}
+      >
         {prefix && (
           <span style={{ color: "var(--color-border)", userSelect: "none" }}>
             {prefix}

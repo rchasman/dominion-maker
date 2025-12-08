@@ -6,14 +6,8 @@
 import { useMultiplayer } from "../../context/MultiplayerContext";
 
 export function LobbyRoom() {
-  const {
-    roomCode,
-    isHost,
-    myPeerId,
-    players,
-    startGame,
-    leaveRoom,
-  } = useMultiplayer();
+  const { roomCode, isHost, myPeerId, players, startGame, leaveRoom } =
+    useMultiplayer();
 
   const canStart = isHost && players.length >= 2;
 

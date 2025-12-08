@@ -11,11 +11,15 @@ export const useLiveTimer = (entries: LLMLogEntry[]): number => {
   useEffect(() => {
     // Check if there are any consensus-start entries without corresponding consensus-complete
     const hasPending = entries.some((entry, idx) => {
-      if (entry.type === 'consensus-start') {
+      if (entry.type === "consensus-start") {
         // Look for matching consensus-complete after this index
-        const hasComplete = entries.slice(idx + 1).some(e =>
-          e.type === 'consensus-complete' || e.type === 'consensus-model-aborted'
-        );
+        const hasComplete = entries
+          .slice(idx + 1)
+          .some(
+            e =>
+              e.type === "consensus-complete" ||
+              e.type === "consensus-model-aborted",
+          );
         return !hasComplete;
       }
       return false;

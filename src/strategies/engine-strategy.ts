@@ -8,26 +8,45 @@ import type { CardName, GameState } from "../types/game-state";
 import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
 
 export class EngineStrategy implements GameStrategy {
-  async runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void> {
+  async runAITurn(
+    engine: DominionEngine,
+    onStateChange?: (state: GameState) => void,
+  ): Promise<void> {
     const delay = () => new Promise(resolve => setTimeout(resolve, 300));
 
     // ACTION PHASE: Play action cards with priority
-    while (engine.state.phase === "action" && engine.state.actions > 0 && !engine.state.gameOver) {
+    while (
+      engine.state.phase === "action" &&
+      engine.state.actions > 0 &&
+      !engine.state.gameOver
+    ) {
       const hand = engine.state.players.ai?.hand || [];
       const actionCards = hand.filter(isActionCard);
       if (actionCards.length === 0) break;
 
       // Priority: Village/cantrips > draw > money > attacks > gain/trash
       const priorities: Record<string, number> = {
-        "Village": 100, "Festival": 95, "Market": 90,
-        "Laboratory": 80, "Smithy": 75, "Council Room": 70,
-        "Moat": 65, "Witch": 60, "Militia": 25,
-        "Moneylender": 45, "Mine": 40,
-        "Workshop": 20, "Remodel": 18, "Chapel": 12,
+        Village: 100,
+        Festival: 95,
+        Market: 90,
+        Laboratory: 80,
+        Smithy: 75,
+        "Council Room": 70,
+        Moat: 65,
+        Witch: 60,
+        Militia: 25,
+        Moneylender: 45,
+        Mine: 40,
+        Workshop: 20,
+        Remodel: 18,
+        Chapel: 12,
       };
       actionCards.sort((a, b) => (priorities[b] ?? 0) - (priorities[a] ?? 0));
 
-      const result = engine.dispatch({ type: "PLAY_ACTION", player: "ai", card: actionCards[0] }, "ai");
+      const result = engine.dispatch(
+        { type: "PLAY_ACTION", player: "ai", card: actionCards[0] },
+        "ai",
+      );
       if (!result.ok) break;
 
       onStateChange?.(engine.state);
@@ -40,26 +59,48 @@ export class EngineStrategy implements GameStrategy {
     await delay();
 
     // BUY PHASE: Play all treasures
-    const treasures = (engine.state.players.ai?.hand || []).filter(isTreasureCard);
+    const treasures = (engine.state.players.ai?.hand || []).filter(
+      isTreasureCard,
+    );
     for (const treasure of treasures) {
-      engine.dispatch({ type: "PLAY_TREASURE", player: "ai", card: treasure }, "ai");
+      engine.dispatch(
+        { type: "PLAY_TREASURE", player: "ai", card: treasure },
+        "ai",
+      );
     }
     onStateChange?.(engine.state);
     await delay();
 
     // Buy best cards we can afford
     const buyPriority: CardName[] = [
-      "Province", "Gold", "Duchy", "Laboratory", "Market", "Festival",
-      "Silver", "Smithy", "Village", "Workshop", "Chapel", "Estate"
+      "Province",
+      "Gold",
+      "Duchy",
+      "Laboratory",
+      "Market",
+      "Festival",
+      "Silver",
+      "Smithy",
+      "Village",
+      "Workshop",
+      "Chapel",
+      "Estate",
     ];
 
-    while (engine.state.buys > 0 && engine.state.coins > 0 && !engine.state.gameOver) {
+    while (
+      engine.state.buys > 0 &&
+      engine.state.coins > 0 &&
+      !engine.state.gameOver
+    ) {
       let bought = false;
       for (const card of buyPriority) {
         const supply = engine.state.supply[card] || 0;
         const cost = CARDS[card].cost;
         if (supply > 0 && cost <= engine.state.coins) {
-          const result = engine.dispatch({ type: "BUY_CARD", player: "ai", card }, "ai");
+          const result = engine.dispatch(
+            { type: "BUY_CARD", player: "ai", card },
+            "ai",
+          );
           if (result.ok) {
             onStateChange?.(engine.state);
             await delay();
@@ -109,11 +150,14 @@ export class EngineStrategy implements GameStrategy {
         selected.push(...remaining.slice(0, numToDiscard - selected.length));
       }
 
-      engine.dispatch({
-        type: "SUBMIT_DECISION",
-        player: "ai",
-        choice: { selectedCards: selected },
-      }, "ai");
+      engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: "ai",
+          choice: { selectedCards: selected },
+        },
+        "ai",
+      );
       return;
     }
 
@@ -121,19 +165,25 @@ export class EngineStrategy implements GameStrategy {
     const options = decision.cardOptions || [];
     if (decision.min === 0) {
       // Skip if possible
-      engine.dispatch({
-        type: "SUBMIT_DECISION",
-        player: "ai",
-        choice: { selectedCards: [] },
-      }, "ai");
+      engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: "ai",
+          choice: { selectedCards: [] },
+        },
+        "ai",
+      );
     } else {
       // Pick first min options
       const selected = options.slice(0, decision.min);
-      engine.dispatch({
-        type: "SUBMIT_DECISION",
-        player: "ai",
-        choice: { selectedCards: selected },
-      }, "ai");
+      engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: "ai",
+          choice: { selectedCards: selected },
+        },
+        "ai",
+      );
     }
   }
 

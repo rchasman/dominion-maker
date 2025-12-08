@@ -54,26 +54,35 @@ describe("Undo System - Immediate Undo", () => {
     engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Market" });
 
     // Market generates CARD_PLAYED + effects (ACTIONS_MODIFIED, CARD_DRAWN, etc.)
-    const marketEvent = [...engine.eventLog].reverse().find(e =>
-      e.type === "CARD_PLAYED" && e.card === "Market"
-    );
+    const marketEvent = [...engine.eventLog]
+      .reverse()
+      .find(e => e.type === "CARD_PLAYED" && e.card === "Market");
     expect(marketEvent).toBeDefined();
 
     // Count effects caused by Market
-    const marketEffects = engine.eventLog.filter(e => e.causedBy === marketEvent!.id);
+    const marketEffects = engine.eventLog.filter(
+      e => e.causedBy === marketEvent!.id,
+    );
     expect(marketEffects.length).toBeGreaterThan(0);
 
     // Undo to before Market
-    const eventBeforeMarket = engine.eventLog[engine.eventLog.findIndex(e => e.id === marketEvent!.id) - 1];
+    const eventBeforeMarket =
+      engine.eventLog[
+        engine.eventLog.findIndex(e => e.id === marketEvent!.id) - 1
+      ];
 
     if (eventBeforeMarket && eventBeforeMarket.id) {
       engine.undoToEvent(eventBeforeMarket.id);
 
       // Market and all its effects should be gone
-      const marketAfterUndo = engine.eventLog.find(e => e.id === marketEvent!.id);
+      const marketAfterUndo = engine.eventLog.find(
+        e => e.id === marketEvent!.id,
+      );
       expect(marketAfterUndo).toBeUndefined();
 
-      const effectsAfterUndo = engine.eventLog.filter(e => e.causedBy === marketEvent!.id);
+      const effectsAfterUndo = engine.eventLog.filter(
+        e => e.causedBy === marketEvent!.id,
+      );
       expect(effectsAfterUndo.length).toBe(0);
     }
   });
@@ -115,7 +124,13 @@ describe("Undo System - removeEventChain Utility", () => {
       { type: "TURN_STARTED", turn: 1, player: "human", id: "evt-1" },
       { type: "CARD_PLAYED", player: "human", card: "Village", id: "evt-2" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
-      { type: "CARD_DRAWN", player: "human", card: "Copper", id: "evt-4", causedBy: "evt-2" },
+      {
+        type: "CARD_DRAWN",
+        player: "human",
+        card: "Copper",
+        id: "evt-4",
+        causedBy: "evt-2",
+      },
       { type: "CARD_PLAYED", player: "human", card: "Smithy", id: "evt-5" },
     ];
 
@@ -129,7 +144,6 @@ describe("Undo System - removeEventChain Utility", () => {
     expect(result.find(e => e.id === "evt-4")).toBeDefined(); // Effect
     expect(result.find(e => e.id === "evt-5")).toBeUndefined(); // Smithy removed
   });
-
 });
 
 describe("Undo System - Root Cause Detection", () => {
@@ -161,8 +175,8 @@ describe("Undo System - Root Cause Detection", () => {
     }
 
     // Effect events should have causedBy
-    const effectEvents = engine.eventLog.filter(e =>
-      e.type === "ACTIONS_MODIFIED" || e.type === "CARD_DRAWN"
+    const effectEvents = engine.eventLog.filter(
+      e => e.type === "ACTIONS_MODIFIED" || e.type === "CARD_DRAWN",
     );
 
     for (const event of effectEvents) {
@@ -173,7 +187,6 @@ describe("Undo System - Root Cause Detection", () => {
     }
   });
 });
-
 
 describe("Undo System - Causality Utilities", () => {
   beforeEach(() => {
@@ -199,8 +212,8 @@ describe("Undo System - Causality Utilities", () => {
     }
 
     // Effect events should NOT be valid undo points
-    const effectEvents = engine.eventLog.filter(e =>
-      e.type === "ACTIONS_MODIFIED" || e.type === "COINS_MODIFIED"
+    const effectEvents = engine.eventLog.filter(
+      e => e.type === "ACTIONS_MODIFIED" || e.type === "COINS_MODIFIED",
     );
 
     for (const event of effectEvents) {
@@ -213,7 +226,13 @@ describe("Undo System - Causality Utilities", () => {
       { type: "TURN_STARTED", turn: 1, player: "human", id: "evt-1" },
       { type: "CARD_PLAYED", player: "human", card: "Village", id: "evt-2" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
-      { type: "CARD_DRAWN", player: "human", card: "Copper", id: "evt-4", causedBy: "evt-2" },
+      {
+        type: "CARD_DRAWN",
+        player: "human",
+        card: "Copper",
+        id: "evt-4",
+        causedBy: "evt-2",
+      },
       { type: "ACTIONS_MODIFIED", delta: 2, id: "evt-5", causedBy: "evt-2" },
       { type: "CARD_PLAYED", player: "human", card: "Smithy", id: "evt-6" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-7", causedBy: "evt-6" },
@@ -223,7 +242,13 @@ describe("Undo System - Causality Utilities", () => {
     const result = removeEventChain("evt-2", events);
 
     expect(result.length).toBe(5); // Turn start + Village + 3 effects
-    expect(result.map(e => e.id)).toEqual(["evt-1", "evt-2", "evt-3", "evt-4", "evt-5"]);
+    expect(result.map(e => e.id)).toEqual([
+      "evt-1",
+      "evt-2",
+      "evt-3",
+      "evt-4",
+      "evt-5",
+    ]);
     expect(result.find(e => e.id === "evt-6")).toBeUndefined();
     expect(result.find(e => e.id === "evt-7")).toBeUndefined();
   });

@@ -3,10 +3,19 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents, isInitialCall, createCardSelectionDecision } from "../effect-types";
+import {
+  createDrawEvents,
+  isInitialCall,
+  createCardSelectionDecision,
+} from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const cellar: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
@@ -58,7 +67,11 @@ export const cellar: CardEffect = ({ state, player, decision, stage }): CardEffe
       deck: [...playerState.deck],
     };
 
-    const drawEvents = createDrawEvents(player, simulatedState, toDiscard.length);
+    const drawEvents = createDrawEvents(
+      player,
+      simulatedState,
+      toDiscard.length,
+    );
     events.push(...drawEvents);
 
     return { events };

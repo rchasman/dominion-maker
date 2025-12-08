@@ -73,12 +73,12 @@ export function useMultiplayerEngine({
   const [events, setEvents] = useState<GameEvent[]>([]);
 
   // Compute my player ID
-  const myPlayerId: Player | null = myPlayerIndex !== null
-    ? getPlayerIdByIndex(myPlayerIndex)
-    : null;
+  const myPlayerId: Player | null =
+    myPlayerIndex !== null ? getPlayerIdByIndex(myPlayerIndex) : null;
 
   // Check if it's my turn
-  const isMyTurn = gameState?.activePlayer === myPlayerId && !gameState?.pendingDecision;
+  const isMyTurn =
+    gameState?.activePlayer === myPlayerId && !gameState?.pendingDecision;
 
   // Initialize engine
   useEffect(() => {
@@ -104,16 +104,22 @@ export function useMultiplayerEngine({
   }, [isHost, onBroadcastEvents, initialEvents]);
 
   // Start a new game
-  const startGame = useCallback((players: PlayerId[], kingdomCards?: CardName[]) => {
-    if (!engineRef.current) return;
-    engineRef.current.startGame(players, kingdomCards);
-  }, []);
+  const startGame = useCallback(
+    (players: PlayerId[], kingdomCards?: CardName[]) => {
+      if (!engineRef.current) return;
+      engineRef.current.startGame(players, kingdomCards);
+    },
+    [],
+  );
 
   // Apply events from external source (for clients)
-  const applyExternalEvents = useCallback((newEvents: GameEvent[]) => {
-    if (!engineRef.current || isHost) return;
-    engineRef.current.applyExternalEvents(newEvents);
-  }, [isHost]);
+  const applyExternalEvents = useCallback(
+    (newEvents: GameEvent[]) => {
+      if (!engineRef.current || isHost) return;
+      engineRef.current.applyExternalEvents(newEvents);
+    },
+    [isHost],
+  );
 
   // Reset to a specific event log (for undo)
   const resetToEvents = useCallback((newEvents: GameEvent[]) => {
@@ -122,61 +128,86 @@ export function useMultiplayerEngine({
   }, []);
 
   // Helper to execute a command
-  const executeCommand = useCallback((
-    commandFn: (player: PlayerId) => CommandResult
-  ): CommandResult => {
-    if (!engineRef.current || !myPlayerId) {
-      return { ok: false, error: "Not initialized" };
-    }
-    return commandFn(myPlayerId);
-  }, [myPlayerId]);
+  const executeCommand = useCallback(
+    (commandFn: (player: PlayerId) => CommandResult): CommandResult => {
+      if (!engineRef.current || !myPlayerId) {
+        return { ok: false, error: "Not initialized" };
+      }
+      return commandFn(myPlayerId);
+    },
+    [myPlayerId],
+  );
 
   // Game actions
-  const playAction = useCallback((card: CardName): CommandResult => {
-    return executeCommand((player) => engineRef.current!.playAction(player, card));
-  }, [executeCommand]);
+  const playAction = useCallback(
+    (card: CardName): CommandResult => {
+      return executeCommand(player =>
+        engineRef.current!.playAction(player, card),
+      );
+    },
+    [executeCommand],
+  );
 
-  const playTreasure = useCallback((card: CardName): CommandResult => {
-    return executeCommand((player) => engineRef.current!.playTreasure(player, card));
-  }, [executeCommand]);
+  const playTreasure = useCallback(
+    (card: CardName): CommandResult => {
+      return executeCommand(player =>
+        engineRef.current!.playTreasure(player, card),
+      );
+    },
+    [executeCommand],
+  );
 
   const playAllTreasures = useCallback((): CommandResult => {
-    return executeCommand((player) => engineRef.current!.playAllTreasures(player));
+    return executeCommand(player =>
+      engineRef.current!.playAllTreasures(player),
+    );
   }, [executeCommand]);
 
-  const buyCard = useCallback((card: CardName): CommandResult => {
-    return executeCommand((player) => engineRef.current!.buyCard(player, card));
-  }, [executeCommand]);
+  const buyCard = useCallback(
+    (card: CardName): CommandResult => {
+      return executeCommand(player => engineRef.current!.buyCard(player, card));
+    },
+    [executeCommand],
+  );
 
   const endPhase = useCallback((): CommandResult => {
-    return executeCommand((player) => engineRef.current!.endPhase(player));
+    return executeCommand(player => engineRef.current!.endPhase(player));
   }, [executeCommand]);
 
-  const submitDecision = useCallback((choice: DecisionChoice): CommandResult => {
-    if (!engineRef.current || !myPlayerId) {
-      return { ok: false, error: "Not initialized" };
-    }
-    // Decision might be for a different player (opponent's response to attack)
-    const decisionPlayer = engineRef.current.state.pendingDecision?.player;
-    if (decisionPlayer) {
-      return engineRef.current.submitDecision(decisionPlayer, choice);
-    }
-    return { ok: false, error: "No pending decision" };
-  }, [myPlayerId]);
+  const submitDecision = useCallback(
+    (choice: DecisionChoice): CommandResult => {
+      if (!engineRef.current || !myPlayerId) {
+        return { ok: false, error: "Not initialized" };
+      }
+      // Decision might be for a different player (opponent's response to attack)
+      const decisionPlayer = engineRef.current.state.pendingDecision?.player;
+      if (decisionPlayer) {
+        return engineRef.current.submitDecision(decisionPlayer, choice);
+      }
+      return { ok: false, error: "No pending decision" };
+    },
+    [myPlayerId],
+  );
 
   // Undo
-  const requestUndo = useCallback((toEventId: string, reason?: string) => {
-    if (!engineRef.current || !myPlayerId) return;
-    engineRef.current.requestUndo(myPlayerId, toEventId, reason);
-  }, [myPlayerId]);
+  const requestUndo = useCallback(
+    (toEventId: string, reason?: string) => {
+      if (!engineRef.current || !myPlayerId) return;
+      engineRef.current.requestUndo(myPlayerId, toEventId, reason);
+    },
+    [myPlayerId],
+  );
 
-  const getStateAtEvent = useCallback((eventId: string): GameState => {
-    const eventIndex = events.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) {
-      throw new Error(`Event ${eventId} not found`);
-    }
-    return projectState(events.slice(0, eventIndex + 1));
-  }, [events]);
+  const getStateAtEvent = useCallback(
+    (eventId: string): GameState => {
+      const eventIndex = events.findIndex(e => e.id === eventId);
+      if (eventIndex === -1) {
+        throw new Error(`Event ${eventId} not found`);
+      }
+      return projectState(events.slice(0, eventIndex + 1));
+    },
+    [events],
+  );
 
   return {
     gameState,

@@ -79,7 +79,7 @@ export function CardTooltip({
             display: "block",
             borderRadius: "4px",
           }}
-          onError={(e) => {
+          onError={e => {
             const img = e.target as HTMLImageElement;
             if (img.src !== fallbackUrl) {
               img.src = fallbackUrl;

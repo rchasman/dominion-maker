@@ -29,18 +29,23 @@ export function PlayerName({ player }: { player: string }) {
 
 export function CardNameSpan({ card }: { card: CardName }) {
   return (
-    <span style={{ color: getCardColor(card), fontWeight: 600 }}>
-      {card}
-    </span>
+    <span style={{ color: getCardColor(card), fontWeight: 600 }}>{card}</span>
   );
 }
 
-export function CoinValue({ coins, showSign = true }: { coins: number; showSign?: boolean }) {
+export function CoinValue({
+  coins,
+  showSign = true,
+}: {
+  coins: number;
+  showSign?: boolean;
+}) {
   const sign = coins >= 0 ? "+" : "-";
   const absCoins = Math.abs(coins);
   return (
     <span style={{ color: "var(--color-gold-bright)", fontWeight: 700 }}>
-      {showSign && sign}{absCoins} {absCoins === 1 ? "Coin" : "Coins"}
+      {showSign && sign}
+      {absCoins} {absCoins === 1 ? "Coin" : "Coins"}
     </span>
   );
 }
@@ -58,7 +63,8 @@ export function ActionValue({ count }: { count: number }) {
   const absCount = Math.abs(count);
   return (
     <span style={{ color: "var(--color-action-phase)", fontWeight: 700 }}>
-      {sign}{absCount} {absCount === 1 ? "Action" : "Actions"}
+      {sign}
+      {absCount} {absCount === 1 ? "Action" : "Actions"}
     </span>
   );
 }
@@ -68,7 +74,8 @@ export function BuyValue({ count }: { count: number }) {
   const absCount = Math.abs(count);
   return (
     <span style={{ color: "var(--color-buy-phase)", fontWeight: 700 }}>
-      {sign}{absCount} {absCount === 1 ? "Buy" : "Buys"}
+      {sign}
+      {absCount} {absCount === 1 ? "Buy" : "Buys"}
     </span>
   );
 }

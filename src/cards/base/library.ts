@@ -8,7 +8,10 @@ import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
 // Helper to safely extract CardName[] from metadata
-function getCardNamesFromMetadata(metadata: Record<string, unknown> | undefined, key: string): CardName[] {
+function getCardNamesFromMetadata(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): CardName[] {
   const value = metadata?.[key];
   if (Array.isArray(value)) {
     return value as CardName[];
@@ -16,7 +19,12 @@ function getCardNamesFromMetadata(metadata: Record<string, unknown> | undefined,
   return [];
 }
 
-export const library: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const library: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
@@ -59,7 +67,10 @@ export const library: CardEffect = ({ state, player, decision, stage }): CardEff
   }
 
   if (stage === "skip_actions") {
-    const peeked = getCardNamesFromMetadata(state.pendingDecision?.metadata, "peekedCards");
+    const peeked = getCardNamesFromMetadata(
+      state.pendingDecision?.metadata,
+      "peekedCards",
+    );
     const toSkip = decision.selectedCards;
 
     // Draw the non-skipped cards (atomic events)

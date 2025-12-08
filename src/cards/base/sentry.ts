@@ -8,7 +8,10 @@ import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
 // Helper to safely extract CardName[] from metadata
-function getCardNamesFromMetadata(metadata: Record<string, unknown> | undefined, key: string): CardName[] {
+function getCardNamesFromMetadata(
+  metadata: Record<string, unknown> | undefined,
+  key: string,
+): CardName[] {
   const value = metadata?.[key];
   if (Array.isArray(value)) {
     return value as CardName[];
@@ -16,7 +19,12 @@ function getCardNamesFromMetadata(metadata: Record<string, unknown> | undefined,
   return [];
 }
 
-export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const sentry: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
@@ -42,7 +50,8 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
         type: "select_cards",
         player,
         from: "revealed",
-        prompt: "Sentry: Select cards to TRASH (others will be discarded or kept)",
+        prompt:
+          "Sentry: Select cards to TRASH (others will be discarded or kept)",
         cardOptions: revealed,
         min: 0,
         max: revealed.length,
@@ -55,7 +64,10 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
   // Trash selected cards
   if (stage === "trash") {
-    const revealed = getCardNamesFromMetadata(state.pendingDecision?.metadata, "revealedCards");
+    const revealed = getCardNamesFromMetadata(
+      state.pendingDecision?.metadata,
+      "revealedCards",
+    );
     const toTrash = decision.selectedCards;
 
     // Trash selected cards (atomic events)
@@ -88,7 +100,10 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
   // Discard selected, rest go back on deck
   if (stage === "discard") {
-    const remaining = getCardNamesFromMetadata(state.pendingDecision?.metadata, "remainingCards");
+    const remaining = getCardNamesFromMetadata(
+      state.pendingDecision?.metadata,
+      "remainingCards",
+    );
     const toDiscard = decision.selectedCards;
 
     // Discard selected cards (atomic events)
@@ -119,7 +134,12 @@ export const sentry: CardEffect = ({ state, player, decision, stage }): CardEffe
 
     // Single card or no cards, just put back
     if (toReturn.length === 1) {
-      events.push({ type: "CARD_PUT_ON_DECK", player, card: toReturn[0], from: "hand" });
+      events.push({
+        type: "CARD_PUT_ON_DECK",
+        player,
+        card: toReturn[0],
+        from: "hand",
+      });
     }
 
     return { events };

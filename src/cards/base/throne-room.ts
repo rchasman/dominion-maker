@@ -6,7 +6,12 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isActionCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const throneRoom: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const throneRoom: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 

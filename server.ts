@@ -54,14 +54,16 @@ const server = Bun.serve({
       await handler(vercelReq, vercelRes);
 
       return new Response(
-        typeof responseData === "string" ? responseData : JSON.stringify(responseData),
+        typeof responseData === "string"
+          ? responseData
+          : JSON.stringify(responseData),
         {
           status: statusCode,
           headers: {
             ...responseHeaders,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 

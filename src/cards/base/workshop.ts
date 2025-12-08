@@ -5,7 +5,11 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getGainableCards } from "../effect-types";
 
-export const workshop: CardEffect = ({ state, player, decision }): CardEffectResult => {
+export const workshop: CardEffect = ({
+  state,
+  player,
+  decision,
+}): CardEffectResult => {
   // Stage 1: Request gain choice
   if (!decision) {
     const gainOptions = getGainableCards(state, 4);

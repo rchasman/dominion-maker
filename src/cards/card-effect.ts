@@ -1,4 +1,9 @@
-import type { GameState, LogEntry, Player, CardName } from "../types/game-state";
+import type {
+  GameState,
+  LogEntry,
+  Player,
+  CardName,
+} from "../types/game-state";
 
 export interface CardEffectContext {
   state: GameState;

@@ -30,15 +30,14 @@ describe("Shuffle Mechanics", () => {
     expect(shuffleEvent).toBeDefined();
 
     // Should have drawn cards
-    const drawEvents = engine.eventLog.filter(e =>
-      e.type === "CARD_DRAWN" && e.player === "human"
+    const drawEvents = engine.eventLog.filter(
+      e => e.type === "CARD_DRAWN" && e.player === "human",
     );
     expect(drawEvents.length).toBe(3);
 
     // Discard should be empty (shuffled into deck)
     expect(engine.state.players.human.discard.length).toBe(0);
   });
-
 
   it("should generate DECK_SHUFFLED event with newDeckOrder", () => {
     const engine = new DominionEngine();
@@ -71,7 +70,13 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayer).toBe("human");
 
     // End human's turn
-    engine.state.players.human.deck = ["Copper", "Silver", "Gold", "Estate", "Duchy"];
+    engine.state.players.human.deck = [
+      "Copper",
+      "Silver",
+      "Gold",
+      "Estate",
+      "Duchy",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "human" });
     engine.dispatch({ type: "END_PHASE", player: "human" });
 
@@ -79,7 +84,13 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayer).toBe("ai");
 
     // End ai's turn
-    engine.state.players.ai.deck = ["Copper", "Copper", "Copper", "Estate", "Estate"];
+    engine.state.players.ai.deck = [
+      "Copper",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "ai" });
     engine.dispatch({ type: "END_PHASE", player: "ai" });
 
@@ -106,7 +117,13 @@ describe("Multi-Turn Scenarios", () => {
     expect(coinsAfterFestival).toBeGreaterThan(0);
 
     // End turn
-    engine.state.players.human.deck = ["Copper", "Silver", "Gold", "Estate", "Duchy"];
+    engine.state.players.human.deck = [
+      "Copper",
+      "Silver",
+      "Gold",
+      "Estate",
+      "Duchy",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "human" });
     engine.dispatch({ type: "END_PHASE", player: "human" });
 
@@ -123,26 +140,42 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayer).toBe("player1");
 
     // End player1's turn
-    engine.state.players.player1.deck = ["Copper", "Copper", "Copper", "Estate", "Estate"];
+    engine.state.players.player1.deck = [
+      "Copper",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "player1" });
     engine.dispatch({ type: "END_PHASE", player: "player1" });
 
     expect(engine.state.activePlayer).toBe("player2");
 
     // End player2's turn
-    engine.state.players.player2.deck = ["Copper", "Copper", "Copper", "Estate", "Estate"];
+    engine.state.players.player2.deck = [
+      "Copper",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "player2" });
     engine.dispatch({ type: "END_PHASE", player: "player2" });
 
     expect(engine.state.activePlayer).toBe("player3");
 
     // End player3's turn - should cycle back
-    engine.state.players.player3.deck = ["Copper", "Copper", "Copper", "Estate", "Estate"];
+    engine.state.players.player3.deck = [
+      "Copper",
+      "Copper",
+      "Copper",
+      "Estate",
+      "Estate",
+    ];
     engine.dispatch({ type: "END_PHASE", player: "player3" });
     engine.dispatch({ type: "END_PHASE", player: "player3" });
 
     expect(engine.state.activePlayer).toBe("player1");
   });
 });
-
-

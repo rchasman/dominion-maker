@@ -139,7 +139,7 @@ export function Card({
             display: "block",
             objectFit: "contain",
           }}
-          onError={(e) => {
+          onError={e => {
             const img = e.target as HTMLImageElement;
             if (img.src !== fallbackUrl) {
               img.src = fallbackUrl;

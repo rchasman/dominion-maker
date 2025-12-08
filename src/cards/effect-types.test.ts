@@ -524,11 +524,18 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
     state.players.human.deck = ["Copper"];
 
-    const effect = createSimpleCardEffect({ cards: 1, actions: 1, buys: 1, coins: 1 });
+    const effect = createSimpleCardEffect({
+      cards: 1,
+      actions: 1,
+      buys: 1,
+      coins: 1,
+    });
     const result = effect({ state, player: "human", card: "Market" });
 
     expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
-    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(1);
+    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
+      1,
+    );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(1);
   });
@@ -561,16 +568,28 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const result = villageFactory({ state, player: "human", card: "Village" });
 
     expect(result.events.filter(e => e.type === "CARD_DRAWN").length).toBe(1);
-    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(2);
+    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
+      2,
+    );
   });
 
   it("should exactly match Festival behavior (+2 actions, +1 buy, +$2)", () => {
     const state = createBasicState();
 
-    const festivalFactory = createSimpleCardEffect({ actions: 2, buys: 1, coins: 2 });
-    const result = festivalFactory({ state, player: "human", card: "Festival" });
+    const festivalFactory = createSimpleCardEffect({
+      actions: 2,
+      buys: 1,
+      coins: 2,
+    });
+    const result = festivalFactory({
+      state,
+      player: "human",
+      card: "Festival",
+    });
 
-    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(2);
+    expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
+      2,
+    );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);
   });
@@ -626,7 +645,10 @@ describe("Decision Helper Functions", () => {
     });
 
     expect(decision.metadata).toBeDefined();
-    expect(decision.metadata).toEqual({ cardsNeeded: 5, peekedCards: ["Village"] });
+    expect(decision.metadata).toEqual({
+      cardsNeeded: 5,
+      peekedCards: ["Village"],
+    });
   });
 
   it("createCardSelectionDecision should work without metadata", () => {

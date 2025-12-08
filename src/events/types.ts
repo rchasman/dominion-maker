@@ -1,4 +1,9 @@
-import type { CardName, Phase, DecisionRequest, DecisionChoice } from "../types/game-state";
+import type {
+  CardName,
+  Phase,
+  DecisionRequest,
+  DecisionChoice,
+} from "../types/game-state";
 import { multiplayerLogger } from "../lib/logger";
 
 export type { DecisionRequest, DecisionChoice };
@@ -165,7 +170,7 @@ export type UndoRequestedEvent = EventMetadata & {
   type: "UNDO_REQUESTED";
   requestId: string;
   byPlayer: PlayerId;
-  toEventId: string;  // Changed from toEventIndex to toEventId
+  toEventId: string; // Changed from toEventIndex to toEventId
   reason?: string;
 };
 
@@ -183,8 +188,8 @@ export type UndoDeniedEvent = EventMetadata & {
 
 export type UndoExecutedEvent = EventMetadata & {
   type: "UNDO_EXECUTED";
-  fromEventId: string;  // Changed from index to ID
-  toEventId: string;    // Changed from index to ID
+  fromEventId: string; // Changed from index to ID
+  toEventId: string; // Changed from index to ID
 };
 
 // Union of all events
@@ -223,7 +228,9 @@ export type GameEvent =
   | UndoExecutedEvent;
 
 // Event type guard helpers
-export function isCardMovementEvent(event: GameEvent): event is
+export function isCardMovementEvent(
+  event: GameEvent,
+): event is
   | CardDrawnEvent
   | CardPlayedEvent
   | CardDiscardedEvent
@@ -236,15 +243,16 @@ export function isCardMovementEvent(event: GameEvent): event is
     "CARD_DISCARDED",
     "CARD_TRASHED",
     "CARD_GAINED",
-    "CARD_PUT_ON_DECK"
+    "CARD_PUT_ON_DECK",
   ].includes(event.type);
 }
 
-export function isResourceEvent(event: GameEvent): event is
-  | ActionsModifiedEvent
-  | BuysModifiedEvent
-  | CoinsModifiedEvent {
-  return ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"].includes(event.type);
+export function isResourceEvent(
+  event: GameEvent,
+): event is ActionsModifiedEvent | BuysModifiedEvent | CoinsModifiedEvent {
+  return ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"].includes(
+    event.type,
+  );
 }
 
 // ============================================
@@ -264,14 +272,22 @@ export function isRootCauseEvent(event: GameEvent): boolean {
 /**
  * Get all events in a causal chain (event + all events it caused, recursively)
  */
-export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<string> {
+export function getCausalChain(
+  eventId: string,
+  allEvents: GameEvent[],
+): Set<string> {
   const chain = new Set([eventId]);
   let changed = true;
 
   while (changed) {
     changed = false;
     for (const evt of allEvents) {
-      if (evt.id && evt.causedBy && chain.has(evt.causedBy) && !chain.has(evt.id)) {
+      if (
+        evt.id &&
+        evt.causedBy &&
+        chain.has(evt.causedBy) &&
+        !chain.has(evt.id)
+      ) {
         chain.add(evt.id);
         changed = true;
       }
@@ -284,7 +300,10 @@ export function getCausalChain(eventId: string, allEvents: GameEvent[]): Set<str
 /**
  * Remove an event and all events that came after it (undo/rewind semantics)
  */
-export function removeEventChain(eventId: string, allEvents: GameEvent[]): GameEvent[] {
+export function removeEventChain(
+  eventId: string,
+  allEvents: GameEvent[],
+): GameEvent[] {
   const targetIndex = allEvents.findIndex(e => e.id === eventId);
   if (targetIndex === -1) {
     multiplayerLogger.warn(`[removeEventChain] Event ${eventId} not found`);

@@ -1,6 +1,12 @@
 import type { CardName } from "../types/game-state";
 
-export type CardType = "treasure" | "victory" | "curse" | "action" | "attack" | "reaction";
+export type CardType =
+  | "treasure"
+  | "victory"
+  | "curse"
+  | "action"
+  | "attack"
+  | "reaction";
 
 export interface CardDefinition {
   name: CardName;
@@ -102,7 +108,8 @@ export const CARDS: Record<CardName, CardDefinition> = {
     name: "Merchant",
     cost: 3,
     types: ["action"],
-    description: "+1 Card, +1 Action. The first time you play a Silver this turn, +$1.",
+    description:
+      "+1 Card, +1 Action. The first time you play a Silver this turn, +$1.",
   },
   Vassal: {
     name: "Vassal",
@@ -175,8 +182,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     name: "Throne Room",
     cost: 4,
     types: ["action"],
-    description:
-      "You may play an Action card from your hand twice.",
+    description: "You may play an Action card from your hand twice.",
   },
 
   // Cost $5

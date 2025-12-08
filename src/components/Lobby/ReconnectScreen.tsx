@@ -41,7 +41,8 @@ export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100dvh",
-        background: "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
         padding: "var(--space-4)",
         gap: "var(--space-6)",
       }}

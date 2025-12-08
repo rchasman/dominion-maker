@@ -14,6 +14,7 @@ DOMINION INTELLECTUAL PROPERTY
 Dominion is a trademark and copyrighted property of Rio Grande Games.
 
 All game content including but not limited to:
+
 - Game rules and mechanics
 - Card names and effects
 - Card artwork and designs
@@ -22,6 +23,7 @@ All game content including but not limited to:
 Are © Donald X. Vaccarino and Rio Grande Games.
 
 This project is NOT affiliated with, endorsed by, or licensed by:
+
 - Rio Grande Games
 - Donald X. Vaccarino
 - Any official Dominion distributors or licensees
@@ -32,6 +34,7 @@ FAIR USE STATEMENT
 
 This implementation uses Dominion game rules and card mechanics under fair use
 principles for:
+
 - Non-commercial academic research
 - Educational purposes (demonstrating MAKER framework)
 - Technical analysis of multi-agent AI systems

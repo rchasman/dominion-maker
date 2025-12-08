@@ -1,5 +1,10 @@
 import type { PaneType } from "./PaneTabSwitcher";
-import type { ConsensusVotingData, TimingData, ModelStatus, GameStateSnapshot } from "../types";
+import type {
+  ConsensusVotingData,
+  TimingData,
+  ModelStatus,
+  GameStateSnapshot,
+} from "../types";
 import { VotingPane } from "./VotingPane";
 import { PerformancePane } from "./PerformancePane";
 import { ReasoningPane } from "./ReasoningPane";
@@ -26,11 +31,25 @@ export function PaneContent({
 }: PaneContentProps) {
   switch (activePane) {
     case "voting":
-      return <VotingPane data={votingData} liveStatuses={modelStatuses} totalModels={totalModels} />;
+      return (
+        <VotingPane
+          data={votingData}
+          liveStatuses={modelStatuses}
+          totalModels={totalModels}
+        />
+      );
     case "performance":
-      return <PerformancePane data={timingData} liveStatuses={modelStatuses} now={now} />;
+      return (
+        <PerformancePane
+          data={timingData}
+          liveStatuses={modelStatuses}
+          now={now}
+        />
+      );
     case "reasoning":
-      return <ReasoningPane votingData={votingData} modelStatuses={modelStatuses} />;
+      return (
+        <ReasoningPane votingData={votingData} modelStatuses={modelStatuses} />
+      );
     case "state":
       return <GameStatePane gameState={gameStateData} />;
     default:

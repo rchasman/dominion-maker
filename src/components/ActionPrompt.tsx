@@ -42,8 +42,15 @@ export function ActionPrompt({
           card(s). Selected: {selectedCards.length}
         </p>
 
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-          {(decision.cardOptions || []).map((card) => {
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
+          }}
+        >
+          {(decision.cardOptions || []).map(card => {
             const cardName = card as CardName;
             return (
               <Card

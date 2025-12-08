@@ -62,7 +62,7 @@ export type SubmitDecisionCommand = {
 export type RequestUndoCommand = {
   type: "REQUEST_UNDO";
   player: PlayerId;
-  toEventId: string;  // Changed from toEventIndex to toEventId for causality tracking
+  toEventId: string; // Changed from toEventIndex to toEventId for causality tracking
   reason?: string;
 };
 

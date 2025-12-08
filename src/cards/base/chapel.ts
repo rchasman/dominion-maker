@@ -5,7 +5,12 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isInitialCall, createCardSelectionDecision } from "../effect-types";
 
-export const chapel: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const chapel: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
 
   // Request trash choice

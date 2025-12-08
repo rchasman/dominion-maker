@@ -1,5 +1,8 @@
 import { useRef, useEffect, useState } from "react";
-import type { GameState, LogEntry as LogEntryType } from "../../types/game-state";
+import type {
+  GameState,
+  LogEntry as LogEntryType,
+} from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
@@ -11,7 +14,7 @@ import { aggregateLogEntries, getPlayerColor } from "../../lib/board-utils";
 function LogEntryWithUndo({
   entry,
   onRequestUndo,
-  lastEventId
+  lastEventId,
 }: {
   entry: LogEntryType & { eventId?: string; eventIds?: string[] };
   onRequestUndo?: (eventId: string) => void;
@@ -21,12 +24,16 @@ function LogEntryWithUndo({
   const eventIds = entry.eventIds;
 
   // Get the target eventId (last in group for aggregated entries)
-  const targetEventId = eventIds && eventIds.length > 0 ? eventIds[eventIds.length - 1] : eventId;
+  const targetEventId =
+    eventIds && eventIds.length > 0 ? eventIds[eventIds.length - 1] : eventId;
 
   // Disable undo if this is the current state (last event)
   const isCurrentState = targetEventId === lastEventId;
 
-  const hasUndo = onRequestUndo && (eventId || (eventIds && eventIds.length > 0)) && !isCurrentState;
+  const hasUndo =
+    onRequestUndo &&
+    (eventId || (eventIds && eventIds.length > 0)) &&
+    !isCurrentState;
 
   return (
     <div
@@ -47,7 +54,7 @@ function LogEntryWithUndo({
       {hasUndo && (
         <button
           className="undo-button"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             if (targetEventId) onRequestUndo(targetEventId);
           }}
@@ -61,7 +68,11 @@ function LogEntryWithUndo({
             lineHeight: 1,
             marginTop: "2px",
           }}
-          title={eventIds && eventIds.length > 1 ? `Undo all ${eventIds.length}` : "Undo to here"}
+          title={
+            eventIds && eventIds.length > 1
+              ? `Undo all ${eventIds.length}`
+              : "Undo to here"
+          }
         >
           ⎌
         </button>
@@ -71,12 +82,12 @@ function LogEntryWithUndo({
 }
 
 function CyclingSquare() {
-  const glyphs = ['▤', '▥', '▦'];
+  const glyphs = ["▤", "▥", "▦"];
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % glyphs.length);
+      setIndex(prev => (prev + 1) % glyphs.length);
     }, 300);
     return () => clearInterval(interval);
   }, []);
@@ -147,12 +158,12 @@ export function GameSidebar({
       setIsDragging(false);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging]);
 
@@ -160,7 +171,8 @@ export function GameSidebar({
     if (gameLogScrollRef.current) {
       requestAnimationFrame(() => {
         if (gameLogScrollRef.current) {
-          gameLogScrollRef.current.scrollTop = gameLogScrollRef.current.scrollHeight;
+          gameLogScrollRef.current.scrollTop =
+            gameLogScrollRef.current.scrollHeight;
         }
       });
     }
@@ -171,32 +183,39 @@ export function GameSidebar({
       ref={sidebarRef}
       style={{
         borderInlineStart: "1px solid var(--color-border)",
-        background: "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
       }}
     >
       {/* Game Log */}
-      <div style={{
-        height: gameMode === "maker" ? `${gameLogHeight}%` : "auto",
-        flex: gameMode === "maker" ? "none" : 1,
-        minBlockSize: 0,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}>
-        <div style={{
-          padding: "var(--space-5)",
-          paddingBlockEnd: "var(--space-3)",
-          borderBlockEnd: "1px solid var(--color-border)",
-        }}>
-          <div style={{
-            fontWeight: 600,
-            textTransform: "uppercase",
-            fontSize: "0.625rem",
-            color: "var(--color-gold)",
-          }}>
+      <div
+        style={{
+          height: gameMode === "maker" ? `${gameLogHeight}%` : "auto",
+          flex: gameMode === "maker" ? "none" : 1,
+          minBlockSize: 0,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "var(--space-5)",
+            paddingBlockEnd: "var(--space-3)",
+            borderBlockEnd: "1px solid var(--color-border)",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              textTransform: "uppercase",
+              fontSize: "0.625rem",
+              color: "var(--color-gold)",
+            }}
+          >
             Game Log
           </div>
         </div>
@@ -215,39 +234,63 @@ export function GameSidebar({
           }}
         >
           {aggregateLogEntries(state.log).map((entry, i) => {
-            const lastEventId = events && events.length > 0 ? events[events.length - 1].id : undefined;
+            const lastEventId =
+              events && events.length > 0
+                ? events[events.length - 1].id
+                : undefined;
             return (
-              <LogEntryWithUndo key={i} entry={entry} onRequestUndo={onRequestUndo} lastEventId={lastEventId} />
+              <LogEntryWithUndo
+                key={i}
+                entry={entry}
+                onRequestUndo={onRequestUndo}
+                lastEventId={lastEventId}
+              />
             );
           })}
-          {(isProcessing || state.subPhase === "opponent_decision") && !isLocalPlayerTurn && (
-            <div style={{
-              color: getPlayerColor(state.activePlayer),
-              fontSize: "0.75rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              marginBlockStart: "var(--space-2)",
-              animation: "pulse 1.5s ease-in-out infinite",
-              fontStyle: "italic",
-            }}>
-              <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⚙</span>
-              <span>AI thinking...</span>
-            </div>
-          )}
-          {!isProcessing && isLocalPlayerTurn && state.subPhase !== "opponent_decision" && (
-            <div style={{
-              color: getPlayerColor(state.activePlayer),
-              fontSize: "0.75rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              marginBlockStart: "var(--space-2)",
-            }}>
-              <span style={{ display: "inline-block" }}><CyclingSquare /></span>
-              <span>Your turn...</span>
-            </div>
-          )}
+          {(isProcessing || state.subPhase === "opponent_decision") &&
+            !isLocalPlayerTurn && (
+              <div
+                style={{
+                  color: getPlayerColor(state.activePlayer),
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  marginBlockStart: "var(--space-2)",
+                  animation: "pulse 1.5s ease-in-out infinite",
+                  fontStyle: "italic",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    animation: "spin 1s linear infinite",
+                  }}
+                >
+                  ⚙
+                </span>
+                <span>AI thinking...</span>
+              </div>
+            )}
+          {!isProcessing &&
+            isLocalPlayerTurn &&
+            state.subPhase !== "opponent_decision" && (
+              <div
+                style={{
+                  color: getPlayerColor(state.activePlayer),
+                  fontSize: "0.75rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  marginBlockStart: "var(--space-2)",
+                }}
+              >
+                <span style={{ display: "inline-block" }}>
+                  <CyclingSquare />
+                </span>
+                <span>Your turn...</span>
+              </div>
+            )}
         </div>
       </div>
 
@@ -257,61 +300,94 @@ export function GameSidebar({
           onMouseDown={() => setIsDragging(true)}
           style={{
             height: "8px",
-            background: isDragging ? "var(--color-gold)" : "var(--color-border)",
+            background: isDragging
+              ? "var(--color-gold)"
+              : "var(--color-border)",
             cursor: "ns-resize",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "var(--color-gold)"}
-          onMouseLeave={(e) => !isDragging && (e.currentTarget.style.background = "var(--color-border)")}
+          onMouseEnter={e =>
+            (e.currentTarget.style.background = "var(--color-gold)")
+          }
+          onMouseLeave={e =>
+            !isDragging &&
+            (e.currentTarget.style.background = "var(--color-border)")
+          }
         >
-          <div style={{
-            width: "40px",
-            height: "3px",
-            background: "var(--color-text-secondary)",
-            borderRadius: "2px",
-            opacity: 0.5,
-          }} />
+          <div
+            style={{
+              width: "40px",
+              height: "3px",
+              background: "var(--color-text-secondary)",
+              borderRadius: "2px",
+              opacity: 0.5,
+            }}
+          />
         </div>
       )}
 
       {/* LLM Debug Log - only show in single-player MAKER mode */}
       {gameMode === "maker" && (
-        <div style={{
-          height: `${100 - gameLogHeight}%`,
-          minBlockSize: 0,
-          display: "flex",
-          flexDirection: "column",
-          background: "var(--color-bg-primary)",
-          overflow: "hidden",
-        }}>
+        <div
+          style={{
+            height: `${100 - gameLogHeight}%`,
+            minBlockSize: 0,
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--color-bg-primary)",
+            overflow: "hidden",
+          }}
+        >
           <LLMLog
             entries={llmLogs}
             gameMode={gameMode}
-            modelSettings={modelSettings && onModelSettingsChange ? {
-              settings: modelSettings,
-              onChange: onModelSettingsChange
-            } : undefined}
+            modelSettings={
+              modelSettings && onModelSettingsChange
+                ? {
+                    settings: modelSettings,
+                    onChange: onModelSettingsChange,
+                  }
+                : undefined
+            }
           />
         </div>
       )}
 
       {/* Game status */}
-      <div style={{
-        padding: "var(--space-4)",
-        borderBlockStart: "1px solid var(--color-border)",
-        background: "var(--color-bg-surface)",
-      }}>
+      <div
+        style={{
+          padding: "var(--space-4)",
+          borderBlockStart: "1px solid var(--color-border)",
+          background: "var(--color-bg-surface)",
+        }}
+      >
         {/* Mode Switcher */}
         {onGameModeChange && (
           <div style={{ marginBlockEnd: "var(--space-3)" }}>
-            <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05rem" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--space-2)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--color-text-secondary)",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05rem",
+                }}
+              >
                 Mode:
               </span>
-              {(["engine", "maker"] as const).map((mode) => (
+              {(["engine", "maker"] as const).map(mode => (
                 <button
                   key={mode}
                   onClick={() => onGameModeChange(mode)}
@@ -319,10 +395,19 @@ export function GameSidebar({
                     padding: "3px 8px",
                     fontSize: "0.65rem",
                     fontWeight: gameMode === mode ? 700 : 400,
-                    background: gameMode === mode ? "var(--color-victory-dark)" : "transparent",
-                    color: gameMode === mode ? "#fff" : "var(--color-text-secondary)",
+                    background:
+                      gameMode === mode
+                        ? "var(--color-victory-dark)"
+                        : "transparent",
+                    color:
+                      gameMode === mode
+                        ? "#fff"
+                        : "var(--color-text-secondary)",
                     border: "1px solid",
-                    borderColor: gameMode === mode ? "var(--color-victory)" : "var(--color-border-secondary)",
+                    borderColor:
+                      gameMode === mode
+                        ? "var(--color-victory)"
+                        : "var(--color-border-secondary)",
                     cursor: "pointer",
                     textTransform: "uppercase",
                     letterSpacing: "0.05rem",
@@ -338,11 +423,13 @@ export function GameSidebar({
         )}
 
         {/* Action Buttons - side by side at bottom */}
-        <div style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          justifyContent: "center",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-2)",
+            justifyContent: "center",
+          }}
+        >
           {onNewGame && (
             <button
               onClick={onNewGame}
@@ -362,8 +449,12 @@ export function GameSidebar({
                 gap: "var(--space-1)",
                 transition: "color 0.15s",
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "var(--color-action)"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+              onMouseEnter={e =>
+                (e.currentTarget.style.color = "var(--color-action)")
+              }
+              onMouseLeave={e =>
+                (e.currentTarget.style.color = "var(--color-text-secondary)")
+              }
               title="New Game"
             >
               <span style={{ fontSize: "0.875rem" }}>⊕</span>
@@ -391,8 +482,10 @@ export function GameSidebar({
                 gap: "var(--space-1)",
                 transition: "color 0.15s",
               }}
-              onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
-              onMouseLeave={(e) => e.currentTarget.style.color = "var(--color-text-secondary)"}
+              onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
+              onMouseLeave={e =>
+                (e.currentTarget.style.color = "var(--color-text-secondary)")
+              }
               title="End Game"
             >
               <span style={{ fontSize: "0.875rem" }}>⊗</span>

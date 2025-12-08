@@ -1,5 +1,9 @@
 import type { GameState, CardName, PlayerState } from "../types/game-state";
-import type { GameEvent, DecisionRequest, DecisionChoice } from "../events/types";
+import type {
+  GameEvent,
+  DecisionRequest,
+  DecisionChoice,
+} from "../events/types";
 import { shuffle } from "../lib/game-utils";
 import { CARDS } from "../data/cards";
 
@@ -51,8 +55,13 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
  */
 export function peekDraw(
   { deck: playerDeck, discard: playerDiscard }: PlayerState,
-  count: number
-): { cards: CardName[]; shuffled: boolean; newDeckOrder?: CardName[]; cardsBeforeShuffle?: CardName[] } {
+  count: number,
+): {
+  cards: CardName[];
+  shuffled: boolean;
+  newDeckOrder?: CardName[];
+  cardsBeforeShuffle?: CardName[];
+} {
   const cards: CardName[] = [];
   const cardsBeforeShuffle: CardName[] = [];
   let deck = [...playerDeck];
@@ -82,14 +91,17 @@ export function peekDraw(
     cards,
     shuffled,
     newDeckOrder,
-    cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined
+    cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined,
   };
 }
 
 /**
  * Get cards that can be gained from supply up to a cost limit.
  */
-export function getGainableCards(state: GameState, maxCost: number): CardName[] {
+export function getGainableCards(
+  state: GameState,
+  maxCost: number,
+): CardName[] {
   return Object.entries(state.supply)
     .filter((entry): entry is [CardName, number] => {
       const [card, count] = entry;
@@ -102,15 +114,20 @@ export function getGainableCards(state: GameState, maxCost: number): CardName[] 
 /**
  * Get treasure cards that can be gained from supply up to a cost limit.
  */
-export function getGainableTreasures(state: GameState, maxCost: number): CardName[] {
+export function getGainableTreasures(
+  state: GameState,
+  maxCost: number,
+): CardName[] {
   return Object.entries(state.supply)
     .filter((entry): entry is [CardName, number] => {
       const [card, count] = entry;
       if (!isCardName(card)) return false;
       const cardDef = CARDS[card];
-      return count > 0 &&
+      return (
+        count > 0 &&
         cardDef.types.includes("treasure") &&
-        cardDef.cost <= maxCost;
+        cardDef.cost <= maxCost
+      );
     })
     .map(([card]) => card);
 }
@@ -130,16 +147,27 @@ export function getOpponents(state: GameState, player: string): string[] {
 export function createDrawEvents(
   player: string,
   playerState: PlayerState,
-  count: number
+  count: number,
 ): GameEvent[] {
-  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(playerState, count);
+  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
+    playerState,
+    count,
+  );
 
   if (shuffled && cardsBeforeShuffle) {
     const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
     return [
-      ...cardsBeforeShuffle.map(card => ({ type: "CARD_DRAWN" as const, player, card })),
+      ...cardsBeforeShuffle.map(card => ({
+        type: "CARD_DRAWN" as const,
+        player,
+        card,
+      })),
       { type: "DECK_SHUFFLED" as const, player, newDeckOrder },
-      ...cardsAfterShuffle.map(card => ({ type: "CARD_DRAWN" as const, player, card })),
+      ...cardsAfterShuffle.map(card => ({
+        type: "CARD_DRAWN" as const,
+        player,
+        card,
+      })),
     ];
   }
 
@@ -169,7 +197,9 @@ export function createSimpleCardEffect(benefits: {
     const events: GameEvent[] = [];
 
     if (benefits.cards) {
-      events.push(...createDrawEvents(player, state.players[player], benefits.cards));
+      events.push(
+        ...createDrawEvents(player, state.players[player], benefits.cards),
+      );
     }
 
     if (benefits.actions) {
@@ -195,7 +225,10 @@ export function createSimpleCardEffect(benefits: {
 /**
  * Check if this is the initial call to a multi-stage card effect.
  */
-export function isInitialCall(decision: DecisionChoice | undefined, stage: string | undefined): boolean {
+export function isInitialCall(
+  decision: DecisionChoice | undefined,
+  stage: string | undefined,
+): boolean {
   return !decision || stage === undefined;
 }
 

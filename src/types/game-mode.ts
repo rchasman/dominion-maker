@@ -19,7 +19,10 @@ export interface GameStrategy {
    * @param engine - The game engine to dispatch commands to
    * @param onStateChange - Optional callback for incremental UI updates
    */
-  runAITurn(engine: DominionEngine, onStateChange?: (state: GameState) => void): Promise<void>;
+  runAITurn(
+    engine: DominionEngine,
+    onStateChange?: (state: GameState) => void,
+  ): Promise<void>;
 
   /**
    * Resolve a pending decision for the AI player

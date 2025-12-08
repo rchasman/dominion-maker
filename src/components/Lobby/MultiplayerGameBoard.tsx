@@ -19,7 +19,9 @@ interface MultiplayerGameBoardProps {
   onBackToHome: () => void;
 }
 
-export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps) {
+export function MultiplayerGameBoard({
+  onBackToHome,
+}: MultiplayerGameBoardProps) {
   const {
     gameState,
     events,
@@ -45,11 +47,14 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   const [showDevtools, setShowDevtools] = useState(false);
 
   // Wrap requestUndo to clear preview state and selections when undoing
-  const handleRequestUndo = useCallback((eventId: string) => {
-    setPreviewEventId(null); // Clear preview when undoing
-    setSelectedCardIndices([]); // Clear selected cards when undoing
-    requestUndo(eventId);
-  }, [requestUndo]);
+  const handleRequestUndo = useCallback(
+    (eventId: string) => {
+      setPreviewEventId(null); // Clear preview when undoing
+      setSelectedCardIndices([]); // Clear selected cards when undoing
+      requestUndo(eventId);
+    },
+    [requestUndo],
+  );
 
   // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
   useEffect(() => {
@@ -66,7 +71,9 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   // Clear preview if the event no longer exists (after undo)
   useEffect(() => {
     if (previewEventId && !events.find(e => e.id === previewEventId)) {
-      uiLogger.debug(`Preview event ${previewEventId} no longer exists, clearing preview`);
+      uiLogger.debug(
+        `Preview event ${previewEventId} no longer exists, clearing preview`,
+      );
       queueMicrotask(() => {
         setPreviewEventId(null);
       });
@@ -74,58 +81,84 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   }, [previewEventId, events]);
 
   // Card click handler - must be before early return
-  const handleCardClick = useCallback((card: CardName, index: number) => {
-    if (previewEventId !== null) return; // No actions in preview mode
-    if (!isMyTurn) return;
+  const handleCardClick = useCallback(
+    (card: CardName, index: number) => {
+      if (previewEventId !== null) return; // No actions in preview mode
+      if (!isMyTurn) return;
 
-    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
-    if (!displayState) return;
+      const displayState = previewEventId
+        ? getStateAtEvent(previewEventId)
+        : gameState;
+      if (!displayState) return;
 
-    // If we have a pending decision, add to selection
-    if (displayState.pendingDecision) {
-      const decision = displayState.pendingDecision;
-      const maxCount = decision.max || 1;
+      // If we have a pending decision, add to selection
+      if (displayState.pendingDecision) {
+        const decision = displayState.pendingDecision;
+        const maxCount = decision.max || 1;
 
-      if (selectedCardIndices.includes(index)) {
-        setSelectedCardIndices(prev => prev.filter(i => i !== index));
-      } else if (selectedCardIndices.length < maxCount) {
-        setSelectedCardIndices(prev => [...prev, index]);
+        if (selectedCardIndices.includes(index)) {
+          setSelectedCardIndices(prev => prev.filter(i => i !== index));
+        } else if (selectedCardIndices.length < maxCount) {
+          setSelectedCardIndices(prev => [...prev, index]);
+        }
+        return;
       }
-      return;
-    }
 
-    // Action phase - play action cards
-    if (displayState.phase === "action" && isActionCard(card) && displayState.actions > 0) {
-      const result = playAction(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play action:", result.error);
+      // Action phase - play action cards
+      if (
+        displayState.phase === "action" &&
+        isActionCard(card) &&
+        displayState.actions > 0
+      ) {
+        const result = playAction(card);
+        if (!result.ok) {
+          uiLogger.error("Failed to play action:", result.error);
+        }
+        return;
       }
-      return;
-    }
 
-    // Buy phase - play treasures
-    if (displayState.phase === "buy" && isTreasureCard(card)) {
-      const result = playTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play treasure:", result.error);
+      // Buy phase - play treasures
+      if (displayState.phase === "buy" && isTreasureCard(card)) {
+        const result = playTreasure(card);
+        if (!result.ok) {
+          uiLogger.error("Failed to play treasure:", result.error);
+        }
+        return;
       }
-      return;
-    }
-  }, [isMyTurn, gameState, selectedCardIndices, playAction, playTreasure, previewEventId, getStateAtEvent]);
+    },
+    [
+      isMyTurn,
+      gameState,
+      selectedCardIndices,
+      playAction,
+      playTreasure,
+      previewEventId,
+      getStateAtEvent,
+    ],
+  );
 
   // Buy card handler
-  const handleBuyCard = useCallback((card: CardName) => {
-    if (previewEventId !== null) return;
-    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
-    if (!displayState) return;
-    const canBuy = isMyTurn && displayState.phase === "buy" && displayState.buys > 0 && !previewEventId;
-    if (!canBuy) return;
+  const handleBuyCard = useCallback(
+    (card: CardName) => {
+      if (previewEventId !== null) return;
+      const displayState = previewEventId
+        ? getStateAtEvent(previewEventId)
+        : gameState;
+      if (!displayState) return;
+      const canBuy =
+        isMyTurn &&
+        displayState.phase === "buy" &&
+        displayState.buys > 0 &&
+        !previewEventId;
+      if (!canBuy) return;
 
-    const result = buyCard(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to buy card:", result.error);
-    }
-  }, [isMyTurn, gameState, buyCard, previewEventId, getStateAtEvent]);
+      const result = buyCard(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to buy card:", result.error);
+      }
+    },
+    [isMyTurn, gameState, buyCard, previewEventId, getStateAtEvent],
+  );
 
   // End phase handler
   const handleEndPhase = useCallback(() => {
@@ -141,7 +174,9 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   // Play all treasures handler
   const handlePlayAllTreasures = useCallback(() => {
     if (previewEventId !== null) return;
-    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    const displayState = previewEventId
+      ? getStateAtEvent(previewEventId)
+      : gameState;
     if (!displayState) return;
     if (!isMyTurn || displayState.phase !== "buy") return;
 
@@ -153,7 +188,9 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {
-    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    const displayState = previewEventId
+      ? getStateAtEvent(previewEventId)
+      : gameState;
     if (!displayState) return;
     const myPlayer = myGamePlayerId;
     const myPlayerState = myPlayer ? displayState.players[myPlayer] : null;
@@ -166,11 +203,20 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     } else {
       uiLogger.error("Failed to submit decision:", result.error);
     }
-  }, [gameState, myGamePlayerId, selectedCardIndices, submitDecision, previewEventId, getStateAtEvent]);
+  }, [
+    gameState,
+    myGamePlayerId,
+    selectedCardIndices,
+    submitDecision,
+    previewEventId,
+    getStateAtEvent,
+  ]);
 
   // Skip decision handler
   const handleSkipDecision = useCallback(() => {
-    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    const displayState = previewEventId
+      ? getStateAtEvent(previewEventId)
+      : gameState;
     if (!displayState?.pendingDecision?.canSkip) return;
 
     const result = submitDecision({ selectedCards: [] });
@@ -185,11 +231,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     : gameState;
 
   if (!displayState) {
-    return (
-      <div style={styles.loading}>
-        Loading game...
-      </div>
-    );
+    return <div style={styles.loading}>Loading game...</div>;
   }
 
   const myPlayer = myGamePlayerId;
@@ -199,9 +241,11 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
   // Computed values
   const isActionPhase = displayState.phase === "action";
   const isBuyPhase = displayState.phase === "buy";
-  const canBuy = isMyTurn && isBuyPhase && displayState.buys > 0 && !previewEventId;
+  const canBuy =
+    isMyTurn && isBuyPhase && displayState.buys > 0 && !previewEventId;
 
-  const hasPlayableActions = myPlayerState?.hand.some(isActionCard) && displayState.actions > 0;
+  const hasPlayableActions =
+    myPlayerState?.hand.some(isActionCard) && displayState.actions > 0;
   const hasTreasuresInHand = myPlayerState?.hand.some(isTreasureCard);
 
   // VP calculation
@@ -212,11 +256,16 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     if (previewEventId) {
       return `Previewing @ ${previewEventId}`;
     }
-    if (displayState.pendingDecision && displayState.pendingDecision.player === myPlayer) {
+    if (
+      displayState.pendingDecision &&
+      displayState.pendingDecision.player === myPlayer
+    ) {
       return displayState.pendingDecision.prompt;
     }
     if (!isMyTurn) {
-      const activeName = playerInfo?.[displayState.activePlayer]?.name ?? displayState.activePlayer;
+      const activeName =
+        playerInfo?.[displayState.activePlayer]?.name ??
+        displayState.activePlayer;
       return `Waiting for ${activeName}...`;
     }
     if (isActionPhase) {
@@ -237,13 +286,21 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
       {/* Main game area */}
       <div style={styles.mainArea}>
         {/* Turn indicator */}
-        <div style={{
-          ...styles.turnIndicator,
-          background: isMyTurn ? "rgba(34, 197, 94, 0.2)" : "var(--color-bg-secondary)",
-          borderColor: isMyTurn ? "rgba(34, 197, 94, 0.5)" : "var(--color-border-primary)",
-          color: isMyTurn ? "#22c55e" : "var(--color-text-secondary)",
-        }}>
-          {isMyTurn ? "Your Turn!" : `${playerInfo?.[displayState.activePlayer]?.name ?? displayState.activePlayer}'s Turn`}
+        <div
+          style={{
+            ...styles.turnIndicator,
+            background: isMyTurn
+              ? "rgba(34, 197, 94, 0.2)"
+              : "var(--color-bg-secondary)",
+            borderColor: isMyTurn
+              ? "rgba(34, 197, 94, 0.5)"
+              : "var(--color-border-primary)",
+            color: isMyTurn ? "#22c55e" : "var(--color-text-secondary)",
+          }}
+        >
+          {isMyTurn
+            ? "Your Turn!"
+            : `${playerInfo?.[displayState.activePlayer]?.name ?? displayState.activePlayer}'s Turn`}
           <span style={styles.phaseTag}>
             {displayState.phase.toUpperCase()} PHASE
           </span>
@@ -276,32 +333,52 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         )}
 
         {/* Decision panel */}
-        {displayState.pendingDecision && displayState.pendingDecision.player === myPlayer && (
-          <div style={styles.decisionPanel}>
-            <div style={styles.decisionPrompt}>{displayState.pendingDecision.prompt}</div>
-            <div style={styles.selectedCards}>
-              Selected: {selectedCardIndices.length > 0 && myPlayerState ? selectedCardIndices.map(i => myPlayerState.hand[i]).join(", ") : "(none)"}
-            </div>
-            <div style={styles.decisionButtons}>
-              <button
-                onClick={handleSubmitDecision}
-                style={styles.submitButton}
-                disabled={selectedCardIndices.length < (displayState.pendingDecision.min || 0)}
-              >
-                Confirm
-              </button>
-              {displayState.pendingDecision.canSkip && (
-                <button onClick={handleSkipDecision} style={styles.button}>
-                  Skip
+        {displayState.pendingDecision &&
+          displayState.pendingDecision.player === myPlayer && (
+            <div style={styles.decisionPanel}>
+              <div style={styles.decisionPrompt}>
+                {displayState.pendingDecision.prompt}
+              </div>
+              <div style={styles.selectedCards}>
+                Selected:{" "}
+                {selectedCardIndices.length > 0 && myPlayerState
+                  ? selectedCardIndices
+                      .map(i => myPlayerState.hand[i])
+                      .join(", ")
+                  : "(none)"}
+              </div>
+              <div style={styles.decisionButtons}>
+                <button
+                  onClick={handleSubmitDecision}
+                  style={styles.submitButton}
+                  disabled={
+                    selectedCardIndices.length <
+                    (displayState.pendingDecision.min || 0)
+                  }
+                >
+                  Confirm
                 </button>
-              )}
+                {displayState.pendingDecision.canSkip && (
+                  <button onClick={handleSkipDecision} style={styles.button}>
+                    Skip
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* My hand */}
         <PlayerArea
-          player={myPlayerState ?? { hand: [], deck: [], discard: [], inPlay: [], inPlaySourceIndices: [], deckTopRevealed: false }}
+          player={
+            myPlayerState ?? {
+              hand: [],
+              deck: [],
+              discard: [],
+              inPlay: [],
+              inPlaySourceIndices: [],
+              deckTopRevealed: false,
+            }
+          }
           label="You"
           vpCount={myPlayerState ? myVP : 0}
           isActive={isMyTurn}
@@ -345,7 +422,16 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
             {displayState.winner ? (
               <>
                 <div style={styles.winner}>
-                  Winner: {players.find(p => p.id === (displayState.playerOrder?.indexOf(displayState.winner!) ?? -1).toString())?.name ?? displayState.winner}
+                  Winner:{" "}
+                  {players.find(
+                    p =>
+                      p.id ===
+                      (
+                        displayState.playerOrder?.indexOf(
+                          displayState.winner!,
+                        ) ?? -1
+                      ).toString(),
+                  )?.name ?? displayState.winner}
                 </div>
                 <div style={styles.scores}>
                   {displayState.playerOrder?.map((playerId, idx) => {
@@ -361,9 +447,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
                 </div>
               </>
             ) : (
-              <div style={styles.winner}>
-                A player ended the game
-              </div>
+              <div style={styles.winner}>A player ended the game</div>
             )}
             <button
               onClick={() => {
@@ -384,7 +468,7 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
         isOpen={showDevtools}
         onToggle={() => setShowDevtools(!showDevtools)}
         onBranchFrom={handleRequestUndo}
-        onScrub={(eventId) => {
+        onScrub={eventId => {
           setPreviewEventId(eventId);
         }}
       />

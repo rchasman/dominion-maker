@@ -1,9 +1,18 @@
-import type { GameEvent, CardDrawnEvent, CardDiscardedEvent, CardTrashedEvent } from "./types";
+import type {
+  GameEvent,
+  CardDrawnEvent,
+  CardDiscardedEvent,
+  CardTrashedEvent,
+} from "./types";
 import type { LogEntry, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
 
 // Extended event type for aggregated card operations
-type AggregatedCardEvent = (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent) & {
+type AggregatedCardEvent = (
+  | CardDrawnEvent
+  | CardDiscardedEvent
+  | CardTrashedEvent
+) & {
   cards: CardName[];
   cardCounts: Record<string, number>;
   count: number;
@@ -11,12 +20,20 @@ type AggregatedCardEvent = (CardDrawnEvent | CardDiscardedEvent | CardTrashedEve
 
 type MaybeAggregatedEvent = GameEvent | AggregatedCardEvent;
 
-function isPlayerEvent(event: GameEvent): event is GameEvent & { player: string } {
+function isPlayerEvent(
+  event: GameEvent,
+): event is GameEvent & { player: string } {
   return "player" in event;
 }
 
-function isCardEvent(event: GameEvent): event is CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent {
-  return event.type === "CARD_DRAWN" || event.type === "CARD_DISCARDED" || event.type === "CARD_TRASHED";
+function isCardEvent(
+  event: GameEvent,
+): event is CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent {
+  return (
+    event.type === "CARD_DRAWN" ||
+    event.type === "CARD_DISCARDED" ||
+    event.type === "CARD_TRASHED"
+  );
 }
 
 /**
@@ -24,7 +41,10 @@ function isCardEvent(event: GameEvent): event is CardDrawnEvent | CardDiscardedE
  * Root events become top-level entries, effects nest under their causes.
  * Aggregates consecutive identical card operations (draw/discard/trash).
  */
-export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = "human"): LogEntry[] {
+export function buildLogFromEvents(
+  events: GameEvent[],
+  currentPlayer: string = "human",
+): LogEntry[] {
   const aggregatedEvents = aggregateCardEvents(events);
 
   const { rootLogs } = aggregatedEvents.reduce<{
@@ -49,7 +69,7 @@ export function buildLogFromEvents(events: GameEvent[], currentPlayer: string = 
 
       return { logMap: newLogMap, rootLogs: [...acc.rootLogs, logEntry] };
     },
-    { logMap: new Map(), rootLogs: [] }
+    { logMap: new Map(), rootLogs: [] },
   );
 
   return rootLogs;
@@ -68,25 +88,34 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
     return current.player === next.player && next.causedBy === current.causedBy;
   };
 
-  const collectConsecutive = (startIndex: number): { events: GameEvent[]; count: number } => {
-    const consecutiveCount = events.slice(startIndex + 1)
-      .findIndex((next) => !canMatchNext(events[startIndex], next));
+  const collectConsecutive = (
+    startIndex: number,
+  ): { events: GameEvent[]; count: number } => {
+    const consecutiveCount = events
+      .slice(startIndex + 1)
+      .findIndex(next => !canMatchNext(events[startIndex], next));
 
-    const count = consecutiveCount === -1
-      ? events.length - startIndex
-      : consecutiveCount + 1;
+    const count =
+      consecutiveCount === -1
+        ? events.length - startIndex
+        : consecutiveCount + 1;
 
     return { events: events.slice(startIndex, startIndex + count), count };
   };
 
-  const aggregateGroup = (groupEvents: (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[]): AggregatedCardEvent => {
+  const aggregateGroup = (
+    groupEvents: (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[],
+  ): AggregatedCardEvent => {
     const [first] = groupEvents;
     const cards = groupEvents.map(e => e.card);
     const initial: Record<string, number> = {};
-    const cardCounts = cards.reduce((acc, card) => ({
-      ...acc,
-      [card]: (acc[card] || 0) + 1
-    }), initial);
+    const cardCounts = cards.reduce(
+      (acc, card) => ({
+        ...acc,
+        [card]: (acc[card] || 0) + 1,
+      }),
+      initial,
+    );
 
     return {
       ...first,
@@ -105,7 +134,15 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
 
     if (isCardEvent(event)) {
       const { events: groupEvents, count } = collectConsecutive(i);
-      result.push(aggregateGroup(groupEvents as (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[]));
+      result.push(
+        aggregateGroup(
+          groupEvents as (
+            | CardDrawnEvent
+            | CardDiscardedEvent
+            | CardTrashedEvent
+          )[],
+        ),
+      );
       i += count;
     } else {
       result.push(event);
@@ -116,20 +153,35 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
   return result;
 }
 
-function isAggregatedEvent(event: MaybeAggregatedEvent): event is AggregatedCardEvent {
+function isAggregatedEvent(
+  event: MaybeAggregatedEvent,
+): event is AggregatedCardEvent {
   return "cards" in event && "cardCounts" in event && "count" in event;
 }
 
 /**
  * Convert a single event to a log entry (without nesting).
  */
-function eventToLogEntry(event: MaybeAggregatedEvent, currentPlayer: string): LogEntry | null {
+function eventToLogEntry(
+  event: MaybeAggregatedEvent,
+  currentPlayer: string,
+): LogEntry | null {
   switch (event.type) {
     case "TURN_STARTED":
-      return { type: "turn-start", turn: event.turn, player: event.player, eventId: event.id };
+      return {
+        type: "turn-start",
+        turn: event.turn,
+        player: event.player,
+        eventId: event.id,
+      };
 
     case "PHASE_CHANGED":
-      return { type: "phase-change", player: currentPlayer, phase: event.phase, eventId: event.id };
+      return {
+        type: "phase-change",
+        player: currentPlayer,
+        phase: event.phase,
+        eventId: event.id,
+      };
 
     case "CARD_PLAYED": {
       const cardDef = CARDS[event.card];
@@ -137,32 +189,81 @@ function eventToLogEntry(event: MaybeAggregatedEvent, currentPlayer: string): Lo
       const isAction = cardDef.types.includes("action");
 
       if (isTreasure) {
-        return { type: "play-treasure", player: event.player, card: event.card, coins: cardDef.coins || 0, eventId: event.id };
+        return {
+          type: "play-treasure",
+          player: event.player,
+          card: event.card,
+          coins: cardDef.coins || 0,
+          eventId: event.id,
+        };
       } else if (isAction) {
-        return { type: "play-action", player: event.player, card: event.card, eventId: event.id };
+        return {
+          type: "play-action",
+          player: event.player,
+          card: event.card,
+          eventId: event.id,
+        };
       }
       return null;
     }
 
     case "CARD_DRAWN": {
       if (isAggregatedEvent(event)) {
-        return { type: "draw-cards", player: event.player, count: event.count, cards: event.cards, cardCounts: event.cardCounts, eventId: event.id };
+        return {
+          type: "draw-cards",
+          player: event.player,
+          count: event.count,
+          cards: event.cards,
+          cardCounts: event.cardCounts,
+          eventId: event.id,
+        };
       }
-      return { type: "draw-cards", player: event.player, count: 1, cards: [event.card], eventId: event.id };
+      return {
+        type: "draw-cards",
+        player: event.player,
+        count: 1,
+        cards: [event.card],
+        eventId: event.id,
+      };
     }
 
     case "CARD_DISCARDED": {
       if (isAggregatedEvent(event)) {
-        return { type: "discard-cards", player: event.player, count: event.count, cards: event.cards, cardCounts: event.cardCounts, eventId: event.id };
+        return {
+          type: "discard-cards",
+          player: event.player,
+          count: event.count,
+          cards: event.cards,
+          cardCounts: event.cardCounts,
+          eventId: event.id,
+        };
       }
-      return { type: "discard-cards", player: event.player, count: 1, cards: [event.card], eventId: event.id };
+      return {
+        type: "discard-cards",
+        player: event.player,
+        count: 1,
+        cards: [event.card],
+        eventId: event.id,
+      };
     }
 
     case "CARD_TRASHED": {
       if (isAggregatedEvent(event)) {
-        return { type: "trash-card", player: event.player, card: event.cards[0], cards: event.cards, count: event.count, eventId: event.id };
+        return {
+          type: "trash-card",
+          player: event.player,
+          card: event.cards[0],
+          cards: event.cards,
+          count: event.count,
+          eventId: event.id,
+        };
       }
-      return { type: "trash-card", player: event.player, card: event.card, eventId: event.id };
+      return {
+        type: "trash-card",
+        player: event.player,
+        card: event.card,
+        eventId: event.id,
+      };
     }
 
     case "CARD_GAINED": {
@@ -177,15 +278,22 @@ function eventToLogEntry(event: MaybeAggregatedEvent, currentPlayer: string): Lo
           card: event.card,
           vp: typeof cardDef.vp === "number" ? cardDef.vp : undefined,
           eventId: event.id,
-          children: [{
-            type: "gain-card",
-            player: event.player,
-            card: event.card,
-            eventId: event.id
-          }]
+          children: [
+            {
+              type: "gain-card",
+              player: event.player,
+              card: event.card,
+              eventId: event.id,
+            },
+          ],
         };
       } else {
-        return { type: "gain-card", player: event.player, card: event.card, eventId: event.id };
+        return {
+          type: "gain-card",
+          player: event.player,
+          card: event.card,
+          eventId: event.id,
+        };
       }
     }
 
@@ -197,32 +305,68 @@ function eventToLogEntry(event: MaybeAggregatedEvent, currentPlayer: string): Lo
       const isTreasure = cardDef.types.includes("treasure");
 
       if (isTreasure && event.from === "inPlay") {
-        return { type: "unplay-treasure", player: event.player, card: event.card, coins: cardDef.coins || 0, eventId: event.id };
+        return {
+          type: "unplay-treasure",
+          player: event.player,
+          card: event.card,
+          coins: cardDef.coins || 0,
+          eventId: event.id,
+        };
       }
       return null;
     }
 
     case "ACTIONS_MODIFIED":
       if (event.delta > 0) {
-        return { type: "get-actions", player: currentPlayer, count: event.delta, eventId: event.id };
+        return {
+          type: "get-actions",
+          player: currentPlayer,
+          count: event.delta,
+          eventId: event.id,
+        };
       } else if (event.delta < 0) {
-        return { type: "use-actions", player: currentPlayer, count: -event.delta, eventId: event.id };
+        return {
+          type: "use-actions",
+          player: currentPlayer,
+          count: -event.delta,
+          eventId: event.id,
+        };
       }
       return null;
 
     case "BUYS_MODIFIED":
       if (event.delta > 0) {
-        return { type: "get-buys", player: currentPlayer, count: event.delta, eventId: event.id };
+        return {
+          type: "get-buys",
+          player: currentPlayer,
+          count: event.delta,
+          eventId: event.id,
+        };
       } else if (event.delta < 0) {
-        return { type: "use-buys", player: currentPlayer, count: -event.delta, eventId: event.id };
+        return {
+          type: "use-buys",
+          player: currentPlayer,
+          count: -event.delta,
+          eventId: event.id,
+        };
       }
       return null;
 
     case "COINS_MODIFIED":
       if (event.delta > 0) {
-        return { type: "get-coins", player: currentPlayer, count: event.delta, eventId: event.id };
+        return {
+          type: "get-coins",
+          player: currentPlayer,
+          count: event.delta,
+          eventId: event.id,
+        };
       } else if (event.delta < 0) {
-        return { type: "spend-coins", player: currentPlayer, count: -event.delta, eventId: event.id };
+        return {
+          type: "spend-coins",
+          player: currentPlayer,
+          count: -event.delta,
+          eventId: event.id,
+        };
       }
       return null;
 

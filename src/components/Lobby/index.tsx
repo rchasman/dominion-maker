@@ -16,7 +16,10 @@ interface MultiplayerScreenProps {
   onGameStart?: () => void;
 }
 
-export function MultiplayerScreen({ onBack, onGameStart }: MultiplayerScreenProps) {
+export function MultiplayerScreen({
+  onBack,
+  onGameStart,
+}: MultiplayerScreenProps) {
   const { isConnected, isInLobby, isPlaying, gameState } = useMultiplayer();
 
   // Not connected - show create/join (includes rejoin if available)

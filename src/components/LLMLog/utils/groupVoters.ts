@@ -12,7 +12,7 @@ export const groupVotersByModel = (voters: string[]): string => {
   voters.forEach(v => counts.set(v, (counts.get(v) || 0) + 1));
   return Array.from(counts.entries())
     .sort(([, a], [, b]) => b - a)
-    .map(([name, count]) => count > 1 ? `${name} ×${count}` : name)
+    .map(([name, count]) => (count > 1 ? `${name} ×${count}` : name))
     .join(", ");
 };
 
@@ -26,6 +26,6 @@ export const groupVotersWithColors = (voters: string[]): GroupedVoter[] => {
   return Array.from(counts.entries()).map(([name, count]) => ({
     name,
     count,
-    color: getModelColor(name)
+    color: getModelColor(name),
   }));
 };

@@ -6,7 +6,12 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const harbinger: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const harbinger: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
   const events: GameEvent[] = [];
 
@@ -26,7 +31,8 @@ export const harbinger: CardEffect = ({ state, player, decision, stage }): CardE
         type: "select_cards",
         player,
         from: "discard",
-        prompt: "Harbinger: Put a card from your discard onto your deck (or skip)",
+        prompt:
+          "Harbinger: Put a card from your discard onto your deck (or skip)",
         cardOptions: [...playerState.discard],
         min: 0,
         max: 1,

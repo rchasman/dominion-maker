@@ -7,7 +7,12 @@ import { getGainableTreasures, isTreasureCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
-export const mine: CardEffect = ({ state, player, decision, stage }): CardEffectResult => {
+export const mine: CardEffect = ({
+  state,
+  player,
+  decision,
+  stage,
+}): CardEffectResult => {
   const playerState = state.players[player];
 
   // Stage 1: Choose treasure to trash

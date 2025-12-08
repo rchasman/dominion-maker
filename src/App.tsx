@@ -4,8 +4,12 @@ import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { StartScreen } from "./components/StartScreen";
 import { uiLogger } from "./lib/logger";
 
-const Board = lazy(() => import("./components/Board/index").then(m => ({ default: m.Board })));
-const MultiplayerScreen = lazy(() => import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen })));
+const Board = lazy(() =>
+  import("./components/Board/index").then(m => ({ default: m.Board })),
+);
+const MultiplayerScreen = lazy(() =>
+  import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen })),
+);
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -74,13 +78,15 @@ function App() {
 
 function LoadingScreen() {
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100dvh",
-      color: "var(--color-text-secondary)",
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100dvh",
+        color: "var(--color-text-secondary)",
+      }}
+    >
       Loading...
     </div>
   );
@@ -92,13 +98,15 @@ function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
   // Wait for loading to complete
   if (isLoading) {
     return (
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100dvh",
-        color: "var(--color-text-secondary)",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100dvh",
+          color: "var(--color-text-secondary)",
+        }}
+      >
         Loading...
       </div>
     );

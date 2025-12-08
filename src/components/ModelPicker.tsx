@@ -63,15 +63,18 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
   };
 
   // Group models by provider
-  const modelsByProvider = AVAILABLE_MODELS.reduce((acc, modelId) => {
-    const model = MODELS.find(m => m.id === modelId);
-    if (!model) return acc;
-    if (!acc[model.provider]) {
-      acc[model.provider] = [];
-    }
-    acc[model.provider].push(modelId);
-    return acc;
-  }, {} as Record<string, ModelProvider[]>);
+  const modelsByProvider = AVAILABLE_MODELS.reduce(
+    (acc, modelId) => {
+      const model = MODELS.find(m => m.id === modelId);
+      if (!model) return acc;
+      if (!acc[model.provider]) {
+        acc[model.provider] = [];
+      }
+      acc[model.provider].push(modelId);
+      return acc;
+    },
+    {} as Record<string, ModelProvider[]>,
+  );
 
   const providerDisplayNames: Record<string, string> = {
     cerebras: "Cerebras",
@@ -86,7 +89,17 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
   };
 
   // Sort providers: fast ones first
-  const providerOrder = ["cerebras", "groq", "together", "sambanova", "google", "mistral", "xai", "anthropic", "openai"];
+  const providerOrder = [
+    "cerebras",
+    "groq",
+    "together",
+    "sambanova",
+    "google",
+    "mistral",
+    "xai",
+    "anthropic",
+    "openai",
+  ];
   const sortedProviders = Object.keys(modelsByProvider).sort((a, b) => {
     const indexA = providerOrder.indexOf(a);
     const indexB = providerOrder.indexOf(b);
@@ -97,25 +110,36 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-      <div style={{
-        position: "sticky",
-        top: 0,
-        background: "var(--color-bg-secondary)",
-        zIndex: 1,
-        paddingTop: "var(--space-2)",
-        paddingBottom: "var(--space-2)",
+    <div
+      style={{
         display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <label style={{
-          fontSize: "0.6875rem",
-          fontWeight: 600,
-          color: "var(--color-text-secondary)",
-          textTransform: "uppercase",
-        }}>
-          Enabled Models ({settings.enabledModels.size}/{AVAILABLE_MODELS.length})
+        flexDirection: "column",
+        gap: "var(--space-3)",
+      }}
+    >
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          background: "var(--color-bg-secondary)",
+          zIndex: 1,
+          paddingTop: "var(--space-2)",
+          paddingBottom: "var(--space-2)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <label
+          style={{
+            fontSize: "0.6875rem",
+            fontWeight: 600,
+            color: "var(--color-text-secondary)",
+            textTransform: "uppercase",
+          }}
+        >
+          Enabled Models ({settings.enabledModels.size}/
+          {AVAILABLE_MODELS.length})
         </label>
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <button
@@ -150,34 +174,46 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
           </button>
         </div>
       </div>
-      {sortedProviders.map((provider) => {
+      {sortedProviders.map(provider => {
         const models = modelsByProvider[provider];
         const providerModel = MODELS.find(m => m.provider === provider);
-        const providerColor = providerModel?.color || "var(--color-text-secondary)";
+        const providerColor =
+          providerModel?.color || "var(--color-text-secondary)";
 
         return (
-          <div key={provider} style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            {/* Provider Header */}
-            <div style={{
-              fontSize: "0.625rem",
-              fontWeight: 600,
-              color: providerColor,
-              textTransform: "uppercase",
-              letterSpacing: "0.05rem",
+          <div
+            key={provider}
+            style={{
               display: "flex",
-              alignItems: "center",
+              flexDirection: "column",
               gap: "var(--space-2)",
-            }}>
-              <div style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "2px",
-                background: providerColor,
-              }} />
+            }}
+          >
+            {/* Provider Header */}
+            <div
+              style={{
+                fontSize: "0.625rem",
+                fontWeight: 600,
+                color: providerColor,
+                textTransform: "uppercase",
+                letterSpacing: "0.05rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+              }}
+            >
+              <div
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "2px",
+                  background: providerColor,
+                }}
+              />
               {providerDisplayNames[provider] || provider}
             </div>
             {/* Models for this provider */}
-            {models.map((model) => {
+            {models.map(model => {
               const isEnabled = settings.enabledModels.has(model);
               return (
                 <label
@@ -190,9 +226,13 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
                     padding: "var(--space-2)",
                     paddingLeft: "var(--space-4)",
                     borderRadius: "3px",
-                    background: isEnabled ? `${providerColor}15` : "transparent",
+                    background: isEnabled
+                      ? `${providerColor}15`
+                      : "transparent",
                     border: "1px solid",
-                    borderColor: isEnabled ? providerColor : "var(--color-border-secondary)",
+                    borderColor: isEnabled
+                      ? providerColor
+                      : "var(--color-border-secondary)",
                     fontSize: "0.6875rem",
                   }}
                 >
@@ -213,14 +253,16 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
       })}
       {/* Warning if no models enabled */}
       {settings.enabledModels.size === 0 && (
-        <div style={{
-          padding: "var(--space-2)",
-          background: "rgba(239, 68, 68, 0.1)",
-          border: "1px solid #ef4444",
-          borderRadius: "3px",
-          fontSize: "0.625rem",
-          color: "#ef4444",
-        }}>
+        <div
+          style={{
+            padding: "var(--space-2)",
+            background: "rgba(239, 68, 68, 0.1)",
+            border: "1px solid #ef4444",
+            borderRadius: "3px",
+            fontSize: "0.625rem",
+            color: "#ef4444",
+          }}
+        >
           ⚠ At least one model must be enabled
         </div>
       )}

@@ -7,7 +7,10 @@ interface ModelSettingsProps {
   onChange: (settings: ModelSettings) => void;
 }
 
-export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProps) {
+export function ModelSettingsAccordion({
+  settings,
+  onChange,
+}: ModelSettingsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleConsensusCountChange = (value: number) => {
@@ -15,11 +18,13 @@ export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProp
   };
 
   return (
-    <div style={{
-      border: "1px solid var(--color-border)",
-      borderRadius: "4px",
-      background: "var(--color-bg-tertiary)",
-    }}>
+    <div
+      style={{
+        border: "1px solid var(--color-border)",
+        borderRadius: "4px",
+        background: "var(--color-bg-tertiary)",
+      }}
+    >
       {/* Accordion Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -48,21 +53,31 @@ export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProp
 
       {/* Accordion Content */}
       {isExpanded && (
-        <div style={{
-          padding: "var(--space-4)",
-          borderTop: "1px solid var(--color-border)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-4)",
-        }}>
+        <div
+          style={{
+            padding: "var(--space-4)",
+            borderTop: "1px solid var(--color-border)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-4)",
+          }}
+        >
           {/* Consensus Count */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <label style={{
-              fontSize: "0.6875rem",
-              fontWeight: 600,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-            }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-2)",
+            }}
+          >
+            <label
+              style={{
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+              }}
+            >
               Consensus Count: {settings.consensusCount}
             </label>
             <input
@@ -70,17 +85,19 @@ export function ModelSettingsAccordion({ settings, onChange }: ModelSettingsProp
               min="1"
               max="50"
               value={settings.consensusCount}
-              onChange={(e) => handleConsensusCountChange(Number(e.target.value))}
+              onChange={e => handleConsensusCountChange(Number(e.target.value))}
               style={{
                 width: "100%",
                 cursor: "pointer",
               }}
             />
-            <div style={{
-              fontSize: "0.625rem",
-              color: "var(--color-text-tertiary)",
-              lineHeight: 1.4,
-            }}>
+            <div
+              style={{
+                fontSize: "0.625rem",
+                color: "var(--color-text-tertiary)",
+                lineHeight: 1.4,
+              }}
+            >
               Total models to run (may include duplicates)
             </div>
           </div>
