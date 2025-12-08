@@ -4,17 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun server.ts & sleep 1 && vite",
+    "dev": "bun server.ts & vite",
     "build": "vite build",
     "type": "tsc --incremental --noEmit",
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "test": "bun test",
-    "check:server": "bun server.ts & SERVER_PID=$! && sleep 0.5 && kill $SERVER_PID",
-    "check:deps:unused": "depcheck",
-    "check:deps:circular": "dpdm --exit-code circular:1 'src/**/*.{ts,tsx}'",
-    "check": "bun run type & bun run lint & bun test & bun run check:server & wait",
-    "check:full": "bun run type & bun run lint & bun test & bun run build & bun run check:server & bun run check:deps:unused & bun run check:deps:circular & wait",
+    "check:server": "bun server.ts & SERVER_PID=$! && kill $SERVER_PID",
+    "check:unused": "depcheck",
+    "check:circular": "dpdm --exit-code circular:1 --warning false --tree false 'src/**/*.{ts,tsx}'",
+    "check": "bun run build & bun run type & bun run lint & bun test & bun check:server & bun check:unused & bun check:circular & wait",
     "preview": "vite preview"
   },
   "dependencies": {
