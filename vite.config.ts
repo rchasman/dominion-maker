@@ -23,6 +23,9 @@ export default defineConfig({
     'import.meta.env.VITE_VERCEL_URL': JSON.stringify(process.env.VERCEL_URL),
   },
   build: {
+    target: 'es2022',
+    minify: 'oxc',
+    sourcemap: !!process.env.CI,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
@@ -33,11 +36,8 @@ export default defineConfig({
             }
             return 'vendor';
           }
-          if (id.includes('/engine/') || id.includes('/commands/')) {
-            return 'game-engine';
-          }
-          if (id.includes('/cards/') || id.includes('/data/cards')) {
-            return 'cards';
+          if (id.includes('/engine/') || id.includes('/commands/') || id.includes('/cards/') || id.includes('/data/cards')) {
+            return 'game';
           }
         },
       },
