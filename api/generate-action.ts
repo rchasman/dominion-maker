@@ -76,8 +76,10 @@ export default async function handler(req: VercelRequest) {
       });
     }
 
+    console.log(`[${new Date().toISOString()}] Creating model gateway for: ${modelName}`);
     const model = gateway(modelName);
     const isAnthropic = provider.startsWith("claude");
+    console.log(`[${new Date().toISOString()}] Model created, isAnthropic: ${isAnthropic}`);
 
     const legalActionsStr = legalActions && legalActions.length > 0
       ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
@@ -185,6 +187,7 @@ export default async function handler(req: VercelRequest) {
     }
 
     // Use generateObject for other models
+    console.log(`[${new Date().toISOString()}] Calling generateObject...`);
     const result = await generateObject({
       model,
       schema: ActionSchema,
@@ -199,6 +202,7 @@ export default async function handler(req: VercelRequest) {
         },
       }),
     });
+    console.log(`[${new Date().toISOString()}] generateObject completed`);
 
     return new Response(JSON.stringify({ action: result.object }), {
       status: 200,
