@@ -1,13 +1,45 @@
-import { treaty } from "@elysiajs/eden";
-import type { App } from "../../server";
+// Simple fetch-based API client (no Elysia dependency needed)
+// Vite dev server proxies /api/* to our handler via middleware
+// Production uses Vercel serverless functions
 
-// Use same-origin API calls to avoid CORS issues
-// In production/preview: use window.location.origin (same deployment)
-// In development: use localhost:5174 (separate server)
-const API_URL = import.meta.env.DEV
-  ? "http://localhost:5174"
-  : typeof window !== "undefined"
-    ? window.location.origin
-    : "https://dominion-maker.vercel.app";
+interface GenerateActionRequest {
+  provider: string;
+  currentState: any;
+  humanChoice?: { selectedCards: string[] };
+  legalActions?: any[];
+}
 
-export const api = treaty<App>(API_URL);
+interface GenerateActionResponse {
+  action?: any;
+  error?: number;
+  message?: string;
+}
+
+export const api = {
+  api: {
+    "generate-action": {
+      post: async (body: GenerateActionRequest, options?: { fetch?: RequestInit }) => {
+        try {
+          const response = await fetch("/api/generate-action", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+            ...options?.fetch,
+          });
+
+          const data: GenerateActionResponse = await response.json();
+
+          if (!response.ok) {
+            return { data: null, error: { value: data.message || "Request failed" } };
+          }
+
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: { value: String(err) } };
+        }
+      },
+    },
+  },
+};
