@@ -9,6 +9,8 @@
     "type": "tsc --noEmit",
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
+    "test": "bun test",
+    "check": "bun run type && bun run lint && bun test && bun run build",
     "preview": "vite preview"
   },
   "dependencies": {
