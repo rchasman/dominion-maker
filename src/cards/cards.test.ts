@@ -678,7 +678,7 @@ describe("Complex Card Interactions", () => {
         ["Village", "Smithy", "Copper", "Silver", "Gold", "Estate"]
       );
 
-      let newState = executeCard("Library", state);
+      const newState = executeCard("Library", state);
 
       // Should request which actions to skip
       if (newState.pendingDecision) {
@@ -712,7 +712,7 @@ describe("Complex Card Interactions", () => {
         ["Copper", "Silver", "Gold", "Estate"]
       );
 
-      let newState = executeCard("Sentry", state);
+      const newState = executeCard("Sentry", state);
 
       // Should reveal 2 cards
       expect(newState.pendingDecision).toBeDefined();
@@ -891,7 +891,7 @@ describe("Complex Card Interactions", () => {
       state.supply.Silver = 0;
       state.supply.Gold = 0;
 
-      let newState = executeCard("Poacher", state);
+      const newState = executeCard("Poacher", state);
 
       // Should request discarding 3 cards
       expect(newState.pendingDecision).toBeDefined();

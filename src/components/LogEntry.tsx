@@ -435,10 +435,11 @@ function LogEntryContent({ entry, depth = 0, viewer = "human" }: { entry: LogEnt
         </span>
       );
 
-    default:
+    default: {
       // Type exhaustiveness check
       const _exhaustive: never = entry;
       return <span>{JSON.stringify(_exhaustive)}</span>;
+    }
   }
 }
 
