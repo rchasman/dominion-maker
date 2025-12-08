@@ -23,7 +23,6 @@ export function CardTooltip({ cardName, mouseX, mouseY, showBack }: CardTooltipP
   const offsetY = 12;
 
   const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
 
   let left = mouseX + offsetX;
   let top = mouseY - offsetY - tooltipHeight;
