@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { GameProvider, useGame } from "./context/GameContext";
 import { MultiplayerProvider } from "./context/MultiplayerContext";
-import { Board } from "./components/Board/index";
 import { StartScreen } from "./components/StartScreen";
-import { MultiplayerScreen } from "./components/Lobby";
 import { uiLogger } from "./lib/logger";
+
+const Board = lazy(() => import("./components/Board/index").then(m => ({ default: m.Board })));
+const MultiplayerScreen = lazy(() => import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen })));
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -50,7 +51,9 @@ function App() {
   if (mode === "singleplayer") {
     return (
       <GameProvider>
-        <SinglePlayerGame onBackToHome={() => setMode("menu")} />
+        <Suspense fallback={<LoadingScreen />}>
+          <SinglePlayerGame onBackToHome={() => setMode("menu")} />
+        </Suspense>
       </GameProvider>
     );
   }
@@ -59,12 +62,28 @@ function App() {
   if (mode === "multiplayer") {
     return (
       <MultiplayerProvider>
-        <MultiplayerScreen onBack={() => setMode("menu")} />
+        <Suspense fallback={<LoadingScreen />}>
+          <MultiplayerScreen onBack={() => setMode("menu")} />
+        </Suspense>
       </MultiplayerProvider>
     );
   }
 
   return null;
+}
+
+function LoadingScreen() {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100dvh",
+      color: "var(--color-text-secondary)",
+    }}>
+      Loading...
+    </div>
+  );
 }
 
 function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
