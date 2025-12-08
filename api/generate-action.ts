@@ -7,6 +7,7 @@ import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
+import { parse as parseBestEffort } from "best-effort-json-parser";
 
 // Create HTTP agents with unlimited concurrent connections
 // Default is 5 connections per host - we increase to Infinity
@@ -16,7 +17,7 @@ const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
 // Configure AI Gateway with custom fetch that uses our unlimited agents
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
-  fetch: (input: URL | Request, init?: RequestInit) => {
+  fetch: (input: string | URL | Request, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const isHttps = url.startsWith('https:');
 
@@ -107,10 +108,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
       : `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 
-    // Ministral struggles with generateObject - use generateText with explicit JSON instructions
-    const isMistral = provider.includes("ministral");
+    // Some models don't support json_schema response format - use generateText with explicit JSON instructions
+    const useTextFallback = provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq");
 
-    if (isMistral) {
+    if (useTextFallback) {
       const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
 { "type": "play_action", "card": "CardName", "reasoning": "..." }
 { "type": "play_treasure", "card": "CardName", "reasoning": "..." }
@@ -127,52 +128,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         maxRetries: 0,
       });
 
-      // Extract JSON from text (may be wrapped in markdown code blocks)
+      // Extract JSON from text using best-effort parser
       let text = result.text.trim();
 
-      // Remove markdown code blocks if present
-      if (text.startsWith('```')) {
-        const match = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-        if (match) {
-          text = match[1].trim();
-        }
+      // Strip markdown code blocks first
+      const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if (codeBlockMatch) {
+        text = codeBlockMatch[1].trim();
       }
 
-      let jsonStr = text;
-
-      // If there are multiple JSON objects, try to find the action (not schema)
-      if (text.includes('}\n') || text.includes('}\r\n')) {
-        const chunks = text.split(/\n\n+/);
-        for (const chunk of chunks) {
-          const trimmed = chunk.trim();
-          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-            try {
-              const parsed = JSON.parse(trimmed);
-              // Skip if it's a schema
-              if (parsed.properties || (parsed.type === "object" && parsed.description)) {
-                continue;
-              }
-              // Found a candidate action
-              if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
-                jsonStr = trimmed;
-                break;
-              }
-            } catch {
-              continue;
-            }
-          }
-        }
-      }
+      const parsed = parseBestEffort(text);
 
       try {
-        const parsed = JSON.parse(jsonStr);
         const action = ActionSchema.parse(parsed);
         return res.status(200).json({ action });
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
         apiLogger.error(`${provider} parse failed: ${errorMessage}`);
         apiLogger.error(`${provider} raw text output: ${result.text}`);
-        apiLogger.error(`${provider} extracted json: ${jsonStr}`);
+        apiLogger.error(`${provider} extracted json: ${JSON.stringify(parsed)}`);
 
         return res.status(500).json({
           error: 500,
@@ -212,7 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    if (errorWithText.text && provider === "ministral-3b") {
+    if (errorWithText.text && (provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq"))) {
       try {
         const text = errorWithText.text;
         const chunks = text.split(/\n\n+/);

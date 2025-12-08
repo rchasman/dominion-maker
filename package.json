@@ -7,8 +7,8 @@
     "dev": "bun server.ts & sleep 1 && vite",
     "build": "tsc -b && vite build",
     "type": "tsc --noEmit",
-    "lint": "bunx oxlint --type-aware",
-    "lint:fix": "bunx oxlint --type-aware --fix",
+    "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
+    "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "@ai-sdk/gateway": "^2.0.18",
     "@ai-sdk/openai": "3.0.0-beta.84",
     "ai": "6.0.0-beta.133",
+    "best-effort-json-parser": "^1.2.1",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "trystero": "0.22.0",
@@ -35,6 +36,8 @@
     "globals": "^16.5.0",
     "oxlint": "^1.31.0",
     "oxlint-tsgolint": "^0.8.3",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.1",
     "vite": "^8.0.0-beta.0"
