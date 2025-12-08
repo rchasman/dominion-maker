@@ -44,33 +44,30 @@ export function Board({ onBackToHome }: BoardProps) {
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
 
   // Wrap requestUndo to clear preview state and selections when undoing
-  const handleRequestUndo = (eventId: string) => {
+  const handleRequestUndo = useCallback((eventId: string) => {
     setPreviewEventId(null); // Clear preview when undoing
     setSelectedCardIndices([]); // Clear selected cards when undoing
     requestUndo(eventId);
-  };
+  }, [requestUndo]);
 
   // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
   useEffect(() => {
     const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
     const isNewGame = hasGameInit && events.length < 10; // New game has few events
+
+    // Reset UI state at start of new game
     if (isNewGame) {
-      setPreviewEventId(null);
-      setSelectedCardIndices([]);
+      // Use a microtask to avoid synchronous setState in effect
+      queueMicrotask(() => {
+        setPreviewEventId(null);
+        setSelectedCardIndices([]);
+      });
     }
-  }, [events]);
+  }, [events.length]);
 
-  if (!state) return null;
-
-  // Use preview state when scrubbing, otherwise use live state
-  const displayState = previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
-  const isPreviewMode = previewEventId !== null;
-
-  const isHumanTurn = state.activePlayer === "human";
-
-  // Card click handler
+  // Card click handler - must be defined before early return
   const onCardClick = useCallback((card: CardName, index: number) => {
-    if (!isHumanTurn) return;
+    if (!state?.activePlayer || state.activePlayer !== "human") return;
 
     // If we have a pending decision, add to selection
     if (state.pendingDecision) {
@@ -106,13 +103,21 @@ export function Board({ onBackToHome }: BoardProps) {
 
   // Handle in-play clicks (unplay treasures)
   const onInPlayClick = useCallback((card: CardName) => {
-    if (!isHumanTurn || state.phase !== "buy") return;
+    if (!state || state.activePlayer !== "human" || state.phase !== "buy") return;
 
     const result = unplayTreasure(card);
     if (!result.ok) {
       uiLogger.error("Failed to unplay treasure:", result.error);
     }
-  }, [state?.phase, unplayTreasure, isHumanTurn]);
+  }, [state, unplayTreasure]);
+
+  if (!state) return null;
+
+  // Use preview state when scrubbing, otherwise use live state
+  const displayState = previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
+  const isPreviewMode = previewEventId !== null;
+
+  const isHumanTurn = state.activePlayer === "human";
 
   const canBuy = isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
   const opponent = displayState.players.ai;

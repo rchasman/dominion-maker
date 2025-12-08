@@ -56,18 +56,128 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
     const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
     const isNewGame = hasGameInit && events.length < 10; // New game has few events
     if (isNewGame) {
-      setPreviewEventId(null);
-      setSelectedCardIndices([]);
+      queueMicrotask(() => {
+        setPreviewEventId(null);
+        setSelectedCardIndices([]);
+      });
     }
-  }, [events]);
+  }, [events.length]);
 
   // Clear preview if the event no longer exists (after undo)
   useEffect(() => {
     if (previewEventId && !events.find(e => e.id === previewEventId)) {
       uiLogger.debug(`Preview event ${previewEventId} no longer exists, clearing preview`);
-      setPreviewEventId(null);
+      queueMicrotask(() => {
+        setPreviewEventId(null);
+      });
     }
   }, [previewEventId, events]);
+
+  // Card click handler - must be before early return
+  const handleCardClick = useCallback((card: CardName, index: number) => {
+    if (previewEventId !== null) return; // No actions in preview mode
+    if (!isMyTurn) return;
+
+    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    if (!displayState) return;
+
+    // If we have a pending decision, add to selection
+    if (displayState.pendingDecision) {
+      const decision = displayState.pendingDecision;
+      const maxCount = decision.max || 1;
+
+      if (selectedCardIndices.includes(index)) {
+        setSelectedCardIndices(prev => prev.filter(i => i !== index));
+      } else if (selectedCardIndices.length < maxCount) {
+        setSelectedCardIndices(prev => [...prev, index]);
+      }
+      return;
+    }
+
+    // Action phase - play action cards
+    if (displayState.phase === "action" && isActionCard(card) && displayState.actions > 0) {
+      const result = playAction(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play action:", result.error);
+      }
+      return;
+    }
+
+    // Buy phase - play treasures
+    if (displayState.phase === "buy" && isTreasureCard(card)) {
+      const result = playTreasure(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play treasure:", result.error);
+      }
+      return;
+    }
+  }, [isMyTurn, gameState, selectedCardIndices, playAction, playTreasure, previewEventId, getStateAtEvent]);
+
+  // Buy card handler
+  const handleBuyCard = useCallback((card: CardName) => {
+    if (previewEventId !== null) return;
+    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    if (!displayState) return;
+    const canBuy = isMyTurn && displayState.phase === "buy" && displayState.buys > 0 && !previewEventId;
+    if (!canBuy) return;
+
+    const result = buyCard(card);
+    if (!result.ok) {
+      uiLogger.error("Failed to buy card:", result.error);
+    }
+  }, [isMyTurn, gameState, buyCard, previewEventId, getStateAtEvent]);
+
+  // End phase handler
+  const handleEndPhase = useCallback(() => {
+    if (previewEventId !== null) return;
+    if (!isMyTurn) return;
+
+    const result = endPhase();
+    if (!result.ok) {
+      uiLogger.error("Failed to end phase:", result.error);
+    }
+  }, [isMyTurn, endPhase, previewEventId]);
+
+  // Play all treasures handler
+  const handlePlayAllTreasures = useCallback(() => {
+    if (previewEventId !== null) return;
+    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    if (!displayState) return;
+    if (!isMyTurn || displayState.phase !== "buy") return;
+
+    const result = playAllTreasures();
+    if (!result.ok) {
+      uiLogger.error("Failed to play treasures:", result.error);
+    }
+  }, [isMyTurn, gameState, playAllTreasures, previewEventId, getStateAtEvent]);
+
+  // Submit decision handler
+  const handleSubmitDecision = useCallback(() => {
+    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    if (!displayState) return;
+    const myPlayer = myGamePlayerId;
+    const myPlayerState = myPlayer ? displayState.players[myPlayer] : null;
+    if (!displayState.pendingDecision || !myPlayerState) return;
+
+    const selectedCards = selectedCardIndices.map(i => myPlayerState.hand[i]);
+    const result = submitDecision({ selectedCards });
+    if (result.ok) {
+      setSelectedCardIndices([]);
+    } else {
+      uiLogger.error("Failed to submit decision:", result.error);
+    }
+  }, [gameState, myGamePlayerId, selectedCardIndices, submitDecision, previewEventId, getStateAtEvent]);
+
+  // Skip decision handler
+  const handleSkipDecision = useCallback(() => {
+    const displayState = previewEventId ? getStateAtEvent(previewEventId) : gameState;
+    if (!displayState?.pendingDecision?.canSkip) return;
+
+    const result = submitDecision({ selectedCards: [] });
+    if (result.ok) {
+      setSelectedCardIndices([]);
+    }
+  }, [gameState, submitDecision, previewEventId, getStateAtEvent]);
 
   // Use preview state if in time travel mode
   const displayState = previewEventId
@@ -96,99 +206,6 @@ export function MultiplayerGameBoard({ onBackToHome }: MultiplayerGameBoardProps
 
   // VP calculation
   const myVP = myPlayerState ? countVP(getAllCards(myPlayerState)) : 0;
-
-  // Card click handler
-  const handleCardClick = useCallback((card: CardName, index: number) => {
-    if (previewEventId !== null) return; // No actions in preview mode
-    if (!isMyTurn) return;
-
-    // If we have a pending decision, add to selection
-    if (displayState.pendingDecision) {
-      const decision = displayState.pendingDecision;
-      const maxCount = decision.max || 1;
-
-      if (selectedCardIndices.includes(index)) {
-        setSelectedCardIndices(prev => prev.filter(i => i !== index));
-      } else if (selectedCardIndices.length < maxCount) {
-        setSelectedCardIndices(prev => [...prev, index]);
-      }
-      return;
-    }
-
-    // Action phase - play action cards
-    if (isActionPhase && isActionCard(card) && displayState.actions > 0) {
-      const result = playAction(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play action:", result.error);
-      }
-      return;
-    }
-
-    // Buy phase - play treasures
-    if (isBuyPhase && isTreasureCard(card)) {
-      const result = playTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play treasure:", result.error);
-      }
-      return;
-    }
-  }, [isMyTurn, displayState, selectedCardIndices, isActionPhase, isBuyPhase, playAction, playTreasure, previewEventId]);
-
-  // Buy card handler
-  const handleBuyCard = useCallback((card: CardName) => {
-    if (previewEventId !== null) return;
-    if (!canBuy) return;
-
-    const result = buyCard(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to buy card:", result.error);
-    }
-  }, [canBuy, buyCard, previewEventId]);
-
-  // End phase handler
-  const handleEndPhase = useCallback(() => {
-    if (previewEventId !== null) return;
-    if (!isMyTurn) return;
-
-    const result = endPhase();
-    if (!result.ok) {
-      uiLogger.error("Failed to end phase:", result.error);
-    }
-  }, [isMyTurn, endPhase, previewEventId]);
-
-  // Play all treasures handler
-  const handlePlayAllTreasures = useCallback(() => {
-    if (previewEventId !== null) return;
-    if (!isMyTurn || !isBuyPhase) return;
-
-    const result = playAllTreasures();
-    if (!result.ok) {
-      uiLogger.error("Failed to play treasures:", result.error);
-    }
-  }, [isMyTurn, isBuyPhase, playAllTreasures, previewEventId]);
-
-  // Submit decision handler
-  const handleSubmitDecision = useCallback(() => {
-    if (!displayState.pendingDecision || !myPlayerState) return;
-
-    const selectedCards = selectedCardIndices.map(i => myPlayerState.hand[i]);
-    const result = submitDecision({ selectedCards });
-    if (result.ok) {
-      setSelectedCardIndices([]);
-    } else {
-      uiLogger.error("Failed to submit decision:", result.error);
-    }
-  }, [displayState.pendingDecision, myPlayerState, selectedCardIndices, submitDecision]);
-
-  // Skip decision handler
-  const handleSkipDecision = useCallback(() => {
-    if (!displayState.pendingDecision?.canSkip) return;
-
-    const result = submitDecision({ selectedCards: [] });
-    if (result.ok) {
-      setSelectedCardIndices([]);
-    }
-  }, [displayState.pendingDecision, submitDecision]);
 
   // Get hint text
   const getHint = () => {
