@@ -9,6 +9,7 @@ interface CardProps {
   onClick?: () => void;
   selected?: boolean;
   disabled?: boolean;
+  dimmed?: boolean;
   count?: number;
   showBack?: boolean;
   size?: "small" | "medium" | "large";
@@ -20,6 +21,7 @@ export function Card({
   onClick,
   selected,
   disabled,
+  dimmed,
   count,
   showBack,
   size = "medium",
@@ -111,6 +113,18 @@ export function Card({
     }
   };
 
+  const getCursor = () => {
+    if (!onClick) return "default";
+    if (disabled) return "not-allowed";
+    return "pointer";
+  };
+
+  const getOpacity = () => {
+    if (disabled) return 0.4;
+    if (dimmed) return 0.5;
+    return 1;
+  };
+
   return (
     <>
       <div
@@ -120,13 +134,8 @@ export function Card({
         onMouseMove={handleMouseMove}
         style={{
           position: "relative",
-          cursor:
-            onClick && !disabled
-              ? "pointer"
-              : onClick && disabled
-                ? "not-allowed"
-                : "default",
-          opacity: disabled ? 0.4 : 1,
+          cursor: getCursor(),
+          opacity: getOpacity(),
           transform: selected
             ? "translateY(calc(-1 * var(--space-2)))"
             : "none",
