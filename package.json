@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "bun server.ts & sleep 1 && vite",
-    "build": "tsc -b && vite build",
-    "type": "tsc --noEmit",
+    "build": "tsc -b --incremental && vite build",
+    "build:vite": "vite build",
+    "type": "tsc --incremental --noEmit",
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "test": "bun test",
-    "check": "bun run type && bun run lint && bun test && bun run build",
+    "check": "bun run type & bun run lint & bun test & wait && bun run build:vite",
     "preview": "vite preview"
   },
   "dependencies": {
