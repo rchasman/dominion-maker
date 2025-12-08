@@ -12,7 +12,13 @@ export interface ModelSettings {
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  enabledModels: new Set(["gemini-2.5-flash-lite", "gpt-4o-mini", "ministral-3b", "gpt-oss-20b"]),
+  enabledModels: new Set([
+    "cerebras-llama-3.3-70b",
+    "groq-llama-3.3-70b",
+    "groq-llama-4-scout",
+    "gemini-2.5-flash-lite",
+    "gpt-4o-mini",
+  ]),
   consensusCount: 8,
 };
 
@@ -21,14 +27,14 @@ export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
 
 // Default: 8 fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
+  "cerebras-llama-3.3-70b",
+  "groq-llama-3.3-70b",
+  "groq-llama-4-scout",
   "gemini-2.5-flash-lite",
   "gpt-4o-mini",
-  "ministral-3b",
-  "gpt-oss-20b",
+  "cerebras-llama-3.3-70b",
+  "groq-llama-3.3-70b",
   "gemini-2.5-flash-lite",
-  "gpt-4o-mini",
-  "ministral-3b",
-  "gpt-oss-20b",
 ];
 
 // Build models array from settings by shuffling and duplicating enabled models

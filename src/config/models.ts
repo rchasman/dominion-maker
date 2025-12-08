@@ -17,6 +17,14 @@ export const MODELS: ModelConfig[] = [
   { id: "gemini-2.5-flash-lite", fullName: "google/gemini-2.5-flash-lite", provider: "google", color: "#93c5fd" },
   { id: "ministral-3b", fullName: "mistral/ministral-3b", provider: "mistral", color: "#fda4af" },
   { id: "grok-4-fast", fullName: "xai/grok-4.1-fast-non-reasoning", provider: "xai", color: "#fbbf24" },
+  { id: "grok-code-fast-1", fullName: "xai/grok-code-fast-1", provider: "xai", color: "#fbbf24" },
+
+  // Ultra-fast Cerebras models (2000+ tokens/s)
+  { id: "cerebras-llama-3.3-70b", fullName: "cerebras/llama-3.3-70b", provider: "cerebras", color: "#f472b6" },
+
+  // Fast Groq models (low latency)
+  { id: "groq-llama-3.3-70b", fullName: "groq/llama-3.3-70b", provider: "groq", color: "#fb923c" },
+  { id: "groq-llama-4-scout", fullName: "groq/llama-4-scout", provider: "groq", color: "#fb923c" },
 ];
 
 // Derived exports
