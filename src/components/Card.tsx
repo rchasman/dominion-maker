@@ -97,10 +97,24 @@ export function Card({
     setMousePosition({ x: e.clientX, y: e.clientY });
   };
 
+  const handleClick = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (showTooltip) {
+      setShowTooltip(false);
+      setTooltipActive(false);
+    }
+    if (!disabled && onClick) {
+      onClick();
+    }
+  };
+
   return (
     <>
       <div
-        onClick={disabled ? undefined : onClick}
+        onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}
