@@ -465,7 +465,12 @@ export function GameSidebar({
           {/* Always show End button - calls onEndGame or onBackToHome */}
           {(onEndGame || onBackToHome) && (
             <button
-              onClick={onEndGame || onBackToHome}
+              onClick={() => {
+                const callback = onEndGame || onBackToHome;
+                if (callback) {
+                  callback();
+                }
+              }}
               style={{
                 padding: "var(--space-2) var(--space-3)",
                 background: "transparent",
