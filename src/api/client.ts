@@ -2,6 +2,8 @@
 // Vite dev server proxies /api/* to our handler via middleware
 // Production uses Vercel serverless functions
 
+import type { Action } from "../types/action";
+
 interface GenerateActionRequest {
   provider: string;
   currentState: unknown;
@@ -10,7 +12,7 @@ interface GenerateActionRequest {
 }
 
 interface GenerateActionResponse {
-  action?: unknown;
+  action?: Action;
   error?: number;
   message?: string;
 }

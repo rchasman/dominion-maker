@@ -1,5 +1,6 @@
 import { generateObject, generateText, createGateway } from "ai";
 import { ActionSchema } from "../src/types/action";
+import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
@@ -36,11 +37,10 @@ export default async function handler(req: Request) {
     });
   }
 
-  let body: unknown;
   let provider: string = "";
 
   try {
-    body = await req.json() as { provider: string; currentState: unknown; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
+    const body = await req.json() as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = body.provider;
     const { currentState, humanChoice, legalActions } = body;
 
