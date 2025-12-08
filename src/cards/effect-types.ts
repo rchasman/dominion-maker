@@ -247,7 +247,7 @@ export function createCardSelectionDecision(params: {
   metadata?: Record<string, unknown>;
 }): DecisionRequest {
   return {
-    type: "select_cards",
+    type: "card_decision",
     player: params.player,
     from: params.from,
     prompt: params.prompt,

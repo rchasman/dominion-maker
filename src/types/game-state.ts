@@ -66,22 +66,40 @@ export type PlayerInfo = {
 export type TurnSubPhase = "opponent_decision" | "waiting_for_reactions" | null;
 
 // Decision types (moved here to break circular dependency with events/types)
+
+export type CardAction = {
+  id: string; // e.g., "trash", "discard", "keep"
+  label: string; // e.g., "Trash", "Discard", "Keep"
+  color: string; // CSS color for highlighting
+  isDefault?: boolean; // True if this is the default action
+};
+
 export type DecisionRequest = {
-  type: "select_cards";
-  player: string; // PlayerId
-  from: "hand" | "supply" | "revealed" | "options" | "discard";
+  type: "card_decision";
+  player: string;
   prompt: string;
-  cardOptions?: CardName[];
-  min: number;
-  max: number;
+  cardOptions: CardName[];
   cardBeingPlayed: CardName;
+
+  // Simple selection mode (when actions is not provided)
+  from?: "hand" | "supply" | "revealed" | "options" | "discard";
+  min?: number;
+  max?: number;
   stage?: string;
   canSkip?: boolean;
+
+  // Complex multi-action mode (when actions is provided)
+  actions?: CardAction[]; // Available actions per card (trash, discard, topdeck, etc.)
+  requiresOrdering?: boolean; // True if cards need to be ordered
+  orderingPrompt?: string;
+
   metadata?: Record<string, unknown>;
 };
 
 export type DecisionChoice = {
   selectedCards: CardName[];
+  cardActions?: Record<string | number, string>; // Map of card name/index to action id
+  cardOrder?: (CardName | number)[]; // Ordered list of cards or indices (for ordering decisions)
 };
 
 // Log entry types with recursive children support

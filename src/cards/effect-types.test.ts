@@ -620,7 +620,7 @@ describe("Decision Helper Functions", () => {
       stage: "trash",
     });
 
-    expect(decision.type).toBe("select_cards");
+    expect(decision.type).toBe("card_decision");
     expect(decision.player).toBe("human");
     expect(decision.from).toBe("hand");
     expect(decision.prompt).toBe("Choose cards");
