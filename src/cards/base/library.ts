@@ -49,43 +49,60 @@ export const library: CardEffect = ({
     }
 
     // Ask which actions to skip
+    // Use multi-action decision to handle duplicates properly
     return {
       events: [],
       pendingDecision: {
-        type: "select_cards",
+        type: "card_decision",
         player,
-        from: "revealed",
-        prompt: "Library: Select Actions to set aside (will be discarded)",
+        prompt: "Library: Choose which Actions to set aside",
         cardOptions: actionsInDraw,
-        min: 0,
-        max: actionsInDraw.length,
+        actions: [
+          {
+            id: "draw",
+            label: "Draw",
+            color: "#10B981",
+            isDefault: true,
+          },
+          {
+            id: "set_aside",
+            label: "Set Aside",
+            color: "#9CA3AF",
+          },
+        ],
         cardBeingPlayed: "Library",
-        stage: "skip_actions",
         metadata: { cardsNeeded, peekedCards: peeked },
       },
     };
   }
 
-  if (stage === "skip_actions") {
-    const peeked = getCardNamesFromMetadata(
-      state.pendingDecision?.metadata,
-      "peekedCards",
-    );
-    const toSkip = decision.selectedCards;
+  // Process decision with indices
+  const peeked = getCardNamesFromMetadata(
+    state.pendingDecision?.metadata,
+    "peekedCards",
+  );
+  const cardActions = decision.cardActions || {};
 
-    // Draw the non-skipped cards (atomic events)
-    const toDraw = peeked.filter(c => !toSkip.includes(c));
-    for (const card of toDraw) {
-      events.push({ type: "CARD_DRAWN", player, card });
+  // Draw cards marked "draw" by index
+  for (const [indexStr, action] of Object.entries(cardActions)) {
+    const index = parseInt(indexStr);
+    if (action === "draw" && peeked[index]) {
+      events.push({ type: "CARD_DRAWN", player, card: peeked[index] });
     }
-
-    // Discard the skipped actions (atomic events)
-    for (const card of toSkip) {
-      events.push({ type: "CARD_DISCARDED", player, card, from: "deck" });
-    }
-
-    return { events };
   }
 
-  return { events: [] };
+  // Discard cards marked "set_aside" by index
+  for (const [indexStr, action] of Object.entries(cardActions)) {
+    const index = parseInt(indexStr);
+    if (action === "set_aside" && peeked[index]) {
+      events.push({
+        type: "CARD_DISCARDED",
+        player,
+        card: peeked[index],
+        from: "deck",
+      });
+    }
+  }
+
+  return { events };
 };
