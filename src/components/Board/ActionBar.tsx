@@ -29,7 +29,7 @@ export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures,
       background: "linear-gradient(180deg, var(--color-bg-surface) 0%, var(--color-bg-surface-alt) 100%)",
       border: "1px solid var(--color-border)",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", fontSize: "0.8125rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", fontSize: "0.8125rem", userSelect: "none" }}>
         <span style={{
           textTransform: "uppercase",
           color: "#fff",
@@ -56,7 +56,7 @@ export function ActionBar({ state, hint, hasTreasuresInHand, onPlayAllTreasures,
           fontSize: "0.75rem",
         }}>{hint}</span>}
       </div>
-      <div style={{ display: "flex", gap: "var(--space-3)" }}>
+      <div style={{ display: "flex", gap: "var(--space-3)", userSelect: "none" }}>
         {hasPendingDecision ? (
           <>
             <button
