@@ -149,12 +149,12 @@ export function Board({ onBackToHome }: BoardProps) {
   // Second player is the "opponent" view
   const opponentPlayerId = playerIds[1];
 
-  const isMainPlayerTurn = state.activePlayer === mainPlayerId;
+  const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
 
   const canBuy =
     isMainPlayerTurn &&
-    state.phase === "buy" &&
-    state.buys > 0 &&
+    displayState.phase === "buy" &&
+    displayState.buys > 0 &&
     !isPreviewMode;
   const opponent = displayState.players[opponentPlayerId];
   const mainPlayer = displayState.players[mainPlayerId];
@@ -163,19 +163,19 @@ export function Board({ onBackToHome }: BoardProps) {
 
   const getHint = () => {
     if (
-      state.pendingDecision &&
-      state.pendingDecision.player === mainPlayerId
+      displayState.pendingDecision &&
+      displayState.pendingDecision.player === mainPlayerId
     ) {
-      return state.pendingDecision.prompt;
+      return displayState.pendingDecision.prompt;
     }
     if (!isMainPlayerTurn) return "Opponent is playing...";
-    if (state.phase === "action") {
+    if (displayState.phase === "action") {
       if (hasPlayableActions) return "Click an Action card to play it";
       return "";
     }
-    if (state.phase === "buy") {
+    if (displayState.phase === "buy") {
       const hasInPlayTreasures = mainPlayer.inPlay.length > 0;
-      if (state.coins === 0 && hasTreasuresInHand) {
+      if (displayState.coins === 0 && hasTreasuresInHand) {
         return "Play treasures to get coins";
       }
       if (hasInPlayTreasures) {

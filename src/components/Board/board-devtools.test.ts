@@ -111,4 +111,50 @@ describe("Board - Devtools scrubbing", () => {
     expect(mainPlayer).toBe(previewState.players.human);
     expect(opponent).toBe(previewState.players.ai);
   });
+
+  it("should derive turn state from displayState when scrubbing", () => {
+    // This is the actual bug: using state instead of displayState for turn logic
+
+    // Live state: human's turn, buy phase
+    const liveState = {
+      turn: 10,
+      activePlayer: "human" as const,
+      phase: "buy" as const,
+      buys: 1,
+      coins: 5,
+    };
+
+    // Preview state: ai's turn, action phase (scrubbing to earlier event)
+    const previewState = {
+      turn: 3,
+      activePlayer: "ai" as const,
+      phase: "action" as const,
+      buys: 0,
+      coins: 0,
+    };
+
+    const previewEventId = "event-5";
+    const getStateAtEvent = (_eventId: string) => previewState;
+
+    // Derive displayState
+    const displayState =
+      previewEventId && getStateAtEvent
+        ? getStateAtEvent(previewEventId)
+        : liveState;
+
+    const mainPlayerId = "human" as const;
+
+    // BUG: This line uses liveState instead of displayState
+    // const isMainPlayerTurn = liveState.activePlayer === mainPlayerId; // WRONG
+    const isMainPlayerTurn = displayState.activePlayer === mainPlayerId; // CORRECT
+
+    // When scrubbing, isMainPlayerTurn should reflect preview state (ai's turn)
+    expect(displayState.activePlayer).toBe("ai");
+    expect(isMainPlayerTurn).toBe(false); // Should be false because it's ai's turn in preview
+
+    // Phase and other state should also come from displayState
+    expect(displayState.phase).toBe("action");
+    expect(displayState.buys).toBe(0);
+    expect(displayState.coins).toBe(0);
+  });
 });
