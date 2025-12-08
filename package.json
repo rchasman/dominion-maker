@@ -10,7 +10,7 @@
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
     "test": "bun test",
-    "check:server": "bun server.ts & SERVER_PID=$! && sleep 2 && kill $SERVER_PID",
+    "check:server": "bun server.ts & SERVER_PID=$! && sleep 0.5 && kill $SERVER_PID",
     "check:deps:unused": "depcheck",
     "check:deps:circular": "dpdm --exit-code circular:1 'src/**/*.{ts,tsx}'",
     "check": "bun run type & bun run lint & bun test & bun run check:server & wait",
