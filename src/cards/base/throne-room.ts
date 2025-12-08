@@ -1,11 +1,10 @@
 /**
  * Throne Room - Choose an action from hand, play it twice
- * TODO: Full implementation requires engine support for replaying card effects
- * Currently only works with simple cards (no decisions)
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isActionCard } from "../effect-types";
+import type { GameEvent } from "../../events/types";
 
 export const throneRoom: CardEffect = ({
   state,
@@ -40,12 +39,30 @@ export const throneRoom: CardEffect = ({
     };
   }
 
-  // Play the chosen card (engine will need to handle double execution)
+  // Store chosen card for engine to execute twice
   if (stage === "choose_action") {
     const cardToPlay = decision.selectedCards[0];
-    // Emit CARD_PLAYED event - full implementation needs engine support
-    events.push({ type: "CARD_PLAYED", player, card: cardToPlay });
-    return { events };
+
+    // Don't emit CARD_PLAYED here - instead create a special decision
+    // that tells the engine to execute this card twice
+    return {
+      events: [],
+      pendingDecision: {
+        type: "card_decision",
+        player,
+        from: "options",
+        prompt: "",
+        cardOptions: [],
+        min: 0,
+        max: 0,
+        cardBeingPlayed: "Throne Room",
+        stage: "execute_throned_card",
+        metadata: {
+          throneRoomTarget: cardToPlay,
+          throneRoomExecutionsRemaining: 2,
+        },
+      },
+    };
   }
 
   return { events: [] };

@@ -642,6 +642,84 @@ function handleSubmitDecision(
     id: rootEventId,
   });
 
+  // Check if this is a Throne Room execution
+  const throneRoomTarget = metadata?.throneRoomTarget as string | undefined;
+  const executionsRemaining = metadata?.throneRoomExecutionsRemaining as
+    | number
+    | undefined;
+
+  if (throneRoomTarget && executionsRemaining && executionsRemaining > 0) {
+    // Execute the throned card
+    const midState = applyEvents(state, events);
+    const targetEffect = getCardEffect(throneRoomTarget);
+
+    if (targetEffect) {
+      const result = targetEffect({
+        state: midState,
+        player: state.activePlayer,
+        card: throneRoomTarget,
+      });
+
+      // Play the card (move from hand to inPlay)
+      events.push({ type: "CARD_PLAYED", player: state.activePlayer, card: throneRoomTarget });
+
+      // Link effect events
+      for (const effectEvent of result.events) {
+        effectEvent.id = generateEventId();
+        effectEvent.causedBy = originalCause || rootEventId;
+      }
+      events.push(...result.events);
+
+      if (result.pendingDecision) {
+        // Card has a decision - preserve throne room context
+        events.push({
+          type: "DECISION_REQUIRED",
+          decision: {
+            ...result.pendingDecision,
+            metadata: {
+              ...result.pendingDecision.metadata,
+              throneRoomTarget,
+              throneRoomExecutionsRemaining: executionsRemaining - 1,
+            },
+          },
+          id: generateEventId(),
+          causedBy: rootEventId,
+        });
+      } else if (executionsRemaining > 1) {
+        // First execution done, no decision - execute again
+        const secondMidState = applyEvents(midState, [...result.events]);
+        const secondResult = targetEffect({
+          state: secondMidState,
+          player: state.activePlayer,
+          card: throneRoomTarget,
+        });
+
+        for (const effectEvent of secondResult.events) {
+          effectEvent.id = generateEventId();
+          effectEvent.causedBy = originalCause || rootEventId;
+        }
+        events.push(...secondResult.events);
+
+        if (secondResult.pendingDecision) {
+          events.push({
+            type: "DECISION_REQUIRED",
+            decision: {
+              ...secondResult.pendingDecision,
+              metadata: {
+                ...secondResult.pendingDecision.metadata,
+                throneRoomTarget,
+                throneRoomExecutionsRemaining: 0,
+              },
+            },
+            id: generateEventId(),
+            causedBy: rootEventId,
+          });
+        }
+      }
+    }
+    return { ok: true, events };
+  }
+
   // Continue the card effect with the decision
   if (cardBeingPlayed) {
     const effect = getCardEffect(cardBeingPlayed);
@@ -652,7 +730,7 @@ function handleSubmitDecision(
       const effectState: GameState = {
         ...midState,
         pendingDecision: {
-          type: "select_cards",
+          type: "card_decision",
           player: decisionPlayer,
           from: "hand",
           prompt: "",
