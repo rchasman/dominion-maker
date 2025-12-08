@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { handleCommand } from "./handle";
 import { resetEventCounter } from "../events/id-generator";
+import { applyEvents } from "../events/apply";
 import type { GameState } from "../types/game-state";
 import type { GameCommand } from "./types";
 
@@ -711,6 +712,97 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toContain("not in play");
+  });
+
+  it("should fail if purchases already made", () => {
+    let state: GameState = {
+      ...createEmptyState(),
+      players: {
+        human: {
+          deck: [],
+          hand: ["Copper"],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
+      },
+      supply: {
+        Copper: 60,
+      },
+      activePlayer: "human",
+      phase: "buy",
+      buys: 1,
+      coins: 0,
+    };
+
+    // Play Copper
+    const playResult = handleCommand(state, {
+      type: "PLAY_TREASURE",
+      player: "human",
+      card: "Copper",
+    });
+    expect(playResult.ok).toBe(true);
+    state = applyEvents(state, playResult.events!);
+
+    // Buy a card
+    const buyResult = handleCommand(state, {
+      type: "BUY_CARD",
+      player: "human",
+      card: "Copper",
+    });
+    expect(buyResult.ok).toBe(true);
+    state = applyEvents(state, buyResult.events!);
+
+    // Try to unplay - should fail
+    const unplayResult = handleCommand(state, {
+      type: "UNPLAY_TREASURE",
+      player: "human",
+      card: "Copper",
+    });
+
+    expect(unplayResult.ok).toBe(false);
+    expect(unplayResult.error).toContain("already made purchases");
+  });
+
+  it("should allow unplaying before any purchases", () => {
+    let state: GameState = {
+      ...createEmptyState(),
+      players: {
+        human: {
+          deck: [],
+          hand: ["Silver"],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
+      },
+      activePlayer: "human",
+      phase: "buy",
+      buys: 1,
+      coins: 0,
+    };
+
+    // Play Silver
+    const playResult = handleCommand(state, {
+      type: "PLAY_TREASURE",
+      player: "human",
+      card: "Silver",
+    });
+    expect(playResult.ok).toBe(true);
+    state = applyEvents(state, playResult.events!);
+    expect(state.coins).toBe(2);
+
+    // Unplay before buying - should work
+    const unplayResult = handleCommand(state, {
+      type: "UNPLAY_TREASURE",
+      player: "human",
+      card: "Silver",
+    });
+
+    expect(unplayResult.ok).toBe(true);
+    state = applyEvents(state, unplayResult.events!);
+    expect(state.coins).toBe(0);
+    expect(state.players.human.hand).toContain("Silver");
   });
 });
 
