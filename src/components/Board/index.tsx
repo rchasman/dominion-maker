@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -12,7 +12,7 @@ import { GameOverModal } from "./GameOverModal";
 import type { CardName, PlayerId } from "../../types/game-state";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { uiLogger } from "../../lib/logger";
-import { GAME_MODE_CONFIG, getPlayersForMode } from "../../types/game-mode";
+import { getPlayersForMode } from "../../types/game-mode";
 
 interface BoardProps {
   onBackToHome?: () => void;
@@ -33,7 +33,7 @@ export function Board({ onBackToHome }: BoardProps) {
     hasTreasuresInHand,
     gameMode,
     setGameMode: onGameModeChange,
-    startGame: onNewGame,
+    startGame: startGameFromContext,
     isProcessing,
     modelSettings,
     setModelSettings: onModelSettingsChange,
@@ -44,6 +44,13 @@ export function Board({ onBackToHome }: BoardProps) {
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
   const [showDevtools, setShowDevtools] = useState(false);
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
+
+  // Wrap startGame to clear UI state on new game
+  const onNewGame = useCallback(() => {
+    setPreviewEventId(null);
+    setSelectedCardIndices([]);
+    startGameFromContext();
+  }, [startGameFromContext]);
   const [complexDecisionData, setComplexDecisionData] = useState<{
     cardActions: Record<number, string>;
     cardOrder?: number[];
@@ -55,12 +62,14 @@ export function Board({ onBackToHome }: BoardProps) {
   const actualPlayerIds = state
     ? (Object.keys(state.players) as PlayerId[])
     : [];
+
+  const getDefaultPlayerIds = (): PlayerId[] => {
+    if (gameMode === "multiplayer") return ["human", "ai"] as PlayerId[];
+    return getPlayersForMode(gameMode);
+  };
+
   const playerIds =
-    actualPlayerIds.length > 0
-      ? actualPlayerIds
-      : gameMode === "multiplayer"
-        ? (["human", "ai"] as PlayerId[])
-        : getPlayersForMode(gameMode);
+    actualPlayerIds.length > 0 ? actualPlayerIds : getDefaultPlayerIds();
   const mainPlayerId = playerIds[0];
   const isHumanPlayer = mainPlayerId === "human";
 
@@ -73,21 +82,6 @@ export function Board({ onBackToHome }: BoardProps) {
     },
     [requestUndo],
   );
-
-  // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
-  useEffect(() => {
-    const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
-    const isNewGame = hasGameInit && events.length < 10; // New game has few events
-
-    // Reset UI state at start of new game
-    if (isNewGame) {
-      // Use a microtask to avoid synchronous setState in effect
-      queueMicrotask(() => {
-        setPreviewEventId(null);
-        setSelectedCardIndices([]);
-      });
-    }
-  }, [events.length]);
 
   // Card click handler - must be defined before early return
   const onCardClick = useCallback(
