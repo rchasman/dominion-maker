@@ -13,28 +13,31 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   enabledModels: new Set([
-    "cerebras-llama-3.3-70b",
-    "groq-llama-3.3-70b",
-    "groq-llama-4-scout",
-    "gemini-2.5-flash-lite",
-    "gpt-4o-mini",
+    "cerebras-llama-3.3-70b",  // 2130 tok/s - fastest
+    "gemini-2.5-flash-lite",   // 496 tok/s - reliable
+    "gpt-oss-20b",             // OpenAI OSS fast
+    "groq-llama-4-scout",      // 412 tok/s - Groq
   ]),
-  consensusCount: 8,
+  consensusCount: 12,
 };
 
 // Available unique models
 export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
 
-// Default: 8 fast model instances for maximum consensus (duplicates allowed)
+// Default: fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
   "cerebras-llama-3.3-70b",
-  "groq-llama-3.3-70b",
-  "groq-llama-4-scout",
-  "gemini-2.5-flash-lite",
-  "gpt-4o-mini",
   "cerebras-llama-3.3-70b",
-  "groq-llama-3.3-70b",
+  "cerebras-llama-3.3-70b",
   "gemini-2.5-flash-lite",
+  "gemini-2.5-flash-lite",
+  "gpt-oss-20b",
+  "gpt-oss-20b",
+  "groq-llama-4-scout",
+  "groq-llama-4-scout",
+  "gpt-4o-mini",
+  "gpt-4o-mini",
+  "groq-llama-3.3-70b",
 ];
 
 // Build models array from settings by shuffling and duplicating enabled models
