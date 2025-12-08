@@ -16,6 +16,7 @@ export const MODELS: ModelConfig[] = [
   { id: "gpt-oss-120b", fullName: "openai/gpt-oss-120b", provider: "openai", color: "#86efac" },
   { id: "gemini-2.5-flash-lite", fullName: "google/gemini-2.5-flash-lite", provider: "google", color: "#93c5fd" },
   { id: "ministral-3b", fullName: "mistral/ministral-3b", provider: "mistral", color: "#fda4af" },
+  { id: "grok-4-fast", fullName: "xai/grok-4.1-fast-non-reasoning", provider: "xai", color: "#fbbf24" },
 ];
 
 // Derived exports
