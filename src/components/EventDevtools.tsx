@@ -200,7 +200,6 @@ export function EventDevtools({
     const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
 
     setScrubberIndex(actualIndex);
-    setIsPinned(true); // Auto-pin when scrubbing
 
     // Notify parent to update game board preview (pass event ID)
     if (onScrub) {
@@ -221,7 +220,6 @@ export function EventDevtools({
 
     setScrubberIndex(null);
     setSelectedEventId(null);
-    setIsPinned(false);
 
     // Reset parent preview
     if (onScrub) {
