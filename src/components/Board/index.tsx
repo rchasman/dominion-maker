@@ -124,7 +124,11 @@ export function Board({ onBackToHome }: BoardProps) {
   // Handle in-play clicks (unplay treasures)
   const onInPlayClick = useCallback(
     (card: CardName) => {
-      if (!state || state.activePlayer !== mainPlayerId || state.phase !== "buy")
+      if (
+        !state ||
+        state.activePlayer !== mainPlayerId ||
+        state.phase !== "buy"
+      )
         return;
 
       const result = unplayTreasure(card);

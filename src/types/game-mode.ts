@@ -37,7 +37,7 @@ export const GAME_MODE_CONFIG: Record<
       description: "AI uses hard-coded rules. No LLM calls are made.",
     },
     players: ["human", "ai"],
-    isAIPlayer: (playerId) => playerId === "ai",
+    isAIPlayer: playerId => playerId === "ai",
   },
   hybrid: {
     name: "Hybrid",
@@ -48,7 +48,7 @@ export const GAME_MODE_CONFIG: Record<
       description: "Consensus decisions will appear when AI takes its turn.",
     },
     players: ["human", "ai"],
-    isAIPlayer: (playerId) => playerId === "ai",
+    isAIPlayer: playerId => playerId === "ai",
   },
   full: {
     name: "Full",
@@ -58,7 +58,7 @@ export const GAME_MODE_CONFIG: Record<
       description: "Both players use MAKER consensus. Watch the game unfold.",
     },
     players: ["ai1", "ai2"],
-    isAIPlayer: (playerId) => playerId === "ai1" || playerId === "ai2",
+    isAIPlayer: playerId => playerId === "ai1" || playerId === "ai2",
   },
 };
 
