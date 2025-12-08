@@ -2,10 +2,25 @@ import type { CardName, LogEntry } from "../types/game-state";
 import { CARDS } from "../data/cards";
 
 /**
- * Get unique color for each player
+ * Player colors for consistent visual identification
+ */
+const PLAYER_COLORS = [
+  "#3b82f6", // Blue
+  "#ef4444", // Red
+  "#10b981", // Green
+  "#f59e0b", // Amber
+  "#8b5cf6", // Purple
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#f97316", // Orange
+] as const;
+
+/**
+ * Get unique color for each player using deterministic hash
  */
 export function getPlayerColor(playerId: string): string {
-  const colorMap: Record<string, string> = {
+  // Legacy hardcoded mappings for backwards compatibility
+  const legacyMap: Record<string, string> = {
     human: "var(--color-human)",
     ai: "var(--color-ai)",
     player0: "var(--color-human)",
@@ -14,7 +29,50 @@ export function getPlayerColor(playerId: string): string {
     player3: "var(--color-player-4)",
     player4: "var(--color-player-5)",
   };
-  return colorMap[playerId] || "var(--color-text-secondary)";
+
+  if (legacyMap[playerId]) {
+    return legacyMap[playerId];
+  }
+
+  // For dynamic player names, use hash-based color selection
+  let hash = 0;
+  for (let i = 0; i < playerId.length; i++) {
+    hash = (hash << 5) - hash + playerId.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  const index = Math.abs(hash) % PLAYER_COLORS.length;
+  return PLAYER_COLORS[index];
+}
+
+/**
+ * Format player name for display with optional AI suffix
+ */
+export function formatPlayerName(
+  playerId: string,
+  isAI: boolean,
+  options?: { capitalize?: boolean },
+): string {
+  const { capitalize = true } = options || {};
+
+  let name = playerId;
+
+  // Friendly names for special IDs
+  if (playerId === "human") {
+    name = "You";
+  } else if (playerId === "player") {
+    name = capitalize ? "Player" : "player";
+  } else {
+    // Keep the name as-is (e.g., "Nova", "ai", "Cipher")
+    name = playerId;
+  }
+
+  // Add AI suffix if needed
+  if (isAI && playerId !== "human") {
+    name = `${name} (AI)`;
+  }
+
+  return name;
 }
 
 export function countVP(cards: CardName[]): number {
