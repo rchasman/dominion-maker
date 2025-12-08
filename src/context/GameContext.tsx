@@ -226,6 +226,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [gameMode, llmLogger, modelSettings]);
 
+  // Handle mode changes: abort ongoing consensus and reset processing
+  useEffect(() => {
+    abortOngoingConsensus();
+    setIsProcessing(false);
+  }, [gameMode]);
+
   // Derived state
   const hasPlayableActionsValue = useMemo(() => {
     if (!gameState) return false;
