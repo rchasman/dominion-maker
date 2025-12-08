@@ -541,9 +541,8 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
           ...state.log,
           {
             type: "game-over",
-            humanVP: event.scores["human"] || event.scores["player0"] || 0,
-            aiVP: event.scores["ai"] || event.scores["player1"] || 0,
-            winner: event.winner || "human",
+            scores: event.scores,
+            winner: event.winner || state.activePlayer,
           },
         ],
       };

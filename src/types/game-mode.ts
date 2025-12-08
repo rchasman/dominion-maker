@@ -1,6 +1,7 @@
 import type { DominionEngine } from "../engine";
 import type { GameState } from "./game-state";
 import type { PlayerId } from "./game-state";
+import { generateAINames } from "../lib/ai-names";
 
 /**
  * Game modes
@@ -21,8 +22,18 @@ export interface GameModeConfig {
     title: string;
     description: string;
   };
-  players: PlayerId[];
+  players: PlayerId[] | (() => PlayerId[]);
   isAIPlayer: (playerId: PlayerId) => boolean;
+}
+
+/**
+ * Get player IDs for a mode, handling both static and dynamic generation
+ */
+export function getPlayersForMode(
+  mode: Exclude<GameMode, "multiplayer">,
+): PlayerId[] {
+  const config = GAME_MODE_CONFIG[mode];
+  return typeof config.players === "function" ? config.players() : config.players;
 }
 
 export const GAME_MODE_CONFIG: Record<
@@ -57,10 +68,33 @@ export const GAME_MODE_CONFIG: Record<
       title: "Full Mode Active",
       description: "Both players use MAKER consensus. Watch the game unfold.",
     },
-    players: ["ai1", "ai2"],
-    isAIPlayer: playerId => playerId === "ai1" || playerId === "ai2",
+    players: () => generateAINames(),
+    isAIPlayer: playerId => {
+      // In full mode, both players are AI (including "player" which is converted "human")
+      return playerId !== "human";
+    },
   },
 };
+
+/**
+ * Convert existing players when switching to full mode
+ * Preserves player identities: "human" → "player", "ai" stays as is
+ */
+export function convertToFullModePlayers(
+  existingPlayers: PlayerId[],
+): PlayerId[] {
+  if (existingPlayers.length !== 2) {
+    // If not exactly 2 players, generate new random names
+    return getPlayersForMode("full");
+  }
+
+  const converted = existingPlayers.map(id => {
+    if (id === "human") return "player";
+    return id; // Keep ai, or any other existing name
+  });
+
+  return converted as PlayerId[];
+}
 
 /**
  * Strategy interface for AI behavior

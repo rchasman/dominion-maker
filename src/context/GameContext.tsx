@@ -19,7 +19,11 @@ import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
+import {
+  GAME_MODE_CONFIG,
+  getPlayersForMode,
+  convertToFullModePlayers,
+} from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings, ModelProvider } from "../agent/game-agent";
 import {
@@ -239,10 +243,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       engineRef.current = engine;
 
       // Determine players based on new game mode
-      const players =
-        gameMode === "multiplayer"
-          ? ["human", "ai"]
-          : GAME_MODE_CONFIG[gameMode].players;
+      // For full mode: preserve existing players if switching from hybrid/engine
+      const existingPlayers = Object.keys(gameState.players);
+      let players: string[];
+
+      if (gameMode === "multiplayer") {
+        players = ["human", "ai"];
+      } else if (gameMode === "full") {
+        // Convert existing players: "human" → "player", keep "ai"
+        players = convertToFullModePlayers(existingPlayers);
+      } else {
+        // engine or hybrid
+        players = getPlayersForMode(gameMode);
+      }
 
       const result = engine.dispatch({
         type: "START_GAME",
@@ -286,9 +299,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // Determine players based on game mode
     const players =
-      gameMode === "multiplayer"
-        ? ["human", "ai"]
-        : GAME_MODE_CONFIG[gameMode].players;
+      gameMode === "multiplayer" ? ["human", "ai"] : getPlayersForMode(gameMode);
 
     const result = engine.dispatch({
       type: "START_GAME",

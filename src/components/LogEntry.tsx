@@ -485,7 +485,8 @@ function LogEntryContent({
         </span>
       );
 
-    case "game-over":
+    case "game-over": {
+      const scoreEntries = Object.entries(entry.scores);
       return (
         <div
           style={{
@@ -501,11 +502,16 @@ function LogEntryContent({
           <div
             style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}
           >
-            Human: <VPValue vp={entry.humanVP} />, AI:{" "}
-            <VPValue vp={entry.aiVP} />
+            {scoreEntries.map(([player, vp], i) => (
+              <span key={player}>
+                {i > 0 && ", "}
+                <PlayerName player={player} />: <VPValue vp={vp} />
+              </span>
+            ))}
           </div>
         </div>
       );
+    }
 
     case "start-game":
       return (

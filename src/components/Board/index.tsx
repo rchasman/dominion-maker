@@ -12,7 +12,7 @@ import { GameOverModal } from "./GameOverModal";
 import type { CardName, PlayerId } from "../../types/game-state";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { uiLogger } from "../../lib/logger";
-import { GAME_MODE_CONFIG } from "../../types/game-mode";
+import { GAME_MODE_CONFIG, getPlayersForMode } from "../../types/game-mode";
 
 interface BoardProps {
   onBackToHome?: () => void;
@@ -60,7 +60,7 @@ export function Board({ onBackToHome }: BoardProps) {
       ? actualPlayerIds
       : gameMode === "multiplayer"
         ? (["human", "ai"] as PlayerId[])
-        : GAME_MODE_CONFIG[gameMode].players;
+        : getPlayersForMode(gameMode);
   const mainPlayerId = playerIds[0];
   const isHumanPlayer = mainPlayerId === "human";
 
@@ -357,7 +357,8 @@ export function Board({ onBackToHome }: BoardProps) {
       {state.gameOver && (
         <GameOverModal
           winner={state.winner}
-          humanVP={mainPlayerVP}
+          mainPlayerId={mainPlayerId}
+          mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
           onNewGame={onNewGame}
         />

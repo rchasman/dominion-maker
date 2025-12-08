@@ -41,20 +41,23 @@ function isCardEvent(
  * Root events become top-level entries, effects nest under their causes.
  * Aggregates consecutive identical card operations (draw/discard/trash).
  */
-export function buildLogFromEvents(
-  events: GameEvent[],
-  currentPlayer: string = "human",
-): LogEntry[] {
+export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
   const aggregatedEvents = aggregateCardEvents(events);
 
   const { rootLogs } = aggregatedEvents.reduce<{
     logMap: Map<string, LogEntry>;
     rootLogs: LogEntry[];
+    currentPlayer: string;
   }>(
     (acc, event) => {
+      // Track current player from TURN_STARTED events
+      const currentPlayer =
+        event.type === "TURN_STARTED" ? event.player : acc.currentPlayer;
+
       const logEntry = eventToLogEntry(event, currentPlayer);
       const eventId = event.id;
-      if (!logEntry || !eventId) return acc;
+      if (!logEntry || !eventId)
+        return { ...acc, currentPlayer: currentPlayer };
 
       const newLogMap = new Map(acc.logMap).set(eventId, logEntry);
 
@@ -62,14 +65,26 @@ export function buildLogFromEvents(
         const parent = acc.logMap.get(event.causedBy);
         if (parent) {
           parent.children = [...(parent.children || []), logEntry];
-          return { logMap: newLogMap, rootLogs: acc.rootLogs };
+          return {
+            logMap: newLogMap,
+            rootLogs: acc.rootLogs,
+            currentPlayer: currentPlayer,
+          };
         }
-        return { logMap: newLogMap, rootLogs: [...acc.rootLogs, logEntry] };
+        return {
+          logMap: newLogMap,
+          rootLogs: [...acc.rootLogs, logEntry],
+          currentPlayer: currentPlayer,
+        };
       }
 
-      return { logMap: newLogMap, rootLogs: [...acc.rootLogs, logEntry] };
+      return {
+        logMap: newLogMap,
+        rootLogs: [...acc.rootLogs, logEntry],
+        currentPlayer: currentPlayer,
+      };
     },
-    { logMap: new Map(), rootLogs: [] },
+    { logMap: new Map(), rootLogs: [], currentPlayer: "human" },
   );
 
   return rootLogs;
@@ -373,8 +388,7 @@ function eventToLogEntry(
     case "GAME_ENDED":
       return {
         type: "game-over",
-        humanVP: event.scores.human || event.scores.player0 || 0,
-        aiVP: event.scores.ai || event.scores.player1 || 0,
+        scores: event.scores,
         winner: event.winner || currentPlayer,
         eventId: event.id,
       };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { GAME_MODE_CONFIG } from "./game-mode";
+import { GAME_MODE_CONFIG, getPlayersForMode } from "./game-mode";
 
 describe("GAME_MODE_CONFIG", () => {
   describe("engine mode", () => {
@@ -47,15 +47,18 @@ describe("GAME_MODE_CONFIG", () => {
 
   describe("full mode", () => {
     const config = GAME_MODE_CONFIG.full;
+    const players = getPlayersForMode("full");
 
-    it("should have correct player IDs", () => {
-      expect(config.players).toEqual(["ai1", "ai2"]);
+    it("should generate player IDs dynamically", () => {
+      expect(players).toHaveLength(2);
+      expect(players[0]).toMatch(/^[a-z]+$/i); // Should be a name
+      expect(players[1]).toMatch(/^[a-z]+$/i); // Should be a name
+      expect(players[0]).not.toEqual(players[1]); // Should be different
     });
 
     it("should identify both AI players correctly", () => {
-      expect(config.isAIPlayer("ai1")).toBe(true);
-      expect(config.isAIPlayer("ai2")).toBe(true);
-      expect(config.isAIPlayer("ai")).toBe(false);
+      expect(config.isAIPlayer(players[0])).toBe(true);
+      expect(config.isAIPlayer(players[1])).toBe(true);
       expect(config.isAIPlayer("human")).toBe(false);
     });
 
@@ -69,21 +72,25 @@ describe("GAME_MODE_CONFIG", () => {
 
   describe("all modes", () => {
     it("should have exactly 2 players each", () => {
-      Object.values(GAME_MODE_CONFIG).forEach(config => {
-        expect(config.players).toHaveLength(2);
+      (["engine", "hybrid", "full"] as const).forEach(mode => {
+        const players = getPlayersForMode(mode);
+        expect(players).toHaveLength(2);
       });
     });
 
     it("should have unique player IDs within each mode", () => {
-      Object.values(GAME_MODE_CONFIG).forEach(config => {
-        const uniquePlayers = new Set(config.players);
-        expect(uniquePlayers.size).toBe(config.players.length);
+      (["engine", "hybrid", "full"] as const).forEach(mode => {
+        const players = getPlayersForMode(mode);
+        const uniquePlayers = new Set(players);
+        expect(uniquePlayers.size).toBe(players.length);
       });
     });
 
     it("should identify at least one AI player in each mode", () => {
-      Object.values(GAME_MODE_CONFIG).forEach(config => {
-        const hasAI = config.players.some(p => config.isAIPlayer(p));
+      (["engine", "hybrid", "full"] as const).forEach(mode => {
+        const config = GAME_MODE_CONFIG[mode];
+        const players = getPlayersForMode(mode);
+        const hasAI = players.some(p => config.isAIPlayer(p));
         expect(hasAI).toBe(true);
       });
     });

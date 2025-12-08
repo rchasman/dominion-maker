@@ -1,13 +1,15 @@
 interface GameOverModalProps {
   winner: string | null;
-  humanVP: number;
+  mainPlayerId: string;
+  mainPlayerVP: number;
   opponentVP: number;
   onNewGame: () => void;
 }
 
 export function GameOverModal({
   winner,
-  humanVP,
+  mainPlayerId,
+  mainPlayerVP,
   opponentVP,
   onNewGame,
 }: GameOverModalProps) {
@@ -46,10 +48,10 @@ export function GameOverModal({
           style={{
             fontSize: "1.375rem",
             margin: 0,
-            color: winner === "human" ? "var(--color-victory)" : "#ef5350",
+            color: winner === mainPlayerId ? "var(--color-victory)" : "#ef5350",
           }}
         >
-          {winner === "human" ? "Victory!" : "Defeat"}
+          {winner === mainPlayerId ? "Victory!" : "Defeat"}
         </p>
         <div
           style={{
@@ -58,7 +60,7 @@ export function GameOverModal({
             color: "var(--color-text-secondary)",
           }}
         >
-          You: {humanVP} VP | Opponent: {opponentVP} VP
+          You: {mainPlayerVP} VP | Opponent: {opponentVP} VP
         </div>
         <button
           onClick={onNewGame}

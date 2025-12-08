@@ -1,13 +1,13 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "../engine/engine";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
+import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
 
 describe("Mode switching during active game", () => {
   it("should handle player ID lookup with actual game state players", () => {
     const engine = new DominionEngine();
 
     // Start in hybrid mode
-    engine.startGame(GAME_MODE_CONFIG.hybrid.players);
+    engine.startGame(getPlayersForMode("hybrid"));
     expect(engine.state.players).toHaveProperty("human");
     expect(engine.state.players).toHaveProperty("ai");
 
@@ -29,13 +29,11 @@ describe("Mode switching during active game", () => {
   it("should preserve game state when switching from hybrid to engine", () => {
     const engine = new DominionEngine();
 
-    engine.startGame(GAME_MODE_CONFIG.hybrid.players);
+    engine.startGame(getPlayersForMode("hybrid"));
     const initialPlayers = Object.keys(engine.state.players);
 
     // Both modes use ["human", "ai"] so switching should be safe
-    expect(GAME_MODE_CONFIG.hybrid.players).toEqual(
-      GAME_MODE_CONFIG.engine.players,
-    );
+    expect(getPlayersForMode("hybrid")).toEqual(getPlayersForMode("engine"));
     expect(initialPlayers).toEqual(["human", "ai"]);
   });
 
@@ -43,16 +41,18 @@ describe("Mode switching during active game", () => {
     const engine = new DominionEngine();
 
     // Start in hybrid mode
-    engine.startGame(GAME_MODE_CONFIG.hybrid.players);
+    engine.startGame(getPlayersForMode("hybrid"));
     const actualPlayers = Object.keys(engine.state.players);
 
-    // Expected players in full mode
-    const expectedFullPlayers = GAME_MODE_CONFIG.full.players;
+    // Full mode generates dynamic player names
+    const fullModePlayers = getPlayersForMode("full");
 
-    // These should NOT match
-    expect(actualPlayers).not.toEqual(expectedFullPlayers);
+    // These should NOT match (hybrid has human+ai, full has two AI names)
+    expect(actualPlayers).not.toEqual(fullModePlayers);
     expect(actualPlayers).toEqual(["human", "ai"]);
-    expect(expectedFullPlayers).toEqual(["ai1", "ai2"]);
+    expect(fullModePlayers).toHaveLength(2);
+    expect(fullModePlayers[0]).not.toBe("human");
+    expect(fullModePlayers[1]).not.toBe("human");
   });
 
   it("should handle accessing non-existent player gracefully", () => {
@@ -73,7 +73,7 @@ describe("Mode switching during active game", () => {
     const engine = new DominionEngine();
 
     // Start with full mode players
-    engine.startGame(GAME_MODE_CONFIG.full.players);
+    engine.startGame(getPlayersForMode("full"));
 
     // Get actual player IDs from state
     const actualPlayerIds = Object.keys(engine.state.players);
@@ -95,15 +95,17 @@ describe("Mode switching during active game", () => {
       const engine2 = new DominionEngine();
 
       // Simulate starting in hybrid then switching to full
-      engine1.startGame(GAME_MODE_CONFIG.hybrid.players);
+      engine1.startGame(getPlayersForMode("hybrid"));
       const hybridPlayers = Object.keys(engine1.state.players);
 
       // "Switch mode" by starting new game with full mode players
-      engine2.startGame(GAME_MODE_CONFIG.full.players);
+      engine2.startGame(getPlayersForMode("full"));
       const fullPlayers = Object.keys(engine2.state.players);
 
       expect(hybridPlayers).toEqual(["human", "ai"]);
-      expect(fullPlayers).toEqual(["ai1", "ai2"]);
+      expect(fullPlayers).toHaveLength(2);
+      expect(fullPlayers[0]).not.toBe("human");
+      expect(fullPlayers[1]).not.toBe("human");
     });
 
     it("should preserve kingdom cards when restarting game", () => {
@@ -122,12 +124,12 @@ describe("Mode switching during active game", () => {
         "Cellar",
       ] as const;
 
-      engine.startGame(GAME_MODE_CONFIG.hybrid.players, kingdomCards);
+      engine.startGame(getPlayersForMode("hybrid"), kingdomCards);
       const initialKingdom = engine.state.kingdomCards;
 
       // Restart with different players but same kingdom
       const engine2 = new DominionEngine();
-      engine2.startGame(GAME_MODE_CONFIG.full.players, kingdomCards);
+      engine2.startGame(getPlayersForMode("full"), kingdomCards);
       const newKingdom = engine2.state.kingdomCards;
 
       expect(initialKingdom).toEqual(newKingdom);
@@ -159,15 +161,15 @@ describe("Mode switching during active game", () => {
     it("should allow switching between engine and hybrid mid-game", () => {
       const engine = new DominionEngine();
 
-      engine.startGame(GAME_MODE_CONFIG.engine.players);
+      engine.startGame(getPlayersForMode("engine"));
       expect(Object.keys(engine.state.players)).toEqual(["human", "ai"]);
 
       // Both modes use same player IDs, so switching is safe
       const playersBefore = Object.keys(engine.state.players);
 
       // Simulate mode switch (same players)
-      const engineMode = GAME_MODE_CONFIG.engine.players;
-      const hybridMode = GAME_MODE_CONFIG.hybrid.players;
+      const engineMode = getPlayersForMode("engine");
+      const hybridMode = getPlayersForMode("hybrid");
 
       expect(engineMode).toEqual(hybridMode);
       expect(playersBefore).toEqual(engineMode);
@@ -179,11 +181,11 @@ describe("Mode switching during active game", () => {
         currentPlayers: string[],
         targetMode: "engine" | "hybrid" | "full",
       ) => {
-        const targetPlayers = GAME_MODE_CONFIG[targetMode].players;
+        const targetPlayers = getPlayersForMode(targetMode);
         return JSON.stringify(currentPlayers) !== JSON.stringify(targetPlayers);
       };
 
-      // engine → full requires restart
+      // engine → full requires restart (full generates dynamic names)
       expect(needsRestart(["human", "ai"], "full")).toBe(true);
 
       // hybrid → full requires restart
@@ -193,11 +195,12 @@ describe("Mode switching during active game", () => {
       expect(needsRestart(["human", "ai"], "hybrid")).toBe(false);
       expect(needsRestart(["human", "ai"], "engine")).toBe(false);
 
-      // full → hybrid requires restart
-      expect(needsRestart(["ai1", "ai2"], "hybrid")).toBe(true);
+      // full → hybrid requires restart (full has different player IDs)
+      const fullPlayers = getPlayersForMode("full");
+      expect(needsRestart(fullPlayers, "hybrid")).toBe(true);
 
       // full → engine requires restart
-      expect(needsRestart(["ai1", "ai2"], "engine")).toBe(true);
+      expect(needsRestart(fullPlayers, "engine")).toBe(true);
     });
   });
 });

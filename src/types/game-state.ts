@@ -207,8 +207,7 @@ export type LogEntry =
     }
   | {
       type: "game-over";
-      humanVP: number;
-      aiVP: number;
+      scores: Record<string, number>;
       winner: string;
       eventId?: string;
       children?: LogEntry[];
