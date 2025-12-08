@@ -5,10 +5,27 @@ import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
+import { Agent as HttpAgent } from "node:http";
+import { Agent as HttpsAgent } from "node:https";
 
-// Configure AI Gateway with server-side API key
+// Create HTTP agents with unlimited concurrent connections
+// Default is 5 connections per host - we increase to Infinity
+const httpAgent = new HttpAgent({ maxSockets: Infinity, keepAlive: true });
+const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
+
+// Configure AI Gateway with custom fetch that uses our unlimited agents
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const isHttps = url.startsWith('https:');
+
+    return fetch(input, {
+      ...init,
+      // @ts-expect-error - Node.js agent option
+      agent: isHttps ? httpsAgent : httpAgent,
+    });
+  },
 });
 
 // Debug logging for deployment
@@ -154,6 +171,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
         apiLogger.error(`${provider} parse failed: ${errorMessage}`);
+        apiLogger.error(`${provider} raw text output: ${result.text}`);
+        apiLogger.error(`${provider} extracted json: ${jsonStr}`);
 
         return res.status(500).json({
           error: 500,
