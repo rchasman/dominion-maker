@@ -1,14 +1,14 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "./engine";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
+import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
 
 describe("Game initialization with different modes", () => {
   describe("engine mode", () => {
     it("should initialize with human and ai players", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.engine;
+      const players = getPlayersForMode("engine");
 
-      const result = engine.startGame(config.players);
+      const result = engine.startGame(players);
 
       expect(result.ok).toBe(true);
       expect(engine.state.players).toHaveProperty("human");
@@ -18,18 +18,18 @@ describe("Game initialization with different modes", () => {
 
     it("should set first player as active", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.engine;
+      const players = getPlayersForMode("engine");
 
-      engine.startGame(config.players);
+      engine.startGame(players);
 
-      expect(engine.state.activePlayer).toBe(config.players[0]);
+      expect(engine.state.activePlayer).toBe(players[0]);
     });
 
     it("should correctly identify AI player during turns", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.engine;
 
-      engine.startGame(config.players);
+      engine.startGame(getPlayersForMode("engine"));
 
       // Check that isAIPlayer correctly identifies the AI
       expect(config.isAIPlayer(engine.state.activePlayer)).toBe(
@@ -41,9 +41,9 @@ describe("Game initialization with different modes", () => {
   describe("hybrid mode", () => {
     it("should initialize with human and ai players", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.hybrid;
+      const players = getPlayersForMode("hybrid");
 
-      const result = engine.startGame(config.players);
+      const result = engine.startGame(players);
 
       expect(result.ok).toBe(true);
       expect(engine.state.players).toHaveProperty("human");
@@ -55,8 +55,8 @@ describe("Game initialization with different modes", () => {
       const engineMode = new DominionEngine();
       const hybridMode = new DominionEngine();
 
-      engineMode.startGame(GAME_MODE_CONFIG.engine.players);
-      hybridMode.startGame(GAME_MODE_CONFIG.hybrid.players);
+      engineMode.startGame(getPlayersForMode("engine"));
+      hybridMode.startGame(getPlayersForMode("hybrid"));
 
       expect(Object.keys(engineMode.state.players).sort()).toEqual(
         Object.keys(hybridMode.state.players).sort(),
@@ -65,61 +65,70 @@ describe("Game initialization with different modes", () => {
   });
 
   describe("full mode", () => {
-    it("should initialize with ai1 and ai2 players", () => {
+    it("should initialize with two AI players", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.full;
+      const players = getPlayersForMode("full");
 
-      const result = engine.startGame(config.players);
+      const result = engine.startGame(players);
 
       expect(result.ok).toBe(true);
-      expect(engine.state.players).toHaveProperty("ai1");
-      expect(engine.state.players).toHaveProperty("ai2");
       expect(Object.keys(engine.state.players)).toHaveLength(2);
+
+      // Should have two AI names (not "human")
+      const playerIds = Object.keys(engine.state.players);
+      expect(playerIds).not.toContain("human");
     });
 
-    it("should NOT have human or ai players", () => {
+    it("should NOT have human player", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.full;
+      const players = getPlayersForMode("full");
 
-      engine.startGame(config.players);
+      engine.startGame(players);
 
       expect(engine.state.players).not.toHaveProperty("human");
-      expect(engine.state.players).not.toHaveProperty("ai");
     });
 
-    it("should set ai1 as first player", () => {
+    it("should set first player as active", () => {
       const engine = new DominionEngine();
-      const config = GAME_MODE_CONFIG.full;
+      const players = getPlayersForMode("full");
 
-      engine.startGame(config.players);
+      engine.startGame(players);
 
-      expect(engine.state.activePlayer).toBe("ai1");
+      expect(engine.state.activePlayer).toBe(players[0]);
     });
 
     it("should correctly identify both AI players", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.full;
+      const players = getPlayersForMode("full");
 
-      engine.startGame(config.players);
+      engine.startGame(players);
 
-      expect(config.isAIPlayer("ai1")).toBe(true);
-      expect(config.isAIPlayer("ai2")).toBe(true);
+      // Both players should be identified as AI
+      expect(config.isAIPlayer(players[0])).toBe(true);
+      expect(config.isAIPlayer(players[1])).toBe(true);
+
+      // "human" should not be AI
       expect(config.isAIPlayer("human")).toBe(false);
-      expect(config.isAIPlayer("ai")).toBe(false);
+
+      // "player" and "ai" should be AI in full mode
+      expect(config.isAIPlayer("player")).toBe(true);
+      expect(config.isAIPlayer("ai")).toBe(true);
     });
 
     it("should allow both AI players to take turns", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.full;
+      const players = getPlayersForMode("full");
 
-      engine.startGame(config.players);
+      engine.startGame(players);
 
       const initialPlayer = engine.state.activePlayer;
       expect(config.isAIPlayer(initialPlayer)).toBe(true);
 
-      // End both phases for ai1 to complete turn
-      if (engine.state.phase === "action") engine.endPhase("ai1");
-      if (engine.state.phase === "buy") engine.endPhase("ai1");
+      // End both phases for first player to complete turn
+      if (engine.state.phase === "action") engine.endPhase(initialPlayer);
+      if (engine.state.phase === "buy") engine.endPhase(initialPlayer);
 
       const nextPlayer = engine.state.activePlayer;
       expect(config.isAIPlayer(nextPlayer)).toBe(true);
@@ -137,7 +146,7 @@ describe("Game initialization with different modes", () => {
 
       engines.forEach(({ mode, engine }) => {
         const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
-        engine.startGame(config.players);
+        engine.startGame(["ai1", "ai2"]);
 
         // Check each player has the expected structure
         Object.values(engine.state.players).forEach(player => {
@@ -157,7 +166,7 @@ describe("Game initialization with different modes", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.full;
 
-      engine.startGame(config.players);
+      engine.startGame(["ai1", "ai2"]);
 
       const player1Cards = [
         ...engine.state.players.ai1.deck,
@@ -194,7 +203,7 @@ describe("Game initialization with different modes", () => {
         const engine = new DominionEngine();
         const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
 
-        engine.startGame(config.players);
+        engine.startGame(["ai1", "ai2"]);
 
         expect(engine.state.activePlayer).toBeTruthy();
         expect(engine.state.players).toHaveProperty(engine.state.activePlayer);
@@ -207,10 +216,10 @@ describe("Game initialization with different modes", () => {
         new DominionEngine(),
         new DominionEngine(),
       ];
-      const configs = [
-        GAME_MODE_CONFIG.engine,
-        GAME_MODE_CONFIG.hybrid,
-        GAME_MODE_CONFIG.full,
+      const modes: ("engine" | "hybrid" | "full")[] = [
+        "engine",
+        "hybrid",
+        "full",
       ];
 
       const kingdomCards = [
@@ -227,7 +236,7 @@ describe("Game initialization with different modes", () => {
       ];
 
       engines.forEach((engine, i) => {
-        engine.startGame(configs[i].players, kingdomCards, 42);
+        engine.startGame(getPlayersForMode(modes[i]), kingdomCards, 42);
       });
 
       // All should have same supply when using same kingdom cards
@@ -244,7 +253,7 @@ describe("Game initialization with different modes", () => {
         const engine = new DominionEngine();
         const config = GAME_MODE_CONFIG[mode as keyof typeof GAME_MODE_CONFIG];
 
-        engine.startGame(config.players);
+        engine.startGame(["ai1", "ai2"]);
 
         // This should not throw
         const activePlayer = engine.state.players[engine.state.activePlayer];
@@ -257,7 +266,7 @@ describe("Game initialization with different modes", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.full;
 
-      engine.startGame(config.players);
+      engine.startGame(["ai1", "ai2"]);
 
       const playerIds = Object.keys(engine.state.players);
       expect(playerIds).toHaveLength(2);

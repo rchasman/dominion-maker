@@ -9,7 +9,7 @@ describe("Full mode integration", () => {
     const config = GAME_MODE_CONFIG.full;
 
     // Start game
-    const startResult = engine.startGame(config.players);
+    const startResult = engine.startGame(["ai1", "ai2"]);
     expect(startResult.ok).toBe(true);
 
     // Verify ai1 starts
@@ -37,7 +37,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // Skip ai1's turn
     if (engine.state.phase === "action") engine.endPhase("ai1");
@@ -58,7 +58,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     const ai1InitialHand = [...engine.state.players.ai1.hand];
     const ai2InitialHand = [...engine.state.players.ai2.hand];
@@ -75,7 +75,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // Should not throw
     const context = buildStrategicContext(engine.state);
@@ -90,7 +90,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // Skip to ai2's turn
     if (engine.state.phase === "action") engine.endPhase("ai1");
@@ -111,7 +111,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // ai1's turn - skip to buy phase
     if (engine.state.phase === "action") engine.endPhase("ai1");
@@ -144,7 +144,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     const countVP = (playerId: string) => {
       const player = engine.state.players[playerId];
@@ -166,7 +166,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // Empty the Province pile to trigger game end
     engine.state.supply.Province = 0;
@@ -184,7 +184,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     // These should fail because these players don't exist
     const result1 = engine.endPhase("human");
@@ -198,7 +198,7 @@ describe("Full mode integration", () => {
     const engine = new DominionEngine();
     const config = GAME_MODE_CONFIG.full;
 
-    engine.startGame(config.players);
+    engine.startGame(["ai1", "ai2"]);
 
     const turnSequence: string[] = [];
 
