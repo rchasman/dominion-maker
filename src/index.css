@@ -131,18 +131,18 @@ body {
   }
 
   to {
-    filter: blur(0px);
+    filter: blur(0);
   }
 }
 
-@keyframes unblurWithFade {
+@keyframes unblur-with-fade {
   from {
     filter: blur(4px);
     opacity: 0.8;
   }
 
   to {
-    filter: blur(0px);
+    filter: blur(0);
     opacity: 1;
   }
 }
@@ -165,7 +165,7 @@ body {
   }
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
   }

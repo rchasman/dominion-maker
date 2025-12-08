@@ -9,11 +9,13 @@
     "type": "tsc --incremental --noEmit",
     "lint": "bunx oxlint --type-aware && bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --type-aware --fix && bunx stylelint 'src/**/*.css' --fix",
+    "pretty": "bunx prettier . --write --experimental-cli",
     "test": "bun test",
     "check:server": "bun server.ts & SERVER_PID=$! && kill $SERVER_PID",
     "check:unused": "depcheck",
     "check:circular": "dpdm --exit-code circular:1 --warning false --tree false 'src/**/*.{ts,tsx}'",
-    "check": "bun run build & bun run type & bun run lint & bun test & bun check:server & bun check:unused & bun check:circular & wait",
+    "check:format": "bunx prettier . --check --experimental-cli",
+    "check": "bun run build & bun run type & bun run lint & bun test & bun check:server & bun check:unused & bun check:circular & bun check:format & wait",
     "preview": "vite preview"
   },
   "dependencies": {
