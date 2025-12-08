@@ -9,6 +9,13 @@ const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
 });
 
+// Debug logging for deployment
+if (!process.env.AI_GATEWAY_API_KEY) {
+  console.error("⚠️  AI_GATEWAY_API_KEY is not set!");
+} else {
+  console.log("✓ AI_GATEWAY_API_KEY is configured");
+}
+
 export default async function handler(req: Request) {
   // CORS headers
   if (req.method === "OPTIONS") {
