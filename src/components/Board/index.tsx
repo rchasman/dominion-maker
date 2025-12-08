@@ -3,6 +3,7 @@ import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
+import { RevealedCardsModal } from "../RevealedCardsModal";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
@@ -285,6 +286,17 @@ export function Board({ onBackToHome }: BoardProps) {
         onBackToHome={onBackToHome}
         onRequestUndo={handleRequestUndo}
       />
+
+      {/* Revealed Cards Modal */}
+      {displayState.pendingDecision &&
+        displayState.pendingDecision.from === "revealed" &&
+        !isPreviewMode && (
+          <RevealedCardsModal
+            pendingDecision={displayState.pendingDecision}
+            selectedCardIndices={selectedCardIndices}
+            onCardClick={onCardClick}
+          />
+        )}
 
       {state.gameOver && (
         <GameOverModal

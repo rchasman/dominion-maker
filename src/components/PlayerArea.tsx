@@ -303,73 +303,6 @@ export function PlayerArea({
         </div>
       )}
 
-      {/* Revealed Cards - shown when making decisions about revealed cards */}
-      {isHuman &&
-        pendingDecision &&
-        pendingDecision.from === "revealed" &&
-        pendingDecision.cardOptions &&
-        pendingDecision.cardOptions.length > 0 && (
-          <div
-            style={{
-              position: "relative",
-              padding: "var(--space-3)",
-              marginBlockEnd: "var(--space-3)",
-              background: "rgba(205, 133, 63, 0.1)",
-              border: "2px solid rgb(205 133 63)",
-              minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                insetBlockStart: "var(--space-1)",
-                insetInlineStart: "var(--space-2)",
-                fontSize: "0.5625rem",
-                color: "rgb(205 133 63)",
-                textTransform: "uppercase",
-                fontWeight: 600,
-              }}
-            >
-              Revealed from Deck
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--space-2)",
-                flexWrap: "wrap",
-                minBlockSize: "100%",
-                justifyContent: "center",
-                alignItems: "center",
-                alignContent: "center",
-                minInlineSize: 0,
-              }}
-            >
-              {pendingDecision.cardOptions.map((card, i) => {
-                const isSelectable =
-                  pendingDecision.cardOptions?.includes(card) ?? true;
-                return (
-                  <Card
-                    key={`${card}-${i}`}
-                    name={card}
-                    size="medium"
-                    onClick={() => onCardClick?.(card, i)}
-                    selected={selectedCardIndices.includes(i)}
-                    highlightMode={
-                      pendingDecision.stage === "trash"
-                        ? "trash"
-                        : pendingDecision.stage === "discard"
-                          ? "discard"
-                          : undefined
-                    }
-                    disabled={!isSelectable}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
-
       <div
         style={{
           display: "grid",
@@ -421,19 +354,26 @@ export function PlayerArea({
                       />
                     </div>
                   ))
-                : player.hand.map((card, i) => (
-                    <div key={`${card}-${i}-wrapper`}>
-                      <Card
-                        key={`${card}-${i}`}
-                        name={card}
-                        size="large"
-                        onClick={() => onCardClick?.(card, i)}
-                        selected={selectedCardIndices.includes(i)}
-                        highlightMode={getHandCardHighlightMode(card)}
-                        disabled={isHandCardDisabled(card)}
-                      />
-                    </div>
-                  ))}
+                : player.hand.map((card, i) => {
+                    const isSelected =
+                      (!pendingDecision ||
+                        pendingDecision.from === "hand" ||
+                        pendingDecision.from === "discard") &&
+                      selectedCardIndices.includes(i);
+                    return (
+                      <div key={`${card}-${i}-wrapper`}>
+                        <Card
+                          key={`${card}-${i}`}
+                          name={card}
+                          size="large"
+                          onClick={() => onCardClick?.(card, i)}
+                          selected={isSelected}
+                          highlightMode={getHandCardHighlightMode(card)}
+                          disabled={isHandCardDisabled(card)}
+                        />
+                      </div>
+                    );
+                  })}
             </div>
           </div>
         )}
