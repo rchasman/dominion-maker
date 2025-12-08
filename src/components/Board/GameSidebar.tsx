@@ -5,6 +5,7 @@ import type {
 } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
+import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import { useLLMLogs } from "../../context/GameContext";
 import { LogEntry } from "../LogEntry";
@@ -193,8 +194,11 @@ export function GameSidebar({
       {/* Game Log */}
       <div
         style={{
-          height: gameMode === "maker" ? `${gameLogHeight}%` : "auto",
-          flex: gameMode === "maker" ? "none" : 1,
+          height:
+            gameMode === "hybrid" || gameMode === "full"
+              ? `${gameLogHeight}%`
+              : "auto",
+          flex: gameMode === "hybrid" || gameMode === "full" ? "none" : 1,
           minBlockSize: 0,
           display: "flex",
           flexDirection: "column",
@@ -294,8 +298,8 @@ export function GameSidebar({
         </div>
       </div>
 
-      {/* Resize Handle - only show in MAKER mode */}
-      {gameMode === "maker" && (
+      {/* Resize Handle - only show in MAKER modes (hybrid/full) */}
+      {(gameMode === "hybrid" || gameMode === "full") && (
         <div
           onMouseDown={() => setIsDragging(true)}
           style={{
@@ -329,8 +333,8 @@ export function GameSidebar({
         </div>
       )}
 
-      {/* LLM Debug Log - only show in single-player MAKER mode */}
-      {gameMode === "maker" && (
+      {/* LLM Debug Log - only show in MAKER modes (hybrid/full) */}
+      {(gameMode === "hybrid" || gameMode === "full") && (
         <div
           style={{
             height: `${100 - gameLogHeight}%`,
@@ -387,7 +391,7 @@ export function GameSidebar({
               >
                 Mode:
               </span>
-              {(["engine", "maker"] as const).map(mode => (
+              {(["engine", "hybrid", "full"] as const).map(mode => (
                 <button
                   key={mode}
                   onClick={() => onGameModeChange(mode)}
@@ -415,7 +419,7 @@ export function GameSidebar({
                     borderRadius: "3px",
                   }}
                 >
-                  {mode === "engine" ? "Engine" : "MAKER"}
+                  {GAME_MODE_CONFIG[mode].name}
                 </button>
               ))}
             </div>

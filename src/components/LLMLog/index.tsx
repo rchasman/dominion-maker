@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { GameMode } from "../../types/game-mode";
+import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/types";
 import type {
   LLMLogEntry,
@@ -28,7 +29,7 @@ interface LLMLogProps {
 
 export function LLMLog({
   entries,
-  gameMode = "maker",
+  gameMode = "hybrid",
   modelSettings,
 }: LLMLogProps) {
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
@@ -60,6 +61,12 @@ export function LLMLog({
   } = useNavigationState(turns);
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
+
+  const getModeMessage = () => {
+    return gameMode === "multiplayer"
+      ? { title: "", description: "" }
+      : GAME_MODE_CONFIG[gameMode].logDescription;
+  };
 
   return (
     <div
@@ -296,25 +303,17 @@ export function LLMLog({
               lineHeight: 1.6,
             }}
           >
-            {gameMode === "engine" ? (
-              <>
-                <div style={{ marginBottom: "var(--space-2)" }}>
-                  Engine Mode Active
-                </div>
-                <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
-                  AI uses hard-coded rules. No LLM calls are made.
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ marginBottom: "var(--space-2)" }}>
-                  MAKER Mode Active
-                </div>
-                <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
-                  Consensus decisions will appear when AI takes its turn.
-                </div>
-              </>
-            )}
+            {(() => {
+              const { title, description } = getModeMessage();
+              return (
+                <>
+                  <div style={{ marginBottom: "var(--space-2)" }}>{title}</div>
+                  <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
+                    {description}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         ) : currentTurn?.pending &&
           currentActionIndex === currentTurn.decisions.length ? (

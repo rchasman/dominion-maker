@@ -1,4 +1,5 @@
 import { useGame } from "../context/GameContext";
+import { GAME_MODE_CONFIG } from "../types/game-mode";
 
 interface StartScreenProps {
   onStartSinglePlayer?: () => void;
@@ -14,6 +15,12 @@ export function StartScreen({
   const handleStartGame = () => {
     startGame();
     onStartSinglePlayer?.();
+  };
+
+  const getModeDescription = () => {
+    return gameMode === "multiplayer"
+      ? ""
+      : GAME_MODE_CONFIG[gameMode].description;
   };
 
   return (
@@ -62,12 +69,9 @@ export function StartScreen({
           borderRadius: "8px",
         }}
       >
-        <ModeButton mode="engine" current={gameMode} onClick={setGameMode}>
-          Engine Mode
-        </ModeButton>
-        <ModeButton mode="maker" current={gameMode} onClick={setGameMode}>
-          MAKER Mode
-        </ModeButton>
+        <ModeButton mode="engine" current={gameMode} onClick={setGameMode} />
+        <ModeButton mode="hybrid" current={gameMode} onClick={setGameMode} />
+        <ModeButton mode="full" current={gameMode} onClick={setGameMode} />
       </div>
 
       <p
@@ -80,9 +84,7 @@ export function StartScreen({
           lineHeight: 1.6,
         }}
       >
-        {gameMode === "engine"
-          ? "Hard-coded rules engine with explicit card implementations"
-          : "Human plays, AI opponent uses multi-LLM consensus voting (different models vote on each decision)"}
+        {getModeDescription()}
       </p>
 
       <div style={{ display: "flex", gap: "var(--space-4)" }}>
@@ -135,12 +137,10 @@ function ModeButton({
   mode,
   current,
   onClick,
-  children,
 }: {
-  mode: "engine" | "maker";
+  mode: "engine" | "hybrid" | "full";
   current: string;
-  onClick: (mode: "engine" | "maker") => void;
-  children: React.ReactNode;
+  onClick: (mode: "engine" | "hybrid" | "full") => void;
 }) {
   const isActive = mode === current;
   return (
@@ -163,7 +163,7 @@ function ModeButton({
         borderRadius: "4px",
       }}
     >
-      {children}
+      {GAME_MODE_CONFIG[mode].name}
     </button>
   );
 }
