@@ -12,7 +12,7 @@ export interface ModelSettings {
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite"]),
+  enabledModels: new Set(["gemini-2.5-flash-lite", "gpt-4o-mini", "ministral-3b", "gpt-oss-20b"]),
   consensusCount: 8,
 };
 
@@ -21,14 +21,14 @@ export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
 
 // Default: 8 fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
-  "claude-haiku",
-  "gpt-4o-mini",
   "gemini-2.5-flash-lite",
-  "claude-haiku",
   "gpt-4o-mini",
+  "ministral-3b",
+  "gpt-oss-20b",
   "gemini-2.5-flash-lite",
-  "claude-haiku",
   "gpt-4o-mini",
+  "ministral-3b",
+  "gpt-oss-20b",
 ];
 
 // Build models array from settings by shuffling and duplicating enabled models

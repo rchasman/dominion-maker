@@ -31,9 +31,6 @@ interface VercelResponse {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log(`[${new Date().toISOString()}] Handler called - method: ${req.method}`);
-  console.log(`[${new Date().toISOString()}] Request has body: ${typeof req.body}, has text: ${typeof req.text}`);
-
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -50,11 +47,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let provider: string = "";
 
   try {
-    console.log(`[${new Date().toISOString()}] Parsing request body...`);
     // Vercel with Bun runtime passes body as req.body, not req.json()
     const rawBody = req.body || (req.text ? await req.text() : "{}");
     const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-    console.log(`[${new Date().toISOString()}] Body parsed - provider: ${(body as { provider?: string }).provider}`);
 
     const { provider: bodyProvider, currentState, humanChoice, legalActions } = body as { provider: string; currentState: GameState; humanChoice?: { selectedCards: string[] }; legalActions?: unknown[] };
     provider = bodyProvider;
@@ -68,10 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid provider" });
     }
 
-    console.log(`[${new Date().toISOString()}] Creating model gateway for: ${modelName}`);
     const model = gateway(modelName);
     const isAnthropic = provider.startsWith("claude");
-    console.log(`[${new Date().toISOString()}] Model created, isAnthropic: ${isAnthropic}`);
 
     const legalActionsStr = legalActions && legalActions.length > 0
       ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
@@ -170,7 +163,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Use generateObject for other models
-    console.log(`[${new Date().toISOString()}] Calling generateObject...`);
     const result = await generateObject({
       model,
       schema: ActionSchema,
@@ -185,9 +177,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       }),
     });
-    console.log(`[${new Date().toISOString()}] generateObject completed`);
 
-    console.log(`[${new Date().toISOString()}] Returning response with action`);
     return res.status(200).json({ action: result.object });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
