@@ -268,6 +268,7 @@ export function Board({ onBackToHome }: BoardProps) {
           phase={displayState.phase}
           subPhase={displayState.subPhase}
           playerId="human"
+          turnHistory={displayState.turnHistory}
         />
       </div>
 

@@ -390,6 +390,7 @@ export function MultiplayerGameBoard({
           subPhase={displayState.subPhase}
           loading={!myPlayerState}
           playerId={myPlayer || undefined}
+          turnHistory={displayState.turnHistory}
         />
       </div>
 
