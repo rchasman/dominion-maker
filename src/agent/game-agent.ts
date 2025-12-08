@@ -143,41 +143,32 @@ async function generateActionViaBackend(
  * This replaces the old executeAction that mutated state
  */
 function executeActionWithEngine(engine: DominionEngine, action: Action, playerId: string): boolean {
-  let result;
-
   switch (action.type) {
     case "play_action":
       if (!action.card) throw new Error("play_action requires card");
-      result = engine.dispatch({ type: "PLAY_ACTION", player: playerId, card: action.card }, playerId);
-      break;
+      return engine.dispatch({ type: "PLAY_ACTION", player: playerId, card: action.card }, playerId).ok;
     case "play_treasure":
       if (!action.card) throw new Error("play_treasure requires card");
-      result = engine.dispatch({ type: "PLAY_TREASURE", player: playerId, card: action.card }, playerId);
-      break;
+      return engine.dispatch({ type: "PLAY_TREASURE", player: playerId, card: action.card }, playerId).ok;
     case "buy_card":
       if (!action.card) throw new Error("buy_card requires card");
-      result = engine.dispatch({ type: "BUY_CARD", player: playerId, card: action.card }, playerId);
-      break;
+      return engine.dispatch({ type: "BUY_CARD", player: playerId, card: action.card }, playerId).ok;
     case "end_phase":
-      result = engine.dispatch({ type: "END_PHASE", player: playerId }, playerId);
-      break;
+      return engine.dispatch({ type: "END_PHASE", player: playerId }, playerId).ok;
     case "discard_card":
     case "trash_card":
     case "gain_card":
       // All decision responses are single cards (atomic)
       if (!action.card) throw new Error(`${action.type} requires card`);
-      result = engine.dispatch({
+      return engine.dispatch({
         type: "SUBMIT_DECISION",
         player: playerId,
         choice: { selectedCards: [action.card] },
-      }, playerId);
-      break;
+      }, playerId).ok;
     default:
       console.error("Unknown action type:", action);
       return false;
   }
-
-  return result.ok;
 }
 
 /**
