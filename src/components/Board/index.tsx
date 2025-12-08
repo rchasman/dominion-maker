@@ -4,7 +4,7 @@ import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
 import { CardDecisionModal } from "../CardDecisionModal";
-import { countVP, getAllCards } from "../../lib/board-utils";
+import { countVP, getAllCards, formatPlayerName } from "../../lib/board-utils";
 import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
 import { GameSidebar } from "./GameSidebar";
@@ -236,13 +236,29 @@ export function Board({ onBackToHome }: BoardProps) {
           position: "relative",
         }}
       >
-        <OpponentBar
-          opponent={opponent}
-          opponentId={opponentPlayerId}
-          isHumanTurn={isMainPlayerTurn}
-          phase={displayState.phase}
-          subPhase={displayState.subPhase}
-        />
+        {gameMode === "full" ? (
+          <PlayerArea
+            player={opponent}
+            label={opponentPlayerId}
+            vpCount={opponentVP}
+            isActive={!isMainPlayerTurn}
+            isHuman={false}
+            selectedCardIndices={[]}
+            compact={true}
+            phase={displayState.phase}
+            subPhase={displayState.subPhase}
+            playerId={opponentPlayerId}
+            turnHistory={displayState.turnHistory}
+          />
+        ) : (
+          <OpponentBar
+            opponent={opponent}
+            opponentId={opponentPlayerId}
+            isHumanTurn={isMainPlayerTurn}
+            phase={displayState.phase}
+            subPhase={displayState.subPhase}
+          />
+        )}
 
         <div
           style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}
