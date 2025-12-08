@@ -7,14 +7,16 @@ import type { Action } from "../types/action";
 import { stripReasoning } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { DominionEngine } from "../engine";
-import { MODEL_IDS, type ModelProvider } from "../config/models";
+import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
-import type { DecisionRequest } from "../events/types";
+import type { DecisionRequest } from "../types/game-state";
 import { formatActionDescription } from "../lib/action-utils";
+import { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS, type ModelSettings } from "./types";
 
 // Re-export for convenience
-export type { ModelProvider } from "../config/models";
+export { AVAILABLE_MODELS, ALL_FAST_MODELS, DEFAULT_MODEL_SETTINGS };
+export type { ModelSettings, ModelProvider };
 
 // Global abort controller for canceling ongoing consensus operations
 let globalAbortController: AbortController | null = null;
@@ -28,59 +30,9 @@ export function abortOngoingConsensus() {
   }
 }
 
-// Default: 8 fast model instances for maximum consensus (duplicates allowed)
-// NOTE: Ministral-3B disabled by default - unreliable with structured outputs
-export const ALL_FAST_MODELS: ModelProvider[] = [
-  "claude-haiku",
-  "gpt-4o-mini",
-  "gemini-2.5-flash-lite",
-  "claude-haiku",
-  "gpt-4o-mini",
-  "gemini-2.5-flash-lite",
-  "claude-haiku",
-  "gpt-4o-mini",
-];
-
-// Available unique models
-export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
-
-// Model settings for consensus
-export interface ModelSettings {
-  enabledModels: Set<ModelProvider>;
-  consensusCount: number;
-}
-
-export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  enabledModels: new Set(["claude-haiku", "gpt-4o-mini", "gemini-2.5-flash-lite"]),
-  consensusCount: 8,
-};
-
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
 
-// Build models array from settings by shuffling and duplicating enabled models
-export function buildModelsFromSettings(settings: ModelSettings): ModelProvider[] {
-  const enabled = Array.from(settings.enabledModels);
-
-  if (enabled.length === 0) {
-    console.warn("No models enabled, using defaults");
-    return ALL_FAST_MODELS;
-  }
-
-  // Create array by cycling through enabled models
-  const models: ModelProvider[] = [];
-  for (let i = 0; i < settings.consensusCount; i++) {
-    models.push(enabled[i % enabled.length]);
-  }
-
-  // Shuffle the array for randomness
-  for (let i = models.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [models[i], models[j]] = [models[j], models[i]];
-  }
-
-  return models;
-}
 
 /**
  * Get legal actions from current game state for LLM context

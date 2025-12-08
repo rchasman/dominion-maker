@@ -139,28 +139,22 @@ export type CoinsModifiedEvent = EventMetadata & {
   delta: number;
 };
 
-// Decisions
-export type DecisionRequest = {
-  type: "select_cards";
-  player: PlayerId;
-  from: "hand" | "supply" | "revealed" | "options" | "discard";
-  prompt: string;
-  cardOptions?: CardName[]; // For supply/options selections
-  min: number;
-  max: number;
-  cardBeingPlayed: CardName;
-  stage?: string;
-  canSkip?: boolean; // For optional decisions
-  metadata?: Record<string, unknown>;
-};
-
-export type DecisionChoice = {
-  selectedCards: CardName[];
-};
-
+// Decisions (DecisionRequest and DecisionChoice moved to types/game-state to break circular dep)
 export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
-  decision: DecisionRequest;
+  decision: {
+    type: "select_cards";
+    player: PlayerId;
+    from: "hand" | "supply" | "revealed" | "options" | "discard";
+    prompt: string;
+    cardOptions?: CardName[];
+    min: number;
+    max: number;
+    cardBeingPlayed: CardName;
+    stage?: string;
+    canSkip?: boolean;
+    metadata?: Record<string, unknown>;
+  };
 };
 
 export type DecisionResolvedEvent = EventMetadata & {

@@ -5,7 +5,7 @@ import type { CardName } from "../../types/game-state";
 import type { Action } from "../../types/action";
 import { stripReasoning } from "../../types/action";
 import { getModelColor } from "../../config/models";
-import { AVAILABLE_MODELS, type ModelSettings } from "../../agent/game-agent";
+import { AVAILABLE_MODELS, type ModelSettings } from "../../agent/types";
 import type { LLMLogEntry, ModelStatus, Turn, PendingData, GameStateSnapshot, ConsensusVotingData, TimingData } from "./types";
 import { formatActionDescription } from "../../lib/action-utils";
 

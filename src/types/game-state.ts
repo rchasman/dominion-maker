@@ -1,5 +1,23 @@
 import { z } from "zod";
-import type { DecisionRequest } from "../events/types";
+
+// Decision types (moved here to break circular dependency with events/types)
+export type DecisionRequest = {
+  type: "select_cards";
+  player: string; // PlayerId
+  from: "hand" | "supply" | "revealed" | "options" | "discard";
+  prompt: string;
+  cardOptions?: string[]; // CardName[]
+  min: number;
+  max: number;
+  cardBeingPlayed: string; // CardName
+  stage?: string;
+  canSkip?: boolean;
+  metadata?: Record<string, unknown>;
+};
+
+export type DecisionChoice = {
+  selectedCards: string[]; // CardName[]
+};
 
 // Zod schema for DecisionRequest
 export const DecisionRequestSchema = z.object({
