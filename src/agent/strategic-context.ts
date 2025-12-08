@@ -13,34 +13,51 @@ import { countVP as countVPFromCards } from "../lib/board-utils";
  */
 export function buildStrategicContext(state: GameState): string {
   const sections: string[] = [];
-  const ai = state.players.ai;
-  const human = state.players.human;
+
+  // Get the current active player (the AI making the decision)
+  const currentPlayer = state.players[state.activePlayer];
+
+  // Get the opponent (the other player)
+  const opponentId = Object.keys(state.players).find(
+    id => id !== state.activePlayer,
+  ) as keyof typeof state.players;
+  const opponent = state.players[opponentId];
 
   // 1. VP Scoreboard
-  const aiVP = calculateVP(ai.deck, ai.hand, ai.discard, ai.inPlay);
-  const humanVP = calculateVP(
-    human.deck,
-    human.hand,
-    human.discard,
-    human.inPlay,
+  const currentVP = calculateVP(
+    currentPlayer.deck,
+    currentPlayer.hand,
+    currentPlayer.discard,
+    currentPlayer.inPlay,
   );
-  const vpDiff = aiVP - humanVP;
+  const opponentVP = calculateVP(
+    opponent.deck,
+    opponent.hand,
+    opponent.discard,
+    opponent.inPlay,
+  );
+  const vpDiff = currentVP - opponentVP;
 
   sections.push(
-    `SCORE: You ${aiVP} VP, Opponent ${humanVP} VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`,
+    `SCORE: You ${currentVP} VP, Opponent ${opponentVP} VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`,
   );
 
   // 2. Your Deck Composition
-  const aiAllCards = [...ai.deck, ...ai.hand, ...ai.discard, ...ai.inPlay];
-  const aiAnalysis = analyzeDeck(aiAllCards);
+  const currentAllCards = [
+    ...currentPlayer.deck,
+    ...currentPlayer.hand,
+    ...currentPlayer.discard,
+    ...currentPlayer.inPlay,
+  ];
+  const currentAnalysis = analyzeDeck(currentAllCards);
 
-  sections.push(`YOUR DECK (${aiAllCards.length} cards): ${aiAnalysis.breakdown}
-Treasure value: $${aiAnalysis.totalTreasureValue} in ${aiAnalysis.treasures} cards (avg $${aiAnalysis.avgTreasureValue.toFixed(1)})
-Terminals: ${aiAnalysis.terminals}, Villages: ${aiAnalysis.villages}`);
+  sections.push(`YOUR DECK (${currentAllCards.length} cards): ${currentAnalysis.breakdown}
+Treasure value: $${currentAnalysis.totalTreasureValue} in ${currentAnalysis.treasures} cards (avg $${currentAnalysis.avgTreasureValue.toFixed(1)})
+Terminals: ${currentAnalysis.terminals}, Villages: ${currentAnalysis.villages}`);
 
   // 3. Shuffle Status
   sections.push(
-    `DRAW PILE: ${ai.deck.length} cards | DISCARD: ${ai.discard.length} cards`,
+    `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards`,
   );
 
   // 4. Supply Status - only show relevant piles
@@ -61,30 +78,28 @@ Terminals: ${aiAnalysis.terminals}, Villages: ${aiAnalysis.villages}`);
   );
 
   // 5. Opponent Deck
-  const humanAllCards = [
-    ...human.deck,
-    ...human.hand,
-    ...human.discard,
-    ...human.inPlay,
+  const opponentAllCards = [
+    ...opponent.deck,
+    ...opponent.hand,
+    ...opponent.discard,
+    ...opponent.inPlay,
   ];
-  const humanAnalysis = analyzeDeck(humanAllCards);
+  const opponentAnalysis = analyzeDeck(opponentAllCards);
 
   sections.push(
-    `OPPONENT DECK (${humanAllCards.length} cards): ${humanAnalysis.breakdown}`,
+    `OPPONENT DECK (${opponentAllCards.length} cards): ${opponentAnalysis.breakdown}`,
   );
 
-  // 6. Current Hand (during AI turn)
-  if (state.activePlayer === "ai") {
-    const treasures = ai.hand.filter(c => isTreasureCard(c));
-    const treasureValue = treasures.reduce(
-      (sum, c) => sum + (CARDS[c].coins || 0),
-      0,
-    );
-    const maxCoins = state.coins + treasureValue;
+  // 6. Current Hand (always show for the active player)
+  const treasures = currentPlayer.hand.filter(c => isTreasureCard(c));
+  const treasureValue = treasures.reduce(
+    (sum, c) => sum + (CARDS[c].coins || 0),
+    0,
+  );
+  const maxCoins = state.coins + treasureValue;
 
-    sections.push(`HAND: ${ai.hand.join(", ")}
+  sections.push(`HAND: ${currentPlayer.hand.join(", ")}
 Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
-  }
 
   return sections.join("\n");
 }
