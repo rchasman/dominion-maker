@@ -9,9 +9,10 @@ import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
-import type { CardName } from "../../types/game-state";
+import type { CardName, PlayerId } from "../../types/game-state";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { uiLogger } from "../../lib/logger";
+import { GAME_MODE_CONFIG } from "../../types/game-mode";
 
 interface BoardProps {
   onBackToHome?: () => void;
@@ -48,6 +49,14 @@ export function Board({ onBackToHome }: BoardProps) {
     cardOrder?: number[];
   } | null>(null);
 
+  // Determine player IDs early so callbacks can use them
+  const playerIds =
+    gameMode === "multiplayer"
+      ? (["human", "ai"] as PlayerId[])
+      : GAME_MODE_CONFIG[gameMode].players;
+  const mainPlayerId = playerIds[0];
+  const isHumanPlayer = mainPlayerId === "human";
+
   // Wrap requestUndo to clear preview state and selections when undoing
   const handleRequestUndo = useCallback(
     (eventId: string) => {
@@ -76,7 +85,7 @@ export function Board({ onBackToHome }: BoardProps) {
   // Card click handler - must be defined before early return
   const onCardClick = useCallback(
     (card: CardName, index: number) => {
-      if (!state?.activePlayer || state.activePlayer !== "human") return;
+      if (!state?.activePlayer || state.activePlayer !== mainPlayerId) return;
 
       // If we have a pending decision, add to selection
       if (state.pendingDecision) {
@@ -109,13 +118,13 @@ export function Board({ onBackToHome }: BoardProps) {
         return;
       }
     },
-    [state, selectedCardIndices, playAction, playTreasure],
+    [state, selectedCardIndices, playAction, playTreasure, mainPlayerId],
   );
 
   // Handle in-play clicks (unplay treasures)
   const onInPlayClick = useCallback(
     (card: CardName) => {
-      if (!state || state.activePlayer !== "human" || state.phase !== "buy")
+      if (!state || state.activePlayer !== mainPlayerId || state.phase !== "buy")
         return;
 
       const result = unplayTreasure(card);
@@ -123,7 +132,7 @@ export function Board({ onBackToHome }: BoardProps) {
         uiLogger.error("Failed to unplay treasure:", result.error);
       }
     },
-    [state, unplayTreasure],
+    [state, unplayTreasure, mainPlayerId],
   );
 
   if (!state) return null;
@@ -133,26 +142,35 @@ export function Board({ onBackToHome }: BoardProps) {
     previewEventId && getStateAtEvent ? getStateAtEvent(previewEventId) : state;
   const isPreviewMode = previewEventId !== null;
 
-  const isHumanTurn = state.activePlayer === "human";
+  // Second player is the "opponent" view
+  const opponentPlayerId = playerIds[1];
+
+  const isMainPlayerTurn = state.activePlayer === mainPlayerId;
 
   const canBuy =
-    isHumanTurn && state.phase === "buy" && state.buys > 0 && !isPreviewMode;
-  const opponent = displayState.players.ai;
-  const human = displayState.players.human;
-  const humanVP = countVP(getAllCards(human));
+    isMainPlayerTurn &&
+    state.phase === "buy" &&
+    state.buys > 0 &&
+    !isPreviewMode;
+  const opponent = displayState.players[opponentPlayerId];
+  const mainPlayer = displayState.players[mainPlayerId];
+  const mainPlayerVP = countVP(getAllCards(mainPlayer));
   const opponentVP = countVP(getAllCards(opponent));
 
   const getHint = () => {
-    if (state.pendingDecision && state.pendingDecision.player === "human") {
+    if (
+      state.pendingDecision &&
+      state.pendingDecision.player === mainPlayerId
+    ) {
       return state.pendingDecision.prompt;
     }
-    if (!isHumanTurn) return "Opponent is playing...";
+    if (!isMainPlayerTurn) return "Opponent is playing...";
     if (state.phase === "action") {
       if (hasPlayableActions) return "Click an Action card to play it";
       return "";
     }
     if (state.phase === "buy") {
-      const hasInPlayTreasures = human.inPlay.length > 0;
+      const hasInPlayTreasures = mainPlayer.inPlay.length > 0;
       if (state.coins === 0 && hasTreasuresInHand) {
         return "Play treasures to get coins";
       }
@@ -215,8 +233,8 @@ export function Board({ onBackToHome }: BoardProps) {
       >
         <OpponentBar
           opponent={opponent}
-          opponentId="ai"
-          isHumanTurn={isHumanTurn}
+          opponentId={opponentPlayerId}
+          isHumanTurn={isMainPlayerTurn}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
         />
@@ -233,7 +251,7 @@ export function Board({ onBackToHome }: BoardProps) {
           />
         </div>
 
-        {isHumanTurn && !isPreviewMode && (
+        {isMainPlayerTurn && !isPreviewMode && (
           <ActionBar
             state={displayState}
             hint={getHint()}
@@ -257,7 +275,7 @@ export function Board({ onBackToHome }: BoardProps) {
               } else {
                 // Simple card selection
                 const selectedCards = selectedCardIndices.map(
-                  i => human.hand[i],
+                  i => mainPlayer.hand[i],
                 );
                 const result = submitDecision({ selectedCards });
                 if (result.ok) {
@@ -276,11 +294,11 @@ export function Board({ onBackToHome }: BoardProps) {
 
         <div style={{ position: "relative" }}>
           <PlayerArea
-            player={human}
-            label="You"
-            vpCount={humanVP}
-            isActive={isHumanTurn}
-            isHuman={true}
+            player={mainPlayer}
+            label={isHumanPlayer ? "You" : mainPlayerId}
+            vpCount={mainPlayerVP}
+            isActive={isMainPlayerTurn}
+            isHuman={isHumanPlayer}
             selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
             onCardClick={isPreviewMode ? undefined : onCardClick}
             onInPlayClick={
@@ -291,7 +309,7 @@ export function Board({ onBackToHome }: BoardProps) {
             pendingDecision={displayState.pendingDecision}
             phase={displayState.phase}
             subPhase={displayState.subPhase}
-            playerId="human"
+            playerId={mainPlayerId}
             turnHistory={displayState.turnHistory}
           />
 
@@ -317,7 +335,7 @@ export function Board({ onBackToHome }: BoardProps) {
         isProcessing={isProcessing}
         gameMode={gameMode}
         onGameModeChange={onGameModeChange}
-        localPlayer="human"
+        localPlayer={mainPlayerId}
         modelSettings={modelSettings}
         onModelSettingsChange={onModelSettingsChange}
         onNewGame={onNewGame}
@@ -328,7 +346,7 @@ export function Board({ onBackToHome }: BoardProps) {
       {state.gameOver && (
         <GameOverModal
           winner={state.winner}
-          humanVP={humanVP}
+          humanVP={mainPlayerVP}
           opponentVP={opponentVP}
           onNewGame={onNewGame}
         />
