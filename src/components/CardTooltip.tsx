@@ -8,7 +8,12 @@ interface CardTooltipProps {
   showBack?: boolean;
 }
 
-export function CardTooltip({ cardName, mouseX, mouseY, showBack }: CardTooltipProps) {
+export function CardTooltip({
+  cardName,
+  mouseX,
+  mouseY,
+  showBack,
+}: CardTooltipProps) {
   const imageUrl = showBack
     ? "/cards/Card_back.jpg"
     : getCardImageUrl(cardName);
@@ -17,22 +22,30 @@ export function CardTooltip({ cardName, mouseX, mouseY, showBack }: CardTooltipP
     ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
     : `https://robinzigmond.github.io/Dominion-app/images/card_images/${cardName.replace(/ /g, "_")}.jpg`;
 
-  const tooltipWidth = 240;
-  const tooltipHeight = 374;
-  const offsetX = 12;
-  const offsetY = 12;
+  const tooltipWidth = 180;
+  const tooltipHeight = 280;
 
   const viewportWidth = window.innerWidth;
 
-  let left = mouseX + offsetX;
-  let top = mouseY - offsetY - tooltipHeight;
+  // Position so cursor is at bottom-right, but skewed inward and upward (like gripping it)
+  const offsetX = 30; // Move cursor inward from right edge
+  const offsetY = 34; // Move cursor up from bottom edge
 
-  if (left + tooltipWidth > viewportWidth) {
-    left = mouseX - offsetX - tooltipWidth;
+  let left = mouseX - tooltipWidth + offsetX;
+  let top = mouseY - tooltipHeight + offsetY;
+
+  // Keep within viewport horizontally
+  if (left < 0) {
+    left = 0;
+  } else if (left + tooltipWidth > viewportWidth) {
+    left = viewportWidth - tooltipWidth;
   }
 
+  // Keep within viewport vertically
   if (top < 0) {
-    top = mouseY + offsetY;
+    top = 0;
+  } else if (top + tooltipHeight > window.innerHeight) {
+    top = window.innerHeight - tooltipHeight;
   }
 
   return (
@@ -43,22 +56,25 @@ export function CardTooltip({ cardName, mouseX, mouseY, showBack }: CardTooltipP
         top: `${top}px`,
         pointerEvents: "none",
         zIndex: 10000,
+        animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
       <div
         style={{
-          background: "rgba(0, 0, 0, 0.95)",
+          background: "rgba(0, 0, 0, 0.7)",
           border: "2px solid var(--color-border)",
           borderRadius: "8px",
           padding: "0.5rem",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
         }}
       >
         <img
           src={imageUrl}
           alt={showBack ? "Card back" : cardName}
           style={{
-            width: "240px",
+            width: "180px",
             height: "auto",
             display: "block",
             borderRadius: "4px",
