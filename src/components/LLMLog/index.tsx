@@ -156,15 +156,19 @@ export function LLMLog({ entries, gameMode = "maker", modelSettings }: LLMLogPro
       {/* Model Settings Panel */}
       {isModelSettingsExpanded && modelSettings && (
         <div style={{
-          padding: "var(--space-4)",
+          paddingLeft: "var(--space-4)",
+          paddingRight: "var(--space-4)",
+          paddingBottom: "var(--space-4)",
           borderBottom: "1px solid var(--color-border)",
           background: "var(--color-bg-secondary)",
           display: "flex",
           flexDirection: "column",
           gap: "var(--space-4)",
+          maxHeight: "70vh",
+          overflow: "auto",
         }}>
           {/* Consensus Count */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)", paddingTop: "var(--space-4)" }}>
             <label style={{
               fontSize: "0.6875rem",
               fontWeight: 600,

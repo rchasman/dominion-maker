@@ -97,12 +97,13 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", maxHeight: "60vh", overflow: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
       <div style={{
         position: "sticky",
         top: 0,
         background: "var(--color-bg-secondary)",
         zIndex: 1,
+        paddingTop: "var(--space-2)",
         paddingBottom: "var(--space-2)",
         display: "flex",
         justifyContent: "space-between",
