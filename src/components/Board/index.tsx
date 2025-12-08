@@ -12,7 +12,7 @@ import { GameOverModal } from "./GameOverModal";
 import type { CardName, PlayerId } from "../../types/game-state";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { uiLogger } from "../../lib/logger";
-import { getPlayersForMode } from "../../types/game-mode";
+import { getPlayersForMode, GAME_MODE_CONFIG } from "../../types/game-mode";
 
 interface BoardProps {
   onBackToHome?: () => void;
@@ -239,7 +239,11 @@ export function Board({ onBackToHome }: BoardProps) {
         {gameMode === "full" ? (
           <PlayerArea
             player={opponent}
-            label={opponentPlayerId}
+            label={formatPlayerName(
+              opponentPlayerId,
+              gameMode !== "multiplayer" &&
+                GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
+            )}
             vpCount={opponentVP}
             isActive={!isMainPlayerTurn}
             isHuman={false}
@@ -254,6 +258,11 @@ export function Board({ onBackToHome }: BoardProps) {
           <OpponentBar
             opponent={opponent}
             opponentId={opponentPlayerId}
+            opponentLabel={formatPlayerName(
+              opponentPlayerId,
+              gameMode !== "multiplayer" &&
+                GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
+            )}
             isHumanTurn={isMainPlayerTurn}
             phase={displayState.phase}
             subPhase={displayState.subPhase}
@@ -316,7 +325,11 @@ export function Board({ onBackToHome }: BoardProps) {
         <div style={{ position: "relative" }}>
           <PlayerArea
             player={mainPlayer}
-            label={isHumanPlayer ? "You" : mainPlayerId}
+            label={formatPlayerName(
+              mainPlayerId,
+              gameMode !== "multiplayer" &&
+                GAME_MODE_CONFIG[gameMode].isAIPlayer(mainPlayerId),
+            )}
             vpCount={mainPlayerVP}
             isActive={isMainPlayerTurn}
             isHuman={isHumanPlayer}
