@@ -18,20 +18,17 @@ export function getPlayerColor(playerId: string): string {
 }
 
 export function countVP(cards: CardName[]): number {
-  let vp = 0;
-  for (const card of cards) {
-    const def = CARDS[card];
-    if (def.vp === "variable") {
-      vp += Math.floor(cards.length / 10);
-    } else if (typeof def.vp === "number") {
-      vp += def.vp;
+  return cards.reduce((vp, card) => {
+    const { vp: cardVP } = CARDS[card];
+    if (cardVP === "variable") {
+      return vp + Math.floor(cards.length / 10);
     }
-  }
-  return vp;
+    return vp + (typeof cardVP === "number" ? cardVP : 0);
+  }, 0);
 }
 
-export function getAllCards(player: { deck: CardName[]; hand: CardName[]; discard: CardName[]; inPlay: CardName[] }): CardName[] {
-  return [...player.deck, ...player.hand, ...player.discard, ...player.inPlay];
+export function getAllCards({ deck, hand, discard, inPlay }: { deck: CardName[]; hand: CardName[]; discard: CardName[]; inPlay: CardName[] }): CardName[] {
+  return [...deck, ...hand, ...discard, ...inPlay];
 }
 
 // Aggregate consecutive identical log entries for display
@@ -39,158 +36,100 @@ export function getAllCards(player: { deck: CardName[]; hand: CardName[]; discar
 export function aggregateLogEntries(log: LogEntry[]): (LogEntry & { eventIds?: string[] })[] {
   if (log.length === 0) return [];
 
+  const isAggregatable = (entry: LogEntry) =>
+    ["play-treasure", "unplay-treasure", "buy-card", "gain-card", "discard-cards", "draw-cards"].includes(entry.type);
+
+  const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
+    if (next.type !== current.type) return false;
+    if (!("player" in next) || !("player" in current)) return false;
+    if (next.player !== current.player) return false;
+
+    if ("card" in next && "card" in current) {
+      return next.card === current.card;
+    }
+    return current.type === "discard-cards" || current.type === "draw-cards";
+  };
+
+  const collectConsecutive = (startIndex: number): { entries: LogEntry[]; count: number } => {
+    const current = log[startIndex];
+    const consecutiveCount = log.slice(startIndex + 1)
+      .findIndex((next) => !canMatchNext(current, next));
+
+    const count = consecutiveCount === -1
+      ? log.length - startIndex
+      : consecutiveCount + 1;
+
+    return { entries: log.slice(startIndex, startIndex + count), count };
+  };
+
+  const aggregateGroup = (entries: LogEntry[]): LogEntry & { eventIds?: string[] } => {
+    const [first] = entries;
+    const count = entries.length;
+
+    const eventIds = entries.map(e => e.eventId).filter(Boolean) as string[];
+    const allCards = entries.flatMap(e =>
+      (e.type === "discard-cards" || e.type === "draw-cards") && e.cards ? e.cards : []
+    );
+    const allChildren = entries.flatMap(e => e.children || []) as LogEntry[];
+    const aggregatedChildren = allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
+
+    if (first.type === "play-treasure" || first.type === "unplay-treasure") {
+      const totalCoins = entries.reduce((sum, e) =>
+        sum + ((e.type === "play-treasure" || e.type === "unplay-treasure") ? e.coins : 0), 0
+      );
+      return {
+        ...first,
+        coins: totalCoins,
+        children: count > 1
+          ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
+          : aggregatedChildren,
+        eventIds,
+      };
+    }
+
+    if (first.type === "buy-card") {
+      const totalVP = entries.reduce((sum, e) =>
+        sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0), 0
+      );
+      return {
+        ...first,
+        vp: totalVP !== 0 ? totalVP : undefined,
+        children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
+        eventIds,
+      };
+    }
+
+    if (first.type === "discard-cards" || first.type === "draw-cards") {
+      const totalCount = entries.reduce((sum, e) =>
+        sum + ((e.type === "discard-cards" || e.type === "draw-cards") ? e.count : 0), 0
+      );
+      return {
+        ...first,
+        count: totalCount,
+        cards: allCards.length > 0 ? allCards : undefined,
+        eventIds,
+      };
+    }
+
+    // gain-card
+    return {
+      ...first,
+      children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
+      eventIds,
+    };
+  };
+
   const result: (LogEntry & { eventIds?: string[] })[] = [];
   let i = 0;
 
   while (i < log.length) {
     const current = log[i];
 
-    // Aggregate consecutive identical entries for groupable types
-    // NOT play-action since each action has unique effects (different draws, etc)
-    if (
-      current.type === "play-treasure" ||
-      current.type === "unplay-treasure" ||
-      current.type === "buy-card" ||
-      current.type === "gain-card" ||
-      current.type === "discard-cards" ||
-      current.type === "draw-cards"
-    ) {
-      // Count consecutive identical entries
-      let count = 1;
-      let totalCoins = (current.type === "play-treasure" || current.type === "unplay-treasure") ? current.coins : 0;
-      let totalVP = current.type === "buy-card" && current.vp !== undefined ? current.vp : 0;
-      let totalCount = (current.type === "discard-cards" || current.type === "draw-cards") ? current.count : 0;
-      const allCards: CardName[] = [];
-      const allChildren: LogEntry[] = [];
-      const eventIds: string[] = [];
-
-      // Collect cards from first entry (for discard/draw)
-      if ((current.type === "discard-cards" || current.type === "draw-cards") && current.cards) {
-        allCards.push(...current.cards);
-      }
-
-      // Collect eventId from first entry
-      if (current.eventId) {
-        eventIds.push(current.eventId);
-      }
-
-      // Collect children from first entry
-      if (current.children) {
-        allChildren.push(...(current.children as LogEntry[]));
-      }
-
-      // Look ahead for matching entries
-      while (i + count < log.length) {
-        const next = log[i + count];
-
-        // Check if next entry matches current one
-        let matches = false;
-
-        if (next.type === current.type && "player" in next && "player" in current && next.player === current.player) {
-          // For entries with single card (play-treasure, buy-card, gain-card), must match card
-          if ("card" in next && "card" in current) {
-            matches = next.card === current.card;
-          }
-          // For entries with multiple cards (discard-cards, draw-cards), just match type and player
-          else if (current.type === "discard-cards" || current.type === "draw-cards") {
-            matches = true;
-          }
-        }
-
-        if (!matches) break;
-
-        // Collect eventId from matched entry
-        if (next.eventId) {
-          eventIds.push(next.eventId);
-        }
-
-        // Aggregate values
-        if (next.type === "play-treasure" || next.type === "unplay-treasure") {
-          totalCoins += next.coins;
-        }
-        if (next.type === "buy-card" && next.vp !== undefined) {
-          totalVP += next.vp;
-        }
-        if (next.type === "discard-cards" || next.type === "draw-cards") {
-          totalCount += next.count;
-          if (next.cards) {
-            allCards.push(...next.cards);
-          }
-        }
-
-        // Collect children from subsequent entries
-        if (next.children) {
-          allChildren.push(...(next.children as LogEntry[]));
-        }
-
-        count++;
-      }
-
-      // Create aggregated entry
-      if (count > 1) {
-        // Recursively aggregate children
-        const aggregatedChildren = allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
-
-        if (current.type === "play-treasure") {
-          result.push({
-            ...current,
-            coins: totalCoins,
-            children: count > 1
-              ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
-              : aggregatedChildren,
-            eventIds, // Array of all eventIds in this group
-          });
-        } else if (current.type === "unplay-treasure") {
-          result.push({
-            ...current,
-            coins: totalCoins,
-            children: count > 1
-              ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
-              : aggregatedChildren,
-            eventIds, // Array of all eventIds in this group
-          });
-        } else if (current.type === "buy-card") {
-          result.push({
-            ...current,
-            vp: totalVP !== 0 ? totalVP : undefined,
-            children: [
-              { type: "text", message: `${count}x` },
-              ...aggregatedChildren,
-            ],
-            eventIds, // Array of all eventIds in this group
-          });
-        } else if (current.type === "discard-cards") {
-          result.push({
-            ...current,
-            count: totalCount,
-            cards: allCards.length > 0 ? allCards : undefined,
-            eventIds, // Array of all eventIds in this group
-          });
-        } else if (current.type === "draw-cards") {
-          result.push({
-            ...current,
-            count: totalCount,
-            cards: allCards.length > 0 ? allCards : undefined,
-            eventIds, // Array of all eventIds in this group
-          });
-        } else {
-          // gain-card
-          result.push({
-            ...current,
-            children: [
-              { type: "text", message: `${count}x` },
-              ...aggregatedChildren,
-            ],
-            eventIds, // Array of all eventIds in this group
-          });
-        }
-      } else {
-        result.push(current);
-      }
-
+    if (isAggregatable(current)) {
+      const { entries, count } = collectConsecutive(i);
+      result.push(count > 1 ? aggregateGroup(entries) : current);
       i += count;
     } else {
-      // Don't aggregate other entry types
       result.push(current);
       i++;
     }
