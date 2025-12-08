@@ -64,15 +64,14 @@ function LogEntryContent({
     case "turn-end":
       return (
         <span>
-          <PlayerName player={entry.player} isAI={isAI} />{" "}
-          <Verb>ends turn</Verb>
+          <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
         </span>
       );
 
     case "phase-change":
       return (
         <span>
-          <PlayerName player={entry.player} isAI={isAI} /> <Verb>moves to</Verb>{" "}
+          <PlayerName player={entry.player} /> <Verb>moves to</Verb>{" "}
           {entry.phase} phase
         </span>
       );
@@ -91,7 +90,7 @@ function LogEntryContent({
       return (
         <>
           <span>
-            <PlayerName player={entry.player} isAI={isAI} /> <Verb>plays</Verb>{" "}
+            <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
             </span>
@@ -128,8 +127,7 @@ function LogEntryContent({
 
       return (
         <span>
-          <PlayerName player={entry.player} isAI={isAI} />{" "}
-          <Verb>takes back</Verb>{" "}
+          <PlayerName player={entry.player} /> <Verb>takes back</Verb>{" "}
           <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
             {entry.card}
           </span>
@@ -152,7 +150,7 @@ function LogEntryContent({
       return (
         <>
           <span>
-            <PlayerName player={entry.player} isAI={isAI} /> <Verb>plays</Verb>{" "}
+            <PlayerName player={entry.player} /> <Verb>plays</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
             </span>
@@ -190,7 +188,7 @@ function LogEntryContent({
       return (
         <>
           <span>
-            <PlayerName player={entry.player} isAI={isAI} /> <Verb>buys</Verb>{" "}
+            <PlayerName player={entry.player} /> <Verb>buys</Verb>{" "}
             <span style={{ color: getCardColor(entry.card), fontWeight: 600 }}>
               {entry.card}
             </span>
@@ -222,7 +220,7 @@ function LogEntryContent({
           <span>
             {depth === 0 && (
               <>
-                <PlayerName player={entry.player} isAI={isAI} />{" "}
+                <PlayerName player={entry.player} />{" "}
               </>
             )}
             <Verb>draws</Verb> {entry.count} cards
@@ -277,7 +275,7 @@ function LogEntryContent({
           <span>
             {depth === 0 && (
               <>
-                <PlayerName player={entry.player} isAI={isAI} />{" "}
+                <PlayerName player={entry.player} />{" "}
               </>
             )}
             <Verb>draws</Verb> {parts}
@@ -288,7 +286,7 @@ function LogEntryContent({
         <span>
           {depth === 0 && (
             <>
-              <PlayerName player={entry.player} isAI={isAI} />{" "}
+              <PlayerName player={entry.player} />{" "}
             </>
           )}
           <Verb>draws</Verb> {entry.count} cards
@@ -329,7 +327,7 @@ function LogEntryContent({
         <span>
           {depth === 0 && (
             <>
-              <PlayerName player={entry.player} isAI={isAI} />{" "}
+              <PlayerName player={entry.player} />{" "}
             </>
           )}
           <Verb>gains</Verb>{" "}
@@ -390,7 +388,7 @@ function LogEntryContent({
           <span>
             {depth === 0 && (
               <>
-                <PlayerName player={entry.player} isAI={isAI} />{" "}
+                <PlayerName player={entry.player} />{" "}
               </>
             )}
             <Verb>discards</Verb> {parts}
@@ -401,7 +399,7 @@ function LogEntryContent({
         <span>
           {depth === 0 && (
             <>
-              <PlayerName player={entry.player} isAI={isAI} />{" "}
+              <PlayerName player={entry.player} />{" "}
             </>
           )}
           <Verb>discards</Verb> {entry.count} cards
@@ -448,7 +446,7 @@ function LogEntryContent({
           <span>
             {depth === 0 && (
               <>
-                <PlayerName player={entry.player} isAI={isAI} />{" "}
+                <PlayerName player={entry.player} />{" "}
               </>
             )}
             <Verb>trashes</Verb> {parts}
@@ -460,7 +458,7 @@ function LogEntryContent({
           <span>
             {depth === 0 && (
               <>
-                <PlayerName player={entry.player} isAI={isAI} />{" "}
+                <PlayerName player={entry.player} />{" "}
               </>
             )}
             <Verb>trashes</Verb> <CardNameSpan card={entry.card} />
@@ -471,7 +469,7 @@ function LogEntryContent({
         <span>
           {depth === 0 && (
             <>
-              <PlayerName player={entry.player} isAI={isAI} />{" "}
+              <PlayerName player={entry.player} />{" "}
             </>
           )}
           <Verb>trashes</Verb> {entry.count} cards
@@ -483,7 +481,7 @@ function LogEntryContent({
         <span>
           {depth === 0 && (
             <>
-              <PlayerName player={entry.player} isAI={isAI} />{" "}
+              <PlayerName player={entry.player} />{" "}
             </>
           )}
           <Verb>shuffles</Verb> {depth > 0 ? "deck" : "their deck"}
@@ -493,8 +491,7 @@ function LogEntryContent({
     case "end-turn":
       return (
         <span>
-          <PlayerName player={entry.player} isAI={isAI} />{" "}
-          <Verb>ends turn</Verb>
+          <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
         </span>
       );
 
@@ -515,19 +512,12 @@ function LogEntryContent({
           <div
             style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}
           >
-            {scoreEntries.map(([player, vp], i) => {
-              const playerIsAI =
-                gameMode && gameMode !== "multiplayer"
-                  ? GAME_MODE_CONFIG[gameMode].isAIPlayer(player)
-                  : undefined;
-              return (
-                <span key={player}>
-                  {i > 0 && ", "}
-                  <PlayerName player={player} isAI={playerIsAI} />:{" "}
-                  <VPValue vp={vp} />
-                </span>
-              );
-            })}
+            {scoreEntries.map(([player, vp], i) => (
+              <span key={player}>
+                {i > 0 && ", "}
+                <PlayerName player={player} />: <VPValue vp={vp} />
+              </span>
+            ))}
           </div>
         </div>
       );
@@ -536,8 +526,7 @@ function LogEntryContent({
     case "start-game":
       return (
         <span>
-          <PlayerName player={entry.player} isAI={isAI} />{" "}
-          <Verb>starts with</Verb>{" "}
+          <PlayerName player={entry.player} /> <Verb>starts with</Verb>{" "}
           <span style={{ color: "var(--color-gold)", fontWeight: 600 }}>
             {entry.coppers}
           </span>{" "}
