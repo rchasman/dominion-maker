@@ -4,6 +4,7 @@ import { countVP, getAllCards, getPlayerColor } from "../../lib/board-utils";
 interface OpponentBarProps {
   opponent: PlayerState;
   opponentId?: string; // Optional opponent ID for color
+  opponentLabel?: string; // Display name for opponent
   isHumanTurn: boolean;
   phase: Phase;
   subPhase: TurnSubPhase;
@@ -31,6 +32,7 @@ function getPhaseBorderColor(
 export function OpponentBar({
   opponent,
   opponentId = "ai",
+  opponentLabel,
   isHumanTurn,
   phase,
   subPhase,
@@ -38,6 +40,7 @@ export function OpponentBar({
   const opponentVP = countVP(getAllCards(opponent));
   const borderColor = getPhaseBorderColor(!isHumanTurn, phase, subPhase);
   const playerColor = getPlayerColor(opponentId);
+  const displayLabel = opponentLabel || "Opponent";
 
   return (
     <div
@@ -62,10 +65,8 @@ export function OpponentBar({
             gap: "var(--space-3)",
           }}
         >
-          <strong
-            style={{ fontSize: "0.875rem", color: "var(--color-text-primary)" }}
-          >
-            Opponent
+          <strong style={{ fontSize: "0.875rem", color: playerColor }}>
+            {displayLabel}
           </strong>
           {!isHumanTurn && (
             <span
