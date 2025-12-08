@@ -10,4 +10,7 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    'import.meta.env.VITE_VERCEL_URL': JSON.stringify(process.env.VERCEL_URL),
+  },
 })

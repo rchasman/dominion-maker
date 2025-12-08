@@ -24,7 +24,10 @@ const gateway = createGateway({
 });
 
 const app = new Elysia()
-  .use(cors())
+  .use(cors({
+    origin: "https://dominion-maker.vercel.app",
+    credentials: true,
+  }))
   .use(opentelemetry())
   .use(serverTiming())
   .post("/api/generate-action", async ({ body, set }) => {
