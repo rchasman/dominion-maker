@@ -31,11 +31,12 @@ Terminals: ${aiAnalysis.terminals}, Villages: ${aiAnalysis.villages}`);
   // 4. Supply Status - only show relevant piles
   const provincesLeft = state.supply["Province"] ?? 8;
   const duchiesLeft = state.supply["Duchy"] ?? 8;
-  const lowPiles = Object.entries(state.supply)
+  const supplyEntries = Object.entries(state.supply) as [string, number][];
+  const lowPiles = supplyEntries
     .filter(([_, count]) => count <= 3 && count > 0)
     .map(([card, count]) => `${card}: ${count}`)
     .join(", ");
-  const emptyPiles = Object.entries(state.supply)
+  const emptyPiles = supplyEntries
     .filter(([_, count]) => count === 0)
     .map(([card]) => card)
     .join(", ");
