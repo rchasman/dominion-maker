@@ -90,7 +90,6 @@ export function EventDevtools({
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilter] = useState<EventCategory>("all");
   const [showDiff, setShowDiff] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
   const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
