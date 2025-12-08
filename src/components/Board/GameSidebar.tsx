@@ -16,10 +16,12 @@ function LogEntryWithUndo({
   entry,
   onRequestUndo,
   lastEventId,
+  gameMode,
 }: {
   entry: LogEntryType & { eventId?: string; eventIds?: string[] };
   onRequestUndo?: (eventId: string) => void;
   lastEventId?: string;
+  gameMode?: GameMode;
 }) {
   const eventId = entry.eventId;
   const eventIds = entry.eventIds;
@@ -50,7 +52,7 @@ function LogEntryWithUndo({
       }}
     >
       <div style={{ flex: 1 }}>
-        <LogEntry entry={entry} />
+        <LogEntry entry={entry} gameMode={gameMode} />
       </div>
       {hasUndo && (
         <button
@@ -248,6 +250,7 @@ export function GameSidebar({
                 entry={entry}
                 onRequestUndo={onRequestUndo}
                 lastEventId={lastEventId}
+                gameMode={gameMode}
               />
             );
           })}

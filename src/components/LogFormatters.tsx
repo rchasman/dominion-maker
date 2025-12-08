@@ -19,10 +19,20 @@ export function getCardColor(card: CardName): string {
   return "var(--color-text-primary)";
 }
 
-export function PlayerName({ player }: { player: string }) {
+export function PlayerName({
+  player,
+  isAI,
+}: {
+  player: string;
+  isAI?: boolean;
+}) {
+  const displayName = player === "human" ? "You" : player;
+  const suffix = isAI && player !== "human" ? " (AI)" : "";
+
   return (
     <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
-      {player}
+      {displayName}
+      {suffix}
     </span>
   );
 }
