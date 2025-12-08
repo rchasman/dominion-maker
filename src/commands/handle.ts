@@ -661,7 +661,11 @@ function handleSubmitDecision(
       });
 
       // Play the card (move from hand to inPlay)
-      events.push({ type: "CARD_PLAYED", player: state.activePlayer, card: throneRoomTarget });
+      events.push({
+        type: "CARD_PLAYED",
+        player: state.activePlayer,
+        card: throneRoomTarget,
+      });
 
       // Link effect events
       for (const effectEvent of result.events) {
