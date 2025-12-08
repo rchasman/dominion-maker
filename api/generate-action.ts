@@ -23,27 +23,28 @@ interface VercelRequest {
   text?: () => Promise<string>;
 }
 
-export default async function handler(req: VercelRequest) {
+interface VercelResponse {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => VercelResponse;
+  send: (data: string) => VercelResponse;
+  setHeader: (key: string, value: string) => VercelResponse;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`[${new Date().toISOString()}] Handler called - method: ${req.method}`);
   console.log(`[${new Date().toISOString()}] Request has body: ${typeof req.body}, has text: ${typeof req.text}`);
 
   // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
+    return res.status(204).send("");
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   let provider: string = "";
@@ -59,21 +60,12 @@ export default async function handler(req: VercelRequest) {
     provider = bodyProvider;
 
     if (!provider || !currentState) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: provider, currentState" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      return res.status(400).json({ error: "Missing required fields: provider, currentState" });
     }
 
     const modelName = MODEL_MAP[provider];
     if (!modelName) {
-      return new Response(JSON.stringify({ error: "Invalid provider" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return res.status(400).json({ error: "Invalid provider" });
     }
 
     console.log(`[${new Date().toISOString()}] Creating model gateway for: ${modelName}`);
@@ -163,26 +155,17 @@ export default async function handler(req: VercelRequest) {
       try {
         const parsed = JSON.parse(jsonStr);
         const action = ActionSchema.parse(parsed);
-        return new Response(JSON.stringify({ action }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return res.status(200).json({ action });
       } catch (parseErr) {
         const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
         console.error(`[${provider}] Failed to parse JSON response`);
         console.error(`Full response text:`, result.text);
         console.error(`Extracted JSON string:`, jsonStr);
 
-        return new Response(
-          JSON.stringify({
-            error: 500,
-            message: `Failed to parse model response: ${errorMessage}`,
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        return res.status(500).json({
+          error: 500,
+          message: `Failed to parse model response: ${errorMessage}`,
+        });
       }
     }
 
@@ -204,10 +187,8 @@ export default async function handler(req: VercelRequest) {
     });
     console.log(`[${new Date().toISOString()}] generateObject completed`);
 
-    return new Response(JSON.stringify({ action: result.object }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.log(`[${new Date().toISOString()}] Returning response with action`);
+    return res.status(200).json({ action: result.object });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
     const errorWithText = err as { text?: string; value?: { action?: unknown } };
@@ -217,10 +198,7 @@ export default async function handler(req: VercelRequest) {
       try {
         const validated = ActionSchema.parse(errorWithText.value.action);
         console.log(`[${provider}] Recovered from wrapped response`);
-        return new Response(JSON.stringify({ action: validated }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+        return res.status(200).json({ action: validated });
       } catch (recoveryErr) {
         console.error(`[${provider}] Recovery attempt failed:`, recoveryErr);
       }
@@ -241,10 +219,7 @@ export default async function handler(req: VercelRequest) {
               if (parsed.type && typeof parsed.type === "string" && parsed.type !== "object") {
                 const validated = ActionSchema.parse(parsed);
                 console.log(`[${provider}] Recovered from schema echo, extracted valid action`);
-                return new Response(JSON.stringify({ action: validated }), {
-                  status: 200,
-                  headers: { "Content-Type": "application/json" },
-                });
+                return res.status(200).json({ action: validated });
               }
             } catch {
               continue;
@@ -267,16 +242,10 @@ export default async function handler(req: VercelRequest) {
     }
     console.error(`Stack:`, error.stack);
 
-    return new Response(
-      JSON.stringify({
-        error: 500,
-        message: `Model failed: ${error.message}`,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return res.status(500).json({
+      error: 500,
+      message: `Model failed: ${error.message}`,
+    });
   }
 }
 
