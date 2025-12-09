@@ -1,12 +1,10 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
-import { useFloating, offset, shift, flip } from "@floating-ui/react";
-import { useEffect, useMemo } from "react";
 
 interface PileTooltipProps {
   cards: CardName[];
-  knownCards?: CardName[]; // For deck: cards that are known/revealed
+  knownCards?: CardName[];
   mouseX: number;
   mouseY: number;
   pileType?: "deck" | "discard" | "trash";
@@ -37,40 +35,27 @@ export function PileTooltip({
   const knownUniqueCards = uniqueCards.filter(card => knownSet.has(card));
   const unknownCards = cards.filter(card => !knownSet.has(card));
 
-  // Use floating-ui with virtual element at cursor position
-  const { refs, floatingStyles } = useFloating({
-    placement: "left-start",
-    strategy: "fixed",
-    middleware: [
-      offset(8),
-      flip(),
-      shift({ padding: 8 }),
-    ],
-  });
+  const tooltipWidth = 320;
+  const tooltipHeight = Math.min(500, uniqueCards.length * 80 + 100);
 
-  // Create virtual element at cursor position (memoized to avoid recreating)
-  const virtualElement = useMemo(
-    () => ({
-      getBoundingClientRect() {
-        return {
-          width: 0,
-          height: 0,
-          x: mouseX,
-          y: mouseY,
-          top: mouseY,
-          left: mouseX,
-          right: mouseX,
-          bottom: mouseY,
-        };
-      },
-    }),
-    [mouseX, mouseY],
-  );
+  const viewportWidth = window.innerWidth;
 
-  // Set reference in useEffect to avoid side effects during render
-  useEffect(() => {
-    refs.setReference(virtualElement);
-  }, [refs, virtualElement]);
+  // TEST: Position directly at cursor to verify this code is running
+  let left = mouseX;
+  let top = mouseY;
+
+  // Keep within viewport
+  if (left < 0) {
+    left = 0;
+  } else if (left + tooltipWidth > viewportWidth) {
+    left = viewportWidth - tooltipWidth;
+  }
+
+  if (top < 0) {
+    top = 0;
+  } else if (top + tooltipHeight > window.innerHeight) {
+    top = window.innerHeight - tooltipHeight;
+  }
 
   const borderColor =
     pileType === "trash"
@@ -84,9 +69,10 @@ export function PileTooltip({
 
   return createPortal(
     <div
-      ref={refs.setFloating}
       style={{
-        ...floatingStyles,
+        position: "fixed",
+        left: `${left}px`,
+        top: `${top}px`,
         pointerEvents: "none",
         zIndex: 10000,
         animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
@@ -98,50 +84,50 @@ export function PileTooltip({
           backdropFilter: "blur(12px)",
           border: `2px solid ${borderColor}`,
           padding: "1rem",
-          maxWidth: "320px",
-          maxHeight: "500px",
+          maxWidth: `${tooltipWidth}px`,
+          maxHeight: `${tooltipHeight}px`,
           overflow: "auto",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
           position: "relative",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: "var(--space-2)",
-            left: "var(--space-2)",
-            fontSize: "0.625rem",
-            color: borderColor,
-            fontWeight: 600,
-            textTransform: "uppercase",
-          }}
-        >
-          {titleText}
-        </div>
+      <div
+        style={{
+          position: "absolute",
+          top: "var(--space-2)",
+          left: "var(--space-2)",
+          fontSize: "0.625rem",
+          color: borderColor,
+          fontWeight: 600,
+          textTransform: "uppercase",
+        }}
+      >
+        {titleText}
+      </div>
 
-        {/* For deck with known cards, show them separately */}
-        {pileType === "deck" && knownUniqueCards.length > 0 && (
-          <>
-            <div
-              style={{
-                fontSize: "0.625rem",
-                color: "var(--color-text-secondary)",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                marginBottom: "0.5rem",
-                paddingTop: "0.75rem",
-              }}
-            >
-              Known Cards
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-              }}
-            >
+      {/* For deck with known cards, show them separately */}
+      {pileType === "deck" && knownUniqueCards.length > 0 && (
+        <>
+          <div
+            style={{
+              fontSize: "0.625rem",
+              color: "var(--color-text-secondary)",
+              fontWeight: 600,
+              textTransform: "uppercase",
+              marginBottom: "0.5rem",
+              paddingTop: "0.75rem",
+            }}
+          >
+            Known Cards
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              marginBottom: "1rem",
+            }}
+          >
               {knownUniqueCards.map(card => {
                 const count = knownCards.filter(c => c === card).length;
                 return (
