@@ -97,21 +97,19 @@ describe("Game initialization with different modes", () => {
       expect(engine.state.activePlayer).toBe(players[0]);
     });
 
-    it("should correctly identify both AI players", () => {
+    it("should identify all players as AI in full mode", () => {
       const engine = new DominionEngine();
       const config = GAME_MODE_CONFIG.full;
       const players = getPlayersForMode("full");
 
       engine.startGame(players);
 
-      // Both players should be identified as AI
+      // ALL players should be identified as AI in full mode
       expect(config.isAIPlayer(players[0])).toBe(true);
       expect(config.isAIPlayer(players[1])).toBe(true);
 
-      // "human" should not be AI
-      expect(config.isAIPlayer("human")).toBe(false);
-
-      // "player" and "ai" should be AI in full mode
+      // Even "human" becomes AI-controlled in full mode
+      expect(config.isAIPlayer("human")).toBe(true);
       expect(config.isAIPlayer("player")).toBe(true);
       expect(config.isAIPlayer("ai")).toBe(true);
     });

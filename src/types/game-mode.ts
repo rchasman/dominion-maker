@@ -71,9 +71,9 @@ export const GAME_MODE_CONFIG: Record<
       description: "Both players use MAKER consensus. Watch the game unfold.",
     },
     players: () => generateAINames(),
-    isAIPlayer: playerId => {
-      // In full mode, both players are AI (including "player" which is converted "human")
-      return playerId !== "human";
+    isAIPlayer: () => {
+      // In full mode, ALL players are AI (even "human" when switching from hybrid)
+      return true;
     },
   },
 };

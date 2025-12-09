@@ -233,44 +233,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [gameMode, llmLogger, modelSettings]);
 
-  // Handle mode changes: abort ongoing consensus, reset processing, and restart game
+  // Handle mode changes: abort ongoing consensus and reset processing
+  // Game state is preserved - just the strategy changes
   useEffect(() => {
     abortOngoingConsensus();
     setIsProcessing(false);
-
-    // If a game is already active and mode changed, restart with new player configuration
-    if (gameState && !gameState.gameOver && events.length > 0) {
-      resetPlayerColors(); // Reset colors when switching modes
-      const engine = new DominionEngine();
-      engineRef.current = engine;
-
-      // Determine players based on new game mode
-      // For full mode: preserve existing players if switching from hybrid/engine
-      const existingPlayers = Object.keys(gameState.players);
-      let players: string[];
-
-      if (gameMode === "multiplayer") {
-        players = ["human", "ai"];
-      } else if (gameMode === "full") {
-        // Convert existing players: "human" → "player", keep "ai"
-        players = convertToFullModePlayers(existingPlayers);
-      } else {
-        // engine or hybrid
-        players = getPlayersForMode(gameMode);
-      }
-
-      const result = engine.dispatch({
-        type: "START_GAME",
-        players,
-        kingdomCards: gameState.kingdomCards, // Reuse same kingdom cards
-      });
-
-      if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
-        setLLMLogs([]); // Clear LLM logs on restart
-      }
-    }
   }, [gameMode]);
 
   // Derived state

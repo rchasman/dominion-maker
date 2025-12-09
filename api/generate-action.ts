@@ -218,7 +218,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         text = codeBlockMatch[1].trim();
       }
 
+      // Configure parser to use our logger for extra token warnings
+      const originalOnExtraToken = parseBestEffort.onExtraToken;
+      parseBestEffort.onExtraToken = (text, data, reminding) => {
+        apiLogger.debug(`${provider} JSON with extra tokens`, {
+          extracted: data,
+          extraText: reminding.slice(0, 100),
+        });
+      };
+
       const parsed = parseBestEffort(text);
+
+      // Restore original handler
+      parseBestEffort.onExtraToken = originalOnExtraToken;
 
       try {
         const action = ActionSchema.parse(parsed);
