@@ -2,20 +2,8 @@ import type { CardName, GameState } from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
 import { CARDS } from "../data/cards";
 import { Card } from "./Card";
+import { Pile } from "./Pile";
 import { useState } from "preact/hooks";
-import {
-  useFloating,
-  autoUpdate,
-  offset,
-  flip,
-  shift,
-  useHover,
-  useFocus,
-  useDismiss,
-  useRole,
-  useInteractions,
-  useClientPoint,
-} from "@floating-ui/react";
 
 interface SupplyProps {
   state: GameState;
@@ -65,48 +53,6 @@ export function Supply({
     (a, b) => CARDS[a].cost - CARDS[b].cost,
   );
   const sortedKingdom = [...sorted.slice(5), ...sorted.slice(0, 5)];
-
-  // Trash pile tooltip state
-  const [isTrashOpen, setIsTrashOpen] = useState(false);
-
-  const { refs, floatingStyles, context } = useFloating({
-    open: isTrashOpen,
-    onOpenChange: setIsTrashOpen,
-    placement: "left",
-    middleware: [
-      offset({ mainAxis: 8, crossAxis: 0 }),
-      flip(),
-      shift({ padding: 8 }),
-    ],
-    whileElementsMounted: autoUpdate,
-  });
-
-  const { setReference, setFloating } = refs;
-
-  const hover = useHover(context);
-  const focus = useFocus(context);
-  const dismiss = useDismiss(context);
-  const role = useRole(context, { role: "tooltip" });
-  const clientPoint = useClientPoint(context);
-
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    hover,
-    focus,
-    dismiss,
-    role,
-    clientPoint,
-  ]);
-
-  // Count occurrences of each card in trash
-  const trashCounts = state.trash.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<CardName, number>,
-  );
-
-  const uniqueTrashCards = Object.keys(trashCounts) as CardName[];
 
   return (
     <div
@@ -239,8 +185,6 @@ export function Supply({
       {/* Trash pile */}
       <div style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}>
         <div
-          ref={setReference}
-          {...getReferenceProps()}
           style={{
             fontSize: "0.625rem",
             color: "#ef4444",
@@ -250,22 +194,9 @@ export function Supply({
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
-            cursor: state.trash.length > 0 ? "help" : "default",
           }}
         >
           Trash
-          {state.trash.length > 0 && (
-            <span
-              style={{
-                fontSize: "0.875rem",
-                opacity: 0.7,
-                color: "var(--color-info)",
-                fontWeight: "normal",
-              }}
-            >
-              ⓘ
-            </span>
-          )}
         </div>
         <div
           style={{
@@ -274,103 +205,8 @@ export function Supply({
             gap: "var(--space-1)",
           }}
         >
-          {state.trash.length > 0 ? (
-            <Card
-              name={state.trash[state.trash.length - 1]}
-              size="small"
-              count={state.trash.length}
-              disabled={true}
-            />
-          ) : (
-            <div
-              style={{
-                width: "var(--card-width-small)",
-                aspectRatio: "5 / 7.8",
-                border: "1px dashed var(--color-border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--color-text-muted)",
-                fontSize: "0.5625rem",
-                background: "var(--color-bg-primary)",
-              }}
-            >
-              Empty
-            </div>
-          )}
+          <Pile cards={state.trash} pileType="trash" />
         </div>
-
-        {/* Trash tooltip */}
-        {isTrashOpen && state.trash.length > 0 && (
-          <div
-            ref={setFloating}
-            style={{
-              ...floatingStyles,
-              background: "rgba(26, 26, 46, 0.75)",
-              backdropFilter: "blur(12px)",
-              border: "2px solid #ef4444",
-              padding: "1rem",
-              maxWidth: "320px",
-              zIndex: 10000,
-              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-              pointerEvents: "none",
-            }}
-            {...getFloatingProps()}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: "var(--space-2)",
-                left: "var(--space-2)",
-                fontSize: "0.625rem",
-                color: "#ef4444",
-                fontWeight: 600,
-                textTransform: "uppercase",
-              }}
-            >
-              Trash ({state.trash.length} cards)
-            </div>
-            <div
-              style={{
-                fontSize: "0.8125rem",
-                lineHeight: "1.5",
-                color: "var(--color-text-primary)",
-                paddingTop: "0.75rem",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "var(--space-2)",
-                  marginTop: "var(--space-2)",
-                }}
-              >
-                {uniqueTrashCards.map(card => (
-                  <div
-                    key={card}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "var(--space-1)",
-                    }}
-                  >
-                    <Card name={card} size="small" disabled={true} />
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      ×{trashCounts[card]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Curse pile */}
