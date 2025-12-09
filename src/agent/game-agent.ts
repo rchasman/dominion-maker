@@ -456,8 +456,7 @@ export async function advanceGameStateWithConsensus(
 
   if (!earlyConsensus && successfulResults.length === 0) {
     agentLogger.error("All models failed to generate actions");
-    // Fall back to simple engine AI
-    return runSimpleAITurnWithEngine(engine, playerId);
+    throw new Error("All AI models failed - check connection");
   }
 
   const rankedGroups = Array.from(voteGroups.values()).sort(
@@ -493,8 +492,8 @@ export async function advanceGameStateWithConsensus(
       : null;
 
   if (!validEarlyConsensus && validRankedGroups.length === 0) {
-    agentLogger.warn("All LLM actions were invalid, falling back to simple AI");
-    return runSimpleAITurnWithEngine(engine, playerId);
+    agentLogger.error("All LLM actions were invalid");
+    throw new Error("All AI actions invalid - models may be confused");
   }
 
   const winner = validEarlyConsensus || validRankedGroups[0];
@@ -574,88 +573,6 @@ export async function advanceGameStateWithConsensus(
   agentLogger.info(
     `${actionDesc} (${winner.count}/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`,
   );
-}
-
-/**
- * Simple AI fallback using engine commands
- */
-function runSimpleAITurnWithEngine(
-  engine: DominionEngine,
-  playerId: string,
-): void {
-  const state = engine.state;
-
-  // If there's a pending decision for this player, resolve it first
-  if (state.pendingDecision && state.pendingDecision.player === playerId) {
-    const decision = state.pendingDecision;
-    const options = decision.cardOptions || [];
-
-    // Pick first min cards or skip if allowed
-    const numToSelect =
-      decision.min === 0 ? 0 : Math.min(decision.min, options.length);
-    const selected: CardName[] = options.slice(0, numToSelect);
-
-    agentLogger.debug(
-      `SimpleAI decision: ${decision.stage} → [${selected.join(", ")}]`,
-    );
-    engine.dispatch(
-      {
-        type: "SUBMIT_DECISION",
-        player: playerId,
-        choice: { selectedCards: selected },
-      },
-      playerId,
-    );
-    return;
-  }
-
-  const playerState = state.players[playerId];
-  if (!playerState) return;
-
-  // Action phase: play all actions
-  if (state.phase === "action") {
-    const actions = playerState.hand.filter(isActionCard);
-    for (const action of actions) {
-      if (state.actions > 0) {
-        engine.dispatch(
-          { type: "PLAY_ACTION", player: playerId, card: action },
-          playerId,
-        );
-      }
-    }
-    engine.dispatch({ type: "END_PHASE", player: playerId }, playerId);
-  }
-
-  // Buy phase: play all treasures, buy best affordable
-  if (state.phase === "buy") {
-    const treasures = playerState.hand.filter(isTreasureCard);
-    for (const treasure of treasures) {
-      engine.dispatch(
-        { type: "PLAY_TREASURE", player: playerId, card: treasure },
-        playerId,
-      );
-    }
-
-    const buyPriority: CardName[] = [
-      "Province",
-      "Gold",
-      "Duchy",
-      "Silver",
-      "Estate",
-    ];
-    for (const card of buyPriority) {
-      if (
-        state.supply[card] > 0 &&
-        CARDS[card].cost <= state.coins &&
-        state.buys > 0
-      ) {
-        engine.dispatch({ type: "BUY_CARD", player: playerId, card }, playerId);
-        break;
-      }
-    }
-
-    engine.dispatch({ type: "END_PHASE", player: playerId }, playerId);
-  }
 }
 
 /**
