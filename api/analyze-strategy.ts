@@ -97,9 +97,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract turn history
     const turnHistory = formatTurnHistoryForAnalysis(currentState);
 
-    // If no turn history yet, return empty
+    // If no turn history yet, return empty object
     if (!turnHistory) {
-      return res.status(200).json({ strategySummary: "" });
+      return res.status(200).json({ strategySummary: {} });
     }
 
     // Get all player IDs
@@ -174,11 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
 
-    apiLogger.info("Strategy analysis completed", {
-      playerIds,
-      hasPlayers: !!result.object.players,
-      playerCount: Object.keys(result.object.players || {}).length,
-    });
+    apiLogger.info("Strategy analysis completed");
 
     return res.status(200).json({
       strategySummary: result.object.players,
