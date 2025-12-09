@@ -120,7 +120,15 @@ export function PlayerArea({
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
 
-  // Strategy popover state
+  // Strategy popover state - only show if there's actual content
+  const hasStrategyContent =
+    playerStrategy &&
+    (playerStrategy.strategy ||
+      playerStrategy.execution ||
+      playerStrategy.position ||
+      playerStrategy.threats ||
+      playerStrategy.opportunities);
+
   const [isStrategyOpen, setIsStrategyOpen] = useState(false);
 
   const { refs, floatingStyles, context } = useFloating({
@@ -134,6 +142,9 @@ export function PlayerArea({
     ],
     whileElementsMounted: autoUpdate,
   });
+
+  // Destructure callback refs to help linter understand these are functions, not ref objects
+  const { setReference, setFloating } = refs;
 
   const hover = useHover(context);
   const focus = useFocus(context);
@@ -244,9 +255,8 @@ export function PlayerArea({
           ) : (
             <>
               <strong
-                {/* eslint-disable-next-line react-hooks/refs */}
-                ref={playerStrategy ? refs.setReference : undefined}
-                {...(playerStrategy ? getReferenceProps() : {})}
+                ref={setReference}
+                {...(hasStrategyContent ? getReferenceProps() : {})}
                 style={{
                   fontSize: "0.8125rem",
                   color: playerId
@@ -255,11 +265,11 @@ export function PlayerArea({
                   display: "flex",
                   alignItems: "center",
                   gap: "var(--space-2)",
-                  cursor: playerStrategy ? "help" : "default",
+                  cursor: hasStrategyContent ? "help" : "default",
                 }}
               >
                 {label}
-                {playerStrategy && (
+                {hasStrategyContent && (
                   <span
                     style={{
                       fontSize: "0.875rem",
@@ -272,10 +282,9 @@ export function PlayerArea({
                   </span>
                 )}
               </strong>
-              {isStrategyOpen && playerStrategy && (
+              {isStrategyOpen && hasStrategyContent && (
                 <div
-                  {/* eslint-disable-next-line react-hooks/refs */}
-                  ref={refs.setFloating}
+                  ref={setFloating}
                   style={{
                     ...floatingStyles,
                     background: "rgba(26, 26, 46, 0.75)",

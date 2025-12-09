@@ -281,14 +281,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 }
               >;
 
-              uiLogger.info("Strategy analysis received", {
-                playerIds: Object.keys(strategies),
-                sampleData: Object.entries(strategies).map(([id, s]) => ({
-                  id,
-                  hasStrategy: !!s.strategy,
-                })),
-              });
-
               if (Object.keys(strategies).length === 0) {
                 return;
               }
