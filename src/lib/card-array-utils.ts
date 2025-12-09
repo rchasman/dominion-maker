@@ -20,16 +20,32 @@ export function removeCards(
   cards: CardName[],
   toRemove: CardName[],
 ): CardName[] {
-  const remaining = [...cards];
+  const removalCounts = new Map(
+    [...new Set(toRemove)].map(card => [
+      card,
+      toRemove.filter(c => c === card).length,
+    ]),
+  );
 
-  for (const cardToRemove of toRemove) {
-    const idx = remaining.indexOf(cardToRemove);
-    if (idx !== -1) {
-      remaining.splice(idx, 1);
-    }
-  }
+  return cards.reduce(
+    ({ result, seen }, card) => {
+      const seenCount = seen.get(card) || 0;
+      const removeCount = removalCounts.get(card) || 0;
 
-  return remaining;
+      if (seenCount < removeCount) {
+        return {
+          result,
+          seen: new Map(seen).set(card, seenCount + 1),
+        };
+      }
+
+      return {
+        result: [...result, card],
+        seen: new Map(seen).set(card, seenCount + 1),
+      };
+    },
+    { result: [] as CardName[], seen: new Map<CardName, number>() },
+  ).result;
 }
 
 /**
@@ -44,5 +60,6 @@ export function removeCard(
 ): CardName[] {
   const idx = fromEnd ? cards.lastIndexOf(card) : cards.indexOf(card);
   if (idx === -1) return cards;
+
   return [...cards.slice(0, idx), ...cards.slice(idx + 1)];
 }
