@@ -158,95 +158,26 @@ export function PlayerArea({
     clientPoint,
   ]);
 
-  // Deck tooltip state
-  const [isDeckOpen, setIsDeckOpen] = useState(false);
-
-  const deckTooltip = useFloating({
-    open: isDeckOpen,
-    onOpenChange: setIsDeckOpen,
-    placement: "left",
-    middleware: [
-      offset({ mainAxis: 8, crossAxis: 0 }),
-      flip(),
-      shift({ padding: 8 }),
-    ],
-    whileElementsMounted: autoUpdate,
-  });
-
-  const deckHover = useHover(deckTooltip.context);
-  const deckFocus = useFocus(deckTooltip.context);
-  const deckDismiss = useDismiss(deckTooltip.context);
-  const deckRole = useRole(deckTooltip.context, { role: "tooltip" });
-  const deckClientPoint = useClientPoint(deckTooltip.context);
-
-  const {
-    getReferenceProps: getDeckReferenceProps,
-    getFloatingProps: getDeckFloatingProps,
-  } = useInteractions([
-    deckHover,
-    deckFocus,
-    deckDismiss,
-    deckRole,
-    deckClientPoint,
-  ]);
-
-  // Discard tooltip state
-  const [isDiscardOpen, setIsDiscardOpen] = useState(false);
-
-  const discardTooltip = useFloating({
-    open: isDiscardOpen,
-    onOpenChange: setIsDiscardOpen,
-    placement: "left",
-    middleware: [
-      offset({ mainAxis: 8, crossAxis: 0 }),
-      flip(),
-      shift({ padding: 8 }),
-    ],
-    whileElementsMounted: autoUpdate,
-  });
-
-  const discardHover = useHover(discardTooltip.context);
-  const discardFocus = useFocus(discardTooltip.context);
-  const discardDismiss = useDismiss(discardTooltip.context);
-  const discardRole = useRole(discardTooltip.context, { role: "tooltip" });
-  const discardClientPoint = useClientPoint(discardTooltip.context);
-
-  const {
-    getReferenceProps: getDiscardReferenceProps,
-    getFloatingProps: getDiscardFloatingProps,
-  } = useInteractions([
-    discardHover,
-    discardFocus,
-    discardDismiss,
-    discardRole,
-    discardClientPoint,
-  ]);
-
-  // Count cards in deck and discard
-  const deckCounts = player.deck.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<CardName, number>,
-  );
-
-  const discardCounts = player.discard.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<CardName, number>,
-  );
-
-  const uniqueDeckCards = Object.keys(deckCounts) as CardName[];
-  const uniqueDiscardCards = Object.keys(discardCounts) as CardName[];
-
-  // Get known cards from top of deck (when revealed)
+  // Prepare pile contents for card tooltips
   const knownDeckCards: CardName[] = [];
   if (player.deckTopRevealed && player.deck.length > 0) {
     knownDeckCards.push(player.deck[player.deck.length - 1]);
   }
+
+  const deckPileContents =
+    player.deck.length > 0
+      ? {
+          cards: player.deck,
+          knownCards: knownDeckCards.length > 0 ? knownDeckCards : undefined,
+        }
+      : undefined;
+
+  const discardPileContents =
+    player.discard.length > 0
+      ? {
+          cards: player.discard,
+        }
+      : undefined;
 
   // Check if any purchases have been made this turn (treasures become non-take-backable)
   const hasMadePurchases = turnHistory.some(
@@ -686,37 +617,18 @@ export function PlayerArea({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  position: "relative",
                 }}
               >
                 <div
-                  ref={deckTooltip.refs.setReference}
-                  {...(player.deck.length > 0 ? getDeckReferenceProps() : {})}
                   style={{
                     fontSize: "0.5625rem",
                     color: "rgb(205 133 63)",
                     marginBlockEnd: "var(--space-2)",
                     fontWeight: 600,
                     textTransform: "uppercase",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    cursor: player.deck.length > 0 ? "help" : "default",
                   }}
                 >
                   Deck
-                  {player.deck.length > 0 && (
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        opacity: 0.7,
-                        color: "var(--color-info)",
-                        fontWeight: "normal",
-                      }}
-                    >
-                      ⓘ
-                    </span>
-                  )}
                 </div>
                 {loading ? (
                   <div
@@ -730,13 +642,45 @@ export function PlayerArea({
                     />
                   </div>
                 ) : player.deck.length > 0 ? (
-                  <Card
-                    name={player.deck[player.deck.length - 1]}
-                    showBack={!player.deckTopRevealed}
-                    size="medium"
-                    count={player.deck.length}
-                    disabled={!isActive}
-                  />
+                  <div
+                    style={{
+                      position: "relative",
+                      filter: `drop-shadow(0 ${Math.min(player.deck.length, 5)}px ${Math.min(player.deck.length * 2, 10)}px rgba(0, 0, 0, 0.3))`,
+                    }}
+                  >
+                    {[...Array(Math.min(player.deck.length, 3))].map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: i === 0 ? "relative" : "absolute",
+                          top: i * 2,
+                          left: i * 2,
+                          zIndex: i,
+                          pointerEvents:
+                            i === Math.min(player.deck.length, 3) - 1
+                              ? "auto"
+                              : "none",
+                        }}
+                      >
+                        <Card
+                          name={player.deck[player.deck.length - 1]}
+                          showBack={!player.deckTopRevealed}
+                          size="medium"
+                          count={
+                            i === Math.min(player.deck.length, 3) - 1
+                              ? player.deck.length
+                              : undefined
+                          }
+                          disabled={!isActive}
+                          pileContents={
+                            i === Math.min(player.deck.length, 3) - 1
+                              ? deckPileContents
+                              : undefined
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div
                     style={{
@@ -754,118 +698,6 @@ export function PlayerArea({
                     Empty
                   </div>
                 )}
-
-                {/* Deck tooltip */}
-                {isDeckOpen && player.deck.length > 0 && (
-                  <div
-                    ref={deckTooltip.refs.setFloating}
-                    style={{
-                      ...deckTooltip.floatingStyles,
-                      background: "rgba(26, 26, 46, 0.75)",
-                      backdropFilter: "blur(12px)",
-                      border: "2px solid rgb(205 133 63)",
-                      padding: "1rem",
-                      maxWidth: "320px",
-                      zIndex: 10000,
-                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-                      pointerEvents: "none",
-                    }}
-                    {...getDeckFloatingProps()}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "var(--space-2)",
-                        left: "var(--space-2)",
-                        fontSize: "0.625rem",
-                        color: "rgb(205 133 63)",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Deck ({player.deck.length} cards)
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "0.8125rem",
-                        lineHeight: "1.5",
-                        color: "var(--color-text-primary)",
-                        paddingTop: "0.75rem",
-                      }}
-                    >
-                      {knownDeckCards.length > 0 && (
-                        <div style={{ marginBottom: "var(--space-3)" }}>
-                          <div
-                            style={{
-                              fontSize: "0.6875rem",
-                              textTransform: "uppercase",
-                              opacity: 0.6,
-                              marginBottom: "var(--space-2)",
-                              color: "rgb(205 133 63)",
-                            }}
-                          >
-                            Known Cards (Top)
-                          </div>
-                          <div
-                            style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: "var(--space-2)",
-                            }}
-                          >
-                            {knownDeckCards.map((card, idx) => (
-                              <Card
-                                key={`known-${idx}`}
-                                name={card}
-                                size="small"
-                                disabled={true}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div
-                        style={{
-                          fontSize: "0.6875rem",
-                          textTransform: "uppercase",
-                          opacity: 0.6,
-                          marginBottom: "var(--space-2)",
-                        }}
-                      >
-                        All Cards
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "var(--space-2)",
-                        }}
-                      >
-                        {uniqueDeckCards.map(card => (
-                          <div
-                            key={card}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "var(--space-1)",
-                            }}
-                          >
-                            <Card name={card} size="small" disabled={true} />
-                            <span
-                              style={{
-                                fontSize: "0.875rem",
-                                fontWeight: 600,
-                                color: "var(--color-text-secondary)",
-                              }}
-                            >
-                              ×{deckCounts[card]}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Discard */}
@@ -874,57 +706,18 @@ export function PlayerArea({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  position: "relative",
                 }}
               >
                 <div
-                  ref={discardTooltip.refs.setReference}
-                  {...(player.discard.length > 0 &&
-                  !(
-                    pendingDecision &&
-                    pendingDecision.from === "discard" &&
-                    isInteractive
-                  )
-                    ? getDiscardReferenceProps()
-                    : {})}
                   style={{
                     fontSize: "0.5625rem",
                     color: "rgb(180 180 180)",
                     marginBlockEnd: "var(--space-2)",
                     fontWeight: 600,
                     textTransform: "uppercase",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--space-1)",
-                    cursor:
-                      player.discard.length > 0 &&
-                      !(
-                        pendingDecision &&
-                        pendingDecision.from === "discard" &&
-                        isInteractive
-                      )
-                        ? "help"
-                        : "default",
                   }}
                 >
                   Discard
-                  {player.discard.length > 0 &&
-                    !(
-                      pendingDecision &&
-                      pendingDecision.from === "discard" &&
-                      isInteractive
-                    ) && (
-                      <span
-                        style={{
-                          fontSize: "0.875rem",
-                          opacity: 0.7,
-                          color: "var(--color-info)",
-                          fontWeight: "normal",
-                        }}
-                      >
-                        ⓘ
-                      </span>
-                    )}
                 </div>
                 {loading ? (
                   <div
@@ -971,12 +764,46 @@ export function PlayerArea({
                       })}
                     </div>
                   ) : (
-                    <Card
-                      name={player.discard[player.discard.length - 1]}
-                      size="medium"
-                      count={player.discard.length}
-                      disabled={!isActive}
-                    />
+                    <div
+                      style={{
+                        position: "relative",
+                        filter: `drop-shadow(0 ${Math.min(player.discard.length, 5)}px ${Math.min(player.discard.length * 2, 10)}px rgba(0, 0, 0, 0.3))`,
+                      }}
+                    >
+                      {[...Array(Math.min(player.discard.length, 3))].map(
+                        (_, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              position: i === 0 ? "relative" : "absolute",
+                              top: i * 2,
+                              left: i * 2,
+                              zIndex: i,
+                              pointerEvents:
+                                i === Math.min(player.discard.length, 3) - 1
+                                  ? "auto"
+                                  : "none",
+                            }}
+                          >
+                            <Card
+                              name={player.discard[player.discard.length - 1]}
+                              size="medium"
+                              count={
+                                i === Math.min(player.discard.length, 3) - 1
+                                  ? player.discard.length
+                                  : undefined
+                              }
+                              disabled={!isActive}
+                              pileContents={
+                                i === Math.min(player.discard.length, 3) - 1
+                                  ? discardPileContents
+                                  : undefined
+                              }
+                            />
+                          </div>
+                        ),
+                      )}
+                    </div>
                   )
                 ) : (
                   <div
@@ -995,84 +822,6 @@ export function PlayerArea({
                     Empty
                   </div>
                 )}
-
-                {/* Discard tooltip */}
-                {isDiscardOpen &&
-                  player.discard.length > 0 &&
-                  !(
-                    pendingDecision &&
-                    pendingDecision.from === "discard" &&
-                    isInteractive
-                  ) && (
-                    <div
-                      ref={discardTooltip.refs.setFloating}
-                      style={{
-                        ...discardTooltip.floatingStyles,
-                        background: "rgba(26, 26, 46, 0.75)",
-                        backdropFilter: "blur(12px)",
-                        border: "2px solid rgb(180 180 180)",
-                        padding: "1rem",
-                        maxWidth: "320px",
-                        zIndex: 10000,
-                        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-                        pointerEvents: "none",
-                      }}
-                      {...getDiscardFloatingProps()}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "var(--space-2)",
-                          left: "var(--space-2)",
-                          fontSize: "0.625rem",
-                          color: "rgb(180 180 180)",
-                          fontWeight: 600,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Discard ({player.discard.length} cards)
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "0.8125rem",
-                          lineHeight: "1.5",
-                          color: "var(--color-text-primary)",
-                          paddingTop: "0.75rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "var(--space-2)",
-                            marginTop: "var(--space-2)",
-                          }}
-                        >
-                          {uniqueDiscardCards.map(card => (
-                            <div
-                              key={card}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "var(--space-1)",
-                              }}
-                            >
-                              <Card name={card} size="small" disabled={true} />
-                              <span
-                                style={{
-                                  fontSize: "0.875rem",
-                                  fontWeight: 600,
-                                  color: "var(--color-text-secondary)",
-                                }}
-                              >
-                                ×{discardCounts[card]}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
               </div>
             </div>
           </div>
