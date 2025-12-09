@@ -9,7 +9,7 @@
  * - Diff view showing what changed
  * - Filter events by type
  */
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { GameEvent } from "../events/types";
 import type { GameState } from "../types/game-state";
 import { projectState } from "../events/project";
@@ -92,8 +92,20 @@ export function EventDevtools({
   const [showDiff, setShowDiff] = useState(false);
   const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRefInternal = useRef<HTMLDivElement>(null);
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Ref callback for initial scroll to bottom
+  const listRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node && !scrubberIndex) {
+        node.scrollTop = node.scrollHeight;
+      }
+      // Store ref for other effects
+      listRefInternal.current = node;
+    },
+    [scrubberIndex],
+  );
 
   // Get root events only (for scrubbing)
   const rootEvents = useMemo(() => {
@@ -102,24 +114,17 @@ export function EventDevtools({
 
   // Auto-scroll to bottom when new events arrive (unless scrubbing)
   useEffect(() => {
-    if (scrubberIndex === null && listRef.current && isOpen) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    if (scrubberIndex === null && listRefInternal.current && isOpen) {
+      listRefInternal.current.scrollTop = listRefInternal.current.scrollHeight;
     }
   }, [events.length, scrubberIndex, isOpen]);
 
-  // Scroll to bottom on initial mount
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, []);
-
   // Scroll to scrubber position when scrubbing
   useEffect(() => {
-    if (scrubberIndex !== null && listRef.current) {
+    if (scrubberIndex !== null && listRefInternal.current) {
       // Find the event element and scroll it into view
       const eventElements =
-        listRef.current.querySelectorAll("[data-event-index]");
+        listRefInternal.current.querySelectorAll("[data-event-index]");
       const targetElement = Array.from(eventElements).find(
         el => el.getAttribute("data-event-index") === String(scrubberIndex),
       );
