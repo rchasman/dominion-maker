@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { useSyncToLocalStorage } from "../../hooks/useSyncToLocalStorage";
 import type {
   GameState,
   LogEntry as LogEntryType,
@@ -141,9 +142,10 @@ export function GameSidebar({
   });
   const [isDragging, setIsDragging] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_LOG_HEIGHT_KEY, gameLogHeight.toString());
-  }, [gameLogHeight]);
+  // Sync gameLogHeight to localStorage
+  useSyncToLocalStorage(STORAGE_LOG_HEIGHT_KEY, gameLogHeight, {
+    serialize: (value) => value.toString(),
+  });
 
   useEffect(() => {
     if (!isDragging) return;
