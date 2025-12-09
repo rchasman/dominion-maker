@@ -60,9 +60,18 @@ export const cellar: CardEffect = ({
     events.push(...discardEvents);
 
     // Draw equal number - compute from state AFTER discards
+    // Remove discarded cards one by one (to handle duplicate cards correctly)
+    let remainingHand = [...playerState.hand];
+    for (const cardToRemove of toDiscard) {
+      const idx = remainingHand.indexOf(cardToRemove);
+      if (idx !== -1) {
+        remainingHand.splice(idx, 1);
+      }
+    }
+
     const simulatedState = {
       ...playerState,
-      hand: playerState.hand.filter(c => !toDiscard.includes(c)),
+      hand: remainingHand,
       discard: [...playerState.discard, ...toDiscard],
       deck: [...playerState.deck],
     };
