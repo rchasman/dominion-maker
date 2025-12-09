@@ -5,7 +5,6 @@ import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
 import { CardDecisionModal } from "../CardDecisionModal";
 import { countVP, getAllCards, formatPlayerName } from "../../lib/board-utils";
-import { ActionBar } from "./ActionBar";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
 import type { CardName, PlayerId } from "../../types/game-state";
