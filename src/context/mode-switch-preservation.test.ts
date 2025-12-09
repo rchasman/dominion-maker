@@ -9,8 +9,6 @@ describe("Mode switching preserves game state", () => {
     engine.startGame(["human", "ai"]);
 
     const beforePlayers = Object.keys(engine.state.players);
-    const beforeTurn = engine.state.turn;
-    const beforePhase = engine.state.phase;
 
     // Simulate mode switch by just checking player IDs stay the same
     const afterPlayers = Object.keys(engine.state.players);
