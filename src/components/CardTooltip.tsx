@@ -1,5 +1,6 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
+import { createPortal } from "react-dom";
 
 interface CardTooltipProps {
   cardName: CardName;
@@ -48,7 +49,7 @@ export function CardTooltip({
     top = window.innerHeight - tooltipHeight;
   }
 
-  return (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -87,6 +88,7 @@ export function CardTooltip({
           }}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
