@@ -5,7 +5,6 @@ import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";
 import { CardDecisionModal } from "../CardDecisionModal";
 import { countVP, getAllCards, formatPlayerName } from "../../lib/board-utils";
-import { OpponentBar } from "./OpponentBar";
 import { ActionBar } from "./ActionBar";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
@@ -219,38 +218,23 @@ export function Board({ onBackToHome }: BoardProps) {
           position: "relative",
         }}
       >
-        {gameMode === "full" ? (
-          <PlayerArea
-            player={opponent}
-            label={formatPlayerName(
-              opponentPlayerId,
-              gameMode !== "multiplayer" &&
-                GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
-            )}
-            vpCount={opponentVP}
-            isActive={!isMainPlayerTurn}
-            showCards={true}
-            selectedCardIndices={[]}
-            compact={true}
-            phase={displayState.phase}
-            subPhase={displayState.subPhase}
-            playerId={opponentPlayerId}
-            turnHistory={displayState.turnHistory}
-          />
-        ) : (
-          <OpponentBar
-            opponent={opponent}
-            opponentId={opponentPlayerId}
-            opponentLabel={formatPlayerName(
-              opponentPlayerId,
-              gameMode !== "multiplayer" &&
-                GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
-            )}
-            isHumanTurn={isMainPlayerTurn}
-            phase={displayState.phase}
-            subPhase={displayState.subPhase}
-          />
-        )}
+        <PlayerArea
+          player={opponent}
+          label={formatPlayerName(
+            opponentPlayerId,
+            gameMode !== "multiplayer" &&
+              GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
+          )}
+          vpCount={opponentVP}
+          isActive={!isMainPlayerTurn}
+          showCards={true}
+          selectedCardIndices={[]}
+          inverted={true}
+          phase={displayState.phase}
+          subPhase={displayState.subPhase}
+          playerId={opponentPlayerId}
+          turnHistory={displayState.turnHistory}
+        />
 
         <div
           style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}
