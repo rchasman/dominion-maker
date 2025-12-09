@@ -241,6 +241,7 @@ export function Board({ onBackToHome }: BoardProps) {
           inverted={true}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
+          actions={displayState.actions}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
           playerStrategy={playerStrategies[opponentPlayerId]}
@@ -320,6 +321,7 @@ export function Board({ onBackToHome }: BoardProps) {
             pendingDecision={displayState.pendingDecision}
             phase={displayState.phase}
             subPhase={displayState.subPhase}
+            actions={displayState.actions}
             playerId={mainPlayerId}
             turnHistory={displayState.turnHistory}
             playerStrategy={playerStrategies[mainPlayerId]}

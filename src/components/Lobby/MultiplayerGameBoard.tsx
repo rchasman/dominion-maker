@@ -370,6 +370,7 @@ export function MultiplayerGameBoard({
           pendingDecision={displayState.pendingDecision}
           phase={displayState.phase}
           subPhase={displayState.subPhase}
+          actions={displayState.actions}
           loading={!myPlayerState}
           playerId={myPlayer || undefined}
           turnHistory={displayState.turnHistory}

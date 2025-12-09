@@ -36,6 +36,7 @@ interface PlayerAreaProps {
   pendingDecision?: DecisionRequest | null;
   phase: Phase;
   subPhase: TurnSubPhase;
+  actions?: number;
   loading?: boolean;
   playerId?: string;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
@@ -112,6 +113,7 @@ export function PlayerArea({
   playerId,
   phase,
   subPhase,
+  actions,
   loading = false,
   turnHistory = [],
   playerStrategy,
@@ -209,6 +211,13 @@ export function PlayerArea({
     // Victory cards are always dimmed (never playable)
     if (cardDef.types.includes("victory")) {
       return true;
+    }
+
+    // Dim actions when not in action phase or when no actions remaining
+    if (cardDef.types.includes("action")) {
+      if (phase !== "action" || (actions !== undefined && actions === 0)) {
+        return true;
+      }
     }
 
     // Dim treasures when not in buy phase (they can't be played)
