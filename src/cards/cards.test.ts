@@ -585,6 +585,56 @@ describe("Attack Cards", () => {
       expect(result.pendingDecision).toBeDefined();
       expect(result.pendingDecision!.player).toBe("ai");
       expect(result.pendingDecision!.stage).toBe("opponent_discard");
+      expect(result.pendingDecision!.min).toBe(2); // 5 - 3 = 2 cards to discard
+      expect(result.pendingDecision!.max).toBe(2);
+    });
+
+    it("should correctly discard cards and reduce hand to 3", () => {
+      const state = createTestState([]);
+      state.players.ai = {
+        deck: [],
+        hand: ["Copper", "Silver", "Gold", "Estate", "Duchy"],
+        discard: [],
+        inPlay: [],
+        inPlaySourceIndices: [],
+      };
+      state.playerOrder = ["human", "ai"];
+      state.pendingDecision = {
+        type: "card_decision",
+        player: "ai",
+        from: "hand",
+        prompt: "Militia: Discard down to 3 cards",
+        cardOptions: ["Copper", "Silver", "Gold", "Estate", "Duchy"],
+        min: 2,
+        max: 2,
+        cardBeingPlayed: "Militia",
+        stage: "opponent_discard",
+        metadata: {
+          remainingOpponents: [],
+          attackingPlayer: "human",
+        },
+      };
+
+      const result = getCardEffect("Militia")!({
+        state,
+        player: "human",
+        card: "Militia",
+        decision: { selectedCards: ["Estate", "Duchy"] },
+        stage: "opponent_discard",
+      });
+
+      // Should create 2 discard events
+      const discardEvents = result.events.filter(
+        e => e.type === "CARD_DISCARDED",
+      );
+      expect(discardEvents.length).toBe(2);
+      expect(discardEvents[0].card).toBe("Estate");
+      expect(discardEvents[0].player).toBe("ai");
+      expect(discardEvents[1].card).toBe("Duchy");
+      expect(discardEvents[1].player).toBe("ai");
+
+      // Should not create another pending decision
+      expect(result.pendingDecision).toBeUndefined();
     });
   });
 

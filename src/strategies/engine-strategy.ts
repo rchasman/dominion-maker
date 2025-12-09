@@ -135,9 +135,11 @@ export class EngineStrategy implements GameStrategy {
 
       // First pick priority discard cards
       for (const priority of priorities) {
-        const card = options.find(c => c === priority);
-        if (card && selected.length < numToDiscard) {
-          selected.push(card);
+        const matchingCards = options.filter(c => c === priority);
+        for (const card of matchingCards) {
+          if (selected.length < numToDiscard) {
+            selected.push(card);
+          }
         }
       }
 
