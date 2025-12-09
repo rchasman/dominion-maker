@@ -1,6 +1,13 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
+import {
+  useFloating,
+  offset,
+  flip,
+  shift,
+  autoUpdate,
+} from "@floating-ui/react";
 
 interface PileTooltipProps {
   cards: CardName[];
@@ -35,29 +42,33 @@ export function PileTooltip({
   const knownUniqueCards = uniqueCards.filter(card => knownSet.has(card));
   const unknownCards = cards.filter(card => !knownSet.has(card));
 
-  const tooltipWidth = 320;
-  const tooltipHeight = Math.min(500, uniqueCards.length * 80 + 100);
+  // Use floating-ui for positioning near cursor
+  const { refs, floatingStyles } = useFloating({
+    placement: "left-start",
+    middleware: [
+      offset({ mainAxis: 8, crossAxis: 0 }),
+      flip(),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+    strategy: "fixed",
+  });
 
-  const viewportWidth = window.innerWidth;
-
-  // Position close to cursor, offset slightly to the right and up
-  const offsetX = 20;
-  const offsetY = 20;
-  let left = mouseX + offsetX;
-  let top = mouseY - offsetY;
-
-  // Keep within viewport
-  if (left < 0) {
-    left = 0;
-  } else if (left + tooltipWidth > viewportWidth) {
-    left = viewportWidth - tooltipWidth;
-  }
-
-  if (top < 0) {
-    top = 0;
-  } else if (top + tooltipHeight > window.innerHeight) {
-    top = window.innerHeight - tooltipHeight;
-  }
+  // Set virtual element at cursor position
+  refs.setPositionReference({
+    getBoundingClientRect() {
+      return {
+        width: 0,
+        height: 0,
+        x: mouseX,
+        y: mouseY,
+        top: mouseY,
+        left: mouseX,
+        right: mouseX,
+        bottom: mouseY,
+      };
+    },
+  });
 
   const borderColor =
     pileType === "trash"
@@ -71,10 +82,9 @@ export function PileTooltip({
 
   return createPortal(
     <div
+      ref={refs.setFloating}
       style={{
-        position: "fixed",
-        left: `${left}px`,
-        top: `${top}px`,
+        ...floatingStyles,
         pointerEvents: "none",
         zIndex: 10000,
         animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
@@ -86,8 +96,8 @@ export function PileTooltip({
           backdropFilter: "blur(12px)",
           border: `2px solid ${borderColor}`,
           padding: "1rem",
-          maxWidth: `${tooltipWidth}px`,
-          maxHeight: `${tooltipHeight}px`,
+          maxWidth: "320px",
+          maxHeight: "500px",
           overflow: "auto",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
           position: "relative",
