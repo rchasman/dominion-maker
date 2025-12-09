@@ -19,11 +19,7 @@ import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
-import {
-  GAME_MODE_CONFIG,
-  getPlayersForMode,
-  convertToFullModePlayers,
-} from "../types/game-mode";
+import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings, ModelProvider } from "../agent/game-agent";
 import {
@@ -637,6 +633,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGame() {
   const context = useContext(GameContext);
   if (!context) {
@@ -645,6 +642,7 @@ export function useGame() {
   return context;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLLMLogs() {
   const context = useContext(LLMLogsContext);
   if (!context) {
