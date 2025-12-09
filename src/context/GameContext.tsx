@@ -14,6 +14,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
+import { useSyncToLocalStorage } from "../hooks/useSyncToLocalStorage";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
@@ -92,8 +93,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [playerStrategies, setPlayerStrategies] = useState<
     Record<string, string>
   >({});
-  const modeRestoredFromStorage = useRef(false);
-  const settingsRestoredFromStorage = useRef(false);
   const lastFetchedTurn = useRef<number>(-1);
 
   // Restore from localStorage on mount
@@ -114,7 +113,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ) {
         // Migrate old "maker" to "hybrid"
         const mode: GameMode = savedMode === "maker" ? "hybrid" : savedMode;
-        modeRestoredFromStorage.current = true;
         setGameModeState(mode);
       }
 
@@ -124,7 +122,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings);
-        settingsRestoredFromStorage.current = true;
         setModelSettingsState({
           enabledModels: new Set(parsed.enabledModels as ModelProvider[]),
           consensusCount: parsed.consensusCount,
@@ -151,56 +148,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save events
-  useEffect(() => {
-    if (events.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_EVENTS_KEY, JSON.stringify(events));
-      } catch (error) {
-        uiLogger.error("Failed to save events", { error });
-      }
-    }
-  }, [events]);
+  // Sync state to localStorage (skips initial hydration)
+  useSyncToLocalStorage(STORAGE_EVENTS_KEY, events, {
+    shouldSync: events.length > 0,
+  });
 
-  // Save game mode
-  useEffect(() => {
-    if (modeRestoredFromStorage.current) {
-      modeRestoredFromStorage.current = false;
-      return;
-    }
-    localStorage.setItem(STORAGE_MODE_KEY, gameMode);
-  }, [gameMode]);
+  useSyncToLocalStorage(STORAGE_MODE_KEY, gameMode);
 
-  // Save LLM logs
-  useEffect(() => {
-    if (llmLogs.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_LLM_LOGS_KEY, JSON.stringify(llmLogs));
-      } catch (error) {
-        uiLogger.error("Failed to save LLM logs", { error });
-      }
-    }
-  }, [llmLogs]);
+  useSyncToLocalStorage(STORAGE_LLM_LOGS_KEY, llmLogs, {
+    shouldSync: llmLogs.length > 0,
+  });
 
-  // Save model settings
-  useEffect(() => {
-    if (settingsRestoredFromStorage.current) {
-      settingsRestoredFromStorage.current = false;
-      return;
-    }
-    try {
-      const serializable = {
-        enabledModels: Array.from(modelSettings.enabledModels),
-        consensusCount: modelSettings.consensusCount,
-      };
-      localStorage.setItem(
-        STORAGE_MODEL_SETTINGS_KEY,
-        JSON.stringify(serializable),
-      );
-    } catch (error) {
-      uiLogger.error("Failed to save model settings", { error });
-    }
-  }, [modelSettings]);
+  useSyncToLocalStorage(
+    STORAGE_MODEL_SETTINGS_KEY,
+    {
+      enabledModels: Array.from(modelSettings.enabledModels),
+      consensusCount: modelSettings.consensusCount,
+    },
+    {
+      shouldSync: true,
+    },
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -237,12 +205,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [gameMode, llmLogger, modelSettings]);
 
-  // Handle mode changes: abort ongoing consensus and reset processing
-  // Game state is preserved - just the strategy changes
-  useEffect(() => {
+  // Wrap setGameMode to handle side effects synchronously
+  const setGameMode = useCallback((mode: GameMode) => {
+    // Abort ongoing consensus and reset processing when mode changes
+    // Game state is preserved - just the strategy changes
     abortOngoingConsensus();
     setIsProcessing(false);
-  }, [gameMode]);
+    setGameModeState(mode);
+  }, []);
 
   // Fetch strategy analysis when turn changes (after turn 2)
   useEffect(() => {
@@ -650,7 +620,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hasPlayableActions: hasPlayableActionsValue,
       hasTreasuresInHand: hasTreasuresInHandValue,
       strategy,
-      setGameMode: setGameModeState,
+      setGameMode,
       setModelSettings: setModelSettingsState,
       startGame,
       playAction,
@@ -674,6 +644,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       hasPlayableActionsValue,
       hasTreasuresInHandValue,
       strategy,
+      setGameMode,
       startGame,
       playAction,
       playTreasure,
