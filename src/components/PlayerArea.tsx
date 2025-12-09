@@ -122,7 +122,10 @@ export function PlayerArea({
 
   // Strategy popover state - only show if there's actual content
   const hasStrategyContent =
-    playerStrategy && (playerStrategy.gameplan || playerStrategy.read || playerStrategy.recommendation);
+    playerStrategy &&
+    (playerStrategy.gameplan ||
+      playerStrategy.read ||
+      playerStrategy.recommendation);
 
   const [isStrategyOpen, setIsStrategyOpen] = useState(false);
 
@@ -415,24 +418,55 @@ export function PlayerArea({
                       paddingTop: "0.75rem",
                     }}
                   >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                      }}
+                    >
                       <div>
-                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                        <div
+                          style={{
+                            fontSize: "0.6875rem",
+                            textTransform: "uppercase",
+                            opacity: 0.6,
+                            marginBottom: "0.25rem",
+                          }}
+                        >
                           Gameplan
                         </div>
                         <div>{playerStrategy.gameplan}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                        <div
+                          style={{
+                            fontSize: "0.6875rem",
+                            textTransform: "uppercase",
+                            opacity: 0.6,
+                            marginBottom: "0.25rem",
+                          }}
+                        >
                           Read
                         </div>
-                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.read}</div>
+                        <div style={{ lineHeight: "1.6" }}>
+                          {playerStrategy.read}
+                        </div>
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                        <div
+                          style={{
+                            fontSize: "0.6875rem",
+                            textTransform: "uppercase",
+                            opacity: 0.6,
+                            marginBottom: "0.25rem",
+                          }}
+                        >
                           Recommendation
                         </div>
-                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.recommendation}</div>
+                        <div style={{ lineHeight: "1.6" }}>
+                          {playerStrategy.recommendation}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -652,18 +686,37 @@ export function PlayerArea({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  position: "relative",
                 }}
               >
                 <div
+                  ref={deckTooltip.refs.setReference}
+                  {...(player.deck.length > 0 ? getDeckReferenceProps() : {})}
                   style={{
                     fontSize: "0.5625rem",
                     color: "rgb(205 133 63)",
                     marginBlockEnd: "var(--space-2)",
                     fontWeight: 600,
                     textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    cursor: player.deck.length > 0 ? "help" : "default",
                   }}
                 >
                   Deck
+                  {player.deck.length > 0 && (
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        opacity: 0.7,
+                        color: "var(--color-info)",
+                        fontWeight: "normal",
+                      }}
+                    >
+                      ⓘ
+                    </span>
+                  )}
                 </div>
                 {loading ? (
                   <div
@@ -701,6 +754,118 @@ export function PlayerArea({
                     Empty
                   </div>
                 )}
+
+                {/* Deck tooltip */}
+                {isDeckOpen && player.deck.length > 0 && (
+                  <div
+                    ref={deckTooltip.refs.setFloating}
+                    style={{
+                      ...deckTooltip.floatingStyles,
+                      background: "rgba(26, 26, 46, 0.75)",
+                      backdropFilter: "blur(12px)",
+                      border: "2px solid rgb(205 133 63)",
+                      padding: "1rem",
+                      maxWidth: "320px",
+                      zIndex: 10000,
+                      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                      pointerEvents: "none",
+                    }}
+                    {...getDeckFloatingProps()}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "var(--space-2)",
+                        left: "var(--space-2)",
+                        fontSize: "0.625rem",
+                        color: "rgb(205 133 63)",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Deck ({player.deck.length} cards)
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.8125rem",
+                        lineHeight: "1.5",
+                        color: "var(--color-text-primary)",
+                        paddingTop: "0.75rem",
+                      }}
+                    >
+                      {knownDeckCards.length > 0 && (
+                        <div style={{ marginBottom: "var(--space-3)" }}>
+                          <div
+                            style={{
+                              fontSize: "0.6875rem",
+                              textTransform: "uppercase",
+                              opacity: 0.6,
+                              marginBottom: "var(--space-2)",
+                              color: "rgb(205 133 63)",
+                            }}
+                          >
+                            Known Cards (Top)
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "var(--space-2)",
+                            }}
+                          >
+                            {knownDeckCards.map((card, idx) => (
+                              <Card
+                                key={`known-${idx}`}
+                                name={card}
+                                size="small"
+                                disabled={true}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          fontSize: "0.6875rem",
+                          textTransform: "uppercase",
+                          opacity: 0.6,
+                          marginBottom: "var(--space-2)",
+                        }}
+                      >
+                        All Cards
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "var(--space-2)",
+                        }}
+                      >
+                        {uniqueDeckCards.map(card => (
+                          <div
+                            key={card}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "var(--space-1)",
+                            }}
+                          >
+                            <Card name={card} size="small" disabled={true} />
+                            <span
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: 600,
+                                color: "var(--color-text-secondary)",
+                              }}
+                            >
+                              ×{deckCounts[card]}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Discard */}
@@ -709,18 +874,57 @@ export function PlayerArea({
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
+                  position: "relative",
                 }}
               >
                 <div
+                  ref={discardTooltip.refs.setReference}
+                  {...(player.discard.length > 0 &&
+                  !(
+                    pendingDecision &&
+                    pendingDecision.from === "discard" &&
+                    isInteractive
+                  )
+                    ? getDiscardReferenceProps()
+                    : {})}
                   style={{
                     fontSize: "0.5625rem",
                     color: "rgb(180 180 180)",
                     marginBlockEnd: "var(--space-2)",
                     fontWeight: 600,
                     textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--space-1)",
+                    cursor:
+                      player.discard.length > 0 &&
+                      !(
+                        pendingDecision &&
+                        pendingDecision.from === "discard" &&
+                        isInteractive
+                      )
+                        ? "help"
+                        : "default",
                   }}
                 >
                   Discard
+                  {player.discard.length > 0 &&
+                    !(
+                      pendingDecision &&
+                      pendingDecision.from === "discard" &&
+                      isInteractive
+                    ) && (
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          opacity: 0.7,
+                          color: "var(--color-info)",
+                          fontWeight: "normal",
+                        }}
+                      >
+                        ⓘ
+                      </span>
+                    )}
                 </div>
                 {loading ? (
                   <div
@@ -791,6 +995,84 @@ export function PlayerArea({
                     Empty
                   </div>
                 )}
+
+                {/* Discard tooltip */}
+                {isDiscardOpen &&
+                  player.discard.length > 0 &&
+                  !(
+                    pendingDecision &&
+                    pendingDecision.from === "discard" &&
+                    isInteractive
+                  ) && (
+                    <div
+                      ref={discardTooltip.refs.setFloating}
+                      style={{
+                        ...discardTooltip.floatingStyles,
+                        background: "rgba(26, 26, 46, 0.75)",
+                        backdropFilter: "blur(12px)",
+                        border: "2px solid rgb(180 180 180)",
+                        padding: "1rem",
+                        maxWidth: "320px",
+                        zIndex: 10000,
+                        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                        pointerEvents: "none",
+                      }}
+                      {...getDiscardFloatingProps()}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "var(--space-2)",
+                          left: "var(--space-2)",
+                          fontSize: "0.625rem",
+                          color: "rgb(180 180 180)",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Discard ({player.discard.length} cards)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.8125rem",
+                          lineHeight: "1.5",
+                          color: "var(--color-text-primary)",
+                          paddingTop: "0.75rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "var(--space-2)",
+                            marginTop: "var(--space-2)",
+                          }}
+                        >
+                          {uniqueDiscardCards.map(card => (
+                            <div
+                              key={card}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "var(--space-1)",
+                              }}
+                            >
+                              <Card name={card} size="small" disabled={true} />
+                              <span
+                                style={{
+                                  fontSize: "0.875rem",
+                                  fontWeight: 600,
+                                  color: "var(--color-text-secondary)",
+                                }}
+                              >
+                                ×{discardCounts[card]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           </div>
