@@ -39,7 +39,7 @@ export function PileTooltip({
 
   // Use floating-ui with virtual element at cursor position
   const { refs, floatingStyles } = useFloating({
-    placement: "right-start",
+    placement: "left-start",
     strategy: "fixed",
     middleware: [
       offset(8),
