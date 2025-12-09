@@ -254,17 +254,13 @@ export function Board({ onBackToHome }: BoardProps) {
           hasTreasuresInHand={false}
         />
 
-        <div
-          style={{ minBlockSize: 0, display: "flex", flexDirection: "column" }}
-        >
-          <Supply
-            state={displayState}
-            onBuyCard={isPreviewMode ? undefined : onBuyCard}
-            canBuy={isPreviewMode ? false : canBuy}
-            availableCoins={displayState.coins}
-            pendingDecision={displayState.pendingDecision}
-          />
-        </div>
+        <Supply
+          state={displayState}
+          onBuyCard={isPreviewMode ? undefined : onBuyCard}
+          canBuy={isPreviewMode ? false : canBuy}
+          availableCoins={displayState.coins}
+          pendingDecision={displayState.pendingDecision}
+        />
 
         <div style={{ position: "relative" }}>
           <PlayerArea
