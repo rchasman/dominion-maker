@@ -54,12 +54,12 @@
   --space-10: 2.5rem; /* 40px */
 
   /* Card Sizes (rem-based for font size scaling) */
-  --card-width-small: 3rem;
-  --card-width-medium: 4.5rem;
-  --card-width-large: 6rem;
-  --card-height-small: 4.75rem;
-  --card-height-medium: 7.03125rem;
-  --card-height-large: 9.375rem;
+  --card-width-small: 2.85rem;
+  --card-width-medium: 4.275rem;
+  --card-width-large: 5.7rem;
+  --card-height-small: 4.5125rem;
+  --card-height-medium: 6.6797rem;
+  --card-height-large: 8.9063rem;
 
   /* Border Radius */
   --radius-sm: 0.125rem;

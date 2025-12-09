@@ -183,11 +183,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     const error = err as Error;
-    apiLogger.error(`Strategy analysis failed: ${error.message}`);
+
+    // Extract detailed error information
+    const errorDetails = {
+      message: error.message,
+      cause: error.cause,
+      stack: error.stack,
+      // @ts-expect-error - Check for additional error properties
+      details: error.details || error.error || error.issues,
+    };
+
+    apiLogger.error("Strategy analysis failed:", errorDetails);
 
     return res.status(500).json({
       error: 500,
       message: `Strategy analysis failed: ${error.message}`,
+      details: errorDetails,
     });
   }
 }
