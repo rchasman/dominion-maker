@@ -164,120 +164,130 @@ export function ActionBar({
       <div
         style={{ display: "flex", gap: "var(--space-3)", userSelect: "none" }}
       >
-        {isActive && onConfirmDecision && hasPendingDecision ? (
-          <>
-            <button
-              onClick={() => onConfirmDecision(complexDecisionData)}
-              disabled={
-                !complexDecisionData &&
-                selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
-              }
-              style={{
-                padding: "var(--space-2) var(--space-4)",
-                background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
-                color: "#fff",
-                border: "1px solid #a5b4fc",
-                cursor:
-                  !complexDecisionData &&
-                  selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
-                    ? "not-allowed"
-                    : "pointer",
-                opacity:
-                  !complexDecisionData &&
-                  selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
-                    ? 0.5
-                    : 1,
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                fontFamily: "inherit",
-              }}
-            >
-              Confirm
-            </button>
-            {onSkipDecision && state.pendingDecision!.min === 0 && (
-              <button
-                onClick={onSkipDecision}
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  background: "linear-gradient(180deg, #555 0%, #333 100%)",
-                  color: "#fff",
-                  border: "1px solid #666",
-                  cursor: "pointer",
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  fontFamily: "inherit",
-                }}
-              >
-                Skip
-              </button>
-            )}
-          </>
-        ) : isActive ? (
-          <>
-            {onPlayAllTreasures && state.phase === "buy" && hasTreasuresInHand && (
-              <button
-                onClick={onPlayAllTreasures}
-                disabled={
-                  !!(state.pendingDecision && !state.pendingDecision.canSkip)
-                }
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  background:
-                    "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
-                  color: "var(--color-bg-primary)",
-                  border: "1px solid var(--color-gold-bright)",
-                  cursor:
-                    state.pendingDecision && !state.pendingDecision.canSkip
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity:
-                    state.pendingDecision && !state.pendingDecision.canSkip
-                      ? 0.5
-                      : 1,
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  fontFamily: "inherit",
-                }}
-              >
-                Play Treasures
-              </button>
-            )}
-            {onEndPhase && (
-              <button
-                onClick={onEndPhase}
-                disabled={
-                  !!(state.pendingDecision && !state.pendingDecision.canSkip)
-                }
-                style={{
-                  padding: "var(--space-2) var(--space-4)",
-                  background: getEndPhaseButtonBackground(state.pendingDecision, state.phase),
-                  color: isTurnComplete ? "#a89968" : "#fff",
-                  border: getEndPhaseButtonBorder(isTurnComplete, state.pendingDecision, state.phase),
-                  cursor:
-                    state.pendingDecision && !state.pendingDecision.canSkip
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity:
-                    state.pendingDecision && !state.pendingDecision.canSkip
-                      ? 0.5
-                      : 1,
-                  fontSize: "0.6875rem",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  fontFamily: "inherit",
-                  animation: isTurnComplete
-                    ? "glow 2s ease-in-out infinite"
-                    : "none",
-                }}
-              >
-                {getEndPhaseButtonText(state.pendingDecision, state.phase)}
-              </button>
-            )}
-          </>
-        ) : null}
+        {(() => {
+          if (isActive && onConfirmDecision && hasPendingDecision) {
+            return (
+              <>
+                <button
+                  onClick={() => onConfirmDecision(complexDecisionData)}
+                  disabled={
+                    !complexDecisionData &&
+                    selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                  }
+                  style={{
+                    padding: "var(--space-2) var(--space-4)",
+                    background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
+                    color: "#fff",
+                    border: "1px solid #a5b4fc",
+                    cursor:
+                      !complexDecisionData &&
+                      selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                        ? "not-allowed"
+                        : "pointer",
+                    opacity:
+                      !complexDecisionData &&
+                      selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                        ? 0.5
+                        : 1,
+                    fontSize: "0.6875rem",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Confirm
+                </button>
+                {onSkipDecision && state.pendingDecision!.min === 0 && (
+                  <button
+                    onClick={onSkipDecision}
+                    style={{
+                      padding: "var(--space-2) var(--space-4)",
+                      background: "linear-gradient(180deg, #555 0%, #333 100%)",
+                      color: "#fff",
+                      border: "1px solid #666",
+                      cursor: "pointer",
+                      fontSize: "0.6875rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Skip
+                  </button>
+                )}
+              </>
+            );
+          }
+
+          if (isActive) {
+            return (
+              <>
+                {onPlayAllTreasures && state.phase === "buy" && hasTreasuresInHand && (
+                  <button
+                    onClick={onPlayAllTreasures}
+                    disabled={
+                      !!(state.pendingDecision && !state.pendingDecision.canSkip)
+                    }
+                    style={{
+                      padding: "var(--space-2) var(--space-4)",
+                      background:
+                        "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
+                      color: "var(--color-bg-primary)",
+                      border: "1px solid var(--color-gold-bright)",
+                      cursor:
+                        state.pendingDecision && !state.pendingDecision.canSkip
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity:
+                        state.pendingDecision && !state.pendingDecision.canSkip
+                          ? 0.5
+                          : 1,
+                      fontSize: "0.6875rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Play Treasures
+                  </button>
+                )}
+                {onEndPhase && (
+                  <button
+                    onClick={onEndPhase}
+                    disabled={
+                      !!(state.pendingDecision && !state.pendingDecision.canSkip)
+                    }
+                    style={{
+                      padding: "var(--space-2) var(--space-4)",
+                      background: getEndPhaseButtonBackground(state.pendingDecision, state.phase),
+                      color: isTurnComplete ? "#a89968" : "#fff",
+                      border: getEndPhaseButtonBorder(isTurnComplete, state.pendingDecision, state.phase),
+                      cursor:
+                        state.pendingDecision && !state.pendingDecision.canSkip
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity:
+                        state.pendingDecision && !state.pendingDecision.canSkip
+                          ? 0.5
+                          : 1,
+                      fontSize: "0.6875rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      fontFamily: "inherit",
+                      animation: isTurnComplete
+                        ? "glow 2s ease-in-out infinite"
+                        : "none",
+                    }}
+                  >
+                    {getEndPhaseButtonText(state.pendingDecision, state.phase)}
+                  </button>
+                )}
+              </>
+            );
+          }
+
+          return null;
+        })()}
       </div>
     </div>
   );

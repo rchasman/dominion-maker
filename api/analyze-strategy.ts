@@ -14,12 +14,11 @@ const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
   fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
+    const url = (() => {
+      if (typeof input === "string") return input;
+      if (input instanceof URL) return input.href;
+      return input.url;
+    })();
     const isHttps = url.startsWith("https:");
 
     return fetch(input, {

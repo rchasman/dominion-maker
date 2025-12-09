@@ -378,11 +378,15 @@ export async function advanceGameStateWithConsensus(
 
           logger?.({
             type: "consensus-model-complete",
-            message: isTimeout
-              ? `${provider} timed out after ${modelDuration.toFixed(0)}ms`
-              : isAborted
-                ? `${provider} aborted after ${modelDuration.toFixed(0)}ms`
-                : `${provider} failed after ${modelDuration.toFixed(0)}ms`,
+            message: (() => {
+              if (isTimeout) {
+                return `${provider} timed out after ${modelDuration.toFixed(0)}ms`;
+              }
+              if (isAborted) {
+                return `${provider} aborted after ${modelDuration.toFixed(0)}ms`;
+              }
+              return `${provider} failed after ${modelDuration.toFixed(0)}ms`;
+            })(),
             data: {
               provider,
               index,

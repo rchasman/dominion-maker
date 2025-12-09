@@ -265,13 +265,12 @@ function analyzeDeck(cards: CardName[]): DeckAnalysis {
           }
         : {};
 
-      const actionUpdate = isActionCard(card)
-        ? description.includes("+2 Actions")
-          ? { villages: acc.villages + 1 }
-          : !description.includes("+1 Action")
-            ? { terminals: acc.terminals + 1 }
-            : {}
-        : {};
+      const actionUpdate = (() => {
+        if (!isActionCard(card)) return {};
+        if (description.includes("+2 Actions")) return { villages: acc.villages + 1 };
+        if (!description.includes("+1 Action")) return { terminals: acc.terminals + 1 };
+        return {};
+      })();
 
       return {
         ...acc,
