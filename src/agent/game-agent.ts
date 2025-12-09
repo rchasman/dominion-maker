@@ -328,13 +328,24 @@ export async function advanceGameStateWithConsensus(
         data: { provider, index, startTime: uiStartTime },
       });
 
+      // Create combined abort controller for both timeout and early consensus
+      const modelAbortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        modelAbortController.abort();
+      }, 5000);
+
+      // Link parent abort to model abort
+      const abortHandler = () => modelAbortController.abort();
+      abortController.signal.addEventListener("abort", abortHandler);
+
       void generateActionViaBackend(
         provider,
         currentState,
         humanChoice,
-        abortController.signal,
+        modelAbortController.signal,
       )
         .then(action => {
+          clearTimeout(timeoutId);
           const modelDuration = performance.now() - modelStart;
           logger?.({
             type: "consensus-model-complete",
@@ -355,15 +366,19 @@ export async function advanceGameStateWithConsensus(
           };
         })
         .catch(error => {
+          clearTimeout(timeoutId);
           const modelDuration = performance.now() - modelStart;
           const isAborted =
             error.name === "AbortError" || error.message?.includes("abort");
+          const isTimeout = modelDuration >= 5000;
 
           logger?.({
             type: "consensus-model-complete",
-            message: isAborted
-              ? `${provider} aborted after ${modelDuration.toFixed(0)}ms`
-              : `${provider} failed after ${modelDuration.toFixed(0)}ms`,
+            message: isTimeout
+              ? `${provider} timed out after ${modelDuration.toFixed(0)}ms`
+              : isAborted
+                ? `${provider} aborted after ${modelDuration.toFixed(0)}ms`
+                : `${provider} failed after ${modelDuration.toFixed(0)}ms`,
             data: {
               provider,
               index,
@@ -371,9 +386,13 @@ export async function advanceGameStateWithConsensus(
               error: String(error),
               success: false,
               aborted: isAborted,
+              timeout: isTimeout,
             },
           });
           return { provider, result: null, error, duration: modelDuration };
+        })
+        .finally(() => {
+          abortController.signal.removeEventListener("abort", abortHandler);
         })
         .then(modelResult => {
           pendingModels.delete(index);
