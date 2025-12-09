@@ -122,7 +122,12 @@ export function LLMLog({
                   fontSize: "0.875rem",
                   fontWeight: 400,
                   fontFamily: "inherit",
-                  padding: "0",
+                  padding: "var(--space-2)",
+                  minWidth: "24px",
+                  minHeight: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   transition: "color 0.15s",
                 }}
                 onMouseEnter={e =>
@@ -166,7 +171,12 @@ export function LLMLog({
                     fontWeight: 700,
                     fontFamily: "inherit",
                     opacity: hasPrevTurn ? 1 : 0.3,
-                    padding: "0",
+                    padding: "var(--space-2)",
+                    minWidth: "24px",
+                    minHeight: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     transition: "opacity 0.15s",
                   }}
                 >
@@ -200,7 +210,12 @@ export function LLMLog({
                     fontWeight: 700,
                     fontFamily: "inherit",
                     opacity: hasNextTurn ? 1 : 0.3,
-                    padding: "0",
+                    padding: "var(--space-2)",
+                    minWidth: "24px",
+                    minHeight: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     transition: "opacity 0.15s",
                   }}
                 >

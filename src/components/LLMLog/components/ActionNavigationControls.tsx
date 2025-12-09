@@ -35,7 +35,12 @@ export function ActionNavigationControls({
           fontWeight: 700,
           fontFamily: "inherit",
           opacity: hasPrevAction ? 1 : 0.3,
-          padding: "0",
+          padding: "var(--space-2)",
+          minWidth: "24px",
+          minHeight: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           transition: "opacity 0.15s",
         }}
       >
@@ -61,7 +66,12 @@ export function ActionNavigationControls({
           fontWeight: 700,
           fontFamily: "inherit",
           opacity: hasNextAction ? 1 : 0.3,
-          padding: "0",
+          padding: "var(--space-2)",
+          minWidth: "24px",
+          minHeight: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           transition: "opacity 0.15s",
         }}
       >
