@@ -33,7 +33,7 @@ export function Supply({
   pendingDecision,
 }: SupplyProps) {
   const treasures: CardName[] = ["Copper", "Silver", "Gold"];
-  const victory: CardName[] = ["Estate", "Duchy", "Province", "Curse"];
+  const victory: CardName[] = ["Estate", "Duchy", "Province"];
 
   const canInteract = (card: CardName) => {
     // If there's a gain decision from supply, only enable cards in the options
@@ -112,16 +112,15 @@ export function Supply({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "auto auto 1fr auto",
-        gridTemplateAreas: '"victory treasure kingdom trash"',
+        gridTemplateColumns: "auto auto 1fr auto auto",
+        gridTemplateAreas: '"victory treasure kingdom curse trash"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
         background:
           "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
         border: "1px solid var(--color-border-supply)",
-        alignItems: "stretch",
-        minHeight: 0,
-        height: "100%",
+        alignItems: "start",
+        alignContent: "start",
       }}
     >
       {/* Victory column */}
@@ -201,15 +200,7 @@ export function Supply({
       </div>
 
       {/* Kingdom cards */}
-      <div
-        style={{
-          gridArea: "kingdom",
-          minInlineSize: 0,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-        }}
-      >
+      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
         <div
           style={{
             display: "grid",
@@ -380,6 +371,40 @@ export function Supply({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Curse pile */}
+      <div style={{ gridArea: "curse" }}>
+        <div
+          style={{
+            fontSize: "0.625rem",
+            color: "var(--color-curse)",
+            marginBlockEnd: "var(--space-2)",
+            textTransform: "uppercase",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            minHeight: "0.875rem",
+          }}
+        >
+          Curse
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-1)",
+          }}
+        >
+          <Card
+            name="Curse"
+            size="small"
+            count={state.supply["Curse"]}
+            onClick={() => onBuyCard?.("Curse")}
+            disabled={!canInteract("Curse")}
+            highlightMode={getSupplyCardHighlightMode("Curse")}
+          />
+        </div>
       </div>
     </div>
   );
