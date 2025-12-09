@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -63,15 +63,13 @@ export function Board({ onBackToHome }: BoardProps) {
     ? (Object.keys(state.players) as PlayerId[])
     : [];
 
-  const getDefaultPlayerIds = (): PlayerId[] => {
+  const playerIds = useMemo(() => {
+    if (actualPlayerIds.length > 0) return actualPlayerIds;
     if (gameMode === "multiplayer") return ["human", "ai"] as PlayerId[];
     return getPlayersForMode(gameMode);
-  };
+  }, [actualPlayerIds, gameMode]);
 
-  const playerIds =
-    actualPlayerIds.length > 0 ? actualPlayerIds : getDefaultPlayerIds();
   const mainPlayerId = playerIds[0];
-  const isHumanPlayer = mainPlayerId === "human";
 
   // Wrap requestUndo to clear preview state and selections when undoing
   const handleRequestUndo = useCallback(
@@ -246,7 +244,7 @@ export function Board({ onBackToHome }: BoardProps) {
             )}
             vpCount={opponentVP}
             isActive={!isMainPlayerTurn}
-            isHuman={false}
+            showCards={true}
             selectedCardIndices={[]}
             compact={true}
             phase={displayState.phase}
@@ -332,7 +330,7 @@ export function Board({ onBackToHome }: BoardProps) {
             )}
             vpCount={mainPlayerVP}
             isActive={isMainPlayerTurn}
-            isHuman={isHumanPlayer}
+            showCards={true}
             selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
             onCardClick={isPreviewMode ? undefined : onCardClick}
             onInPlayClick={

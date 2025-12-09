@@ -35,6 +35,7 @@ import { isActionCard, isTreasureCard } from "../data/cards";
 import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
 import { uiLogger } from "../lib/logger";
+import { resetPlayerColors } from "../lib/board-utils";
 
 const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -239,6 +240,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // If a game is already active and mode changed, restart with new player configuration
     if (gameState && !gameState.gameOver && events.length > 0) {
+      resetPlayerColors(); // Reset colors when switching modes
       const engine = new DominionEngine();
       engineRef.current = engine;
 
@@ -293,6 +295,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_EVENTS_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
     setLLMLogs([]);
+    resetPlayerColors(); // Reset color assignments for new game
 
     const engine = new DominionEngine();
     engineRef.current = engine;

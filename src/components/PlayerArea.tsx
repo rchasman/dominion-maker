@@ -14,7 +14,7 @@ interface PlayerAreaProps {
   label: string;
   vpCount?: number;
   isActive: boolean;
-  isHuman: boolean;
+  showCards: boolean; // If false, show card counts instead of actual cards
   selectedCardIndices: number[];
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName, index: number) => void;
@@ -82,7 +82,7 @@ export function PlayerArea({
   label,
   vpCount,
   isActive,
-  isHuman,
+  showCards,
   selectedCardIndices,
   onCardClick,
   onInPlayClick,
@@ -94,6 +94,7 @@ export function PlayerArea({
   loading = false,
   turnHistory = [],
 }: PlayerAreaProps) {
+  const isInteractive = !!onCardClick; // Can interact if callbacks provided
   const size = compact ? "small" : "medium";
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
@@ -107,9 +108,9 @@ export function PlayerArea({
   const getHandCardHighlightMode = (
     card: CardName,
   ): "trash" | "discard" | "gain" | undefined => {
-    if (!pendingDecision || !isHuman) return undefined;
-    // Only highlight if the decision is for this player (human)
-    if (pendingDecision.player !== "human") return undefined;
+    if (!pendingDecision || !isInteractive) return undefined;
+    // Only highlight if the decision is for this player
+    if (pendingDecision.player !== playerId) return undefined;
 
     // Only apply highlights when selecting from hand
     if (pendingDecision.from !== "hand") return undefined;
@@ -127,15 +128,15 @@ export function PlayerArea({
 
   // Determine if a hand card is disabled
   const isHandCardDisabled = (card: CardName): boolean => {
-    if (!isHuman) return false;
+    if (!isInteractive) return true; // Non-interactive players always disabled
 
     // Dim all cards when it's not the player's turn
     if (!isActive) return true;
 
-    // If there's a pending decision for the human player, only cards in options are clickable
+    // If there's a pending decision for this player, only cards in options are clickable
     if (
       pendingDecision &&
-      pendingDecision.player === "human" &&
+      pendingDecision.player === playerId &&
       pendingDecision.from === "hand"
     ) {
       const cardOptions = pendingDecision.cardOptions ?? [];
@@ -311,8 +312,8 @@ export function PlayerArea({
           alignItems: "stretch",
         }}
       >
-        {/* Hand - only for human */}
-        {isHuman && (
+        {/* Hand - show cards if showCards is true, otherwise show count */}
+        {showCards ? (
           <div
             className="hand-container"
             style={{
@@ -349,7 +350,7 @@ export function PlayerArea({
                       <Card
                         name="Copper"
                         showBack={true}
-                        size="large"
+                        size={compact ? "medium" : "large"}
                         disabled={true}
                       />
                     </div>
@@ -365,7 +366,7 @@ export function PlayerArea({
                         <Card
                           key={`${card}-${i}`}
                           name={card}
-                          size="large"
+                          size={compact ? "medium" : "large"}
                           onClick={() => onCardClick?.(card, i)}
                           selected={isSelected}
                           highlightMode={getHandCardHighlightMode(card)}
@@ -376,10 +377,7 @@ export function PlayerArea({
                   })}
             </div>
           </div>
-        )}
-
-        {/* For AI, just show card count */}
-        {!isHuman && (
+        ) : (
           <div
             style={{
               padding: "var(--space-3) var(--space-6)",
@@ -396,7 +394,7 @@ export function PlayerArea({
         )}
 
         {/* Deck & Discard box */}
-        {isHuman && (
+        {showCards && (
           <div
             className="deck-discard-container"
             style={{
@@ -500,7 +498,7 @@ export function PlayerArea({
                   // If there's a decision to choose from discard, show all cards
                   pendingDecision &&
                   pendingDecision.from === "discard" &&
-                  isHuman ? (
+                  isInteractive ? (
                     <div
                       style={{
                         display: "flex",

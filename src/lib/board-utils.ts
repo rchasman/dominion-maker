@@ -3,35 +3,38 @@ import { CARDS } from "../data/cards";
 
 /**
  * Player colors for consistent visual identification
+ * Ordered by distinctiveness for 2-player games
  */
 const PLAYER_COLORS = [
-  "#3b82f6", // Blue
-  "#ef4444", // Red
-  "#10b981", // Green
-  "#f59e0b", // Amber
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-  "#14b8a6", // Teal
-  "#f97316", // Orange
+  "#3b82f6", // Blue - Player 1
+  "#ef4444", // Red - Player 2
+  "#10b981", // Green - Player 3
+  "#f59e0b", // Amber - Player 4
+  "#8b5cf6", // Purple - Player 5
+  "#ec4899", // Pink - Player 6
+  "#14b8a6", // Teal - Player 7
+  "#f97316", // Orange - Player 8
 ] as const;
 
 /**
+ * Deterministic color mapping for specific player IDs
+ * Ensures consistent colors across mode switches
+ */
+const FIXED_PLAYER_COLORS: Record<string, number> = {
+  human: 0, // Blue
+  player: 0, // Blue (converted human)
+  ai: 1, // Red
+};
+
+/**
  * Get unique color for each player using deterministic hash
+ * Same player ID always gets same color, but different players get different colors
  */
 export function getPlayerColor(playerId: string): string {
-  // Legacy hardcoded mappings for backwards compatibility
-  const legacyMap: Record<string, string> = {
-    human: "var(--color-human)",
-    ai: "var(--color-ai)",
-    player0: "var(--color-human)",
-    player1: "var(--color-ai)",
-    player2: "var(--color-player-3)",
-    player3: "var(--color-player-4)",
-    player4: "var(--color-player-5)",
-  };
-
-  if (legacyMap[playerId]) {
-    return legacyMap[playerId];
+  // Check if this is a fixed player ID
+  if (playerId in FIXED_PLAYER_COLORS) {
+    const index = FIXED_PLAYER_COLORS[playerId];
+    return PLAYER_COLORS[index];
   }
 
   // For dynamic player names, use hash-based color selection
@@ -43,6 +46,14 @@ export function getPlayerColor(playerId: string): string {
 
   const index = Math.abs(hash) % PLAYER_COLORS.length;
   return PLAYER_COLORS[index];
+}
+
+/**
+ * Reset player color assignments (for testing)
+ */
+export function resetPlayerColors(): void {
+  // No-op now that colors are deterministic
+  // Kept for backwards compatibility with tests
 }
 
 /**

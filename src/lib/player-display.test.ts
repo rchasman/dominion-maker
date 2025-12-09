@@ -2,21 +2,23 @@ import { describe, it, expect } from "bun:test";
 import { getPlayerColor, formatPlayerName } from "./board-utils";
 
 describe("getPlayerColor", () => {
-  describe("legacy player colors", () => {
-    it("should return predefined color for 'human'", () => {
-      expect(getPlayerColor("human")).toBe("var(--color-human)");
+  describe("fixed player colors", () => {
+    it("should return blue for 'human'", () => {
+      expect(getPlayerColor("human")).toBe("#3b82f6"); // Blue
     });
 
-    it("should return predefined color for 'ai'", () => {
-      expect(getPlayerColor("ai")).toBe("var(--color-ai)");
+    it("should return blue for 'player' (converted human)", () => {
+      expect(getPlayerColor("player")).toBe("#3b82f6"); // Blue - same as human
     });
 
-    it("should return predefined colors for player0-4", () => {
-      expect(getPlayerColor("player0")).toBe("var(--color-human)");
-      expect(getPlayerColor("player1")).toBe("var(--color-ai)");
-      expect(getPlayerColor("player2")).toBe("var(--color-player-3)");
-      expect(getPlayerColor("player3")).toBe("var(--color-player-4)");
-      expect(getPlayerColor("player4")).toBe("var(--color-player-5)");
+    it("should return red for 'ai'", () => {
+      expect(getPlayerColor("ai")).toBe("#ef4444"); // Red
+    });
+
+    it("should preserve color when human converts to player", () => {
+      const humanColor = getPlayerColor("human");
+      const playerColor = getPlayerColor("player");
+      expect(humanColor).toBe(playerColor);
     });
   });
 
@@ -57,16 +59,16 @@ describe("getPlayerColor", () => {
     });
   });
 
-  describe("color consistency", () => {
-    it("should use deterministic hash for same name", () => {
-      const calls: string[] = [];
+  describe("deterministic colors across mode switches", () => {
+    it("should give same color to 'human' and 'player'", () => {
+      expect(getPlayerColor("human")).toBe("#3b82f6");
+      expect(getPlayerColor("player")).toBe("#3b82f6");
+    });
 
-      for (let i = 0; i < 10; i++) {
-        calls.push(getPlayerColor("TestPlayer"));
-      }
-
-      // All should be identical
-      expect(new Set(calls).size).toBe(1);
+    it("should give consistent colors to AI names", () => {
+      const nova1 = getPlayerColor("Nova");
+      const nova2 = getPlayerColor("Nova");
+      expect(nova1).toBe(nova2);
     });
 
     it("should distribute names across color palette", () => {
@@ -221,8 +223,9 @@ describe("Player display integration", () => {
 
     expect(humanName).toBe("You");
     expect(aiName).toBe("ai (AI)");
-    expect(humanColor).toBe("var(--color-human)");
-    expect(aiColor).toBe("var(--color-ai)");
+    expect(humanColor).toBe("#3b82f6"); // Blue
+    expect(aiColor).toBe("#ef4444"); // Red
+    expect(humanColor).not.toBe(aiColor);
   });
 
   it("should handle converted player in full mode", () => {
@@ -232,8 +235,25 @@ describe("Player display integration", () => {
 
     const playerName = formatPlayerName(player, true);
     const aiName = formatPlayerName(ai, true);
+    const playerColor = getPlayerColor(player);
+    const aiColor = getPlayerColor(ai);
 
     expect(playerName).toBe("Player (AI)");
     expect(aiName).toBe("ai (AI)");
+    expect(playerColor).toBe("#3b82f6"); // Blue - same as "human"
+    expect(aiColor).toBe("#ef4444"); // Red
+    expect(playerColor).not.toBe(aiColor);
+  });
+
+  it("should preserve color when human converts to player", () => {
+    // Simulate hybrid mode
+    const humanColor = getPlayerColor("human");
+
+    // Simulate switching to full mode (human → player)
+    const playerColor = getPlayerColor("player");
+
+    // Should be the same color
+    expect(humanColor).toBe(playerColor);
+    expect(humanColor).toBe("#3b82f6"); // Blue
   });
 });
