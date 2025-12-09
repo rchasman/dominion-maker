@@ -505,7 +505,7 @@ export function PlayerArea({
               player.inPlay.length > 0
                 ? "1px solid var(--color-border)"
                 : "1px dashed var(--color-border)",
-            minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
+            minBlockSize: "calc(var(--card-height-small) + var(--space-4) + 12px)",
             overflow: "hidden",
           }}
         >
@@ -824,7 +824,7 @@ export function PlayerArea({
               player.inPlay.length > 0
                 ? "1px solid var(--color-border)"
                 : "1px dashed var(--color-border)",
-            minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
+            minBlockSize: "calc(var(--card-height-small) + var(--space-4) + 12px)",
             overflow: "hidden",
           }}
         >
