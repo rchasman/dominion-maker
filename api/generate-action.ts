@@ -172,7 +172,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
         : "";
 
-    const strategicContext = buildStrategicContext(currentState);
+    // Get strategy analysis if we have turn history
+    let strategySummary: string | undefined;
+    try {
+      const { formatTurnHistoryForAnalysis } = await import(
+        "../src/agent/strategic-context"
+      );
+      const turnHistory = formatTurnHistoryForAnalysis(currentState);
+
+      if (turnHistory && currentState.turn > 2) {
+        // Only analyze after a few turns
+        const analyzeResponse = await fetch(
+          `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:5173"}/api/analyze-strategy`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ currentState }),
+          },
+        );
+
+        if (analyzeResponse.ok) {
+          const analyzeData = (await analyzeResponse.json()) as {
+            strategySummary?: string;
+          };
+          strategySummary = analyzeData.strategySummary;
+        }
+      }
+    } catch {
+      apiLogger.warn("Strategy analysis failed, continuing without it");
+    }
+
+    const strategicContext = buildStrategicContext(
+      currentState,
+      strategySummary,
+    );
 
     let promptQuestion: string;
     if (currentState.pendingDecision) {

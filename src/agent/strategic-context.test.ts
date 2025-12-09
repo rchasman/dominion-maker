@@ -1,5 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { buildStrategicContext } from "./strategic-context";
+import {
+  buildStrategicContext,
+  formatTurnHistoryForAnalysis,
+} from "./strategic-context";
 import type { GameState, PlayerState } from "../types/game-state";
 
 function createMockGameState(
@@ -216,6 +219,70 @@ describe("buildStrategicContext", () => {
 
       expect(context).toContain("Empty:");
       expect(context).toContain("Copper");
+    });
+  });
+
+  describe("strategy summary integration", () => {
+    it("should include strategy summary when provided", () => {
+      const state = createMockGameState("ai", ["human", "ai"]);
+      const strategySummary =
+        "You: Playing Big Money, focusing on Gold/Silver purchases.\nOpponent: Building engine with Villages and Smithies.";
+
+      const context = buildStrategicContext(state, strategySummary);
+
+      expect(context).toContain("STRATEGY ANALYSIS:");
+      expect(context).toContain("Big Money");
+      expect(context).toContain("Villages and Smithies");
+    });
+
+    it("should work without strategy summary", () => {
+      const state = createMockGameState("ai", ["human", "ai"]);
+      const context = buildStrategicContext(state);
+
+      expect(context).not.toContain("STRATEGY ANALYSIS:");
+      expect(context).toContain("SCORE:");
+      expect(context).toContain("YOUR DECK");
+    });
+  });
+
+  describe("formatTurnHistoryForAnalysis", () => {
+    it("should format recent turns for LLM analysis", () => {
+      const state = createMockGameState("ai", ["human", "ai"]);
+
+      // Add some log entries
+      state.log = [
+        { type: "turn-start", turn: 1, player: "human" },
+        {
+          type: "play-action",
+          player: "human",
+          card: "Village",
+          reasoning: "",
+        },
+        { type: "play-action", player: "human", card: "Smithy", reasoning: "" },
+        { type: "buy-card", player: "human", card: "Silver", reasoning: "" },
+        { type: "turn-start", turn: 2, player: "ai" },
+        { type: "play-action", player: "ai", card: "Market", reasoning: "" },
+        { type: "buy-card", player: "ai", card: "Gold", reasoning: "" },
+      ];
+
+      const formatted = formatTurnHistoryForAnalysis(state);
+
+      expect(formatted).toContain("RECENT TURN HISTORY:");
+      expect(formatted).toContain("Turn 1");
+      expect(formatted).toContain("Turn 2");
+      expect(formatted).toContain("Village, Smithy");
+      expect(formatted).toContain("Silver");
+      expect(formatted).toContain("Market");
+      expect(formatted).toContain("Gold");
+    });
+
+    it("should return empty string when no turns", () => {
+      const state = createMockGameState("ai", ["human", "ai"]);
+      state.log = [];
+
+      const formatted = formatTurnHistoryForAnalysis(state);
+
+      expect(formatted).toBe("");
     });
   });
 });
