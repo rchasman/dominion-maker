@@ -166,13 +166,7 @@ export function MultiplayerGameBoard({
     if (!result.ok) {
       uiLogger.error("Failed to play treasures:", result.error);
     }
-  }, [
-    isMyTurn,
-    gameState,
-    playAllTreasures,
-    validPreviewEventId,
-    getStateAtEvent,
-  ]);
+  }, [previewEventId, isMyTurn, gameState, playAllTreasures, getStateAtEvent]);
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {

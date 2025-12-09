@@ -88,6 +88,10 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   });
 
   // Auto-advance to latest turn and action when new data arrives
+  const lastTurn = turns[turns.length - 1];
+  const lastTurnDecisionsLength = lastTurn?.decisions.length;
+  const lastTurnPending = lastTurn?.pending;
+
   useEffect(() => {
     if (state.userNavigatedAway || turns.length === 0) return;
 
@@ -109,9 +113,10 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
       });
     }
   }, [
+    turns,
     turns.length,
-    turns[turns.length - 1]?.decisions.length,
-    turns[turns.length - 1]?.pending,
+    lastTurnDecisionsLength,
+    lastTurnPending,
     state.userNavigatedAway,
     state.currentTurnIndex,
     state.currentActionIndex,
