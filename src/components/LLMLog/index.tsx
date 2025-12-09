@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/types";
@@ -38,11 +38,10 @@ export function LLMLog({
     return (saved as PaneType | null) || "voting";
   });
 
-  const activePane = activePaneState;
-  const setActivePane = (pane: PaneType) => {
+  const setActivePane = useCallback((pane: PaneType) => {
     setActivePaneState(pane);
     localStorage.setItem("llm-log-active-pane", pane);
-  };
+  }, []);
 
   const now = useLiveTimer(entries);
   const turns = useTurnExtraction(entries);
@@ -62,16 +61,12 @@ export function LLMLog({
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
 
-  // Auto-switch away from performance pane when it's hidden (no timing data)
-  useEffect(() => {
-    if (
-      currentDecision &&
-      !currentDecision.timingEntry &&
-      activePane === "performance"
-    ) {
-      setActivePane("voting");
-    }
-  }, [currentDecision, activePane, setActivePane]);
+  const activePane =
+    currentDecision &&
+    !currentDecision.timingEntry &&
+    activePaneState === "performance"
+      ? "voting"
+      : activePaneState;
 
   const getModeMessage = () => {
     if (gameMode === "multiplayer") {
@@ -135,8 +130,7 @@ export function LLMLog({
               </span>
             ) : (
               <>
-                {currentTurn.gameTurn &&
-                  `Turn #${currentTurn.gameTurn}: `}
+                {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
                 Action {currentActionIndex + 1} of{" "}
                 {currentTurn.decisions.length + 1}{" "}
               </>
@@ -150,9 +144,9 @@ export function LLMLog({
             >
               (
               {
-                Array.from(
-                  currentTurn.modelStatuses?.values() || [],
-                ).filter(s => s.completed).length
+                Array.from(currentTurn.modelStatuses?.values() || []).filter(
+                  s => s.completed,
+                ).length
               }
               /{currentTurn.pendingData?.totalModels || "?"})
             </span>
@@ -165,10 +159,7 @@ export function LLMLog({
           />
         </div>
       </div>
-      <PaneTabSwitcher
-        activePane={activePane}
-        onPaneChange={setActivePane}
-      />
+      <PaneTabSwitcher activePane={activePane} onPaneChange={setActivePane} />
       <PaneContent
         activePane={activePane}
         votingData={null}
@@ -214,8 +205,7 @@ export function LLMLog({
               </span>
             ) : (
               <>
-                {currentTurn.gameTurn &&
-                  `Turn #${currentTurn.gameTurn}: `}
+                {currentTurn.gameTurn && `Turn #${currentTurn.gameTurn}: `}
                 Action {currentActionIndex + 1} of{" "}
                 {currentTurn.pending
                   ? currentTurn.decisions.length + 1
@@ -231,9 +221,8 @@ export function LLMLog({
             >
               (
               {(
-                (Number(
-                  currentDecision.timingEntry?.data?.parallelDuration,
-                ) || 0) / 1000
+                (Number(currentDecision.timingEntry?.data?.parallelDuration) ||
+                  0) / 1000
               ).toFixed(2)}
               s)
             </span>
@@ -256,12 +245,9 @@ export function LLMLog({
       <PaneContent
         activePane={activePane}
         votingData={
-          currentDecision.votingEntry
-            .data as unknown as ConsensusVotingData
+          currentDecision.votingEntry.data as unknown as ConsensusVotingData
         }
-        timingData={
-          currentDecision.timingEntry?.data as TimingData | undefined
-        }
+        timingData={currentDecision.timingEntry?.data as TimingData | undefined}
         modelStatuses={currentDecision.modelStatuses}
         gameStateData={
           currentDecision.votingEntry.data?.gameState as
@@ -287,7 +273,10 @@ export function LLMLog({
       return renderEmptyState();
     }
 
-    if (currentTurn?.pending && currentActionIndex === currentTurn.decisions.length) {
+    if (
+      currentTurn?.pending &&
+      currentActionIndex === currentTurn.decisions.length
+    ) {
       return renderPendingAction();
     }
 
