@@ -58,8 +58,8 @@ export function Supply({
         display: "grid",
         gridTemplateColumns: "auto auto 1fr",
         gridTemplateAreas: '"victory treasure kingdom"',
-        gap: "var(--space-6)",
-        padding: "var(--space-6) var(--space-5)",
+        gap: "var(--space-4)",
+        padding: "var(--space-3) var(--space-4)",
         background:
           "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
         border: "1px solid var(--color-border-supply)",

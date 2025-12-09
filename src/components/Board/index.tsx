@@ -217,13 +217,13 @@ export function Board({ onBackToHome }: BoardProps) {
         style={{
           display: "grid",
           gridTemplateRows: "auto 1fr auto auto",
-          rowGap: "var(--space-3)",
-          padding: "var(--space-5)",
+          rowGap: "var(--space-2)",
+          padding: "var(--space-3)",
           minInlineSize: 0,
           overflow: "hidden",
           paddingTop: isPreviewMode
-            ? "calc(var(--space-5) + 2.5rem)"
-            : "var(--space-5)",
+            ? "calc(var(--space-3) + 2.5rem)"
+            : "var(--space-3)",
           position: "relative",
         }}
       >

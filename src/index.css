@@ -54,12 +54,12 @@
   --space-10: 2.5rem; /* 40px */
 
   /* Card Sizes (rem-based for font size scaling) */
-  --card-width-small: 3.75rem;
-  --card-width-medium: 6rem;
-  --card-width-large: 8.25rem;
-  --card-height-small: 5.9375rem;
-  --card-height-medium: 9.375rem;
-  --card-height-large: 12.8906rem;
+  --card-width-small: 3rem;
+  --card-width-medium: 4.5rem;
+  --card-width-large: 6rem;
+  --card-height-small: 4.75rem;
+  --card-height-medium: 7.03125rem;
+  --card-height-large: 9.375rem;
 
   /* Border Radius */
   --radius-sm: 0.125rem;
@@ -205,7 +205,7 @@ body {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, var(--card-width-large));
-  gap: 0.5rem;
+  gap: 0.375rem;
   justify-content: center;
   overflow-x: auto;
 }
