@@ -14,6 +14,7 @@ interface CardProps {
   showBack?: boolean;
   size?: "small" | "medium" | "large";
   highlightMode?: "trash" | "discard" | "gain";
+  disableTooltip?: boolean;
 }
 
 export function Card({
@@ -26,6 +27,7 @@ export function Card({
   showBack,
   size = "medium",
   highlightMode,
+  disableTooltip = false,
 }: CardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -71,6 +73,8 @@ export function Card({
   const borderStyle = getBorderStyle();
 
   const handleMouseEnter = () => {
+    if (disableTooltip) return;
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
