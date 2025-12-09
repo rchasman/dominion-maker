@@ -229,12 +229,14 @@ describe("buildStrategicContext", () => {
         human: {
           gameplan: "Big Money - Leading with 12 VP",
           read: "Playing textbook Big Money with disciplined Gold/Silver purchases. Deck is clean but lacks action synergy. Main weakness is vulnerability to engine strategies in long games.",
-          lines: "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
+          lines:
+            "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
         },
         ai: {
           gameplan: "Engine Building - Behind at 6 VP",
           read: "Building Villages and Smithies engine but execution is slow. Low buying power is the critical weakness. Needs 1-2 more engine pieces before competing.",
-          lines: "Finish the engine before greening. Need at least one more Village.",
+          lines:
+            "Finish the engine before greening. Need at least one more Village.",
         },
       });
 

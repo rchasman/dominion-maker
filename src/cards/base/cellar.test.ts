@@ -42,7 +42,13 @@ describe("Cellar - duplicate card handling", () => {
   it("should only discard selected copies, not all copies", () => {
     const state = createTestState();
     // Player has 3 Estates, wants to discard 2
-    state.players.human.hand = ["Estate", "Estate", "Estate", "Copper", "Silver"];
+    state.players.human.hand = [
+      "Estate",
+      "Estate",
+      "Estate",
+      "Copper",
+      "Silver",
+    ];
     state.players.human.deck = ["Gold", "Gold", "Gold"]; // Cards to draw
 
     // Initial call - get decision
@@ -65,7 +71,9 @@ describe("Cellar - duplicate card handling", () => {
     });
 
     // Should create 2 discard events + 2 draw events
-    const discardEvents = result2.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result2.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
 
     expect(discardEvents.length).toBe(2);
@@ -96,7 +104,9 @@ describe("Cellar - duplicate card handling", () => {
       stage: "discard",
     });
 
-    const discardEvents = result2.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result2.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(2);
     expect(discardEvents.every(e => e.card === "Estate")).toBe(true);
   });
@@ -121,7 +131,9 @@ describe("Cellar - duplicate card handling", () => {
       stage: "discard",
     });
 
-    const discardEvents = result2.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result2.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(3);
 
     const discardedCards = discardEvents.map(e => e.card);

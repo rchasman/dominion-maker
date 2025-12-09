@@ -35,7 +35,6 @@ function selectCardsToDiscard(
 describe("EngineStrategy - Militia discard", () => {
   beforeEach(() => {});
 
-
   it("should select 2 cards when AI has multiple Estates", () => {
     const hand = ["Estate", "Estate", "Estate", "Copper", "Copper"];
     const selected = selectCardsToDiscard(hand, 2);

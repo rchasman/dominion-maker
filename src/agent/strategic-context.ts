@@ -268,8 +268,10 @@ function analyzeDeck(cards: CardName[]): DeckAnalysis {
 
       const actionUpdate = run(() => {
         if (!isActionCard(card)) return {};
-        if (description.includes("+2 Actions")) return { villages: acc.villages + 1 };
-        if (!description.includes("+1 Action")) return { terminals: acc.terminals + 1 };
+        if (description.includes("+2 Actions"))
+          return { villages: acc.villages + 1 };
+        if (!description.includes("+1 Action"))
+          return { terminals: acc.terminals + 1 };
         return {};
       });
 

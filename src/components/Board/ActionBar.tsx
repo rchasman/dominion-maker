@@ -23,10 +23,17 @@ interface ActionBarProps {
 
 function getPhaseBackground(isActive: boolean, phase: string): string {
   if (!isActive) return "transparent";
-  return phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)";
+  return phase === "action"
+    ? "var(--color-action-phase)"
+    : "var(--color-buy-phase)";
 }
 
-function getPhaseOpacity(isActive: boolean, phase: string, actions: number, buys: number): number {
+function getPhaseOpacity(
+  isActive: boolean,
+  phase: string,
+  actions: number,
+  buys: number,
+): number {
   if (!isActive) return 1;
   if (phase === "action" && actions === 0) return 0.4;
   if (phase === "buy" && buys === 0) return 0.4;
@@ -97,7 +104,9 @@ export function ActionBar({
         padding: "var(--space-2) var(--space-4)",
         background:
           "linear-gradient(180deg, var(--color-bg-surface) 0%, var(--color-bg-surface-alt) 100%)",
-        border: isActive ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
+        border: isActive
+          ? `2px solid ${borderColor}`
+          : `1px solid ${borderColor}`,
         borderBottom: `1px dashed ${borderColor}`,
         boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
       }}
@@ -120,7 +129,12 @@ export function ActionBar({
             border: isActive ? "none" : `1px dashed ${borderColor}`,
             padding: "var(--space-1) var(--space-3)",
             fontWeight: 600,
-            opacity: getPhaseOpacity(isActive, state.phase, state.actions, state.buys),
+            opacity: getPhaseOpacity(
+              isActive,
+              state.phase,
+              state.actions,
+              state.buys,
+            ),
             minWidth: "4.5rem",
             textAlign: "center",
             display: "inline-block",
@@ -138,7 +152,9 @@ export function ActionBar({
             </span>
             <span style={{ color: "var(--color-text-primary)" }}>
               Buys:{" "}
-              <strong style={{ color: "var(--color-gold)" }}>{state.buys}</strong>
+              <strong style={{ color: "var(--color-gold)" }}>
+                {state.buys}
+              </strong>
             </span>
             <span style={{ color: "var(--color-text-primary)" }}>
               Coins:{" "}
@@ -173,21 +189,25 @@ export function ActionBar({
                   onClick={() => onConfirmDecision(complexDecisionData)}
                   disabled={
                     !complexDecisionData &&
-                    selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                    selectedCardIndices.length <
+                      (state.pendingDecision!.min ?? 0)
                   }
                   style={{
                     padding: "var(--space-2) var(--space-4)",
-                    background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
+                    background:
+                      "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
                     color: "#fff",
                     border: "1px solid #a5b4fc",
                     cursor:
                       !complexDecisionData &&
-                      selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                      selectedCardIndices.length <
+                        (state.pendingDecision!.min ?? 0)
                         ? "not-allowed"
                         : "pointer",
                     opacity:
                       !complexDecisionData &&
-                      selectedCardIndices.length < (state.pendingDecision!.min ?? 0)
+                      selectedCardIndices.length <
+                        (state.pendingDecision!.min ?? 0)
                         ? 0.5
                         : 1,
                     fontSize: "0.6875rem",
@@ -223,46 +243,62 @@ export function ActionBar({
           if (isActive) {
             return (
               <>
-                {onPlayAllTreasures && state.phase === "buy" && hasTreasuresInHand && (
-                  <button
-                    onClick={onPlayAllTreasures}
-                    disabled={
-                      !!(state.pendingDecision && !state.pendingDecision.canSkip)
-                    }
-                    style={{
-                      padding: "var(--space-2) var(--space-4)",
-                      background:
-                        "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
-                      color: "var(--color-bg-primary)",
-                      border: "1px solid var(--color-gold-bright)",
-                      cursor:
-                        state.pendingDecision && !state.pendingDecision.canSkip
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity:
-                        state.pendingDecision && !state.pendingDecision.canSkip
-                          ? 0.5
-                          : 1,
-                      fontSize: "0.6875rem",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    Play Treasures
-                  </button>
-                )}
+                {onPlayAllTreasures &&
+                  state.phase === "buy" &&
+                  hasTreasuresInHand && (
+                    <button
+                      onClick={onPlayAllTreasures}
+                      disabled={
+                        !!(
+                          state.pendingDecision &&
+                          !state.pendingDecision.canSkip
+                        )
+                      }
+                      style={{
+                        padding: "var(--space-2) var(--space-4)",
+                        background:
+                          "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
+                        color: "var(--color-bg-primary)",
+                        border: "1px solid var(--color-gold-bright)",
+                        cursor:
+                          state.pendingDecision &&
+                          !state.pendingDecision.canSkip
+                            ? "not-allowed"
+                            : "pointer",
+                        opacity:
+                          state.pendingDecision &&
+                          !state.pendingDecision.canSkip
+                            ? 0.5
+                            : 1,
+                        fontSize: "0.6875rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Play Treasures
+                    </button>
+                  )}
                 {onEndPhase && (
                   <button
                     onClick={onEndPhase}
                     disabled={
-                      !!(state.pendingDecision && !state.pendingDecision.canSkip)
+                      !!(
+                        state.pendingDecision && !state.pendingDecision.canSkip
+                      )
                     }
                     style={{
                       padding: "var(--space-2) var(--space-4)",
-                      background: getEndPhaseButtonBackground(state.pendingDecision, state.phase),
+                      background: getEndPhaseButtonBackground(
+                        state.pendingDecision,
+                        state.phase,
+                      ),
                       color: isTurnComplete ? "#a89968" : "#fff",
-                      border: getEndPhaseButtonBorder(isTurnComplete, state.pendingDecision, state.phase),
+                      border: getEndPhaseButtonBorder(
+                        isTurnComplete,
+                        state.pendingDecision,
+                        state.phase,
+                      ),
                       cursor:
                         state.pendingDecision && !state.pendingDecision.canSkip
                           ? "not-allowed"

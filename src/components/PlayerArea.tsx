@@ -265,12 +265,7 @@ export function PlayerArea({
             animation: "subtlePulse 3s ease-in-out infinite",
           }}
         >
-          <Card
-            name="Copper"
-            showBack={true}
-            size="medium"
-            disabled={true}
-          />
+          <Card name="Copper" showBack={true} size="medium" disabled={true} />
         </div>
       );
     }
@@ -315,12 +310,7 @@ export function PlayerArea({
             animation: "subtlePulse 3s ease-in-out infinite",
           }}
         >
-          <Card
-            name="Copper"
-            showBack={true}
-            size="medium"
-            disabled={true}
-          />
+          <Card name="Copper" showBack={true} size="medium" disabled={true} />
         </div>
       );
     }
@@ -347,9 +337,7 @@ export function PlayerArea({
 
     // Check if we should show interactive card selection
     const shouldShowCardSelection =
-      pendingDecision &&
-      pendingDecision.from === "discard" &&
-      isInteractive;
+      pendingDecision && pendingDecision.from === "discard" && isInteractive;
 
     if (shouldShowCardSelection) {
       return (
@@ -385,13 +373,7 @@ export function PlayerArea({
     }
 
     // Default: show as normal pile
-    return (
-      <Pile
-        cards={player.discard}
-        pileType="discard"
-        size="medium"
-      />
-    );
+    return <Pile cards={player.discard} pileType="discard" size="medium" />;
   };
 
   return (

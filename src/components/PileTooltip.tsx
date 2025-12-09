@@ -104,43 +104,43 @@ export function PileTooltip({
           position: "relative",
         }}
       >
-      <div
-        style={{
-          position: "absolute",
-          top: "var(--space-2)",
-          left: "var(--space-2)",
-          fontSize: "0.625rem",
-          color: borderColor,
-          fontWeight: 600,
-          textTransform: "uppercase",
-        }}
-      >
-        {titleText}
-      </div>
+        <div
+          style={{
+            position: "absolute",
+            top: "var(--space-2)",
+            left: "var(--space-2)",
+            fontSize: "0.625rem",
+            color: borderColor,
+            fontWeight: 600,
+            textTransform: "uppercase",
+          }}
+        >
+          {titleText}
+        </div>
 
-      {/* For deck with known cards, show them separately */}
-      {pileType === "deck" && knownUniqueCards.length > 0 && (
-        <>
-          <div
-            style={{
-              fontSize: "0.625rem",
-              color: "var(--color-text-secondary)",
-              fontWeight: 600,
-              textTransform: "uppercase",
-              marginBottom: "0.5rem",
-              paddingTop: "0.75rem",
-            }}
-          >
-            Known Cards
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.5rem",
-              marginBottom: "1rem",
-            }}
-          >
+        {/* For deck with known cards, show them separately */}
+        {pileType === "deck" && knownUniqueCards.length > 0 && (
+          <>
+            <div
+              style={{
+                fontSize: "0.625rem",
+                color: "var(--color-text-secondary)",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                marginBottom: "0.5rem",
+                paddingTop: "0.75rem",
+              }}
+            >
+              Known Cards
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                marginBottom: "1rem",
+              }}
+            >
               {knownUniqueCards.map(card => {
                 const count = knownCards.filter(c => c === card).length;
                 return (

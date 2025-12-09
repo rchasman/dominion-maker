@@ -33,10 +33,7 @@ function selectCardsToTrash(
 }
 
 // Extract the AI gain logic to test it directly
-function selectCardsToGain(
-  options: CardName[],
-  numToGain: number,
-): CardName[] {
+function selectCardsToGain(options: CardName[], numToGain: number): CardName[] {
   // Gain most expensive card available (simple heuristic)
   const sorted = [...options].sort((a, b) => CARDS[b].cost - CARDS[a].cost);
   return sorted.slice(0, numToGain);

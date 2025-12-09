@@ -33,19 +33,13 @@ function getBarOpacity(
   return 0.8;
 }
 
-function getDottedLineOpacity(
-  isPending: boolean,
-  isFailed: boolean,
-): number {
+function getDottedLineOpacity(isPending: boolean, isFailed: boolean): number {
   if (isPending) return 0.1;
   if (isFailed) return 0.15;
   return 0.2;
 }
 
-function getDottedLineColor(
-  isFailed: boolean,
-  providerColor: string,
-): string {
+function getDottedLineColor(isFailed: boolean, providerColor: string): string {
   return isFailed ? "#ef4444" : providerColor;
 }
 
@@ -59,10 +53,7 @@ function getModelNameColor(
   return providerColor;
 }
 
-function getModelNameOpacity(
-  isPending: boolean,
-  isAborted: boolean,
-): number {
+function getModelNameOpacity(isPending: boolean, isAborted: boolean): number {
   if (isPending) return 0.6;
   if (isAborted) return 0.4;
   return 1;
@@ -260,7 +251,10 @@ export function PerformancePane({
               <div
                 style={{
                   width: `${barAreaWidth - barWidthPx + extraSpace}px`,
-                  color: getDottedLineColor(isFailed, getModelColor(timing.provider)),
+                  color: getDottedLineColor(
+                    isFailed,
+                    getModelColor(timing.provider),
+                  ),
                   opacity: getDottedLineOpacity(isPending, isFailed),
                   fontSize: "0.6rem",
                   lineHeight: "5px",
