@@ -580,23 +580,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Auto-transition to buy phase when human has no actions to play
   useEffect(() => {
-    if (!gameState || gameState.gameOver || isProcessing) return;
-    if (gameState.activePlayer !== "human") return;
-    if (gameState.phase !== "action") return;
-    if (gameState.pendingDecision) return; // Don't auto-transition during decisions
+    if (!gameState || isProcessing) return;
 
     const engine = engineRef.current;
     if (!engine) return;
 
-    // Check if player can play any actions
-    const humanPlayer = gameState.players.human;
-    if (!humanPlayer) return;
-
-    const hasActionCards = humanPlayer.hand.some(card => isActionCard(card));
-    const hasActions = gameState.actions > 0;
-
-    // Auto-transition if no actions available OR no action cards to play
-    if (!hasActions || !hasActionCards) {
+    // Use engine to check if auto-advance should happen
+    if (engine.shouldAutoAdvancePhase("human")) {
       const timer = setTimeout(() => {
         uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
