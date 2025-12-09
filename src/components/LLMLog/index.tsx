@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/types";
@@ -61,6 +61,17 @@ export function LLMLog({
   } = useNavigationState(turns);
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
+
+  // Auto-switch away from performance pane when it's hidden (no timing data)
+  useEffect(() => {
+    if (
+      currentDecision &&
+      !currentDecision.timingEntry &&
+      activePane === "performance"
+    ) {
+      setActivePane("voting");
+    }
+  }, [currentDecision, activePane, setActivePane]);
 
   const getModeMessage = () => {
     return gameMode === "multiplayer"
