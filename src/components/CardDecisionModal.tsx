@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { CardName, CardAction } from "../types/game-state";
 import { Card } from "./Card";
 
@@ -32,18 +32,44 @@ export function CardDecisionModal({
   const [cardOrder, setCardOrder] = useState<number[]>(cards.map((_, i) => i));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // Notify parent of initial state on mount
+  useEffect(() => {
+    const cardsToOrder = cardOrder.filter(idx => {
+      const action = cardActions[idx];
+      return action === "topdeck" || action === "keep";
+    });
+    onDataChange({
+      cardActions,
+      cardOrder: requiresOrdering ? cardsToOrder : undefined,
+    });
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleCardAction = useCallback(
     (index: number) => {
       setCardActions(prev => {
         const currentActionIndex = actions.findIndex(a => a.id === prev[index]);
         const nextActionIndex = (currentActionIndex + 1) % actions.length;
-        return {
+        const newCardActions = {
           ...prev,
           [index]: actions[nextActionIndex].id,
         };
+
+        // Notify parent immediately
+        const cardsToOrder = cardOrder.filter(idx => {
+          const action = newCardActions[idx];
+          return action === "topdeck" || action === "keep";
+        });
+        onDataChange({
+          cardActions: newCardActions,
+          cardOrder: requiresOrdering ? cardsToOrder : undefined,
+        });
+
+        return newCardActions;
       });
     },
-    [actions],
+    [actions, cardOrder, onDataChange, requiresOrdering],
   );
 
   const handleDragStart = useCallback((index: number) => {
@@ -67,12 +93,22 @@ export function CardDecisionModal({
         newOrder.splice(draggedOrderIndex, 1);
         newOrder.splice(targetOrderIndex, 0, draggedIndex);
 
+        // Notify parent immediately
+        const cardsToOrder = newOrder.filter(idx => {
+          const action = cardActions[idx];
+          return action === "topdeck" || action === "keep";
+        });
+        onDataChange({
+          cardActions,
+          cardOrder: requiresOrdering ? cardsToOrder : undefined,
+        });
+
         return newOrder;
       });
 
       setDraggedIndex(null);
     },
-    [draggedIndex],
+    [draggedIndex, cardActions, onDataChange, requiresOrdering],
   );
 
   const getCardsForOrdering = useCallback(() => {
@@ -84,29 +120,29 @@ export function CardDecisionModal({
     });
   }, [cardOrder, cardActions]);
 
+  const handleReorder = useCallback(
+    (newOrder: number[]) => {
+      setCardOrder(newOrder);
+
+      // Notify parent immediately
+      const cardsToOrder = newOrder.filter(idx => {
+        const action = cardActions[idx];
+        return action === "topdeck" || action === "keep";
+      });
+      onDataChange({
+        cardActions,
+        cardOrder: requiresOrdering ? cardsToOrder : undefined,
+      });
+    },
+    [cardActions, onDataChange, requiresOrdering],
+  );
+
   const cardsToOrder = getCardsForOrdering();
 
   // Check if all topdecked cards are the same (no need to order)
   const needsOrdering =
     cardsToOrder.length > 1 &&
     new Set(cardsToOrder.map(index => cards[index])).size > 1;
-
-  // Update parent whenever cardActions or cardOrder changes
-  const prevDataRef = useRef<string>("");
-  useEffect(() => {
-    const dataStr = JSON.stringify({
-      cardActions,
-      cardOrder: requiresOrdering ? cardsToOrder : undefined,
-    });
-    if (dataStr !== prevDataRef.current) {
-      prevDataRef.current = dataStr;
-      onDataChange({
-        cardActions,
-        cardOrder: requiresOrdering ? cardsToOrder : undefined,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardActions, cardOrder]);
 
   return (
     <div
@@ -242,20 +278,18 @@ export function CardDecisionModal({
                           e.stopPropagation();
                           const currentPos = cardsToOrder.indexOf(cardIndex);
                           if (currentPos > 0) {
-                            setCardOrder(prev => {
-                              const newOrder = [...prev];
-                              const idx1 = newOrder.indexOf(
-                                cardsToOrder[currentPos],
-                              );
-                              const idx2 = newOrder.indexOf(
-                                cardsToOrder[currentPos - 1],
-                              );
-                              [newOrder[idx1], newOrder[idx2]] = [
-                                newOrder[idx2],
-                                newOrder[idx1],
-                              ];
-                              return newOrder;
-                            });
+                            const newOrder = [...cardOrder];
+                            const idx1 = newOrder.indexOf(
+                              cardsToOrder[currentPos],
+                            );
+                            const idx2 = newOrder.indexOf(
+                              cardsToOrder[currentPos - 1],
+                            );
+                            [newOrder[idx1], newOrder[idx2]] = [
+                              newOrder[idx2],
+                              newOrder[idx1],
+                            ];
+                            handleReorder(newOrder);
                           }
                         }}
                         style={{
@@ -276,20 +310,18 @@ export function CardDecisionModal({
                           e.stopPropagation();
                           const currentPos = cardsToOrder.indexOf(cardIndex);
                           if (currentPos < cardsToOrder.length - 1) {
-                            setCardOrder(prev => {
-                              const newOrder = [...prev];
-                              const idx1 = newOrder.indexOf(
-                                cardsToOrder[currentPos],
-                              );
-                              const idx2 = newOrder.indexOf(
-                                cardsToOrder[currentPos + 1],
-                              );
-                              [newOrder[idx1], newOrder[idx2]] = [
-                                newOrder[idx2],
-                                newOrder[idx1],
-                              ];
-                              return newOrder;
-                            });
+                            const newOrder = [...cardOrder];
+                            const idx1 = newOrder.indexOf(
+                              cardsToOrder[currentPos],
+                            );
+                            const idx2 = newOrder.indexOf(
+                              cardsToOrder[currentPos + 1],
+                            );
+                            [newOrder[idx1], newOrder[idx2]] = [
+                              newOrder[idx2],
+                              newOrder[idx1],
+                            ];
+                            handleReorder(newOrder);
                           }
                         }}
                         style={{

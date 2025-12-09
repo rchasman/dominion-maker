@@ -57,6 +57,13 @@ export function Board({ onBackToHome }: BoardProps) {
     cardOrder?: number[];
   } | null>(null);
 
+  const handleComplexDecisionDataChange = useCallback(
+    (data: { cardActions: Record<number, string>; cardOrder?: number[] }) => {
+      setComplexDecisionData(data);
+    },
+    [],
+  );
+
   // Determine player IDs - use actual from state if available, otherwise defaults
   const getPlayerIds = (): PlayerId[] => {
     if (state) return Object.keys(state.players) as PlayerId[];
@@ -326,9 +333,7 @@ export function Board({ onBackToHome }: BoardProps) {
                 cards={displayState.pendingDecision.cardOptions}
                 actions={displayState.pendingDecision.actions}
                 requiresOrdering={displayState.pendingDecision.requiresOrdering}
-                onDataChange={data => {
-                  setComplexDecisionData(data);
-                }}
+                onDataChange={handleComplexDecisionDataChange}
               />
             )}
         </div>
