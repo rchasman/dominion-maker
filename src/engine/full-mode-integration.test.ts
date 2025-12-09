@@ -65,8 +65,12 @@ describe("Full mode integration", () => {
 
     // Verify both players have valid starting cards
     const validStartingCards = ["Copper", "Estate"];
-    expect(ai1InitialHand.every(card => validStartingCards.includes(card))).toBe(true);
-    expect(ai2InitialHand.every(card => validStartingCards.includes(card))).toBe(true);
+    expect(
+      ai1InitialHand.every(card => validStartingCards.includes(card)),
+    ).toBe(true);
+    expect(
+      ai2InitialHand.every(card => validStartingCards.includes(card)),
+    ).toBe(true);
   });
 
   it("should generate valid strategic context for ai1", () => {
