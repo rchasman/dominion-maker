@@ -216,7 +216,7 @@ export function Board({ onBackToHome }: BoardProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateRows: "auto auto 1fr auto auto",
+          gridTemplateRows: "auto 1fr auto",
           rowGap: "var(--space-2)",
           padding: "var(--space-3)",
           minInlineSize: 0,
@@ -245,24 +245,13 @@ export function Board({ onBackToHome }: BoardProps) {
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
           playerStrategy={playerStrategies[opponentPlayerId]}
-        />
-
-        <ActionBar
-          state={displayState}
-          hint={
-            !isMainPlayerTurn
-              ? displayState.pendingDecision?.player === opponentPlayerId
-                ? displayState.pendingDecision.prompt
-                : ""
+          gameState={displayState}
+          actionBarHint={
+            displayState.pendingDecision?.player === opponentPlayerId
+              ? displayState.pendingDecision.prompt
               : ""
           }
           hasTreasuresInHand={false}
-          onPlayAllTreasures={undefined}
-          onEndPhase={undefined}
-          selectedCardIndices={[]}
-          complexDecisionData={null}
-          onConfirmDecision={undefined}
-          onSkipDecision={undefined}
         />
 
         <div
@@ -276,59 +265,6 @@ export function Board({ onBackToHome }: BoardProps) {
             pendingDecision={displayState.pendingDecision}
           />
         </div>
-
-        <ActionBar
-          state={displayState}
-          hint={getHint()}
-          hasTreasuresInHand={hasTreasuresInHand}
-          onPlayAllTreasures={
-            isMainPlayerTurn && !isPreviewMode
-              ? onPlayAllTreasures
-              : undefined
-          }
-          onEndPhase={
-            isMainPlayerTurn && !isPreviewMode ? onEndPhase : undefined
-          }
-          selectedCardIndices={selectedCardIndices}
-          complexDecisionData={complexDecisionData}
-          onConfirmDecision={
-            isMainPlayerTurn && !isPreviewMode
-              ? data => {
-                  if (data) {
-                    // Complex decision with cardActions and cardOrder
-                    const result = submitDecision({
-                      selectedCards: [],
-                      cardActions: data.cardActions,
-                      cardOrder: data.cardOrder,
-                    });
-                    if (result.ok) {
-                      setSelectedCardIndices([]);
-                      setComplexDecisionData(null);
-                    }
-                  } else {
-                    // Simple card selection
-                    const selectedCards = selectedCardIndices.map(
-                      i => mainPlayer.hand[i],
-                    );
-                    const result = submitDecision({ selectedCards });
-                    if (result.ok) {
-                      setSelectedCardIndices([]);
-                    }
-                  }
-                }
-              : undefined
-          }
-          onSkipDecision={
-            isMainPlayerTurn && !isPreviewMode
-              ? () => {
-                  const result = submitDecision({ selectedCards: [] });
-                  if (result.ok) {
-                    setSelectedCardIndices([]);
-                  }
-                }
-              : undefined
-          }
-        />
 
         <div style={{ position: "relative" }}>
           <PlayerArea
@@ -355,6 +291,55 @@ export function Board({ onBackToHome }: BoardProps) {
             playerId={mainPlayerId}
             turnHistory={displayState.turnHistory}
             playerStrategy={playerStrategies[mainPlayerId]}
+            gameState={displayState}
+            actionBarHint={getHint()}
+            hasTreasuresInHand={hasTreasuresInHand}
+            onPlayAllTreasures={
+              isMainPlayerTurn && !isPreviewMode
+                ? onPlayAllTreasures
+                : undefined
+            }
+            onEndPhase={
+              isMainPlayerTurn && !isPreviewMode ? onEndPhase : undefined
+            }
+            complexDecisionData={complexDecisionData}
+            onConfirmDecision={
+              isMainPlayerTurn && !isPreviewMode
+                ? data => {
+                    if (data) {
+                      // Complex decision with cardActions and cardOrder
+                      const result = submitDecision({
+                        selectedCards: [],
+                        cardActions: data.cardActions,
+                        cardOrder: data.cardOrder,
+                      });
+                      if (result.ok) {
+                        setSelectedCardIndices([]);
+                        setComplexDecisionData(null);
+                      }
+                    } else {
+                      // Simple card selection
+                      const selectedCards = selectedCardIndices.map(
+                        i => mainPlayer.hand[i],
+                      );
+                      const result = submitDecision({ selectedCards });
+                      if (result.ok) {
+                        setSelectedCardIndices([]);
+                      }
+                    }
+                  }
+                : undefined
+            }
+            onSkipDecision={
+              isMainPlayerTurn && !isPreviewMode
+                ? () => {
+                    const result = submitDecision({ selectedCards: [] });
+                    if (result.ok) {
+                      setSelectedCardIndices([]);
+                    }
+                  }
+                : undefined
+            }
           />
 
           {/* Card Decision Overlay */}

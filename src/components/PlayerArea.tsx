@@ -3,6 +3,7 @@ import type {
   PlayerState,
   Phase,
   TurnSubPhase,
+  GameState,
 } from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
@@ -22,6 +23,7 @@ import {
   useInteractions,
   useClientPoint,
 } from "@floating-ui/react";
+import { ActionBar } from "./Board/ActionBar";
 
 interface PlayerAreaProps {
   player: PlayerState;
@@ -45,6 +47,21 @@ interface PlayerAreaProps {
     read: string;
     recommendation: string;
   };
+  // ActionBar props
+  gameState?: GameState;
+  actionBarHint?: string;
+  hasTreasuresInHand?: boolean;
+  onPlayAllTreasures?: () => void;
+  onEndPhase?: () => void;
+  onConfirmDecision?: (complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void;
+  onSkipDecision?: () => void;
+  complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  } | null;
 }
 
 function getPhaseBorderColor(
@@ -115,6 +132,14 @@ export function PlayerArea({
   loading = false,
   turnHistory = [],
   playerStrategy,
+  gameState,
+  actionBarHint = "",
+  hasTreasuresInHand = false,
+  onPlayAllTreasures,
+  onEndPhase,
+  onConfirmDecision,
+  onSkipDecision,
+  complexDecisionData,
 }: PlayerAreaProps) {
   const isInteractive = !!onCardClick; // Can interact if callbacks provided
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
@@ -246,16 +271,36 @@ export function PlayerArea({
   };
 
   return (
-    <div
-      style={{
-        padding: "var(--space-1) var(--space-2)",
-        border: `2px solid ${borderColor}`,
-        background: backgroundColor,
-        boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
-        overflow: "auto",
-        minHeight: 0,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+      {/* ActionBar always visible */}
+      {gameState && (
+        <ActionBar
+          state={gameState}
+          hint={actionBarHint}
+          hasTreasuresInHand={hasTreasuresInHand}
+          onPlayAllTreasures={onPlayAllTreasures}
+          onEndPhase={onEndPhase}
+          selectedCardIndices={selectedCardIndices}
+          complexDecisionData={complexDecisionData}
+          onConfirmDecision={onConfirmDecision}
+          onSkipDecision={onSkipDecision}
+          borderColor={borderColor}
+          isActive={isActive}
+        />
+      )}
+
+      <div
+        style={{
+          padding: "var(--space-1) var(--space-2)",
+          borderLeft: isActive && gameState ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
+          borderRight: isActive && gameState ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
+          borderBottom: isActive && gameState ? `2px solid ${borderColor}` : `1px solid ${borderColor}`,
+          borderTop: "none",
+          background: backgroundColor,
+          overflow: "auto",
+          minHeight: 0,
+        }}
+      >
       <div
         style={{
           marginBlockEnd: "var(--space-1)",
@@ -511,7 +556,7 @@ export function PlayerArea({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "75% 25%",
+          gridTemplateColumns: "75% 24.5%",
           gap: "var(--space-2)",
           alignItems: "stretch",
         }}
@@ -602,7 +647,7 @@ export function PlayerArea({
           <div
             className="deck-discard-container"
             style={{
-              padding: "var(--space-3)",
+              padding: "var(--space-2)",
               background: "var(--color-bg-surface)",
               border: "1px solid var(--color-border)",
               display: "flex",
@@ -642,45 +687,14 @@ export function PlayerArea({
                     />
                   </div>
                 ) : player.deck.length > 0 ? (
-                  <div
-                    style={{
-                      position: "relative",
-                      filter: `drop-shadow(0 ${Math.min(player.deck.length, 5)}px ${Math.min(player.deck.length * 2, 10)}px rgba(0, 0, 0, 0.3))`,
-                    }}
-                  >
-                    {[...Array(Math.min(player.deck.length, 3))].map((_, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          position: i === 0 ? "relative" : "absolute",
-                          top: i * 2,
-                          left: i * 2,
-                          zIndex: i,
-                          pointerEvents:
-                            i === Math.min(player.deck.length, 3) - 1
-                              ? "auto"
-                              : "none",
-                        }}
-                      >
-                        <Card
-                          name={player.deck[player.deck.length - 1]}
-                          showBack={!player.deckTopRevealed}
-                          size="medium"
-                          count={
-                            i === Math.min(player.deck.length, 3) - 1
-                              ? player.deck.length
-                              : undefined
-                          }
-                          disabled={!isActive}
-                          pileContents={
-                            i === Math.min(player.deck.length, 3) - 1
-                              ? deckPileContents
-                              : undefined
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <Card
+                    name={player.deck[player.deck.length - 1]}
+                    showBack={!player.deckTopRevealed}
+                    size="medium"
+                    count={player.deck.length}
+                    disabled={false}
+                    pileContents={deckPileContents}
+                  />
                 ) : (
                   <div
                     style={{
@@ -764,46 +778,13 @@ export function PlayerArea({
                       })}
                     </div>
                   ) : (
-                    <div
-                      style={{
-                        position: "relative",
-                        filter: `drop-shadow(0 ${Math.min(player.discard.length, 5)}px ${Math.min(player.discard.length * 2, 10)}px rgba(0, 0, 0, 0.3))`,
-                      }}
-                    >
-                      {[...Array(Math.min(player.discard.length, 3))].map(
-                        (_, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              position: i === 0 ? "relative" : "absolute",
-                              top: i * 2,
-                              left: i * 2,
-                              zIndex: i,
-                              pointerEvents:
-                                i === Math.min(player.discard.length, 3) - 1
-                                  ? "auto"
-                                  : "none",
-                            }}
-                          >
-                            <Card
-                              name={player.discard[player.discard.length - 1]}
-                              size="medium"
-                              count={
-                                i === Math.min(player.discard.length, 3) - 1
-                                  ? player.discard.length
-                                  : undefined
-                              }
-                              disabled={!isActive}
-                              pileContents={
-                                i === Math.min(player.discard.length, 3) - 1
-                                  ? discardPileContents
-                                  : undefined
-                              }
-                            />
-                          </div>
-                        ),
-                      )}
-                    </div>
+                    <Card
+                      name={player.discard[player.discard.length - 1]}
+                      size="medium"
+                      count={player.discard.length}
+                      disabled={false}
+                      pileContents={discardPileContents}
+                    />
                   )
                 ) : (
                   <div
@@ -900,6 +881,7 @@ export function PlayerArea({
           }
         `}</style>
       )}
+      </div>
     </div>
   );
 }
