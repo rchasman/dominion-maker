@@ -128,11 +128,16 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   const hasPrevTurn = state.currentTurnIndex > 0;
   const hasNextTurn = state.currentTurnIndex < turns.length - 1;
   const hasPrevAction = state.currentActionIndex > 0;
-  const maxActionIndex = currentTurn?.pending
-    ? currentTurn.decisions.length
-    : currentTurn
-      ? currentTurn.decisions.length - 1
-      : -1;
+
+  let maxActionIndex: number;
+  if (currentTurn?.pending) {
+    maxActionIndex = currentTurn.decisions.length;
+  } else if (currentTurn) {
+    maxActionIndex = currentTurn.decisions.length - 1;
+  } else {
+    maxActionIndex = -1;
+  }
+
   const hasNextAction = state.currentActionIndex < maxActionIndex;
 
   // Event handlers
