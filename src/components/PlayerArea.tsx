@@ -41,12 +41,9 @@ interface PlayerAreaProps {
   playerId?: string;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
   playerStrategy?: {
-    strategy: string;
-    execution: string;
-    position: string;
-    weakness: string;
-    threats: string;
-    nextMove: string;
+    gameplan: string;
+    read: string;
+    lines: string;
   };
 }
 
@@ -125,13 +122,7 @@ export function PlayerArea({
 
   // Strategy popover state - only show if there's actual content
   const hasStrategyContent =
-    playerStrategy &&
-    (playerStrategy.strategy ||
-      playerStrategy.execution ||
-      playerStrategy.position ||
-      playerStrategy.weakness ||
-      playerStrategy.threats ||
-      playerStrategy.nextMove);
+    playerStrategy && (playerStrategy.gameplan || playerStrategy.read || playerStrategy.lines);
 
   const [isStrategyOpen, setIsStrategyOpen] = useState(false);
 
@@ -334,26 +325,26 @@ export function PlayerArea({
                       paddingTop: "0.75rem",
                     }}
                   >
-                    <ul style={{ margin: 0, paddingLeft: "1.5rem" }}>
-                      <li>
-                        <strong>Strategy:</strong> {playerStrategy.strategy}
-                      </li>
-                      <li>
-                        <strong>Execution:</strong> {playerStrategy.execution}
-                      </li>
-                      <li>
-                        <strong>Position:</strong> {playerStrategy.position}
-                      </li>
-                      <li>
-                        <strong>Weakness:</strong> {playerStrategy.weakness}
-                      </li>
-                      <li>
-                        <strong>Threats:</strong> {playerStrategy.threats}
-                      </li>
-                      <li>
-                        <strong>Next Move:</strong> {playerStrategy.nextMove}
-                      </li>
-                    </ul>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      <div>
+                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                          Gameplan
+                        </div>
+                        <div>{playerStrategy.gameplan}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                          Read
+                        </div>
+                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.read}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
+                          Lines
+                        </div>
+                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.lines}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

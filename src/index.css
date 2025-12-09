@@ -177,23 +177,45 @@ body {
 
 .kingdom-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, var(--card-width-large)));
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 0.25rem;
   justify-content: center;
   container-type: inline-size;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.kingdom-grid > * {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kingdom-grid img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 
 /* Switch to 2 columns when too narrow */
 @container (max-width: 40rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(2, minmax(0, var(--card-width-large)));
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(5, 1fr);
   }
 }
 
 /* Allow 3 columns as middle ground */
 @container (max-width: 40rem) and (min-width: 30rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(3, minmax(0, var(--card-width-large)));
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
   }
 }
 

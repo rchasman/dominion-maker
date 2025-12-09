@@ -30,25 +30,27 @@ const gateway = createGateway({
   },
 });
 
-const STRATEGY_ANALYSIS_PROMPT = `You are a Dominion strategy analyst providing tactical intelligence for both players.
+const STRATEGY_ANALYSIS_PROMPT = `You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
 
-Analyze each player's:
-- Strategic approach: Big Money, Engine Building, Hybrid, or Rush
-- Execution quality: How well they're implementing their plan, card synergies, tactical choices
-- Current position: VP standing, deck strength, greening status
-- Key weakness: The main problem with their deck or strategy
-- Threat assessment: What the opponent is doing that could hurt them
-- Best move: What they should prioritize next
+For each player, provide:
+1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
+2. **Read** (2-3 sentences): Paragraph analyzing their deck, execution, and position. Be specific about card synergies, buying patterns, and deck quality. Include their main weakness.
+3. **Lines** (1-2 sentences): What they should do next and why. Be decisive and actionable.
 
-Be specific, actionable, and concise. Write from a neutral analyst perspective with personality.`;
+Write with confidence and personality. Be analytical but engaging. No fluff - every word should matter.`;
 
 const PlayerAnalysisSchema = z.object({
-  strategy: z.string().describe("Strategy type and approach"),
-  execution: z.string().describe("How well they're executing their plan"),
-  position: z.string().describe("Current standing in the game"),
-  weakness: z.string().describe("Main weakness in their deck or strategy"),
-  threats: z.string().describe("Threat assessment from opponent"),
-  nextMove: z.string().describe("Best next move or priority"),
+  gameplan: z
+    .string()
+    .describe("One-line summary of strategy and current standing"),
+  read: z
+    .string()
+    .describe(
+      "2-3 sentence paragraph analyzing deck quality, execution, and weakness",
+    ),
+  lines: z
+    .string()
+    .describe("1-2 sentences on what to do next and why - be decisive"),
 });
 
 const StrategyAnalysisSchema = z.object({

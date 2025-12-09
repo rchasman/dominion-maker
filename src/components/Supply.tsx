@@ -119,8 +119,9 @@ export function Supply({
         background:
           "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
         border: "1px solid var(--color-border-supply)",
-        alignItems: "start",
-        alignContent: "start",
+        alignItems: "stretch",
+        minHeight: 0,
+        height: "100%",
       }}
     >
       {/* Victory column */}
@@ -200,7 +201,15 @@ export function Supply({
       </div>
 
       {/* Kingdom cards */}
-      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
+      <div
+        style={{
+          gridArea: "kingdom",
+          minInlineSize: 0,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+        }}
+      >
         <div
           style={{
             display: "grid",

@@ -51,12 +51,9 @@ interface GameContextValue {
   playerStrategies: Record<
     string,
     {
-      strategy: string;
-      execution: string;
-      position: string;
-      weakness: string;
-      threats: string;
-      nextMove: string;
+      gameplan: string;
+      read: string;
+      lines: string;
     }
   >;
 
@@ -124,12 +121,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     Record<
       string,
       {
-        strategy: string;
-        execution: string;
-        position: string;
-        weakness: string;
-        threats: string;
-        nextMove: string;
+        gameplan: string;
+        read: string;
+        lines: string;
       }
     >
   >({});
@@ -275,12 +269,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
               const strategies = data.strategySummary as Record<
                 string,
                 {
-                  strategy: string;
-                  execution: string;
-                  position: string;
-                  weakness: string;
-                  threats: string;
-                  nextMove: string;
+                  gameplan: string;
+                  read: string;
+                  lines: string;
                 }
               >;
 

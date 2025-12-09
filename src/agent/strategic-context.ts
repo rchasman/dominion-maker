@@ -87,12 +87,9 @@ export function formatTurnHistoryForAnalysis(state: GameState): string {
 }
 
 interface PlayerStrategyAnalysis {
-  strategy: string;
-  execution: string;
-  position: string;
-  weakness: string;
-  threats: string;
-  nextMove: string;
+  gameplan: string;
+  read: string;
+  lines: string;
 }
 
 /**
@@ -207,20 +204,15 @@ Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
 
       if (yourStrategy) {
         sections.push(`YOUR STRATEGY:
-  Approach: ${yourStrategy.strategy}
-  Execution: ${yourStrategy.execution}
-  Position: ${yourStrategy.position}
-  Weakness: ${yourStrategy.weakness}
-  Threats: ${yourStrategy.threats}
-  Next Move: ${yourStrategy.nextMove}`);
+  Gameplan: ${yourStrategy.gameplan}
+  Read: ${yourStrategy.read}
+  Lines: ${yourStrategy.lines}`);
       }
 
       if (opponentStrategy) {
         sections.push(`\nOPPONENT STRATEGY:
-  Approach: ${opponentStrategy.strategy}
-  Execution: ${opponentStrategy.execution}
-  Position: ${opponentStrategy.position}
-  Weakness: ${opponentStrategy.weakness}`);
+  Gameplan: ${opponentStrategy.gameplan}
+  Read: ${opponentStrategy.read}`);
       }
     }
   }

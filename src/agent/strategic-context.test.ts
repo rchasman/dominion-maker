@@ -227,20 +227,14 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const strategySummary = JSON.stringify({
         human: {
-          strategy: "Playing Big Money, focusing on Gold/Silver purchases",
-          execution: "Good",
-          position: "Leading",
-          weakness: "No action synergy",
-          threats: "None",
-          nextMove: "Continue buying Golds",
+          gameplan: "Big Money - Leading with 12 VP",
+          read: "Playing textbook Big Money with disciplined Gold/Silver purchases. Deck is clean but lacks action synergy. Main weakness is vulnerability to engine strategies in long games.",
+          lines: "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
         },
         ai: {
-          strategy: "Building engine with Villages and Smithies",
-          execution: "Fair",
-          position: "Behind",
-          weakness: "Low buying power",
-          threats: "Human pulling ahead",
-          nextMove: "Complete engine",
+          gameplan: "Engine Building - Behind at 6 VP",
+          read: "Building Villages and Smithies engine but execution is slow. Low buying power is the critical weakness. Needs 1-2 more engine pieces before competing.",
+          lines: "Finish the engine before greening. Need at least one more Village.",
         },
       });
 
