@@ -70,6 +70,16 @@ export function Card({
     };
   };
 
+  const getCardWidth = () => {
+    if (size === "small") {
+      return "var(--card-width-small)";
+    }
+    if (size === "large") {
+      return "var(--card-width-large)";
+    }
+    return "var(--card-width-medium)";
+  };
+
   const borderStyle = getBorderStyle();
 
   const handleMouseEnter = () => {
@@ -155,12 +165,7 @@ export function Card({
           src={imageUrl}
           alt={showBack ? "Card back" : name}
           style={{
-            maxInlineSize:
-              size === "small"
-                ? "var(--card-width-small)"
-                : size === "large"
-                  ? "var(--card-width-large)"
-                  : "var(--card-width-medium)",
+            maxInlineSize: getCardWidth(),
             inlineSize: "100%",
             blockSize: "auto",
             display: "block",

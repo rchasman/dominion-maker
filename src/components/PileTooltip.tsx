@@ -57,15 +57,28 @@ export function PileTooltip({
     top = window.innerHeight - tooltipHeight;
   }
 
-  const borderColor =
-    pileType === "trash"
-      ? "#ef4444"
-      : pileType === "discard"
-        ? "#fbbf24"
-        : "#60a5fa";
+  const getBorderColor = () => {
+    if (pileType === "trash") {
+      return "#ef4444";
+    }
+    if (pileType === "discard") {
+      return "#fbbf24";
+    }
+    return "#60a5fa";
+  };
 
-  const titleText =
-    pileType === "deck" ? "Deck" : pileType === "discard" ? "Discard" : "Trash";
+  const getTitleText = () => {
+    if (pileType === "deck") {
+      return "Deck";
+    }
+    if (pileType === "discard") {
+      return "Discard";
+    }
+    return "Trash";
+  };
+
+  const borderColor = getBorderColor();
+  const titleText = getTitleText();
 
   return createPortal(
     <div

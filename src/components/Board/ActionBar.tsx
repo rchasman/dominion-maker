@@ -1,4 +1,4 @@
-import type { GameState } from "../../types/game-state";
+import type { GameState, DecisionRequest } from "../../types/game-state";
 
 interface ActionBarProps {
   state: GameState;
@@ -18,6 +18,51 @@ interface ActionBarProps {
   } | null;
   borderColor?: string;
   isActive?: boolean;
+}
+
+function getPhaseBackground(isActive: boolean, phase: string): string {
+  if (!isActive) return "transparent";
+  return phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)";
+}
+
+function getPhaseOpacity(isActive: boolean, phase: string, actions: number, buys: number): number {
+  if (!isActive) return 1;
+  if (phase === "action" && actions === 0) return 0.4;
+  if (phase === "buy" && buys === 0) return 0.4;
+  return 1;
+}
+
+function getEndPhaseButtonBackground(
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (pendingDecision && pendingDecision.canSkip) {
+    return "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)";
+  }
+  if (phase === "action") {
+    return "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)";
+  }
+  return "linear-gradient(180deg, #555 0%, #333 100%)";
+}
+
+function getEndPhaseButtonBorder(
+  isTurnComplete: boolean,
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (isTurnComplete) return "1px solid #a89968";
+  if (pendingDecision && pendingDecision.canSkip) return "1px solid #fbbf24";
+  if (phase === "action") return "1px solid var(--color-victory)";
+  return "1px solid #666";
+}
+
+function getEndPhaseButtonText(
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (pendingDecision && pendingDecision.canSkip) return "Skip";
+  if (phase === "action") return "Skip to Buy";
+  return "End Turn";
 }
 
 export function ActionBar({
@@ -70,20 +115,11 @@ export function ActionBar({
             textTransform: "uppercase",
             color: isActive ? "#fff" : borderColor,
             fontSize: "0.625rem",
-            background: isActive
-              ? state.phase === "action"
-                ? "var(--color-action-phase)"
-                : "var(--color-buy-phase)"
-              : "transparent",
+            background: getPhaseBackground(isActive, state.phase),
             border: isActive ? "none" : `1px dashed ${borderColor}`,
             padding: "var(--space-1) var(--space-3)",
             fontWeight: 600,
-            opacity: isActive
-              ? (state.phase === "action" && state.actions === 0) ||
-                (state.phase === "buy" && state.buys === 0)
-                ? 0.4
-                : 1
-              : 1,
+            opacity: getPhaseOpacity(isActive, state.phase, state.actions, state.buys),
             minWidth: "4.5rem",
             textAlign: "center",
             display: "inline-block",
@@ -217,20 +253,9 @@ export function ActionBar({
                 }
                 style={{
                   padding: "var(--space-2) var(--space-4)",
-                  background:
-                    state.pendingDecision && state.pendingDecision.canSkip
-                      ? "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)"
-                      : state.phase === "action"
-                        ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
-                        : "linear-gradient(180deg, #555 0%, #333 100%)",
+                  background: getEndPhaseButtonBackground(state.pendingDecision, state.phase),
                   color: isTurnComplete ? "#a89968" : "#fff",
-                  border: isTurnComplete
-                    ? "1px solid #a89968"
-                    : state.pendingDecision && state.pendingDecision.canSkip
-                      ? "1px solid #fbbf24"
-                      : state.phase === "action"
-                        ? "1px solid var(--color-victory)"
-                        : "1px solid #666",
+                  border: getEndPhaseButtonBorder(isTurnComplete, state.pendingDecision, state.phase),
                   cursor:
                     state.pendingDecision && !state.pendingDecision.canSkip
                       ? "not-allowed"
@@ -248,11 +273,7 @@ export function ActionBar({
                     : "none",
                 }}
               >
-                {state.pendingDecision && state.pendingDecision.canSkip
-                  ? "Skip"
-                  : state.phase === "action"
-                    ? "Skip to Buy"
-                    : "End Turn"}
+                {getEndPhaseButtonText(state.pendingDecision, state.phase)}
               </button>
             )}
           </>

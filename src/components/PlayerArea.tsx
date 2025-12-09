@@ -256,6 +256,144 @@ export function PlayerArea({
     return false;
   };
 
+  // Render deck content based on loading and deck state
+  const renderDeckContent = () => {
+    if (loading) {
+      return (
+        <div
+          style={{
+            animation: "subtlePulse 3s ease-in-out infinite",
+          }}
+        >
+          <Card
+            name="Copper"
+            showBack={true}
+            size="medium"
+            disabled={true}
+          />
+        </div>
+      );
+    }
+
+    if (player.deck.length > 0) {
+      return (
+        <Pile
+          cards={player.deck}
+          knownCards={knownDeckCards}
+          pileType="deck"
+          size="medium"
+          showBack={!player.deckTopRevealed}
+        />
+      );
+    }
+
+    return (
+      <div
+        style={{
+          inlineSize: "100%",
+          aspectRatio: "5 / 7.8",
+          border: "1px dashed var(--color-border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "var(--color-text-muted)",
+          fontSize: "0.5625rem",
+          background: "var(--color-bg-primary)",
+        }}
+      >
+        Empty
+      </div>
+    );
+  };
+
+  // Render discard content based on loading and discard state
+  const renderDiscardContent = () => {
+    if (loading) {
+      return (
+        <div
+          style={{
+            animation: "subtlePulse 3s ease-in-out infinite",
+          }}
+        >
+          <Card
+            name="Copper"
+            showBack={true}
+            size="medium"
+            disabled={true}
+          />
+        </div>
+      );
+    }
+
+    if (player.discard.length === 0) {
+      return (
+        <div
+          style={{
+            inlineSize: "100%",
+            aspectRatio: "5 / 7.8",
+            border: "1px dashed var(--color-border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--color-text-muted)",
+            fontSize: "0.5625rem",
+            background: "var(--color-bg-primary)",
+          }}
+        >
+          Empty
+        </div>
+      );
+    }
+
+    // Check if we should show interactive card selection
+    const shouldShowCardSelection =
+      pendingDecision &&
+      pendingDecision.from === "discard" &&
+      isInteractive;
+
+    if (shouldShowCardSelection) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "var(--space-1)",
+            maxInlineSize: "12rem",
+            justifyContent: "center",
+            padding: "var(--space-2)",
+            background: "rgba(16, 185, 129, 0.1)",
+            border: "2px dashed #10b981",
+            borderRadius: "4px",
+          }}
+        >
+          {player.discard.map((card, i) => {
+            const isOption =
+              pendingDecision.cardOptions?.includes(card) ?? true;
+            return (
+              <Card
+                key={`${card}-${i}`}
+                name={card}
+                size="small"
+                onClick={() => onCardClick?.(card, i)}
+                highlightMode={isOption ? "gain" : undefined}
+                disabled={!isOption}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Default: show as normal pile
+    return (
+      <Pile
+        cards={player.discard}
+        pileType="discard"
+        size="medium"
+      />
+    );
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
       {/* ActionBar always visible */}
@@ -671,44 +809,7 @@ export function PlayerArea({
                   >
                     Deck
                   </div>
-                  {loading ? (
-                    <div
-                      style={{
-                        animation: "subtlePulse 3s ease-in-out infinite",
-                      }}
-                    >
-                      <Card
-                        name="Copper"
-                        showBack={true}
-                        size="medium"
-                        disabled={true}
-                      />
-                    </div>
-                  ) : player.deck.length > 0 ? (
-                    <Pile
-                      cards={player.deck}
-                      knownCards={knownDeckCards}
-                      pileType="deck"
-                      size="medium"
-                      showBack={!player.deckTopRevealed}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        inlineSize: "100%",
-                        aspectRatio: "5 / 7.8",
-                        border: "1px dashed var(--color-border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--color-text-muted)",
-                        fontSize: "0.5625rem",
-                        background: "var(--color-bg-primary)",
-                      }}
-                    >
-                      Empty
-                    </div>
-                  )}
+                  {renderDeckContent()}
                 </div>
 
                 {/* Discard */}
@@ -730,76 +831,7 @@ export function PlayerArea({
                   >
                     Discard
                   </div>
-                  {loading ? (
-                    <div
-                      style={{
-                        animation: "subtlePulse 3s ease-in-out infinite",
-                      }}
-                    >
-                      <Card
-                        name="Copper"
-                        showBack={true}
-                        size="medium"
-                        disabled={true}
-                      />
-                    </div>
-                  ) : player.discard.length > 0 ? (
-                    // If there's a decision to choose from discard, show all cards
-                    pendingDecision &&
-                    pendingDecision.from === "discard" &&
-                    isInteractive ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "var(--space-1)",
-                          maxInlineSize: "12rem",
-                          justifyContent: "center",
-                          padding: "var(--space-2)",
-                          background: "rgba(16, 185, 129, 0.1)",
-                          border: "2px dashed #10b981",
-                          borderRadius: "4px",
-                        }}
-                      >
-                        {player.discard.map((card, i) => {
-                          const isOption =
-                            pendingDecision.cardOptions?.includes(card) ?? true;
-                          return (
-                            <Card
-                              key={`${card}-${i}`}
-                              name={card}
-                              size="small"
-                              onClick={() => onCardClick?.(card, i)}
-                              highlightMode={isOption ? "gain" : undefined}
-                              disabled={!isOption}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <Pile
-                        cards={player.discard}
-                        pileType="discard"
-                        size="medium"
-                      />
-                    )
-                  ) : (
-                    <div
-                      style={{
-                        inlineSize: "100%",
-                        aspectRatio: "5 / 7.8",
-                        border: "1px dashed var(--color-border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--color-text-muted)",
-                        fontSize: "0.5625rem",
-                        background: "var(--color-bg-primary)",
-                      }}
-                    >
-                      Empty
-                    </div>
-                  )}
+                  {renderDiscardContent()}
                 </div>
               </div>
             </div>
