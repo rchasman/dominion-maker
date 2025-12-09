@@ -7,6 +7,76 @@ interface PerformancePaneProps {
   now?: number;
 }
 
+function getBarColor(
+  isAborted: boolean,
+  isFailed: boolean,
+  isPending: boolean,
+  isFastest: boolean,
+  isSlowest: boolean,
+): string {
+  if (isAborted) return "var(--color-text-secondary)";
+  if (isFailed) return "#ef4444";
+  if (isPending) return "var(--color-gold)";
+  if (isFastest) return "var(--color-action)";
+  if (isSlowest) return "var(--color-gold)";
+  return "var(--color-text-secondary)";
+}
+
+function getBarOpacity(
+  isPending: boolean,
+  isAborted: boolean,
+  isFailed: boolean,
+): number {
+  if (isPending) return 0.5;
+  if (isAborted) return 0.2;
+  if (isFailed) return 0.6;
+  return 0.8;
+}
+
+function getDottedLineOpacity(
+  isPending: boolean,
+  isFailed: boolean,
+): number {
+  if (isPending) return 0.1;
+  if (isFailed) return 0.15;
+  return 0.2;
+}
+
+function getDottedLineColor(
+  isFailed: boolean,
+  providerColor: string,
+): string {
+  return isFailed ? "#ef4444" : providerColor;
+}
+
+function getModelNameColor(
+  isAborted: boolean,
+  isFailed: boolean,
+  providerColor: string,
+): string {
+  if (isAborted) return "var(--color-text-secondary)";
+  if (isFailed) return "#ef4444";
+  return providerColor;
+}
+
+function getModelNameOpacity(
+  isPending: boolean,
+  isAborted: boolean,
+): number {
+  if (isPending) return 0.6;
+  if (isAborted) return 0.4;
+  return 1;
+}
+
+function getModelNameTitle(
+  isAborted: boolean,
+  isFailed: boolean,
+): string | undefined {
+  if (isAborted) return "Skipped (early consensus)";
+  if (isFailed) return "Failed";
+  return undefined;
+}
+
 export function PerformancePane({
   data,
   liveStatuses,
@@ -136,28 +206,20 @@ export function PerformancePane({
           // Bar width in pixels (percentage of the fixed bar area) - grows for pending too
           const barWidthPx = Math.max(4, (percentage / 100) * barAreaWidth);
 
-          const barColor = isAborted
-            ? "var(--color-text-secondary)"
-            : isFailed
-              ? "#ef4444"
-              : isPending
-                ? "var(--color-gold)"
-                : isFastest
-                  ? "var(--color-action)"
-                  : isSlowest
-                    ? "var(--color-gold)"
-                    : "var(--color-text-secondary)";
-          const textColor = isAborted
-            ? "var(--color-text-secondary)"
-            : isFailed
-              ? "#ef4444"
-              : isPending
-                ? "var(--color-gold)"
-                : isFastest
-                  ? "var(--color-action)"
-                  : isSlowest
-                    ? "var(--color-gold)"
-                    : "var(--color-text-secondary)";
+          const barColor = getBarColor(
+            isAborted,
+            isFailed,
+            isPending,
+            isFastest,
+            isSlowest,
+          );
+          const textColor = getBarColor(
+            isAborted,
+            isFailed,
+            isPending,
+            isFastest,
+            isSlowest,
+          );
 
           return (
             <div
@@ -189,13 +251,7 @@ export function PerformancePane({
                   height: "5px",
                   width: `${barWidthPx}px`,
                   backgroundColor: barColor,
-                  opacity: isPending
-                    ? 0.5
-                    : isAborted
-                      ? 0.2
-                      : isFailed
-                        ? 0.6
-                        : 0.8,
+                  opacity: getBarOpacity(isPending, isAborted, isFailed),
                   borderRadius: "3px",
                   flexShrink: 0,
                 }}
@@ -204,8 +260,8 @@ export function PerformancePane({
               <div
                 style={{
                   width: `${barAreaWidth - barWidthPx + extraSpace}px`,
-                  color: isFailed ? "#ef4444" : getModelColor(timing.provider),
-                  opacity: isPending ? 0.1 : isFailed ? 0.15 : 0.2,
+                  color: getDottedLineColor(isFailed, getModelColor(timing.provider)),
+                  opacity: getDottedLineOpacity(isPending, isFailed),
                   fontSize: "0.6rem",
                   lineHeight: "5px",
                   overflow: "hidden",
@@ -219,23 +275,17 @@ export function PerformancePane({
               </div>
               {/* Model name at the end */}
               <span
-                title={
-                  isAborted
-                    ? "Skipped (early consensus)"
-                    : isFailed
-                      ? "Failed"
-                      : undefined
-                }
+                title={getModelNameTitle(isAborted, isFailed)}
                 style={{
                   fontSize: "0.7rem",
-                  color: isAborted
-                    ? "var(--color-text-secondary)"
-                    : isFailed
-                      ? "#ef4444"
-                      : getModelColor(timing.provider),
+                  color: getModelNameColor(
+                    isAborted,
+                    isFailed,
+                    getModelColor(timing.provider),
+                  ),
                   whiteSpace: "nowrap",
                   flexShrink: 0,
-                  opacity: isPending ? 0.6 : isAborted ? 0.4 : 1,
+                  opacity: getModelNameOpacity(isPending, isAborted),
                   textDecoration:
                     isFailed || isAborted ? "line-through" : "none",
                   cursor: isAborted || isFailed ? "help" : "default",
