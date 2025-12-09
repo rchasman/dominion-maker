@@ -216,7 +216,7 @@ export function Board({ onBackToHome }: BoardProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateRows: "auto 1fr auto auto",
+          gridTemplateRows: "minmax(0, 30%) 1fr auto minmax(0, 30%)",
           rowGap: "var(--space-2)",
           padding: "var(--space-3)",
           minInlineSize: 0,

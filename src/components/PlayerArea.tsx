@@ -237,6 +237,8 @@ export function PlayerArea({
         border: `2px solid ${borderColor}`,
         background: backgroundColor,
         boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
+        overflow: "auto",
+        minHeight: 0,
       }}
     >
       <div

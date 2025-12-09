@@ -177,7 +177,7 @@ body {
 
 .kingdom-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, var(--card-width-large)));
+  grid-template-columns: repeat(5, minmax(7rem, 1fr));
   gap: 0.25rem;
   justify-content: center;
   container-type: inline-size;
@@ -186,14 +186,14 @@ body {
 /* Switch to 2 columns when too narrow */
 @container (max-width: 40rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(2, minmax(0, var(--card-width-large)));
+    grid-template-columns: repeat(2, minmax(7rem, 1fr));
   }
 }
 
 /* Allow 3 columns as middle ground */
 @container (max-width: 40rem) and (min-width: 30rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(3, minmax(0, var(--card-width-large)));
+    grid-template-columns: repeat(3, minmax(7rem, 1fr));
   }
 }
 
