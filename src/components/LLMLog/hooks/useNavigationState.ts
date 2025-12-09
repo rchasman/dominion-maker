@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useMemo } from "react";
+import { useReducer, useEffect, useCallback } from "react";
 import type { Turn } from "../types";
 
 export interface NavigationState {
@@ -139,7 +139,10 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
 
   const handleNextTurn = useCallback(() => {
     if (hasNextTurn) {
-      dispatch({ type: "NEXT_TURN", nextTurnIndex: state.currentTurnIndex + 1 });
+      dispatch({
+        type: "NEXT_TURN",
+        nextTurnIndex: state.currentTurnIndex + 1,
+      });
     }
   }, [hasNextTurn, state.currentTurnIndex]);
 

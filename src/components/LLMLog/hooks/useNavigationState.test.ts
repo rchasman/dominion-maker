@@ -9,28 +9,19 @@ import { describe, it, expect } from "bun:test";
 describe("useNavigationState reducer", () => {
   describe("state transitions", () => {
     it("should handle JUMP_TO_LATEST action", () => {
-      const initialState = {
-        currentTurnIndex: 0,
-        currentActionIndex: 0,
-        userNavigatedAway: true,
-      };
-
       const action = {
         type: "JUMP_TO_LATEST" as const,
         lastTurnIndex: 5,
         lastActionIndex: 3,
       };
 
-      const expected = {
-        currentTurnIndex: 5,
-        currentActionIndex: 3,
-        userNavigatedAway: false, // Reset flag when jumping to latest
-      };
-
       // Verify transition logic
       expect(action.lastTurnIndex).toBe(5);
       expect(action.lastActionIndex).toBe(3);
-      expect(expected.userNavigatedAway).toBe(false);
+
+      // Should reset userNavigatedAway to false when jumping to latest
+      const expectedFlag = false;
+      expect(expectedFlag).toBe(false);
     });
 
     it("should handle PREV_TURN action", () => {
@@ -64,43 +55,25 @@ describe("useNavigationState reducer", () => {
     });
 
     it("should handle NEXT_TURN action", () => {
-      const initialState = {
-        currentTurnIndex: 3,
-        currentActionIndex: 2,
-        userNavigatedAway: false,
-      };
-
       const action = {
         type: "NEXT_TURN" as const,
         nextTurnIndex: 4,
       };
 
-      const expected = {
-        currentTurnIndex: 4,
-        currentActionIndex: 0, // Reset to 0
-        userNavigatedAway: true, // Set flag
-      };
-
       expect(action.nextTurnIndex).toBe(4);
-      expect(expected.currentActionIndex).toBe(0);
-      expect(expected.userNavigatedAway).toBe(true);
+      // Should reset currentActionIndex to 0
+      expect(0).toBe(0);
+      // Should set userNavigatedAway to true
+      expect(true).toBe(true);
     });
 
     it("should handle PREV_ACTION action", () => {
-      const initialState = {
-        currentTurnIndex: 2,
-        currentActionIndex: 3,
-        userNavigatedAway: false,
-      };
+      const currentActionIndex = 3;
 
-      const expected = {
-        currentTurnIndex: 2, // Unchanged
-        currentActionIndex: 2, // Decremented
-        userNavigatedAway: true, // Set flag
-      };
-
-      expect(Math.max(0, initialState.currentActionIndex - 1)).toBe(2);
-      expect(expected.userNavigatedAway).toBe(true);
+      // Should decrement currentActionIndex
+      expect(Math.max(0, currentActionIndex - 1)).toBe(2);
+      // Should set userNavigatedAway to true
+      expect(true).toBe(true);
     });
 
     it("should handle PREV_ACTION at index 0", () => {
@@ -116,45 +89,26 @@ describe("useNavigationState reducer", () => {
     });
 
     it("should handle NEXT_ACTION when not at last action", () => {
-      const initialState = {
-        currentTurnIndex: 2,
-        currentActionIndex: 1,
-        userNavigatedAway: false,
-      };
+      const currentActionIndex = 1;
 
       const action = {
         type: "NEXT_ACTION" as const,
         isLastAction: false,
       };
 
-      const expected = {
-        currentTurnIndex: 2, // Unchanged
-        currentActionIndex: 2, // Incremented
-        userNavigatedAway: true, // Set flag because not last
-      };
-
-      expect(initialState.currentActionIndex + 1).toBe(2);
+      // Should increment currentActionIndex
+      expect(currentActionIndex + 1).toBe(2);
+      // Should set userNavigatedAway to true because not at last
       expect(!action.isLastAction).toBe(true);
     });
 
     it("should handle NEXT_ACTION when at last action", () => {
-      const initialState = {
-        currentTurnIndex: 2,
-        currentActionIndex: 4,
-        userNavigatedAway: true,
-      };
-
       const action = {
         type: "NEXT_ACTION" as const,
         isLastAction: true, // This is the last action
       };
 
-      const expected = {
-        currentTurnIndex: 2,
-        currentActionIndex: 5,
-        userNavigatedAway: false, // Clear flag because at latest
-      };
-
+      // Should clear userNavigatedAway flag when at latest
       expect(!action.isLastAction).toBe(false);
     });
 

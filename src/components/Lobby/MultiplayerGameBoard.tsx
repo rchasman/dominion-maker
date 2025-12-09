@@ -5,7 +5,7 @@ import { uiLogger } from "../../lib/logger";
  * Full game board for multiplayer games using the event-driven engine.
  * Provides card interactions, action bar, and game state display.
  */
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useMultiplayer } from "../../context/multiplayer-hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -166,7 +166,13 @@ export function MultiplayerGameBoard({
     if (!result.ok) {
       uiLogger.error("Failed to play treasures:", result.error);
     }
-  }, [isMyTurn, gameState, playAllTreasures, validPreviewEventId, getStateAtEvent]);
+  }, [
+    isMyTurn,
+    gameState,
+    playAllTreasures,
+    validPreviewEventId,
+    getStateAtEvent,
+  ]);
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {

@@ -144,7 +144,7 @@ export function GameSidebar({
 
   // Sync gameLogHeight to localStorage
   useSyncToLocalStorage(STORAGE_LOG_HEIGHT_KEY, gameLogHeight, {
-    serialize: (value) => value.toString(),
+    serialize: value => value.toString(),
   });
 
   useEffect(() => {

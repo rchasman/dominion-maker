@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "./engine";
-import type { PlayerId } from "../events/types";
 
 describe("Auto-transition logic", () => {
   describe("shouldAutoAdvancePhase", () => {
@@ -61,8 +60,9 @@ describe("Auto-transition logic", () => {
           expect(engine.shouldAutoAdvancePhase("human")).toBe(false);
         }
       } else {
-        // If no Cellar, just verify the method exists
-        expect(engine.shouldAutoAdvancePhase).toBeDefined();
+        // If no Cellar, just verify the method works
+        const result = engine.shouldAutoAdvancePhase("human");
+        expect(typeof result).toBe("boolean");
       }
     });
 
@@ -70,8 +70,9 @@ describe("Auto-transition logic", () => {
       const engine = new DominionEngine();
       engine.startGame(["human", "ai"]);
 
-      // Can't easily trigger game over, but verify the check exists
-      expect(engine.shouldAutoAdvancePhase).toBeDefined();
+      // Can't easily trigger game over, but verify the method works
+      const result = engine.shouldAutoAdvancePhase("human");
+      expect(typeof result).toBe("boolean");
     });
 
     it("should return true when player has no action cards", () => {
@@ -95,7 +96,8 @@ describe("Auto-transition logic", () => {
       // but doesn't play any, they should auto-advance
       // This is tested via integration
       expect(state.actions).toBe(1);
-      expect(engine.shouldAutoAdvancePhase).toBeDefined();
+      const result = engine.shouldAutoAdvancePhase("human");
+      expect(typeof result).toBe("boolean");
     });
   });
 
@@ -123,16 +125,6 @@ describe("Auto-transition logic", () => {
     it("should handle scenario with no action cards in hand", () => {
       const engine = new DominionEngine();
       engine.startGame(["human", "ai"]);
-
-      // Initial state
-      const state = engine.state;
-      const humanPlayer = state.players.human;
-
-      // Log what cards we have (for debugging)
-      const actionCards = humanPlayer.hand.filter(card => {
-        const cardData = { isAction: card.endsWith("Village") || card === "Smithy" || card === "Market" };
-        return cardData.isAction;
-      });
 
       // Method should work regardless of hand composition
       const result = engine.shouldAutoAdvancePhase("human");
