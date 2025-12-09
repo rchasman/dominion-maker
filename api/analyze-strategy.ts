@@ -162,8 +162,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const prompt = `${gameContext.join("\n")}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
-    // Use Claude Haiku for fast, cheap strategy analysis
-    const model = gateway("claude-3-5-haiku-20241022");
+    // Use Claude Opus for high-quality strategy analysis
+    const model = gateway("claude-opus-4-5-20251101");
 
     const result = await generateObject({
       model,
