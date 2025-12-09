@@ -86,6 +86,14 @@ export function formatTurnHistoryForAnalysis(state: GameState): string {
   return lines.join("\n");
 }
 
+interface PlayerStrategyAnalysis {
+  strategy: string;
+  execution: string;
+  position: string;
+  threats: string;
+  opportunities: string;
+}
+
 /**
  * Builds human-readable game facts that a real Dominion player would track.
  * Pure data - no strategy advice.
@@ -185,7 +193,33 @@ Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
 
   // 7. Strategy Summary (if provided by LLM analysis)
   if (strategySummary) {
-    sections.push(`\nSTRATEGY ANALYSIS:\n${strategySummary}`);
+    const strategies = JSON.parse(strategySummary) as Record<
+      string,
+      PlayerStrategyAnalysis
+    >;
+
+    const yourStrategy = strategies[state.activePlayer];
+    const opponentStrategy = strategies[opponentId];
+
+    if (yourStrategy || opponentStrategy) {
+      sections.push(`\nSTRATEGY ANALYSIS:`);
+
+      if (yourStrategy) {
+        sections.push(`YOUR STRATEGY:
+  Approach: ${yourStrategy.strategy}
+  Execution: ${yourStrategy.execution}
+  Position: ${yourStrategy.position}
+  Threats: ${yourStrategy.threats}
+  Opportunities: ${yourStrategy.opportunities}`);
+      }
+
+      if (opponentStrategy) {
+        sections.push(`\nOPPONENT STRATEGY:
+  Approach: ${opponentStrategy.strategy}
+  Execution: ${opponentStrategy.execution}
+  Position: ${opponentStrategy.position}`);
+      }
+    }
   }
 
   return sections.join("\n");

@@ -8,6 +8,20 @@ import type { DecisionRequest } from "../events/types";
 import { Card } from "./Card";
 import { CARDS } from "../data/cards";
 import { getPlayerColor } from "../lib/board-utils";
+import { useState } from "preact/hooks";
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+  useHover,
+  useFocus,
+  useDismiss,
+  useRole,
+  useInteractions,
+  useClientPoint,
+} from "@floating-ui/react";
 
 interface PlayerAreaProps {
   player: PlayerState;
@@ -25,7 +39,13 @@ interface PlayerAreaProps {
   loading?: boolean;
   playerId?: string;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
-  playerStrategy?: string; // Strategy analysis for tooltip
+  playerStrategy?: {
+    strategy: string;
+    execution: string;
+    position: string;
+    threats: string;
+    opportunities: string;
+  };
 }
 
 function getPhaseBorderColor(
@@ -99,6 +119,35 @@ export function PlayerArea({
   const isInteractive = !!onCardClick; // Can interact if callbacks provided
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
+
+  // Strategy popover state
+  const [isStrategyOpen, setIsStrategyOpen] = useState(false);
+
+  const { refs, floatingStyles, context } = useFloating({
+    open: isStrategyOpen,
+    onOpenChange: setIsStrategyOpen,
+    placement: "top-end",
+    middleware: [
+      offset({ mainAxis: 8, crossAxis: 8 }),
+      flip(),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const hover = useHover(context);
+  const focus = useFocus(context);
+  const dismiss = useDismiss(context);
+  const role = useRole(context, { role: "tooltip" });
+  const clientPoint = useClientPoint(context);
+
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    hover,
+    focus,
+    dismiss,
+    role,
+    clientPoint,
+  ]);
 
   // Check if any purchases have been made this turn (treasures become non-take-backable)
   const hasMadePurchases = turnHistory.some(
@@ -193,32 +242,98 @@ export function PlayerArea({
               Reconnecting...
             </span>
           ) : (
-            <strong
-              style={{
-                fontSize: "0.8125rem",
-                color: playerId
-                  ? getPlayerColor(playerId)
-                  : "var(--color-text-primary)",
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-                cursor: playerStrategy ? "help" : "default",
-              }}
-              title={playerStrategy || undefined}
-            >
-              {label}
-              {playerStrategy && (
-                <span
+            <>
+              <strong
+                {/* eslint-disable-next-line react-hooks/refs */}
+                ref={playerStrategy ? refs.setReference : undefined}
+                {...(playerStrategy ? getReferenceProps() : {})}
+                style={{
+                  fontSize: "0.8125rem",
+                  color: playerId
+                    ? getPlayerColor(playerId)
+                    : "var(--color-text-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  cursor: playerStrategy ? "help" : "default",
+                }}
+              >
+                {label}
+                {playerStrategy && (
+                  <span
+                    style={{
+                      fontSize: "0.875rem",
+                      opacity: 0.7,
+                      color: "var(--color-info)",
+                      fontWeight: "normal",
+                    }}
+                  >
+                    ⓘ
+                  </span>
+                )}
+              </strong>
+              {isStrategyOpen && playerStrategy && (
+                <div
+                  {/* eslint-disable-next-line react-hooks/refs */}
+                  ref={refs.setFloating}
                   style={{
-                    fontSize: "1rem",
-                    opacity: 0.9,
-                    color: "var(--color-info)",
+                    ...floatingStyles,
+                    background: "rgba(26, 26, 46, 0.75)",
+                    backdropFilter: "blur(12px)",
+                    border: `2px solid ${playerId ? getPlayerColor(playerId) : "rgb(205 133 63)"}`,
+                    padding: "1rem",
+                    maxWidth: "320px",
+                    zIndex: 10000,
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+                    pointerEvents: "none",
                   }}
+                  {...getFloatingProps()}
                 >
-                  📊
-                </span>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "var(--space-2)",
+                      left: "var(--space-2)",
+                      fontSize: "0.625rem",
+                      color: playerId
+                        ? getPlayerColor(playerId)
+                        : "rgb(205 133 63)",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Strategy - {label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.8125rem",
+                      lineHeight: "1.5",
+                      color: "var(--color-text-primary)",
+                      paddingTop: "0.75rem",
+                    }}
+                  >
+                    <ul style={{ margin: 0, paddingLeft: "1.5rem" }}>
+                      <li>
+                        <strong>Strategy:</strong> {playerStrategy.strategy}
+                      </li>
+                      <li>
+                        <strong>Execution:</strong> {playerStrategy.execution}
+                      </li>
+                      <li>
+                        <strong>Position:</strong> {playerStrategy.position}
+                      </li>
+                      <li>
+                        <strong>Threats:</strong> {playerStrategy.threats}
+                      </li>
+                      <li>
+                        <strong>Opportunities:</strong>{" "}
+                        {playerStrategy.opportunities}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               )}
-            </strong>
+            </>
           )}
         </div>
         {vpCount !== undefined && (
