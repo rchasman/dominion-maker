@@ -65,6 +65,30 @@ const EVENT_COLORS: Record<string, string> = {
 
 type EventCategory = "all" | "turns" | "cards" | "resources" | "decisions";
 
+// Helper to calculate display index with readable logic
+function getDisplayIndex(
+  scrubberIndex: number | null,
+  selectedEventId: string | null,
+  events: GameEvent[],
+): number | null {
+  // Scrubber takes precedence
+  if (scrubberIndex !== null) {
+    return scrubberIndex;
+  }
+
+  // Use selected event if available
+  if (selectedEventId) {
+    return events.findIndex(e => e.id === selectedEventId);
+  }
+
+  // Fall back to latest event
+  if (events.length > 0) {
+    return events.length - 1;
+  }
+
+  return null;
+}
+
 const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
   all: [],
   turns: ["TURN_STARTED", "PHASE_CHANGED", "GAME_ENDED"],
@@ -142,13 +166,7 @@ export function EventDevtools({
   }, [events, filter]);
 
   // Display state from scrubber or selected event, or current live state
-  const displayIndex =
-    scrubberIndex ??
-    (selectedEventId
-      ? events.findIndex(e => e.id === selectedEventId)
-      : events.length > 0
-        ? events.length - 1
-        : null);
+  const displayIndex = getDisplayIndex(scrubberIndex, selectedEventId, events);
 
   // Selected state (from scrubber or clicked event or live state)
   const selectedState = useMemo(() => {
@@ -193,6 +211,35 @@ export function EventDevtools({
       default:
         return event.type;
     }
+  };
+
+  // Render the right-side button for event items
+  const renderEventRightButton = (
+    isScrubberPosition: boolean,
+    isRoot: boolean,
+    onBranchFrom: ((eventId: string) => void) | undefined,
+    eventId: string | undefined,
+  ) => {
+    if (isScrubberPosition && isRoot && onBranchFrom) {
+      return (
+        <button
+          onClick={e => {
+            e.stopPropagation();
+            handleBranch(eventId);
+          }}
+          style={styles.inlineBranchButton}
+          title="Branch from here"
+        >
+          ⎌
+        </button>
+      );
+    }
+
+    if (isScrubberPosition) {
+      return <span style={styles.playhead}>▶</span>;
+    }
+
+    return null;
   };
 
   // Handle timeline scrubbing (scrub through root events only)
@@ -513,20 +560,12 @@ export function EventDevtools({
                 {event.type}
               </span>
               <span style={styles.eventDetail}>{formatEvent(event)}</span>
-              {isScrubberPosition && isRoot && onBranchFrom ? (
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleBranch(event.id);
-                  }}
-                  style={styles.inlineBranchButton}
-                  title="Branch from here"
-                >
-                  ⎌
-                </button>
-              ) : isScrubberPosition ? (
-                <span style={styles.playhead}>▶</span>
-              ) : null}
+              {renderEventRightButton(
+                isScrubberPosition,
+                isRoot,
+                onBranchFrom,
+                event.id,
+              )}
             </div>
           );
         })}

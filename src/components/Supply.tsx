@@ -3,7 +3,6 @@ import type { DecisionRequest } from "../events/types";
 import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 import { Pile } from "./Pile";
-import { useState } from "preact/hooks";
 
 interface SupplyProps {
   state: GameState;
