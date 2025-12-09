@@ -214,63 +214,75 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGameModeState(mode);
   }, []);
 
-  // Fetch strategy analysis when turn changes (after turn 2)
-  useEffect(() => {
+  // Fetch strategy analysis on turn completion
+  const fetchStrategyAnalysis = useCallback(async (state: GameState) => {
+    // Only fetch after turn 2 and if we haven't fetched for this turn yet
     if (
-      !gameState ||
-      gameState.turn < 3 ||
-      gameState.gameOver ||
-      lastFetchedTurn.current === gameState.turn
+      state.turn < 3 ||
+      state.gameOver ||
+      lastFetchedTurn.current === state.turn
     ) {
       return;
     }
 
-    lastFetchedTurn.current = gameState.turn;
+    lastFetchedTurn.current = state.turn;
 
-    const fetchStrategy = async () => {
-      const { data, error } = await api.api["analyze-strategy"].post({
-        currentState: gameState,
-      });
+    const { data, error } = await api.api["analyze-strategy"].post({
+      currentState: state,
+    });
 
-      if (error) {
-        uiLogger.warn("Failed to fetch strategy analysis");
-        return;
-      }
+    if (error) {
+      uiLogger.warn("Failed to fetch strategy analysis");
+      return;
+    }
 
-      if (data?.strategySummary) {
-        const strategies: Record<string, string> = {};
-        const lines = data.strategySummary.split("\n");
+    if (data?.strategySummary) {
+      const strategies: Record<string, string> = {};
+      const lines = data.strategySummary.split("\n");
 
-        for (const line of lines) {
-          const match = line.match(/^([^:]+):\s*(.+)$/);
-          if (match) {
-            const [, player, strategy] = match;
-            const playerKey = player.trim().toLowerCase();
+      for (const line of lines) {
+        const match = line.match(/^([^:]+):\s*(.+)$/);
+        if (match) {
+          const [, player, strategy] = match;
+          const playerKey = player.trim().toLowerCase();
 
-            if (playerKey === "you") {
-              strategies[gameState.activePlayer] = strategy.trim();
-            } else if (playerKey === "opponent") {
-              const opponentId = Object.keys(gameState.players).find(
-                id => id !== gameState.activePlayer,
-              );
-              if (opponentId) strategies[opponentId] = strategy.trim();
-            } else {
-              const matchedPlayerId = Object.keys(gameState.players).find(
-                id => id.toLowerCase() === playerKey,
-              );
-              if (matchedPlayerId) {
-                strategies[matchedPlayerId] = strategy.trim();
-              }
+          if (playerKey === "you") {
+            strategies[state.activePlayer] = strategy.trim();
+          } else if (playerKey === "opponent") {
+            const opponentId = Object.keys(state.players).find(
+              id => id !== state.activePlayer,
+            );
+            if (opponentId) strategies[opponentId] = strategy.trim();
+          } else {
+            const matchedPlayerId = Object.keys(state.players).find(
+              id => id.toLowerCase() === playerKey,
+            );
+            if (matchedPlayerId) {
+              strategies[matchedPlayerId] = strategy.trim();
             }
           }
         }
-
-        setPlayerStrategies(strategies);
       }
-    };
 
-    void fetchStrategy();
-  }, [gameState]);
+      setPlayerStrategies(strategies);
+    }
+  }, []);
+
+  // Subscribe to engine events to fetch strategy on turn completion
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    const unsubscribe = engine.subscribe((events, state) => {
+      // Check if any TURN_ENDED event occurred
+      const hasTurnEnded = events.some(e => e.type === "TURN_ENDED");
+      if (hasTurnEnded) {
+        void fetchStrategyAnalysis(state);
+      }
+    });
+
+    return unsubscribe;
+  }, [fetchStrategyAnalysis]);
 
   // Derived state
   const hasPlayableActionsValue = useMemo(() => {
