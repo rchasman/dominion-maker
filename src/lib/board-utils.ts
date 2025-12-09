@@ -78,8 +78,8 @@ export function formatPlayerName(
     name = playerId;
   }
 
-  // Add AI suffix if needed
-  if (isAI && playerId !== "human") {
+  // Add AI suffix if needed (but not if already named "ai")
+  if (isAI && playerId !== "human" && playerId !== "ai") {
     name = `${name} (AI)`;
   }
 

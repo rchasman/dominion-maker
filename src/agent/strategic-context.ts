@@ -1,4 +1,4 @@
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, LogEntry } from "../types/game-state";
 import {
   CARDS,
   isActionCard,
@@ -8,10 +8,92 @@ import {
 import { countVP as countVPFromCards } from "../lib/board-utils";
 
 /**
+ * Extracts recent turn actions from game log for strategy analysis
+ */
+interface TurnSummary {
+  player: string;
+  turn: number;
+  actionsPlayed: CardName[];
+  treasuresPlayed: CardName[];
+  cardsBought: CardName[];
+}
+
+function extractRecentTurns(log: LogEntry[], lastNTurns = 3): TurnSummary[] {
+  const turnMap = new Map<string, TurnSummary>();
+  let currentTurn = 0;
+  let currentPlayer = "";
+
+  for (const entry of log) {
+    if (entry.type === "turn-start") {
+      currentTurn = entry.turn;
+      currentPlayer = entry.player;
+      const key = `${currentPlayer}-${currentTurn}`;
+      if (!turnMap.has(key)) {
+        turnMap.set(key, {
+          player: currentPlayer,
+          turn: currentTurn,
+          actionsPlayed: [],
+          treasuresPlayed: [],
+          cardsBought: [],
+        });
+      }
+    }
+
+    if (currentTurn === 0) continue;
+
+    const key = `${entry.player || currentPlayer}-${currentTurn}`;
+    const summary = turnMap.get(key);
+    if (!summary) continue;
+
+    if (entry.type === "play-action" && entry.card) {
+      summary.actionsPlayed.push(entry.card);
+    } else if (entry.type === "play-treasure" && entry.card) {
+      summary.treasuresPlayed.push(entry.card);
+    } else if (entry.type === "buy-card" && entry.card) {
+      summary.cardsBought.push(entry.card);
+    }
+  }
+
+  const allSummaries = Array.from(turnMap.values()).sort(
+    (a, b) => b.turn - a.turn,
+  );
+  return allSummaries.slice(0, lastNTurns * 2);
+}
+
+/**
+ * Formats turn history for LLM analysis
+ */
+export function formatTurnHistoryForAnalysis(state: GameState): string {
+  const recentTurns = extractRecentTurns(state.log, 3);
+
+  if (recentTurns.length === 0) {
+    return "";
+  }
+
+  const lines: string[] = ["RECENT TURN HISTORY:"];
+
+  for (const turn of recentTurns) {
+    const actions =
+      turn.actionsPlayed.length > 0 ? turn.actionsPlayed.join(", ") : "none";
+    const buys =
+      turn.cardsBought.length > 0 ? turn.cardsBought.join(", ") : "none";
+
+    lines.push(`Turn ${turn.turn} (${turn.player}):`);
+    lines.push(`  Actions played: ${actions}`);
+    lines.push(`  Bought: ${buys}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Builds human-readable game facts that a real Dominion player would track.
  * Pure data - no strategy advice.
  */
-export function buildStrategicContext(state: GameState): string {
+export function buildStrategicContext(
+  state: GameState,
+  strategySummary?: string,
+): string {
   const sections: string[] = [];
 
   // Get the current active player (the AI making the decision)
@@ -100,6 +182,11 @@ Terminals: ${currentAnalysis.terminals}, Villages: ${currentAnalysis.villages}`)
 
   sections.push(`HAND: ${currentPlayer.hand.join(", ")}
 Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
+
+  // 7. Strategy Summary (if provided by LLM analysis)
+  if (strategySummary) {
+    sections.push(`\nSTRATEGY ANALYSIS:\n${strategySummary}`);
+  }
 
   return sections.join("\n");
 }

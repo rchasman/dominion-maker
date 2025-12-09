@@ -107,7 +107,7 @@ describe("formatPlayerName", () => {
 
   describe("AI suffix", () => {
     it("should add (AI) suffix for AI players", () => {
-      expect(formatPlayerName("ai", true)).toBe("ai (AI)");
+      expect(formatPlayerName("ai", true)).toBe("ai");
       expect(formatPlayerName("Nova", true)).toBe("Nova (AI)");
       expect(formatPlayerName("player", true)).toBe("Player (AI)");
     });
@@ -129,8 +129,8 @@ describe("formatPlayerName", () => {
       expect(formatPlayerName("player", true)).toBe("Player (AI)");
     });
 
-    it("should show 'ai (AI)' for standard AI", () => {
-      expect(formatPlayerName("ai", true)).toBe("ai (AI)");
+    it("should show 'ai' for standard AI (no redundant suffix)", () => {
+      expect(formatPlayerName("ai", true)).toBe("ai");
     });
 
     it("should show cool names with AI suffix", () => {
@@ -170,7 +170,7 @@ describe("formatPlayerName", () => {
 
       // Standard AI
       expect(formatPlayerName("ai", false)).toBe("ai");
-      expect(formatPlayerName("ai", true)).toBe("ai (AI)");
+      expect(formatPlayerName("ai", true)).toBe("ai");
 
       // Converted human (player) as AI in full mode
       expect(formatPlayerName("player", true)).toBe("Player (AI)");
@@ -222,7 +222,7 @@ describe("Player display integration", () => {
     const aiColor = getPlayerColor(ai);
 
     expect(humanName).toBe("You");
-    expect(aiName).toBe("ai (AI)");
+    expect(aiName).toBe("ai");
     expect(humanColor).toBe("#3b82f6"); // Blue
     expect(aiColor).toBe("#ef4444"); // Red
     expect(humanColor).not.toBe(aiColor);
@@ -239,7 +239,7 @@ describe("Player display integration", () => {
     const aiColor = getPlayerColor(ai);
 
     expect(playerName).toBe("Player (AI)");
-    expect(aiName).toBe("ai (AI)");
+    expect(aiName).toBe("ai");
     expect(playerColor).toBe("#3b82f6"); // Blue - same as "human"
     expect(aiColor).toBe("#ef4444"); // Red
     expect(playerColor).not.toBe(aiColor);

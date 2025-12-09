@@ -17,8 +17,48 @@ interface GenerateActionResponse {
   message?: string;
 }
 
+interface AnalyzeStrategyRequest {
+  currentState: unknown;
+}
+
+interface AnalyzeStrategyResponse {
+  strategySummary?: string;
+  error?: number;
+  message?: string;
+}
+
 export const api = {
   api: {
+    "analyze-strategy": {
+      post: async (
+        body: AnalyzeStrategyRequest,
+        options?: { fetch?: RequestInit },
+      ) => {
+        try {
+          const response = await fetch("/api/analyze-strategy", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+            ...options?.fetch,
+          });
+
+          const data: AnalyzeStrategyResponse = await response.json();
+
+          if (!response.ok) {
+            return {
+              data: null,
+              error: { value: data.message || "Request failed" },
+            };
+          }
+
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: { value: String(err) } };
+        }
+      },
+    },
     "generate-action": {
       post: async (
         body: GenerateActionRequest,

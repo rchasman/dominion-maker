@@ -12,7 +12,7 @@ export function PlayerName({
   isAI?: boolean;
 }) {
   const displayName = player === "human" ? "You" : player;
-  const suffix = isAI && player !== "human" ? " (AI)" : "";
+  const suffix = isAI && player !== "human" && player !== "ai" ? " (AI)" : "";
 
   return (
     <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
