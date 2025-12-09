@@ -1,4 +1,5 @@
-import { generateText, createGateway } from "ai";
+import { generateObject, createGateway } from "ai";
+import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
@@ -29,15 +30,28 @@ const gateway = createGateway({
   },
 });
 
-const STRATEGY_ANALYSIS_PROMPT = `You are analyzing a Dominion game. Based on the recent turn history, summarize each player's strategy and tendencies in 2-3 concise sentences per player.
+const STRATEGY_ANALYSIS_PROMPT = `You are a Dominion strategy analyst providing tactical intelligence for both players.
 
-Focus on:
-- Buying patterns (Big Money vs Engine Building vs hybrid)
-- Card preferences and synergies they're pursuing
-- VP timing (when they started greening)
-- Any notable tactical patterns
+Analyze each player's:
+- Strategic approach: Big Money, Engine Building, Hybrid, or Rush
+- Execution quality: How well they're implementing their plan, card synergies, tactical choices
+- Current position: VP standing, deck strength, greening status
+- Threats: What the opponent is doing that could hurt them
+- Opportunities: What they should prioritize given the current game state
 
-Be specific and actionable. This analysis will help the AI make better decisions.`;
+Be specific, actionable, and concise. Write from a neutral analyst perspective.`;
+
+const PlayerAnalysisSchema = z.object({
+  strategy: z.string().describe("Strategy type and approach"),
+  execution: z.string().describe("How well they're executing their plan"),
+  position: z.string().describe("Current standing in the game"),
+  threats: z.string().describe("Threats from opponent"),
+  opportunities: z.string().describe("Opportunities to pursue"),
+});
+
+const StrategyAnalysisSchema = z.object({
+  players: z.record(z.string(), PlayerAnalysisSchema),
+});
 
 interface VercelRequest {
   method?: string;
@@ -91,7 +105,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get all player IDs
     const playerIds = Object.keys(currentState.players);
 
-    // Build prompt with deck composition for context
+    // Build comprehensive game state context
+    const gameContext: string[] = [];
+
+    // Game progress
+    gameContext.push(
+      `GAME STATE: Turn ${currentState.turn}, Phase: ${currentState.phase}`,
+    );
+
+    // Supply status
+    const provincesLeft = currentState.supply["Province"] ?? 8;
+    const duchiesLeft = currentState.supply["Duchy"] ?? 8;
+    const emptyPiles = Object.entries(currentState.supply)
+      .filter(([, count]) => count === 0)
+      .map(([card]) => card)
+      .join(", ");
+    gameContext.push(
+      `SUPPLY: Provinces ${provincesLeft}/8, Duchies ${duchiesLeft}/8${emptyPiles ? `, Empty piles: ${emptyPiles}` : ""}`,
+    );
+
+    // Build detailed player info with VP scores
     const deckInfo = playerIds
       .map(playerId => {
         const player = currentState.players[playerId];
@@ -101,34 +134,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ...player.discard,
           ...player.inPlay,
         ];
+
+        // Calculate VP
+        let vp = 0;
         const cardCounts: Record<string, number> = {};
         for (const card of allCards) {
           cardCounts[card] = (cardCounts[card] || 0) + 1;
+          if (card === "Estate") vp += 1;
+          else if (card === "Duchy") vp += 3;
+          else if (card === "Province") vp += 6;
+          else if (card === "Curse") vp -= 1;
+          else if (card === "Gardens") vp += Math.floor(allCards.length / 10);
         }
+
         const summary = Object.entries(cardCounts)
           .sort(([, a], [, b]) => b - a)
           .map(([card, count]) => `${count}x ${card}`)
           .join(", ");
-        return `${playerId} deck (${allCards.length} cards): ${summary}`;
+
+        return `${playerId.toUpperCase()} (${vp} VP, ${allCards.length} cards): ${summary}`;
       })
       .join("\n");
 
-    const prompt = `${turnHistory}\n\nCURRENT DECK COMPOSITIONS:\n${deckInfo}\n\nProvide a strategic analysis for each player.`;
+    const prompt = `${gameContext.join("\n")}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use Claude Haiku for fast, cheap strategy analysis
     const model = gateway("claude-3-5-haiku-20241022");
 
-    const result = await generateText({
+    const result = await generateObject({
       model,
       system: STRATEGY_ANALYSIS_PROMPT,
       prompt,
+      schema: StrategyAnalysisSchema,
       maxRetries: 1,
-      maxTokens: 300,
+      providerOptions: {
+        anthropic: {
+          structuredOutputMode: "outputFormat",
+        },
+      },
     });
 
-    apiLogger.info("Strategy analysis completed");
+    apiLogger.info("Strategy analysis completed", {
+      playerIds,
+      hasPlayers: !!result.object.players,
+      playerCount: Object.keys(result.object.players || {}).length,
+    });
 
-    return res.status(200).json({ strategySummary: result.text });
+    return res.status(200).json({
+      strategySummary: result.object.players,
+    });
   } catch (err) {
     const error = err as Error;
     apiLogger.error(`Strategy analysis failed: ${error.message}`);

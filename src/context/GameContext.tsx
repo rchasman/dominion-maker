@@ -38,6 +38,7 @@ const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
 const STORAGE_LLM_LOGS_KEY = "dominion-maker-llm-logs";
 const STORAGE_MODEL_SETTINGS_KEY = "dominion-maker-model-settings";
+const STORAGE_STRATEGIES_KEY = "dominion-maker-strategies";
 
 interface GameContextValue {
   // Game state
@@ -47,7 +48,16 @@ interface GameContextValue {
   isProcessing: boolean;
   isLoading: boolean; // Loading from localStorage
   modelSettings: ModelSettings;
-  playerStrategies: Record<string, string>;
+  playerStrategies: Record<
+    string,
+    {
+      strategy: string;
+      execution: string;
+      position: string;
+      threats: string;
+      opportunities: string;
+    }
+  >;
 
   // Derived state
   hasPlayableActions: boolean;
@@ -83,7 +93,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const engineRef = useRef<DominionEngine | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
-  const [gameMode, setGameModeState] = useState<GameMode>("engine");
+  const [gameMode, setGameModeState] = useState<GameMode>(() => {
+    const savedModeRaw = localStorage.getItem(STORAGE_MODE_KEY);
+    if (savedModeRaw) {
+      try {
+        const savedMode = JSON.parse(savedModeRaw) as string;
+        const validModes: GameMode[] = [
+          "engine",
+          "hybrid",
+          "full",
+          "multiplayer",
+        ];
+        if (validModes.includes(savedMode as GameMode)) {
+          return savedMode as GameMode;
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+    return "engine";
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // Track loading state
   const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>([]);
@@ -91,30 +120,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
     DEFAULT_MODEL_SETTINGS,
   );
   const [playerStrategies, setPlayerStrategies] = useState<
-    Record<string, string>
+    Record<
+      string,
+      {
+        strategy: string;
+        execution: string;
+        position: string;
+        threats: string;
+        opportunities: string;
+      }
+    >
   >({});
-  const lastFetchedTurn = useRef<number>(-1);
 
   // Restore from localStorage on mount
   useEffect(() => {
     try {
       const savedEvents = localStorage.getItem(STORAGE_EVENTS_KEY);
-      const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
       const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
       const savedSettings = localStorage.getItem(STORAGE_MODEL_SETTINGS_KEY);
-
-      if (
-        savedMode &&
-        (savedMode === "engine" ||
-          savedMode === "maker" ||
-          savedMode === "hybrid" ||
-          savedMode === "full" ||
-          savedMode === "llm")
-      ) {
-        // Migrate old "maker" to "hybrid"
-        const mode: GameMode = savedMode === "maker" ? "hybrid" : savedMode;
-        setGameModeState(mode);
-      }
+      const savedStrategies = localStorage.getItem(STORAGE_STRATEGIES_KEY);
 
       if (savedLogs) {
         setLLMLogs(JSON.parse(savedLogs));
@@ -126,6 +150,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
           enabledModels: new Set(parsed.enabledModels as ModelProvider[]),
           consensusCount: parsed.consensusCount,
         });
+      }
+
+      if (savedStrategies) {
+        setPlayerStrategies(JSON.parse(savedStrategies));
       }
 
       if (savedEvents) {
@@ -142,6 +170,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(STORAGE_EVENTS_KEY);
       localStorage.removeItem(STORAGE_MODE_KEY);
       localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
+      localStorage.removeItem(STORAGE_STRATEGIES_KEY);
       localStorage.removeItem(STORAGE_MODEL_SETTINGS_KEY);
     } finally {
       setIsLoading(false); // Done loading
@@ -169,6 +198,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       shouldSync: true,
     },
   );
+
+  useSyncToLocalStorage(STORAGE_STRATEGIES_KEY, playerStrategies);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -214,85 +245,68 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGameModeState(mode);
   }, []);
 
-  // Fetch strategy analysis on turn completion
-  const fetchStrategyAnalysis = useCallback(async (state: GameState) => {
-    // Only fetch after turn 2 and if we haven't fetched for this turn yet
-    if (
-      state.turn < 3 ||
-      state.gameOver ||
-      lastFetchedTurn.current === state.turn
-    ) {
-      return;
-    }
-
-    lastFetchedTurn.current = state.turn;
-
-    uiLogger.info(
-      `🔍 Fetching strategy analysis for turn ${state.turn}...`,
-    );
-
-    const { data, error } = await api.api["analyze-strategy"].post({
-      currentState: state,
-    });
-
-    if (error) {
-      uiLogger.warn("Failed to fetch strategy analysis:", error);
-      return;
-    }
-
-    if (data?.strategySummary) {
-      uiLogger.info(
-        "✅ Strategy analysis received:",
-        data.strategySummary,
-      );
-
-      const strategies: Record<string, string> = {};
-      const lines = data.strategySummary.split("\n");
-
-      for (const line of lines) {
-        const match = line.match(/^([^:]+):\s*(.+)$/);
-        if (match) {
-          const [, player, strategy] = match;
-          const playerKey = player.trim().toLowerCase();
-
-          if (playerKey === "you") {
-            strategies[state.activePlayer] = strategy.trim();
-          } else if (playerKey === "opponent") {
-            const opponentId = Object.keys(state.players).find(
-              id => id !== state.activePlayer,
-            );
-            if (opponentId) strategies[opponentId] = strategy.trim();
-          } else {
-            const matchedPlayerId = Object.keys(state.players).find(
-              id => id.toLowerCase() === playerKey,
-            );
-            if (matchedPlayerId) {
-              strategies[matchedPlayerId] = strategy.trim();
-            }
-          }
-        }
-      }
-
-      uiLogger.info("📊 Parsed strategies:", strategies);
-      setPlayerStrategies(strategies);
-    }
-  }, []);
-
-  // Subscribe to engine events to fetch strategy on turn completion
+  // Fetch and store strategy analysis once per turn
   useEffect(() => {
     const engine = engineRef.current;
-    if (!engine) return;
+    if (!engine) {
+      uiLogger.warn("Strategy subscription: no engine");
+      return;
+    }
 
     const unsubscribe = engine.subscribe((events, state) => {
       // Check if any TURN_ENDED event occurred
       const hasTurnEnded = events.some(e => e.type === "TURN_ENDED");
-      if (hasTurnEnded) {
-        void fetchStrategyAnalysis(state);
+
+      if (hasTurnEnded && state.turn >= 1) {
+        // Fetch strategy analysis with FULL game state (all events)
+        api.api["analyze-strategy"]
+          .post({
+            currentState: state,
+          })
+          .then(({ data, error }) => {
+            if (error) {
+              uiLogger.warn("Failed to fetch strategy analysis:", error);
+              return;
+            }
+
+            if (data?.strategySummary) {
+              const strategies = data.strategySummary as Record<
+                string,
+                {
+                  strategy: string;
+                  execution: string;
+                  position: string;
+                  threats: string;
+                  opportunities: string;
+                }
+              >;
+
+              uiLogger.info("Strategy analysis received", {
+                playerIds: Object.keys(strategies),
+                sampleData: Object.entries(strategies).map(([id, s]) => ({
+                  id,
+                  hasStrategy: !!s.strategy,
+                })),
+              });
+
+              if (Object.keys(strategies).length === 0) {
+                return;
+              }
+
+              const stringifiedStrategies = JSON.stringify(strategies);
+
+              // Update strategy with new summary
+              strategy.setStrategySummary?.(stringifiedStrategies);
+
+              // Display in UI
+              setPlayerStrategies(strategies);
+            }
+          });
       }
     });
 
     return unsubscribe;
-  }, [fetchStrategyAnalysis]);
+  }, [strategy]);
 
   // Derived state
   const hasPlayableActionsValue = useMemo(() => {
@@ -315,9 +329,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsProcessing(false);
     localStorage.removeItem(STORAGE_EVENTS_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
+    localStorage.removeItem(STORAGE_STRATEGIES_KEY);
     setLLMLogs([]);
     setPlayerStrategies({});
-    lastFetchedTurn.current = -1;
     resetPlayerColors(); // Reset color assignments for new game
 
     const engine = new DominionEngine();
