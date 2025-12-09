@@ -227,16 +227,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     lastFetchedTurn.current = state.turn;
 
+    uiLogger.info(
+      `🔍 Fetching strategy analysis for turn ${state.turn}...`,
+    );
+
     const { data, error } = await api.api["analyze-strategy"].post({
       currentState: state,
     });
 
     if (error) {
-      uiLogger.warn("Failed to fetch strategy analysis");
+      uiLogger.warn("Failed to fetch strategy analysis:", error);
       return;
     }
 
     if (data?.strategySummary) {
+      uiLogger.info(
+        "✅ Strategy analysis received:",
+        data.strategySummary,
+      );
+
       const strategies: Record<string, string> = {};
       const lines = data.strategySummary.split("\n");
 
@@ -264,6 +273,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      uiLogger.info("📊 Parsed strategies:", strategies);
       setPlayerStrategies(strategies);
     }
   }, []);

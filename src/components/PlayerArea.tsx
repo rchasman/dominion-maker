@@ -210,11 +210,12 @@ export function PlayerArea({
               {playerStrategy && (
                 <span
                   style={{
-                    fontSize: "0.75rem",
-                    opacity: 0.6,
+                    fontSize: "1rem",
+                    opacity: 0.9,
+                    color: "var(--color-info)",
                   }}
                 >
-                  ⓘ
+                  📊
                 </span>
               )}
             </strong>
