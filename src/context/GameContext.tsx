@@ -31,6 +31,7 @@ import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
 import { uiLogger } from "../lib/logger";
 import { resetPlayerColors } from "../lib/board-utils";
+import { api } from "../api/client";
 
 const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
 const STORAGE_MODE_KEY = "dominion-maker-game-mode";
@@ -45,6 +46,7 @@ interface GameContextValue {
   isProcessing: boolean;
   isLoading: boolean; // Loading from localStorage
   modelSettings: ModelSettings;
+  playerStrategies: Record<string, string>;
 
   // Derived state
   hasPlayableActions: boolean;
@@ -87,8 +89,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [modelSettings, setModelSettingsState] = useState<ModelSettings>(
     DEFAULT_MODEL_SETTINGS,
   );
+  const [playerStrategies, setPlayerStrategies] = useState<
+    Record<string, string>
+  >({});
   const modeRestoredFromStorage = useRef(false);
   const settingsRestoredFromStorage = useRef(false);
+  const lastFetchedTurn = useRef<number>(-1);
 
   // Restore from localStorage on mount
   useEffect(() => {
@@ -238,6 +244,64 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setIsProcessing(false);
   }, [gameMode]);
 
+  // Fetch strategy analysis when turn changes (after turn 2)
+  useEffect(() => {
+    if (
+      !gameState ||
+      gameState.turn < 3 ||
+      gameState.gameOver ||
+      lastFetchedTurn.current === gameState.turn
+    ) {
+      return;
+    }
+
+    lastFetchedTurn.current = gameState.turn;
+
+    const fetchStrategy = async () => {
+      const { data, error } = await api.api["analyze-strategy"].post({
+        currentState: gameState,
+      });
+
+      if (error) {
+        uiLogger.warn("Failed to fetch strategy analysis");
+        return;
+      }
+
+      if (data?.strategySummary) {
+        const strategies: Record<string, string> = {};
+        const lines = data.strategySummary.split("\n");
+
+        for (const line of lines) {
+          const match = line.match(/^([^:]+):\s*(.+)$/);
+          if (match) {
+            const [, player, strategy] = match;
+            const playerKey = player.trim().toLowerCase();
+
+            if (playerKey === "you") {
+              strategies[gameState.activePlayer] = strategy.trim();
+            } else if (playerKey === "opponent") {
+              const opponentId = Object.keys(gameState.players).find(
+                id => id !== gameState.activePlayer,
+              );
+              if (opponentId) strategies[opponentId] = strategy.trim();
+            } else {
+              const matchedPlayerId = Object.keys(gameState.players).find(
+                id => id.toLowerCase() === playerKey,
+              );
+              if (matchedPlayerId) {
+                strategies[matchedPlayerId] = strategy.trim();
+              }
+            }
+          }
+        }
+
+        setPlayerStrategies(strategies);
+      }
+    };
+
+    void fetchStrategy();
+  }, [gameState]);
+
   // Derived state
   const hasPlayableActionsValue = useMemo(() => {
     if (!gameState) return false;
@@ -260,6 +324,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(STORAGE_EVENTS_KEY);
     localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
     setLLMLogs([]);
+    setPlayerStrategies({});
+    lastFetchedTurn.current = -1;
     resetPlayerColors(); // Reset color assignments for new game
 
     const engine = new DominionEngine();
@@ -580,6 +646,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isProcessing,
       isLoading,
       modelSettings,
+      playerStrategies,
       hasPlayableActions: hasPlayableActionsValue,
       hasTreasuresInHand: hasTreasuresInHandValue,
       strategy,
@@ -603,6 +670,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isProcessing,
       isLoading,
       modelSettings,
+      playerStrategies,
       hasPlayableActionsValue,
       hasTreasuresInHandValue,
       strategy,

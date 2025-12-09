@@ -38,6 +38,7 @@ export function Board({ onBackToHome }: BoardProps) {
     setModelSettings: onModelSettingsChange,
     requestUndo,
     getStateAtEvent,
+    playerStrategies,
   } = useGame();
 
   const [selectedCardIndices, setSelectedCardIndices] = useState<number[]>([]);
@@ -234,6 +235,7 @@ export function Board({ onBackToHome }: BoardProps) {
           subPhase={displayState.subPhase}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
+          playerStrategy={playerStrategies[opponentPlayerId]}
         />
 
         <div
@@ -312,6 +314,7 @@ export function Board({ onBackToHome }: BoardProps) {
             subPhase={displayState.subPhase}
             playerId={mainPlayerId}
             turnHistory={displayState.turnHistory}
+            playerStrategy={playerStrategies[mainPlayerId]}
           />
 
           {/* Card Decision Overlay */}

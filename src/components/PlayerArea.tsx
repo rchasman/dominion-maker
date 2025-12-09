@@ -25,6 +25,7 @@ interface PlayerAreaProps {
   loading?: boolean;
   playerId?: string;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
+  playerStrategy?: string; // Strategy analysis for tooltip
 }
 
 function getPhaseBorderColor(
@@ -93,6 +94,7 @@ export function PlayerArea({
   subPhase,
   loading = false,
   turnHistory = [],
+  playerStrategy,
 }: PlayerAreaProps) {
   const isInteractive = !!onCardClick; // Can interact if callbacks provided
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
@@ -197,9 +199,24 @@ export function PlayerArea({
                 color: playerId
                   ? getPlayerColor(playerId)
                   : "var(--color-text-primary)",
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                cursor: playerStrategy ? "help" : "default",
               }}
+              title={playerStrategy || undefined}
             >
               {label}
+              {playerStrategy && (
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    opacity: 0.6,
+                  }}
+                >
+                  ⓘ
+                </span>
+              )}
             </strong>
           )}
         </div>
