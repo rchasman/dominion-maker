@@ -171,11 +171,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       prompt,
       schema: StrategyAnalysisSchema,
       maxRetries: 1,
-      providerOptions: {
-        anthropic: {
-          structuredOutputMode: "outputFormat",
-        },
-      },
     });
 
     apiLogger.info("Strategy analysis completed");

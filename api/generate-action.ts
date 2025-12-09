@@ -264,13 +264,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       system: DOMINION_SYSTEM_PROMPT,
       prompt: userMessage,
       maxRetries: 0,
-      ...(isAnthropic && {
-        providerOptions: {
-          anthropic: {
-            structuredOutputMode: "outputFormat",
-          },
-        },
-      }),
     });
 
     return res.status(200).json({ action: result.object, strategySummary });
