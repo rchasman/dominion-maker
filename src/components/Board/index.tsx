@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useGame } from "../../context/GameContext";
+import { useGame } from "../../context/hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";

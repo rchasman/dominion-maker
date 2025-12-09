@@ -5,7 +5,7 @@ import { uiLogger } from "../../lib/logger";
  * Shows options when there's a saved multiplayer session.
  */
 import { useState } from "react";
-import { useMultiplayer } from "../../context/MultiplayerContext";
+import { useMultiplayer } from "../../context/multiplayer-hooks";
 
 interface ReconnectScreenProps {
   onBack: () => void;

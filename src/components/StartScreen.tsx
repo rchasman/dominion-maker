@@ -1,4 +1,4 @@
-import { useGame } from "../context/GameContext";
+import { useGame } from "../context/hooks";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 
 interface StartScreenProps {

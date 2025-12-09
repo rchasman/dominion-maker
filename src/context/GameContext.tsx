@@ -7,7 +7,6 @@
 
 import {
   createContext,
-  useContext,
   useState,
   useCallback,
   useEffect,
@@ -73,6 +72,9 @@ interface LLMLogsContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 const LLMLogsContext = createContext<LLMLogsContextValue | null>(null);
+
+// Re-export for hooks module
+export { GameContext, LLMLogsContext };
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const engineRef = useRef<DominionEngine | null>(null);
@@ -631,23 +633,4 @@ export function GameProvider({ children }: { children: ReactNode }) {
       </LLMLogsContext.Provider>
     </GameContext.Provider>
   );
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useGame() {
-  const context = useContext(GameContext);
-  if (!context) {
-    throw new Error("useGame must be used within a GameProvider");
-  }
-  return context;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useLLMLogs() {
-  const context = useContext(LLMLogsContext);
-  if (!context) {
-    // Return empty logs for multiplayer mode (no GameProvider)
-    return { llmLogs: [] };
-  }
-  return context;
 }

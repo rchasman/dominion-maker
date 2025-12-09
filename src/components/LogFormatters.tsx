@@ -2,6 +2,8 @@ import type { CardName } from "../types/game-state";
 import { getPlayerColor } from "../lib/board-utils";
 import { getCardColor } from "../lib/card-colors";
 
+export { getCardColor };
+
 export function PlayerName({
   player,
   isAI,

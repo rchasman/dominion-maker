@@ -3,7 +3,7 @@
  *
  * Shows connected players and allows host to start game.
  */
-import { useMultiplayer } from "../../context/MultiplayerContext";
+import { useMultiplayer } from "../../context/multiplayer-hooks";
 
 export function LobbyRoom() {
   const { roomCode, isHost, myPeerId, players, startGame, leaveRoom } =

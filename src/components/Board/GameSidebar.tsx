@@ -7,7 +7,7 @@ import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
-import { useLLMLogs } from "../../context/GameContext";
+import { useLLMLogs } from "../../context/hooks";
 import { LogEntry } from "../LogEntry";
 import { LLMLog } from "../LLMLog";
 import { aggregateLogEntries, getPlayerColor } from "../../lib/board-utils";
@@ -93,7 +93,7 @@ function CyclingSquare() {
       setIndex(prev => (prev + 1) % glyphs.length);
     }, 300);
     return () => clearInterval(interval);
-  }, []);
+  }, [glyphs.length]);
 
   return <span>{glyphs[index]}</span>;
 }

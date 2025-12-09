@@ -6,7 +6,7 @@
  * 2. Lobby room (connected, waiting)
  * 3. Game (playing)
  */
-import { useMultiplayer } from "../../context/MultiplayerContext";
+import { useMultiplayer } from "../../context/multiplayer-hooks";
 import { CreateJoinScreen } from "./CreateJoinScreen";
 import { LobbyRoom } from "./LobbyRoom";
 import { MultiplayerGameBoard } from "./MultiplayerGameBoard";

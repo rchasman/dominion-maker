@@ -6,7 +6,7 @@ import { uiLogger } from "../../lib/logger";
  * Provides card interactions, action bar, and game state display.
  */
 import { useState, useCallback, useEffect } from "react";
-import { useMultiplayer } from "../../context/MultiplayerContext";
+import { useMultiplayer } from "../../context/multiplayer-hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { EventDevtools } from "../EventDevtools";

@@ -6,7 +6,6 @@
  */
 import {
   createContext,
-  useContext,
   useState,
   useCallback,
   useEffect,
@@ -88,13 +87,8 @@ interface MultiplayerContextValue {
 
 const MultiplayerContext = createContext<MultiplayerContextValue | null>(null);
 
-export function useMultiplayer(): MultiplayerContextValue {
-  const context = useContext(MultiplayerContext);
-  if (!context) {
-    throw new Error("useMultiplayer must be used within MultiplayerProvider");
-  }
-  return context;
-}
+// Re-export for hooks module
+export { MultiplayerContext };
 
 export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const roomRef = useRef<P2PRoom | null>(null);

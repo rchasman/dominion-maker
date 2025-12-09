@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { GameProvider, useGame } from "./context/GameContext";
+import { GameProvider } from "./context/GameContext";
+import { useGame } from "./context/hooks";
 import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { StartScreen } from "./components/StartScreen";
 import { uiLogger } from "./lib/logger";
