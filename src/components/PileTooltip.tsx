@@ -1,6 +1,8 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
+import { useFloating, offset, shift, flip } from "@floating-ui/react";
+import { useEffect, useMemo } from "react";
 
 interface PileTooltipProps {
   cards: CardName[];
@@ -35,30 +37,40 @@ export function PileTooltip({
   const knownUniqueCards = uniqueCards.filter(card => knownSet.has(card));
   const unknownCards = cards.filter(card => !knownSet.has(card));
 
-  const tooltipWidth = 320;
-  const tooltipHeight = Math.min(500, uniqueCards.length * 80 + 100);
+  // Use floating-ui with virtual element at cursor position
+  const { refs, floatingStyles } = useFloating({
+    placement: "right-start",
+    strategy: "fixed",
+    middleware: [
+      offset(8),
+      flip(),
+      shift({ padding: 8 }),
+    ],
+  });
 
-  const viewportWidth = window.innerWidth;
+  // Create virtual element at cursor position (memoized to avoid recreating)
+  const virtualElement = useMemo(
+    () => ({
+      getBoundingClientRect() {
+        return {
+          width: 0,
+          height: 0,
+          x: mouseX,
+          y: mouseY,
+          top: mouseY,
+          left: mouseX,
+          right: mouseX,
+          bottom: mouseY,
+        };
+      },
+    }),
+    [mouseX, mouseY],
+  );
 
-  // Position tooltip to the right and slightly below cursor
-  const offsetX = 10;
-  const offsetY = 10;
-
-  let left = mouseX + offsetX;
-  let top = mouseY + offsetY;
-
-  // Keep within viewport
-  if (left < 0) {
-    left = 0;
-  } else if (left + tooltipWidth > viewportWidth) {
-    left = viewportWidth - tooltipWidth;
-  }
-
-  if (top < 0) {
-    top = 0;
-  } else if (top + tooltipHeight > window.innerHeight) {
-    top = window.innerHeight - tooltipHeight;
-  }
+  // Set reference in useEffect to avoid side effects during render
+  useEffect(() => {
+    refs.setReference(virtualElement);
+  }, [refs, virtualElement]);
 
   const borderColor =
     pileType === "trash"
@@ -72,10 +84,9 @@ export function PileTooltip({
 
   return createPortal(
     <div
+      ref={refs.setFloating}
       style={{
-        position: "fixed",
-        left: `${left}px`,
-        top: `${top}px`,
+        ...floatingStyles,
         pointerEvents: "none",
         zIndex: 10000,
         animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
@@ -87,8 +98,8 @@ export function PileTooltip({
           backdropFilter: "blur(12px)",
           border: `2px solid ${borderColor}`,
           padding: "1rem",
-          maxWidth: `${tooltipWidth}px`,
-          maxHeight: `${tooltipHeight}px`,
+          maxWidth: "320px",
+          maxHeight: "500px",
           overflow: "auto",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.6)",
           position: "relative",
