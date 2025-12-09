@@ -83,7 +83,7 @@ describe("Board - Devtools scrubbing", () => {
     };
 
     const previewEventId = "event-10";
-    const getStateAtEvent = (_eventId: string) => previewState;
+    const getStateAtEvent = () => previewState;
 
     // Derive displayState (should use preview when scrubbing)
     const displayState =
@@ -134,7 +134,7 @@ describe("Board - Devtools scrubbing", () => {
     };
 
     const previewEventId = "event-5";
-    const getStateAtEvent = (_eventId: string) => previewState;
+    const getStateAtEvent = () => previewState;
 
     // Derive displayState
     const displayState =

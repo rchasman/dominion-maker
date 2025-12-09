@@ -56,7 +56,7 @@ describe("EventDevtools - live updates", () => {
 
   it("should not auto-scroll when scrubbing", () => {
     // When scrubbing, scrubberIndex is not null
-    let scrubberIndex: number | null = 2; // User is viewing event 2
+    const scrubberIndex: number | null = 2; // User is viewing event 2
     let events = [
       { id: "evt-1", type: "GAME_INITIALIZED" },
       { id: "evt-2", type: "TURN_STARTED" },
