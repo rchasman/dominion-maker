@@ -5,6 +5,7 @@ import type {
   CardName,
 } from "../types/game-state";
 import type { GameEvent } from "./types";
+import { removeCard } from "../lib/card-array-utils";
 
 // Helper to create the players record with proper typing
 function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
@@ -20,18 +21,6 @@ function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
   }
   return players;
 }
-
-/**
- * Helper: Remove a card from a zone (hand, deck, discard) immutably.
- */
-const removeCardFromZone = (
-  zone: CardName[],
-  card: CardName,
-  fromDeck: boolean = false,
-): CardName[] => {
-  const idx = fromDeck ? zone.lastIndexOf(card) : zone.indexOf(card);
-  return idx === -1 ? zone : [...zone.slice(0, idx), ...zone.slice(idx + 1)];
-};
 
 /**
  * Helper: Remove a card from inPlay zone along with its source index.
@@ -251,13 +240,13 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             ...playerState,
             hand:
               event.from === "hand"
-                ? removeCardFromZone(playerState.hand, event.card)
+                ? removeCard(playerState.hand, event.card)
                 : playerState.hand,
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
             deck:
               event.from === "deck"
-                ? removeCardFromZone(playerState.deck, event.card, true)
+                ? removeCard(playerState.deck, event.card, true)
                 : playerState.deck,
             discard: [...playerState.discard, event.card],
           },
@@ -295,11 +284,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             ...playerState,
             hand:
               event.from === "hand"
-                ? removeCardFromZone(playerState.hand, event.card)
+                ? removeCard(playerState.hand, event.card)
                 : playerState.hand,
             deck:
               event.from === "deck"
-                ? removeCardFromZone(playerState.deck, event.card, true)
+                ? removeCard(playerState.deck, event.card, true)
                 : playerState.deck,
             inPlay: newInPlay,
             inPlaySourceIndices: newInPlaySourceIndices,
@@ -404,11 +393,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             ...playerState,
             hand:
               event.from === "hand"
-                ? removeCardFromZone(playerState.hand, event.card)
+                ? removeCard(playerState.hand, event.card)
                 : playerState.hand,
             discard:
               event.from === "discard"
-                ? removeCardFromZone(playerState.discard, event.card)
+                ? removeCard(playerState.discard, event.card)
                 : playerState.discard,
             deck: [...playerState.deck, event.card],
             deckTopRevealed: true, // You know what's on top since you put it there
@@ -441,11 +430,11 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
             inPlaySourceIndices: newInPlaySourceIndices,
             discard:
               event.from === "discard"
-                ? removeCardFromZone(playerState.discard, event.card)
+                ? removeCard(playerState.discard, event.card)
                 : playerState.discard,
             deck:
               event.from === "deck"
-                ? removeCardFromZone(playerState.deck, event.card, true)
+                ? removeCard(playerState.deck, event.card, true)
                 : playerState.deck,
           },
         },
