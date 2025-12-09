@@ -434,7 +434,7 @@ export function PlayerArea({
                     <Card
                       name="Copper"
                       showBack={true}
-                      size={size}
+                      size="medium"
                       disabled={true}
                     />
                   </div>
@@ -442,7 +442,7 @@ export function PlayerArea({
                   <Card
                     name={player.deck[player.deck.length - 1]}
                     showBack={!player.deckTopRevealed}
-                    size={size}
+                    size="medium"
                     count={player.deck.length}
                     disabled={!isActive}
                   />
@@ -491,7 +491,7 @@ export function PlayerArea({
                     <Card
                       name="Copper"
                       showBack={true}
-                      size={size}
+                      size="medium"
                       disabled={true}
                     />
                   </div>
@@ -531,7 +531,7 @@ export function PlayerArea({
                   ) : (
                     <Card
                       name={player.discard[player.discard.length - 1]}
-                      size={size}
+                      size="medium"
                       count={player.discard.length}
                       disabled={!isActive}
                     />
