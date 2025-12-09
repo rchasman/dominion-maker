@@ -40,9 +40,11 @@ export function PileTooltip({
 
   const viewportWidth = window.innerWidth;
 
-  // Center on cursor
-  let left = mouseX - tooltipWidth / 2;
-  let top = mouseY - tooltipHeight / 2;
+  // Position close to cursor, offset slightly to the right and up
+  const offsetX = 20;
+  const offsetY = 20;
+  let left = mouseX + offsetX;
+  let top = mouseY - offsetY;
 
   // Keep within viewport
   if (left < 0) {
