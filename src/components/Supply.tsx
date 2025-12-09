@@ -116,9 +116,9 @@ export function Supply({
         gridTemplateAreas: '"victory treasure kingdom curse trash"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
-        background:
-          "linear-gradient(180deg, var(--color-bg-supply) 0%, var(--color-bg-supply-alt) 100%)",
-        border: "1px solid var(--color-border-supply)",
+        background: "rgba(70, 70, 95, 0.25)",
+        backdropFilter: "blur(12px)",
+        borderRadius: "0.5rem",
         alignItems: "start",
         alignContent: "start",
       }}
