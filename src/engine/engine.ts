@@ -6,6 +6,7 @@ import { projectState, createEmptyState } from "../events/project";
 import { removeEventChain } from "../events/types";
 import { generateEventId } from "../events/id-generator";
 import { engineLogger } from "../lib/logger";
+import { isActionCard } from "../data/cards";
 
 /**
  * Pending undo request awaiting approval.
@@ -230,6 +231,36 @@ export class DominionEngine {
     forked.events = [...this.events];
     forked._state = null; // Will be recomputed on access
     return forked;
+  }
+
+  /**
+   * Check if a player should auto-advance from action to buy phase.
+   * Returns true when player has no playable actions (no action cards OR no actions remaining).
+   */
+  shouldAutoAdvancePhase(playerId: PlayerId): boolean {
+    const state = this.state;
+
+    // Only auto-advance in action phase
+    if (state.phase !== "action") return false;
+
+    // Don't auto-advance if it's not the player's turn
+    if (state.activePlayer !== playerId) return false;
+
+    // Don't auto-advance during decisions
+    if (state.pendingDecision) return false;
+
+    // Don't auto-advance if game is over
+    if (state.gameOver) return false;
+
+    const player = state.players[playerId];
+    if (!player) return false;
+
+    // Check if player can play any actions
+    const hasActionCards = player.hand.some(card => isActionCard(card));
+    const hasActions = state.actions > 0;
+
+    // Auto-advance if no actions available OR no action cards to play
+    return !hasActions || !hasActionCards;
   }
 
   /**
