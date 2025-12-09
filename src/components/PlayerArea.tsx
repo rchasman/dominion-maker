@@ -43,7 +43,7 @@ interface PlayerAreaProps {
   playerStrategy?: {
     gameplan: string;
     read: string;
-    lines: string;
+    recommendation: string;
   };
 }
 
@@ -122,7 +122,7 @@ export function PlayerArea({
 
   // Strategy popover state - only show if there's actual content
   const hasStrategyContent =
-    playerStrategy && (playerStrategy.gameplan || playerStrategy.read || playerStrategy.lines);
+    playerStrategy && (playerStrategy.gameplan || playerStrategy.read || playerStrategy.recommendation);
 
   const [isStrategyOpen, setIsStrategyOpen] = useState(false);
 
@@ -154,6 +154,96 @@ export function PlayerArea({
     role,
     clientPoint,
   ]);
+
+  // Deck tooltip state
+  const [isDeckOpen, setIsDeckOpen] = useState(false);
+
+  const deckTooltip = useFloating({
+    open: isDeckOpen,
+    onOpenChange: setIsDeckOpen,
+    placement: "left",
+    middleware: [
+      offset({ mainAxis: 8, crossAxis: 0 }),
+      flip(),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const deckHover = useHover(deckTooltip.context);
+  const deckFocus = useFocus(deckTooltip.context);
+  const deckDismiss = useDismiss(deckTooltip.context);
+  const deckRole = useRole(deckTooltip.context, { role: "tooltip" });
+  const deckClientPoint = useClientPoint(deckTooltip.context);
+
+  const {
+    getReferenceProps: getDeckReferenceProps,
+    getFloatingProps: getDeckFloatingProps,
+  } = useInteractions([
+    deckHover,
+    deckFocus,
+    deckDismiss,
+    deckRole,
+    deckClientPoint,
+  ]);
+
+  // Discard tooltip state
+  const [isDiscardOpen, setIsDiscardOpen] = useState(false);
+
+  const discardTooltip = useFloating({
+    open: isDiscardOpen,
+    onOpenChange: setIsDiscardOpen,
+    placement: "left",
+    middleware: [
+      offset({ mainAxis: 8, crossAxis: 0 }),
+      flip(),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+
+  const discardHover = useHover(discardTooltip.context);
+  const discardFocus = useFocus(discardTooltip.context);
+  const discardDismiss = useDismiss(discardTooltip.context);
+  const discardRole = useRole(discardTooltip.context, { role: "tooltip" });
+  const discardClientPoint = useClientPoint(discardTooltip.context);
+
+  const {
+    getReferenceProps: getDiscardReferenceProps,
+    getFloatingProps: getDiscardFloatingProps,
+  } = useInteractions([
+    discardHover,
+    discardFocus,
+    discardDismiss,
+    discardRole,
+    discardClientPoint,
+  ]);
+
+  // Count cards in deck and discard
+  const deckCounts = player.deck.reduce(
+    (acc, card) => {
+      acc[card] = (acc[card] || 0) + 1;
+      return acc;
+    },
+    {} as Record<CardName, number>,
+  );
+
+  const discardCounts = player.discard.reduce(
+    (acc, card) => {
+      acc[card] = (acc[card] || 0) + 1;
+      return acc;
+    },
+    {} as Record<CardName, number>,
+  );
+
+  const uniqueDeckCards = Object.keys(deckCounts) as CardName[];
+  const uniqueDiscardCards = Object.keys(discardCounts) as CardName[];
+
+  // Get known cards from top of deck (when revealed)
+  const knownDeckCards: CardName[] = [];
+  if (player.deckTopRevealed && player.deck.length > 0) {
+    knownDeckCards.push(player.deck[player.deck.length - 1]);
+  }
 
   // Check if any purchases have been made this turn (treasures become non-take-backable)
   const hasMadePurchases = turnHistory.some(
@@ -224,7 +314,7 @@ export function PlayerArea({
   return (
     <div
       style={{
-        padding: "var(--space-2) var(--space-3)",
+        padding: "var(--space-1) var(--space-2)",
         border: `2px solid ${borderColor}`,
         background: backgroundColor,
         boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
@@ -234,7 +324,7 @@ export function PlayerArea({
     >
       <div
         style={{
-          marginBlockEnd: "var(--space-2)",
+          marginBlockEnd: "var(--space-1)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -340,9 +430,9 @@ export function PlayerArea({
                       </div>
                       <div>
                         <div style={{ fontSize: "0.6875rem", textTransform: "uppercase", opacity: 0.6, marginBottom: "0.25rem" }}>
-                          Lines
+                          Recommendation
                         </div>
-                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.lines}</div>
+                        <div style={{ lineHeight: "1.6" }}>{playerStrategy.recommendation}</div>
                       </div>
                     </div>
                   </div>
