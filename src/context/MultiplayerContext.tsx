@@ -139,19 +139,6 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
       ? getPlayerIdByIndex(myPlayerIndex)
       : null;
 
-  // Debug logging for player mapping
-  useEffect(() => {
-    if (isPlaying && myPeerId) {
-      multiplayerLogger.debug("Player mapping", {
-        myPeerId,
-        myPlayerIndex,
-        myGamePlayerId,
-        playersInRoom: players.map(p => p.id),
-        foundInList: players.some(p => p.id === myPeerId),
-      });
-    }
-  }, [isPlaying, myPeerId, myPlayerIndex, myGamePlayerId, players]);
-
   const isMyTurn = (() => {
     if (!isPlaying || !gameState || !myGamePlayerId) {
       return false;
