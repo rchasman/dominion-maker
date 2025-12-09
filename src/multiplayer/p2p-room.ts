@@ -4,7 +4,7 @@
  * Host-authoritative: Host runs game engine, broadcasts events to clients.
  * Event-driven: Game state is derived from event log.
  */
-import { joinRoom as joinTrysteroRoom, type Room } from "trystero/nostr";
+import { joinRoom as joinTrysteroRoom, type Room } from "trystero/torrent";
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { GameCommand } from "../commands/types";
@@ -82,15 +82,15 @@ export class P2PRoom {
       `Creating room: ${roomCode}, isHost: ${isHost}, myPeerId: ${this.myPeerId}${savedPeerId ? " (restored)" : " (new)"}`,
     );
 
-    // Join Trystero room with Nostr relays
+    // Join Trystero room with multiple reliable WebTorrent trackers
     this.room = joinTrysteroRoom(
       {
         appId: APP_ID,
-        relayUrls: [
-          "wss://relay.damus.io",
-          "wss://nos.lol",
-          "wss://relay.nostr.band",
-          "wss://nostr.wine",
+        trackerUrls: [
+          "wss://tracker.openwebtorrent.com",
+          "wss://tracker.webtorrent.dev",
+          "wss://tracker.files.fm:7073/announce",
+          "wss://spacetradersapi-chatbox.herokuapp.com:443/announce",
         ],
       },
       roomCode,
