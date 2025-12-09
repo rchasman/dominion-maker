@@ -212,30 +212,35 @@ export function CardDecisionModal({
             return (
               <div
                 key={cardIndex}
-                draggable={requiresOrdering}
-                onDragStart={e => {
-                  e.dataTransfer.effectAllowed = "move";
-                  handleDragStart(cardIndex);
-                }}
-                onDragOver={handleDragOver}
-                onDrop={e => {
-                  e.preventDefault();
-                  handleDrop(cardIndex);
-                }}
-                onDragEnd={() => setDraggedIndex(null)}
                 style={{
                   opacity: isDragging ? 0.5 : 1,
-                  cursor: requiresOrdering ? "grab" : "pointer",
                   position: "relative",
-                  userSelect: "none",
                 }}
               >
-                <Card
-                  name={card}
-                  size="large"
-                  onClick={() => toggleCardAction(cardIndex)}
-                  highlightMode={getHighlightMode()}
-                />
+                <div
+                  draggable={requiresOrdering}
+                  onDragStart={e => {
+                    e.dataTransfer.effectAllowed = "move";
+                    handleDragStart(cardIndex);
+                  }}
+                  onDragOver={handleDragOver}
+                  onDrop={e => {
+                    e.preventDefault();
+                    handleDrop(cardIndex);
+                  }}
+                  onDragEnd={() => setDraggedIndex(null)}
+                  style={{
+                    cursor: requiresOrdering ? "grab" : "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <Card
+                    name={card}
+                    size="large"
+                    onClick={() => toggleCardAction(cardIndex)}
+                    highlightMode={getHighlightMode()}
+                  />
+                </div>
                 {/* Action indicator */}
                 <div
                   style={{
