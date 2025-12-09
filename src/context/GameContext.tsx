@@ -54,8 +54,9 @@ interface GameContextValue {
       strategy: string;
       execution: string;
       position: string;
+      weakness: string;
       threats: string;
-      opportunities: string;
+      nextMove: string;
     }
   >;
 
@@ -126,8 +127,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         strategy: string;
         execution: string;
         position: string;
+        weakness: string;
         threats: string;
-        opportunities: string;
+        nextMove: string;
       }
     >
   >({});
@@ -276,8 +278,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
                   strategy: string;
                   execution: string;
                   position: string;
+                  weakness: string;
                   threats: string;
-                  opportunities: string;
+                  nextMove: string;
                 }
               >;
 

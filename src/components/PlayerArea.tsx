@@ -44,8 +44,9 @@ interface PlayerAreaProps {
     strategy: string;
     execution: string;
     position: string;
+    weakness: string;
     threats: string;
-    opportunities: string;
+    nextMove: string;
   };
 }
 
@@ -128,8 +129,9 @@ export function PlayerArea({
     (playerStrategy.strategy ||
       playerStrategy.execution ||
       playerStrategy.position ||
+      playerStrategy.weakness ||
       playerStrategy.threats ||
-      playerStrategy.opportunities);
+      playerStrategy.nextMove);
 
   const [isStrategyOpen, setIsStrategyOpen] = useState(false);
 
@@ -231,7 +233,7 @@ export function PlayerArea({
   return (
     <div
       style={{
-        padding: "var(--space-4)",
+        padding: "var(--space-2) var(--space-3)",
         border: `2px solid ${borderColor}`,
         background: backgroundColor,
         boxShadow: isActive ? `0 0 var(--space-5) ${borderColor}66` : "none",
@@ -239,7 +241,7 @@ export function PlayerArea({
     >
       <div
         style={{
-          marginBlockEnd: "var(--space-3)",
+          marginBlockEnd: "var(--space-2)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -341,11 +343,13 @@ export function PlayerArea({
                         <strong>Position:</strong> {playerStrategy.position}
                       </li>
                       <li>
+                        <strong>Weakness:</strong> {playerStrategy.weakness}
+                      </li>
+                      <li>
                         <strong>Threats:</strong> {playerStrategy.threats}
                       </li>
                       <li>
-                        <strong>Opportunities:</strong>{" "}
-                        {playerStrategy.opportunities}
+                        <strong>Next Move:</strong> {playerStrategy.nextMove}
                       </li>
                     </ul>
                   </div>
@@ -398,8 +402,8 @@ export function PlayerArea({
         <div
           style={{
             position: "relative",
-            padding: "var(--space-3)",
-            marginBlockEnd: "var(--space-3)",
+            padding: "var(--space-2)",
+            marginBlockEnd: "var(--space-2)",
             background:
               player.inPlay.length > 0
                 ? "rgb(255 255 255 / 0.05)"
@@ -408,7 +412,7 @@ export function PlayerArea({
               player.inPlay.length > 0
                 ? "1px solid var(--color-border)"
                 : "1px dashed var(--color-border)",
-            minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
+            minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
             overflow: "hidden",
           }}
         >
@@ -460,7 +464,7 @@ export function PlayerArea({
         style={{
           display: "grid",
           gridTemplateColumns: "75% 25%",
-          gap: "var(--space-3)",
+          gap: "var(--space-2)",
           alignItems: "stretch",
         }}
       >
@@ -715,8 +719,8 @@ export function PlayerArea({
         <div
           style={{
             position: "relative",
-            padding: "var(--space-3)",
-            marginBlockStart: "var(--space-3)",
+            padding: "var(--space-2)",
+            marginBlockStart: "var(--space-2)",
             background:
               player.inPlay.length > 0
                 ? "rgb(255 255 255 / 0.05)"
@@ -725,7 +729,7 @@ export function PlayerArea({
               player.inPlay.length > 0
                 ? "1px solid var(--color-border)"
                 : "1px dashed var(--color-border)",
-            minBlockSize: "calc(var(--card-height-small) + var(--space-6))",
+            minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
             overflow: "hidden",
           }}
         >

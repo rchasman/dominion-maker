@@ -90,8 +90,9 @@ interface PlayerStrategyAnalysis {
   strategy: string;
   execution: string;
   position: string;
+  weakness: string;
   threats: string;
-  opportunities: string;
+  nextMove: string;
 }
 
 /**
@@ -209,15 +210,17 @@ Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
   Approach: ${yourStrategy.strategy}
   Execution: ${yourStrategy.execution}
   Position: ${yourStrategy.position}
+  Weakness: ${yourStrategy.weakness}
   Threats: ${yourStrategy.threats}
-  Opportunities: ${yourStrategy.opportunities}`);
+  Next Move: ${yourStrategy.nextMove}`);
       }
 
       if (opponentStrategy) {
         sections.push(`\nOPPONENT STRATEGY:
   Approach: ${opponentStrategy.strategy}
   Execution: ${opponentStrategy.execution}
-  Position: ${opponentStrategy.position}`);
+  Position: ${opponentStrategy.position}
+  Weakness: ${opponentStrategy.weakness}`);
       }
     }
   }

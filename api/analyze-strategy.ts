@@ -36,17 +36,19 @@ Analyze each player's:
 - Strategic approach: Big Money, Engine Building, Hybrid, or Rush
 - Execution quality: How well they're implementing their plan, card synergies, tactical choices
 - Current position: VP standing, deck strength, greening status
-- Threats: What the opponent is doing that could hurt them
-- Opportunities: What they should prioritize given the current game state
+- Key weakness: The main problem with their deck or strategy
+- Threat assessment: What the opponent is doing that could hurt them
+- Best move: What they should prioritize next
 
-Be specific, actionable, and concise. Write from a neutral analyst perspective.`;
+Be specific, actionable, and concise. Write from a neutral analyst perspective with personality.`;
 
 const PlayerAnalysisSchema = z.object({
   strategy: z.string().describe("Strategy type and approach"),
   execution: z.string().describe("How well they're executing their plan"),
   position: z.string().describe("Current standing in the game"),
-  threats: z.string().describe("Threats from opponent"),
-  opportunities: z.string().describe("Opportunities to pursue"),
+  weakness: z.string().describe("Main weakness in their deck or strategy"),
+  threats: z.string().describe("Threat assessment from opponent"),
+  nextMove: z.string().describe("Best next move or priority"),
 });
 
 const StrategyAnalysisSchema = z.object({

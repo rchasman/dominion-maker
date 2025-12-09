@@ -230,15 +230,17 @@ describe("buildStrategicContext", () => {
           strategy: "Playing Big Money, focusing on Gold/Silver purchases",
           execution: "Good",
           position: "Leading",
+          weakness: "No action synergy",
           threats: "None",
-          opportunities: "Continue buying Golds",
+          nextMove: "Continue buying Golds",
         },
         ai: {
           strategy: "Building engine with Villages and Smithies",
           execution: "Fair",
           position: "Behind",
-          threats: "Low buying power",
-          opportunities: "Complete engine",
+          weakness: "Low buying power",
+          threats: "Human pulling ahead",
+          nextMove: "Complete engine",
         },
       });
 
