@@ -24,6 +24,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "workflows", "api"],
-  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
+  "include": ["src", "workflows", "api", "server.ts"]
 }
