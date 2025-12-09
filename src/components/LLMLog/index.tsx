@@ -74,9 +74,228 @@ export function LLMLog({
   }, [currentDecision, activePane, setActivePane]);
 
   const getModeMessage = () => {
-    return gameMode === "multiplayer"
-      ? { title: "", description: "" }
-      : GAME_MODE_CONFIG[gameMode].logDescription;
+    if (gameMode === "multiplayer") {
+      return { title: "", description: "" };
+    }
+    return GAME_MODE_CONFIG[gameMode].logDescription;
+  };
+
+  const renderEmptyState = () => (
+    <div
+      style={{
+        padding: "var(--space-4)",
+        paddingTop: "var(--space-3)",
+        textAlign: "center",
+        color: "var(--color-text-secondary)",
+        fontSize: "0.75rem",
+        lineHeight: 1.6,
+      }}
+    >
+      {(() => {
+        const { title, description } = getModeMessage();
+        return (
+          <>
+            <div style={{ marginBottom: "var(--space-2)" }}>{title}</div>
+            <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
+              {description}
+            </div>
+          </>
+        );
+      })()}
+    </div>
+  );
+
+  const renderPendingAction = () => (
+    <>
+      <div
+        style={{
+          padding: "0 var(--space-4)",
+          marginTop: "var(--space-3)",
+          marginBottom: "var(--space-3)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            color: "var(--color-text-primary)",
+            marginBottom: "var(--space-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            userSelect: "none",
+          }}
+        >
+          <span>
+            {currentTurn.isSubPhase ? (
+              <span style={{ color: "var(--color-victory)" }}>
+                {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                {currentActionIndex + 1} of{" "}
+                {currentTurn.decisions.length + 1}{" "}
+              </span>
+            ) : (
+              <>
+                {currentTurn.gameTurn &&
+                  `Turn #${currentTurn.gameTurn}: `}
+                Action {currentActionIndex + 1} of{" "}
+                {currentTurn.decisions.length + 1}{" "}
+              </>
+            )}
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--color-gold)",
+                fontWeight: 400,
+              }}
+            >
+              (
+              {
+                Array.from(
+                  currentTurn.modelStatuses?.values() || [],
+                ).filter(s => s.completed).length
+              }
+              /{currentTurn.pendingData?.totalModels || "?"})
+            </span>
+          </span>
+          <ActionNavigationControls
+            hasPrevAction={hasPrevAction}
+            hasNextAction={hasNextAction}
+            onPrev={handlePrevAction}
+            onNext={handleNextAction}
+          />
+        </div>
+      </div>
+      <PaneTabSwitcher
+        activePane={activePane}
+        onPaneChange={setActivePane}
+      />
+      <PaneContent
+        activePane={activePane}
+        votingData={null}
+        timingData={null}
+        modelStatuses={currentTurn.modelStatuses}
+        gameStateData={currentTurn.pendingData?.gameState}
+        totalModels={currentTurn.pendingData?.totalModels}
+        now={now}
+      />
+    </>
+  );
+
+  const renderDecisionAction = () => (
+    <>
+      {/* Decision Info with Navigation */}
+      <div
+        style={{
+          padding: "0 var(--space-4)",
+          marginTop: "var(--space-3)",
+          marginBottom: "var(--space-3)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            color: "var(--color-text-primary)",
+            marginBottom: "var(--space-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            userSelect: "none",
+          }}
+        >
+          <span>
+            {currentTurn.isSubPhase ? (
+              <span style={{ color: "var(--color-victory)" }}>
+                {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
+                {currentActionIndex + 1} of{" "}
+                {currentTurn.pending
+                  ? currentTurn.decisions.length + 1
+                  : currentTurn.decisions.length}{" "}
+              </span>
+            ) : (
+              <>
+                {currentTurn.gameTurn &&
+                  `Turn #${currentTurn.gameTurn}: `}
+                Action {currentActionIndex + 1} of{" "}
+                {currentTurn.pending
+                  ? currentTurn.decisions.length + 1
+                  : currentTurn.decisions.length}{" "}
+              </>
+            )}
+            <span
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--color-gold)",
+                fontWeight: 400,
+              }}
+            >
+              (
+              {(
+                (Number(
+                  currentDecision.timingEntry?.data?.parallelDuration,
+                ) || 0) / 1000
+              ).toFixed(2)}
+              s)
+            </span>
+          </span>
+          <ActionNavigationControls
+            hasPrevAction={hasPrevAction}
+            hasNextAction={hasNextAction}
+            onPrev={handlePrevAction}
+            onNext={handleNextAction}
+          />
+        </div>
+      </div>
+
+      <PaneTabSwitcher
+        activePane={activePane}
+        onPaneChange={setActivePane}
+        hidePerformance={!currentDecision.timingEntry}
+      />
+
+      <PaneContent
+        activePane={activePane}
+        votingData={
+          currentDecision.votingEntry
+            .data as unknown as ConsensusVotingData
+        }
+        timingData={
+          currentDecision.timingEntry?.data as TimingData | undefined
+        }
+        modelStatuses={currentDecision.modelStatuses}
+        gameStateData={
+          currentDecision.votingEntry.data?.gameState as
+            | GameStateSnapshot
+            | undefined
+        }
+        totalModels={
+          Number(
+            (
+              currentDecision.votingEntry.data as unknown as {
+                topResult?: { totalVotes?: number };
+              }
+            )?.topResult?.totalVotes,
+          ) || 0
+        }
+        now={now}
+      />
+    </>
+  );
+
+  const renderMainContent = () => {
+    if (turns.length === 0) {
+      return renderEmptyState();
+    }
+
+    if (currentTurn?.pending && currentActionIndex === currentTurn.decisions.length) {
+      return renderPendingAction();
+    }
+
+    if (currentDecision) {
+      return renderDecisionAction();
+    }
+
+    return null;
   };
 
   return (
@@ -318,205 +537,7 @@ export function LLMLog({
           overflow: "hidden",
         }}
       >
-        {turns.length === 0 ? (
-          <div
-            style={{
-              padding: "var(--space-4)",
-              paddingTop: "var(--space-3)",
-              textAlign: "center",
-              color: "var(--color-text-secondary)",
-              fontSize: "0.75rem",
-              lineHeight: 1.6,
-            }}
-          >
-            {(() => {
-              const { title, description } = getModeMessage();
-              return (
-                <>
-                  <div style={{ marginBottom: "var(--space-2)" }}>{title}</div>
-                  <div style={{ fontSize: "0.6875rem", opacity: 0.7 }}>
-                    {description}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        ) : currentTurn?.pending &&
-          currentActionIndex === currentTurn.decisions.length ? (
-          /* Show live panes with both Voting and Performance tabs for pending action */
-          <>
-            <div
-              style={{
-                padding: "0 var(--space-4)",
-                marginTop: "var(--space-3)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "var(--color-text-primary)",
-                  marginBottom: "var(--space-2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  userSelect: "none",
-                }}
-              >
-                <span>
-                  {currentTurn.isSubPhase ? (
-                    <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
-                      {currentActionIndex + 1} of{" "}
-                      {currentTurn.decisions.length + 1}{" "}
-                    </span>
-                  ) : (
-                    <>
-                      {currentTurn.gameTurn &&
-                        `Turn #${currentTurn.gameTurn}: `}
-                      Action {currentActionIndex + 1} of{" "}
-                      {currentTurn.decisions.length + 1}{" "}
-                    </>
-                  )}
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "var(--color-gold)",
-                      fontWeight: 400,
-                    }}
-                  >
-                    (
-                    {
-                      Array.from(
-                        currentTurn.modelStatuses?.values() || [],
-                      ).filter(s => s.completed).length
-                    }
-                    /{currentTurn.pendingData?.totalModels || "?"})
-                  </span>
-                </span>
-                <ActionNavigationControls
-                  hasPrevAction={hasPrevAction}
-                  hasNextAction={hasNextAction}
-                  onPrev={handlePrevAction}
-                  onNext={handleNextAction}
-                />
-              </div>
-            </div>
-            <PaneTabSwitcher
-              activePane={activePane}
-              onPaneChange={setActivePane}
-            />
-            <PaneContent
-              activePane={activePane}
-              votingData={null}
-              timingData={null}
-              modelStatuses={currentTurn.modelStatuses}
-              gameStateData={currentTurn.pendingData?.gameState}
-              totalModels={currentTurn.pendingData?.totalModels}
-              now={now}
-            />
-          </>
-        ) : currentDecision ? (
-          <>
-            {/* Decision Info with Navigation */}
-            <div
-              style={{
-                padding: "0 var(--space-4)",
-                marginTop: "var(--space-3)",
-                marginBottom: "var(--space-3)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  color: "var(--color-text-primary)",
-                  marginBottom: "var(--space-2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  userSelect: "none",
-                }}
-              >
-                <span>
-                  {currentTurn.isSubPhase ? (
-                    <span style={{ color: "var(--color-victory)" }}>
-                      {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
-                      {currentActionIndex + 1} of{" "}
-                      {currentTurn.pending
-                        ? currentTurn.decisions.length + 1
-                        : currentTurn.decisions.length}{" "}
-                    </span>
-                  ) : (
-                    <>
-                      {currentTurn.gameTurn &&
-                        `Turn #${currentTurn.gameTurn}: `}
-                      Action {currentActionIndex + 1} of{" "}
-                      {currentTurn.pending
-                        ? currentTurn.decisions.length + 1
-                        : currentTurn.decisions.length}{" "}
-                    </>
-                  )}
-                  <span
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "var(--color-gold)",
-                      fontWeight: 400,
-                    }}
-                  >
-                    (
-                    {(
-                      (Number(
-                        currentDecision.timingEntry?.data?.parallelDuration,
-                      ) || 0) / 1000
-                    ).toFixed(2)}
-                    s)
-                  </span>
-                </span>
-                <ActionNavigationControls
-                  hasPrevAction={hasPrevAction}
-                  hasNextAction={hasNextAction}
-                  onPrev={handlePrevAction}
-                  onNext={handleNextAction}
-                />
-              </div>
-            </div>
-
-            <PaneTabSwitcher
-              activePane={activePane}
-              onPaneChange={setActivePane}
-              hidePerformance={!currentDecision.timingEntry}
-            />
-
-            <PaneContent
-              activePane={activePane}
-              votingData={
-                currentDecision.votingEntry
-                  .data as unknown as ConsensusVotingData
-              }
-              timingData={
-                currentDecision.timingEntry?.data as TimingData | undefined
-              }
-              modelStatuses={currentDecision.modelStatuses}
-              gameStateData={
-                currentDecision.votingEntry.data?.gameState as
-                  | GameStateSnapshot
-                  | undefined
-              }
-              totalModels={
-                Number(
-                  (
-                    currentDecision.votingEntry.data as unknown as {
-                      topResult?: { totalVotes?: number };
-                    }
-                  )?.topResult?.totalVotes,
-                ) || 0
-              }
-              now={now}
-            />
-          </>
-        ) : null}
+        {renderMainContent()}
       </div>
     </div>
   );
