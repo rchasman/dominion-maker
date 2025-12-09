@@ -1,5 +1,6 @@
 // Simple Bun HTTP server for local API development
-import handler from "./api/generate-action";
+import generateActionHandler from "./api/generate-action";
+import analyzeStrategyHandler from "./api/analyze-strategy";
 import { serverLogger } from "./src/lib/logger";
 
 const server = Bun.serve({
@@ -20,7 +21,10 @@ const server = Bun.serve({
     }
 
     // Route API requests
-    if (url.pathname === "/api/generate-action") {
+    if (
+      url.pathname === "/api/generate-action" ||
+      url.pathname === "/api/analyze-strategy"
+    ) {
       // Adapt Bun Request to Vercel-style request/response
       const body = await req.text();
       const vercelReq = {
@@ -51,6 +55,11 @@ const server = Bun.serve({
         },
       };
 
+      // Route to appropriate handler
+      const handler =
+        url.pathname === "/api/generate-action"
+          ? generateActionHandler
+          : analyzeStrategyHandler;
       await handler(vercelReq, vercelRes);
 
       return new Response(
