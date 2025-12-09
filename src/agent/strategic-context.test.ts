@@ -225,8 +225,22 @@ describe("buildStrategicContext", () => {
   describe("strategy summary integration", () => {
     it("should include strategy summary when provided", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
-      const strategySummary =
-        "You: Playing Big Money, focusing on Gold/Silver purchases.\nOpponent: Building engine with Villages and Smithies.";
+      const strategySummary = JSON.stringify({
+        human: {
+          strategy: "Playing Big Money, focusing on Gold/Silver purchases",
+          execution: "Good",
+          position: "Leading",
+          threats: "None",
+          opportunities: "Continue buying Golds",
+        },
+        ai: {
+          strategy: "Building engine with Villages and Smithies",
+          execution: "Fair",
+          position: "Behind",
+          threats: "Low buying power",
+          opportunities: "Complete engine",
+        },
+      });
 
       const context = buildStrategicContext(state, strategySummary);
 
