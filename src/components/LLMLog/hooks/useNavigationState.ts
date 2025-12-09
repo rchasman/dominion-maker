@@ -1,5 +1,6 @@
 import { useReducer, useEffect, useCallback } from "react";
 import type { Turn } from "../types";
+import { run } from "../../../lib/run";
 
 export interface NavigationState {
   currentTurnIndex: number;
@@ -129,11 +130,11 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   const hasNextTurn = state.currentTurnIndex < turns.length - 1;
   const hasPrevAction = state.currentActionIndex > 0;
 
-  const maxActionIndex = (() => {
+  const maxActionIndex = run(() => {
     if (currentTurn?.pending) return currentTurn.decisions.length;
     if (currentTurn) return currentTurn.decisions.length - 1;
     return -1;
-  })();
+  });
 
   const hasNextAction = state.currentActionIndex < maxActionIndex;
 

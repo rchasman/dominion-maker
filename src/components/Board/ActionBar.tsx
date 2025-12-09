@@ -1,4 +1,5 @@
 import type { GameState, DecisionRequest } from "../../types/game-state";
+import { run } from "../../lib/run";
 
 interface ActionBarProps {
   state: GameState;
@@ -164,7 +165,7 @@ export function ActionBar({
       <div
         style={{ display: "flex", gap: "var(--space-3)", userSelect: "none" }}
       >
-        {(() => {
+        {run(() => {
           if (isActive && onConfirmDecision && hasPendingDecision) {
             return (
               <>
@@ -287,7 +288,7 @@ export function ActionBar({
           }
 
           return null;
-        })()}
+        })}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
+import { run } from "../src/lib/run";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
 
@@ -14,11 +15,11 @@ const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
   fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url = (() => {
+    const url = run(() => {
       if (typeof input === "string") return input;
       if (input instanceof URL) return input.href;
       return input.url;
-    })();
+    });
     const isHttps = url.startsWith("https:");
 
     return fetch(input, {

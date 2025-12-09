@@ -11,6 +11,7 @@ import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
 import { formatActionDescription } from "../lib/action-utils";
+import { run } from "../lib/run";
 import {
   AVAILABLE_MODELS,
   ALL_FAST_MODELS,
@@ -378,7 +379,7 @@ export async function advanceGameStateWithConsensus(
 
           logger?.({
             type: "consensus-model-complete",
-            message: (() => {
+            message: run(() => {
               if (isTimeout) {
                 return `${provider} timed out after ${modelDuration.toFixed(0)}ms`;
               }
@@ -386,7 +387,7 @@ export async function advanceGameStateWithConsensus(
                 return `${provider} aborted after ${modelDuration.toFixed(0)}ms`;
               }
               return `${provider} failed after ${modelDuration.toFixed(0)}ms`;
-            })(),
+            }),
             data: {
               provider,
               index,

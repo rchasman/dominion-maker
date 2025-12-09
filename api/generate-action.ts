@@ -4,6 +4,7 @@ import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
+import { run } from "../src/lib/run";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
 import { parse as parseBestEffort } from "best-effort-json-parser";
@@ -78,11 +79,11 @@ const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
   fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url = (() => {
+    const url = run(() => {
       if (typeof input === "string") return input;
       if (input instanceof URL) return input.href;
       return input.url;
-    })();
+    });
     const isHttps = url.startsWith("https:");
 
     return fetch(input, {

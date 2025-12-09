@@ -6,6 +6,7 @@ import {
   isVictoryCard,
 } from "../data/cards";
 import { countVP as countVPFromCards } from "../lib/board-utils";
+import { run } from "../lib/run";
 
 /**
  * Extracts recent turn actions from game log for strategy analysis
@@ -265,12 +266,12 @@ function analyzeDeck(cards: CardName[]): DeckAnalysis {
           }
         : {};
 
-      const actionUpdate = (() => {
+      const actionUpdate = run(() => {
         if (!isActionCard(card)) return {};
         if (description.includes("+2 Actions")) return { villages: acc.villages + 1 };
         if (!description.includes("+1 Action")) return { terminals: acc.terminals + 1 };
         return {};
-      })();
+      });
 
       return {
         ...acc,
