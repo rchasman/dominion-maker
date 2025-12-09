@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useGame } from "../../context/GameContext";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
@@ -56,19 +56,14 @@ export function Board({ onBackToHome }: BoardProps) {
     cardOrder?: number[];
   } | null>(null);
 
-  // Determine player IDs early so callbacks can use them
-  // If a game is active, use ACTUAL player IDs from game state
-  // Otherwise, use expected player IDs from config
-  const actualPlayerIds = state
-    ? (Object.keys(state.players) as PlayerId[])
-    : [];
-
-  const playerIds = useMemo(() => {
-    if (actualPlayerIds.length > 0) return actualPlayerIds;
+  // Determine player IDs - use actual from state if available, otherwise defaults
+  const getPlayerIds = (): PlayerId[] => {
+    if (state) return Object.keys(state.players) as PlayerId[];
     if (gameMode === "multiplayer") return ["human", "ai"] as PlayerId[];
     return getPlayersForMode(gameMode);
-  }, [actualPlayerIds, gameMode]);
+  };
 
+  const playerIds = getPlayerIds();
   const mainPlayerId = playerIds[0];
 
   // Wrap requestUndo to clear preview state and selections when undoing
@@ -82,61 +77,51 @@ export function Board({ onBackToHome }: BoardProps) {
   );
 
   // Card click handler - must be defined before early return
-  const onCardClick = useCallback(
-    (card: CardName, index: number) => {
-      if (!state?.activePlayer || state.activePlayer !== mainPlayerId) return;
+  const onCardClick = (card: CardName, index: number) => {
+    if (!state?.activePlayer || state.activePlayer !== mainPlayerId) return;
 
-      // If we have a pending decision, add to selection
-      if (state.pendingDecision) {
-        const decision = state.pendingDecision;
-        const max = decision.max || 1;
+    // If we have a pending decision, add to selection
+    if (state.pendingDecision) {
+      const decision = state.pendingDecision;
+      const max = decision.max || 1;
 
-        if (selectedCardIndices.includes(index)) {
-          setSelectedCardIndices(prev => prev.filter(i => i !== index));
-        } else if (selectedCardIndices.length < max) {
-          setSelectedCardIndices(prev => [...prev, index]);
-        }
-        return;
+      if (selectedCardIndices.includes(index)) {
+        setSelectedCardIndices(prev => prev.filter(i => i !== index));
+      } else if (selectedCardIndices.length < max) {
+        setSelectedCardIndices(prev => [...prev, index]);
       }
+      return;
+    }
 
-      // Action phase - play action cards
-      if (state.phase === "action" && isActionCard(card) && state.actions > 0) {
-        const result = playAction(card);
-        if (!result.ok) {
-          uiLogger.error("Failed to play action:", result.error);
-        }
-        return;
+    // Action phase - play action cards
+    if (state.phase === "action" && isActionCard(card) && state.actions > 0) {
+      const result = playAction(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play action:", result.error);
       }
+      return;
+    }
 
-      // Buy phase - play treasures
-      if (state.phase === "buy" && isTreasureCard(card)) {
-        const result = playTreasure(card);
-        if (!result.ok) {
-          uiLogger.error("Failed to play treasure:", result.error);
-        }
-        return;
+    // Buy phase - play treasures
+    if (state.phase === "buy" && isTreasureCard(card)) {
+      const result = playTreasure(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play treasure:", result.error);
       }
-    },
-    [state, selectedCardIndices, playAction, playTreasure, mainPlayerId],
-  );
+      return;
+    }
+  };
 
   // Handle in-play clicks (unplay treasures)
-  const onInPlayClick = useCallback(
-    (card: CardName) => {
-      if (
-        !state ||
-        state.activePlayer !== mainPlayerId ||
-        state.phase !== "buy"
-      )
-        return;
+  const onInPlayClick = (card: CardName) => {
+    if (!state || state.activePlayer !== mainPlayerId || state.phase !== "buy")
+      return;
 
-      const result = unplayTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to unplay treasure:", result.error);
-      }
-    },
-    [state, unplayTreasure, mainPlayerId],
-  );
+    const result = unplayTreasure(card);
+    if (!result.ok) {
+      uiLogger.error("Failed to unplay treasure:", result.error);
+    }
+  };
 
   if (!state) return null;
 
