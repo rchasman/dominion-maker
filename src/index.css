@@ -54,9 +54,9 @@
   --space-10: 2.5rem; /* 40px */
 
   /* Card Sizes (rem-based for font size scaling) */
-  --card-width-small: 2.85rem;
+  --card-width-small: 3.5rem;
   --card-width-medium: 4.275rem;
-  --card-width-large: 5.7rem;
+  --card-width-large: 5.6rem;
   --card-height-small: 4.5125rem;
   --card-height-medium: 6.6797rem;
   --card-height-large: 8.9063rem;
@@ -177,45 +177,23 @@ body {
 
 .kingdom-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(5, minmax(0, var(--card-width-large)));
   gap: 0.25rem;
   justify-content: center;
   container-type: inline-size;
-  flex: 1;
-  min-height: 0;
-  align-items: stretch;
-}
-
-.kingdom-grid > * {
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kingdom-grid img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
 }
 
 /* Switch to 2 columns when too narrow */
 @container (max-width: 40rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-columns: repeat(2, minmax(0, var(--card-width-large)));
   }
 }
 
 /* Allow 3 columns as middle ground */
 @container (max-width: 40rem) and (min-width: 30rem) {
   .kingdom-grid {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(4, 1fr);
+    grid-template-columns: repeat(3, minmax(0, var(--card-width-large)));
   }
 }
 
