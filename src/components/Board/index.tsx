@@ -47,6 +47,7 @@ export function Board({ onBackToHome }: BoardProps) {
 
   // Wrap startGame to clear UI state on new game
   const onNewGame = useCallback(() => {
+    // Clear UI state before starting new game
     setPreviewEventId(null);
     setSelectedCardIndices([]);
     startGameFromContext();

@@ -56,38 +56,20 @@ export function MultiplayerGameBoard({
     [requestUndo],
   );
 
-  // Clear UI state when a new game starts (detected by GAME_INITIALIZED event)
-  useEffect(() => {
-    const hasGameInit = events.some(e => e.type === "GAME_INITIALIZED");
-    const isNewGame = hasGameInit && events.length < 10; // New game has few events
-    if (isNewGame) {
-      queueMicrotask(() => {
-        setPreviewEventId(null);
-        setSelectedCardIndices([]);
-      });
-    }
-  }, [events.length]);
-
-  // Clear preview if the event no longer exists (after undo)
-  useEffect(() => {
-    if (previewEventId && !events.find(e => e.id === previewEventId)) {
-      uiLogger.debug(
-        `Preview event ${previewEventId} no longer exists, clearing preview`,
-      );
-      queueMicrotask(() => {
-        setPreviewEventId(null);
-      });
-    }
-  }, [previewEventId, events]);
+  // Derive preview validity instead of using effect
+  const validPreviewEventId =
+    previewEventId && events.find(e => e.id === previewEventId)
+      ? previewEventId
+      : null;
 
   // Card click handler - must be before early return
   const handleCardClick = useCallback(
     (card: CardName, index: number) => {
-      if (previewEventId !== null) return; // No actions in preview mode
+      if (validPreviewEventId !== null) return; // No actions in preview mode
       if (!isMyTurn) return;
 
-      const displayState = previewEventId
-        ? getStateAtEvent(previewEventId)
+      const displayState = validPreviewEventId
+        ? getStateAtEvent(validPreviewEventId)
         : gameState;
       if (!displayState) return;
 
@@ -132,7 +114,7 @@ export function MultiplayerGameBoard({
       selectedCardIndices,
       playAction,
       playTreasure,
-      previewEventId,
+      validPreviewEventId,
       getStateAtEvent,
     ],
   );
@@ -140,16 +122,16 @@ export function MultiplayerGameBoard({
   // Buy card handler
   const handleBuyCard = useCallback(
     (card: CardName) => {
-      if (previewEventId !== null) return;
-      const displayState = previewEventId
-        ? getStateAtEvent(previewEventId)
+      if (validPreviewEventId !== null) return;
+      const displayState = validPreviewEventId
+        ? getStateAtEvent(validPreviewEventId)
         : gameState;
       if (!displayState) return;
       const canBuy =
         isMyTurn &&
         displayState.phase === "buy" &&
         displayState.buys > 0 &&
-        !previewEventId;
+        !validPreviewEventId;
       if (!canBuy) return;
 
       const result = buyCard(card);
@@ -157,19 +139,19 @@ export function MultiplayerGameBoard({
         uiLogger.error("Failed to buy card:", result.error);
       }
     },
-    [isMyTurn, gameState, buyCard, previewEventId, getStateAtEvent],
+    [isMyTurn, gameState, buyCard, validPreviewEventId, getStateAtEvent],
   );
 
   // End phase handler
   const handleEndPhase = useCallback(() => {
-    if (previewEventId !== null) return;
+    if (validPreviewEventId !== null) return;
     if (!isMyTurn) return;
 
     const result = endPhase();
     if (!result.ok) {
       uiLogger.error("Failed to end phase:", result.error);
     }
-  }, [isMyTurn, endPhase, previewEventId]);
+  }, [isMyTurn, endPhase, validPreviewEventId]);
 
   // Play all treasures handler
   const handlePlayAllTreasures = useCallback(() => {
@@ -184,12 +166,12 @@ export function MultiplayerGameBoard({
     if (!result.ok) {
       uiLogger.error("Failed to play treasures:", result.error);
     }
-  }, [isMyTurn, gameState, playAllTreasures, previewEventId, getStateAtEvent]);
+  }, [isMyTurn, gameState, playAllTreasures, validPreviewEventId, getStateAtEvent]);
 
   // Submit decision handler
   const handleSubmitDecision = useCallback(() => {
-    const displayState = previewEventId
-      ? getStateAtEvent(previewEventId)
+    const displayState = validPreviewEventId
+      ? getStateAtEvent(validPreviewEventId)
       : gameState;
     if (!displayState) return;
     const myPlayer = myGamePlayerId;
@@ -208,14 +190,14 @@ export function MultiplayerGameBoard({
     myGamePlayerId,
     selectedCardIndices,
     submitDecision,
-    previewEventId,
+    validPreviewEventId,
     getStateAtEvent,
   ]);
 
   // Skip decision handler
   const handleSkipDecision = useCallback(() => {
-    const displayState = previewEventId
-      ? getStateAtEvent(previewEventId)
+    const displayState = validPreviewEventId
+      ? getStateAtEvent(validPreviewEventId)
       : gameState;
     if (!displayState?.pendingDecision?.canSkip) return;
 
@@ -223,11 +205,11 @@ export function MultiplayerGameBoard({
     if (result.ok) {
       setSelectedCardIndices([]);
     }
-  }, [gameState, submitDecision, previewEventId, getStateAtEvent]);
+  }, [gameState, submitDecision, validPreviewEventId, getStateAtEvent]);
 
   // Use preview state if in time travel mode
-  const displayState = previewEventId
-    ? getStateAtEvent(previewEventId)
+  const displayState = validPreviewEventId
+    ? getStateAtEvent(validPreviewEventId)
     : gameState;
 
   if (!displayState) {
@@ -242,7 +224,7 @@ export function MultiplayerGameBoard({
   const isActionPhase = displayState.phase === "action";
   const isBuyPhase = displayState.phase === "buy";
   const canBuy =
-    isMyTurn && isBuyPhase && displayState.buys > 0 && !previewEventId;
+    isMyTurn && isBuyPhase && displayState.buys > 0 && !validPreviewEventId;
 
   const hasPlayableActions =
     myPlayerState?.hand.some(isActionCard) && displayState.actions > 0;
@@ -253,8 +235,8 @@ export function MultiplayerGameBoard({
 
   // Get hint text
   const getHint = () => {
-    if (previewEventId) {
-      return `Previewing @ ${previewEventId}`;
+    if (validPreviewEventId) {
+      return `Previewing @ ${validPreviewEventId}`;
     }
     if (
       displayState.pendingDecision &&
@@ -316,7 +298,7 @@ export function MultiplayerGameBoard({
         />
 
         {/* Action bar */}
-        {isMyTurn && previewEventId === null && (
+        {isMyTurn && validPreviewEventId === null && (
           <div style={styles.actionBar}>
             <div style={styles.hint}>{getHint()}</div>
             <div style={styles.actionButtons}>
