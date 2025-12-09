@@ -19,11 +19,13 @@ import {
 export class MakerStrategy implements GameStrategy {
   private logger?: LLMLogger;
   private modelSettings: ModelSettings;
+  private strategySummary?: string;
 
   constructor(
     _provider?: unknown,
     logger?: LLMLogger,
     modelSettings?: ModelSettings,
+    strategySummary?: string,
   ) {
     this.logger = logger;
     this.modelSettings = modelSettings || {
@@ -35,6 +37,11 @@ export class MakerStrategy implements GameStrategy {
       ]),
       consensusCount: 8,
     };
+    this.strategySummary = strategySummary;
+  }
+
+  setStrategySummary(summary: string | undefined): void {
+    this.strategySummary = summary;
   }
 
   async runAITurn(
@@ -51,6 +58,7 @@ export class MakerStrategy implements GameStrategy {
       models,
       this.logger,
       onStateChange,
+      this.strategySummary,
     );
   }
 
@@ -80,6 +88,7 @@ export class MakerStrategy implements GameStrategy {
       undefined,
       models,
       this.logger,
+      this.strategySummary,
     );
   }
 

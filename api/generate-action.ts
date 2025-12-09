@@ -172,35 +172,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
         : "";
 
-    // Get strategy analysis if we have turn history
-    let strategySummary: string | undefined;
-    try {
-      const { formatTurnHistoryForAnalysis } = await import(
-        "../src/agent/strategic-context"
-      );
-      const turnHistory = formatTurnHistoryForAnalysis(currentState);
-
-      if (turnHistory && currentState.turn > 2) {
-        // Only analyze after a few turns
-        const analyzeResponse = await fetch(
-          `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:5173"}/api/analyze-strategy`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ currentState }),
-          },
-        );
-
-        if (analyzeResponse.ok) {
-          const analyzeData = (await analyzeResponse.json()) as {
-            strategySummary?: string;
-          };
-          strategySummary = analyzeData.strategySummary;
-        }
-      }
-    } catch {
-      apiLogger.warn("Strategy analysis failed, continuing without it");
-    }
+    // Strategy summary is passed from client (fetched once per turn)
+    const strategySummary = body.strategySummary as string | undefined;
 
     const strategicContext = buildStrategicContext(
       currentState,
@@ -267,7 +240,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       try {
         const action = ActionSchema.parse(parsed);
-        return res.status(200).json({ action });
+        return res.status(200).json({ action, strategySummary });
       } catch (parseErr) {
         const errorMessage =
           parseErr instanceof Error ? parseErr.message : String(parseErr);
@@ -300,7 +273,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    return res.status(200).json({ action: result.object });
+    return res.status(200).json({ action: result.object, strategySummary });
   } catch (err) {
     // Recovery logic for Ministral and Gemini
     const errorWithText = err as {
@@ -312,7 +285,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (errorWithText.value?.action && provider.includes("gemini")) {
       try {
         const validated = ActionSchema.parse(errorWithText.value.action);
-        return res.status(200).json({ action: validated });
+        return res.status(200).json({ action: validated, strategySummary });
       } catch {
         apiLogger.error(`${provider} recovery failed`);
       }
@@ -344,7 +317,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 parsed.type !== "object"
               ) {
                 const validated = ActionSchema.parse(parsed);
-                return res.status(200).json({ action: validated });
+                return res
+                  .status(200)
+                  .json({ action: validated, strategySummary });
               }
             } catch {
               continue;

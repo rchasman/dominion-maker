@@ -123,4 +123,9 @@ export interface GameStrategy {
    * Get the mode name for display
    */
   getModeName(): string;
+
+  /**
+   * Set strategy summary for AI context (optional, used by LLM-based strategies)
+   */
+  setStrategySummary?(summary: string | undefined): void;
 }

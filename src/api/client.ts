@@ -9,6 +9,7 @@ interface GenerateActionRequest {
   currentState: unknown;
   humanChoice?: { selectedCards: string[] };
   legalActions?: unknown[];
+  strategySummary?: string;
 }
 
 interface GenerateActionResponse {
@@ -22,7 +23,7 @@ interface AnalyzeStrategyRequest {
 }
 
 interface AnalyzeStrategyResponse {
-  strategySummary?: string;
+  strategySummary?: Record<string, string>;
   error?: number;
   message?: string;
 }

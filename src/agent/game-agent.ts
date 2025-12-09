@@ -126,6 +126,7 @@ async function generateActionViaBackend(
   currentState: GameState,
   humanChoice?: { selectedCards: CardName[] },
   signal?: AbortSignal,
+  strategySummary?: string,
 ): Promise<Action> {
   const legalActions = getLegalActions(currentState);
 
@@ -135,6 +136,7 @@ async function generateActionViaBackend(
       currentState,
       humanChoice,
       legalActions,
+      strategySummary,
     },
     {
       fetch: { signal },
@@ -216,6 +218,7 @@ export async function advanceGameStateWithConsensus(
   humanChoice?: { selectedCards: CardName[] },
   providers: ModelProvider[] = ALL_FAST_MODELS,
   logger?: LLMLogger,
+  strategySummary?: string,
 ): Promise<void> {
   const currentState = engine.state;
   const overallStart = performance.now();
@@ -343,6 +346,7 @@ export async function advanceGameStateWithConsensus(
         currentState,
         humanChoice,
         modelAbortController.signal,
+        strategySummary,
       )
         .then(action => {
           clearTimeout(timeoutId);
@@ -584,6 +588,7 @@ export async function runAITurnWithConsensus(
   providers: ModelProvider[],
   logger?: LLMLogger,
   onStateChange?: (state: GameState) => void,
+  strategySummary?: string,
 ): Promise<void> {
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
@@ -611,6 +616,7 @@ export async function runAITurnWithConsensus(
         undefined,
         providers,
         logger,
+        strategySummary,
       );
 
       // Handle AI pending decisions
@@ -627,6 +633,7 @@ export async function runAITurnWithConsensus(
           undefined,
           providers,
           logger,
+          strategySummary,
         );
         onStateChange?.(engine.state);
 
