@@ -103,7 +103,7 @@ export const sentry: CardEffect = ({
     cardOrder.length > 0
       ? cardOrder
       : Object.entries(cardActions)
-          .filter(([_, action]) => action === "topdeck")
+          .filter(([, action]) => action === "topdeck")
           .map(([indexStr]) => parseInt(indexStr));
 
   for (let i = topdeckIndices.length - 1; i >= 0; i--) {

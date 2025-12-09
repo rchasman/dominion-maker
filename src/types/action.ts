@@ -21,6 +21,7 @@ export type Action = {
  * Useful for comparing actions or creating action signatures.
  */
 export function stripReasoning(action: Action): Omit<Action, "reasoning"> {
-  const { reasoning: _reasoning, ...actionCore } = action;
+  const { reasoning, ...actionCore } = action;
+  void reasoning;
   return actionCore;
 }
