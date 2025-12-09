@@ -163,6 +163,67 @@ export class EngineStrategy implements GameStrategy {
       return;
     }
 
+    // For trash decisions, trash worst cards (Chapel, Mine, Remodel)
+    if (decision.stage === "trash") {
+      const aiPlayer = engine.state.players.ai;
+      if (!aiPlayer) return;
+
+      const options = decision.cardOptions || [];
+      const numToTrash = decision.min;
+
+      // Priority for trashing: Curses > Estates > Coppers > low-cost cards
+      const trashPriorities = ["Curse", "Estate", "Copper"];
+      const selected: CardName[] = [];
+
+      // First pick priority trash cards
+      for (const priority of trashPriorities) {
+        const matchingCards = options.filter(c => c === priority);
+        for (const card of matchingCards) {
+          if (selected.length < numToTrash) {
+            selected.push(card);
+          }
+        }
+      }
+
+      // Fill remaining with cheapest cards
+      if (selected.length < numToTrash) {
+        const remaining = options
+          .filter(c => !selected.includes(c))
+          .sort((a, b) => CARDS[a].cost - CARDS[b].cost); // Cheapest first
+
+        selected.push(...remaining.slice(0, numToTrash - selected.length));
+      }
+
+      engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: "ai",
+          choice: { selectedCards: selected },
+        },
+        "ai",
+      );
+      return;
+    }
+
+    // For gain decisions, gain best available card
+    if (decision.stage === "gain") {
+      const options = decision.cardOptions || [];
+
+      // Gain most expensive card available (simple heuristic)
+      const sorted = [...options].sort((a, b) => CARDS[b].cost - CARDS[a].cost);
+      const selected = sorted.slice(0, decision.min);
+
+      engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: "ai",
+          choice: { selectedCards: selected },
+        },
+        "ai",
+      );
+      return;
+    }
+
     // For other decisions, pick first min options or skip
     const options = decision.cardOptions || [];
     if (decision.min === 0) {
