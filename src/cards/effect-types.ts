@@ -64,8 +64,8 @@ export function peekDraw(
   newDeckOrder?: CardName[];
   cardsBeforeShuffle?: CardName[];
 } {
-  const cards: CardName[] = [];
-  const cardsBeforeShuffle: CardName[] = [];
+  let cards: CardName[] = [];
+  let cardsBeforeShuffle: CardName[] = [];
   let deck = [...playerDeck];
   let discard = [...playerDiscard];
   let shuffled = false;
@@ -77,7 +77,7 @@ export function peekDraw(
       if (discard.length === 0) break;
 
       // Capture state before shuffle
-      cardsBeforeShuffle.push(...cards);
+      cardsBeforeShuffle = [...cards];
       deck = shuffle(discard);
       discard = [];
       shuffled = true;
@@ -85,7 +85,7 @@ export function peekDraw(
     }
 
     const card = deck.pop();
-    if (card) cards.push(card);
+    if (card) cards = [...cards, card];
     remaining--;
   }
 
@@ -196,27 +196,23 @@ export function createSimpleCardEffect(benefits: {
   coins?: number;
 }): CardEffect {
   return ({ state, player }): CardEffectResult => {
-    const events: GameEvent[] = [];
+    const drawEvents = benefits.cards
+      ? createDrawEvents(player, state.players[player], benefits.cards)
+      : [];
 
-    if (benefits.cards) {
-      events.push(
-        ...createDrawEvents(player, state.players[player], benefits.cards),
-      );
-    }
+    const actionEvents: GameEvent[] = benefits.actions
+      ? [{ type: "ACTIONS_MODIFIED", delta: benefits.actions }]
+      : [];
 
-    if (benefits.actions) {
-      events.push({ type: "ACTIONS_MODIFIED", delta: benefits.actions });
-    }
+    const buyEvents: GameEvent[] = benefits.buys
+      ? [{ type: "BUYS_MODIFIED", delta: benefits.buys }]
+      : [];
 
-    if (benefits.buys) {
-      events.push({ type: "BUYS_MODIFIED", delta: benefits.buys });
-    }
+    const coinEvents: GameEvent[] = benefits.coins
+      ? [{ type: "COINS_MODIFIED", delta: benefits.coins }]
+      : [];
 
-    if (benefits.coins) {
-      events.push({ type: "COINS_MODIFIED", delta: benefits.coins });
-    }
-
-    return { events };
+    return { events: [...drawEvents, ...actionEvents, ...buyEvents, ...coinEvents] };
   };
 }
 
