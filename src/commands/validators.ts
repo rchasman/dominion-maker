@@ -84,7 +84,7 @@ export const validators = {
    * Validate that a player exists in the game state
    */
   playerExists: (state: GameState, player: PlayerId): ValidationResult => {
-    return !state.players[player]
+    return !state.players[player as string]
       ? { ok: false, error: "Player not found" }
       : undefined;
   },
@@ -97,7 +97,7 @@ export const validators = {
     player: PlayerId,
     card: CardName,
   ): ValidationResult => {
-    const playerState = state.players[player];
+    const playerState = state.players[player as string];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
@@ -114,7 +114,7 @@ export const validators = {
     player: PlayerId,
     card: CardName,
   ): ValidationResult => {
-    const playerState = state.players[player];
+    const playerState = state.players[player as string];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
