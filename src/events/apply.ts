@@ -7,6 +7,7 @@ import {
   applyAttackAndReactionEvent,
   applyDecisionEvent,
   applyGameEndEvent,
+  expandDrawEvent,
 } from "./apply-handlers";
 
 // Helper to create the players record with proper typing
@@ -103,6 +104,11 @@ function applyGameSetupEvent(
  * This is the core state transition function - pure and deterministic.
  */
 export function applyEvent(state: GameState, event: GameEvent): GameState {
+  // DRAW events are expanded in applyEvents, not applied directly
+  if (event.type === "DRAW") {
+    return state;
+  }
+
   // Try game setup events
   const setupResult = applyGameSetupEvent(state, event);
   if (setupResult) return setupResult;
@@ -148,8 +154,17 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 }
 
 /**
- * Apply multiple events in sequence
+ * Apply multiple events in sequence, expanding DRAW events as needed
  */
 export function applyEvents(state: GameState, events: GameEvent[]): GameState {
-  return events.reduce(applyEvent, state);
+  return events.reduce((currentState, event) => {
+    // Expand DRAW events into CARD_DRAWN + DECK_SHUFFLED events
+    const expandedEvents = expandDrawEvent(currentState, event);
+    if (expandedEvents !== null) {
+      // Apply all expanded events sequentially
+      return expandedEvents.reduce(applyEvent, currentState);
+    }
+    // Not a DRAW event, apply normally
+    return applyEvent(currentState, event);
+  }, state);
 }
