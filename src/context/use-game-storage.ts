@@ -19,6 +19,7 @@ import {
   loadModelSettings,
   loadPlayerStrategies,
   clearGameStorage,
+  STORAGE_KEYS,
 } from "./storage-utils";
 
 type PlayerStrategyData = Record<
@@ -73,17 +74,30 @@ export function useGameStorage(): GameStorageState {
 
       const savedEvents = loadEvents();
       if (savedEvents) {
-        const engine = new DominionEngine();
-        engine.loadEvents(savedEvents);
-        uiLogger.info(`Restored game from ${savedEvents.length} events`);
+        try {
+          const engine = new DominionEngine();
+          engine.loadEvents(savedEvents);
+          const restoredState = engine.state;
 
-        setEngineRef(engine);
-        setEvents(savedEvents);
-        setGameState(engine.state);
+          uiLogger.info(`Restored game from ${savedEvents.length} events`);
+          setEngineRef(engine);
+          setEvents(savedEvents);
+          setGameState(restoredState);
+        } catch (eventError: unknown) {
+          uiLogger.error(
+            "Failed to restore events, clearing only event storage",
+            {
+              error: eventError,
+              eventCount: savedEvents.length,
+            },
+          );
+          // Only clear events, preserve settings and logs
+          localStorage.removeItem(STORAGE_KEYS.EVENTS);
+        }
       }
     } catch (error: unknown) {
-      uiLogger.error("Failed to restore game state", { error });
-      clearGameStorage();
+      uiLogger.error("Failed to restore game storage", { error });
+      // Don't clear storage on general errors, just log
     } finally {
       setIsLoading(false);
     }
