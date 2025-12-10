@@ -420,6 +420,19 @@ export async function advanceGameStateWithConsensus(
   agentLogger.info(`Starting consensus with ${providers.length} models`);
 
   const legalActions = getLegalActions(currentState);
+
+  // Log legal actions for debugging
+  const actionSummaries = legalActions.map(a =>
+    a.type === "end_phase"
+      ? "end_phase"
+      : a.type === "choose_from_options"
+        ? `choose[${a.optionIndex}]`
+        : `${a.type}(${a.card})`,
+  );
+  agentLogger.debug(
+    `Legal actions (${legalActions.length}): ${actionSummaries.join(", ")} | Coins: ${currentState.coins}, Buys: ${currentState.buys}`,
+  );
+
   logConsensusStart({
     currentState,
     playerId,

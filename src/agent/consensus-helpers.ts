@@ -428,6 +428,14 @@ export const logConsensusStart = (params: ConsensusStartParams): void => {
         inPlay,
         handCounts,
         turnHistory: currentState.turnHistory,
+        legalActionsCount: legalActions.length,
+        legalActions: legalActions.map(a =>
+          a.type === "end_phase"
+            ? "end_phase"
+            : a.type === "choose_from_options"
+              ? `choose[${a.optionIndex}]`
+              : `${a.type}(${a.card})`,
+        ),
       },
     },
   });

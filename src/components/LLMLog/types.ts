@@ -22,6 +22,8 @@ export interface GameStateSnapshot {
     total: number;
   };
   turnHistory: TurnAction[];
+  legalActionsCount?: number;
+  legalActions?: string[];
 }
 
 // Voting result for a single action
