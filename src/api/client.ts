@@ -45,7 +45,7 @@ export const api = {
             ...options?.fetch,
           });
 
-          const data: AnalyzeStrategyResponse = await response.json();
+          const data = (await response.json()) as AnalyzeStrategyResponse;
 
           if (!response.ok) {
             return {
@@ -75,7 +75,7 @@ export const api = {
             ...options?.fetch,
           });
 
-          const data: GenerateActionResponse = await response.json();
+          const data = (await response.json()) as GenerateActionResponse;
 
           if (!response.ok) {
             return {
