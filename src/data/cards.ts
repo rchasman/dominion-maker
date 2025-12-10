@@ -11,9 +11,37 @@ export type CardType =
 
 export type ReactionTrigger = "on_attack" | "on_gain" | "on_trash" | "on_discard";
 
-export type TreasureTriggerContext = {
-  isFirstOfType: boolean;
-  treasuresInPlay: CardName[];
+export type TriggerType = "treasure_played" | "card_gained" | "card_trashed" | "card_discarded";
+
+export type TriggerContext = {
+  card: CardName;
+  isFirstOfType?: boolean;
+  treasuresInPlay?: CardName[];
+};
+
+export type CardTrigger = {
+  on: TriggerType;
+  condition?: (ctx: TriggerContext) => boolean;
+  effect: (ctx: TriggerContext) => GameEvent[];
+};
+
+// DSL types for decision requests
+export type DecisionContext = {
+  state: import("../types/game-state").GameState;
+  player: string;
+  stage?: string;
+};
+
+export type CardSelectionSource = "hand" | "supply" | "revealed" | "options" | "discard";
+
+export type DecisionSpec = {
+  from: CardSelectionSource;
+  prompt: string | ((ctx: DecisionContext) => string);
+  cardOptions: CardName[] | ((ctx: DecisionContext) => CardName[]);
+  min: number | ((ctx: DecisionContext) => number);
+  max: number | ((ctx: DecisionContext) => number);
+  canSkip?: boolean;
+  metadata?: Record<string, unknown> | ((ctx: DecisionContext) => Record<string, unknown>);
 };
 
 export interface CardDefinition {
@@ -28,12 +56,9 @@ export interface CardDefinition {
   // For reaction cards
   reactionTrigger?: ReactionTrigger;
   // For cards with triggers
-  triggers?: {
-    onTreasurePlayed?: (
-      treasureCard: CardName,
-      context: TreasureTriggerContext,
-    ) => GameEvent[];
-  };
+  triggers?: CardTrigger[];
+  // For cards with decisions (DSL)
+  decisions?: Record<string, DecisionSpec>;
 }
 
 export const CARDS: Record<CardName, CardDefinition> = {
@@ -98,12 +123,30 @@ export const CARDS: Record<CardName, CardDefinition> = {
     cost: 2,
     types: ["action"],
     description: "+1 Action. Discard any number of cards, then draw that many.",
+    decisions: {
+      discard: {
+        from: "hand",
+        prompt: "Cellar: Discard any number of cards to draw that many",
+        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        min: 0,
+        max: ctx => ctx.state.players[ctx.player].hand.length,
+      },
+    },
   },
   Chapel: {
     name: "Chapel",
     cost: 2,
     types: ["action"],
     description: "Trash up to 4 cards from your hand.",
+    decisions: {
+      trash: {
+        from: "hand",
+        prompt: "Chapel: Trash up to 4 cards from your hand",
+        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        min: 0,
+        max: ctx => Math.min(4, ctx.state.players[ctx.player].hand.length),
+      },
+    },
   },
   Moat: {
     name: "Moat",
@@ -128,12 +171,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
     types: ["action"],
     description:
       "+1 Card, +1 Action. The first time you play a Silver this turn, +$1.",
-    triggers: {
-      onTreasurePlayed: (treasureCard, context) =>
-        treasureCard === "Silver" && context.isFirstOfType
-          ? [{ type: "COINS_MODIFIED", delta: 1 }]
-          : [],
-    },
+    triggers: [
+      {
+        on: "treasure_played",
+        condition: ctx => ctx.card === "Silver" && (ctx.isFirstOfType ?? false),
+        effect: () => [{ type: "COINS_MODIFIED", delta: 1 }],
+      },
+    ],
   },
   Vassal: {
     name: "Vassal",
@@ -195,6 +239,45 @@ export const CARDS: Record<CardName, CardDefinition> = {
     types: ["action"],
     description:
       "Trash a card from your hand. Gain a card costing up to $2 more than it.",
+    decisions: {
+      trash: {
+        from: "hand",
+        prompt: "Remodel: Choose a card to trash",
+        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        min: 1,
+        max: 1,
+      },
+      gain: {
+        from: "supply",
+        prompt: ctx => {
+          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          if (!trashedCard) return "Remodel: Gain a card costing up to $2 more";
+          const trashCost = CARDS[trashedCard].cost;
+          const maxCost = trashCost + 2;
+          return `Remodel: Gain a card costing up to $${maxCost}`;
+        },
+        cardOptions: ctx => {
+          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          if (!trashedCard) return [];
+          const trashCost = CARDS[trashedCard].cost;
+          const maxCost = trashCost + 2;
+          return Object.entries(ctx.state.supply)
+            .filter((entry): entry is [CardName, number] => {
+              const [card, count] = entry;
+              if (!(card in CARDS)) return false;
+              return count > 0 && CARDS[card as CardName].cost <= maxCost;
+            })
+            .map(([card]) => card);
+        },
+        min: 1,
+        max: 1,
+        metadata: ctx => {
+          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          if (!trashedCard) return {};
+          return { trashedCard, maxCost: CARDS[trashedCard].cost + 2 };
+        },
+      },
+    },
   },
   Smithy: {
     name: "Smithy",
@@ -254,6 +337,48 @@ export const CARDS: Record<CardName, CardDefinition> = {
     types: ["action"],
     description:
       "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to $3 more than it.",
+    decisions: {
+      trash: {
+        from: "hand",
+        prompt: "Mine: Trash a Treasure from your hand",
+        cardOptions: ctx => ctx.state.players[ctx.player].hand.filter(c => {
+          const cardDef = CARDS[c];
+          return cardDef.types.includes("treasure");
+        }),
+        min: 1,
+        max: 1,
+      },
+      gain: {
+        from: "supply",
+        prompt: ctx => {
+          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          if (!trashedCard) return "Mine: Gain a Treasure costing up to $3 more";
+          const trashCost = CARDS[trashedCard].cost;
+          const maxCost = trashCost + 3;
+          return `Mine: Gain a Treasure costing up to $${maxCost} to your hand`;
+        },
+        cardOptions: ctx => {
+          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          if (!trashedCard) return [];
+          const trashCost = CARDS[trashedCard].cost;
+          const maxCost = trashCost + 3;
+          return Object.entries(ctx.state.supply)
+            .filter((entry): entry is [CardName, number] => {
+              const [card, count] = entry;
+              if (!(card in CARDS)) return false;
+              const cardDef = CARDS[card as CardName];
+              return (
+                count > 0 &&
+                cardDef.types.includes("treasure") &&
+                cardDef.cost <= maxCost
+              );
+            })
+            .map(([card]) => card);
+        },
+        min: 1,
+        max: 1,
+      },
+    },
   },
   Sentry: {
     name: "Sentry",
