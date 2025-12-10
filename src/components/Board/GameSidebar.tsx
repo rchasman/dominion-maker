@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import type { GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
@@ -9,17 +8,12 @@ import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
+import { useLiveTimer } from "../LLMLog/hooks/useLiveTimer";
 
 function CyclingSquare() {
   const glyphs = ["▤", "▥", "▦"];
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex(prev => (prev + 1) % glyphs.length);
-    }, CYCLING_GLYPH_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [glyphs.length]);
+  const now = useLiveTimer([]);
+  const index = Math.floor(now / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
 
   return <span>{glyphs[index]}</span>;
 }
