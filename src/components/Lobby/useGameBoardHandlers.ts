@@ -75,6 +75,7 @@ export function useGameBoardHandlers(
     playAction,
     playTreasure,
     buyCard,
+    submitDecision,
     getStateAtEvent,
   });
 

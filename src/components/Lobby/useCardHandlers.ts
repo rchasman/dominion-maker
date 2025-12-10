@@ -17,6 +17,7 @@ interface CardHandlersParams {
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
   buyCard: (card: CardName) => CommandResult;
+  submitDecision: (choice: { selectedCards: CardName[] }) => CommandResult;
   getStateAtEvent: (eventId: string) => GameState;
 }
 
@@ -30,6 +31,7 @@ export function useCardHandlers(params: CardHandlersParams) {
     playAction,
     playTreasure,
     buyCard,
+    submitDecision,
     getStateAtEvent,
   } = params;
 
@@ -92,6 +94,15 @@ export function useCardHandlers(params: CardHandlersParams) {
         getStateAtEvent,
       );
       if (!displayState) return;
+
+      // If there's a pending decision from supply, submit the decision
+      if (displayState.pendingDecision?.from === "supply") {
+        const result = submitDecision({ selectedCards: [card] });
+        if (!result.ok)
+          uiLogger.error("Failed to submit decision:", result.error);
+        return;
+      }
+
       const canBuy =
         isMyTurn &&
         displayState.phase === "buy" &&
@@ -102,7 +113,14 @@ export function useCardHandlers(params: CardHandlersParams) {
       const result = buyCard(card);
       if (!result.ok) uiLogger.error("Failed to buy card:", result.error);
     },
-    [isMyTurn, gameState, buyCard, validPreviewEventId, getStateAtEvent],
+    [
+      isMyTurn,
+      gameState,
+      buyCard,
+      submitDecision,
+      validPreviewEventId,
+      getStateAtEvent,
+    ],
   );
 
   return { handleCardClick, handleBuyCard };
