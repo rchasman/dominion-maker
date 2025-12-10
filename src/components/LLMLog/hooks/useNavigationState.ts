@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback } from "react";
+import { useReducer } from "react";
 import type { Turn } from "../types";
 
 export interface NavigationState {
@@ -22,22 +22,13 @@ interface State {
 }
 
 type Action =
-  | { type: "JUMP_TO_LATEST"; lastTurnIndex: number; lastActionIndex: number }
   | { type: "PREV_TURN" }
   | { type: "NEXT_TURN"; nextTurnIndex: number }
   | { type: "PREV_ACTION" }
-  | { type: "NEXT_ACTION"; isLastAction: boolean }
-  | { type: "RESET_FLAG" };
+  | { type: "NEXT_ACTION"; isLastAction: boolean };
 
 function navigationReducer(state: State, action: Action): State {
   switch (action.type) {
-    case "JUMP_TO_LATEST":
-      return {
-        currentTurnIndex: action.lastTurnIndex,
-        currentActionIndex: action.lastActionIndex,
-        userNavigatedAway: false,
-      };
-
     case "PREV_TURN":
       return {
         ...state,
@@ -68,24 +59,14 @@ function navigationReducer(state: State, action: Action): State {
         userNavigatedAway: !action.isLastAction,
       };
 
-    case "RESET_FLAG":
-      return { ...state, userNavigatedAway: false };
-
     default:
       return state;
   }
 }
 
-// Calculate max action index for current turn
-function calculateMaxActionIndex(currentTurn: Turn | undefined): number {
-  if (currentTurn?.pending) return currentTurn.decisions.length;
-  if (currentTurn) return currentTurn.decisions.length - 1;
-  return -1;
-}
-
 /**
  * Hook to manage navigation state for turns and actions
- * Handles auto-advance to latest turn/action when new data arrives
+ * Auto-advances to latest by deriving effective indices
  */
 export const useNavigationState = (turns: Turn[]): NavigationState => {
   const [state, dispatch] = useReducer(navigationReducer, {
@@ -94,78 +75,66 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
     userNavigatedAway: false,
   });
 
-  // Auto-advance to latest turn and action when new data arrives
-  const lastTurn = turns[turns.length - 1];
-  useEffect(() => {
-    if (state.userNavigatedAway || turns.length === 0) return;
+  // Derive latest indices
+  const latestTurnIndex = Math.max(0, turns.length - 1);
+  const latestTurn = turns[latestTurnIndex];
+  const latestActionIndex =
+    latestTurn?.pending
+      ? latestTurn.decisions.length
+      : Math.max(0, (latestTurn?.decisions.length || 0) - 1);
 
-    const lastTurnIndex = turns.length - 1;
-    const lastTurn = turns[lastTurnIndex];
-    const lastActionIndex = lastTurn.pending
-      ? lastTurn.decisions.length
-      : lastTurn.decisions.length - 1;
+  // Auto-advance: use manual position if navigated away, otherwise latest
+  const currentTurnIndex = state.userNavigatedAway
+    ? state.currentTurnIndex
+    : latestTurnIndex;
+  const currentActionIndex = state.userNavigatedAway
+    ? state.currentActionIndex
+    : latestActionIndex;
 
-    if (
-      state.currentTurnIndex !== lastTurnIndex ||
-      state.currentActionIndex !== lastActionIndex
-    ) {
-      dispatch({
-        type: "JUMP_TO_LATEST",
-        lastTurnIndex,
-        lastActionIndex,
-      });
-    }
-  }, [
-    turns.length,
-    lastTurn?.decisions.length,
-    lastTurn?.pending,
-    state.userNavigatedAway,
-    state.currentTurnIndex,
-    state.currentActionIndex,
-  ]);
+  const currentTurn = turns[currentTurnIndex];
 
-  // Derive computed values
-  const currentTurn = turns[state.currentTurnIndex];
+  // Derive booleans
+  const hasPrevTurn = currentTurnIndex > 0;
+  const hasNextTurn = currentTurnIndex < turns.length - 1;
+  const hasPrevAction = currentActionIndex > 0;
 
-  const hasPrevTurn = state.currentTurnIndex > 0;
-  const hasNextTurn = state.currentTurnIndex < turns.length - 1;
-  const hasPrevAction = state.currentActionIndex > 0;
+  const maxActionIndex = currentTurn?.pending
+    ? currentTurn.decisions.length
+    : Math.max(0, (currentTurn?.decisions.length || 0) - 1);
+  const hasNextAction = currentActionIndex < maxActionIndex;
 
-  const maxActionIndex = calculateMaxActionIndex(currentTurn);
-  const hasNextAction = state.currentActionIndex < maxActionIndex;
-
-  // Event handlers
-  const handlePrevTurn = useCallback(() => {
+  // Handlers - plain functions, no useCallback
+  const handlePrevTurn = () => {
     if (hasPrevTurn) {
       dispatch({ type: "PREV_TURN" });
     }
-  }, [hasPrevTurn]);
+  };
 
-  const handleNextTurn = useCallback(() => {
+  const handleNextTurn = () => {
     if (hasNextTurn) {
       dispatch({
         type: "NEXT_TURN",
-        nextTurnIndex: state.currentTurnIndex + 1,
+        nextTurnIndex: currentTurnIndex + 1,
       });
     }
-  }, [hasNextTurn, state.currentTurnIndex]);
+  };
 
-  const handlePrevAction = useCallback(() => {
+  const handlePrevAction = () => {
     if (hasPrevAction) {
       dispatch({ type: "PREV_ACTION" });
     }
-  }, [hasPrevAction]);
+  };
 
-  const handleNextAction = useCallback(() => {
+  const handleNextAction = () => {
     if (hasNextAction) {
-      const isLastAction = state.currentActionIndex + 1 >= maxActionIndex;
+      const isLastAction = currentActionIndex + 1 >= maxActionIndex;
       dispatch({ type: "NEXT_ACTION", isLastAction });
     }
-  }, [hasNextAction, state.currentActionIndex, maxActionIndex]);
+  };
 
   return {
-    currentTurnIndex: state.currentTurnIndex,
-    currentActionIndex: state.currentActionIndex,
+    currentTurnIndex,
+    currentActionIndex,
     currentTurn,
     hasPrevTurn,
     hasNextTurn,
