@@ -4,6 +4,7 @@ import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
+import { EventBuilder, linkEvents } from "../events/event-builder";
 import { getAvailableReactions } from "../cards/effect-types";
 
 type DecisionContext = {
@@ -15,14 +16,6 @@ type DecisionContext = {
   originalCause: string | undefined;
   rootEventId: string;
 };
-
-function linkEffectEvents(events: GameEvent[], causedBy: string): GameEvent[] {
-  return events.map(event => ({
-    ...event,
-    id: generateEventId(),
-    causedBy,
-  }));
-}
 
 function handleThroneRoomExecution(
   ctx: DecisionContext,
@@ -47,7 +40,7 @@ function handleThroneRoomExecution(
       player: ctx.state.activePlayer,
       card: throneRoomTarget,
     },
-    ...linkEffectEvents(result.events, ctx.originalCause || ctx.rootEventId),
+    ...linkEvents(result.events, ctx.originalCause || ctx.rootEventId),
   ];
 
   if (result.pendingDecision) {
@@ -80,7 +73,7 @@ function handleThroneRoomExecution(
   });
   const withSecond = [
     ...newEvents,
-    ...linkEffectEvents(
+    ...linkEvents(
       secondResult.events,
       ctx.originalCause || ctx.rootEventId,
     ),
@@ -231,7 +224,7 @@ function handleAutoReaction(
     attackTargets: resolvedTargets,
   });
 
-  events.push(...linkEffectEvents(result.events, ctx.originalCause || ctx.rootEventId));
+  events.push(...linkEvents(result.events, ctx.originalCause || ctx.rootEventId));
 
   if (result.pendingDecision) {
     events.push({
@@ -291,7 +284,7 @@ function handleCardEffectContinuation(
   });
   const newEvents = [
     ...baseEvents,
-    ...linkEffectEvents(result.events, ctx.originalCause || ctx.rootEventId),
+    ...linkEvents(result.events, ctx.originalCause || ctx.rootEventId),
   ];
 
   if (result.pendingDecision) {
@@ -330,10 +323,11 @@ export function handleSubmitDecision(
     metadata,
   } = state.pendingDecision;
   const originalCause = metadata?.originalCause as string | undefined;
-  const rootEventId = generateEventId();
-  const baseEvents: GameEvent[] = [
-    { type: "DECISION_RESOLVED", player, choice, id: rootEventId },
-  ];
+
+  const builder = new EventBuilder();
+  builder.add({ type: "DECISION_RESOLVED", player, choice });
+  const rootEventId = builder.getRootId();
+  const baseEvents = builder.build();
 
   const ctx: DecisionContext = {
     state,

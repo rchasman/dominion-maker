@@ -11,13 +11,13 @@ import {
   GAME_CONSTANTS,
   selectRandomKingdomCards,
   calculateSupply,
-  createDrawEventsForCleanup,
   getNextPlayer,
   checkGameOver,
   createResourceEvents,
 } from "./handle-helpers";
 import { handleSubmitDecision } from "./handle-decision";
 import { validators, validateCommand } from "./validators";
+import { orchestrateAttack } from "./attack-orchestration";
 
 /**
  * Calculate the effective cost of a card considering active effects.
@@ -523,19 +523,19 @@ function handleBuyCard(
     return validationError;
   }
 
-  const cardDef = CARDS[card];
-
   // Calculate effective cost with modifiers
   const { modifiedCost, baseCost, modifiers } = calculateEffectiveCost(
     state,
     card,
   );
 
-  if (modifiedCost > state.coins) {
-    return { ok: false, error: "Not enough coins" };
-  }
-  if ((state.supply[card] || 0) <= 0) {
-    return { ok: false, error: "Card not available in supply" };
+  // Validate cost and supply
+  const costValidationError = validateCommand(
+    () => validators.hasCoins(state, modifiedCost),
+    () => validators.cardInSupply(state, card),
+  );
+  if (costValidationError) {
+    return costValidationError;
   }
 
   const builder = new EventBuilder();
@@ -615,15 +615,14 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
     events.push(...handDiscardEvents, ...inPlayDiscardEvents);
 
-    // Draw 5 new cards
-    const afterDiscard = applyEvents(state, events);
-    const drawEvents = createDrawEventsForCleanup(
-      afterDiscard,
+    // Draw 5 new cards - engine will handle shuffle logic
+    events.push({
+      type: "DRAW",
       player,
-      GAME_CONSTANTS.INITIAL_HAND_SIZE,
-      endTurnId,
-    );
-    events.push(...drawEvents);
+      count: GAME_CONSTANTS.INITIAL_HAND_SIZE,
+      id: generateEventId(),
+      causedBy: endTurnId,
+    });
 
     // Check game over
     const stateAfterDraw = applyEvents(state, events);
