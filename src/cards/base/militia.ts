@@ -4,7 +4,70 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getOpponents } from "../effect-types";
-import type { GameEvent } from "../../events/types";
+import type { GameEvent, PlayerId } from "../../events/types";
+import type { GameState } from "../../types/game-state";
+
+const MILITIA_HAND_LIMIT = 3;
+const MILITIA_COIN_BONUS = 2;
+
+type MilitiaDecision = {
+  player: PlayerId;
+  hand: string[];
+  discardCount: number;
+  remainingOpponents: PlayerId[];
+  attackingPlayer: PlayerId;
+};
+
+function findOpponentNeedingDiscard(
+  state: GameState,
+  opponents: PlayerId[],
+  attackingPlayer: PlayerId,
+): MilitiaDecision | null {
+  const found = opponents.find(opp => {
+    const oppState = state.players[opp];
+    return oppState && oppState.hand.length > MILITIA_HAND_LIMIT;
+  });
+
+  if (!found) return null;
+
+  const oppState = state.players[found];
+  return {
+    player: found,
+    hand: oppState.hand,
+    discardCount: oppState.hand.length - MILITIA_HAND_LIMIT,
+    remainingOpponents: opponents.filter(o => o !== found),
+    attackingPlayer,
+  };
+}
+
+function createDiscardDecision(
+  d: MilitiaDecision,
+): CardEffectResult["pendingDecision"] {
+  return {
+    type: "card_decision",
+    player: d.player,
+    from: "hand",
+    prompt: `Militia: Discard down to 3 cards (discard ${d.discardCount})`,
+    cardOptions: [...d.hand],
+    min: d.discardCount,
+    max: d.discardCount,
+    cardBeingPlayed: "Militia",
+    stage: "opponent_discard",
+    metadata: {
+      remainingOpponents: d.remainingOpponents,
+      attackingPlayer: d.attackingPlayer,
+    },
+  };
+}
+
+function createDiscardEvents(cards: string[], player: PlayerId): GameEvent[] {
+  return cards.map(card => ({
+    type: "CARD_DISCARDED" as const,
+    player,
+    card,
+    from: "hand" as const,
+  }));
+}
 
 export const militia: CardEffect = ({
   state,
@@ -12,40 +75,18 @@ export const militia: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const events: GameEvent[] = [];
   const opponents = getOpponents(state, player);
 
   // Initial call: +$2, then check if anyone needs to discard
   if (!decision || stage === undefined) {
-    events.push({ type: "COINS_MODIFIED", delta: 2 });
+    const events: GameEvent[] = [
+      { type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS },
+    ];
+    const needsDiscard = findOpponentNeedingDiscard(state, opponents, player);
 
-    // Find first opponent who needs to discard
-    for (const opp of opponents) {
-      const oppState = state.players[opp];
-      if (oppState && oppState.hand.length > 3) {
-        const discardCount = oppState.hand.length - 3;
-        return {
-          events,
-          pendingDecision: {
-            type: "card_decision",
-            player: opp,
-            from: "hand",
-            prompt: `Militia: Discard down to 3 cards (discard ${discardCount})`,
-            cardOptions: [...oppState.hand],
-            min: discardCount,
-            max: discardCount,
-            cardBeingPlayed: "Militia",
-            stage: "opponent_discard",
-            metadata: {
-              remainingOpponents: opponents.filter(o => o !== opp),
-              attackingPlayer: player,
-            },
-          },
-        };
-      }
+    if (needsDiscard) {
+      return { events, pendingDecision: createDiscardDecision(needsDiscard) };
     }
-
-    // No one needs to discard
     return { events };
   }
 
@@ -53,48 +94,22 @@ export const militia: CardEffect = ({
   if (stage === "opponent_discard" && decision) {
     const toDiscard = decision.selectedCards || [];
     const discardingPlayer = state.pendingDecision?.player;
+    const events = discardingPlayer
+      ? createDiscardEvents(toDiscard, discardingPlayer)
+      : [];
 
-    if (discardingPlayer) {
-      // Discard (atomic events)
-      for (const card of toDiscard) {
-        events.push({
-          type: "CARD_DISCARDED",
-          player: discardingPlayer,
-          card,
-          from: "hand",
-        });
-      }
-    }
-
-    // Check for more opponents
     const metadata = state.pendingDecision?.metadata;
     const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
+    const attackingPlayer = (metadata?.attackingPlayer as string) || player;
 
-    for (const opp of remainingOpponents) {
-      const oppState = state.players[opp];
-      if (oppState && oppState.hand.length > 3) {
-        const discardCount = oppState.hand.length - 3;
-        return {
-          events,
-          pendingDecision: {
-            type: "card_decision",
-            player: opp,
-            from: "hand",
-            prompt: `Militia: Discard down to 3 cards (discard ${discardCount})`,
-            cardOptions: [...oppState.hand],
-            min: discardCount,
-            max: discardCount,
-            cardBeingPlayed: "Militia",
-            stage: "opponent_discard",
-            metadata: {
-              remainingOpponents: remainingOpponents.filter(o => o !== opp),
-              attackingPlayer: player,
-            },
-          },
-        };
-      }
+    const needsDiscard = findOpponentNeedingDiscard(
+      state,
+      remainingOpponents,
+      attackingPlayer,
+    );
+    if (needsDiscard) {
+      return { events, pendingDecision: createDiscardDecision(needsDiscard) };
     }
-
     return { events };
   }
 
