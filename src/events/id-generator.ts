@@ -3,21 +3,21 @@ import { engineLogger } from "../lib/logger";
  * Event ID generation for causality tracking
  */
 
-let eventCounter = 0;
+const eventCounterState = { value: 0 };
 
 /**
  * Generate a unique event ID
  * Format: evt-{counter}
  */
 export function generateEventId(): string {
-  return `evt-${++eventCounter}`;
+  return `evt-${++eventCounterState.value}`;
 }
 
 /**
  * Reset the event counter (useful for testing or new games)
  */
 export function resetEventCounter(): void {
-  eventCounter = 0;
+  eventCounterState.value = 0;
 }
 
 const EVENT_ID_PREFIX_LENGTH = 4;
@@ -35,7 +35,7 @@ export function syncEventCounter(events: Array<{ id?: string }>): void {
     return max;
   }, 0);
 
-  eventCounter = maxId;
+  eventCounterState.value = maxId;
   engineLogger.debug(
     `[id-generator] Synced counter to ${maxId} from ${events.length} events`,
   );
