@@ -1,4 +1,5 @@
-import { generateObject, generateText, createGateway } from "ai";
+import { generateObject, generateText } from "ai";
+import { createGateway } from "@ai-sdk/gateway";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";

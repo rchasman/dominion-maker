@@ -1,4 +1,5 @@
-import { generateObject, createGateway } from "ai";
+import { generateObject } from "ai";
+import { createGateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
