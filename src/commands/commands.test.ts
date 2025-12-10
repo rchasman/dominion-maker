@@ -718,10 +718,10 @@ describe("Command System - UNPLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     // Should remove 2 coins from Silver + 1 from Merchant = -3 total
-    const coinsModified = result.events.find(e => e.type === "COINS_MODIFIED");
-    expect(coinsModified).toBeDefined();
-    if (!coinsModified) throw new Error("Expected COINS_MODIFIED event");
-    expect(coinsModified.delta).toBe(-3);
+    const coinsModifiedEvents = result.events.filter(e => e.type === "COINS_MODIFIED");
+    expect(coinsModifiedEvents.length).toBeGreaterThan(0);
+    const totalCoinsRemoved = coinsModifiedEvents.reduce((sum, e) => sum + e.delta, 0);
+    expect(totalCoinsRemoved).toBe(-3);
   });
 
   it("should fail if treasure not in play", () => {
