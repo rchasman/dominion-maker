@@ -19,70 +19,90 @@ interface TurnSummary {
   cardsBought: CardName[];
 }
 
-function extractRecentTurns(log: LogEntry[], lastNTurns = 3): TurnSummary[] {
-  const turnMap = new Map<string, TurnSummary>();
-  let currentTurn = 0;
-  let currentPlayer = "";
+const DEFAULT_LAST_N_TURNS = 3;
+const SUMMARIES_PER_TURN = 2;
 
-  for (const entry of log) {
-    if (entry.type === "turn-start") {
-      currentTurn = entry.turn;
-      currentPlayer = entry.player;
-      const key = `${currentPlayer}-${currentTurn}`;
-      if (!turnMap.has(key)) {
-        turnMap.set(key, {
-          player: currentPlayer,
-          turn: currentTurn,
-          actionsPlayed: [],
-          treasuresPlayed: [],
-          cardsBought: [],
-        });
-      }
-    }
-
-    if (currentTurn === 0) continue;
-
-    const key = `${entry.player || currentPlayer}-${currentTurn}`;
-    const summary = turnMap.get(key);
-    if (!summary) continue;
-
-    if (entry.type === "play-action" && entry.card) {
-      summary.actionsPlayed.push(entry.card);
-    } else if (entry.type === "play-treasure" && entry.card) {
-      summary.treasuresPlayed.push(entry.card);
-    } else if (entry.type === "buy-card" && entry.card) {
-      summary.cardsBought.push(entry.card);
-    }
+function extractRecentTurns(
+  log: LogEntry[],
+  lastNTurns = DEFAULT_LAST_N_TURNS,
+): TurnSummary[] {
+  interface TurnState {
+    turnMap: Map<string, TurnSummary>;
+    currentTurn: number;
+    currentPlayer: string;
   }
+
+  const { turnMap } = log.reduce<TurnState>(
+    (state, entry) => {
+      if (entry.type === "turn-start") {
+        const newTurn = entry.turn;
+        const newPlayer = entry.player;
+        const key = `${newPlayer}-${newTurn}`;
+        if (!state.turnMap.has(key)) {
+          state.turnMap.set(key, {
+            player: newPlayer,
+            turn: newTurn,
+            actionsPlayed: [],
+            treasuresPlayed: [],
+            cardsBought: [],
+          });
+        }
+        return { ...state, currentTurn: newTurn, currentPlayer: newPlayer };
+      }
+
+      if (state.currentTurn === 0) return state;
+
+      const key = `${entry.player || state.currentPlayer}-${state.currentTurn}`;
+      const summary = state.turnMap.get(key);
+      if (!summary) return state;
+
+      if (entry.type === "play-action" && entry.card) {
+        summary.actionsPlayed.push(entry.card);
+      } else if (entry.type === "play-treasure" && entry.card) {
+        summary.treasuresPlayed.push(entry.card);
+      } else if (entry.type === "buy-card" && entry.card) {
+        summary.cardsBought.push(entry.card);
+      }
+
+      return state;
+    },
+    {
+      turnMap: new Map<string, TurnSummary>(),
+      currentTurn: 0,
+      currentPlayer: "",
+    },
+  );
 
   const allSummaries = Array.from(turnMap.values()).sort(
     (a, b) => b.turn - a.turn,
   );
-  return allSummaries.slice(0, lastNTurns * 2);
+  return allSummaries.slice(0, lastNTurns * SUMMARIES_PER_TURN);
 }
 
 /**
  * Formats turn history for LLM analysis
  */
 export function formatTurnHistoryForAnalysis(state: GameState): string {
-  const recentTurns = extractRecentTurns(state.log, 3);
+  const recentTurns = extractRecentTurns(state.log, DEFAULT_LAST_N_TURNS);
 
   if (recentTurns.length === 0) {
     return "";
   }
 
-  const lines: string[] = ["RECENT TURN HISTORY:"];
+  const lines = ["RECENT TURN HISTORY:"].concat(
+    recentTurns.flatMap(turn => {
+      const actions =
+        turn.actionsPlayed.length > 0 ? turn.actionsPlayed.join(", ") : "none";
+      const buys =
+        turn.cardsBought.length > 0 ? turn.cardsBought.join(", ") : "none";
 
-  for (const turn of recentTurns) {
-    const actions =
-      turn.actionsPlayed.length > 0 ? turn.actionsPlayed.join(", ") : "none";
-    const buys =
-      turn.cardsBought.length > 0 ? turn.cardsBought.join(", ") : "none";
-
-    lines.push(`Turn ${turn.turn} (${turn.player}):`);
-    lines.push(`  Actions played: ${actions}`);
-    lines.push(`  Bought: ${buys}`);
-  }
+      return [
+        `Turn ${turn.turn} (${turn.player}):`,
+        `  Actions played: ${actions}`,
+        `  Bought: ${buys}`,
+      ];
+    }),
+  );
 
   return lines.join("\n");
 }
@@ -93,6 +113,83 @@ interface PlayerStrategyAnalysis {
   lines: string;
 }
 
+const DEFAULT_PROVINCE_COUNT = 8;
+const DEFAULT_DUCHY_COUNT = 8;
+const LOW_PILE_THRESHOLD = 3;
+
+function formatScoreboard(currentVP: number, opponentVP: number): string {
+  const vpDiff = currentVP - opponentVP;
+  return `SCORE: You ${currentVP} VP, Opponent ${opponentVP} VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`;
+}
+
+function formatDeckComposition(cards: CardName[]): string {
+  const analysis = analyzeDeck(cards);
+  return `YOUR DECK (${cards.length} cards): ${analysis.breakdown}
+Treasure value: $${analysis.totalTreasureValue} in ${analysis.treasures} cards (avg $${analysis.avgTreasureValue.toFixed(1)})
+Terminals: ${analysis.terminals}, Villages: ${analysis.villages}`;
+}
+
+function formatSupplyStatus(supply: Record<string, number>): string {
+  const provincesLeft = supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
+  const duchiesLeft = supply["Duchy"] ?? DEFAULT_DUCHY_COUNT;
+  const supplyEntries = Object.entries(supply);
+  const lowPiles = supplyEntries
+    .filter(([, count]) => count <= LOW_PILE_THRESHOLD && count > 0)
+    .map(([card, count]) => `${card}: ${count}`)
+    .join(", ");
+  const emptyPiles = supplyEntries
+    .filter(([, count]) => count === 0)
+    .map(([card]) => card)
+    .join(", ");
+
+  return `SUPPLY: Province ${provincesLeft}/${DEFAULT_PROVINCE_COUNT}, Duchy ${duchiesLeft}/${DEFAULT_DUCHY_COUNT}${lowPiles ? ` | Low: ${lowPiles}` : ""}${emptyPiles ? ` | Empty: ${emptyPiles}` : ""}`;
+}
+
+function formatHandStatus(hand: CardName[], currentCoins: number): string {
+  const treasures = hand.filter(c => isTreasureCard(c));
+  const treasureValue = treasures.reduce(
+    (sum, c) => sum + (CARDS[c].coins || 0),
+    0,
+  );
+  const maxCoins = currentCoins + treasureValue;
+
+  return `HAND: ${hand.join(", ")}
+Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`;
+}
+
+function formatStrategyAnalysis(
+  strategySummary: string,
+  activePlayerId: string,
+  opponentId: string,
+): string[] {
+  const strategies = JSON.parse(strategySummary) as Record<
+    string,
+    PlayerStrategyAnalysis
+  >;
+
+  const yourStrategy = strategies[activePlayerId];
+  const opponentStrategy = strategies[opponentId];
+
+  if (!yourStrategy && !opponentStrategy) return [];
+
+  const sections = ["\nSTRATEGY ANALYSIS:"];
+
+  if (yourStrategy) {
+    sections.push(`YOUR STRATEGY:
+  Gameplan: ${yourStrategy.gameplan}
+  Read: ${yourStrategy.read}
+  Lines: ${yourStrategy.lines}`);
+  }
+
+  if (opponentStrategy) {
+    sections.push(`\nOPPONENT STRATEGY:
+  Gameplan: ${opponentStrategy.gameplan}
+  Read: ${opponentStrategy.read}`);
+  }
+
+  return sections;
+}
+
 /**
  * Builds human-readable game facts that a real Dominion player would track.
  * Pure data - no strategy advice.
@@ -101,18 +198,25 @@ export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
 ): string {
-  const sections: string[] = [];
-
-  // Get the current active player (the AI making the decision)
   const currentPlayer = state.players[state.activePlayer];
-
-  // Get the opponent (the other player)
   const opponentId = Object.keys(state.players).find(
     id => id !== state.activePlayer,
   ) as keyof typeof state.players;
   const opponent = state.players[opponentId];
 
-  // 1. VP Scoreboard
+  const currentAllCards = [
+    ...currentPlayer.deck,
+    ...currentPlayer.hand,
+    ...currentPlayer.discard,
+    ...currentPlayer.inPlay,
+  ];
+  const opponentAllCards = [
+    ...opponent.deck,
+    ...opponent.hand,
+    ...opponent.discard,
+    ...opponent.inPlay,
+  ];
+
   const currentVP = calculateVP(
     currentPlayer.deck,
     currentPlayer.hand,
@@ -125,97 +229,24 @@ export function buildStrategicContext(
     opponent.discard,
     opponent.inPlay,
   );
-  const vpDiff = currentVP - opponentVP;
 
-  sections.push(
-    `SCORE: You ${currentVP} VP, Opponent ${opponentVP} VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`,
-  );
-
-  // 2. Your Deck Composition
-  const currentAllCards = [
-    ...currentPlayer.deck,
-    ...currentPlayer.hand,
-    ...currentPlayer.discard,
-    ...currentPlayer.inPlay,
-  ];
-  const currentAnalysis = analyzeDeck(currentAllCards);
-
-  sections.push(`YOUR DECK (${currentAllCards.length} cards): ${currentAnalysis.breakdown}
-Treasure value: $${currentAnalysis.totalTreasureValue} in ${currentAnalysis.treasures} cards (avg $${currentAnalysis.avgTreasureValue.toFixed(1)})
-Terminals: ${currentAnalysis.terminals}, Villages: ${currentAnalysis.villages}`);
-
-  // 3. Shuffle Status
-  sections.push(
+  const sections = [
+    formatScoreboard(currentVP, opponentVP),
+    formatDeckComposition(currentAllCards),
     `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards`,
-  );
-
-  // 4. Supply Status - only show relevant piles
-  const provincesLeft = state.supply["Province"] ?? 8;
-  const duchiesLeft = state.supply["Duchy"] ?? 8;
-  const supplyEntries = Object.entries(state.supply);
-  const lowPiles = supplyEntries
-    .filter(([, count]) => count <= 3 && count > 0)
-    .map(([card, count]) => `${card}: ${count}`)
-    .join(", ");
-  const emptyPiles = supplyEntries
-    .filter(([, count]) => count === 0)
-    .map(([card]) => card)
-    .join(", ");
-
-  sections.push(
-    `SUPPLY: Province ${provincesLeft}/8, Duchy ${duchiesLeft}/8${lowPiles ? ` | Low: ${lowPiles}` : ""}${emptyPiles ? ` | Empty: ${emptyPiles}` : ""}`,
-  );
-
-  // 5. Opponent Deck
-  const opponentAllCards = [
-    ...opponent.deck,
-    ...opponent.hand,
-    ...opponent.discard,
-    ...opponent.inPlay,
+    formatSupplyStatus(state.supply),
+    `OPPONENT DECK (${opponentAllCards.length} cards): ${analyzeDeck(opponentAllCards).breakdown}`,
+    formatHandStatus(currentPlayer.hand, state.coins),
   ];
-  const opponentAnalysis = analyzeDeck(opponentAllCards);
 
-  sections.push(
-    `OPPONENT DECK (${opponentAllCards.length} cards): ${opponentAnalysis.breakdown}`,
-  );
-
-  // 6. Current Hand (always show for the active player)
-  const treasures = currentPlayer.hand.filter(c => isTreasureCard(c));
-  const treasureValue = treasures.reduce(
-    (sum, c) => sum + (CARDS[c].coins || 0),
-    0,
-  );
-  const maxCoins = state.coins + treasureValue;
-
-  sections.push(`HAND: ${currentPlayer.hand.join(", ")}
-Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`);
-
-  // 7. Strategy Summary (if provided by LLM analysis)
   if (strategySummary) {
-    const strategies = JSON.parse(strategySummary) as Record<
-      string,
-      PlayerStrategyAnalysis
-    >;
-
-    const yourStrategy = strategies[state.activePlayer];
-    const opponentStrategy = strategies[opponentId];
-
-    if (yourStrategy || opponentStrategy) {
-      sections.push(`\nSTRATEGY ANALYSIS:`);
-
-      if (yourStrategy) {
-        sections.push(`YOUR STRATEGY:
-  Gameplan: ${yourStrategy.gameplan}
-  Read: ${yourStrategy.read}
-  Lines: ${yourStrategy.lines}`);
-      }
-
-      if (opponentStrategy) {
-        sections.push(`\nOPPONENT STRATEGY:
-  Gameplan: ${opponentStrategy.gameplan}
-  Read: ${opponentStrategy.read}`);
-      }
-    }
+    sections.push(
+      ...formatStrategyAnalysis(
+        strategySummary,
+        state.activePlayer,
+        opponentId,
+      ),
+    );
   }
 
   return sections.join("\n");
