@@ -76,25 +76,51 @@ const server = Bun.serve({
         body: JSON.parse(body),
       };
 
-      let statusCode = HTTP_OK;
-      let responseData: unknown = null;
-      const responseHeaders: Record<string, string> = {};
+      type ResponseState = {
+        statusCode: number;
+        responseData: unknown;
+        responseHeaders: Record<string, string>;
+      };
+
+      const initialState: ResponseState = {
+        statusCode: HTTP_OK,
+        responseData: null,
+        responseHeaders: {},
+      };
+
+      // Use a mutable ref to capture response state
+      const responseState = { current: initialState };
 
       const vercelRes: VercelResponse = {
         status: (code: number) => {
-          statusCode = code;
+          responseState.current = {
+            ...responseState.current,
+            statusCode: code,
+          };
           return vercelRes;
         },
         json: (data: unknown) => {
-          responseData = data;
+          responseState.current = {
+            ...responseState.current,
+            responseData: data,
+          };
           return vercelRes;
         },
         send: (data: string) => {
-          responseData = data;
+          responseState.current = {
+            ...responseState.current,
+            responseData: data,
+          };
           return vercelRes;
         },
         setHeader: (key: string, value: string) => {
-          responseHeaders[key] = value;
+          responseState.current = {
+            ...responseState.current,
+            responseHeaders: {
+              ...responseState.current.responseHeaders,
+              [key]: value,
+            },
+          };
           return vercelRes;
         },
       };
@@ -105,6 +131,9 @@ const server = Bun.serve({
           ? generateActionHandler
           : analyzeStrategyHandler;
       await handler(vercelReq, vercelRes);
+
+      const { statusCode, responseData, responseHeaders } =
+        responseState.current;
 
       return new Response(
         typeof responseData === "string"

@@ -221,7 +221,11 @@ export const bandit: CardEffect = ({
       processOpponentAutoAttack(state, t),
     );
     return {
-      events: [trashEvent, ...discardEvents, ...remainingAttackEvents] as GameEvent[],
+      events: [
+        trashEvent,
+        ...discardEvents,
+        ...remainingAttackEvents,
+      ] as GameEvent[],
     };
   }
 

@@ -76,29 +76,32 @@ export function peekDraw(
 
   const result = Array.from({ length: count }).reduce<AccState>(
     acc => {
-      if (acc.deck.length === 0) {
-        if (acc.discard.length === 0) return acc;
+      // Determine which deck to use
+      const currentDeck =
+        acc.deck.length === 0 && acc.discard.length > 0
+          ? shuffle(acc.discard)
+          : acc.deck;
 
-        // Capture state before shuffle
-        const shuffledDeck = shuffle(acc.discard);
-        return {
-          ...acc,
-          cardsBeforeShuffle: [...acc.cards],
-          deck: shuffledDeck,
-          discard: [],
-          shuffled: true,
-          newDeckOrder: [...shuffledDeck],
-        };
-      }
+      // Check if we shuffled
+      const didShuffle = currentDeck !== acc.deck && acc.discard.length > 0;
 
-      const card = acc.deck[acc.deck.length - 1];
-      return card
-        ? {
-            ...acc,
-            cards: [...acc.cards, card],
-            deck: acc.deck.slice(0, -1),
-          }
-        : acc;
+      // If no cards available, return
+      if (currentDeck.length === 0) return acc;
+
+      // Draw the card
+      const card = currentDeck[currentDeck.length - 1];
+      if (!card) return acc;
+
+      return {
+        cards: [...acc.cards, card],
+        cardsBeforeShuffle: didShuffle
+          ? [...acc.cards]
+          : acc.cardsBeforeShuffle,
+        deck: currentDeck.slice(0, -1),
+        discard: didShuffle ? [] : acc.discard,
+        shuffled: acc.shuffled || didShuffle,
+        newDeckOrder: didShuffle ? [...currentDeck] : acc.newDeckOrder,
+      };
     },
     {
       cards: [],

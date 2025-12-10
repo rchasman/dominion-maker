@@ -489,12 +489,8 @@ export default async function handler(
       .json({ error: "Method not allowed" });
   }
 
-  let provider: string = "";
-
   try {
     const body = parseRequestBody(req);
-    provider = body.provider;
-
     const result = await processGenerationRequest(body, res);
     if (result) return result;
 
@@ -504,6 +500,15 @@ export default async function handler(
       message: "Internal error: no response generated",
     });
   } catch (err) {
+    // Try to parse body for provider name in error logging
+    const provider = run(() => {
+      try {
+        return parseRequestBody(req).provider;
+      } catch {
+        return "unknown";
+      }
+    });
+
     // Try recovery strategies
     const recovered = tryRecoverFromError(err, provider, res);
     if (recovered) return recovered;
