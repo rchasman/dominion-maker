@@ -3,12 +3,11 @@
  */
 
 import type { GameState, CardName } from "../types/game-state";
-import type { Action } from "../types/action";
 import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
-import { api } from "../api/client";
 import { formatActionDescription } from "../lib/action-utils";
+import { run } from "../lib/run";
 import {
   AVAILABLE_MODELS,
   ALL_FAST_MODELS,
@@ -17,6 +16,11 @@ import {
   type ModelSettings,
 } from "./types";
 import { agentLogger } from "../lib/logger";
+import {
+  getLegalActions,
+  generateActionViaBackend,
+  executeActionWithEngine,
+} from "./game-agent-helpers";
 import {
   type LLMLogger,
   type ModelResult,
@@ -48,14 +52,14 @@ export {
 export type { ModelSettings, ModelProvider };
 
 // Global abort controller for canceling ongoing consensus operations
-let globalAbortController: AbortController | null = null;
+const globalAbortState = { current: null as AbortController | null };
 
 // Abort any ongoing consensus operations (e.g., when starting new game)
 export function abortOngoingConsensus() {
-  if (globalAbortController) {
+  if (globalAbortState.current) {
     agentLogger.info("Aborting consensus");
-    globalAbortController.abort();
-    globalAbortController = null;
+    globalAbortState.current.abort();
+    globalAbortState.current = null;
   }
 }
 
@@ -150,183 +154,6 @@ const executeModel = (context: ModelExecutionContext): void => {
     });
 };
 
-/**
- * Get legal actions from current game state for LLM context
- * Adapted to work with event-sourced state
- */
-function getLegalActions(state: GameState): Action[] {
-  // Pending decision actions - use decision.player, not activePlayer!
-  // (e.g., Militia makes opponent discard while human is still active)
-  if (state.pendingDecision) {
-    const decision = state.pendingDecision;
-    const decisionPlayer = decision.player;
-    const playerState = state.players[decisionPlayer];
-    if (!playerState) return [];
-
-    const options = decision.cardOptions || [];
-
-    if (decision.stage === "trash") {
-      // Can't skip trashing by selecting nothing - that would be end_phase or a different action
-      return options.map(card => ({ type: "trash_card" as const, card }));
-    }
-
-    if (decision.stage === "discard" || decision.stage === "opponent_discard") {
-      // Single card at a time (atomic)
-      // Can't skip discarding by selecting nothing - that would be end_phase or a different action
-      return options.map(card => ({ type: "discard_card" as const, card }));
-    }
-
-    if (decision.stage === "gain" || decision.from === "supply") {
-      return options.map(card => ({ type: "gain_card" as const, card }));
-    }
-
-    return [];
-  }
-
-  // No pending decision - use active player
-  const player = state.activePlayer;
-  const playerState = state.players[player];
-  if (!playerState) return [];
-
-  // Action phase
-  if (state.phase === "action") {
-    const actionCards = playerState.hand.filter(isActionCard);
-    const playActions =
-      state.actions > 0
-        ? actionCards.map(card => ({ type: "play_action" as const, card }))
-        : [];
-    return [...playActions, { type: "end_phase" }];
-  }
-
-  // Buy phase
-  if (state.phase === "buy") {
-    const treasures = playerState.hand.filter(isTreasureCard);
-    const playTreasures = treasures.map(card => ({
-      type: "play_treasure" as const,
-      card,
-    }));
-
-    // Buyable cards
-    const buyableCards = Object.entries(state.supply)
-      .filter(([card, count]) => {
-        const cardName = card as CardName;
-        return (
-          count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
-        );
-      })
-      .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));
-
-    return [...playTreasures, ...buyableCards, { type: "end_phase" }];
-  }
-
-  return [];
-}
-
-type GenerateActionParams = {
-  provider: ModelProvider;
-  currentState: GameState;
-  humanChoice?: { selectedCards: CardName[] };
-  signal?: AbortSignal;
-  strategySummary?: string;
-  customStrategy?: string;
-  format?: "json" | "toon";
-};
-
-// Call backend API to generate action
-async function generateActionViaBackend(
-  params: GenerateActionParams,
-): Promise<{ action: Action; format: "json" | "toon" }> {
-  const {
-    provider,
-    currentState,
-    humanChoice,
-    signal,
-    strategySummary,
-    customStrategy,
-    format,
-  } = params;
-  const legalActions = getLegalActions(currentState);
-
-  const { data, error } = await api.api["generate-action"].post(
-    {
-      provider,
-      currentState,
-      humanChoice,
-      legalActions,
-      strategySummary,
-      customStrategy,
-      format,
-    },
-    {
-      fetch: { signal },
-    },
-  );
-
-  if (error) {
-    const errorMsg =
-      typeof error === "object" && error && "value" in error
-        ? String(error.value)
-        : "Backend request failed";
-    throw new Error(errorMsg);
-  }
-
-  if (!data?.action) {
-    throw new Error("Backend returned no action");
-  }
-
-  return { action: data.action, format: data.format || "toon" };
-}
-
-/**
- * Execute an action by dispatching command to engine
- * This replaces the old executeAction that mutated state
- */
-function executeActionWithEngine(
-  engine: DominionEngine,
-  action: Action,
-  playerId: string,
-): boolean {
-  switch (action.type) {
-    case "play_action":
-      if (!action.card) throw new Error("play_action requires card");
-      return engine.dispatch(
-        { type: "PLAY_ACTION", player: playerId, card: action.card },
-        playerId,
-      ).ok;
-    case "play_treasure":
-      if (!action.card) throw new Error("play_treasure requires card");
-      return engine.dispatch(
-        { type: "PLAY_TREASURE", player: playerId, card: action.card },
-        playerId,
-      ).ok;
-    case "buy_card":
-      if (!action.card) throw new Error("buy_card requires card");
-      return engine.dispatch(
-        { type: "BUY_CARD", player: playerId, card: action.card },
-        playerId,
-      ).ok;
-    case "end_phase":
-      return engine.dispatch({ type: "END_PHASE", player: playerId }, playerId)
-        .ok;
-    case "discard_card":
-    case "trash_card":
-    case "gain_card":
-      // All decision responses are single cards (atomic)
-      if (!action.card) throw new Error(`${action.type} requires card`);
-      return engine.dispatch(
-        {
-          type: "SUBMIT_DECISION",
-          player: playerId,
-          choice: { selectedCards: [action.card] },
-        },
-        playerId,
-      ).ok;
-    default:
-      agentLogger.error(`Unknown action type: ${String(action.type)}`);
-      return false;
-  }
-}
-
 type RunModelsParams = {
   providers: ModelProvider[];
   currentState: GameState;
@@ -366,15 +193,14 @@ const runModelsInParallel = async (
   const pendingModels = new Set<number>();
   const modelStartTimes = new Map<number, number>();
 
-  globalAbortController = new AbortController();
-  const abortController = globalAbortController;
+  globalAbortState.current = new AbortController();
+  const abortController = globalAbortState.current;
 
   const { results, earlyConsensus } = await new Promise<{
     results: ModelResult[];
     earlyConsensus: VoteGroup | null;
   }>(resolveAll => {
-    let resolved = false;
-    let completedCount = 0;
+    const state = { resolved: false, completedCount: 0 };
 
     providers.map((provider, index) => {
       const modelFormat = run(() => {
@@ -402,14 +228,14 @@ const runModelsInParallel = async (
         modelStartTimes,
         providers,
         onEarlyConsensus: (winner: VoteGroup) => {
-          if (resolved) return;
-          resolved = true;
+          if (state.resolved) return;
+          state.resolved = true;
           resolveAll({ results: completedResults, earlyConsensus: winner });
         },
         onComplete: () => {
-          if (resolved) return;
-          completedCount++;
-          if (completedCount === totalModels) {
+          if (state.resolved) return;
+          state.completedCount++;
+          if (state.completedCount === totalModels) {
             resolveAll({ results: completedResults, earlyConsensus: null });
           }
         },
@@ -417,8 +243,8 @@ const runModelsInParallel = async (
     });
   });
 
-  if (globalAbortController === abortController) {
-    globalAbortController = null;
+  if (globalAbortState.current === abortController) {
+    globalAbortState.current = null;
   }
 
   return { results, earlyConsensus, voteGroups, completedResults };
@@ -567,15 +393,15 @@ export async function runAITurnWithConsensus(
     data: { phase: engine.state.phase, providers, turn: engine.state.turn },
   });
 
-  let stepCount = 0;
-
-  while (
-    engine.state.activePlayer === playerId &&
-    !engine.state.gameOver &&
-    !engine.state.pendingDecision &&
-    stepCount < MAX_TURN_STEPS
-  ) {
-    stepCount++;
+  const runTurnSteps = async (stepCount: number): Promise<number> => {
+    if (
+      engine.state.activePlayer !== playerId ||
+      engine.state.gameOver ||
+      engine.state.pendingDecision ||
+      stepCount >= MAX_TURN_STEPS
+    ) {
+      return stepCount;
+    }
 
     try {
       await advanceGameStateWithConsensus(engine, playerId, {
@@ -592,7 +418,11 @@ export async function runAITurnWithConsensus(
         return d !== null && d.player === playerId;
       };
 
-      while (hasAIDecision()) {
+      const resolveDecisions = async (count: number): Promise<number> => {
+        if (!hasAIDecision() || count >= MAX_TURN_STEPS) {
+          return count;
+        }
+
         agentLogger.debug("Resolving pending decision");
         await advanceGameStateWithConsensus(engine, playerId, {
           providers,
@@ -603,11 +433,14 @@ export async function runAITurnWithConsensus(
         });
         onStateChange?.(engine.state);
 
-        // Safety check
-        if (stepCount++ >= MAX_TURN_STEPS) break;
-      }
+        return resolveDecisions(count + 1);
+      };
+
+      const newStepCount = await resolveDecisions(stepCount + 1);
 
       onStateChange?.(engine.state);
+
+      return runTurnSteps(newStepCount);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -617,9 +450,11 @@ export async function runAITurnWithConsensus(
         message: `Error: ${errorMessage}`,
         data: { error: errorMessage },
       });
-      return;
+      return stepCount;
     }
-  }
+  };
 
-  agentLogger.info(`AI turn complete (${stepCount} steps)`);
+  const finalStepCount = await runTurnSteps(0);
+
+  agentLogger.info(`AI turn complete (${finalStepCount} steps)`);
 }
