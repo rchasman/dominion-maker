@@ -1,4 +1,5 @@
 import type { CardName } from "../types/game-state";
+import type { GameEvent } from "../events/types";
 
 export type CardType =
   | "treasure"
@@ -7,6 +8,13 @@ export type CardType =
   | "action"
   | "attack"
   | "reaction";
+
+export type ReactionTrigger = "on_attack" | "on_gain" | "on_trash" | "on_discard";
+
+export type TreasureTriggerContext = {
+  isFirstOfType: boolean;
+  treasuresInPlay: CardName[];
+};
 
 export interface CardDefinition {
   name: CardName;
@@ -17,6 +25,15 @@ export interface CardDefinition {
   coins?: number;
   // For victory cards
   vp?: number | "variable";
+  // For reaction cards
+  reactionTrigger?: ReactionTrigger;
+  // For cards with triggers
+  triggers?: {
+    onTreasurePlayed?: (
+      treasureCard: CardName,
+      context: TreasureTriggerContext,
+    ) => GameEvent[];
+  };
 }
 
 export const CARDS: Record<CardName, CardDefinition> = {
@@ -92,6 +109,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     name: "Moat",
     cost: 2,
     types: ["action", "reaction"],
+    reactionTrigger: "on_attack",
     description:
       "+2 Cards. When another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.",
   },
@@ -110,6 +128,12 @@ export const CARDS: Record<CardName, CardDefinition> = {
     types: ["action"],
     description:
       "+1 Card, +1 Action. The first time you play a Silver this turn, +$1.",
+    triggers: {
+      onTreasurePlayed: (treasureCard, context) =>
+        treasureCard === "Silver" && context.isFirstOfType
+          ? [{ type: "COINS_MODIFIED", delta: 1 }]
+          : [],
+    },
   },
   Vassal: {
     name: "Vassal",

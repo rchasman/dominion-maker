@@ -5,7 +5,7 @@ import type {
   DecisionChoice,
 } from "../events/types";
 import { shuffle } from "../lib/game-utils";
-import { CARDS } from "../data/cards";
+import { CARDS, type ReactionTrigger } from "../data/cards";
 
 // Type guard for CardName - validates that a string is a known card
 function isCardName(card: string): card is CardName {
@@ -321,18 +321,18 @@ export function calculateEffectiveCost(
 // ============================================
 
 /**
- * Get available reaction cards for a trigger
+ * Get available reaction cards for a trigger (data-driven, no hardcoded card names)
  */
 export function getAvailableReactions(
   state: GameState,
   player: string,
-  trigger: "on_attack",
+  trigger: ReactionTrigger,
 ): CardName[] {
   const playerState = state.players[player];
   if (!playerState) return [];
 
   return playerState.hand.filter(card => {
     const cardDef = CARDS[card];
-    return cardDef.types.includes("reaction") && trigger === "on_attack";
+    return cardDef.reactionTrigger === trigger;
   });
 }
