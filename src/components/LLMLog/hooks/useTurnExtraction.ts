@@ -116,12 +116,14 @@ function handleConsensusModelPending(
   const provider = data.provider as string;
   const modelIndex = data.index as number;
   const startTime = data.startTime as number;
+  const format = data.format as "json" | "toon" | undefined;
   if (modelIndex !== undefined) {
     state.buildingTurn.modelStatuses?.set(modelIndex, {
       provider,
       index: modelIndex,
       startTime,
       completed: false,
+      format,
     });
   }
 }

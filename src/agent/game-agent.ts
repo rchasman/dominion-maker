@@ -104,7 +104,7 @@ const executeModel = (context: ModelExecutionContext): void => {
   logger?.({
     type: "consensus-model-pending",
     message: `${provider} started`,
-    data: { provider, index, startTime: uiStartTime },
+    data: { provider, index, startTime: uiStartTime, format: context.format },
   });
 
   const modelAbortController = new AbortController();

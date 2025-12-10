@@ -255,16 +255,12 @@ function ModelNameDisplay({
       {format && (
         <span
           style={{
-            fontSize: "0.6rem",
-            padding: "1px 3px",
-            borderRadius: "2px",
-            backgroundColor: format === "json" ? "#3b82f6" : "#f59e0b",
-            color: "#ffffff",
-            fontWeight: "bold",
-            opacity: 0.8,
+            fontSize: "0.7rem",
+            fontWeight: "normal",
+            opacity: 0.6,
           }}
         >
-          {format.toUpperCase()}
+          {format === "json" ? "J" : "T"}
         </span>
       )}
     </span>
