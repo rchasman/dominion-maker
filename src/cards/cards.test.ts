@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { getCardEffect } from "./base";
 import { applyEvents } from "../events/apply";
 import { resetEventCounter } from "../events/id-generator";
+import { handleCommand } from "../commands/handle";
 import type { GameState, CardName } from "../types/game-state";
 import type { CardEffectContext } from "./effect-types";
 
@@ -621,14 +622,13 @@ describe("Attack Cards", () => {
   describe("Militia", () => {
     it("should give +$2 to player", () => {
       const state = createTestState([]);
-      const effect = getCardEffect("Militia");
-      if (!effect) throw new Error("No effect for Militia");
+      state.players.human.hand = ["Militia"];
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Militia",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
       expect(coinsEvent).toBeDefined();
@@ -638,6 +638,7 @@ describe("Attack Cards", () => {
 
     it("should attack opponents with more than 3 cards", () => {
       const state = createTestState([]);
+      state.players.human.hand = ["Militia"];
       state.players.ai = {
         deck: [],
         hand: ["Copper", "Silver", "Gold", "Estate", "Duchy"],
@@ -646,22 +647,21 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
-      const effect = getCardEffect("Militia");
-      if (!effect) throw new Error("No effect for Militia");
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Militia",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
 
-      // Should request opponent to discard down to 3
-      expect(result.pendingDecision).toBeDefined();
-      if (!result.pendingDecision) throw new Error("No pending decision");
-      expect(result.pendingDecision.player).toBe("ai");
-      expect(result.pendingDecision.stage).toBe("opponent_discard");
-      expect(result.pendingDecision.min).toBe(2); // 5 - 3 = 2 cards to discard
-      expect(result.pendingDecision.max).toBe(2);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
+
+      // Should emit DECISION_REQUIRED event for opponent to discard down to 3
+      const decisionEvent = result.events.find(e => e.type === "DECISION_REQUIRED");
+      expect(decisionEvent).toBeDefined();
+      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED") throw new Error("No decision event");
+      expect(decisionEvent.decision.player).toBe("ai");
+      expect(decisionEvent.decision.stage).toBe("opponent_discard");
+      expect(decisionEvent.decision.min).toBe(2); // 5 - 3 = 2 cards to discard
+      expect(decisionEvent.decision.max).toBe(2);
     });
 
     it("should correctly discard cards and reduce hand to 3", () => {
@@ -733,6 +733,7 @@ describe("Attack Cards", () => {
 
     it("should give Curse to opponents", () => {
       const state = createTestState([]);
+      state.players.human.hand = ["Witch"];
       state.players.ai = {
         deck: [],
         hand: [],
@@ -741,14 +742,12 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
-      const effect = getCardEffect("Witch");
-      if (!effect) throw new Error("No effect for Witch");
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Witch",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Witch" }, "human");
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       const gainEvents = result.events.filter(
         e => e.type === "CARD_GAINED" && e.card === "Curse",
@@ -760,14 +759,13 @@ describe("Attack Cards", () => {
   describe("Bureaucrat", () => {
     it("should gain Silver to top of deck", () => {
       const state = createTestState([]);
-      const effect = getCardEffect("Bureaucrat");
-      if (!effect) throw new Error("No effect for Bureaucrat");
+      state.players.human.hand = ["Bureaucrat"];
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Bureaucrat",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       const gainEvent = result.events.find(
         e => e.type === "CARD_GAINED" && e.card === "Silver",
@@ -779,6 +777,7 @@ describe("Attack Cards", () => {
 
     it("should make opponents topdeck victory card", () => {
       const state = createTestState([]);
+      state.players.human.hand = ["Bureaucrat"];
       state.players.ai = {
         deck: [],
         hand: ["Copper", "Estate", "Duchy"],
@@ -787,36 +786,34 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
-      const effect = getCardEffect("Bureaucrat");
-      if (!effect) throw new Error("No effect for Bureaucrat");
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Bureaucrat",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
 
-      // Should request opponent to topdeck victory card
-      expect(result.pendingDecision).toBeDefined();
-      if (!result.pendingDecision) throw new Error("No pending decision");
-      expect(result.pendingDecision.player).toBe("ai");
-      expect(result.pendingDecision.cardOptions).toContain("Estate");
-      expect(result.pendingDecision.cardOptions).toContain("Duchy");
-      expect(result.pendingDecision.cardOptions).not.toContain("Copper");
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
+
+      // Should emit DECISION_REQUIRED event for opponent to topdeck victory card
+      const decisionEvent = result.events.find(e => e.type === "DECISION_REQUIRED");
+      expect(decisionEvent).toBeDefined();
+      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED") throw new Error("No decision event");
+      expect(decisionEvent.decision.player).toBe("ai");
+      expect(decisionEvent.decision.cardOptions).toContain("Estate");
+      expect(decisionEvent.decision.cardOptions).toContain("Duchy");
+      expect(decisionEvent.decision.cardOptions).not.toContain("Copper");
     });
   });
 
   describe("Bandit", () => {
     it("should gain Gold", () => {
       const state = createTestState([]);
-      const effect = getCardEffect("Bandit");
-      if (!effect) throw new Error("No effect for Bandit");
+      state.players.human.hand = ["Bandit"];
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Bandit",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bandit" }, "human");
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       const gainEvent = result.events.find(
         e => e.type === "CARD_GAINED" && e.card === "Gold",
@@ -826,6 +823,7 @@ describe("Attack Cards", () => {
 
     it("should trash opponent treasures (not Copper)", () => {
       const state = createTestState([]);
+      state.players.human.hand = ["Bandit"];
       state.players.ai = {
         deck: ["Silver", "Gold", "Copper"],
         hand: [],
@@ -834,14 +832,12 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
-      const effect = getCardEffect("Bandit");
-      if (!effect) throw new Error("No effect for Bandit");
+      state.actions = 1;
 
-      const result = effect({
-        state,
-        player: "human",
-        card: "Bandit",
-      });
+      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bandit" }, "human");
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       // Should gain Gold for player
       const gainEvent = result.events.find(

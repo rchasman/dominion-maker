@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { getCardEffect } from "./base";
 import { applyEvents } from "../events/apply";
 import { resetEventCounter } from "../events/id-generator";
+import { handleCommand } from "../commands/handle";
 import type { GameState, CardName } from "../types/game-state";
 
 /**
@@ -290,6 +291,7 @@ describe("Edge Cases - Opponent Interactions", () => {
 
   it("Militia vs opponent with ≤3 cards skips them", () => {
     const state = createTestState([]);
+    state.players.human.hand = ["Militia"];
     state.players.ai = {
       deck: [],
       hand: ["Copper", "Estate", "Duchy"],
@@ -298,23 +300,21 @@ describe("Edge Cases - Opponent Interactions", () => {
       inPlaySourceIndices: [],
     };
     state.playerOrder = ["human", "ai"];
+    state.actions = 1;
 
-    const effect = getCardEffect("Militia");
-    expect(effect).toBeDefined();
-    if (!effect) return;
+    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
 
-    const result = effect({
-      state,
-      player: "human",
-      card: "Militia",
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
 
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);
-    expect(result.pendingDecision).toBeUndefined();
+    // Should not request decision since opponent has ≤3 cards
+    expect(result.events.find(e => e.type === "DECISION_REQUIRED")).toBeUndefined();
   });
 
   it("Bureaucrat vs opponent with no victory cards skips them", () => {
     const state = createTestState([]);
+    state.players.human.hand = ["Bureaucrat"];
     state.players.ai = {
       deck: [],
       hand: ["Copper", "Silver", "Gold"],
@@ -323,25 +323,23 @@ describe("Edge Cases - Opponent Interactions", () => {
       inPlaySourceIndices: [],
     };
     state.playerOrder = ["human", "ai"];
+    state.actions = 1;
 
-    const effect = getCardEffect("Bureaucrat");
-    expect(effect).toBeDefined();
-    if (!effect) return;
+    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
 
-    const result = effect({
-      state,
-      player: "human",
-      card: "Bureaucrat",
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
 
     expect(
       result.events.find(e => e.type === "CARD_GAINED" && e.card === "Silver"),
     ).toBeDefined();
-    expect(result.pendingDecision).toBeUndefined();
+    // Should not request decision since opponent has no victory cards
+    expect(result.events.find(e => e.type === "DECISION_REQUIRED")).toBeUndefined();
   });
 
   it("Witch with 2 opponents curses both", () => {
     const state = createTestState([], ["Copper", "Silver"]);
+    state.players.human.hand = ["Witch"];
     state.players.ai1 = {
       deck: [],
       hand: [],
@@ -357,16 +355,12 @@ describe("Edge Cases - Opponent Interactions", () => {
       inPlaySourceIndices: [],
     };
     state.playerOrder = ["human", "ai1", "ai2"];
+    state.actions = 1;
 
-    const effect = getCardEffect("Witch");
-    expect(effect).toBeDefined();
-    if (!effect) return;
+    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Witch" }, "human");
 
-    const result = effect({
-      state,
-      player: "human",
-      card: "Witch",
-    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
 
     const curseEvents = result.events.filter(
       e => e.type === "CARD_GAINED" && e.card === "Curse",
