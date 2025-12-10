@@ -26,7 +26,11 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
         },
       };
     },
-    createDecision: ({ opponent, data }, remainingOpponents, attackingPlayer) => ({
+    createDecision: (
+      { opponent, data },
+      remainingOpponents,
+      attackingPlayer,
+    ) => ({
       type: "card_decision",
       player: opponent,
       from: "hand",

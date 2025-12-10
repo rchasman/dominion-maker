@@ -155,7 +155,10 @@ function createReactionEvents(
           causedBy,
         },
       ],
-      updatedBlockedTargets: [...metadata.blockedTargets, metadata.currentTarget],
+      updatedBlockedTargets: [
+        ...metadata.blockedTargets,
+        metadata.currentTarget,
+      ],
     };
   }
 
@@ -305,14 +308,18 @@ function handleAutoReaction(
   if (!ctx.stage?.startsWith("__auto_reaction__")) return null;
 
   const metadata = extractReactionMetadata(ctx);
-  const { events: reactionEvents, updatedBlockedTargets } = createReactionEvents(
-    choice,
-    metadata,
-    ctx.originalCause || ctx.rootEventId,
-  );
+  const { events: reactionEvents, updatedBlockedTargets } =
+    createReactionEvents(
+      choice,
+      metadata,
+      ctx.originalCause || ctx.rootEventId,
+    );
 
   const currentEvents = [...baseEvents, ...reactionEvents];
-  const updatedMetadata = { ...metadata, blockedTargets: updatedBlockedTargets };
+  const updatedMetadata = {
+    ...metadata,
+    blockedTargets: updatedBlockedTargets,
+  };
 
   const nextIndex = metadata.currentTargetIndex + 1;
   if (nextIndex < metadata.allTargets.length) {

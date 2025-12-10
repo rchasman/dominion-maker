@@ -47,7 +47,11 @@ export function orchestrateAttack(
   const firstTarget = opponents[0];
   const reactionEvents = firstTarget
     ? run(() => {
-        const reactions = getAvailableReactions(state, firstTarget, "on_attack");
+        const reactions = getAvailableReactions(
+          state,
+          firstTarget,
+          "on_attack",
+        );
 
         if (reactions.length > 0) {
           // Ask first target for reaction - continuation handled by handleAutoReaction

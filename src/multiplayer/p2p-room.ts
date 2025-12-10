@@ -229,7 +229,7 @@ export class P2PRoom {
       multiplayerLogger.debug(
         `Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`,
       );
-      this.events.push(...newEvents);
+      this.events = [...this.events, ...newEvents];
       this.gameState = projectState(this.events);
       Array.from(this.eventHandlers).map(handler => handler(newEvents));
       this.notifyStateChange();
@@ -411,7 +411,7 @@ export class P2PRoom {
     if (!this.isHost) return;
 
     multiplayerLogger.debug(`Broadcasting ${newEvents.length} events`);
-    this.events.push(...newEvents);
+    this.events = [...this.events, ...newEvents];
     this.gameState = newState;
 
     // Send incremental events to clients
@@ -478,7 +478,7 @@ export class P2PRoom {
       this.pendingUndo.approvals,
       `+ ${playerId}`,
     );
-    this.pendingUndo.approvals.push(playerId);
+    this.pendingUndo.approvals = [...this.pendingUndo.approvals, playerId];
 
     // Check if we have enough approvals
     if (this.pendingUndo.approvals.length >= this.pendingUndo.needed) {
