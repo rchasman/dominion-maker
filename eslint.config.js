@@ -40,6 +40,14 @@ export default defineConfig([
           message: "Use map/filter/reduce instead of forEach",
         },
         {
+          selector: "CallExpression[callee.property.name='push']",
+          message: "Use spread [...arr, item] instead of push() for immutability",
+        },
+        {
+          selector: "CallExpression[callee.property.name='unshift']",
+          message: "Use spread [item, ...arr] instead of unshift() for immutability",
+        },
+        {
           selector: "ForStatement",
           message: "Use map/filter/reduce instead of for loops",
         },
