@@ -22,9 +22,9 @@ interface State {
 }
 
 type Action =
-  | { type: "PREV_TURN" }
+  | { type: "PREV_TURN"; prevTurnIndex: number }
   | { type: "NEXT_TURN"; nextTurnIndex: number }
-  | { type: "PREV_ACTION" }
+  | { type: "PREV_ACTION"; prevActionIndex: number }
   | { type: "NEXT_ACTION"; isLastAction: boolean }
   | { type: "RESET_NAVIGATION" };
 
@@ -33,7 +33,7 @@ function navigationReducer(state: State, action: Action): State {
     case "PREV_TURN":
       return {
         ...state,
-        currentTurnIndex: Math.max(0, state.currentTurnIndex - 1),
+        currentTurnIndex: action.prevTurnIndex,
         currentActionIndex: 0,
         userNavigatedAway: true,
       };
@@ -49,7 +49,7 @@ function navigationReducer(state: State, action: Action): State {
     case "PREV_ACTION":
       return {
         ...state,
-        currentActionIndex: Math.max(0, state.currentActionIndex - 1),
+        currentActionIndex: action.prevActionIndex,
         userNavigatedAway: true,
       };
 
@@ -123,7 +123,7 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   // Handlers - plain functions, no useCallback
   const handlePrevTurn = () => {
     if (hasPrevTurn) {
-      dispatch({ type: "PREV_TURN" });
+      dispatch({ type: "PREV_TURN", prevTurnIndex: currentTurnIndex - 1 });
     }
   };
 
@@ -138,7 +138,10 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
 
   const handlePrevAction = () => {
     if (hasPrevAction) {
-      dispatch({ type: "PREV_ACTION" });
+      dispatch({
+        type: "PREV_ACTION",
+        prevActionIndex: currentActionIndex - 1,
+      });
     }
   };
 
