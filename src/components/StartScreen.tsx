@@ -93,10 +93,9 @@ export function StartScreen({
   onStartSinglePlayer,
   onStartMultiplayer,
 }: StartScreenProps) {
-  const { gameMode, setGameMode, startGame } = useGame();
+  const { gameMode, setGameMode } = useGame();
 
   const handleStartGame = () => {
-    startGame();
     onStartSinglePlayer?.();
   };
 
