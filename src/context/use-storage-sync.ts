@@ -40,7 +40,7 @@ export function useStorageSync(state: {
 
   useSyncToLocalStorage(STORAGE_KEYS.LLM_LOGS, llmLogs, {
     shouldSync: llmLogs.length > 0,
-    serialize: (logs) => {
+    serialize: logs => {
       // Keep only the last 10,000 entries to prevent localStorage quota exceeded errors
       const trimmedLogs = logs.slice(-10000);
       return JSON.stringify(trimmedLogs);

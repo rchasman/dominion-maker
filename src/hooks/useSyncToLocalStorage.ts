@@ -59,7 +59,10 @@ export function useSyncToLocalStorage<T>(
       console.error(`Failed to save ${key} to localStorage:`, error);
 
       // If quota exceeded, clear this specific key and retry once
-      if (error instanceof DOMException && error.name === "QuotaExceededError") {
+      if (
+        error instanceof DOMException &&
+        error.name === "QuotaExceededError"
+      ) {
         console.warn(`Quota exceeded for ${key}, clearing and retrying...`);
         try {
           localStorage.removeItem(key);
