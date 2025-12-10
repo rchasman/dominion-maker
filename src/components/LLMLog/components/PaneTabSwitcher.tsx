@@ -37,17 +37,13 @@ const PANE_TABS: PaneTab[] = [
 interface PaneTabSwitcherProps {
   activePane: PaneType;
   onPaneChange: (pane: PaneType) => void;
-  hidePerformance?: boolean;
 }
 
 export function PaneTabSwitcher({
   activePane,
   onPaneChange,
-  hidePerformance = false,
 }: PaneTabSwitcherProps) {
-  const visibleTabs = hidePerformance
-    ? PANE_TABS.filter(tab => tab.type !== "performance")
-    : PANE_TABS;
+  const visibleTabs = PANE_TABS;
 
   return (
     <div

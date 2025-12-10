@@ -55,11 +55,7 @@ export function DecisionAction({
         handleNextAction={handleNextAction}
       />
 
-      <PaneTabSwitcher
-        activePane={activePane}
-        onPaneChange={setActivePane}
-        hidePerformance={!currentDecision.timingEntry}
-      />
+      <PaneTabSwitcher activePane={activePane} onPaneChange={setActivePane} />
 
       <PaneContent
         activePane={activePane}

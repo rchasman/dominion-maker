@@ -45,7 +45,7 @@ export function LLMLog({
   } = useNavigationState(turns);
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
-  const { activePane, setActivePane } = useActivePane(currentDecision);
+  const { activePane, setActivePane } = useActivePane();
 
   return (
     <div
