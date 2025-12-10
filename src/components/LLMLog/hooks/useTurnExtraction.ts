@@ -51,7 +51,7 @@ export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
       state.buildingTurn &&
       (state.buildingTurn.decisions.length > 0 || state.buildingTurn.pending)
     ) {
-      state.turns.push(state.buildingTurn);
+      state.turns = [...state.turns, state.buildingTurn];
     }
 
     return state.turns;
@@ -60,7 +60,7 @@ export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
 
 function handleAITurnStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
-    state.turns.push(state.buildingTurn);
+    state.turns = [...state.turns, state.buildingTurn];
   }
   state.buildingTurn = {
     turnNumber: state.turns.length + 1,
@@ -75,7 +75,7 @@ function handleAIDecisionResolving(
   state: TurnBuildState,
 ): void {
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
-    state.turns.push(state.buildingTurn);
+    state.turns = [...state.turns, state.buildingTurn];
   }
   const prompt = (entry.data?.prompt as string) || "";
   state.buildingTurn = {
@@ -181,13 +181,16 @@ function handleConsensusVoting(
     ? new Map(state.buildingTurn.modelStatuses)
     : undefined;
 
-  state.buildingTurn.decisions.push({
-    id: entry.id,
-    votingEntry: entry,
-    timingEntry,
-    stepNumber: state.stepNumber,
-    modelStatuses: modelStatusesSnapshot,
-  });
+  state.buildingTurn.decisions = [
+    ...state.buildingTurn.decisions,
+    {
+      id: entry.id,
+      votingEntry: entry,
+      timingEntry,
+      stepNumber: state.stepNumber,
+      modelStatuses: modelStatusesSnapshot,
+    },
+  ];
 }
 
 function processEntry(
