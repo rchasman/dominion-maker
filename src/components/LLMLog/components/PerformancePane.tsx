@@ -167,7 +167,8 @@ function calculateTimingBarState(
     timing.duration === maxDuration &&
     hasMultipleCompleted;
 
-  const thisModelNameWidth = timing.provider.length * CHAR_WIDTH.MODEL_NAME;
+  const formatExtraWidth = timing.format ? 1 : 0;
+  const thisModelNameWidth = (timing.provider.length + formatExtraWidth) * CHAR_WIDTH.MODEL_NAME;
   const extraSpace = modelNameWidth - thisModelNameWidth;
   const barWidthPx = Math.max(
     LAYOUT.MIN_BAR_WIDTH,
@@ -257,6 +258,7 @@ function ModelNameDisplay({
           style={{
             fontSize: "0.7rem",
             fontWeight: "normal",
+            color: "#ffffff",
             opacity: 0.6,
           }}
         >
@@ -465,7 +467,9 @@ function calculateWidths(timings: TimingEntry[]) {
   );
   const timingWidth = longestTimingString * CHAR_WIDTH.TIMING;
 
-  const longestModelName = Math.max(...timings.map(t => t.provider.length));
+  const longestModelName = Math.max(
+    ...timings.map(t => t.provider.length + (t.format ? 1 : 0)),
+  );
   const modelNameWidth = longestModelName * CHAR_WIDTH.MODEL_NAME;
 
   const barAreaWidth =
