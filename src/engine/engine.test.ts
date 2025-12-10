@@ -367,7 +367,9 @@ describe("DominionEngine - Full Game Flow", () => {
 
     expect(playResult.ok).toBe(true);
     expect(engine.state.pendingDecision).toBeDefined();
-    expect(engine.state.pendingDecision!.cardBeingPlayed).toBe("Chapel");
+    if (engine.state.pendingDecision) {
+      expect(engine.state.pendingDecision.cardBeingPlayed).toBe("Chapel");
+    }
 
     // Submit decision to trash 2 cards
     const decisionResult = engine.submitDecision("human", {
@@ -390,7 +392,7 @@ describe("DominionEngine - State Consistency", () => {
     engine.startGame(["human", "ai"]);
 
     // Perform 10 operations
-    for (let i = 0; i < 10; i++) {
+    Array.from({ length: 10 }).forEach(() => {
       engine.state.players.human.hand = ["Festival"];
       engine.state.actions = 1;
 
@@ -404,7 +406,7 @@ describe("DominionEngine - State Consistency", () => {
       // State should always be valid
       expect(engine.state).toBeDefined();
       expect(engine.state.players).toBeDefined();
-    }
+    });
 
     // Event log should have all events
     expect(engine.eventLog.length).toBeGreaterThan(10);
