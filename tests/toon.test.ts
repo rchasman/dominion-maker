@@ -17,7 +17,12 @@ describe("TOON encoding and decoding", () => {
 
   test("encodes array of objects with tab delimiters", () => {
     const data = [
-      { id: 1, name: "Alice", role: "admin", lastLogin: "2025-01-15T10:30:00Z" },
+      {
+        id: 1,
+        name: "Alice",
+        role: "admin",
+        lastLogin: "2025-01-15T10:30:00Z",
+      },
       { id: 2, name: "Bob", role: "user", lastLogin: "2025-01-14T15:22:00Z" },
       {
         id: 3,
