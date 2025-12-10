@@ -1,35 +1,30 @@
 import type { GameState, CardName } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
-import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
+import type { GameEvent, PlayerId } from "../events/types";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { getCardEffect } from "../cards/base";
-import { countVP } from "../lib/game-utils";
 import { applyEvents } from "../events/apply";
-import { peekDraw } from "../cards/effect-types";
 import { shuffle } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
+import {
+  GAME_CONSTANTS,
+  selectRandomKingdomCards,
+  calculateSupply,
+  createDrawEventsForCleanup,
+  getNextPlayer,
+  checkGameOver,
+} from "./handle-helpers";
+import { handleSubmitDecision } from "./handle-decision";
 
-/**
- * Helper to create resource modification events with proper ID and causality.
- */
+/** Create resource modification events with proper ID and causality */
 function createResourceEvents(
-  modifications: Array<{
-    type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED";
-    delta: number;
-  }>,
+  modifications: Array<{ type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED"; delta: number }>,
   causedBy: string,
 ): GameEvent[] {
-  return modifications.map(mod => ({
-    ...mod,
-    id: generateEventId(),
-    causedBy,
-  }));
+  return modifications.map(mod => ({ ...mod, id: generateEventId(), causedBy }));
 }
 
-/**
- * Calculate Merchant bonus for Silver cards.
- * Returns the coin delta to apply (positive when playing, negative when unplaying).
- */
+/** Calculate Merchant bonus for Silver cards */
 function calculateMerchantBonus(
   playerState: { inPlay: CardName[] },
   card: CardName,
@@ -45,10 +40,9 @@ function calculateMerchantBonus(
   if (isPlaying) {
     // When playing: first Silver gets +$1 per Merchant
     return silversInPlay === 0 && merchantsInPlay > 0 ? merchantsInPlay : 0;
-  } else {
-    // When unplaying: if we had exactly 1 Silver, remove the bonus
-    return silversInPlay === 1 && merchantsInPlay > 0 ? -merchantsInPlay : 0;
   }
+  // When unplaying: if we had exactly 1 Silver, remove the bonus
+  return silversInPlay === 1 && merchantsInPlay > 0 ? -merchantsInPlay : 0;
 }
 
 /**
@@ -185,26 +179,27 @@ function handleStartGame(
     "Estate",
   ];
 
-  for (const player of players) {
+  const playerSetupEvents = players.flatMap(player => {
     const shuffledDeck = shuffle([...startingDeck]);
-    events.push({
-      type: "INITIAL_DECK_DEALT",
-      player: player,
-      cards: shuffledDeck,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    });
-
-    // Draw initial hand of 5
-    const initialHand = shuffledDeck.slice(-5);
-    events.push({
-      type: "INITIAL_HAND_DRAWN",
-      player: player,
-      cards: initialHand,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    });
-  }
+    const initialHand = shuffledDeck.slice(-GAME_CONSTANTS.INITIAL_HAND_SIZE);
+    return [
+      {
+        type: "INITIAL_DECK_DEALT" as const,
+        player,
+        cards: shuffledDeck,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      },
+      {
+        type: "INITIAL_HAND_DRAWN" as const,
+        player,
+        cards: initialHand,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      },
+    ];
+  });
+  events.push(...playerSetupEvents);
 
   // Start turn 1
   const turnStartId = generateEventId();
@@ -285,12 +280,13 @@ function handlePlayAction(
     });
 
     // Link all effect events to the root cause
-    for (const effectEvent of result.events) {
-      effectEvent.id = generateEventId();
-      effectEvent.causedBy = rootEventId;
-    }
+    const linkedEffectEvents = result.events.map(effectEvent => ({
+      ...effectEvent,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    }));
 
-    events.push(...result.events);
+    events.push(...linkedEffectEvents);
 
     // If there's a pending decision, add it as an event
     if (result.pendingDecision) {
@@ -394,16 +390,17 @@ function handlePlayAllTreasures(
     ...treasures.filter(c => c === "Gold"),
   ];
 
-  const events: GameEvent[] = [];
-  let currentState = state;
-
-  for (const card of orderedTreasures) {
-    const result = handlePlayTreasure(currentState, player, card);
-    if (result.ok) {
-      events.push(...result.events);
-      currentState = applyEvents(currentState, result.events);
-    }
-  }
+  const { events } = orderedTreasures.reduce(
+    (acc, card) => {
+      const result = handlePlayTreasure(acc.currentState, player, card);
+      if (!result.ok) return acc;
+      return {
+        events: [...acc.events, ...result.events],
+        currentState: applyEvents(acc.currentState, result.events),
+      };
+    },
+    { events: [] as GameEvent[], currentState: state },
+  );
 
   return { ok: true, events };
 }
@@ -541,37 +538,32 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
     });
 
     // Discard hand and in-play cards (atomic events)
-    const handCards = [...playerState.hand];
-    const inPlayCards = [...playerState.inPlay];
+    const handDiscardEvents: GameEvent[] = playerState.hand.map(card => ({
+      type: "CARD_DISCARDED" as const,
+      player,
+      card,
+      from: "hand" as const,
+      id: generateEventId(),
+      causedBy: endTurnId,
+    }));
 
-    for (const card of handCards) {
-      events.push({
-        type: "CARD_DISCARDED",
-        player: player,
-        card,
-        from: "hand",
-        id: generateEventId(),
-        causedBy: endTurnId,
-      });
-    }
+    const inPlayDiscardEvents: GameEvent[] = playerState.inPlay.map(card => ({
+      type: "CARD_DISCARDED" as const,
+      player,
+      card,
+      from: "inPlay" as const,
+      id: generateEventId(),
+      causedBy: endTurnId,
+    }));
 
-    for (const card of inPlayCards) {
-      events.push({
-        type: "CARD_DISCARDED",
-        player: player,
-        card,
-        from: "inPlay",
-        id: generateEventId(),
-        causedBy: endTurnId,
-      });
-    }
+    events.push(...handDiscardEvents, ...inPlayDiscardEvents);
 
     // Draw 5 new cards
     const afterDiscard = applyEvents(state, events);
     const drawEvents = createDrawEventsForCleanup(
       afterDiscard,
       player,
-      5,
+      GAME_CONSTANTS.INITIAL_HAND_SIZE,
       endTurnId,
     );
     events.push(...drawEvents);
@@ -610,184 +602,13 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
   return { ok: true, events };
 }
 
-function handleSubmitDecision(
-  state: GameState,
-  player: PlayerId,
-  choice: DecisionChoice,
-): CommandResult {
-  if (!state.pendingDecision) {
-    return { ok: false, error: "No pending decision" };
-  }
-  if (state.pendingDecision.player !== player) {
-    return { ok: false, error: "Not your decision" };
-  }
-
-  const events: GameEvent[] = [];
-
-  // Save decision info before resolving (we'll need it after the decision is cleared)
-  const decisionPlayer = state.pendingDecision.player;
-  const cardBeingPlayed = state.pendingDecision.cardBeingPlayed;
-  const stage = state.pendingDecision.stage;
-  const metadata = state.pendingDecision.metadata;
-
-  // Get the original cause from metadata (set when DECISION_REQUIRED was created)
-  const originalCause = metadata?.originalCause as string | undefined;
-
-  // Root cause event - resolving the decision
-  const rootEventId = generateEventId();
-  events.push({
-    type: "DECISION_RESOLVED",
-    player: player,
-    choice,
-    id: rootEventId,
-  });
-
-  // Check if this is a Throne Room execution
-  const throneRoomTarget = metadata?.throneRoomTarget as string | undefined;
-  const executionsRemaining = metadata?.throneRoomExecutionsRemaining as
-    | number
-    | undefined;
-
-  if (throneRoomTarget && executionsRemaining && executionsRemaining > 0) {
-    // Execute the throned card
-    const midState = applyEvents(state, events);
-    const targetEffect = getCardEffect(throneRoomTarget);
-
-    if (targetEffect) {
-      const result = targetEffect({
-        state: midState,
-        player: state.activePlayer,
-        card: throneRoomTarget,
-      });
-
-      // Play the card (move from hand to inPlay)
-      events.push({
-        type: "CARD_PLAYED",
-        player: state.activePlayer,
-        card: throneRoomTarget,
-      });
-
-      // Link effect events
-      for (const effectEvent of result.events) {
-        effectEvent.id = generateEventId();
-        effectEvent.causedBy = originalCause || rootEventId;
-      }
-      events.push(...result.events);
-
-      if (result.pendingDecision) {
-        // Card has a decision - preserve throne room context
-        events.push({
-          type: "DECISION_REQUIRED",
-          decision: {
-            ...result.pendingDecision,
-            metadata: {
-              ...result.pendingDecision.metadata,
-              throneRoomTarget,
-              throneRoomExecutionsRemaining: executionsRemaining - 1,
-            },
-          },
-          id: generateEventId(),
-          causedBy: rootEventId,
-        });
-      } else if (executionsRemaining > 1) {
-        // First execution done, no decision - execute again
-        const secondMidState = applyEvents(midState, [...result.events]);
-        const secondResult = targetEffect({
-          state: secondMidState,
-          player: state.activePlayer,
-          card: throneRoomTarget,
-        });
-
-        for (const effectEvent of secondResult.events) {
-          effectEvent.id = generateEventId();
-          effectEvent.causedBy = originalCause || rootEventId;
-        }
-        events.push(...secondResult.events);
-
-        if (secondResult.pendingDecision) {
-          events.push({
-            type: "DECISION_REQUIRED",
-            decision: {
-              ...secondResult.pendingDecision,
-              metadata: {
-                ...secondResult.pendingDecision.metadata,
-                throneRoomTarget,
-                throneRoomExecutionsRemaining: 0,
-              },
-            },
-            id: generateEventId(),
-            causedBy: rootEventId,
-          });
-        }
-      }
-    }
-    return { ok: true, events };
-  }
-
-  // Continue the card effect with the decision
-  if (cardBeingPlayed) {
-    const effect = getCardEffect(cardBeingPlayed);
-    if (effect) {
-      const midState = applyEvents(state, events);
-      // Reconstruct minimal pendingDecision for card effect to use
-      // (midState.pendingDecision is null after DECISION_RESOLVED, but card effects need it)
-      const effectState: GameState = {
-        ...midState,
-        pendingDecision: {
-          type: "card_decision",
-          player: decisionPlayer,
-          from: "hand",
-          prompt: "",
-          cardOptions: [],
-          min: 0,
-          max: 0,
-          cardBeingPlayed: cardBeingPlayed,
-          stage: stage,
-          metadata: metadata,
-        },
-      };
-
-      const result = effect({
-        state: effectState,
-        player: state.activePlayer, // Original player who played the card
-        card: cardBeingPlayed,
-        decision: choice,
-        stage,
-      });
-
-      // Link all continuation effects to the original cause (PLAY_ACTION), not the DECISION_RESOLVED
-      // This makes the log show discards nested under the attack card, not as separate entries
-      for (const effectEvent of result.events) {
-        effectEvent.id = generateEventId();
-        effectEvent.causedBy = originalCause || rootEventId; // Fall back to rootEventId if no original cause
-      }
-
-      events.push(...result.events);
-
-      if (result.pendingDecision) {
-        events.push({
-          type: "DECISION_REQUIRED",
-          decision: {
-            ...result.pendingDecision,
-            cardBeingPlayed,
-          },
-          id: generateEventId(),
-          causedBy: rootEventId,
-        });
-      }
-    }
-  }
-
-  return { ok: true, events };
-}
-
 function handleRequestUndo(
   _state: GameState,
   player: PlayerId,
   toEventId: string,
   reason?: string,
 ): CommandResult {
-  const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const requestId = `undo_${Date.now()}_${Math.random().toString(GAME_CONSTANTS.UUID_BASE).slice(GAME_CONSTANTS.UUID_SLICE)}`;
 
   const events: GameEvent[] = [
     {
@@ -801,204 +622,4 @@ function handleRequestUndo(
   ];
 
   return { ok: true, events };
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-function selectRandomKingdomCards(): CardName[] {
-  const allKingdom: CardName[] = [
-    "Cellar",
-    "Chapel",
-    "Moat",
-    "Harbinger",
-    "Merchant",
-    "Vassal",
-    "Village",
-    "Workshop",
-    "Bureaucrat",
-    "Gardens",
-    "Militia",
-    "Moneylender",
-    "Poacher",
-    "Remodel",
-    "Smithy",
-    "Throne Room",
-    "Bandit",
-    "Council Room",
-    "Festival",
-    "Laboratory",
-    "Library",
-    "Market",
-    "Mine",
-    "Sentry",
-    "Witch",
-    "Artisan",
-  ];
-
-  // Simple shuffle for now (could use seeded RNG)
-  const shuffled = [...allKingdom].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 10);
-}
-
-const SUPPLY_CONSTANTS = {
-  COPPER_BASE: 60,
-  COPPER_PER_PLAYER: 7,
-  SILVER_COUNT: 40,
-  GOLD_COUNT: 30,
-  CURSE_PER_OPPONENT: 10,
-  KINGDOM_CARD_COUNT: 10,
-  VICTORY_CARD_COUNT_2P: 8,
-  VICTORY_CARD_COUNT_3P_PLUS: 12,
-};
-
-function calculateSupply(
-  playerCount: number,
-  kingdomCards: CardName[],
-): Record<string, number> {
-  const supply: Record<string, number> = {};
-
-  // Victory cards scale with player count
-  const victoryCount =
-    playerCount <= 2
-      ? SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_2P
-      : SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_3P_PLUS;
-
-  supply.Estate = victoryCount;
-  supply.Duchy = victoryCount;
-  supply.Province = victoryCount;
-
-  // Treasure cards
-  supply.Copper =
-    SUPPLY_CONSTANTS.COPPER_BASE -
-    playerCount * SUPPLY_CONSTANTS.COPPER_PER_PLAYER;
-  supply.Silver = SUPPLY_CONSTANTS.SILVER_COUNT;
-  supply.Gold = SUPPLY_CONSTANTS.GOLD_COUNT;
-
-  // Curses scale with player count
-  supply.Curse = (playerCount - 1) * SUPPLY_CONSTANTS.CURSE_PER_OPPONENT;
-
-  // Kingdom cards (10 each)
-  for (const card of kingdomCards) {
-    supply[card] =
-      card === "Gardens" ? victoryCount : SUPPLY_CONSTANTS.KINGDOM_CARD_COUNT;
-  }
-
-  return supply;
-}
-
-function createDrawEventsForCleanup(
-  state: GameState,
-  player: string,
-  count: number,
-  causedBy?: string,
-): GameEvent[] {
-  const playerState = state.players[player];
-  if (!playerState) return [];
-
-  const events: GameEvent[] = [];
-  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
-    playerState,
-    count,
-  );
-
-  if (shuffled && cardsBeforeShuffle) {
-    // Draw cards before shuffle
-    for (const card of cardsBeforeShuffle) {
-      events.push({
-        type: "CARD_DRAWN",
-        player,
-        card,
-        id: generateEventId(),
-        causedBy,
-      });
-    }
-
-    // Then shuffle
-    events.push({
-      type: "DECK_SHUFFLED",
-      player,
-      newDeckOrder,
-      id: generateEventId(),
-      causedBy,
-    });
-
-    // Then draw remaining cards after shuffle
-    const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
-    for (const card of cardsAfterShuffle) {
-      events.push({
-        type: "CARD_DRAWN",
-        player,
-        card,
-        id: generateEventId(),
-        causedBy,
-      });
-    }
-  } else {
-    // No shuffle, just draw all cards
-    for (const card of cards) {
-      events.push({
-        type: "CARD_DRAWN",
-        player,
-        card,
-        id: generateEventId(),
-        causedBy,
-      });
-    }
-  }
-
-  return events;
-}
-
-function getNextPlayer(state: GameState, currentPlayer: string): string {
-  const playerOrder = state.playerOrder || ["human", "ai"];
-  const currentIdx = playerOrder.indexOf(currentPlayer);
-  const nextIdx = (currentIdx + 1) % playerOrder.length;
-  return playerOrder[nextIdx];
-}
-
-function checkGameOver(state: GameState): GameEvent | null {
-  // Province pile empty
-  if ((state.supply.Province || 0) <= 0) {
-    return createGameOverEvent(state, "provinces_empty");
-  }
-
-  // Three piles empty
-  const emptyPiles = Object.values(state.supply).filter(
-    count => count <= 0,
-  ).length;
-  if (emptyPiles >= 3) {
-    return createGameOverEvent(state, "three_piles_empty");
-  }
-
-  return null;
-}
-
-function createGameOverEvent(
-  state: GameState,
-  reason: "provinces_empty" | "three_piles_empty",
-): GameEvent {
-  const scores: Record<string, number> = {};
-
-  let maxScore = -Infinity;
-  let winner: string | null = null;
-
-  for (const [playerId, playerState] of Object.entries(state.players)) {
-    if (!playerState) continue;
-    const score = countVP(playerState);
-    scores[playerId] = score;
-
-    if (score > maxScore) {
-      maxScore = score;
-      winner = playerId;
-    }
-  }
-
-  return {
-    type: "GAME_ENDED",
-    winner,
-    scores,
-    reason,
-  };
 }
