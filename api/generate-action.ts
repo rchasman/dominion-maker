@@ -2,7 +2,7 @@ import { generateObject, generateText } from "ai";
 import { createGateway } from "@ai-sdk/gateway";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
-import { MODEL_MAP } from "../src/config/models";
+import { MODEL_MAP, MODELS } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { run } from "../src/lib/run";
@@ -111,6 +111,25 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   apiLogger.error("AI_GATEWAY_API_KEY is not set");
 } else {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
+}
+
+// Get provider options for AI Gateway routing
+function getProviderOptions(providerId: string) {
+  const modelConfig = MODELS.find(m => m.id === providerId);
+  if (!modelConfig) return {};
+
+  // Cerebras and Groq need explicit provider routing
+  if (modelConfig.provider === "cerebras" || modelConfig.provider === "groq") {
+    return {
+      providerOptions: {
+        gateway: {
+          only: [modelConfig.provider],
+        },
+      },
+    };
+  }
+
+  return {};
 }
 
 interface VercelRequest {
@@ -299,6 +318,7 @@ async function generateActionWithTextFallback(params: {
     system: DOMINION_SYSTEM_PROMPT,
     prompt: jsonPrompt,
     maxRetries: 0,
+    ...getProviderOptions(provider),
   });
 
   const parsed = parseTextResponse(result.text, provider);
@@ -437,6 +457,7 @@ async function processGenerationRequest(
     system: DOMINION_SYSTEM_PROMPT,
     prompt: userMessage,
     maxRetries: 0,
+    ...getProviderOptions(provider),
   });
 
   return res.status(HTTP_OK).json({ action: result.object, strategySummary });
