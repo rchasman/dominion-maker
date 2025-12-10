@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback } from "react";
+import { useReducer, useEffect, useCallback, useMemo } from "react";
 import type { Turn } from "../types";
 
 export interface NavigationState {
@@ -94,13 +94,9 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
     userNavigatedAway: false,
   });
 
-  // Auto-advance to latest turn and action when new data arrives
-  const lastTurn = turns[turns.length - 1];
-  const lastTurnDecisionsLength = lastTurn?.decisions.length;
-  const lastTurnPending = lastTurn?.pending;
-
-  useEffect(() => {
-    if (state.userNavigatedAway || turns.length === 0) return;
+  // Derive target indices for auto-advance
+  const targetIndices = useMemo(() => {
+    if (state.userNavigatedAway || turns.length === 0) return null;
 
     const lastTurnIndex = turns.length - 1;
     const lastTurn = turns[lastTurnIndex];
@@ -108,7 +104,15 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
       ? lastTurn.decisions.length
       : lastTurn.decisions.length - 1;
 
-    // Only dispatch if we're not already at the latest
+    return { lastTurnIndex, lastActionIndex };
+  }, [turns, state.userNavigatedAway]);
+
+  // Auto-advance to latest turn and action when new data arrives
+  useEffect(() => {
+    if (!targetIndices) return;
+
+    const { lastTurnIndex, lastActionIndex } = targetIndices;
+
     if (
       state.currentTurnIndex !== lastTurnIndex ||
       state.currentActionIndex !== lastActionIndex
@@ -119,15 +123,7 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
         lastActionIndex,
       });
     }
-  }, [
-    turns,
-    turns.length,
-    lastTurnDecisionsLength,
-    lastTurnPending,
-    state.userNavigatedAway,
-    state.currentTurnIndex,
-    state.currentActionIndex,
-  ]);
+  }, [targetIndices, state.currentTurnIndex, state.currentActionIndex]);
 
   // Derive computed values
   const currentTurn = turns[state.currentTurnIndex];
