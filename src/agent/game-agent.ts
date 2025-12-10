@@ -88,6 +88,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     currentState,
     humanChoice,
     strategySummary,
+    customStrategy,
     abortController,
     pendingModels,
     modelStartTimes,

@@ -1,41 +1,32 @@
-export const DOMINION_SYSTEM_PROMPT = `Data is in TOON format (2-space indent, arrays show length and fields).
+export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic action per call.
 
-\`\`\`toon
-users[3]{id,name,role,lastLogin}:
-  1	Alice	admin	2025-01-15T10:30:00Z
-  2	Bob	user	2025-01-14T15:22:00Z
-  3	Charlie	user	2025-01-13T09:45:00Z
-\`\`\`
-
-Task: Return only users with role "user" as TOON. Use the same header format. Set [N] to match the row count. Output only the code block.
-
----
-
-You are a Dominion AI. Choose ONE atomic action per call.
+Game facts are provided in TOON format (tab-delimited, validated structure).
 
 ## Rules
-- Choose exactly one action from the LEGAL ACTIONS list provided
-- For end_phase: omit "card" field. Example: {"type": "end_phase", "reasoning": "..."}
+- Choose exactly one action from the LEGAL ACTIONS list
+- For end_phase: omit "card" field
 
-## Game Structure
-Action phase: Play action cards (costs 1 action). End when actions=0 or no useful actions.
-Buy phase: Play treasures (add coins), then buy cards (costs 1 buy, ≤coins). End when buys=0.
-Cleanup: Automatic - inPlay→discard, hand→discard, draw 5, next player.
+## Game Phases
+Action: Play action cards (costs 1 action)
+Buy: Play treasures (add coins), buy cards (costs 1 buy, ≤coins)
+Cleanup: Auto (inPlay→discard, hand→discard, draw 5)
 
 ## Card Reference
 Treasures: Copper($1), Silver($2), Gold($3)
-Strong Actions: Smithy(+3cards), Market(+1card,+1action,+1buy,+$1), Laboratory(+2cards,+1action), Village(+1card,+2actions), Festival(+2actions,+1buy,+$2)
+Actions: Village(+1card,+2actions), Smithy(+3cards), Market(+1card,+1action,+1buy,+$1), Laboratory(+2cards,+1action), Festival(+2actions,+1buy,+$2)
 Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
-## Context Reading
-- Turn number and Early/Mid/Late game stage
-- Win condition math: how many Provinces you need
-- Your deck metrics: treasure density, avg $/card, action/village counts, cycle time
-- Opponent's deck metrics and threat level
-- "Play Gold(+$3) → $8: Province($8)" shows what each treasure unlocks
-- Supply status and pile counts
+## TOON Facts Fields
+game.turn, game.stage (Early/Mid/Late)
+score.you, score.opponent, score.diff, score.youNeedProvinces, score.theyNeedProvinces
+yourDeck.composition{}, yourDeck.avgTreasureValue, yourDeck.villages, yourDeck.terminals, yourDeck.cycleTime
+opponent.composition{}, opponent.avgTreasureValue
+supply{} - available card piles
+hand.coinsActivated, hand.coinsInHand, hand.maxCoins, hand.treasuresInHand[]
+buyOptions.current[], buyOptions.unlocks[].treasure/.newTotal/.unlocked[]
+customStrategy - user override if present
 
-Include brief reasoning with each action.`;
+Include brief reasoning.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
 export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (2-space indent, arrays show length and fields).

@@ -101,6 +101,7 @@ export function ModelSettingsPanel({
           style={{
             width: "100%",
             minHeight: "120px",
+            maxWidth: "100%",
             padding: "var(--space-2)",
             fontSize: "0.8125rem",
             fontFamily: "monospace",
@@ -108,8 +109,11 @@ export function ModelSettingsPanel({
             border: "1px solid var(--color-border)",
             borderRadius: "4px",
             background: "var(--color-bg)",
-            color: "var(--color-text)",
+            color: "var(--color-text-primary)",
             resize: "vertical",
+            boxSizing: "border-box",
+            overflowWrap: "break-word",
+            whiteSpace: "pre-wrap",
           }}
         />
         <div

@@ -7,6 +7,72 @@ import {
 } from "../data/cards";
 import { countVP as countVPFromCards } from "../lib/board-utils";
 import { run } from "../lib/run";
+import { encodeToon } from "../lib/toon";
+import { z } from "zod";
+
+/**
+ * Zod schema for strategic facts
+ */
+const StrategicFactsSchema = z.object({
+  game: z.object({
+    turn: z.number(),
+    stage: z.enum(["Early", "Mid", "Late"]),
+  }),
+  score: z.object({
+    you: z.number(),
+    opponent: z.number(),
+    diff: z.number(),
+    youNeedProvinces: z.number(),
+    theyNeedProvinces: z.number(),
+  }),
+  yourDeck: z.object({
+    total: z.number(),
+    composition: z.record(z.number()),
+    treasures: z.number(),
+    actions: z.number(),
+    victory: z.number(),
+    totalTreasureValue: z.number(),
+    avgTreasureValue: z.number(),
+    villages: z.number(),
+    terminals: z.number(),
+    cycleTime: z.number(),
+  }),
+  yourPiles: z.object({
+    deck: z.number(),
+    discard: z.number(),
+    shuffleSoon: z.boolean(),
+  }),
+  opponent: z.object({
+    total: z.number(),
+    composition: z.record(z.number()),
+    totalTreasureValue: z.number(),
+    avgTreasureValue: z.number(),
+  }),
+  supply: z.record(z.number()),
+  hand: z.object({
+    cards: z.array(z.string()),
+    coinsActivated: z.number(),
+    coinsInHand: z.number(),
+    maxCoins: z.number(),
+    treasuresInHand: z.array(z.string()),
+  }),
+  buyOptions: z
+    .object({
+      current: z.array(z.object({ card: z.string(), cost: z.number() })),
+      unlocks: z.array(
+        z.object({
+          treasure: z.string(),
+          value: z.number(),
+          newTotal: z.number(),
+          unlocked: z.array(z.object({ card: z.string(), cost: z.number() })),
+        }),
+      ),
+    })
+    .optional(),
+  customStrategy: z.string().optional(),
+});
+
+type StrategicFacts = z.infer<typeof StrategicFactsSchema>;
 
 /**
  * Extracts recent turn actions from game log for strategy analysis
@@ -289,8 +355,7 @@ function formatStrategyAnalysis(
 }
 
 /**
- * Builds human-readable game facts that a real Dominion player would track.
- * Pure data - no strategy advice.
+ * Builds structured game facts as TOON-encoded data
  */
 export function buildStrategicContext(
   state: GameState,
@@ -329,6 +394,21 @@ export function buildStrategicContext(
     opponent.inPlay,
   );
 
+  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
+  const gameStage: "Early" | "Mid" | "Late" =
+    state.turn <= EARLY_GAME_TURN_THRESHOLD
+      ? "Early"
+      : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
+        ? "Late"
+        : "Mid";
+
+  const PROVINCE_VP = 6;
+  const youNeed = Math.ceil((opponentVP + 1 - currentVP) / PROVINCE_VP);
+  const theyNeed = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
+
+  const yourAnalysis = analyzeDeck(currentAllCards);
+  const opponentAnalysis = analyzeDeck(opponentAllCards);
+
   const treasures = currentPlayer.hand.filter(c => isTreasureCard(c));
   const treasureValue = treasures.reduce(
     (sum, c) => sum + (CARDS[c].coins || 0),
@@ -336,56 +416,102 @@ export function buildStrategicContext(
   );
   const maxCoins = state.coins + treasureValue;
 
-  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
-  const shuffleSoon =
-    currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0;
-
-  const gameStage =
-    state.turn <= EARLY_GAME_TURN_THRESHOLD
-      ? "Early"
-      : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
-        ? "Late"
-        : "Mid";
-
-  const opponentAnalysis = analyzeDeck(opponentAllCards);
-
-  const sections = [
-    formatScoreboard(currentVP, opponentVP, state.turn, provincesLeft),
-    formatDeckComposition(currentAllCards),
-    `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards${shuffleSoon ? " (shuffle next turn)" : ""}`,
-    formatSupplyStatus(state.supply),
-    `OPPONENT DECK (${opponentAllCards.length} cards): ${opponentAnalysis.breakdown}
-Opponent: $${opponentAnalysis.totalTreasureValue} total, avg $${opponentAnalysis.avgTreasureValue.toFixed(1)}/treasure`,
-    formatHandStatus(currentPlayer.hand, state.coins, state.phase),
-  ];
-
-  if (state.phase === "buy") {
-    const buyOptions = formatAvailableBuyOptions(
-      state.supply,
-      state.coins,
+  const facts: StrategicFacts = {
+    game: { turn: state.turn, stage: gameStage },
+    score: {
+      you: currentVP,
+      opponent: opponentVP,
+      diff: currentVP - opponentVP,
+      youNeedProvinces: youNeed,
+      theyNeedProvinces: theyNeed,
+    },
+    yourDeck: {
+      total: currentAllCards.length,
+      composition: yourAnalysis.counts,
+      treasures: yourAnalysis.treasures,
+      actions: yourAnalysis.actions,
+      victory: yourAnalysis.victory,
+      totalTreasureValue: yourAnalysis.totalTreasureValue,
+      avgTreasureValue: yourAnalysis.avgTreasureValue,
+      villages: yourAnalysis.villages,
+      terminals: yourAnalysis.terminals,
+      cycleTime: parseFloat((currentAllCards.length / 5).toFixed(1)),
+    },
+    yourPiles: {
+      deck: currentPlayer.deck.length,
+      discard: currentPlayer.discard.length,
+      shuffleSoon:
+        currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0,
+    },
+    opponent: {
+      total: opponentAllCards.length,
+      composition: opponentAnalysis.counts,
+      totalTreasureValue: opponentAnalysis.totalTreasureValue,
+      avgTreasureValue: opponentAnalysis.avgTreasureValue,
+    },
+    supply: state.supply,
+    hand: {
+      cards: currentPlayer.hand,
+      coinsActivated: state.coins,
+      coinsInHand: treasureValue,
       maxCoins,
-      treasures,
-    );
-    if (buyOptions) {
-      sections.push(buyOptions);
-    }
+      treasuresInHand: treasures,
+    },
+    customStrategy: customStrategy?.trim() || undefined,
+  };
+
+  // Add buy options if in buy phase
+  if (state.phase === "buy") {
+    const current = Object.entries(state.supply)
+      .filter(([cardName, count]) => {
+        const card = cardName as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        return count > 0 && cost <= state.coins;
+      })
+      .map(([cardName]) => ({
+        card: cardName,
+        cost: CARDS[cardName as CardName]?.cost || 0,
+      }));
+
+    const unlocks = treasures
+      .map((treasure, idx) => {
+        const treasureValue = CARDS[treasure].coins || 0;
+        const runningTotal =
+          state.coins +
+          treasures
+            .slice(0, idx + 1)
+            .reduce((sum, t) => sum + (CARDS[t].coins || 0), 0);
+        const prevTotal =
+          idx === 0
+            ? state.coins
+            : state.coins +
+              treasures
+                .slice(0, idx)
+                .reduce((sum, t) => sum + (CARDS[t].coins || 0), 0);
+
+        const unlocked = Object.entries(state.supply)
+          .filter(([cardName, count]) => {
+            const cost = CARDS[cardName as CardName]?.cost || 0;
+            return count > 0 && cost <= runningTotal && cost > prevTotal;
+          })
+          .map(([cardName]) => ({
+            card: cardName,
+            cost: CARDS[cardName as CardName]?.cost || 0,
+          }));
+
+        return {
+          treasure,
+          value: treasureValue,
+          newTotal: runningTotal,
+          unlocked,
+        };
+      })
+      .filter(u => u.unlocked.length > 0);
+
+    facts.buyOptions = { current, unlocks };
   }
 
-  if (strategySummary) {
-    sections.push(
-      ...formatStrategyAnalysis(
-        strategySummary,
-        state.activePlayer,
-        opponentId,
-      ),
-    );
-  }
-
-  if (customStrategy && customStrategy.trim()) {
-    sections.push(`\nCUSTOM STRATEGY OVERRIDE:\n${customStrategy.trim()}`);
-  }
-
-  return sections.join("\n");
+  return encodeToon(facts);
 }
 
 const calculateVP = (
@@ -404,6 +530,7 @@ interface DeckAnalysis {
   avgTreasureValue: number;
   terminals: number;
   villages: number;
+  counts: Record<string, number>;
 }
 
 interface DeckAccumulator {
@@ -464,5 +591,6 @@ function analyzeDeck(cards: CardName[]): DeckAnalysis {
     avgTreasureValue: treasureCount > 0 ? treasureValue / treasureCount : 0,
     terminals,
     villages,
+    counts,
   };
 }
