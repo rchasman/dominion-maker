@@ -3,15 +3,59 @@ import generateActionHandler from "./api/generate-action";
 import analyzeStrategyHandler from "./api/analyze-strategy";
 import { serverLogger } from "./src/lib/logger";
 
+// HTTP Status Codes
+const HTTP_NO_CONTENT = 204;
+const HTTP_NOT_FOUND = 404;
+const HTTP_OK = 200;
+
+// Server Configuration
+const SERVER_PORT = 5174;
+const EXIT_CODE_SUCCESS = 0;
+
+// Type definitions for Bun server
+interface BunRequest {
+  method: string;
+  url: string;
+  text(): Promise<string>;
+}
+
+interface BunServer {
+  port: number;
+  stop(): void;
+}
+
+interface BunServeOptions {
+  port: number;
+  fetch: (req: BunRequest) => Promise<Response>;
+}
+
+// Declare global Bun object for TypeScript
+declare const Bun: {
+  serve(options: BunServeOptions): BunServer;
+};
+
+interface VercelRequest {
+  method?: string;
+  body?: unknown;
+  text?: () => Promise<string>;
+}
+
+interface VercelResponse {
+  status: (code: number) => VercelResponse;
+  json: (data: unknown) => VercelResponse;
+  send: (data: string) => VercelResponse;
+  setHeader: (key: string, value: string) => VercelResponse;
+}
+
 const server = Bun.serve({
-  port: 5174,
-  async fetch(req) {
+  port: SERVER_PORT,
+  async fetch(req: BunRequest) {
     const url = new URL(req.url);
 
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
       return new Response(null, {
-        status: 204,
+        status: HTTP_NO_CONTENT,
         headers: {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -27,16 +71,16 @@ const server = Bun.serve({
     ) {
       // Adapt Bun Request to Vercel-style request/response
       const body = await req.text();
-      const vercelReq = {
+      const vercelReq: VercelRequest = {
         method: req.method,
         body: JSON.parse(body),
       };
 
-      let statusCode = 200;
+      let statusCode = HTTP_OK;
       let responseData: unknown = null;
       const responseHeaders: Record<string, string> = {};
 
-      const vercelRes = {
+      const vercelRes: VercelResponse = {
         status: (code: number) => {
           statusCode = code;
           return vercelRes;
@@ -76,7 +120,7 @@ const server = Bun.serve({
       );
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response("Not Found", { status: HTTP_NOT_FOUND });
   },
 });
 
@@ -86,11 +130,11 @@ serverLogger.info(`API server running at http://localhost:${server.port}`);
 process.on("SIGTERM", () => {
   serverLogger.info("SIGTERM received, shutting down gracefully");
   server.stop();
-  process.exit(0);
+  process.exit(EXIT_CODE_SUCCESS);
 });
 
 process.on("SIGINT", () => {
   serverLogger.info("SIGINT received, shutting down gracefully");
   server.stop();
-  process.exit(0);
+  process.exit(EXIT_CODE_SUCCESS);
 });
