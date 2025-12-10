@@ -17,13 +17,8 @@ Actions: Village(+1card,+2actions), Smithy(+3cards), Market(+1card,+1action,+1bu
 Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
 ## Strategy
-Action phase: Play draw cards first (Smithy, Lab, Village), then terminals
-Buy phase:
-  1. **CRITICAL: Play ALL treasures from hand BEFORE buying anything**
-  2. Then buy: Province($8) > Gold($6) > Silver($3) > useful actions
-  3. If coins=0 and no treasures in hand, END PHASE (don't buy Curse/Copper)
-Early: Trash weak cards with Chapel
-Late: Buy Provinces, then Duchies when Provinces low
+Actions: Play +cards/+actions first, then terminals
+Buying: Play ALL treasures first. Build treasure economy (Province > Gold > Silver > actions). Don't dilute your deck with weak cards.
 
 ## Pending Decisions
 When pendingDecision exists, pick from pendingDecision.options only:
