@@ -231,21 +231,24 @@ export function aggregateLogEntries(
 ): (LogEntry & { eventIds?: string[] })[] {
   if (log.length === 0) return [];
 
-  const result: (LogEntry & { eventIds?: string[] })[] = [];
-  let i = 0;
+  const processEntries = (
+    index: number,
+    acc: (LogEntry & { eventIds?: string[] })[],
+  ): (LogEntry & { eventIds?: string[] })[] => {
+    if (index >= log.length) return acc;
 
-  while (i < log.length) {
-    const current = log[i];
+    const current = log[index];
 
     if (isAggregatable(current)) {
-      const { entries, count } = collectConsecutive(log, i);
-      result.push(count > 1 ? aggregateGroup(entries) : current);
-      i += count;
-    } else {
-      result.push(current);
-      i++;
+      const { entries, count } = collectConsecutive(log, index);
+      return processEntries(index + count, [
+        ...acc,
+        count > 1 ? aggregateGroup(entries) : current,
+      ]);
     }
-  }
 
-  return result;
+    return processEntries(index + 1, [...acc, current]);
+  };
+
+  return processEntries(0, []);
 }

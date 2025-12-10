@@ -1,9 +1,4 @@
-import type {
-  CardName,
-  PlayerState,
-  Player,
-  LogEntry,
-} from "../types/game-state";
+import type { CardName, PlayerState } from "../types/game-state";
 import { countVP as countVPFromCards } from "./board-utils";
 
 export function shuffle<T>(array: T[]): T[] {
@@ -102,25 +97,6 @@ export function drawCards(
 }
 
 /** Helper to add draw log entries in correct transactional order */
-export function logDraw(
-  children: LogEntry[],
-  { events }: { events: DrawEvent[] },
-  player: Player,
-): void {
-  children.push(
-    ...events.map(event =>
-      event.type === "shuffle"
-        ? { type: "shuffle-deck" as const, player }
-        : {
-            type: "draw-cards" as const,
-            player,
-            count: event.cards.length,
-            cards: event.cards,
-          },
-    ),
-  );
-}
-
 export function countVP({ deck, hand, discard, inPlay }: PlayerState): number {
   return countVPFromCards([...deck, ...hand, ...discard, ...inPlay]);
 }

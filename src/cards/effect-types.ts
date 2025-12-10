@@ -476,15 +476,19 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
           : getOpponents(state, player);
 
       const opponentData = run(() => {
-        for (const target of targets) {
-          const data = config.filter(target, state);
-          if (data)
-            return {
-              ...data,
-              remainingTargets: targets.filter(t => t !== target),
-            };
-        }
-        return null;
+        const targetWithData = targets
+          .map(target => ({
+            target,
+            data: config.filter(target, state),
+          }))
+          .find(({ data }) => data);
+
+        if (!targetWithData) return null;
+
+        return {
+          ...targetWithData.data,
+          remainingTargets: targets.filter(t => t !== targetWithData.target),
+        };
       });
 
       if (opponentData) {
@@ -512,32 +516,34 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
 
       // Reconstruct opponent data for processing
       const opponentData = config.filter(currentOpponent, state);
-      if (opponentData) {
-        const choiceEvents = config.processChoice(
-          decision,
-          opponentData,
-          state,
-        );
-        events.push(...choiceEvents);
-      }
+      const choiceEvents = opponentData
+        ? config.processChoice(decision, opponentData, state)
+        : [];
+      const allEvents = [...events, ...choiceEvents];
 
       // Find next opponent needing decision
       const nextOpponentData = run(() => {
-        for (const target of remainingOpponents) {
-          const data = config.filter(target, state);
-          if (data)
-            return {
-              ...data,
-              remainingTargets: remainingOpponents.filter(t => t !== target),
-            };
-        }
-        return null;
+        const targetWithData = remainingOpponents
+          .map(target => ({
+            target,
+            data: config.filter(target, state),
+          }))
+          .find(({ data }) => data);
+
+        if (!targetWithData) return null;
+
+        return {
+          ...targetWithData.data,
+          remainingTargets: remainingOpponents.filter(
+            t => t !== targetWithData.target,
+          ),
+        };
       });
 
       if (nextOpponentData) {
         const { remainingTargets, ...rest } = nextOpponentData;
         return {
-          events,
+          events: allEvents,
           pendingDecision: config.createDecision(
             rest,
             remainingTargets,
@@ -546,7 +552,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
           ),
         };
       }
-      return { events };
+      return { events: allEvents };
     }
 
     return { events };

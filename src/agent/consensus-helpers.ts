@@ -198,7 +198,6 @@ export const handleModelResult = (
 ): void => {
   const {
     voteGroups,
-    completedResults,
     aheadByK,
     abortController,
     pendingModels,
@@ -209,14 +208,16 @@ export const handleModelResult = (
     onComplete,
   } = context;
 
-  completedResults.push(modelResult);
-
   if (modelResult.result) {
     const signature = createActionSignature(modelResult.result);
     const existing = voteGroups.get(signature);
     if (existing) {
-      existing.voters.push(modelResult.provider);
-      existing.count++;
+      const updatedVoters = [...existing.voters, modelResult.provider];
+      voteGroups.set(signature, {
+        ...existing,
+        voters: updatedVoters,
+        count: existing.count + 1,
+      });
     } else {
       voteGroups.set(signature, {
         signature,
@@ -441,13 +442,12 @@ export const logConsensusStart = (params: ConsensusStartParams): void => {
         handCounts,
         turnHistory: currentState.turnHistory,
         legalActionsCount: legalActions.length,
-        legalActions: legalActions.map(a =>
-          a.type === "end_phase"
-            ? "end_phase"
-            : a.type === "choose_from_options"
-              ? `choose[${a.optionIndex}]`
-              : `${a.type}(${a.card})`,
-        ),
+        legalActions: legalActions.map(a => {
+          if (a.type === "end_phase") return "end_phase";
+          if (a.type === "choose_from_options")
+            return `choose[${a.optionIndex}]`;
+          return `${a.type}(${a.card})`;
+        }),
       },
     },
   });

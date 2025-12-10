@@ -155,62 +155,56 @@ const executeModel = (context: ModelExecutionContext): void => {
  * Adapted to work with event-sourced state
  */
 function getLegalActions(state: GameState): Action[] {
-  const actions: Action[] = [];
-
   // Pending decision actions - use decision.player, not activePlayer!
   // (e.g., Militia makes opponent discard while human is still active)
   if (state.pendingDecision) {
     const decision = state.pendingDecision;
     const decisionPlayer = decision.player;
     const playerState = state.players[decisionPlayer];
-    if (!playerState) return actions;
+    if (!playerState) return [];
 
     const options = decision.cardOptions || [];
 
     if (decision.stage === "trash") {
-      actions.push(
-        ...options.map(card => ({ type: "trash_card" as const, card })),
-      );
       // Can't skip trashing by selecting nothing - that would be end_phase or a different action
-    } else if (
-      decision.stage === "discard" ||
-      decision.stage === "opponent_discard"
-    ) {
-      // Single card at a time (atomic)
-      actions.push(
-        ...options.map(card => ({ type: "discard_card" as const, card })),
-      );
-      // Can't skip discarding by selecting nothing - that would be end_phase or a different action
-    } else if (decision.stage === "gain" || decision.from === "supply") {
-      actions.push(
-        ...options.map(card => ({ type: "gain_card" as const, card })),
-      );
+      return options.map(card => ({ type: "trash_card" as const, card }));
     }
-    return actions;
+
+    if (decision.stage === "discard" || decision.stage === "opponent_discard") {
+      // Single card at a time (atomic)
+      // Can't skip discarding by selecting nothing - that would be end_phase or a different action
+      return options.map(card => ({ type: "discard_card" as const, card }));
+    }
+
+    if (decision.stage === "gain" || decision.from === "supply") {
+      return options.map(card => ({ type: "gain_card" as const, card }));
+    }
+
+    return [];
   }
 
   // No pending decision - use active player
   const player = state.activePlayer;
   const playerState = state.players[player];
-  if (!playerState) return actions;
+  if (!playerState) return [];
 
   // Action phase
   if (state.phase === "action") {
     const actionCards = playerState.hand.filter(isActionCard);
-    if (state.actions > 0) {
-      actions.push(
-        ...actionCards.map(card => ({ type: "play_action" as const, card })),
-      );
-    }
-    actions.push({ type: "end_phase" });
+    const playActions =
+      state.actions > 0
+        ? actionCards.map(card => ({ type: "play_action" as const, card }))
+        : [];
+    return [...playActions, { type: "end_phase" }];
   }
 
   // Buy phase
   if (state.phase === "buy") {
     const treasures = playerState.hand.filter(isTreasureCard);
-    actions.push(
-      ...treasures.map(card => ({ type: "play_treasure" as const, card })),
-    );
+    const playTreasures = treasures.map(card => ({
+      type: "play_treasure" as const,
+      card,
+    }));
 
     // Buyable cards
     const buyableCards = Object.entries(state.supply)
@@ -221,12 +215,11 @@ function getLegalActions(state: GameState): Action[] {
         );
       })
       .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));
-    actions.push(...buyableCards);
 
-    actions.push({ type: "end_phase" });
+    return [...playTreasures, ...buyableCards, { type: "end_phase" }];
   }
 
-  return actions;
+  return [];
 }
 
 type GenerateActionParams = {
@@ -384,12 +377,13 @@ const runModelsInParallel = async (
     let completedCount = 0;
 
     providers.map((provider, index) => {
-      const modelFormat =
-        dataFormat === "mixed"
-          ? index % 2 === 0
-            ? "json"
-            : "toon"
-          : dataFormat;
+      const modelFormat = run(() => {
+        if (dataFormat === "mixed") {
+          const TWO = 2;
+          return index % TWO === 0 ? "json" : "toon";
+        }
+        return dataFormat;
+      });
 
       return executeModel({
         provider,
@@ -455,13 +449,11 @@ export async function advanceGameStateWithConsensus(
   const legalActions = getLegalActions(currentState);
 
   // Log legal actions for debugging
-  const actionSummaries = legalActions.map(a =>
-    a.type === "end_phase"
-      ? "end_phase"
-      : a.type === "choose_from_options"
-        ? `choose[${a.optionIndex}]`
-        : `${a.type}(${a.card})`,
-  );
+  const actionSummaries = legalActions.map(a => {
+    if (a.type === "end_phase") return "end_phase";
+    if (a.type === "choose_from_options") return `choose[${a.optionIndex}]`;
+    return `${a.type}(${a.card})`;
+  });
 
   // If in buy phase, show detailed supply info
   if (currentState.phase === "buy" && currentState.buys > 0) {

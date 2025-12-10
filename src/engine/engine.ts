@@ -305,7 +305,7 @@ export class DominionEngine {
     const eventsWithIds: GameEvent[] = events.map(event =>
       event.id ? event : { ...event, id: generateEventId() },
     );
-    this.events.push(...eventsWithIds);
+    this.events = [...this.events, ...eventsWithIds];
     this._state = null;
     this.notifyListeners(eventsWithIds);
   }
@@ -327,7 +327,7 @@ export class DominionEngine {
     const eventsWithIds: GameEvent[] = events.map(event =>
       event.id ? event : { ...event, id: generateEventId() },
     );
-    this.events.push(...eventsWithIds);
+    this.events = [...this.events, ...eventsWithIds];
     this._state = null;
     this.notifyListeners(eventsWithIds);
   }
@@ -354,15 +354,15 @@ export class DominionEngine {
       return { ok: false, error: "Request ID mismatch" };
     }
 
-    const events: GameEvent[] = [];
-
     if (type === "DENY_UNDO") {
-      events.push({
-        type: "UNDO_DENIED",
-        requestId,
-        byPlayer: playerId,
-        id: generateEventId(),
-      });
+      const events: GameEvent[] = [
+        {
+          type: "UNDO_DENIED",
+          requestId,
+          byPlayer: playerId,
+          id: generateEventId(),
+        },
+      ];
       this.pendingUndo = null;
       this.appendEvents(events);
       return { ok: true, events };
@@ -370,12 +370,12 @@ export class DominionEngine {
 
     // APPROVE_UNDO
     this.pendingUndo.approvals.add(playerId);
-    events.push({
+    const approvalEvent: GameEvent = {
       type: "UNDO_APPROVED",
       requestId,
       byPlayer: playerId,
       id: generateEventId(),
-    });
+    };
 
     // Check if we have enough approvals
     if (this.pendingUndo.approvals.size >= this.pendingUndo.needed) {
@@ -393,12 +393,14 @@ export class DominionEngine {
       const fromEventId = lastEvent?.id || "";
 
       // Record undo execution
-      events.push({
+      const undoExecutedEvent: GameEvent = {
         type: "UNDO_EXECUTED",
         fromEventId,
         toEventId,
         id: generateEventId(),
-      });
+      };
+
+      const events: GameEvent[] = [approvalEvent, undoExecutedEvent];
 
       // Remove the target event and all events caused by it (atomically)
       this.events = removeEventChain(toEventId, this.events);
@@ -407,10 +409,11 @@ export class DominionEngine {
 
       // Add the undo execution event to the log
       this.appendEvents(events);
-    } else {
-      this.appendEvents(events);
+      return { ok: true, events };
     }
 
+    const events: GameEvent[] = [approvalEvent];
+    this.appendEvents(events);
     return { ok: true, events };
   }
 }

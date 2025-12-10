@@ -8,64 +8,51 @@ import {
 import { countVP as countVPFromCards } from "../lib/board-utils";
 import { run } from "../lib/run";
 import { encodeToon } from "../lib/toon";
-import { z } from "zod";
+import { GAME_CONSTANTS } from "../commands/handle-helpers";
 
-/**
- * Zod schema with self-documenting field names
- */
-const StrategicFactsSchema = z.object({
-  currentTurnNumber: z.number(),
-  gameStage: z.enum(["Early", "Mid", "Late"]),
-  yourVictoryPoints: z.number(),
-  opponentVictoryPoints: z.number(),
-  victoryPointDifference: z.number(),
-  provincesYouNeedToWin: z.number(),
-  provincesTheyNeedToWin: z.number(),
-  yourDeckTotalCards: z.number(),
-  yourDeckComposition: z.record(z.number()),
-  yourTreasureCount: z.number(),
-  yourActionCount: z.number(),
-  yourVictoryCardCount: z.number(),
-  yourTotalTreasureValue: z.number(),
-  yourAvgTreasureValue: z.number(),
-  yourVillageCount: z.number(),
-  yourTerminalCount: z.number(),
-  yourDeckCycleTime: z.number(),
-  yourDrawPileCount: z.number(),
-  yourDiscardPileCount: z.number(),
-  shuffleNextTurn: z.boolean(),
-  opponentDeckTotalCards: z.number(),
-  opponentDeckComposition: z.record(z.number()),
-  opponentTotalTreasureValue: z.number(),
-  opponentAvgTreasureValue: z.number(),
-  supplyPiles: z.record(z.number()),
-  handCards: z.array(z.string()),
-  coinsActivatedThisTurn: z.number(),
-  coinsInUnplayedTreasures: z.number(),
-  maxCoinsIfAllTreasuresPlayed: z.number(),
-  unplayedTreasuresInHand: z.array(z.string()),
-  buyableWithCurrentCoins: z
-    .array(z.object({ card: z.string(), cost: z.number() }))
-    .optional(),
-  whatEachUnplayedTreasureUnlocks: z
-    .array(
-      z.object({
-        treasureName: z.string(),
-        coinValue: z.number(),
-        newCoinTotal: z.number(),
-        cardsUnlocked: z.array(
-          z.object({ card: z.string(), cost: z.number() }),
-        ),
-      }),
-    )
-    .optional(),
-  aiStrategyGameplan: z.string().optional(),
-  aiStrategyRead: z.string().optional(),
-  aiStrategyRecommendation: z.string().optional(),
-  strategyOverride: z.string().optional(),
-});
-
-type StrategicFacts = z.infer<typeof StrategicFactsSchema>;
+type StrategicFacts = {
+  currentTurnNumber: number;
+  gameStage: "Early" | "Mid" | "Late";
+  yourVictoryPoints: number;
+  opponentVictoryPoints: number;
+  victoryPointDifference: number;
+  provincesYouNeedToWin: number;
+  provincesTheyNeedToWin: number;
+  yourDeckTotalCards: number;
+  yourDeckComposition: Record<string, number>;
+  yourTreasureCount: number;
+  yourActionCount: number;
+  yourVictoryCardCount: number;
+  yourTotalTreasureValue: number;
+  yourAvgTreasureValue: number;
+  yourVillageCount: number;
+  yourTerminalCount: number;
+  yourDeckCycleTime: number;
+  yourDrawPileCount: number;
+  yourDiscardPileCount: number;
+  shuffleNextTurn: boolean;
+  opponentDeckTotalCards: number;
+  opponentDeckComposition: Record<string, number>;
+  opponentTotalTreasureValue: number;
+  opponentAvgTreasureValue: number;
+  supplyPiles: Record<string, number>;
+  handCards: string[];
+  coinsActivatedThisTurn: number;
+  coinsInUnplayedTreasures: number;
+  maxCoinsIfAllTreasuresPlayed: number;
+  unplayedTreasuresInHand: string[];
+  buyableWithCurrentCoins?: Array<{ card: string; cost: number }>;
+  whatEachUnplayedTreasureUnlocks?: Array<{
+    treasureName: string;
+    coinValue: number;
+    newCoinTotal: number;
+    cardsUnlocked: Array<{ card: string; cost: number }>;
+  }>;
+  aiStrategyGameplan?: string;
+  aiStrategyRead?: string;
+  aiStrategyRecommendation?: string;
+  strategyOverride?: string;
+};
 
 /**
  * Extracts recent turn actions from game log for strategy analysis
@@ -98,13 +85,20 @@ function extractRecentTurns(
         const newPlayer = entry.player;
         const key = `${newPlayer}-${newTurn}`;
         if (!state.turnMap.has(key)) {
-          state.turnMap.set(key, {
+          const newTurnMap = new Map(state.turnMap);
+          newTurnMap.set(key, {
             player: newPlayer,
             turn: newTurn,
             actionsPlayed: [],
             treasuresPlayed: [],
             cardsBought: [],
           });
+          return {
+            ...state,
+            turnMap: newTurnMap,
+            currentTurn: newTurn,
+            currentPlayer: newPlayer,
+          };
         }
         return { ...state, currentTurn: newTurn, currentPlayer: newPlayer };
       }
@@ -117,11 +111,33 @@ function extractRecentTurns(
       if (!summary) return state;
 
       if (entry.type === "play-action" && entry.card) {
-        summary.actionsPlayed.push(entry.card);
-      } else if (entry.type === "play-treasure" && entry.card) {
-        summary.treasuresPlayed.push(entry.card);
-      } else if (entry.type === "buy-card" && entry.card) {
-        summary.cardsBought.push(entry.card);
+        const newSummary = {
+          ...summary,
+          actionsPlayed: [...summary.actionsPlayed, entry.card],
+        };
+        const newTurnMap = new Map(state.turnMap);
+        newTurnMap.set(key, newSummary);
+        return { ...state, turnMap: newTurnMap };
+      }
+
+      if (entry.type === "play-treasure" && entry.card) {
+        const newSummary = {
+          ...summary,
+          treasuresPlayed: [...summary.treasuresPlayed, entry.card],
+        };
+        const newTurnMap = new Map(state.turnMap);
+        newTurnMap.set(key, newSummary);
+        return { ...state, turnMap: newTurnMap };
+      }
+
+      if (entry.type === "buy-card" && entry.card) {
+        const newSummary = {
+          ...summary,
+          cardsBought: [...summary.cardsBought, entry.card],
+        };
+        const newTurnMap = new Map(state.turnMap);
+        newTurnMap.set(key, newSummary);
+        return { ...state, turnMap: newTurnMap };
       }
 
       return state;
@@ -217,12 +233,11 @@ export function buildStrategicContext(
   );
 
   const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
-  const gameStage: "Early" | "Mid" | "Late" =
-    state.turn <= EARLY_GAME_TURN_THRESHOLD
-      ? "Early"
-      : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
-        ? "Late"
-        : "Mid";
+  const gameStage: "Early" | "Mid" | "Late" = run(() => {
+    if (state.turn <= EARLY_GAME_TURN_THRESHOLD) return "Early";
+    if (provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD) return "Late";
+    return "Mid";
+  });
 
   const PROVINCE_VP = 6;
   const youNeed = Math.ceil((opponentVP + 1 - currentVP) / PROVINCE_VP);
@@ -255,11 +270,14 @@ export function buildStrategicContext(
     yourAvgTreasureValue: yourAnalysis.avgTreasureValue,
     yourVillageCount: yourAnalysis.villages,
     yourTerminalCount: yourAnalysis.terminals,
-    yourDeckCycleTime: parseFloat((currentAllCards.length / 5).toFixed(1)),
+    yourDeckCycleTime: parseFloat(
+      (currentAllCards.length / GAME_CONSTANTS.INITIAL_HAND_SIZE).toFixed(1),
+    ),
     yourDrawPileCount: currentPlayer.deck.length,
     yourDiscardPileCount: currentPlayer.discard.length,
     shuffleNextTurn:
-      currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0,
+      currentPlayer.deck.length <= GAME_CONSTANTS.INITIAL_HAND_SIZE &&
+      currentPlayer.discard.length > 0,
     opponentDeckTotalCards: opponentAllCards.length,
     opponentDeckComposition: opponentAnalysis.counts,
     opponentTotalTreasureValue: opponentAnalysis.totalTreasureValue,

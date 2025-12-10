@@ -128,10 +128,8 @@ function renderDeckSection(
   deckTopRevealed: boolean,
   loading: boolean,
 ) {
-  const knownDeckCards: CardName[] = [];
-  if (deckTopRevealed && deck.length > 0) {
-    knownDeckCards.push(deck[deck.length - 1]);
-  }
+  const knownDeckCards: CardName[] =
+    deckTopRevealed && deck.length > 0 ? [deck[deck.length - 1]] : [];
 
   const deckContent = getDeckContent(
     deck,

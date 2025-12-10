@@ -85,11 +85,11 @@ const groupModelsByProvider = (
     );
     if (!model) return acc;
     const provider: string = model.provider;
-    if (!acc[provider]) {
-      acc[provider] = [];
-    }
-    acc[provider].push(modelId);
-    return acc;
+    const existingModels = acc[provider] || [];
+    return {
+      ...acc,
+      [provider]: [...existingModels, modelId],
+    };
   }, {});
 
 const sortProviders = (providers: string[]): string[] =>

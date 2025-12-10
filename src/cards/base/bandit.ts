@@ -3,10 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import {
-  peekDraw,
-  createCardSelectionDecision,
-} from "../effect-types";
+import { peekDraw, createCardSelectionDecision } from "../effect-types";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameState } from "../../types/game-state";
 import { CARDS } from "../../data/cards";
@@ -26,26 +23,30 @@ function findOpponentNeedingChoice(
   state: GameState,
   targets: PlayerId[],
 ): { opponent: PlayerId; attackData: BanditAttackData } | null {
-  for (const target of targets) {
-    const targetState = state.players[target];
-    if (!targetState) continue;
+  const opponentWithChoice = targets
+    .map(target => {
+      const targetState = state.players[target];
+      if (!targetState) return null;
 
-    const { cards: revealed } = peekDraw(targetState, BANDIT_REVEAL_COUNT);
-    if (revealed.length === 0) continue;
+      const { cards: revealed } = peekDraw(targetState, BANDIT_REVEAL_COUNT);
+      if (revealed.length === 0) return null;
 
-    const trashable = revealed.filter(
-      c => CARDS[c].types.includes("treasure") && c !== "Copper",
-    );
+      const trashable = revealed.filter(
+        c => CARDS[c].types.includes("treasure") && c !== "Copper",
+      );
 
-    // Only ask if there are multiple trashable treasures
-    if (trashable.length > 1) {
-      return {
-        opponent: target,
-        attackData: { revealed, trashable },
-      };
-    }
-  }
-  return null;
+      // Only ask if there are multiple trashable treasures
+      if (trashable.length > 1) {
+        return {
+          opponent: target,
+          attackData: { revealed, trashable },
+        };
+      }
+      return null;
+    })
+    .find(result => result !== null);
+
+  return opponentWithChoice || null;
 }
 
 /**
@@ -115,7 +116,12 @@ export const bandit: CardEffect = ({
 }): CardEffectResult => {
   // Gain Gold (apply layer will handle supply depletion)
   const gainGoldEvents: GameEvent[] = [
-    { type: "CARD_GAINED" as const, player, card: "Gold" as const, to: "discard" as const },
+    {
+      type: "CARD_GAINED" as const,
+      player,
+      card: "Gold" as const,
+      to: "discard" as const,
+    },
   ];
 
   // Engine auto-handles reactions, provides resolved targets
@@ -185,7 +191,7 @@ export const bandit: CardEffect = ({
     const needsChoice = findOpponentNeedingChoice(state, remainingTargets);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
-      const revealEvents = attackData.revealed.map(card => ({
+      const revealEvents: GameEvent[] = attackData.revealed.map(card => ({
         type: "CARD_REVEALED" as const,
         player: opponent,
         card,
@@ -211,8 +217,12 @@ export const bandit: CardEffect = ({
     }
 
     // All remaining auto-processed
-    const remainingAttackEvents = remainingTargets.flatMap(t => processOpponentAutoAttack(state, t));
-    return { events: [...trashEvent, ...discardEvents, ...remainingAttackEvents] };
+    const remainingAttackEvents: GameEvent[] = remainingTargets.flatMap(t =>
+      processOpponentAutoAttack(state, t),
+    );
+    return {
+      events: [...trashEvent, ...discardEvents, ...remainingAttackEvents],
+    };
   }
 
   return { events: [] };
