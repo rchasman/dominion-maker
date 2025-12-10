@@ -1,13 +1,9 @@
-import { generateObject, generateText } from "ai";
-import { createGateway } from "@ai-sdk/gateway";
+import { generateObject, generateText, createGateway } from "ai";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
 import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { run } from "../src/lib/run";
-import { Agent as HttpAgent } from "node:http";
-import { Agent as HttpsAgent } from "node:https";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
 
@@ -82,28 +78,9 @@ const ActionSchema = z
   })
   .describe("A single atomic game action");
 
-// Create HTTP agents with unlimited concurrent connections
-// Default is 5 connections per host - we increase to Infinity
-const httpAgent = new HttpAgent({ maxSockets: Infinity, keepAlive: true });
-const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
-
-// Configure AI Gateway with custom fetch that uses our unlimited agents
+// Configure AI Gateway
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
-  fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url = run(() => {
-      if (typeof input === "string") return input;
-      if (input instanceof URL) return input.href;
-      return input.url;
-    });
-    const isHttps = url.startsWith("https:");
-
-    return fetch(input, {
-      ...init,
-      // @ts-expect-error - Node.js agent option
-      agent: isHttps ? httpsAgent : httpAgent,
-    });
-  },
 });
 
 // Debug logging for deployment

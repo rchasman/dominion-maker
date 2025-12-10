@@ -1,12 +1,8 @@
-import { generateObject } from "ai";
-import { createGateway } from "@ai-sdk/gateway";
+import { generateObject, createGateway } from "ai";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { run } from "../src/lib/run";
-import { Agent as HttpAgent } from "node:http";
-import { Agent as HttpsAgent } from "node:https";
 
 // HTTP status codes
 const HTTP_STATUS = {
@@ -28,27 +24,9 @@ const VP_VALUES = {
   GARDENS_DIVISOR: 10,
 } as const;
 
-// Create HTTP agents with unlimited concurrent connections
-const httpAgent = new HttpAgent({ maxSockets: Infinity, keepAlive: true });
-const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
-
 // Configure AI Gateway
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY || "",
-  fetch: (input: string | URL | Request, init?: RequestInit) => {
-    const url = run(() => {
-      if (typeof input === "string") return input;
-      if (input instanceof URL) return input.href;
-      return input.url;
-    });
-    const isHttps = url.startsWith("https:");
-
-    return fetch(input, {
-      ...init,
-      // @ts-expect-error - Node.js agent option
-      agent: isHttps ? httpsAgent : httpAgent,
-    });
-  },
 });
 
 const STRATEGY_ANALYSIS_PROMPT = `You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
