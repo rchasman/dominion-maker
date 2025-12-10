@@ -74,7 +74,14 @@ function setupEngine(params: {
   setEvents: (events: GameEvent[]) => void;
   initialEvents?: GameEvent[];
 }): void {
-  const { engine, isHost, onBroadcastEvents, setGameState, setEvents, initialEvents } = params;
+  const {
+    engine,
+    isHost,
+    onBroadcastEvents,
+    setGameState,
+    setEvents,
+    initialEvents,
+  } = params;
 
   engine.subscribe((newEvents: GameEvent[], state: GameState) => {
     setGameState(state);
@@ -107,7 +114,9 @@ function findEventIndex(events: GameEvent[], eventId: string): number {
 }
 
 // Helper: Execute command with player validation
-type CommandExecutor = (commandFn: (player: PlayerId) => CommandResult) => CommandResult;
+type CommandExecutor = (
+  commandFn: (player: PlayerId) => CommandResult,
+) => CommandResult;
 
 function createCommandExecutor(
   engine: DominionEngine | null,
@@ -133,7 +142,7 @@ function useBasicActions(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
       const executor = createCommandExecutor(engine, myPlayerId);
-      if ('ok' in executor) return executor;
+      if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
       return executor((player: PlayerId) => engine.playAction(player, card));
     },
@@ -144,7 +153,7 @@ function useBasicActions(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
       const executor = createCommandExecutor(engine, myPlayerId);
-      if ('ok' in executor) return executor;
+      if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
       return executor((player: PlayerId) => engine.playTreasure(player, card));
     },
@@ -154,7 +163,7 @@ function useBasicActions(
   const playAllTreasures = useCallback((): CommandResult => {
     const engine = engineRef.current;
     const executor = createCommandExecutor(engine, myPlayerId);
-    if ('ok' in executor) return executor;
+    if ("ok" in executor) return executor;
     if (!engine) return { ok: false, error: "Engine not initialized" };
     return executor((player: PlayerId) => engine.playAllTreasures(player));
   }, [engineRef, myPlayerId]);
@@ -174,7 +183,7 @@ function useBuyAndPhaseActions(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
       const executor = createCommandExecutor(engine, myPlayerId);
-      if ('ok' in executor) return executor;
+      if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
       return executor((player: PlayerId) => engine.buyCard(player, card));
     },
@@ -184,7 +193,7 @@ function useBuyAndPhaseActions(
   const endPhase = useCallback((): CommandResult => {
     const engine = engineRef.current;
     const executor = createCommandExecutor(engine, myPlayerId);
-    if ('ok' in executor) return executor;
+    if ("ok" in executor) return executor;
     if (!engine) return { ok: false, error: "Engine not initialized" };
     return executor((player: PlayerId) => engine.endPhase(player));
   }, [engineRef, myPlayerId]);
@@ -248,11 +257,14 @@ function useEngineManagement(
     [isHost, engineRef],
   );
 
-  const resetToEvents = useCallback((newEvents: GameEvent[]) => {
-    const engine = engineRef.current;
-    if (!engine) return;
-    engine.loadEvents(newEvents);
-  }, [engineRef]);
+  const resetToEvents = useCallback(
+    (newEvents: GameEvent[]) => {
+      const engine = engineRef.current;
+      if (!engine) return;
+      engine.loadEvents(newEvents);
+    },
+    [engineRef],
+  );
 
   const requestUndo = useCallback(
     (toEventId: string, reason?: string) => {
