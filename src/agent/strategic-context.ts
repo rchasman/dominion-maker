@@ -118,7 +118,10 @@ function extractRecentTurns(
 
       const field = fieldMap[entry.type as keyof typeof fieldMap];
       if (field && entry.card) {
-        const newSummary = { ...summary, [field]: [...summary[field], entry.card] };
+        const newSummary = {
+          ...summary,
+          [field]: [...summary[field], entry.card],
+        };
         const newTurnMap = new Map(state.turnMap);
         newTurnMap.set(key, newSummary);
         return { ...state, turnMap: newTurnMap };
@@ -307,7 +310,10 @@ export function buildStrategicContext(
     );
 
     const cumulativeTotals = treasures.reduce(
-      (totals, t) => [...totals, totals[totals.length - 1] + (CARDS[t].coins || 0)],
+      (totals, t) => [
+        ...totals,
+        totals[totals.length - 1] + (CARDS[t].coins || 0),
+      ],
       [state.coins],
     );
 
@@ -327,13 +333,6 @@ export function buildStrategicContext(
 
   return encodeToon(facts);
 }
-
-const calculateVP = (
-  deck: CardName[],
-  hand: CardName[],
-  discard: CardName[],
-  inPlay: CardName[],
-): number => countVPFromCards([...deck, ...hand, ...discard, ...inPlay]);
 
 interface DeckAnalysis {
   treasures: number;
