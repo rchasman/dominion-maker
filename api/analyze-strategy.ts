@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
+import { run } from "../src/lib/run";
 
 // HTTP status codes
 const HTTP_STATUS = {
