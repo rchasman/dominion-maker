@@ -1,6 +1,6 @@
 import type { DominionEngine } from "../engine";
 import type { GameState } from "./game-state";
-import type { PlayerId } from "./game-state";
+import type { PlayerId } from "../events/types";
 import { generateAINames } from "../lib/ai-names";
 
 /**
