@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, type MutableRefObject } from "react";
 import { P2PRoom, generateRoomCode, type PlayerInfo } from "../p2p-room";
 import { multiplayerLogger } from "../../lib/logger";
 import { saveSession, clearSession } from "../storage";
+import { clearGameStateStorage } from "../../context/storage-utils";
 import type { RoomState } from "../p2p-room";
 
 interface UseRoomConnectionParams {
@@ -120,6 +121,7 @@ function createEndGameHandler(
 
     room.endGame("Player ended game");
     clearSession();
+    clearGameStateStorage();
     setHasSavedSession(false);
   };
 }
