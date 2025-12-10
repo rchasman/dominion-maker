@@ -40,7 +40,7 @@ You are a Dominion strategy analyst with personality - think Patrick Chapin anal
 For each player, provide:
 1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
 2. **Read** (2-3 sentences): Paragraph analyzing their deck, execution, and position. Be specific about card synergies, buying patterns, and deck quality. Include their main weakness.
-3. **Lines** (1-2 sentences): What they should do next and why. Be decisive and actionable.
+3. **Recommendation** (1-2 sentences): What they should do next and why. Be decisive and actionable.
 
 Write with confidence and personality. Be analytical but engaging. No fluff - every word should matter.`;
 
@@ -53,7 +53,7 @@ const PlayerAnalysisSchema = z.object({
     .describe(
       "2-3 sentence paragraph analyzing deck quality, execution, and weakness",
     ),
-  lines: z
+  recommendation: z
     .string()
     .describe("1-2 sentences on what to do next and why - be decisive"),
 });
