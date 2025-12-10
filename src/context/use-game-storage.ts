@@ -18,7 +18,6 @@ import {
   loadLLMLogs,
   loadModelSettings,
   loadPlayerStrategies,
-  clearGameStorage,
   STORAGE_KEYS,
 } from "./storage-utils";
 

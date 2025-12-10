@@ -37,7 +37,6 @@ import { useStrategyAnalysis } from "./use-strategy-analysis";
 import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
-import { uiLogger } from "../lib/logger";
 
 interface GameContextValue {
   gameState: GameState | null;
