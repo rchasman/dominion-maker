@@ -59,19 +59,20 @@ const createOpponentTopdeckDecision = (
 export const bureaucrat: CardEffect = ({
   state,
   player,
+  attackTargets,
   decision,
   stage,
 }): CardEffectResult => {
   const events: GameEvent[] = [];
-  const opponents = getOpponents(state, player);
 
-  // Initial: Gain Silver to deck, then opponents react
-  if (!decision || stage === undefined) {
-    if (state.supply.Silver > 0) {
-      events.push({ type: "CARD_GAINED", player, card: "Silver", to: "deck" });
-    }
+  // Gain Silver to deck
+  if (state.supply.Silver > 0) {
+    events.push({ type: "CARD_GAINED", player, card: "Silver", to: "deck" });
+  }
 
-    const opponentData = findOpponentWithVictoryCards(opponents, state);
+  // Engine auto-handles reactions, provides resolved targets
+  if (!stage && attackTargets) {
+    const opponentData = findOpponentWithVictoryCards(attackTargets, state);
     if (opponentData) {
       return {
         events,
@@ -82,7 +83,6 @@ export const bureaucrat: CardEffect = ({
         ),
       };
     }
-
     return { events };
   }
 

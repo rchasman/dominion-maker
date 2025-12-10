@@ -72,18 +72,21 @@ function createDiscardEvents(cards: string[], player: PlayerId): GameEvent[] {
 export const militia: CardEffect = ({
   state,
   player,
+  attackTargets,
   decision,
   stage,
 }): CardEffectResult => {
-  const opponents = getOpponents(state, player);
+  const events: GameEvent[] = [
+    { type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS },
+  ];
 
-  // Initial call: +$2, then check if anyone needs to discard
-  if (!decision || stage === undefined) {
-    const events: GameEvent[] = [
-      { type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS },
-    ];
-    const needsDiscard = findOpponentNeedingDiscard(state, opponents, player);
-
+  // Engine auto-handles reactions, provides resolved targets
+  if (!stage && attackTargets) {
+    const needsDiscard = findOpponentNeedingDiscard(
+      state,
+      attackTargets,
+      player,
+    );
     if (needsDiscard) {
       return { events, pendingDecision: createDiscardDecision(needsDiscard) };
     }
