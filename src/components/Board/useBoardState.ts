@@ -1,6 +1,6 @@
 // Not a hook - can be called after early returns
-// Uses useMemo internally but is a utility function
-import type { GameState, PlayerId } from "../../types/game-state";
+// Pure utility function for computing board state
+import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import { countVP, getAllCards } from "../../lib/board-utils";
@@ -8,7 +8,7 @@ import { getPlayerIds, getHintText, canBuyCards } from "./helpers";
 import { MAIN_PLAYER_INDEX, OPPONENT_PLAYER_INDEX } from "./constants";
 
 interface BoardStateParams {
-  state: GameState | null;
+  state: GameState;
   previewEventId: string | null;
   isPreviewMode: boolean;
   gameMode: GameMode;
@@ -19,18 +19,77 @@ interface BoardStateParams {
 
 interface BoardState {
   displayState: GameState;
-  playerIds: PlayerId[];
-  mainPlayerId: PlayerId;
-  opponentPlayerId: PlayerId;
+  playerIds: readonly [Player, Player];
+  mainPlayerId: Player;
+  opponentPlayerId: Player;
   isMainPlayerTurn: boolean;
   canBuy: boolean;
-  opponent: GameState["players"][PlayerId];
-  mainPlayer: GameState["players"][PlayerId];
+  opponent: GameState["players"][Player];
+  mainPlayer: GameState["players"][Player];
   mainPlayerVP: number;
   opponentVP: number;
   hint: string;
   isOpponentAI: boolean;
   isMainPlayerAI: boolean;
+}
+
+function computeDisplayState(
+  previewEventId: string | null,
+  state: GameState,
+  getStateAtEvent: (eventId: string) => GameState,
+): GameState {
+  return previewEventId ? getStateAtEvent(previewEventId) : state;
+}
+
+function computePlayerIds(
+  state: GameState,
+  gameMode: GameMode,
+): readonly [Player, Player] {
+  const ids: Player[] = getPlayerIds(state, gameMode);
+  const mainId: Player | undefined = ids[MAIN_PLAYER_INDEX];
+  const opponentId: Player | undefined = ids[OPPONENT_PLAYER_INDEX];
+  if (!mainId || !opponentId) {
+    throw new Error("Invalid player IDs");
+  }
+  return [mainId, opponentId] as const;
+}
+
+function computeCanBuy(
+  isMainPlayerTurn: boolean,
+  phase: GameState["phase"],
+  buys: number,
+  isPreviewMode: boolean,
+): boolean {
+  return canBuyCards(isMainPlayerTurn, phase, buys, isPreviewMode);
+}
+
+function computeVictoryPoints(player: GameState["players"][Player]): number {
+  return countVP(getAllCards(player));
+}
+
+interface HintParams {
+  displayState: GameState;
+  mainPlayerId: Player;
+  isMainPlayerTurn: boolean;
+  hasPlayableActions: boolean;
+  hasTreasuresInHand: boolean;
+}
+
+function computeHint(params: HintParams): string {
+  return getHintText(
+    params.displayState,
+    params.mainPlayerId,
+    params.isMainPlayerTurn,
+    params.hasPlayableActions,
+    params.hasTreasuresInHand,
+  );
+}
+
+function computeIsAIPlayer(gameMode: GameMode, playerId: Player): boolean {
+  return (
+    gameMode !== "multiplayer" &&
+    GAME_MODE_CONFIG[gameMode].isAIPlayer(playerId)
+  );
 }
 
 export function useBoardState(params: BoardStateParams): BoardState {
@@ -44,73 +103,41 @@ export function useBoardState(params: BoardStateParams): BoardState {
     getStateAtEvent,
   } = params;
 
-  const displayState = useMemo(
-    () => (previewEventId && state ? getStateAtEvent(previewEventId) : state),
-    [previewEventId, getStateAtEvent, state],
+  const displayState: GameState = computeDisplayState(
+    previewEventId,
+    state,
+    getStateAtEvent,
+  );
+  const playerIds: readonly [Player, Player] = computePlayerIds(
+    state,
+    gameMode,
+  );
+  const mainPlayerId: Player = playerIds[MAIN_PLAYER_INDEX];
+  const opponentPlayerId: Player = playerIds[OPPONENT_PLAYER_INDEX];
+  const isMainPlayerTurn: boolean = displayState.activePlayer === mainPlayerId;
+  const canBuy: boolean = computeCanBuy(
+    isMainPlayerTurn,
+    displayState.phase,
+    displayState.buys,
+    isPreviewMode,
   );
 
-  const playerIds = useMemo(
-    () => (state ? getPlayerIds(state, gameMode) : []),
-    [state, gameMode],
-  );
+  const opponent: GameState["players"][Player] =
+    displayState.players[opponentPlayerId];
+  const mainPlayer: GameState["players"][Player] =
+    displayState.players[mainPlayerId];
+  const mainPlayerVP: number = computeVictoryPoints(mainPlayer);
+  const opponentVP: number = computeVictoryPoints(opponent);
+  const hint: string = computeHint({
+    displayState,
+    mainPlayerId,
+    isMainPlayerTurn,
+    hasPlayableActions,
+    hasTreasuresInHand,
+  });
 
-  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX] as PlayerId;
-  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX] as PlayerId;
-
-  const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
-
-  const canBuy = useMemo(
-    () =>
-      canBuyCards(
-        isMainPlayerTurn,
-        displayState.phase,
-        displayState.buys,
-        isPreviewMode,
-      ),
-    [isMainPlayerTurn, displayState.phase, displayState.buys, isPreviewMode],
-  );
-
-  const opponent = displayState.players[opponentPlayerId];
-  const mainPlayer = displayState.players[mainPlayerId];
-
-  const mainPlayerVP = useMemo(
-    () => countVP(getAllCards(mainPlayer)),
-    [mainPlayer],
-  );
-
-  const opponentVP = useMemo(() => countVP(getAllCards(opponent)), [opponent]);
-
-  const hint = useMemo(
-    () =>
-      getHintText(
-        displayState,
-        mainPlayerId,
-        isMainPlayerTurn,
-        hasPlayableActions,
-        hasTreasuresInHand,
-      ),
-    [
-      displayState,
-      mainPlayerId,
-      isMainPlayerTurn,
-      hasPlayableActions,
-      hasTreasuresInHand,
-    ],
-  );
-
-  const isOpponentAI = useMemo(
-    () =>
-      gameMode !== "multiplayer" &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId),
-    [gameMode, opponentPlayerId],
-  );
-
-  const isMainPlayerAI = useMemo(
-    () =>
-      gameMode !== "multiplayer" &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(mainPlayerId),
-    [gameMode, mainPlayerId],
-  );
+  const isOpponentAI: boolean = computeIsAIPlayer(gameMode, opponentPlayerId);
+  const isMainPlayerAI: boolean = computeIsAIPlayer(gameMode, mainPlayerId);
 
   return {
     displayState,
