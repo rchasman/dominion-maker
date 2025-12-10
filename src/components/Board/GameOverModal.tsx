@@ -1,6 +1,11 @@
+import { formatPlayerName } from "../../lib/board-utils";
+
 interface GameOverModalProps {
   winner: string | null;
   mainPlayerId: string;
+  opponentPlayerId: string;
+  isMainPlayerAI: boolean;
+  isOpponentAI: boolean;
   mainPlayerVP: number;
   opponentVP: number;
   onNewGame: () => void;
@@ -9,10 +14,17 @@ interface GameOverModalProps {
 export function GameOverModal({
   winner,
   mainPlayerId,
+  opponentPlayerId,
+  isMainPlayerAI,
+  isOpponentAI,
   mainPlayerVP,
   opponentVP,
   onNewGame,
 }: GameOverModalProps) {
+  const winnerName =
+    winner === mainPlayerId
+      ? formatPlayerName(mainPlayerId, isMainPlayerAI)
+      : formatPlayerName(opponentPlayerId, isOpponentAI);
   return (
     <div
       style={{
@@ -51,7 +63,7 @@ export function GameOverModal({
             color: winner === mainPlayerId ? "var(--color-victory)" : "#ef5350",
           }}
         >
-          {winner === mainPlayerId ? "Victory!" : "Defeat"}
+          {winnerName} wins!
         </p>
         <div
           style={{

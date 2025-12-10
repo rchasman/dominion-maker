@@ -185,6 +185,9 @@ export function BoardContent({
         <GameOverModal
           winner={game.winner}
           mainPlayerId={mainPlayerId as PlayerId}
+          opponentPlayerId={opponentPlayerId as PlayerId}
+          isMainPlayerAI={isMainPlayerAI}
+          isOpponentAI={isOpponentAI}
           mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
           onNewGame={onNewGame}
