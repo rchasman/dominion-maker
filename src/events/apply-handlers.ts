@@ -44,7 +44,10 @@ export function applyTurnEvent(
   }
 
   if (event.type === "TURN_ENDED") {
-    return state;
+    return {
+      ...state,
+      activeEffects: [], // Clear all turn-based effects
+    };
   }
 
   if (event.type === "PHASE_CHANGED") {
@@ -443,6 +446,95 @@ export function applyResourceEvent(
       ...state,
       coins: newCoins,
       log: logEntry ? [...state.log, logEntry] : state.log,
+    };
+  }
+
+  if (event.type === "EFFECT_REGISTERED") {
+    return {
+      ...state,
+      activeEffects: [
+        ...state.activeEffects,
+        {
+          type: event.type,
+          player: event.player,
+          effectType: event.effectType,
+          source: event.source,
+          parameters: event.parameters,
+        },
+      ],
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          message: `${event.source} reduces all costs by $${event.parameters.amount} this turn`,
+        },
+      ],
+    };
+  }
+
+  if (event.type === "COST_MODIFIED") {
+    // Cost modification is metadata for logging/display, doesn't change state
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          message: `${event.card} costs $${event.modifiedCost} (base $${event.baseCost})`,
+        },
+      ],
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Apply attack and reaction events
+ */
+export function applyAttackAndReactionEvent(
+  state: GameState,
+  event: GameEvent,
+): GameState | null {
+  if (event.type === "ATTACK_DECLARED") {
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          message: `${event.attacker} plays ${event.attackCard}, attacking ${event.targets.join(", ")}`,
+        },
+      ],
+    };
+  }
+
+  if (event.type === "ATTACK_RESOLVED") {
+    if (event.blocked) {
+      return {
+        ...state,
+        log: [
+          ...state.log,
+          {
+            type: "text",
+            message: `${event.target} blocks the attack`,
+          },
+        ],
+      };
+    }
+    return state; // Attack effects are handled by other events
+  }
+
+  if (event.type === "REACTION_PLAYED") {
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          message: `${event.player} reveals ${event.card}`,
+        },
+      ],
     };
   }
 

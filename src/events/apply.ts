@@ -4,6 +4,7 @@ import {
   applyTurnEvent,
   applyCardMovementEvent,
   applyResourceEvent,
+  applyAttackAndReactionEvent,
   applyDecisionEvent,
   applyGameEndEvent,
 } from "./apply-handlers";
@@ -53,6 +54,7 @@ function applyGameSetupEvent(
       trash: [],
       log: [],
       turnHistory: [],
+      activeEffects: [],
     };
   }
 
@@ -116,6 +118,10 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
   // Try resource events
   const resourceResult = applyResourceEvent(state, event);
   if (resourceResult) return resourceResult;
+
+  // Try attack and reaction events
+  const attackResult = applyAttackAndReactionEvent(state, event);
+  if (attackResult) return attackResult;
 
   // Try decision events
   const decisionResult = applyDecisionEvent(state, event);

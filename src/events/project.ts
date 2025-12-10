@@ -26,6 +26,7 @@ export function createEmptyState(): GameState {
     log: [],
     turnHistory: [],
     playerOrder: [],
+    activeEffects: [],
   };
 }
 

@@ -145,6 +145,52 @@ export type CoinsModifiedEvent = EventMetadata & {
   delta: number;
 };
 
+// Effects (persistent modifiers like cost reduction)
+export type EffectRegisteredEvent = EventMetadata & {
+  type: "EFFECT_REGISTERED";
+  player: PlayerId;
+  effectType: "cost_reduction";
+  source: CardName;
+  parameters: {
+    amount: number;
+  };
+};
+
+// Cost modifications (emitted during purchase to show applied modifiers)
+export type CostModifiedEvent = EventMetadata & {
+  type: "COST_MODIFIED";
+  card: CardName;
+  baseCost: number;
+  modifiedCost: number;
+  modifiers: Array<{
+    source: CardName;
+    delta: number;
+  }>;
+};
+
+// Attack and Reaction Events
+export type AttackDeclaredEvent = EventMetadata & {
+  type: "ATTACK_DECLARED";
+  attacker: PlayerId;
+  attackCard: CardName;
+  targets: PlayerId[];
+};
+
+export type AttackResolvedEvent = EventMetadata & {
+  type: "ATTACK_RESOLVED";
+  attacker: PlayerId;
+  target: PlayerId;
+  attackCard: CardName;
+  blocked: boolean;
+};
+
+export type ReactionPlayedEvent = EventMetadata & {
+  type: "REACTION_PLAYED";
+  player: PlayerId;
+  card: CardName;
+  triggerEventId: string;
+};
+
 // Decisions (DecisionRequest and DecisionChoice moved to types/game-state to break circular dep)
 export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
@@ -216,6 +262,13 @@ export type GameEvent =
   | ActionsModifiedEvent
   | BuysModifiedEvent
   | CoinsModifiedEvent
+  // Effects
+  | EffectRegisteredEvent
+  | CostModifiedEvent
+  // Attacks and Reactions
+  | AttackDeclaredEvent
+  | AttackResolvedEvent
+  | ReactionPlayedEvent
   // Decisions
   | DecisionRequiredEvent
   | DecisionResolvedEvent

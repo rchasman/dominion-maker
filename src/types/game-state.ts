@@ -318,6 +318,15 @@ export type GameState = {
   log: LogEntry[];
   turnHistory: TurnAction[]; // Actions taken this turn (reset on cleanup)
 
+  // Active effects (cost reductions, etc.) cleared at turn end
+  activeEffects: Array<{
+    type: "EFFECT_REGISTERED";
+    player: string;
+    effectType: "cost_reduction";
+    source: CardName;
+    parameters: { amount: number };
+  }>;
+
   // Multiplayer extensions (optional for single-player)
   playerOrder?: string[]; // Turn order for N-player games
   playerInfo?: Record<string, PlayerInfo>; // Player names, types, connection status
