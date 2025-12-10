@@ -59,6 +59,9 @@ const StrategicFactsSchema = z.object({
       }),
     )
     .optional(),
+  aiStrategyGameplan: z.string().optional(),
+  aiStrategyRead: z.string().optional(),
+  aiStrategyRecommendation: z.string().optional(),
   strategyOverride: z.string().optional(),
 });
 
@@ -167,7 +170,7 @@ export function formatTurnHistoryForAnalysis(state: GameState): string {
 interface PlayerStrategyAnalysis {
   gameplan: string;
   read: string;
-  lines: string;
+  recommendation: string;
 }
 
 const DEFAULT_PROVINCE_COUNT = 8;
@@ -332,7 +335,7 @@ function formatStrategyAnalysis(
     sections.push(`YOUR STRATEGY:
   Gameplan: ${yourStrategy.gameplan}
   Read: ${yourStrategy.read}
-  Lines: ${yourStrategy.lines}`);
+  Recommendation: ${yourStrategy.recommendation}`);
   }
 
   if (opponentStrategy) {
@@ -438,8 +441,27 @@ export function buildStrategicContext(
     coinsInUnplayedTreasures: treasureValue,
     maxCoinsIfAllTreasuresPlayed: maxCoins,
     unplayedTreasuresInHand: treasures,
-    strategyOverride: customStrategy?.trim() || undefined,
   };
+
+  // Add AI's own strategy analysis (not opponent's - no cheating)
+  if (strategySummary) {
+    const strategies = JSON.parse(strategySummary) as Record<
+      string,
+      PlayerStrategyAnalysis
+    >;
+    const aiStrategy = strategies[state.activePlayer];
+
+    if (aiStrategy) {
+      facts.aiStrategyGameplan = aiStrategy.gameplan;
+      facts.aiStrategyRead = aiStrategy.read;
+      facts.aiStrategyRecommendation = aiStrategy.recommendation;
+    }
+  }
+
+  // Add custom override
+  if (customStrategy?.trim()) {
+    facts.strategyOverride = customStrategy.trim();
+  }
 
   // Add buy options if in buy phase
   if (state.phase === "buy") {
@@ -493,14 +515,7 @@ export function buildStrategicContext(
     facts.whatEachUnplayedTreasureUnlocks = unlocks;
   }
 
-  const toonData = encodeToon(facts);
-
-  // Append strategy override prominently if present
-  if (customStrategy && customStrategy.trim()) {
-    return `${toonData}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSTRATEGY OVERRIDE (follow absolutely):\n${customStrategy.trim()}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-  }
-
-  return toonData;
+  return encodeToon(facts);
 }
 
 const calculateVP = (
