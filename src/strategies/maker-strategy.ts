@@ -56,14 +56,12 @@ export class MakerStrategy implements GameStrategy {
     const models = buildModelsFromSettings(this.modelSettings);
     // Use the actual active player (could be "ai", "ai1", or "ai2")
     const activePlayer = engine.state.activePlayer;
-    return runAITurnWithConsensus(
-      engine,
-      activePlayer,
-      models,
-      this.logger,
+    return runAITurnWithConsensus(engine, activePlayer, {
+      providers: models,
+      logger: this.logger,
       onStateChange,
-      this.strategySummary,
-    );
+      strategySummary: this.strategySummary,
+    });
   }
 
   async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
@@ -86,14 +84,11 @@ export class MakerStrategy implements GameStrategy {
 
     // Use the actual pending decision player (could be "ai", "ai1", or "ai2")
     const player = pendingDecision?.player || engine.state.activePlayer;
-    return advanceGameStateWithConsensus(
-      engine,
-      player,
-      undefined,
-      models,
-      this.logger,
-      this.strategySummary,
-    );
+    return advanceGameStateWithConsensus(engine, player, {
+      providers: models,
+      logger: this.logger,
+      strategySummary: this.strategySummary,
+    });
   }
 
   getModeName(): string {
