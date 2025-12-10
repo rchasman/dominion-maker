@@ -29,6 +29,7 @@ function createEmptyState(): GameState {
     trash: [],
     log: [],
     turnHistory: [],
+    activeEffects: [],
   };
 }
 
