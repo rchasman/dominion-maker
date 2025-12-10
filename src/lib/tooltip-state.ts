@@ -1,29 +1,31 @@
 const TOOLTIP_RESET_DELAY = 200;
 
-let tooltipActiveGlobal = false;
-let hasShownFirstTooltip = false;
-let resetTimeoutId: NodeJS.Timeout | null = null;
+const tooltipState = {
+  activeGlobal: false,
+  hasShownFirstTooltip: false,
+  resetTimeoutId: null as NodeJS.Timeout | null,
+};
 
 export function isTooltipActive(): boolean {
-  return tooltipActiveGlobal;
+  return tooltipState.activeGlobal;
 }
 
 export function isFirstTooltip(): boolean {
-  return !hasShownFirstTooltip;
+  return !tooltipState.hasShownFirstTooltip;
 }
 
 export function setTooltipActive(active: boolean): void {
-  if (resetTimeoutId) {
-    clearTimeout(resetTimeoutId);
-    resetTimeoutId = null;
+  if (tooltipState.resetTimeoutId) {
+    clearTimeout(tooltipState.resetTimeoutId);
+    tooltipState.resetTimeoutId = null;
   }
 
   if (active) {
-    tooltipActiveGlobal = true;
-    hasShownFirstTooltip = true;
+    tooltipState.activeGlobal = true;
+    tooltipState.hasShownFirstTooltip = true;
   } else {
-    resetTimeoutId = setTimeout(() => {
-      tooltipActiveGlobal = false;
+    tooltipState.resetTimeoutId = setTimeout(() => {
+      tooltipState.activeGlobal = false;
     }, TOOLTIP_RESET_DELAY);
   }
 }
