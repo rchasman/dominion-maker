@@ -1,4 +1,4 @@
-import { useCallback, type MutableRefObject } from "react";
+import { useCallback, useMemo, type MutableRefObject } from "react";
 import type { P2PRoom, PendingUndoRequest } from "../p2p-room";
 import type { DominionEngine } from "../../engine";
 import type { GameEvent } from "../../events/types";
@@ -16,6 +16,94 @@ interface UseUndoActionsParams {
   events: GameEvent[];
 }
 
+interface RequestUndoParams {
+  room: P2PRoom;
+  myPeerId: string;
+  isHost: boolean;
+  toEventId: string;
+  reason?: string;
+}
+
+function executeRequestUndo(params: RequestUndoParams): void {
+  const { room, myPeerId, isHost, toEventId, reason } = params;
+
+  multiplayerLogger.debug(
+    `requestUndo called with toEventId: ${toEventId}, reason: ${reason ?? "none"}`,
+  );
+
+  if (isHost) {
+    room.requestUndo(myPeerId, toEventId, reason);
+  } else {
+    multiplayerLogger.debug(
+      `Client sending REQUEST_UNDO for event ${toEventId}`,
+    );
+    room.sendCommandToHost({
+      type: "REQUEST_UNDO",
+      player: myPeerId,
+      toEventId,
+      reason,
+    });
+  }
+}
+
+function executeHostApproval(
+  room: P2PRoom,
+  engine: DominionEngine,
+  myPeerId: string,
+): void {
+  const wasExecuted = room.approveUndo(myPeerId);
+
+  multiplayerLogger.debug(`Host approval, wasExecuted:`, wasExecuted);
+
+  if (wasExecuted) {
+    const newEvents = room.getEvents();
+    multiplayerLogger.debug(
+      `Host reloading engine with ${newEvents.length} events`,
+    );
+
+    syncEventCounter(newEvents);
+
+    const newState = projectState(newEvents);
+    room.setGameStateAfterUndo(newState);
+    engine.loadEventsSilently(newEvents);
+
+    multiplayerLogger.debug(
+      `Host broadcasting full state after undo, activePlayer: ${newState.activePlayer}`,
+    );
+    room.broadcastFullState();
+  }
+}
+
+function executeClientApproval(
+  room: P2PRoom,
+  myPeerId: string,
+  pendingUndo: PendingUndoRequest,
+): void {
+  multiplayerLogger.debug(`Client sending APPROVE_UNDO to host`);
+  room.sendCommandToHost({
+    type: "APPROVE_UNDO",
+    player: myPeerId,
+    requestId: pendingUndo.requestId,
+  });
+}
+
+function executeDenyUndo(
+  room: P2PRoom,
+  myPeerId: string,
+  isHost: boolean,
+  pendingUndo: PendingUndoRequest,
+): void {
+  if (isHost) {
+    room.denyUndo();
+  } else {
+    room.sendCommandToHost({
+      type: "DENY_UNDO",
+      player: myPeerId,
+      requestId: pendingUndo.requestId,
+    });
+  }
+}
+
 export function useUndoActions({
   roomRef,
   engineRef,
@@ -31,25 +119,7 @@ export function useUndoActions({
         return;
       }
 
-      multiplayerLogger.debug(
-        `requestUndo called with toEventId: ${toEventId}, reason: ${reason ?? "none"}`,
-      );
-
-      if (isHost) {
-        // Host: Update locally and broadcast
-        room.requestUndo(myPeerId, toEventId, reason);
-      } else {
-        // Client: Send command to host
-        multiplayerLogger.debug(
-          `Client sending REQUEST_UNDO for event ${toEventId}`,
-        );
-        room.sendCommandToHost({
-          type: "REQUEST_UNDO",
-          player: myPeerId,
-          toEventId,
-          reason,
-        });
-      }
+      executeRequestUndo({ room, myPeerId, isHost, toEventId, reason });
     },
     [myPeerId, isHost, roomRef],
   );
@@ -66,38 +136,11 @@ export function useUndoActions({
     );
 
     if (isHost) {
-      // Host: Approve locally
-      const wasExecuted = room.approveUndo(myPeerId);
-
-      multiplayerLogger.debug(`Host approval, wasExecuted:`, wasExecuted);
-
-      if (engine && wasExecuted) {
-        const newEvents = room.getEvents();
-        multiplayerLogger.debug(
-          `Host reloading engine with ${newEvents.length} events`,
-        );
-
-        // Sync event counter to the highest ID in the truncated log
-        syncEventCounter(newEvents);
-
-        const newState = projectState(newEvents);
-        room.setGameStateAfterUndo(newState);
-        engine.loadEventsSilently(newEvents);
-
-        // Broadcast full state (events were truncated, clients need full sync)
-        multiplayerLogger.debug(
-          `Host broadcasting full state after undo, activePlayer: ${newState.activePlayer}`,
-        );
-        room.broadcastFullState();
+      if (engine) {
+        executeHostApproval(room, engine, myPeerId);
       }
     } else {
-      // Client: Send approval to host
-      multiplayerLogger.debug(`Client sending APPROVE_UNDO to host`);
-      room.sendCommandToHost({
-        type: "APPROVE_UNDO",
-        player: myPeerId,
-        requestId: pendingUndo.requestId,
-      });
+      executeClientApproval(room, myPeerId, pendingUndo);
     }
   }, [myPeerId, isHost, pendingUndo, roomRef, engineRef]);
 
@@ -107,27 +150,20 @@ export function useUndoActions({
       return;
     }
 
-    if (isHost) {
-      room.denyUndo();
-    } else {
-      room.sendCommandToHost({
-        type: "DENY_UNDO",
-        player: myPeerId,
-        requestId: pendingUndo.requestId,
-      });
-    }
+    executeDenyUndo(room, myPeerId, isHost, pendingUndo);
   }, [myPeerId, isHost, pendingUndo, roomRef]);
 
-  const getStateAtEvent = useCallback(
-    (eventId: string): GameState => {
-      const eventIndex = events.findIndex(e => e.id === eventId);
-      const NOT_FOUND = -1;
-      if (eventIndex === NOT_FOUND) {
-        throw new Error(`Event ${eventId} not found`);
-      }
-      const INCLUSIVE_END = 1;
-      return projectState(events.slice(0, eventIndex + INCLUSIVE_END));
-    },
+  const getStateAtEvent = useMemo(
+    () =>
+      (eventId: string): GameState => {
+        const eventIndex = events.findIndex(e => e.id === eventId);
+        const NOT_FOUND = -1;
+        if (eventIndex === NOT_FOUND) {
+          throw new Error(`Event ${eventId} not found`);
+        }
+        const INCLUSIVE_END = 1;
+        return projectState(events.slice(0, eventIndex + INCLUSIVE_END));
+      },
     [events],
   );
 
