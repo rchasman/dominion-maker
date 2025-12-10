@@ -4,7 +4,6 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import {
-  getOpponents,
   peekDraw,
   createCardSelectionDecision,
 } from "../effect-types";
@@ -26,7 +25,6 @@ type BanditAttackData = {
 function findOpponentNeedingChoice(
   state: GameState,
   targets: PlayerId[],
-  attackingPlayer: PlayerId,
 ): { opponent: PlayerId; attackData: BanditAttackData } | null {
   for (const target of targets) {
     const targetState = state.players[target];
@@ -115,15 +113,14 @@ export const bandit: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  // Gain Gold
-  const gainGoldEvents: GameEvent[] =
-    state.supply.Gold > 0
-      ? [{ type: "CARD_GAINED" as const, player, card: "Gold" as const, to: "discard" as const }]
-      : [];
+  // Gain Gold (apply layer will handle supply depletion)
+  const gainGoldEvents: GameEvent[] = [
+    { type: "CARD_GAINED" as const, player, card: "Gold" as const, to: "discard" as const },
+  ];
 
   // Engine auto-handles reactions, provides resolved targets
   if (!stage && attackTargets) {
-    const needsChoice = findOpponentNeedingChoice(state, attackTargets, player);
+    const needsChoice = findOpponentNeedingChoice(state, attackTargets);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
       const revealEvents = attackData.revealed.map(card => ({
@@ -146,14 +143,15 @@ export const bandit: CardEffect = ({
           metadata: {
             revealed: attackData.revealed,
             remainingTargets: attackTargets.filter(t => t !== opponent),
-            attackingPlayer: player,
           },
         }),
       };
     }
 
     // All targets can be auto-processed
-    const attackEvents = attackTargets.flatMap(t => processOpponentAutoAttack(state, t));
+    const attackEvents = attackTargets.flatMap(t =>
+      processOpponentAutoAttack(state, t),
+    );
     return { events: [...gainGoldEvents, ...attackEvents] };
   }
 
@@ -184,7 +182,7 @@ export const bandit: CardEffect = ({
     }));
 
     // Check if more targets need choices
-    const needsChoice = findOpponentNeedingChoice(state, remainingTargets, player);
+    const needsChoice = findOpponentNeedingChoice(state, remainingTargets);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
       const revealEvents = attackData.revealed.map(card => ({
@@ -207,7 +205,6 @@ export const bandit: CardEffect = ({
           metadata: {
             revealed: attackData.revealed,
             remainingTargets: remainingTargets.filter(t => t !== opponent),
-            attackingPlayer: player,
           },
         }),
       };
