@@ -196,24 +196,26 @@ export function createSimpleCardEffect(benefits: {
   buys?: number;
   coins?: number;
 }): CardEffect {
-  return ({ state, player }): CardEffectResult => {
-    const drawEvents = benefits.cards
-      ? createDrawEvents(player, state.players[player], benefits.cards)
-      : [];
+  return ({ player }): CardEffectResult => {
+    const events: GameEvent[] = [];
 
-    const actionEvents: GameEvent[] = benefits.actions
-      ? [{ type: "ACTIONS_MODIFIED", delta: benefits.actions }]
-      : [];
+    if (benefits.cards) {
+      events.push({ type: "DRAW", player, count: benefits.cards });
+    }
 
-    const buyEvents: GameEvent[] = benefits.buys
-      ? [{ type: "BUYS_MODIFIED", delta: benefits.buys }]
-      : [];
+    if (benefits.actions) {
+      events.push({ type: "ACTIONS_MODIFIED", delta: benefits.actions });
+    }
 
-    const coinEvents: GameEvent[] = benefits.coins
-      ? [{ type: "COINS_MODIFIED", delta: benefits.coins }]
-      : [];
+    if (benefits.buys) {
+      events.push({ type: "BUYS_MODIFIED", delta: benefits.buys });
+    }
 
-    return { events: [...drawEvents, ...actionEvents, ...buyEvents, ...coinEvents] };
+    if (benefits.coins) {
+      events.push({ type: "COINS_MODIFIED", delta: benefits.coins });
+    }
+
+    return { events };
   };
 }
 
