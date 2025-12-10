@@ -69,6 +69,7 @@ type ConsensusConfig = {
   logger?: LLMLogger;
   strategySummary?: string;
   customStrategy?: string;
+  dataFormat?: "toon" | "json" | "mixed";
 };
 
 // Configuration for AI turn operations
@@ -78,6 +79,7 @@ type AITurnConfig = {
   onStateChange?: (state: GameState) => void;
   strategySummary?: string;
   customStrategy?: string;
+  dataFormat?: "toon" | "json" | "mixed";
 };
 
 // Execute a single model and handle its result
@@ -340,6 +342,7 @@ type RunModelsParams = {
   customStrategy?: string;
   logger?: LLMLogger;
   aheadByK: number;
+  dataFormat: "toon" | "json" | "mixed";
 };
 
 type RunModelsResult = {
@@ -361,6 +364,7 @@ const runModelsInParallel = async (
     customStrategy,
     logger,
     aheadByK,
+    dataFormat,
   } = params;
 
   const voteGroups = new Map<ActionSignature, VoteGroup>();
@@ -379,15 +383,22 @@ const runModelsInParallel = async (
     let resolved = false;
     let completedCount = 0;
 
-    providers.map((provider, index) =>
-      executeModel({
+    providers.map((provider, index) => {
+      const modelFormat =
+        dataFormat === "mixed"
+          ? index % 2 === 0
+            ? "json"
+            : "toon"
+          : dataFormat;
+
+      return executeModel({
         provider,
         index,
         currentState,
         humanChoice,
         strategySummary,
         customStrategy,
-        format: index % 2 === 0 ? "json" : "toon",
+        format: modelFormat,
         abortController,
         voteGroups,
         completedResults,
@@ -408,8 +419,8 @@ const runModelsInParallel = async (
             resolveAll({ results: completedResults, earlyConsensus: null });
           }
         },
-      }),
-    );
+      });
+    });
   });
 
   if (globalAbortController === abortController) {
@@ -434,6 +445,7 @@ export async function advanceGameStateWithConsensus(
     logger,
     strategySummary,
     customStrategy,
+    dataFormat = "mixed",
   } = config;
   const currentState = engine.state;
   const overallStart = performance.now();
@@ -502,6 +514,7 @@ export async function advanceGameStateWithConsensus(
       customStrategy,
       logger,
       aheadByK,
+      dataFormat,
     });
 
   const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
@@ -546,8 +559,14 @@ export async function runAITurnWithConsensus(
   playerId: string,
   config: AITurnConfig,
 ): Promise<void> {
-  const { providers, logger, onStateChange, strategySummary, customStrategy } =
-    config;
+  const {
+    providers,
+    logger,
+    onStateChange,
+    strategySummary,
+    customStrategy,
+    dataFormat = "mixed",
+  } = config;
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
@@ -572,6 +591,7 @@ export async function runAITurnWithConsensus(
         logger,
         strategySummary,
         customStrategy,
+        dataFormat,
       });
 
       // Handle AI pending decisions
@@ -587,6 +607,7 @@ export async function runAITurnWithConsensus(
           logger,
           strategySummary,
           customStrategy,
+          dataFormat,
         });
         onStateChange?.(engine.state);
 

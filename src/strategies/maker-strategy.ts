@@ -36,6 +36,7 @@ export class MakerStrategy implements GameStrategy {
         "ministral-3b",
       ]),
       consensusCount: 8,
+      dataFormat: "mixed",
     };
     this.strategySummary = strategySummary;
   }
@@ -62,6 +63,7 @@ export class MakerStrategy implements GameStrategy {
       onStateChange,
       strategySummary: this.strategySummary,
       customStrategy: this.modelSettings.customStrategy,
+      dataFormat: this.modelSettings.dataFormat,
     });
   }
 
@@ -90,6 +92,7 @@ export class MakerStrategy implements GameStrategy {
       logger: this.logger,
       strategySummary: this.strategySummary,
       customStrategy: this.modelSettings.customStrategy,
+      dataFormat: this.modelSettings.dataFormat,
     });
   }
 

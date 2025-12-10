@@ -108,6 +108,7 @@ interface TimingBarProps {
     pending?: boolean;
     failed?: boolean;
     aborted?: boolean;
+    format?: "json" | "toon";
   };
   maxDuration: number;
   minDuration: number;
@@ -115,6 +116,7 @@ interface TimingBarProps {
   timingWidth: number;
   modelNameWidth: number;
   barAreaWidth: number;
+  showFormatGlyphs: boolean;
 }
 
 const PERCENTAGE_SCALE = 100;
@@ -167,8 +169,7 @@ function calculateTimingBarState(
     timing.duration === maxDuration &&
     hasMultipleCompleted;
 
-  const formatExtraWidth = timing.format ? 1 : 0;
-  const thisModelNameWidth = (timing.provider.length + formatExtraWidth) * CHAR_WIDTH.MODEL_NAME;
+  const thisModelNameWidth = timing.provider.length * CHAR_WIDTH.MODEL_NAME;
   const extraSpace = modelNameWidth - thisModelNameWidth;
   const barWidthPx = Math.max(
     LAYOUT.MIN_BAR_WIDTH,
@@ -329,6 +330,7 @@ function TimingBar({
   timingWidth,
   modelNameWidth,
   barAreaWidth,
+  showFormatGlyphs,
 }: TimingBarProps) {
   const state = calculateTimingBarState(timing, {
     maxDuration,
@@ -395,7 +397,7 @@ function TimingBar({
         title={getModelNameTitle(state.isAborted, state.isFailed)}
         strikethrough={state.isFailed || state.isAborted}
         isHelp={state.isAborted || state.isFailed}
-        format={timing.format}
+        format={showFormatGlyphs ? timing.format : undefined}
       />
     </div>
   );
@@ -467,9 +469,7 @@ function calculateWidths(timings: TimingEntry[]) {
   );
   const timingWidth = longestTimingString * CHAR_WIDTH.TIMING;
 
-  const longestModelName = Math.max(
-    ...timings.map(t => t.provider.length + (t.format ? 1 : 0)),
-  );
+  const longestModelName = Math.max(...timings.map(t => t.provider.length));
   const modelNameWidth = longestModelName * CHAR_WIDTH.MODEL_NAME;
 
   const barAreaWidth =
@@ -495,6 +495,10 @@ export function PerformancePane({
   } else {
     return null;
   }
+
+  // Check if formats are mixed (both json and toon present)
+  const formats = new Set(timings.map(t => t.format).filter(Boolean));
+  const showFormatGlyphs = formats.size > 1;
 
   const completedTimings = timings.filter(t => !t.pending && !t.aborted);
   const allDurations = timings.map(t => t.duration);
@@ -528,6 +532,7 @@ export function PerformancePane({
             timingWidth={timingWidth}
             modelNameWidth={modelNameWidth}
             barAreaWidth={barAreaWidth}
+            showFormatGlyphs={showFormatGlyphs}
           />
         ))}
       </div>

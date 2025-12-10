@@ -170,9 +170,10 @@ function buildUserMessage(params: {
     humanChoice,
     format,
   } = params;
-  const stateStr = format === "toon"
-    ? encodeToon(currentState)
-    : JSON.stringify(currentState, null, JSON_INDENT_SPACES);
+  const stateStr =
+    format === "toon"
+      ? encodeToon(currentState)
+      : JSON.stringify(currentState, null, JSON_INDENT_SPACES);
 
   const humanChoiceStr = humanChoice
     ? format === "toon"
@@ -458,7 +459,9 @@ async function processGenerationRequest(
     ...getProviderOptions(provider),
   });
 
-  return res.status(HTTP_OK).json({ action: result.object, strategySummary, format });
+  return res
+    .status(HTTP_OK)
+    .json({ action: result.object, strategySummary, format });
 }
 
 export default async function handler(

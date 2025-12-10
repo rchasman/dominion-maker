@@ -87,6 +87,73 @@ export function ModelSettingsPanel({
             textTransform: "uppercase",
           }}
         >
+          Data Format
+        </label>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--space-3)",
+          }}
+        >
+          {(["toon", "json", "mixed"] as const).map(format => (
+            <label
+              key={format}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-1)",
+                cursor: "pointer",
+                fontSize: "0.8125rem",
+                color:
+                  settings.dataFormat === format
+                    ? "var(--color-text-primary)"
+                    : "var(--color-text-secondary)",
+              }}
+            >
+              <input
+                type="radio"
+                name="dataFormat"
+                value={format}
+                checked={settings.dataFormat === format}
+                onChange={e =>
+                  onChange({
+                    ...settings,
+                    dataFormat: e.target.value as "toon" | "json" | "mixed",
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              />
+              {format === "mixed" ? "Mixed (A/B test)" : format.toUpperCase()}
+            </label>
+          ))}
+        </div>
+        <div
+          style={{
+            fontSize: "0.625rem",
+            color: "var(--color-text-tertiary)",
+            lineHeight: 1.4,
+          }}
+        >
+          Format for game state context: TOON (compact), JSON (verbose), or
+          Mixed (alternating for comparison)
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
+        <label
+          style={{
+            fontSize: "0.6875rem",
+            fontWeight: 600,
+            color: "var(--color-text-secondary)",
+            textTransform: "uppercase",
+          }}
+        >
           Custom Strategy Override
         </label>
         <textarea
