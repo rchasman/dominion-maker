@@ -105,7 +105,14 @@ export type CardRevealedEvent = EventMetadata & {
   type: "CARD_REVEALED";
   player: PlayerId;
   card: CardName;
-  from: "hand" | "deck";
+  from: "hand" | "deck" | "discard";
+};
+
+export type CardPeekedEvent = EventMetadata & {
+  type: "CARD_PEEKED";
+  player: PlayerId;
+  card: CardName;
+  from: "deck" | "discard";
 };
 
 export type DeckShuffledEvent = EventMetadata & {
@@ -255,6 +262,7 @@ export type GameEvent =
   | CardTrashedEvent
   | CardGainedEvent
   | CardRevealedEvent
+  | CardPeekedEvent
   | DeckShuffledEvent
   | CardPutOnDeckEvent
   | CardReturnedToHandEvent

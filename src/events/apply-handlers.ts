@@ -275,6 +275,16 @@ function applyRevealAndShuffle(
     };
   }
 
+  if (event.type === "CARD_PEEKED") {
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        { type: "text", message: `${event.player} looks at ${event.card}` },
+      ],
+    };
+  }
+
   if (event.type === "DECK_SHUFFLED") {
     const playerState = state.players[event.player];
     if (!playerState) return state;
