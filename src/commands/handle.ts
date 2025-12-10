@@ -16,7 +16,7 @@ import {
   createResourceEvents,
   calculateMerchantBonus,
 } from "./handle-helpers";
-import { calculateEffectiveCost } from "../cards/effect-types";
+import { calculateEffectiveCost, getAvailableReactions } from "../cards/effect-types";
 import { handleSubmitDecision } from "./handle-decision";
 
 /**
@@ -247,22 +247,205 @@ function handlePlayAction(
   // Execute card effect
   const effect = getCardEffect(card);
   if (effect) {
-    const result = effect({
-      state: midState,
-      player: player,
-      card,
-    });
+    // Check if this is an attack card (auto-handle reactions)
+    const cardDef = CARDS[card];
+    const isAttackCard = cardDef?.types.includes("attack");
 
-    // Link all effect events to the root cause
-    const linkedEffectEvents = result.events.map(effectEvent => ({
-      ...effectEvent,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    }));
+    if (isAttackCard) {
+      // Engine emits ATTACK_DECLARED automatically
+      const opponents = midState.playerOrder?.filter(p => p !== player) || [];
+      if (opponents.length > 0) {
+        events.push({
+          type: "ATTACK_DECLARED",
+          attacker: player,
+          attackCard: card,
+          targets: opponents,
+          id: generateEventId(),
+          causedBy: rootEventId,
+        });
+      }
 
-    events.push(...linkedEffectEvents);
+      // Start reaction flow for first target
+      // Start auto-reaction flow
+      const firstTarget = attackEvent.targets[0];
+      if (firstTarget) {
+        const reactions = getAvailableReactions(
+          applyEvents(midState, linkedEffectEvents),
+          firstTarget,
+          "on_attack",
+        );
 
-    // If there's a pending decision, add it as an event
+        if (reactions.length > 0) {
+          // Ask first target for reaction
+          events.push({
+            type: "DECISION_REQUIRED",
+            decision: {
+              type: "card_decision",
+              player: firstTarget,
+              from: "hand",
+              prompt: `${player} played ${card}. Reveal a reaction?`,
+              cardOptions: reactions,
+              actions: [
+                {
+                  id: "reveal",
+                  label: "Reveal",
+                  color: "#10B981",
+                  isDefault: false,
+                },
+                {
+                  id: "decline",
+                  label: "Don't Reveal",
+                  color: "#9CA3AF",
+                  isDefault: true,
+                },
+              ],
+              cardBeingPlayed: card,
+              stage: "__auto_reaction__",
+              metadata: {
+                attackCard: card,
+                attacker: player,
+                allTargets: opponents,
+                currentTargetIndex: 0,
+                blockedTargets: [],
+                originalCause: rootEventId,
+              },
+            },
+            id: generateEventId(),
+            causedBy: rootEventId,
+          });
+          return { ok: true, events };
+        }
+
+        // No reaction for first target, auto-resolve and check next
+        events.push({
+          type: "ATTACK_RESOLVED",
+          attacker: player,
+          target: firstTarget,
+          attackCard: card,
+          blocked: false,
+          id: generateEventId(),
+          causedBy: rootEventId,
+        });
+
+        // Continue with remaining targets
+        const nextTarget = opponents[1];
+        if (nextTarget) {
+          const nextReactions = getAvailableReactions(
+            midState,
+            nextTarget,
+            "on_attack",
+          );
+          if (nextReactions.length > 0) {
+            events.push({
+              type: "DECISION_REQUIRED",
+              decision: {
+                type: "card_decision",
+                player: nextTarget,
+                from: "hand",
+                prompt: `${player} played ${card}. Reveal a reaction?`,
+                cardOptions: nextReactions,
+                actions: [
+                  {
+                    id: "reveal",
+                    label: "Reveal",
+                    color: "#10B981",
+                    isDefault: false,
+                  },
+                  {
+                    id: "decline",
+                    label: "Don't Reveal",
+                    color: "#9CA3AF",
+                    isDefault: true,
+                  },
+                ],
+                cardBeingPlayed: card,
+                stage: "__auto_reaction__",
+                metadata: {
+                  attackCard: card,
+                  attacker: player,
+                  allTargets: opponents,
+                  currentTargetIndex: 1,
+                  blockedTargets: [],
+                  originalCause: rootEventId,
+                },
+              },
+              id: generateEventId(),
+              causedBy: rootEventId,
+            });
+            return { ok: true, events };
+          }
+        }
+
+        // No more reactions needed, call card effect with resolved targets
+        const resolvedTargets = opponents;
+        const attackResult = effect({
+          state: midState,
+          player: player,
+          card,
+          attackTargets: resolvedTargets,
+        });
+
+        const linkedAttackEvents = attackResult.events.map(e => ({
+          ...e,
+          id: generateEventId(),
+          causedBy: rootEventId,
+        }));
+        events.push(...linkedAttackEvents);
+
+        if (attackResult.pendingDecision) {
+          events.push({
+            type: "DECISION_REQUIRED",
+            decision: {
+              ...attackResult.pendingDecision,
+              cardBeingPlayed: card,
+              metadata: {
+                ...attackResult.pendingDecision.metadata,
+                originalCause: rootEventId,
+              },
+            },
+            id: generateEventId(),
+            causedBy: rootEventId,
+          });
+        }
+
+        return { ok: true, events };
+      }
+
+      // No targets, call card effect with empty attackTargets
+      const attackResult = effect({
+        state: midState,
+        player: player,
+        card,
+        attackTargets: [],
+      });
+
+      const linkedAttackEvents = attackResult.events.map(e => ({
+        ...e,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      }));
+      events.push(...linkedAttackEvents);
+
+      if (attackResult.pendingDecision) {
+        events.push({
+          type: "DECISION_REQUIRED",
+          decision: {
+            ...attackResult.pendingDecision,
+            cardBeingPlayed: card,
+            metadata: {
+              ...attackResult.pendingDecision.metadata,
+              originalCause: rootEventId,
+            },
+          },
+          id: generateEventId(),
+          causedBy: rootEventId,
+        });
+      }
+
+      return { ok: true, events };
+    }
+
+    // Not an attack card, handle normal decision if present
     if (result.pendingDecision) {
       events.push({
         type: "DECISION_REQUIRED",

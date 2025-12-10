@@ -36,6 +36,8 @@ export type CardEffectContext = {
   decision?: DecisionChoice;
   /** Stage identifier for multi-stage effects */
   stage?: string;
+  /** For attack cards: targets who didn't block (undefined until reactions resolved) */
+  attackTargets?: string[];
 };
 
 /**
@@ -319,40 +321,18 @@ export function calculateEffectiveCost(
 // ============================================
 
 /**
- * Create a reaction decision request for a player who can reveal a reaction card
+ * Get available reaction cards for a trigger
  */
-export function createReactionDecision(params: {
-  player: string;
-  attackEventId: string;
-  attackCard: CardName;
-  attacker: string;
-  availableReactions: CardName[];
-}): DecisionRequest {
-  return {
-    type: "card_decision",
-    player: params.player,
-    from: "hand",
-    prompt: `${params.attacker} played ${params.attackCard}. Reveal a reaction card?`,
-    cardOptions: params.availableReactions,
-    actions: [
-      {
-        id: "reveal",
-        label: "Reveal",
-        color: "#10B981",
-        isDefault: false,
-      },
-      {
-        id: "decline",
-        label: "Don't Reveal",
-        color: "#9CA3AF",
-        isDefault: true,
-      },
-    ],
-    cardBeingPlayed: params.attackCard,
-    stage: "reaction",
-    metadata: {
-      attackEventId: params.attackEventId,
-      attacker: params.attacker,
-    },
-  };
+export function getAvailableReactions(
+  state: GameState,
+  player: string,
+  trigger: "on_attack",
+): CardName[] {
+  const playerState = state.players[player];
+  if (!playerState) return [];
+
+  return playerState.hand.filter(card => {
+    const cardDef = CARDS[card];
+    return cardDef.types.includes("reaction") && trigger === "on_attack";
+  });
 }

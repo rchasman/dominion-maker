@@ -4,6 +4,7 @@ import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
+import { getAvailableReactions } from "../cards/effect-types";
 
 type DecisionContext = {
   state: GameState;
@@ -106,11 +107,159 @@ function handleThroneRoomExecution(
   return withSecond;
 }
 
+function handleAutoReaction(
+  ctx: DecisionContext,
+  baseEvents: GameEvent[],
+  choice: DecisionChoice,
+): GameEvent[] | null {
+  if (!ctx.stage?.startsWith("__auto_reaction__")) return null;
+
+  const allTargets = (ctx.metadata?.allTargets as string[]) || [];
+  const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
+  const blockedTargets = (ctx.metadata?.blockedTargets as string[]) || [];
+  const attackCard = (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
+  const attacker = (ctx.metadata?.attacker as string) || ctx.state.activePlayer;
+  const currentTarget = allTargets[currentTargetIndex];
+
+  const events = [...baseEvents];
+
+  // Did they reveal a reaction?
+  const revealedReaction = choice.cardActions?.["0"] === "reveal";
+
+  if (revealedReaction && choice.selectedCards.length > 0) {
+    const reactionCard = choice.selectedCards[0];
+    events.push(
+      {
+        type: "REACTION_PLAYED",
+        player: currentTarget,
+        card: reactionCard,
+        triggerEventId: "", // Link to ATTACK_DECLARED
+        id: generateEventId(),
+        causedBy: ctx.originalCause || ctx.rootEventId,
+      },
+      {
+        type: "ATTACK_RESOLVED",
+        attacker,
+        target: currentTarget,
+        attackCard: attackCard!,
+        blocked: true,
+        id: generateEventId(),
+        causedBy: ctx.originalCause || ctx.rootEventId,
+      },
+    );
+    blockedTargets.push(currentTarget);
+  } else {
+    events.push({
+      type: "ATTACK_RESOLVED",
+      attacker,
+      target: currentTarget,
+      attackCard: attackCard!,
+      blocked: false,
+      id: generateEventId(),
+      causedBy: ctx.originalCause || ctx.rootEventId,
+    });
+  }
+
+  // Check next target
+  const nextIndex = currentTargetIndex + 1;
+  if (nextIndex < allTargets.length) {
+    const nextTarget = allTargets[nextIndex];
+    const midState = applyEvents(ctx.state, events);
+    const reactions = getAvailableReactions(midState, nextTarget, "on_attack");
+
+    if (reactions.length > 0) {
+      // Ask next target for reaction
+      events.push({
+        type: "DECISION_REQUIRED",
+        decision: {
+          type: "card_decision",
+          player: nextTarget,
+          from: "hand",
+          prompt: `${attacker} played ${attackCard}. Reveal a reaction?`,
+          cardOptions: reactions,
+          actions: [
+            { id: "reveal", label: "Reveal", color: "#10B981", isDefault: false },
+            { id: "decline", label: "Don't Reveal", color: "#9CA3AF", isDefault: true },
+          ],
+          cardBeingPlayed: attackCard!,
+          stage: "__auto_reaction__",
+          metadata: {
+            attackCard,
+            attacker,
+            allTargets,
+            currentTargetIndex: nextIndex,
+            blockedTargets,
+            originalCause: ctx.originalCause,
+          },
+        },
+        id: generateEventId(),
+        causedBy: ctx.originalCause || ctx.rootEventId,
+      });
+      return events;
+    }
+
+    // No reaction for next target, auto-resolve
+    events.push({
+      type: "ATTACK_RESOLVED",
+      attacker,
+      target: nextTarget,
+      attackCard: attackCard!,
+      blocked: false,
+      id: generateEventId(),
+      causedBy: ctx.originalCause || ctx.rootEventId,
+    });
+
+    // Continue checking remaining targets recursively
+    return handleAutoReaction(
+      { ...ctx, metadata: { ...ctx.metadata, currentTargetIndex: nextIndex, blockedTargets } },
+      events,
+      { selectedCards: [] }, // Fake decline for recursion
+    ) || events;
+  }
+
+  // All targets processed, apply attack to resolved targets
+  const resolvedTargets = allTargets.filter(t => !blockedTargets.includes(t));
+  const midState = applyEvents(ctx.state, events);
+
+  const effect = getCardEffect(attackCard!);
+  if (!effect) return events;
+
+  const result = effect({
+    state: midState,
+    player: attacker,
+    card: attackCard!,
+    attackTargets: resolvedTargets,
+  });
+
+  events.push(...linkEffectEvents(result.events, ctx.originalCause || ctx.rootEventId));
+
+  if (result.pendingDecision) {
+    events.push({
+      type: "DECISION_REQUIRED",
+      decision: {
+        ...result.pendingDecision,
+        metadata: {
+          ...result.pendingDecision.metadata,
+          originalCause: ctx.originalCause || ctx.rootEventId,
+        },
+      },
+      id: generateEventId(),
+      causedBy: ctx.originalCause || ctx.rootEventId,
+    });
+  }
+
+  return events;
+}
+
 function handleCardEffectContinuation(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
   choice: DecisionChoice,
 ): GameEvent[] {
+  // Check for auto-reaction first
+  const reactionResult = handleAutoReaction(ctx, baseEvents, choice);
+  if (reactionResult) return reactionResult;
+
   if (!ctx.cardBeingPlayed) return baseEvents;
 
   const effect = getCardEffect(ctx.cardBeingPlayed);
