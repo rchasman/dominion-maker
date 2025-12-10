@@ -2,7 +2,10 @@
  * Mine - Trash a Treasure from hand, gain a Treasure costing up to $3 more to hand
  */
 
-import { createMultiStageCard, generateDecisionFromSpec } from "../effect-types";
+import {
+  createMultiStageCard,
+  generateDecisionFromSpec,
+} from "../effect-types";
 import { CARDS } from "../../data/cards";
 
 export const mine = createMultiStageCard({
@@ -14,7 +17,9 @@ export const mine = createMultiStageCard({
     if (!trashSpec) return { events: [] };
 
     // Check if player has treasures
-    const treasures = playerState.hand.filter(c => CARDS[c].types.includes("treasure"));
+    const treasures = playerState.hand.filter(c =>
+      CARDS[c].types.includes("treasure"),
+    );
     if (treasures.length === 0) return { events: [] };
 
     return {
@@ -35,7 +40,12 @@ export const mine = createMultiStageCard({
     if (!toTrash) return { events: [] };
 
     const events = [
-      { type: "CARD_TRASHED" as const, player, card: toTrash, from: "hand" as const },
+      {
+        type: "CARD_TRASHED" as const,
+        player,
+        card: toTrash,
+        from: "hand" as const,
+      },
     ];
 
     const cardDef = CARDS.Mine;
@@ -43,10 +53,12 @@ export const mine = createMultiStageCard({
     if (!gainSpec) return { events };
 
     // Store the trashed card in a temporary state for gain decision
+    if (!state.pendingDecision) return { events };
+
     const stateWithMetadata = {
       ...state,
       pendingDecision: {
-        ...state.pendingDecision!,
+        ...state.pendingDecision,
         metadata: { trashedCard: toTrash },
       },
     };

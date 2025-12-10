@@ -38,7 +38,12 @@ export const remodel = createMultiStageCard({
     const gainOptions = getGainableCards(state, maxCost);
 
     const events = [
-      { type: "CARD_TRASHED" as const, player, card: toTrash, from: "hand" as const },
+      {
+        type: "CARD_TRASHED" as const,
+        player,
+        card: toTrash,
+        from: "hand" as const,
+      },
     ];
 
     if (gainOptions.length === 0) return { events };

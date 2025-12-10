@@ -1,6 +1,11 @@
 import type { CardName } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 
+// Card-specific constants
+const CHAPEL_MAX_TRASH = 4;
+const REMODEL_COST_BONUS = 2;
+const MINE_COST_BONUS = 3;
+
 export type CardType =
   | "treasure"
   | "victory"
@@ -9,9 +14,17 @@ export type CardType =
   | "attack"
   | "reaction";
 
-export type ReactionTrigger = "on_attack" | "on_gain" | "on_trash" | "on_discard";
+export type ReactionTrigger =
+  | "on_attack"
+  | "on_gain"
+  | "on_trash"
+  | "on_discard";
 
-export type TriggerType = "treasure_played" | "card_gained" | "card_trashed" | "card_discarded";
+export type TriggerType =
+  | "treasure_played"
+  | "card_gained"
+  | "card_trashed"
+  | "card_discarded";
 
 export type TriggerContext = {
   card: CardName;
@@ -32,7 +45,12 @@ export type DecisionContext = {
   stage?: string;
 };
 
-export type CardSelectionSource = "hand" | "supply" | "revealed" | "options" | "discard";
+export type CardSelectionSource =
+  | "hand"
+  | "supply"
+  | "revealed"
+  | "options"
+  | "discard";
 
 export type DecisionSpec = {
   from: CardSelectionSource;
@@ -41,7 +59,9 @@ export type DecisionSpec = {
   min: number | ((ctx: DecisionContext) => number);
   max: number | ((ctx: DecisionContext) => number);
   canSkip?: boolean;
-  metadata?: Record<string, unknown> | ((ctx: DecisionContext) => Record<string, unknown>);
+  metadata?:
+    | Record<string, unknown>
+    | ((ctx: DecisionContext) => Record<string, unknown>);
 };
 
 export interface CardDefinition {
@@ -144,7 +164,8 @@ export const CARDS: Record<CardName, CardDefinition> = {
         prompt: "Chapel: Trash up to 4 cards from your hand",
         cardOptions: ctx => ctx.state.players[ctx.player].hand,
         min: 0,
-        max: ctx => Math.min(4, ctx.state.players[ctx.player].hand.length),
+        max: ctx =>
+          Math.min(CHAPEL_MAX_TRASH, ctx.state.players[ctx.player].hand.length),
       },
     },
   },
@@ -250,17 +271,19 @@ export const CARDS: Record<CardName, CardDefinition> = {
       gain: {
         from: "supply",
         prompt: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          const trashedCard = ctx.state.pendingDecision?.metadata
+            ?.trashedCard as CardName | undefined;
           if (!trashedCard) return "Remodel: Gain a card costing up to $2 more";
           const trashCost = CARDS[trashedCard].cost;
-          const maxCost = trashCost + 2;
+          const maxCost = trashCost + REMODEL_COST_BONUS;
           return `Remodel: Gain a card costing up to $${maxCost}`;
         },
         cardOptions: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          const trashedCard = ctx.state.pendingDecision?.metadata
+            ?.trashedCard as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
-          const maxCost = trashCost + 2;
+          const maxCost = trashCost + REMODEL_COST_BONUS;
           return Object.entries(ctx.state.supply)
             .filter((entry): entry is [CardName, number] => {
               const [card, count] = entry;
@@ -272,9 +295,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         min: 1,
         max: 1,
         metadata: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          const trashedCard = ctx.state.pendingDecision?.metadata
+            ?.trashedCard as CardName | undefined;
           if (!trashedCard) return {};
-          return { trashedCard, maxCost: CARDS[trashedCard].cost + 2 };
+          return {
+            trashedCard,
+            maxCost: CARDS[trashedCard].cost + REMODEL_COST_BONUS,
+          };
         },
       },
     },
@@ -341,27 +368,31 @@ export const CARDS: Record<CardName, CardDefinition> = {
       trash: {
         from: "hand",
         prompt: "Mine: Trash a Treasure from your hand",
-        cardOptions: ctx => ctx.state.players[ctx.player].hand.filter(c => {
-          const cardDef = CARDS[c];
-          return cardDef.types.includes("treasure");
-        }),
+        cardOptions: ctx =>
+          ctx.state.players[ctx.player].hand.filter(c => {
+            const cardDef = CARDS[c];
+            return cardDef.types.includes("treasure");
+          }),
         min: 1,
         max: 1,
       },
       gain: {
         from: "supply",
         prompt: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
-          if (!trashedCard) return "Mine: Gain a Treasure costing up to $3 more";
+          const trashedCard = ctx.state.pendingDecision?.metadata
+            ?.trashedCard as CardName | undefined;
+          if (!trashedCard)
+            return "Mine: Gain a Treasure costing up to $3 more";
           const trashCost = CARDS[trashedCard].cost;
-          const maxCost = trashCost + 3;
+          const maxCost = trashCost + MINE_COST_BONUS;
           return `Mine: Gain a Treasure costing up to $${maxCost} to your hand`;
         },
         cardOptions: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata?.trashedCard as CardName | undefined;
+          const trashedCard = ctx.state.pendingDecision?.metadata
+            ?.trashedCard as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
-          const maxCost = trashCost + 3;
+          const maxCost = trashCost + MINE_COST_BONUS;
           return Object.entries(ctx.state.supply)
             .filter((entry): entry is [CardName, number] => {
               const [card, count] = entry;

@@ -2,7 +2,10 @@
  * Chapel - Trash up to 4 cards from your hand
  */
 
-import { createMultiStageCard, generateDecisionFromSpec } from "../effect-types";
+import {
+  createMultiStageCard,
+  generateDecisionFromSpec,
+} from "../effect-types";
 import { CARDS } from "../../data/cards";
 
 export const chapel = createMultiStageCard({
