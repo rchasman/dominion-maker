@@ -429,6 +429,22 @@ export async function advanceGameStateWithConsensus(
         ? `choose[${a.optionIndex}]`
         : `${a.type}(${a.card})`,
   );
+
+  // If in buy phase, show detailed supply info
+  if (currentState.phase === "buy" && currentState.buys > 0) {
+    const buyableCards = legalActions
+      .filter(a => a.type === "buy_card")
+      .map(a => {
+        const card = a.card as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        return `${card}($${cost})`;
+      })
+      .join(", ");
+    agentLogger.info(
+      `Buy phase: $${currentState.coins} available | Buyable: ${buyableCards}`,
+    );
+  }
+
   agentLogger.debug(
     `Legal actions (${legalActions.length}): ${actionSummaries.join(", ")} | Coins: ${currentState.coins}, Buys: ${currentState.buys}`,
   );

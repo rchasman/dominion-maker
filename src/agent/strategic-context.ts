@@ -158,6 +158,30 @@ function formatHandStatus(hand: CardName[], currentCoins: number): string {
 Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`;
 }
 
+function formatAvailableBuyOptions(
+  supply: Record<string, number>,
+  maxCoins: number,
+): string {
+  const availableCards = Object.entries(supply)
+    .filter(([cardName, count]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      return count > 0 && cost <= maxCoins;
+    })
+    .map(([cardName]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      const cardInfo = CARDS[card];
+      const desc = cardInfo.description || "";
+      return `${card}($${cost}): ${desc}`;
+    })
+    .join("\n  ");
+
+  if (!availableCards) return "";
+
+  return `CARDS YOU CAN BUY (with $${maxCoins}):\n  ${availableCards}`;
+}
+
 function formatStrategyAnalysis(
   strategySummary: string,
   activePlayerId: string,
@@ -231,6 +255,13 @@ export function buildStrategicContext(
     opponent.inPlay,
   );
 
+  const treasures = currentPlayer.hand.filter(c => isTreasureCard(c));
+  const treasureValue = treasures.reduce(
+    (sum, c) => sum + (CARDS[c].coins || 0),
+    0,
+  );
+  const maxCoins = state.coins + treasureValue;
+
   const sections = [
     formatScoreboard(currentVP, opponentVP),
     formatDeckComposition(currentAllCards),
@@ -239,6 +270,13 @@ export function buildStrategicContext(
     `OPPONENT DECK (${opponentAllCards.length} cards): ${analyzeDeck(opponentAllCards).breakdown}`,
     formatHandStatus(currentPlayer.hand, state.coins),
   ];
+
+  if (state.phase === "buy") {
+    const buyOptions = formatAvailableBuyOptions(state.supply, maxCoins);
+    if (buyOptions) {
+      sections.push(buyOptions);
+    }
+  }
 
   if (strategySummary) {
     sections.push(

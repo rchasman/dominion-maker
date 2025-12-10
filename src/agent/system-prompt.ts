@@ -18,7 +18,7 @@ Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
 ## Strategy
 Actions: Play +cards/+actions first, then terminals
-Buying: Play ALL treasures first. Build treasure economy (Province > Gold > Silver > actions). Don't dilute your deck with weak cards.
+Buying: Play ALL treasures first. Don't dilute your deck with weak cards - strong actions like Smithy, Market, Laboratory, Village are often worth more than treasure cards.
 
 ## Pending Decisions
 When pendingDecision exists, pick from pendingDecision.options only:
