@@ -6,6 +6,7 @@ import type {
 } from "../events/types";
 import { shuffle } from "../lib/game-utils";
 import { CARDS, type ReactionTrigger } from "../data/cards";
+import { run } from "../lib/run";
 
 // Type guard for CardName - validates that a string is a known card
 function isCardName(card: string): card is CardName {
@@ -258,6 +259,46 @@ export function createCardSelectionDecision(params: {
   };
 }
 
+/**
+ * Generate a DecisionRequest from a DecisionSpec (DSL).
+ * Evaluates dynamic properties (functions) using the provided context.
+ */
+export function generateDecisionFromSpec(
+  spec: import("../data/cards").DecisionSpec,
+  card: CardName,
+  player: string,
+  state: GameState,
+  stage: string,
+): DecisionRequest {
+  const ctx: import("../data/cards").DecisionContext = { state, player, stage };
+
+  const prompt = typeof spec.prompt === "function" ? spec.prompt(ctx) : spec.prompt;
+  const cardOptions = typeof spec.cardOptions === "function"
+    ? spec.cardOptions(ctx)
+    : spec.cardOptions;
+  const min = typeof spec.min === "function" ? spec.min(ctx) : spec.min;
+  const max = typeof spec.max === "function" ? spec.max(ctx) : spec.max;
+  const metadata = spec.metadata
+    ? typeof spec.metadata === "function"
+      ? spec.metadata(ctx)
+      : spec.metadata
+    : undefined;
+
+  return {
+    type: "card_decision",
+    player,
+    from: spec.from,
+    prompt,
+    cardOptions,
+    min,
+    max,
+    cardBeingPlayed: card,
+    stage,
+    canSkip: spec.canSkip,
+    metadata,
+  };
+}
+
 // ============================================
 // CARD TYPE CHECKING UTILITIES
 // ============================================
@@ -284,35 +325,6 @@ export function isVictoryCard(card: CardName): boolean {
 }
 
 // ============================================
-// COST CALCULATION
-// ============================================
-
-/**
- * Calculate the effective cost of a card considering active effects.
- * Returns base cost, modified cost, and list of applied modifiers.
- */
-export function calculateEffectiveCost(
-  state: GameState,
-  card: CardName,
-): {
-  baseCost: number;
-  modifiedCost: number;
-  modifiers: Array<{ source: CardName; delta: number }>;
-} {
-  const baseCost = CARDS[card].cost;
-  const modifiers = state.activeEffects
-    .filter(e => e.effectType === "cost_reduction")
-    .map(e => ({ source: e.source, delta: -e.parameters.amount }));
-
-  const modifiedCost = Math.max(
-    0,
-    baseCost + modifiers.reduce((sum, m) => sum + m.delta, 0),
-  );
-
-  return { baseCost, modifiedCost, modifiers };
-}
-
-// ============================================
 // ATTACK AND REACTION HELPERS
 // ============================================
 
@@ -331,4 +343,182 @@ export function getAvailableReactions(
     const cardDef = CARDS[card];
     return cardDef.reactionTrigger === trigger;
   });
+}
+
+// ============================================
+// MULTI-STAGE CARD EFFECT FACTORY
+// ============================================
+
+/**
+ * A stage handler function that processes one stage of a multi-stage card.
+ * Returns events and optionally triggers the next stage.
+ */
+export type StageHandler = (ctx: CardEffectContext) => CardEffectResult;
+
+/**
+ * Configuration for a multi-stage card effect.
+ * Keys are stage names (or "initial" for the first call).
+ */
+export type MultiStageConfig = {
+  initial: StageHandler;
+  [stageName: string]: StageHandler;
+};
+
+/**
+ * Create a multi-stage card effect that eliminates stage-routing boilerplate.
+ *
+ * Example usage:
+ * ```typescript
+ * export const mine = createMultiStageCard({
+ *   initial: (ctx) => ({
+ *     events: [],
+ *     pendingDecision: { stage: "trash", ... }
+ *   }),
+ *   trash: (ctx) => ({
+ *     events: [trashEvent],
+ *     pendingDecision: { stage: "gain", ... }
+ *   }),
+ *   gain: (ctx) => ({
+ *     events: [gainEvent]
+ *   })
+ * });
+ * ```
+ */
+export function createMultiStageCard(config: MultiStageConfig): CardEffect {
+  return (ctx: CardEffectContext): CardEffectResult => {
+    const { decision, stage } = ctx;
+
+    // Initial call: no decision or stage
+    if (!decision || stage === undefined) {
+      return config.initial(ctx);
+    }
+
+    // Route to appropriate stage handler
+    const handler = config[stage];
+    if (!handler) {
+      // Unknown stage - return empty result
+      return EMPTY_RESULT;
+    }
+
+    return handler(ctx);
+  };
+}
+
+// ============================================
+// OPPONENT ITERATOR FOR ATTACK CARDS
+// ============================================
+
+/**
+ * Data extracted from an opponent who needs to make a decision.
+ */
+export type OpponentDecisionData<T = Record<string, unknown>> = {
+  opponent: string;
+  data: T;
+};
+
+/**
+ * Configuration for opponent iterator card effects.
+ */
+export type OpponentIteratorConfig<T = Record<string, unknown>> = {
+  /** Filter to determine which opponents need a decision */
+  filter: (opponent: string, state: GameState) => OpponentDecisionData<T> | null;
+  /** Create decision request for an opponent */
+  createDecision: (
+    opponentData: OpponentDecisionData<T>,
+    remainingOpponents: string[],
+    attackingPlayer: string,
+    cardName: CardName,
+  ) => DecisionRequest;
+  /** Process decision choice and emit events */
+  processChoice: (
+    choice: DecisionChoice,
+    opponentData: OpponentDecisionData<T>,
+    state: GameState,
+  ) => GameEvent[];
+  /** Stage identifier for the opponent decision */
+  stage: string;
+};
+
+/**
+ * Create a card effect that iterates through opponents for attacks.
+ * Removes the manual "queue next decision" pattern from attack cards.
+ */
+export function createOpponentIteratorEffect<T = Record<string, unknown>>(
+  config: OpponentIteratorConfig<T>,
+  initialEvents: GameEvent[] | ((state: GameState, player: string) => GameEvent[]) = [],
+): CardEffect {
+  return ({ state, player, attackTargets, decision, stage }): CardEffectResult => {
+    const events = typeof initialEvents === "function"
+      ? initialEvents(state, player)
+      : [...initialEvents];
+
+    // Initial call: find first opponent needing decision
+    if (!stage) {
+      const targets = attackTargets !== undefined
+        ? attackTargets
+        : getOpponents(state, player);
+
+      const opponentData = run(() => {
+        for (const target of targets) {
+          const data = config.filter(target, state);
+          if (data) return { ...data, remainingTargets: targets.filter(t => t !== target) };
+        }
+        return null;
+      });
+
+      if (opponentData) {
+        const { remainingTargets, ...rest } = opponentData;
+        return {
+          events,
+          pendingDecision: config.createDecision(
+            rest,
+            remainingTargets,
+            player,
+            state.pendingDecision?.cardBeingPlayed || ("" as CardName),
+          ),
+        };
+      }
+      return { events };
+    }
+
+    // Process opponent decision
+    if (stage === config.stage && decision) {
+      const metadata = state.pendingDecision?.metadata;
+      const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
+      const attackingPlayer = (metadata?.attackingPlayer as string) || player;
+      const currentOpponent = state.pendingDecision?.player || "";
+
+      // Reconstruct opponent data for processing
+      const opponentData = config.filter(currentOpponent, state);
+      if (opponentData) {
+        const choiceEvents = config.processChoice(decision, opponentData, state);
+        events.push(...choiceEvents);
+      }
+
+      // Find next opponent needing decision
+      const nextOpponentData = run(() => {
+        for (const target of remainingOpponents) {
+          const data = config.filter(target, state);
+          if (data) return { ...data, remainingTargets: remainingOpponents.filter(t => t !== target) };
+        }
+        return null;
+      });
+
+      if (nextOpponentData) {
+        const { remainingTargets, ...rest } = nextOpponentData;
+        return {
+          events,
+          pendingDecision: config.createDecision(
+            rest,
+            remainingTargets,
+            attackingPlayer,
+            state.pendingDecision?.cardBeingPlayed || ("" as CardName),
+          ),
+        };
+      }
+      return { events };
+    }
+
+    return { events };
+  };
 }
