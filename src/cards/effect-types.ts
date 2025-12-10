@@ -263,13 +263,14 @@ export function createCardSelectionDecision(params: {
  * Generate a DecisionRequest from a DecisionSpec (DSL).
  * Evaluates dynamic properties (functions) using the provided context.
  */
-export function generateDecisionFromSpec(
-  spec: import("../data/cards").DecisionSpec,
-  card: CardName,
-  player: string,
-  state: GameState,
-  stage: string,
-): DecisionRequest {
+export function generateDecisionFromSpec(params: {
+  spec: import("../data/cards").DecisionSpec;
+  card: CardName;
+  player: string;
+  state: GameState;
+  stage: string;
+}): DecisionRequest {
+  const { spec, card, player, state, stage } = params;
   const ctx: import("../data/cards").DecisionContext = { state, player, stage };
 
   const prompt = typeof spec.prompt === "function" ? spec.prompt(ctx) : spec.prompt;
@@ -278,11 +279,10 @@ export function generateDecisionFromSpec(
     : spec.cardOptions;
   const min = typeof spec.min === "function" ? spec.min(ctx) : spec.min;
   const max = typeof spec.max === "function" ? spec.max(ctx) : spec.max;
-  const metadata = spec.metadata
-    ? typeof spec.metadata === "function"
-      ? spec.metadata(ctx)
-      : spec.metadata
-    : undefined;
+  const metadata = run(() => {
+    if (!spec.metadata) return undefined;
+    return typeof spec.metadata === "function" ? spec.metadata(ctx) : spec.metadata;
+  });
 
   return {
     type: "card_decision",
