@@ -194,13 +194,9 @@ export function Card({
     }
   };
 
-  let cursor = "pointer";
-  if (!onClick) cursor = "default";
-  else if (disabled) cursor = "not-allowed";
+  const cursor = !onClick ? "default" : disabled ? "not-allowed" : "pointer";
 
-  let opacity = 1;
-  if (disabled) opacity = OPACITY_DISABLED;
-  else if (dimmed) opacity = OPACITY_DIMMED;
+  const opacity = disabled ? OPACITY_DISABLED : dimmed ? OPACITY_DIMMED : 1;
 
   const transform = selected ? "translateY(calc(-1 * var(--space-2)))" : "none";
 
