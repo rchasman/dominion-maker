@@ -73,10 +73,7 @@ function handleThroneRoomExecution(
   });
   const withSecond = [
     ...newEvents,
-    ...linkEvents(
-      secondResult.events,
-      ctx.originalCause || ctx.rootEventId,
-    ),
+    ...linkEvents(secondResult.events, ctx.originalCause || ctx.rootEventId),
   ];
 
   if (secondResult.pendingDecision) {
@@ -100,6 +97,206 @@ function handleThroneRoomExecution(
   return withSecond;
 }
 
+type ReactionMetadata = {
+  attackCard: CardName;
+  attacker: string;
+  allTargets: string[];
+  currentTargetIndex: number;
+  blockedTargets: string[];
+};
+
+function extractReactionMetadata(
+  ctx: DecisionContext,
+): ReactionMetadata & { currentTarget: string } {
+  const allTargets = (ctx.metadata?.allTargets as string[]) || [];
+  const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
+  const blockedTargets = (ctx.metadata?.blockedTargets as string[]) || [];
+  const attackCard =
+    (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
+  const attacker = (ctx.metadata?.attacker as string) || ctx.state.activePlayer;
+  const currentTarget = allTargets[currentTargetIndex];
+
+  return {
+    attackCard,
+    attacker,
+    allTargets,
+    currentTargetIndex,
+    blockedTargets,
+    currentTarget,
+  };
+}
+
+function createReactionEvents(
+  choice: DecisionChoice,
+  metadata: ReactionMetadata & { currentTarget: string },
+  causedBy: string,
+): { events: GameEvent[]; updatedBlockedTargets: string[] } {
+  const revealedReaction = choice.cardActions?.["0"] === "reveal";
+
+  if (revealedReaction && choice.selectedCards.length > 0) {
+    const reactionCard = choice.selectedCards[0];
+    return {
+      events: [
+        {
+          type: "REACTION_PLAYED",
+          player: metadata.currentTarget,
+          card: reactionCard,
+          triggerEventId: "",
+          id: generateEventId(),
+          causedBy,
+        },
+        {
+          type: "ATTACK_RESOLVED",
+          attacker: metadata.attacker,
+          target: metadata.currentTarget,
+          attackCard: metadata.attackCard,
+          blocked: true,
+          id: generateEventId(),
+          causedBy,
+        },
+      ],
+      updatedBlockedTargets: [...metadata.blockedTargets, metadata.currentTarget],
+    };
+  }
+
+  return {
+    events: [
+      {
+        type: "ATTACK_RESOLVED",
+        attacker: metadata.attacker,
+        target: metadata.currentTarget,
+        attackCard: metadata.attackCard,
+        blocked: false,
+        id: generateEventId(),
+        causedBy,
+      },
+    ],
+    updatedBlockedTargets: metadata.blockedTargets,
+  };
+}
+
+function processNextTarget(
+  ctx: DecisionContext,
+  currentEvents: GameEvent[],
+  metadata: ReactionMetadata,
+  nextIndex: number,
+): GameEvent[] | null {
+  const nextTarget = metadata.allTargets[nextIndex];
+  const midState = applyEvents(ctx.state, currentEvents);
+  const reactions = getAvailableReactions(midState, nextTarget, "on_attack");
+
+  if (reactions.length > 0) {
+    const decisionEvent: GameEvent = {
+      type: "DECISION_REQUIRED",
+      decision: {
+        type: "card_decision",
+        player: nextTarget,
+        from: "hand",
+        prompt: `${metadata.attacker} played ${metadata.attackCard}. Reveal a reaction?`,
+        cardOptions: reactions,
+        actions: [
+          {
+            id: "reveal",
+            label: "Reveal",
+            color: "#10B981",
+            isDefault: false,
+          },
+          {
+            id: "decline",
+            label: "Don't Reveal",
+            color: "#9CA3AF",
+            isDefault: true,
+          },
+        ],
+        cardBeingPlayed: metadata.attackCard,
+        stage: "__auto_reaction__",
+        metadata: {
+          attackCard: metadata.attackCard,
+          attacker: metadata.attacker,
+          allTargets: metadata.allTargets,
+          currentTargetIndex: nextIndex,
+          blockedTargets: metadata.blockedTargets,
+          originalCause: ctx.originalCause,
+        },
+      },
+      id: generateEventId(),
+      causedBy: ctx.originalCause || ctx.rootEventId,
+    };
+    return [...currentEvents, decisionEvent];
+  }
+
+  const autoResolveEvent: GameEvent = {
+    type: "ATTACK_RESOLVED",
+    attacker: metadata.attacker,
+    target: nextTarget,
+    attackCard: metadata.attackCard,
+    blocked: false,
+    id: generateEventId(),
+    causedBy: ctx.originalCause || ctx.rootEventId,
+  };
+
+  return (
+    handleAutoReaction(
+      {
+        ...ctx,
+        metadata: {
+          ...ctx.metadata,
+          currentTargetIndex: nextIndex,
+          blockedTargets: metadata.blockedTargets,
+        },
+      },
+      [...currentEvents, autoResolveEvent],
+      { selectedCards: [] },
+    ) || [...currentEvents, autoResolveEvent]
+  );
+}
+
+function applyAttackToResolvedTargets(
+  ctx: DecisionContext,
+  currentEvents: GameEvent[],
+  metadata: ReactionMetadata,
+): GameEvent[] {
+  const resolvedTargets = metadata.allTargets.filter(
+    t => !metadata.blockedTargets.includes(t),
+  );
+  const midState = applyEvents(ctx.state, currentEvents);
+
+  const effect = getCardEffect(metadata.attackCard);
+  if (!effect) return currentEvents;
+
+  const result = effect({
+    state: midState,
+    player: metadata.attacker,
+    card: metadata.attackCard,
+    attackTargets: resolvedTargets,
+  });
+
+  const eventsWithAttack = [
+    ...currentEvents,
+    ...linkEvents(result.events, ctx.originalCause || ctx.rootEventId),
+  ];
+
+  if (result.pendingDecision) {
+    return [
+      ...eventsWithAttack,
+      {
+        type: "DECISION_REQUIRED",
+        decision: {
+          ...result.pendingDecision,
+          metadata: {
+            ...result.pendingDecision.metadata,
+            originalCause: ctx.originalCause || ctx.rootEventId,
+          },
+        },
+        id: generateEventId(),
+        causedBy: ctx.originalCause || ctx.rootEventId,
+      },
+    ];
+  }
+
+  return eventsWithAttack;
+}
+
 function handleAutoReaction(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
@@ -107,141 +304,22 @@ function handleAutoReaction(
 ): GameEvent[] | null {
   if (!ctx.stage?.startsWith("__auto_reaction__")) return null;
 
-  const allTargets = (ctx.metadata?.allTargets as string[]) || [];
-  const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
-  const blockedTargets = (ctx.metadata?.blockedTargets as string[]) || [];
-  const attackCard = (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
-  const attacker = (ctx.metadata?.attacker as string) || ctx.state.activePlayer;
-  const currentTarget = allTargets[currentTargetIndex];
+  const metadata = extractReactionMetadata(ctx);
+  const { events: reactionEvents, updatedBlockedTargets } = createReactionEvents(
+    choice,
+    metadata,
+    ctx.originalCause || ctx.rootEventId,
+  );
 
-  const events = [...baseEvents];
+  const currentEvents = [...baseEvents, ...reactionEvents];
+  const updatedMetadata = { ...metadata, blockedTargets: updatedBlockedTargets };
 
-  // Did they reveal a reaction?
-  const revealedReaction = choice.cardActions?.["0"] === "reveal";
-
-  if (revealedReaction && choice.selectedCards.length > 0) {
-    const reactionCard = choice.selectedCards[0];
-    events.push(
-      {
-        type: "REACTION_PLAYED",
-        player: currentTarget,
-        card: reactionCard,
-        triggerEventId: "", // Link to ATTACK_DECLARED
-        id: generateEventId(),
-        causedBy: ctx.originalCause || ctx.rootEventId,
-      },
-      {
-        type: "ATTACK_RESOLVED",
-        attacker,
-        target: currentTarget,
-        attackCard: attackCard!,
-        blocked: true,
-        id: generateEventId(),
-        causedBy: ctx.originalCause || ctx.rootEventId,
-      },
-    );
-    blockedTargets.push(currentTarget);
-  } else {
-    events.push({
-      type: "ATTACK_RESOLVED",
-      attacker,
-      target: currentTarget,
-      attackCard: attackCard!,
-      blocked: false,
-      id: generateEventId(),
-      causedBy: ctx.originalCause || ctx.rootEventId,
-    });
+  const nextIndex = metadata.currentTargetIndex + 1;
+  if (nextIndex < metadata.allTargets.length) {
+    return processNextTarget(ctx, currentEvents, updatedMetadata, nextIndex);
   }
 
-  // Check next target
-  const nextIndex = currentTargetIndex + 1;
-  if (nextIndex < allTargets.length) {
-    const nextTarget = allTargets[nextIndex];
-    const midState = applyEvents(ctx.state, events);
-    const reactions = getAvailableReactions(midState, nextTarget, "on_attack");
-
-    if (reactions.length > 0) {
-      // Ask next target for reaction
-      events.push({
-        type: "DECISION_REQUIRED",
-        decision: {
-          type: "card_decision",
-          player: nextTarget,
-          from: "hand",
-          prompt: `${attacker} played ${attackCard}. Reveal a reaction?`,
-          cardOptions: reactions,
-          actions: [
-            { id: "reveal", label: "Reveal", color: "#10B981", isDefault: false },
-            { id: "decline", label: "Don't Reveal", color: "#9CA3AF", isDefault: true },
-          ],
-          cardBeingPlayed: attackCard!,
-          stage: "__auto_reaction__",
-          metadata: {
-            attackCard,
-            attacker,
-            allTargets,
-            currentTargetIndex: nextIndex,
-            blockedTargets,
-            originalCause: ctx.originalCause,
-          },
-        },
-        id: generateEventId(),
-        causedBy: ctx.originalCause || ctx.rootEventId,
-      });
-      return events;
-    }
-
-    // No reaction for next target, auto-resolve
-    events.push({
-      type: "ATTACK_RESOLVED",
-      attacker,
-      target: nextTarget,
-      attackCard: attackCard!,
-      blocked: false,
-      id: generateEventId(),
-      causedBy: ctx.originalCause || ctx.rootEventId,
-    });
-
-    // Continue checking remaining targets recursively
-    return handleAutoReaction(
-      { ...ctx, metadata: { ...ctx.metadata, currentTargetIndex: nextIndex, blockedTargets } },
-      events,
-      { selectedCards: [] }, // Fake decline for recursion
-    ) || events;
-  }
-
-  // All targets processed, apply attack to resolved targets
-  const resolvedTargets = allTargets.filter(t => !blockedTargets.includes(t));
-  const midState = applyEvents(ctx.state, events);
-
-  const effect = getCardEffect(attackCard!);
-  if (!effect) return events;
-
-  const result = effect({
-    state: midState,
-    player: attacker,
-    card: attackCard!,
-    attackTargets: resolvedTargets,
-  });
-
-  events.push(...linkEvents(result.events, ctx.originalCause || ctx.rootEventId));
-
-  if (result.pendingDecision) {
-    events.push({
-      type: "DECISION_REQUIRED",
-      decision: {
-        ...result.pendingDecision,
-        metadata: {
-          ...result.pendingDecision.metadata,
-          originalCause: ctx.originalCause || ctx.rootEventId,
-        },
-      },
-      id: generateEventId(),
-      causedBy: ctx.originalCause || ctx.rootEventId,
-    });
-  }
-
-  return events;
+  return applyAttackToResolvedTargets(ctx, currentEvents, updatedMetadata);
 }
 
 function handleCardEffectContinuation(
