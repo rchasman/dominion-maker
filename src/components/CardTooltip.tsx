@@ -38,22 +38,24 @@ export function CardTooltip({
   const offsetX = 30; // Move cursor inward from right edge
   const offsetY = 34; // Move cursor up from bottom edge
 
-  let left = mouseX - tooltipWidth + offsetX;
-  let top = mouseY - tooltipHeight + offsetY;
+  const rawLeft = mouseX - tooltipWidth + offsetX;
+  const rawTop = mouseY - tooltipHeight + offsetY;
 
   // Keep within viewport horizontally
-  if (left < 0) {
-    left = 0;
-  } else if (left + tooltipWidth > viewportWidth) {
-    left = viewportWidth - tooltipWidth;
-  }
+  const left =
+    rawLeft < 0
+      ? 0
+      : rawLeft + tooltipWidth > viewportWidth
+        ? viewportWidth - tooltipWidth
+        : rawLeft;
 
   // Keep within viewport vertically
-  if (top < 0) {
-    top = 0;
-  } else if (top + tooltipHeight > window.innerHeight) {
-    top = window.innerHeight - tooltipHeight;
-  }
+  const top =
+    rawTop < 0
+      ? 0
+      : rawTop + tooltipHeight > window.innerHeight
+        ? window.innerHeight - tooltipHeight
+        : rawTop;
 
   return createTooltipPortal(
     <div
