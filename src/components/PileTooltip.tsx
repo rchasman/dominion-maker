@@ -1,6 +1,6 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
-import { createPortal } from "react-dom";
+import { createPortal as createReactPortal } from "react-dom";
 import type { ReactPortal } from "react";
 
 const MAX_TOOLTIP_HEIGHT = 500;
@@ -13,6 +13,235 @@ interface PileTooltipProps {
   mouseX: number;
   mouseY: number;
   pileType?: "deck" | "discard" | "trash";
+}
+
+interface TooltipPosition {
+  left: number;
+  top: number;
+}
+
+function getBorderColor(pileType?: string): string {
+  if (pileType === "trash") {
+    return "#ef4444";
+  }
+  if (pileType === "discard") {
+    return "#fbbf24";
+  }
+  return "#60a5fa";
+}
+
+function getTitleText(pileType?: string): string {
+  if (pileType === "deck") {
+    return "Deck";
+  }
+  if (pileType === "discard") {
+    return "Discard";
+  }
+  return "Trash";
+}
+
+function calculatePosition(
+  mouseX: number,
+  mouseY: number,
+  tooltipWidth: number,
+  tooltipHeight: number,
+): TooltipPosition {
+  const viewportWidth = window.innerWidth;
+
+  let left = mouseX;
+  let top = mouseY;
+
+  // Keep within viewport
+  if (left < 0) {
+    left = 0;
+  } else if (left + tooltipWidth > viewportWidth) {
+    left = viewportWidth - tooltipWidth;
+  }
+
+  if (top < 0) {
+    top = 0;
+  } else if (top + tooltipHeight > window.innerHeight) {
+    top = window.innerHeight - tooltipHeight;
+  }
+
+  return { left, top };
+}
+
+function CardImage({
+  card,
+  count,
+}: {
+  card: CardName;
+  count: number;
+}): JSX.Element {
+  return (
+    <div
+      key={card}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+      }}
+    >
+      <img
+        src={getCardImageUrl(card)}
+        alt={card}
+        style={{
+          width: "var(--card-width-medium)",
+          height: "auto",
+          border: "1px solid var(--color-border)",
+        }}
+        onError={e => {
+          const img = e.target as HTMLImageElement;
+          const fallbackUrl = `https://robinzigmond.github.io/Dominion-app/images/card_images/${card.replace(/ /g, "_")}.jpg`;
+          if (img.src !== fallbackUrl) {
+            img.src = fallbackUrl;
+          }
+        }}
+      />
+      <span
+        style={{
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        ×{count}
+      </span>
+    </div>
+  );
+}
+
+function KnownCardsSection({
+  knownUniqueCards,
+  knownCards,
+  unknownCards,
+}: {
+  knownUniqueCards: CardName[];
+  knownCards: CardName[];
+  unknownCards: CardName[];
+}): JSX.Element {
+  return (
+    <>
+      <div
+        style={{
+          fontSize: "0.625rem",
+          color: "var(--color-text-secondary)",
+          fontWeight: 600,
+          textTransform: "uppercase",
+          marginBottom: "0.5rem",
+          paddingTop: "0.75rem",
+        }}
+      >
+        Known Cards
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+        }}
+      >
+        {knownUniqueCards.map(card => {
+          const count = knownCards.filter(c => c === card).length;
+          return <CardImage key={card} card={card} count={count} />;
+        })}
+      </div>
+      {unknownCards.length > 0 && (
+        <div
+          style={{
+            fontSize: "0.625rem",
+            color: "var(--color-text-secondary)",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Unknown Cards ({unknownCards.length})
+        </div>
+      )}
+    </>
+  );
+}
+
+function AllCardsSection({
+  uniqueCards,
+  cardCounts,
+}: {
+  uniqueCards: CardName[];
+  cardCounts: Record<CardName, number>;
+}): JSX.Element {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "0.5rem",
+        paddingTop: "0.75rem",
+      }}
+    >
+      {uniqueCards.map(card => {
+        const count = cardCounts[card];
+        return <CardImage key={card} card={card} count={count ?? 0} />;
+      })}
+    </div>
+  );
+}
+
+interface TooltipContentProps {
+  pileType?: string;
+  knownUniqueCards: CardName[];
+  knownCards: CardName[];
+  unknownCards: CardName[];
+  uniqueCards: CardName[];
+  cardCounts: Record<CardName, number>;
+  borderColor: string;
+  titleText: string;
+}
+
+function TooltipContent({
+  pileType,
+  knownUniqueCards,
+  knownCards,
+  unknownCards,
+  uniqueCards,
+  cardCounts,
+  borderColor,
+  titleText,
+}: TooltipContentProps): JSX.Element {
+  const showDeckCards = pileType === "deck" && knownUniqueCards.length > 0;
+  const showAllCards =
+    (pileType === "deck" && knownUniqueCards.length === 0) ||
+    pileType !== "deck";
+
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          top: "var(--space-2)",
+          left: "var(--space-2)",
+          fontSize: "0.625rem",
+          color: borderColor,
+          fontWeight: 600,
+          textTransform: "uppercase",
+        }}
+      >
+        {titleText}
+      </div>
+      {showDeckCards && (
+        <KnownCardsSection
+          knownUniqueCards={knownUniqueCards}
+          knownCards={knownCards}
+          unknownCards={unknownCards}
+        />
+      )}
+      {showAllCards && (
+        <AllCardsSection uniqueCards={uniqueCards} cardCounts={cardCounts} />
+      )}
+    </>
+  );
 }
 
 export function PileTooltip({
@@ -46,49 +275,17 @@ export function PileTooltip({
     uniqueCards.length * CARD_HEIGHT_ESTIMATE + TOOLTIP_PADDING,
   );
 
-  const viewportWidth = window.innerWidth;
+  const { left, top } = calculatePosition(
+    mouseX,
+    mouseY,
+    tooltipWidth,
+    tooltipHeight,
+  );
 
-  // TEST: Position directly at cursor to verify this code is running
-  let left = mouseX;
-  let top = mouseY;
+  const borderColor = getBorderColor(pileType);
+  const titleText = getTitleText(pileType);
 
-  // Keep within viewport
-  if (left < 0) {
-    left = 0;
-  } else if (left + tooltipWidth > viewportWidth) {
-    left = viewportWidth - tooltipWidth;
-  }
-
-  if (top < 0) {
-    top = 0;
-  } else if (top + tooltipHeight > window.innerHeight) {
-    top = window.innerHeight - tooltipHeight;
-  }
-
-  const getBorderColor = () => {
-    if (pileType === "trash") {
-      return "#ef4444";
-    }
-    if (pileType === "discard") {
-      return "#fbbf24";
-    }
-    return "#60a5fa";
-  };
-
-  const getTitleText = () => {
-    if (pileType === "deck") {
-      return "Deck";
-    }
-    if (pileType === "discard") {
-      return "Discard";
-    }
-    return "Trash";
-  };
-
-  const borderColor = getBorderColor();
-  const titleText = getTitleText();
-
-  return createPortal(
+  const element = (
     <div
       style={{
         position: "fixed",
@@ -112,150 +309,20 @@ export function PileTooltip({
           position: "relative",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            top: "var(--space-2)",
-            left: "var(--space-2)",
-            fontSize: "0.625rem",
-            color: borderColor,
-            fontWeight: 600,
-            textTransform: "uppercase",
-          }}
-        >
-          {titleText}
-        </div>
-
-        {/* For deck with known cards, show them separately */}
-        {pileType === "deck" && knownUniqueCards.length > 0 && (
-          <>
-            <div
-              style={{
-                fontSize: "0.625rem",
-                color: "var(--color-text-secondary)",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                marginBottom: "0.5rem",
-                paddingTop: "0.75rem",
-              }}
-            >
-              Known Cards
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-              }}
-            >
-              {knownUniqueCards.map(card => {
-                const count = knownCards.filter(c => c === card).length;
-                return (
-                  <div
-                    key={card}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <img
-                      src={getCardImageUrl(card)}
-                      alt={card}
-                      style={{
-                        width: "var(--card-width-medium)",
-                        height: "auto",
-                        border: "1px solid var(--color-border)",
-                      }}
-                      onError={e => {
-                        const img = e.target as HTMLImageElement;
-                        const fallbackUrl = `https://robinzigmond.github.io/Dominion-app/images/card_images/${card.replace(/ /g, "_")}.jpg`;
-                        if (img.src !== fallbackUrl) {
-                          img.src = fallbackUrl;
-                        }
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        color: "var(--color-text-secondary)",
-                      }}
-                    >
-                      ×{count}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {unknownCards.length > 0 && (
-              <div
-                style={{
-                  fontSize: "0.625rem",
-                  color: "var(--color-text-secondary)",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                Unknown Cards ({unknownCards.length})
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Show all cards (or just unknown for deck with known cards) */}
-        {((pileType === "deck" && knownUniqueCards.length === 0) ||
-          pileType !== "deck") && (
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.5rem",
-              paddingTop: "0.75rem",
-            }}
-          >
-            {uniqueCards.map(card => (
-              <div
-                key={card}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                <img
-                  src={getCardImageUrl(card)}
-                  alt={card}
-                  style={{
-                    width: "var(--card-width-medium)",
-                    height: "auto",
-                    border: "1px solid var(--color-border)",
-                  }}
-                  onError={e => {
-                    const img = e.target as HTMLImageElement;
-                    const fallbackUrl = `https://robinzigmond.github.io/Dominion-app/images/card_images/${card.replace(/ /g, "_")}.jpg`;
-                    if (img.src !== fallbackUrl) {
-                      img.src = fallbackUrl;
-                    }
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "0.875rem",
-                    fontWeight: 600,
-                    color: "var(--color-text-secondary)",
-                  }}
-                >
-                  ×{cardCounts[card]}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <TooltipContent
+          pileType={pileType}
+          knownUniqueCards={knownUniqueCards}
+          knownCards={knownCards}
+          unknownCards={unknownCards}
+          uniqueCards={uniqueCards}
+          cardCounts={cardCounts}
+          borderColor={borderColor}
+          titleText={titleText}
+        />
       </div>
-    </div>,
-    document.body,
+    </div>
   );
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  return createReactPortal(element, document.body) as ReactPortal;
 }

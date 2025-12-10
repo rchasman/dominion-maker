@@ -99,7 +99,7 @@ function createLLMLogEntry(
   };
 }
 
-// eslint-disable-next-line max-lines-per-function -- Complex provider with extracted hooks
+ 
 export function GameProvider({ children }: { children: ReactNode }) {
   const storage = useGameStorage();
   const engineRef: MutableRefObject<DominionEngine | null> = useRef(null);

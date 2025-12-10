@@ -52,7 +52,7 @@ interface GameActions {
 /**
  * Hook to create all game action callbacks
  */
-// eslint-disable-next-line max-lines-per-function -- Multiple action callbacks
+ 
 export function useGameActions(
   engineRef: MutableRefObject<DominionEngine | null>,
   gameState: GameState | null,

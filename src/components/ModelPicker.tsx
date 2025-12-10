@@ -1,6 +1,6 @@
-import type { ModelSettings, ModelProvider } from "../agent/types";
+import type { ModelSettings } from "../agent/types";
 import { AVAILABLE_MODELS } from "../agent/types";
-import { MODELS, type ModelConfig } from "../config/models";
+import { MODELS, type ModelConfig, type ModelProvider } from "../config/models";
 
 interface ModelPickerProps {
   settings: ModelSettings;
@@ -277,11 +277,11 @@ const ProviderSection = ({
       }}
     >
       <ProviderHeader provider={provider} color={providerColor} />
-      {models.map((model: ModelProvider) => (
+      {models.map(modelId => (
         <ModelCheckbox
-          key={model}
-          model={model}
-          isEnabled={enabledModels.has(model)}
+          key={String(modelId)}
+          model={modelId}
+          isEnabled={enabledModels.has(modelId)}
           color={providerColor}
           onToggle={onToggle}
         />
@@ -292,7 +292,7 @@ const ProviderSection = ({
 
 export function ModelPicker({ settings, onChange }: ModelPickerProps) {
   const handleModelToggle = (model: ModelProvider): void => {
-    const newEnabled = new Set<ModelProvider>(settings.enabledModels);
+    const newEnabled = new Set(settings.enabledModels);
     if (newEnabled.has(model)) {
       newEnabled.delete(model);
     } else {
@@ -315,7 +315,7 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
 
   const handleSelectNone = (): void => {
     const updated: ModelSettings = {
-      enabledModels: new Set(),
+      enabledModels: new Set<ModelProvider>(),
       consensusCount: settings.consensusCount,
     };
     onChange(updated);

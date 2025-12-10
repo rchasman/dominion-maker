@@ -4,6 +4,42 @@ import { peekDraw } from "../cards/effect-types";
 import { countVP } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
 
+/** Create resource modification events with proper ID and causality */
+export function createResourceEvents(
+  modifications: Array<{
+    type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED";
+    delta: number;
+  }>,
+  causedBy: string,
+): GameEvent[] {
+  return modifications.map(mod => ({
+    ...mod,
+    id: generateEventId(),
+    causedBy,
+  }));
+}
+
+/** Calculate Merchant bonus for Silver cards */
+export function calculateMerchantBonus(
+  playerState: { inPlay: CardName[] },
+  card: CardName,
+  isPlaying: boolean,
+): number {
+  if (card !== "Silver") return 0;
+
+  const merchantsInPlay = playerState.inPlay.filter(
+    c => c === "Merchant",
+  ).length;
+  const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
+
+  if (isPlaying) {
+    // When playing: first Silver gets +$1 per Merchant
+    return silversInPlay === 0 && merchantsInPlay > 0 ? merchantsInPlay : 0;
+  }
+  // When unplaying: if we had exactly 1 Silver, remove the bonus
+  return silversInPlay === 1 && merchantsInPlay > 0 ? -merchantsInPlay : 0;
+}
+
 export const GAME_CONSTANTS = {
   INITIAL_HAND_SIZE: 5,
   KINGDOM_CARD_SELECTION: 10,

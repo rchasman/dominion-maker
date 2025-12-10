@@ -130,10 +130,13 @@ function renderTurnEnd(entry: Extract<LogEntryType, { type: "turn-end" }>) {
   );
 }
 
-function renderPhaseChange(entry: Extract<LogEntryType, { type: "phase-change" }>) {
+function renderPhaseChange(
+  entry: Extract<LogEntryType, { type: "phase-change" }>,
+) {
   return (
     <span>
-      <PlayerName player={entry.player} /> <Verb>moves to</Verb> {entry.phase} phase
+      <PlayerName player={entry.player} /> <Verb>moves to</Verb> {entry.phase}{" "}
+      phase
     </span>
   );
 }
@@ -159,15 +162,21 @@ function renderCardAction(
   );
 }
 
-function renderPlayTreasure(entry: Extract<LogEntryType, { type: "play-treasure" }>) {
+function renderPlayTreasure(
+  entry: Extract<LogEntryType, { type: "play-treasure" }>,
+) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
 
-function renderUnplayTreasure(entry: Extract<LogEntryType, { type: "unplay-treasure" }>) {
+function renderUnplayTreasure(
+  entry: Extract<LogEntryType, { type: "unplay-treasure" }>,
+) {
   return renderCardAction(entry, "takes back");
 }
 
-function renderPlayAction(entry: Extract<LogEntryType, { type: "play-action" }>) {
+function renderPlayAction(
+  entry: Extract<LogEntryType, { type: "play-action" }>,
+) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
 
@@ -393,7 +402,9 @@ function renderResourceChange(verb: string, component: ReactNode) {
   );
 }
 
-function renderGetActions(entry: Extract<LogEntryType, { type: "get-actions" }>) {
+function renderGetActions(
+  entry: Extract<LogEntryType, { type: "get-actions" }>,
+) {
   return renderResourceChange("earns", <ActionValue count={entry.count} />);
 }
 
@@ -401,7 +412,9 @@ function renderGetBuys(entry: Extract<LogEntryType, { type: "get-buys" }>) {
   return renderResourceChange("earns", <BuyValue count={entry.count} />);
 }
 
-function renderUseActions(entry: Extract<LogEntryType, { type: "use-actions" }>) {
+function renderUseActions(
+  entry: Extract<LogEntryType, { type: "use-actions" }>,
+) {
   return renderResourceChange("spends", <ActionValue count={-entry.count} />);
 }
 
@@ -413,7 +426,9 @@ function renderGetCoins(entry: Extract<LogEntryType, { type: "get-coins" }>) {
   return renderResourceChange("earns", <CoinValue coins={entry.count} />);
 }
 
-function renderSpendCoins(entry: Extract<LogEntryType, { type: "spend-coins" }>) {
+function renderSpendCoins(
+  entry: Extract<LogEntryType, { type: "spend-coins" }>,
+) {
   return renderResourceChange("spends", <CoinValue coins={-entry.count} />);
 }
 
@@ -424,34 +439,73 @@ const ENTRY_RENDERERS = {
       ctx.gameMode && ctx.gameMode !== "multiplayer"
         ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(entry.player ?? "")
         : undefined;
-    return renderTurnStart(entry as Extract<LogEntryType, { type: "turn-start" }>, isAI);
+    return renderTurnStart(
+      entry as Extract<LogEntryType, { type: "turn-start" }>,
+      isAI,
+    );
   },
-  "turn-end": (entry: LogEntryType) => renderTurnEnd(entry as Extract<LogEntryType, { type: "turn-end" }>),
-  "phase-change": (entry: LogEntryType) => renderPhaseChange(entry as Extract<LogEntryType, { type: "phase-change" }>),
-  "play-treasure": (entry: LogEntryType) => renderPlayTreasure(entry as Extract<LogEntryType, { type: "play-treasure" }>),
-  "unplay-treasure": (entry: LogEntryType) => renderUnplayTreasure(entry as Extract<LogEntryType, { type: "unplay-treasure" }>),
-  "play-action": (entry: LogEntryType) => renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
-  "buy-card": (entry: LogEntryType) => renderBuyCard(entry as Extract<LogEntryType, { type: "buy-card" }>),
+  "turn-end": (entry: LogEntryType) =>
+    renderTurnEnd(entry as Extract<LogEntryType, { type: "turn-end" }>),
+  "phase-change": (entry: LogEntryType) =>
+    renderPhaseChange(entry as Extract<LogEntryType, { type: "phase-change" }>),
+  "play-treasure": (entry: LogEntryType) =>
+    renderPlayTreasure(
+      entry as Extract<LogEntryType, { type: "play-treasure" }>,
+    ),
+  "unplay-treasure": (entry: LogEntryType) =>
+    renderUnplayTreasure(
+      entry as Extract<LogEntryType, { type: "unplay-treasure" }>,
+    ),
+  "play-action": (entry: LogEntryType) =>
+    renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
+  "buy-card": (entry: LogEntryType) =>
+    renderBuyCard(entry as Extract<LogEntryType, { type: "buy-card" }>),
   "draw-cards": (entry: LogEntryType, ctx: { depth: number; viewer: string }) =>
-    renderDrawCards(entry as Extract<LogEntryType, { type: "draw-cards" }>, ctx.depth, ctx.viewer),
+    renderDrawCards(
+      entry as Extract<LogEntryType, { type: "draw-cards" }>,
+      ctx.depth,
+      ctx.viewer,
+    ),
   "gain-card": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderGainCard(entry as Extract<LogEntryType, { type: "gain-card" }>, ctx.depth),
+    renderGainCard(
+      entry as Extract<LogEntryType, { type: "gain-card" }>,
+      ctx.depth,
+    ),
   "discard-cards": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderDiscardCards(entry as Extract<LogEntryType, { type: "discard-cards" }>, ctx.depth),
+    renderDiscardCards(
+      entry as Extract<LogEntryType, { type: "discard-cards" }>,
+      ctx.depth,
+    ),
   "trash-card": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderTrashCard(entry as Extract<LogEntryType, { type: "trash-card" }>, ctx.depth),
+    renderTrashCard(
+      entry as Extract<LogEntryType, { type: "trash-card" }>,
+      ctx.depth,
+    ),
   "shuffle-deck": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderShuffleDeck(entry as Extract<LogEntryType, { type: "shuffle-deck" }>, ctx.depth),
-  "end-turn": (entry: LogEntryType) => renderEndTurn(entry as Extract<LogEntryType, { type: "end-turn" }>),
-  "game-over": (entry: LogEntryType) => renderGameOver(entry as Extract<LogEntryType, { type: "game-over" }>),
-  "start-game": (entry: LogEntryType) => renderStartGame(entry as Extract<LogEntryType, { type: "start-game" }>),
-  "text": (entry: LogEntryType) => renderText(entry as Extract<LogEntryType, { type: "text" }>),
-  "get-actions": (entry: LogEntryType) => renderGetActions(entry as Extract<LogEntryType, { type: "get-actions" }>),
-  "get-buys": (entry: LogEntryType) => renderGetBuys(entry as Extract<LogEntryType, { type: "get-buys" }>),
-  "use-actions": (entry: LogEntryType) => renderUseActions(entry as Extract<LogEntryType, { type: "use-actions" }>),
-  "use-buys": (entry: LogEntryType) => renderUseBuys(entry as Extract<LogEntryType, { type: "use-buys" }>),
-  "get-coins": (entry: LogEntryType) => renderGetCoins(entry as Extract<LogEntryType, { type: "get-coins" }>),
-  "spend-coins": (entry: LogEntryType) => renderSpendCoins(entry as Extract<LogEntryType, { type: "spend-coins" }>),
+    renderShuffleDeck(
+      entry as Extract<LogEntryType, { type: "shuffle-deck" }>,
+      ctx.depth,
+    ),
+  "end-turn": (entry: LogEntryType) =>
+    renderEndTurn(entry as Extract<LogEntryType, { type: "end-turn" }>),
+  "game-over": (entry: LogEntryType) =>
+    renderGameOver(entry as Extract<LogEntryType, { type: "game-over" }>),
+  "start-game": (entry: LogEntryType) =>
+    renderStartGame(entry as Extract<LogEntryType, { type: "start-game" }>),
+  text: (entry: LogEntryType) =>
+    renderText(entry as Extract<LogEntryType, { type: "text" }>),
+  "get-actions": (entry: LogEntryType) =>
+    renderGetActions(entry as Extract<LogEntryType, { type: "get-actions" }>),
+  "get-buys": (entry: LogEntryType) =>
+    renderGetBuys(entry as Extract<LogEntryType, { type: "get-buys" }>),
+  "use-actions": (entry: LogEntryType) =>
+    renderUseActions(entry as Extract<LogEntryType, { type: "use-actions" }>),
+  "use-buys": (entry: LogEntryType) =>
+    renderUseBuys(entry as Extract<LogEntryType, { type: "use-buys" }>),
+  "get-coins": (entry: LogEntryType) =>
+    renderGetCoins(entry as Extract<LogEntryType, { type: "get-coins" }>),
+  "spend-coins": (entry: LogEntryType) =>
+    renderSpendCoins(entry as Extract<LogEntryType, { type: "spend-coins" }>),
 };
 
 function LogEntryContent({
@@ -466,7 +520,11 @@ function LogEntryContent({
   gameMode?: GameMode;
 }) {
   const renderer = ENTRY_RENDERERS[entry.type];
-  return renderer ? renderer(entry, { depth, viewer, gameMode }) : <span>{JSON.stringify(entry)}</span>;
+  return renderer ? (
+    renderer(entry, { depth, viewer, gameMode })
+  ) : (
+    <span>{JSON.stringify(entry)}</span>
+  );
 }
 
 type RenderContext = {

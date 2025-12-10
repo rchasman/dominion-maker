@@ -61,9 +61,7 @@ function VoteCount({
   return (
     <span
       style={{
-        color: isWinner
-          ? "var(--color-action)"
-          : "var(--color-text-secondary)",
+        color: isWinner ? "var(--color-action)" : "var(--color-text-secondary)",
         fontWeight,
         width: `${voteCountWidth}px`,
         flexShrink: 0,

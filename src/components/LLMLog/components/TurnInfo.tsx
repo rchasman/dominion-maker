@@ -15,8 +15,8 @@ export function TurnInfo({
     return (
       <>
         <span style={{ color: "var(--color-victory)" }}>
-          {currentTurn.subPhaseLabel || "Sub-phase"}:{" "}
-          {currentActionIndex + 1} of{" "}
+          {currentTurn.subPhaseLabel || "Sub-phase"}: {currentActionIndex + 1}{" "}
+          of{" "}
           {currentTurn.pending
             ? currentTurn.decisions.length + 1
             : currentTurn.decisions.length}{" "}

@@ -12,6 +12,26 @@ interface PileProps {
   showBack?: boolean;
 }
 
+function EmptyPile() {
+  return (
+    <div
+      style={{
+        width: "var(--card-width-small)",
+        aspectRatio: "5 / 7.8",
+        border: "1px dashed var(--color-border)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "var(--color-text-muted)",
+        fontSize: "0.5625rem",
+        background: "var(--color-bg-primary)",
+      }}
+    >
+      Empty
+    </div>
+  );
+}
+
 export function Pile({
   cards,
   pileType,
@@ -26,23 +46,7 @@ export function Pile({
   } | null>(null);
 
   if (cards.length === 0) {
-    return (
-      <div
-        style={{
-          width: "var(--card-width-small)",
-          aspectRatio: "5 / 7.8",
-          border: "1px dashed var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--color-text-muted)",
-          fontSize: "0.5625rem",
-          background: "var(--color-bg-primary)",
-        }}
-      >
-        Empty
-      </div>
-    );
+    return <EmptyPile />;
   }
 
   return (

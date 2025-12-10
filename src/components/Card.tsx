@@ -21,6 +21,110 @@ interface CardProps {
   disableTooltip?: boolean;
 }
 
+function getBorderStyle(
+  selected: boolean | undefined,
+  highlightMode: "trash" | "discard" | "gain" | undefined,
+): React.CSSProperties {
+  if (selected) {
+    return {
+      border: "0.125rem solid var(--color-victory)",
+      boxShadow: "var(--shadow-md)",
+    };
+  }
+  if (highlightMode === "trash") {
+    return {
+      border: "0.1875rem dashed #ef4444",
+      boxShadow: "0 0 0.5rem rgba(239, 68, 68, 0.4)",
+    };
+  }
+  if (highlightMode === "discard") {
+    return {
+      border: "0.1875rem dashed #f59e0b",
+      boxShadow: "0 0 0.5rem rgba(245, 158, 11, 0.4)",
+    };
+  }
+  if (highlightMode === "gain") {
+    return {
+      border: "0.1875rem dashed #10b981",
+      boxShadow: "0 0 0.5rem rgba(16, 185, 129, 0.4)",
+    };
+  }
+  return {
+    border: "0.125rem solid transparent",
+    boxShadow: "none",
+  };
+}
+
+function getCardWidth(size: "small" | "medium" | "large"): string {
+  if (size === "small") {
+    return "var(--card-width-small)";
+  }
+  if (size === "large") {
+    return "var(--card-width-large)";
+  }
+  return "var(--card-width-medium)";
+}
+
+function renderCardImage(params: {
+  imageUrl: string;
+  fallbackUrl: string;
+  showBack: boolean;
+  name: string;
+  cardWidth: string;
+}) {
+  const { imageUrl, fallbackUrl, showBack, name, cardWidth } = params;
+
+  return (
+    <img
+      src={imageUrl}
+      alt={showBack ? "Card back" : name}
+      style={{
+        maxInlineSize: cardWidth,
+        inlineSize: "100%",
+        blockSize: "auto",
+        display: "block",
+        objectFit: "contain",
+      }}
+      onError={e => {
+        const img = e.target as HTMLImageElement;
+        if (img.src !== fallbackUrl) {
+          img.src = fallbackUrl;
+        } else {
+          img.style.display = "none";
+        }
+      }}
+    />
+  );
+}
+
+function renderCardCount(count: number | undefined) {
+  if (count === undefined) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        insetBlockStart: "-0.5rem",
+        insetInlineEnd: "-0.5rem",
+        background: count === 0 ? "#666" : "rgba(0, 0, 0, 0.85)",
+        color: "white",
+        minInlineSize: "1.75rem",
+        blockSize: "1.75rem",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "0.875rem",
+        fontWeight: "bold",
+        border: "0.125rem solid rgba(255, 255, 255, 0.3)",
+        boxShadow: "0 0.125rem 0.25rem rgba(0,0,0,0.3)",
+      }}
+    >
+      {count}
+    </div>
+  );
+}
+
 export function Card({
   name,
   onClick,
@@ -42,49 +146,8 @@ export function Card({
     ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
     : `https://robinzigmond.github.io/Dominion-app/images/card_images/${name.replace(/ /g, "_")}.jpg`;
 
-  // Determine border style based on state
-  const getBorderStyle = () => {
-    if (selected) {
-      return {
-        border: "0.125rem solid var(--color-victory)",
-        boxShadow: "var(--shadow-md)",
-      };
-    }
-    if (highlightMode === "trash") {
-      return {
-        border: "0.1875rem dashed #ef4444",
-        boxShadow: "0 0 0.5rem rgba(239, 68, 68, 0.4)",
-      };
-    }
-    if (highlightMode === "discard") {
-      return {
-        border: "0.1875rem dashed #f59e0b",
-        boxShadow: "0 0 0.5rem rgba(245, 158, 11, 0.4)",
-      };
-    }
-    if (highlightMode === "gain") {
-      return {
-        border: "0.1875rem dashed #10b981",
-        boxShadow: "0 0 0.5rem rgba(16, 185, 129, 0.4)",
-      };
-    }
-    return {
-      border: "0.125rem solid transparent",
-      boxShadow: "none",
-    };
-  };
-
-  const getCardWidth = () => {
-    if (size === "small") {
-      return "var(--card-width-small)";
-    }
-    if (size === "large") {
-      return "var(--card-width-large)";
-    }
-    return "var(--card-width-medium)";
-  };
-
-  const borderStyle = getBorderStyle();
+  const cardWidth = getCardWidth(size);
+  const borderStyle = getBorderStyle(selected, highlightMode);
 
   const handleMouseEnter = () => {
     if (disableTooltip) return;
@@ -131,17 +194,15 @@ export function Card({
     }
   };
 
-  const getCursor = () => {
-    if (!onClick) return "default";
-    if (disabled) return "not-allowed";
-    return "pointer";
-  };
+  let cursor = "pointer";
+  if (!onClick) cursor = "default";
+  else if (disabled) cursor = "not-allowed";
 
-  const getOpacity = () => {
-    if (disabled) return OPACITY_DISABLED;
-    if (dimmed) return OPACITY_DIMMED;
-    return 1;
-  };
+  let opacity = 1;
+  if (disabled) opacity = OPACITY_DISABLED;
+  else if (dimmed) opacity = OPACITY_DIMMED;
+
+  const transform = selected ? "translateY(calc(-1 * var(--space-2)))" : "none";
 
   return (
     <>
@@ -152,11 +213,9 @@ export function Card({
         onMouseMove={handleMouseMove}
         style={{
           position: "relative",
-          cursor: getCursor(),
-          opacity: getOpacity(),
-          transform: selected
-            ? "translateY(calc(-1 * var(--space-2)))"
-            : "none",
+          cursor,
+          opacity,
+          transform,
           transition:
             "transform var(--transition-fast), box-shadow var(--transition-fast)",
           ...borderStyle,
@@ -165,48 +224,8 @@ export function Card({
           userSelect: "none",
         }}
       >
-        <img
-          src={imageUrl}
-          alt={showBack ? "Card back" : name}
-          style={{
-            maxInlineSize: getCardWidth(),
-            inlineSize: "100%",
-            blockSize: "auto",
-            display: "block",
-            objectFit: "contain",
-          }}
-          onError={e => {
-            const img = e.target as HTMLImageElement;
-            if (img.src !== fallbackUrl) {
-              img.src = fallbackUrl;
-            } else {
-              img.style.display = "none";
-            }
-          }}
-        />
-        {count !== undefined && (
-          <div
-            style={{
-              position: "absolute",
-              insetBlockStart: "-0.5rem",
-              insetInlineEnd: "-0.5rem",
-              background: count === 0 ? "#666" : "rgba(0, 0, 0, 0.85)",
-              color: "white",
-              minInlineSize: "1.75rem",
-              blockSize: "1.75rem",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.875rem",
-              fontWeight: "bold",
-              border: "0.125rem solid rgba(255, 255, 255, 0.3)",
-              boxShadow: "0 0.125rem 0.25rem rgba(0,0,0,0.3)",
-            }}
-          >
-            {count}
-          </div>
-        )}
+        {renderCardImage({ imageUrl, fallbackUrl, showBack, name, cardWidth })}
+        {renderCardCount(count)}
       </div>
       {showTooltip && (
         <CardTooltip

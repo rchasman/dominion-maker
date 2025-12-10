@@ -90,7 +90,7 @@ interface GameLogSectionProps {
   turnStatusIndicator: React.ReactNode;
 }
 
-// eslint-disable-next-line max-lines-per-function
+ 
 export function GameLogSection({
   state,
   events,

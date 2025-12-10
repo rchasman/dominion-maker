@@ -10,6 +10,32 @@ interface ActionPromptProps {
   onSkip?: () => void;
 }
 
+function renderCardOptions(
+  decision: DecisionRequest,
+  selectedCards: CardName[],
+  onToggleCard: (card: CardName) => void,
+) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "8px",
+        flexWrap: "wrap",
+        marginBottom: "16px",
+      }}
+    >
+      {(decision.cardOptions || []).map(card => (
+        <Card
+          key={card}
+          name={card}
+          onClick={() => onToggleCard(card)}
+          selected={selectedCards.includes(card)}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function ActionPrompt({
   decision,
   selectedCards,
@@ -47,23 +73,7 @@ export function ActionPrompt({
           card(s). Selected: {selectedCards.length}
         </p>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-          }}
-        >
-          {(decision.cardOptions || []).map(card => (
-            <Card
-              key={card}
-              name={card}
-              onClick={() => onToggleCard(card)}
-              selected={selectedCards.includes(card)}
-            />
-          ))}
-        </div>
+        {renderCardOptions(decision, selectedCards, onToggleCard)}
 
         <div style={{ display: "flex", gap: "12px" }}>
           <button

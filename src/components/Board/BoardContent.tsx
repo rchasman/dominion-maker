@@ -76,7 +76,7 @@ function SupplyArea({ displayState, onBuyCard, canBuy }: SupplyAreaProps) {
   );
 }
 
-// eslint-disable-next-line max-lines-per-function
+ 
 export function BoardContent({
   boardState,
   game,

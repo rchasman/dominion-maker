@@ -14,49 +14,95 @@ interface SupplyProps {
   pendingDecision?: DecisionRequest | null;
 }
 
-export function Supply({
-  state,
-  onBuyCard,
-  canBuy,
-  availableCoins,
-  pendingDecision,
-}: SupplyProps) {
-  const treasures: CardName[] = ["Copper", "Silver", "Gold"];
-  const victory: CardName[] = ["Estate", "Duchy", "Province"];
-
-  const canInteract = (card: CardName) => {
-    // If there's a gain decision from supply, only enable cards in the options
-    if (pendingDecision && pendingDecision.from === "supply") {
-      const options = pendingDecision.cardOptions || [];
-      return options.includes(card) && state.supply[card] > 0;
-    }
-
-    // Normal buy phase logic
-    return (
-      canBuy && CARDS[card].cost <= availableCoins && state.supply[card] > 0
-    );
-  };
-
-  // Determine highlight mode for supply cards
-  const getSupplyCardHighlightMode = (
-    card: CardName,
-  ): "trash" | "discard" | "gain" | undefined => {
-    if (!pendingDecision || pendingDecision.from !== "supply") return undefined;
-
-    // Check if this card is in the gain options
+function canInteractWithCard(
+  card: CardName,
+  canBuyCard: { canBuy: boolean; availableCoins: number },
+  state: GameState,
+  pendingDecision: DecisionRequest | undefined | null,
+): boolean {
+  // If there's a gain decision from supply, only enable cards in the options
+  if (pendingDecision && pendingDecision.from === "supply") {
     const options = pendingDecision.cardOptions || [];
-    const isGainable = options.includes(card);
-    return isGainable ? "gain" : undefined;
-  };
+    return options.includes(card) && state.supply[card] > 0;
+  }
 
-  // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
-  const sorted = [...state.kingdomCards].sort(
-    (a, b) => CARDS[a].cost - CARDS[b].cost,
+  // Normal buy phase logic
+  return (
+    canBuyCard.canBuy &&
+    CARDS[card].cost <= canBuyCard.availableCoins &&
+    state.supply[card] > 0
   );
-  const sortedKingdom = [
-    ...sorted.slice(KINGDOM_GRID_COLUMNS),
-    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
-  ];
+}
+
+function getSupplyCardHighlightMode(
+  card: CardName,
+  pendingDecision: DecisionRequest | undefined | null,
+): "trash" | "discard" | "gain" | undefined {
+  if (!pendingDecision || pendingDecision.from !== "supply") return undefined;
+
+  // Check if this card is in the gain options
+  const options = pendingDecision.cardOptions || [];
+  const isGainable = options.includes(card);
+  return isGainable ? "gain" : undefined;
+}
+
+function renderSupplyColumn(params: {
+  cards: CardName[];
+  size: "small" | "large";
+  state: GameState;
+  canBuyParams: { canBuy: boolean; availableCoins: number };
+  pendingDecision: DecisionRequest | undefined | null;
+  onBuyCard: ((card: CardName) => void) | undefined;
+}) {
+  const { cards, size, state, canBuyParams, pendingDecision, onBuyCard } =
+    params;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flexWrap: "wrap",
+        gap: "var(--space-1)",
+        maxBlockSize: "30rem",
+        alignContent: "start",
+      }}
+    >
+      {cards.map(card => (
+        <Card
+          key={card}
+          name={card}
+          size={size}
+          count={state.supply[card]}
+          onClick={() => onBuyCard?.(card)}
+          disabled={
+            !canInteractWithCard(card, canBuyParams, state, pendingDecision)
+          }
+          highlightMode={getSupplyCardHighlightMode(card, pendingDecision)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function renderSupplyGrid(params: {
+  state: GameState;
+  onBuyCard: ((card: CardName) => void) | undefined;
+  canBuyParams: { canBuy: boolean; availableCoins: number };
+  pendingDecision: DecisionRequest | undefined | null;
+  treasures: CardName[];
+  victory: CardName[];
+  sortedKingdom: CardName[];
+}) {
+  const {
+    state,
+    onBuyCard,
+    canBuyParams,
+    pendingDecision,
+    treasures,
+    victory,
+    sortedKingdom,
+  } = params;
 
   return (
     <div
@@ -88,28 +134,14 @@ export function Supply({
         >
           Victory
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flexWrap: "wrap",
-            gap: "var(--space-1)",
-            maxBlockSize: "30rem",
-            alignContent: "start",
-          }}
-        >
-          {victory.map(card => (
-            <Card
-              key={card}
-              name={card}
-              size="small"
-              count={state.supply[card]}
-              onClick={() => onBuyCard?.(card)}
-              disabled={!canInteract(card)}
-              highlightMode={getSupplyCardHighlightMode(card)}
-            />
-          ))}
-        </div>
+        {renderSupplyColumn({
+          cards: victory,
+          size: "small",
+          state,
+          canBuyParams,
+          pendingDecision,
+          onBuyCard,
+        })}
       </div>
 
       {/* Treasure column */}
@@ -125,28 +157,14 @@ export function Supply({
         >
           Treasure
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flexWrap: "wrap",
-            gap: "var(--space-1)",
-            maxBlockSize: "30rem",
-            alignContent: "start",
-          }}
-        >
-          {treasures.map(card => (
-            <Card
-              key={card}
-              name={card}
-              size="small"
-              count={state.supply[card]}
-              onClick={() => onBuyCard?.(card)}
-              disabled={!canInteract(card)}
-              highlightMode={getSupplyCardHighlightMode(card)}
-            />
-          ))}
-        </div>
+        {renderSupplyColumn({
+          cards: treasures,
+          size: "small",
+          state,
+          canBuyParams,
+          pendingDecision,
+          onBuyCard,
+        })}
       </div>
 
       {/* Kingdom cards */}
@@ -179,8 +197,10 @@ export function Supply({
               size="large"
               count={state.supply[card]}
               onClick={() => onBuyCard?.(card)}
-              disabled={!canInteract(card)}
-              highlightMode={getSupplyCardHighlightMode(card)}
+              disabled={
+                !canInteractWithCard(card, canBuyParams, state, pendingDecision)
+              }
+              highlightMode={getSupplyCardHighlightMode(card, pendingDecision)}
             />
           ))}
         </div>
@@ -241,11 +261,49 @@ export function Supply({
             size="small"
             count={state.supply["Curse"]}
             onClick={() => onBuyCard?.("Curse")}
-            disabled={!canInteract("Curse")}
-            highlightMode={getSupplyCardHighlightMode("Curse")}
+            disabled={
+              !canInteractWithCard(
+                "Curse",
+                canBuyParams,
+                state,
+                pendingDecision,
+              )
+            }
+            highlightMode={getSupplyCardHighlightMode("Curse", pendingDecision)}
           />
         </div>
       </div>
     </div>
   );
+}
+
+export function Supply({
+  state,
+  onBuyCard,
+  canBuy,
+  availableCoins,
+  pendingDecision,
+}: SupplyProps) {
+  const treasures: CardName[] = ["Copper", "Silver", "Gold"];
+  const victory: CardName[] = ["Estate", "Duchy", "Province"];
+
+  // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
+  const sorted = [...state.kingdomCards].sort(
+    (a, b) => CARDS[a].cost - CARDS[b].cost,
+  );
+  const sortedKingdom = [
+    ...sorted.slice(KINGDOM_GRID_COLUMNS),
+    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
+  ];
+  const canBuyParams = { canBuy, availableCoins };
+
+  return renderSupplyGrid({
+    state,
+    onBuyCard,
+    canBuyParams,
+    pendingDecision,
+    treasures,
+    victory,
+    sortedKingdom,
+  });
 }

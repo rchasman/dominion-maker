@@ -45,7 +45,7 @@ function submitSimpleDecision(
   return submitDecision({ selectedCards });
 }
 
-// eslint-disable-next-line max-lines-per-function
+ 
 export function useBoardHandlers(params: BoardHandlersParams) {
   const {
     gameState,

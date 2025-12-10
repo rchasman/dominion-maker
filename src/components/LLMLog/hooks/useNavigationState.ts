@@ -1,6 +1,5 @@
 import { useReducer, useEffect, useCallback } from "react";
 import type { Turn } from "../types";
-import { run } from "../../../lib/run";
 
 export interface NavigationState {
   currentTurnIndex: number;
@@ -77,6 +76,13 @@ function navigationReducer(state: State, action: Action): State {
   }
 }
 
+// Calculate max action index for current turn
+function calculateMaxActionIndex(currentTurn: Turn | undefined): number {
+  if (currentTurn?.pending) return currentTurn.decisions.length;
+  if (currentTurn) return currentTurn.decisions.length - 1;
+  return -1;
+}
+
 /**
  * Hook to manage navigation state for turns and actions
  * Handles auto-advance to latest turn/action when new data arrives
@@ -130,12 +136,7 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   const hasNextTurn = state.currentTurnIndex < turns.length - 1;
   const hasPrevAction = state.currentActionIndex > 0;
 
-  const maxActionIndex = run(() => {
-    if (currentTurn?.pending) return currentTurn.decisions.length;
-    if (currentTurn) return currentTurn.decisions.length - 1;
-    return -1;
-  });
-
+  const maxActionIndex = calculateMaxActionIndex(currentTurn);
   const hasNextAction = state.currentActionIndex < maxActionIndex;
 
   // Event handlers

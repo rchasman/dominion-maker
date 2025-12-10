@@ -1,8 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import type { CardName, CardAction } from "../types/game-state";
 import { Card } from "./Card";
-
-const OPACITY_DRAGGING = 0.5;
+import {
+  getHighlightMode,
+  ActionIndicator,
+  ReorderButtons,
+  OPACITY_DRAGGING_EXPORT as OPACITY_DRAGGING,
+} from "./CardDecisionModal/CardRowComponents";
 
 interface CardDecisionModalProps {
   cards: CardName[];
@@ -14,140 +18,237 @@ interface CardDecisionModalProps {
   }) => void;
 }
 
-export function CardDecisionModal({
-  cards,
-  actions,
-  requiresOrdering = false,
-  onDataChange,
-}: CardDecisionModalProps) {
+interface CardRowProps {
+  cardIndex: number;
+  card: CardName;
+  action: CardAction | undefined;
+  isDragging: boolean;
+  requiresOrdering: boolean;
+  needsOrdering: boolean;
+  cardsToOrder: number[];
+  cardOrder: number[];
+  onToggleCardAction: (index: number) => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (targetIndex: number) => void;
+  onSetDraggedIndex: (index: number | null) => void;
+  onReorder: (newOrder: number[]) => void;
+}
+
+interface UseCardDecisionState {
+  cardOrder: number[];
+  cardActions: Record<number, string>;
+  draggedIndex: number | null;
+  needsOrdering: boolean;
+  cardsToOrder: number[];
+  toggleCardAction: (index: number) => void;
+  handleDragStart: (index: number) => void;
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDrop: (targetIndex: number) => void;
+  setDraggedIndex: (index: number | null) => void;
+  handleReorder: (newOrder: number[]) => void;
+}
+
+function getInitialCardActions(
+  cards: CardName[],
+  actions: CardAction[],
+): Record<number, string> {
   const defaultAction = actions.find(a => a.isDefault);
-
-  // Initialize all cards with default action - use index as key
-  const [cardActions, setCardActions] = useState<Record<number, string>>(() =>
-    cards.reduce(
-      (acc, _, index) => ({
-        ...acc,
-        [index]: defaultAction?.id || actions[0].id,
-      }),
-      {} as Record<number, string>,
-    ),
+  return cards.reduce(
+    (acc, _, index) => ({
+      ...acc,
+      [index]: defaultAction?.id || actions[0].id,
+    }),
+    {} as Record<number, string>,
   );
+}
 
-  const [cardOrder, setCardOrder] = useState<number[]>(cards.map((_, i) => i));
+function getCardsToOrder(
+  cardOrder: number[],
+  cardActions: Record<number, string>,
+): number[] {
+  return cardOrder.filter(index => {
+    const action = cardActions[index];
+    return action === "topdeck" || action === "keep";
+  });
+}
+
+function useCardDecisionState(
+  cards: CardName[],
+  actions: CardAction[],
+  requiresOrdering: boolean,
+  onDataChange: (data: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void,
+): UseCardDecisionState {
+  const [cardActions, setCardActions] = useState(() =>
+    getInitialCardActions(cards, actions),
+  );
+  const [cardOrder, setCardOrder] = useState(cards.map((_, i) => i));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  // Notify parent of initial state on mount
   useEffect(() => {
-    const cardsToOrder = cardOrder.filter(idx => {
-      const action = cardActions[idx];
-      return action === "topdeck" || action === "keep";
-    });
     onDataChange({
       cardActions,
-      cardOrder: requiresOrdering ? cardsToOrder : undefined,
+      cardOrder: requiresOrdering
+        ? getCardsToOrder(cardOrder, cardActions)
+        : undefined,
     });
-    // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleCardAction = useCallback(
     (index: number) => {
       setCardActions(prev => {
-        const currentActionIndex = actions.findIndex(a => a.id === prev[index]);
-        const nextActionIndex = (currentActionIndex + 1) % actions.length;
-        const newCardActions = {
-          ...prev,
-          [index]: actions[nextActionIndex].id,
-        };
-
-        // Notify parent immediately
-        const cardsToOrder = cardOrder.filter(idx => {
-          const action = newCardActions[idx];
-          return action === "topdeck" || action === "keep";
-        });
+        const nextIdx =
+          (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
+        const newActions = { ...prev, [index]: actions[nextIdx].id };
         onDataChange({
-          cardActions: newCardActions,
-          cardOrder: requiresOrdering ? cardsToOrder : undefined,
+          cardActions: newActions,
+          cardOrder: requiresOrdering
+            ? getCardsToOrder(cardOrder, newActions)
+            : undefined,
         });
-
-        return newCardActions;
+        return newActions;
       });
     },
     [actions, cardOrder, onDataChange, requiresOrdering],
   );
 
-  const handleDragStart = useCallback((index: number) => {
-    setDraggedIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
+  const handleDragStart = useCallback((i: number) => setDraggedIndex(i), []);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => e.preventDefault(),
+    [],
+  );
 
   const handleDrop = useCallback(
-    (targetIndex: number) => {
-      if (draggedIndex === null || draggedIndex === targetIndex) return;
-
+    (target: number) => {
+      if (draggedIndex === null || draggedIndex === target) return;
       setCardOrder(prev => {
-        const newOrder = [...prev];
-        const draggedOrderIndex = newOrder.indexOf(draggedIndex);
-        const targetOrderIndex = newOrder.indexOf(targetIndex);
-
-        // Remove dragged card and insert at target position
-        newOrder.splice(draggedOrderIndex, 1);
-        newOrder.splice(targetOrderIndex, 0, draggedIndex);
-
-        // Notify parent immediately
-        const cardsToOrder = newOrder.filter(idx => {
-          const action = cardActions[idx];
-          return action === "topdeck" || action === "keep";
-        });
+        const order = [...prev];
+        const dIdx = order.indexOf(draggedIndex);
+        const tIdx = order.indexOf(target);
+        order.splice(dIdx, 1);
+        order.splice(tIdx, 0, draggedIndex);
         onDataChange({
           cardActions,
-          cardOrder: requiresOrdering ? cardsToOrder : undefined,
+          cardOrder: requiresOrdering
+            ? getCardsToOrder(order, cardActions)
+            : undefined,
         });
-
-        return newOrder;
+        return order;
       });
-
       setDraggedIndex(null);
     },
     [draggedIndex, cardActions, onDataChange, requiresOrdering],
   );
 
-  const getCardsForOrdering = useCallback(() => {
-    // Only cards that will go back on deck should be ordered
-    return cardOrder.filter(index => {
-      const action = cardActions[index];
-      // Cards marked topdeck or keep need ordering
-      return action === "topdeck" || action === "keep";
-    });
-  }, [cardOrder, cardActions]);
-
   const handleReorder = useCallback(
-    (newOrder: number[]) => {
-      setCardOrder(newOrder);
-
-      // Notify parent immediately
-      const cardsToOrder = newOrder.filter(idx => {
-        const action = cardActions[idx];
-        return action === "topdeck" || action === "keep";
-      });
+    (order: number[]) => {
+      setCardOrder(order);
       onDataChange({
         cardActions,
-        cardOrder: requiresOrdering ? cardsToOrder : undefined,
+        cardOrder: requiresOrdering
+          ? getCardsToOrder(order, cardActions)
+          : undefined,
       });
     },
     [cardActions, onDataChange, requiresOrdering],
   );
 
-  const cardsToOrder = getCardsForOrdering();
-
-  // Check if all topdecked cards are the same (no need to order)
+  const cardsToOrder = getCardsToOrder(cardOrder, cardActions);
   const needsOrdering =
     cardsToOrder.length > 1 &&
-    new Set(cardsToOrder.map(index => cards[index])).size > 1;
+    new Set(cardsToOrder.map(i => cards[i])).size > 1;
+  return {
+    cardOrder,
+    cardActions,
+    draggedIndex,
+    needsOrdering,
+    cardsToOrder,
+    toggleCardAction,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    setDraggedIndex,
+    handleReorder,
+  };
+}
 
+export function CardDecisionModal({
+  cards,
+  actions,
+  requiresOrdering = false,
+  onDataChange,
+}: CardDecisionModalProps) {
+  const {
+    cardOrder,
+    cardActions,
+    draggedIndex,
+    needsOrdering,
+    cardsToOrder,
+    toggleCardAction,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    setDraggedIndex,
+    handleReorder,
+  } = useCardDecisionState(cards, actions, requiresOrdering, onDataChange);
+
+  return (
+    <CardDecisionModalUI
+      cardOrder={cardOrder}
+      cards={cards}
+      actions={actions}
+      cardActions={cardActions}
+      draggedIndex={draggedIndex}
+      requiresOrdering={requiresOrdering}
+      needsOrdering={needsOrdering}
+      cardsToOrder={cardsToOrder}
+      onToggleCardAction={toggleCardAction}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onSetDraggedIndex={setDraggedIndex}
+      onReorder={handleReorder}
+    />
+  );
+}
+
+interface CardDecisionModalUIProps {
+  cardOrder: number[];
+  cards: CardName[];
+  actions: CardAction[];
+  cardActions: Record<number, string>;
+  draggedIndex: number | null;
+  requiresOrdering: boolean;
+  needsOrdering: boolean;
+  cardsToOrder: number[];
+  onToggleCardAction: (index: number) => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (targetIndex: number) => void;
+  onSetDraggedIndex: (index: number | null) => void;
+  onReorder: (newOrder: number[]) => void;
+}
+
+function CardDecisionModalUI({
+  cardOrder,
+  cards,
+  actions,
+  cardActions,
+  draggedIndex,
+  requiresOrdering,
+  needsOrdering,
+  cardsToOrder,
+  onToggleCardAction,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onSetDraggedIndex,
+  onReorder,
+}: CardDecisionModalUIProps) {
   return (
     <div
       style={{
@@ -160,200 +261,216 @@ export function CardDecisionModal({
         pointerEvents: "auto",
       }}
     >
+      <ModalContent
+        cardOrder={cardOrder}
+        cards={cards}
+        actions={actions}
+        cardActions={cardActions}
+        draggedIndex={draggedIndex}
+        requiresOrdering={requiresOrdering}
+        needsOrdering={needsOrdering}
+        cardsToOrder={cardsToOrder}
+        onToggleCardAction={onToggleCardAction}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onSetDraggedIndex={onSetDraggedIndex}
+        onReorder={onReorder}
+      />
+    </div>
+  );
+}
+
+function ModalContent({
+  cardOrder,
+  cards,
+  actions,
+  cardActions,
+  draggedIndex,
+  requiresOrdering,
+  needsOrdering,
+  cardsToOrder,
+  onToggleCardAction,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onSetDraggedIndex,
+  onReorder,
+}: CardDecisionModalUIProps) {
+  return (
+    <div
+      style={{
+        background: "rgba(26, 26, 46, 0.75)",
+        backdropFilter: "blur(12px)",
+        border: "2px solid rgb(205 133 63)",
+        padding: "var(--space-3)",
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+        maxHeight: "50vh",
+        overflow: "auto",
+        position: "relative",
+      }}
+    >
+      <ModalLabel />
+      <CardGrid
+        cardOrder={cardOrder}
+        cards={cards}
+        actions={actions}
+        cardActions={cardActions}
+        draggedIndex={draggedIndex}
+        requiresOrdering={requiresOrdering}
+        needsOrdering={needsOrdering}
+        cardsToOrder={cardsToOrder}
+        onToggleCardAction={onToggleCardAction}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onSetDraggedIndex={onSetDraggedIndex}
+        onReorder={onReorder}
+      />
+    </div>
+  );
+}
+
+function ModalLabel() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "var(--space-1)",
+        left: "var(--space-2)",
+        fontSize: "0.625rem",
+        color: "rgb(205 133 63)",
+        fontWeight: 600,
+        textTransform: "uppercase",
+      }}
+    >
+      Decision
+    </div>
+  );
+}
+
+function CardGrid({
+  cardOrder,
+  cards,
+  actions,
+  cardActions,
+  draggedIndex,
+  requiresOrdering,
+  needsOrdering,
+  cardsToOrder,
+  onToggleCardAction,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onSetDraggedIndex,
+  onReorder,
+}: CardDecisionModalUIProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--space-2)",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        padding: "var(--space-2)",
+      }}
+    >
+      {cardOrder.map(cardIndex => {
+        const card = cards[cardIndex];
+        const action = actions.find(a => a.id === cardActions[cardIndex]);
+        const isDragging = draggedIndex === cardIndex;
+
+        return (
+          <CardRow
+            key={cardIndex}
+            cardIndex={cardIndex}
+            card={card}
+            action={action}
+            isDragging={isDragging}
+            requiresOrdering={requiresOrdering}
+            needsOrdering={needsOrdering}
+            cardsToOrder={cardsToOrder}
+            cardOrder={cardOrder}
+            onToggleCardAction={onToggleCardAction}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            onSetDraggedIndex={onSetDraggedIndex}
+            onReorder={onReorder}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function CardRow({
+  cardIndex,
+  card,
+  action,
+  isDragging,
+  requiresOrdering,
+  needsOrdering,
+  cardsToOrder,
+  cardOrder,
+  onToggleCardAction,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onSetDraggedIndex,
+  onReorder,
+}: CardRowProps) {
+  const shouldShowReorderButtons =
+    requiresOrdering &&
+    (action?.id === "topdeck" || action?.id === "keep") &&
+    needsOrdering &&
+    cardsToOrder.includes(cardIndex);
+
+  return (
+    <div
+      style={{
+        opacity: isDragging ? OPACITY_DRAGGING : 1,
+        position: "relative",
+      }}
+    >
       <div
+        draggable={requiresOrdering}
+        onDragStart={e => {
+          e.dataTransfer.effectAllowed = "move";
+          onDragStart(cardIndex);
+        }}
+        onDragOver={onDragOver}
+        onDrop={e => {
+          e.preventDefault();
+          onDrop(cardIndex);
+        }}
+        onDragEnd={() => onSetDraggedIndex(null)}
         style={{
-          background: "rgba(26, 26, 46, 0.75)",
-          backdropFilter: "blur(12px)",
-          border: "2px solid rgb(205 133 63)",
-          padding: "var(--space-3)",
-          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-          maxHeight: "50vh",
-          overflow: "auto",
-          position: "relative",
+          cursor: requiresOrdering ? "grab" : "pointer",
+          userSelect: "none",
         }}
       >
-        {/* Label */}
-        <div
-          style={{
-            position: "absolute",
-            top: "var(--space-1)",
-            left: "var(--space-2)",
-            fontSize: "0.625rem",
-            color: "rgb(205 133 63)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-          }}
-        >
-          Decision
-        </div>
-
-        {/* Cards */}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            padding: "var(--space-2)",
-          }}
-        >
-          {cardOrder.map(cardIndex => {
-            const card = cards[cardIndex];
-            const action = actions.find(a => a.id === cardActions[cardIndex]);
-            const isDragging = draggedIndex === cardIndex;
-
-            const getHighlightMode = ():
-              | "trash"
-              | "discard"
-              | "gain"
-              | undefined => {
-              if (action?.id === "trash") return "trash";
-              if (action?.id === "discard") return "discard";
-              if (action?.id === "topdeck" || action?.id === "keep")
-                return "gain";
-              return undefined;
-            };
-
-            return (
-              <div
-                key={cardIndex}
-                style={{
-                  opacity: isDragging ? OPACITY_DRAGGING : 1,
-                  position: "relative",
-                }}
-              >
-                <div
-                  draggable={requiresOrdering}
-                  onDragStart={e => {
-                    e.dataTransfer.effectAllowed = "move";
-                    handleDragStart(cardIndex);
-                  }}
-                  onDragOver={handleDragOver}
-                  onDrop={e => {
-                    e.preventDefault();
-                    handleDrop(cardIndex);
-                  }}
-                  onDragEnd={() => setDraggedIndex(null)}
-                  style={{
-                    cursor: requiresOrdering ? "grab" : "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <Card
-                    name={card}
-                    size="large"
-                    onClick={() => toggleCardAction(cardIndex)}
-                    highlightMode={getHighlightMode()}
-                  />
-                </div>
-                {/* Action indicator */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "-8px",
-                    right: "-8px",
-                    background: action?.color || "#666",
-                    color: "white",
-                    padding: "4px 8px",
-                    borderRadius: "12px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {action?.label}
-                  {(action?.id === "topdeck" || action?.id === "keep") &&
-                    needsOrdering &&
-                    ` #${cardsToOrder.indexOf(cardIndex) + 1}`}
-                </div>
-                {/* Reorder arrows - only show if this card is being topdecked and there are multiple DIFFERENT cards to order */}
-                {requiresOrdering &&
-                  (action?.id === "topdeck" || action?.id === "keep") &&
-                  needsOrdering &&
-                  cardsToOrder.includes(cardIndex) && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: "-12px",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        display: "flex",
-                        gap: "4px",
-                        pointerEvents: "auto",
-                      }}
-                    >
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          const currentPos = cardsToOrder.indexOf(cardIndex);
-                          if (currentPos > 0) {
-                            const newOrder = [...cardOrder];
-                            const idx1 = newOrder.indexOf(
-                              cardsToOrder[currentPos],
-                            );
-                            const idx2 = newOrder.indexOf(
-                              cardsToOrder[currentPos - 1],
-                            );
-                            [newOrder[idx1], newOrder[idx2]] = [
-                              newOrder[idx2],
-                              newOrder[idx1],
-                            ];
-                            handleReorder(newOrder);
-                          }
-                        }}
-                        style={{
-                          background: "rgba(0, 0, 0, 0.7)",
-                          border: "1px solid white",
-                          borderRadius: "3px",
-                          color: "white",
-                          cursor: "pointer",
-                          padding: "2px 6px",
-                          fontSize: "0.75rem",
-                          lineHeight: 1,
-                        }}
-                      >
-                        ◀
-                      </button>
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          const currentPos = cardsToOrder.indexOf(cardIndex);
-                          if (currentPos < cardsToOrder.length - 1) {
-                            const newOrder = [...cardOrder];
-                            const idx1 = newOrder.indexOf(
-                              cardsToOrder[currentPos],
-                            );
-                            const idx2 = newOrder.indexOf(
-                              cardsToOrder[currentPos + 1],
-                            );
-                            [newOrder[idx1], newOrder[idx2]] = [
-                              newOrder[idx2],
-                              newOrder[idx1],
-                            ];
-                            handleReorder(newOrder);
-                          }
-                        }}
-                        style={{
-                          background: "rgba(0, 0, 0, 0.7)",
-                          border: "1px solid white",
-                          borderRadius: "3px",
-                          color: "white",
-                          cursor: "pointer",
-                          padding: "2px 6px",
-                          fontSize: "0.75rem",
-                          lineHeight: 1,
-                        }}
-                      >
-                        ▶
-                      </button>
-                    </div>
-                  )}
-              </div>
-            );
-          })}
-        </div>
+        <Card
+          name={card}
+          size="large"
+          onClick={() => onToggleCardAction(cardIndex)}
+          highlightMode={getHighlightMode(action?.id)}
+        />
       </div>
+      <ActionIndicator
+        action={action}
+        needsOrdering={needsOrdering}
+        cardsToOrder={cardsToOrder}
+        cardIndex={cardIndex}
+      />
+      {shouldShowReorderButtons && (
+        <ReorderButtons
+          cardIndex={cardIndex}
+          cardsToOrder={cardsToOrder}
+          cardOrder={cardOrder}
+          onReorder={onReorder}
+        />
+      )}
     </div>
   );
 }

@@ -43,7 +43,9 @@ export function TurnNavigationButtons({
       <button
         onClick={handlePrevTurn}
         disabled={!hasPrevTurn}
-        onMouseEnter={e => hasPrevTurn && (e.currentTarget.style.opacity = "0.5")}
+        onMouseEnter={e =>
+          hasPrevTurn && (e.currentTarget.style.opacity = "0.5")
+        }
         onMouseLeave={e => hasPrevTurn && (e.currentTarget.style.opacity = "1")}
         style={{
           ...buttonBaseStyle,
@@ -67,7 +69,9 @@ export function TurnNavigationButtons({
       <button
         onClick={handleNextTurn}
         disabled={!hasNextTurn}
-        onMouseEnter={e => hasNextTurn && (e.currentTarget.style.opacity = "0.5")}
+        onMouseEnter={e =>
+          hasNextTurn && (e.currentTarget.style.opacity = "0.5")
+        }
         onMouseLeave={e => hasNextTurn && (e.currentTarget.style.opacity = "1")}
         style={{
           ...buttonBaseStyle,

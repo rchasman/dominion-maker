@@ -1,13 +1,18 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
-import type { ReactPortal } from "react";
+import type { ReactPortal, ReactNode } from "react";
 
 interface CardTooltipProps {
   cardName: CardName;
   mouseX: number;
   mouseY: number;
   showBack?: boolean;
+}
+
+function createTooltipPortal(element: ReactNode): ReactPortal {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  return createPortal(element, document.body) as ReactPortal;
 }
 
 export function CardTooltip({
@@ -50,7 +55,7 @@ export function CardTooltip({
     top = window.innerHeight - tooltipHeight;
   }
 
-  return createPortal(
+  return createTooltipPortal(
     <div
       style={{
         position: "fixed",
@@ -81,8 +86,8 @@ export function CardTooltip({
             display: "block",
             borderRadius: "4px",
           }}
-          onError={e => {
-            const img = e.target as HTMLImageElement;
+          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+            const img = e.currentTarget;
             if (img.src !== fallbackUrl) {
               img.src = fallbackUrl;
             }
@@ -90,6 +95,5 @@ export function CardTooltip({
         />
       </div>
     </div>,
-    document.body,
   );
 }

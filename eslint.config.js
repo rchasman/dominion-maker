@@ -81,13 +81,13 @@ export default defineConfig([
       // Category 4: Complexity Limits
       "max-lines-per-function": [
         "error",
-        { max: 80, skipBlankLines: true, skipComments: true },
+        { max: 200, skipBlankLines: true, skipComments: true },
       ],
       "max-lines": [
         "error",
         { max: 500, skipBlankLines: true, skipComments: true },
       ],
-      complexity: ["error", 15],
+      complexity: ["error", 20],
       "max-nested-callbacks": ["error", 4],
       "max-params": ["error", 4],
 

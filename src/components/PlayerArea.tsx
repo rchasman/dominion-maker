@@ -55,6 +55,233 @@ interface PlayerAreaProps {
   } | null;
 }
 
+function getBorderStyle(
+  isActive: boolean,
+  gameState: GameState | undefined,
+  borderColor: string,
+): React.CSSProperties {
+  const borderWidth = isActive && gameState ? "2px" : "1px";
+  const borderStyle = `${borderWidth} solid ${borderColor}`;
+
+  return {
+    borderLeft: borderStyle,
+    borderRight: borderStyle,
+    borderBottom: borderStyle,
+    borderTop: "none",
+  };
+}
+
+function InPlayTop({
+  player,
+  loading,
+  hasMadePurchases,
+  onInPlayClick,
+}: {
+  player: PlayerState;
+  loading: boolean;
+  hasMadePurchases: boolean;
+  onInPlayClick?: (card: CardName, index: number) => void;
+}) {
+  return (
+    <InPlaySection
+      inPlay={player.inPlay}
+      loading={loading}
+      hasMadePurchases={hasMadePurchases}
+      onInPlayClick={onInPlayClick}
+    />
+  );
+}
+
+function InPlayBottom({
+  player,
+  loading,
+  hasMadePurchases,
+  onInPlayClick,
+}: {
+  player: PlayerState;
+  loading: boolean;
+  hasMadePurchases: boolean;
+  onInPlayClick?: (card: CardName, index: number) => void;
+}) {
+  return (
+    <div style={{ marginBlockStart: "var(--space-2)" }}>
+      <InPlaySection
+        inPlay={player.inPlay}
+        loading={loading}
+        hasMadePurchases={hasMadePurchases}
+        onInPlayClick={onInPlayClick}
+      />
+    </div>
+  );
+}
+
+function LoadingAnimation({ show }: { show: boolean }) {
+  if (!show) return null;
+
+  return (
+    <style>{`
+      @keyframes subtlePulse {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 0.2; }
+      }
+    `}</style>
+  );
+}
+
+function HandAndDeckGrid({
+  player,
+  showCards,
+  loading,
+  selectedCardIndices,
+  pendingDecision,
+  isInteractive,
+  isActive,
+  playerId,
+  phase,
+  actions,
+  onCardClick,
+}: {
+  player: PlayerState;
+  showCards: boolean;
+  loading: boolean;
+  selectedCardIndices: number[];
+  pendingDecision: DecisionRequest | null | undefined;
+  isInteractive: boolean;
+  isActive: boolean;
+  playerId: string | undefined;
+  phase: Phase;
+  actions: number | undefined;
+  onCardClick?: (card: CardName, index: number) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "75% 24.5%",
+        gap: "var(--space-2)",
+        alignItems: "stretch",
+      }}
+    >
+      <HandSection
+        hand={player.hand}
+        showCards={showCards}
+        loading={loading}
+        selectedCardIndices={selectedCardIndices}
+        pendingDecision={pendingDecision}
+        isInteractive={isInteractive}
+        isActive={isActive}
+        playerId={playerId}
+        phase={phase}
+        actions={actions}
+        onCardClick={onCardClick}
+      />
+
+      {showCards && (
+        <DeckDiscardSection
+          deck={player.deck}
+          discard={player.discard}
+          loading={loading}
+          deckTopRevealed={player.deckTopRevealed}
+          pendingDecision={pendingDecision}
+          isInteractive={isInteractive}
+          onCardClick={onCardClick}
+        />
+      )}
+    </div>
+  );
+}
+
+function PlayerAreaContent({
+  player,
+  label,
+  vpCount,
+  isActive,
+  showCards,
+  selectedCardIndices,
+  onCardClick,
+  onInPlayClick,
+  inverted,
+  pendingDecision,
+  playerId,
+  phase,
+  actions,
+  loading,
+  hasMadePurchases,
+  playerStrategy,
+  borderColor,
+  backgroundColor,
+  isInteractive,
+}: Omit<
+  PlayerAreaProps,
+  | "gameState"
+  | "actionBarHint"
+  | "hasTreasuresInHand"
+  | "onPlayAllTreasures"
+  | "onEndPhase"
+  | "onConfirmDecision"
+  | "onSkipDecision"
+  | "complexDecisionData"
+> & {
+  hasMadePurchases: boolean;
+  borderColor: string;
+  backgroundColor: string;
+  isInteractive: boolean;
+}): React.ReactNode {
+  return (
+    <div
+      style={{
+        padding: "var(--space-1) var(--space-2)",
+        ...getBorderStyle(isActive, undefined, borderColor),
+        background: backgroundColor,
+        overflow: "auto",
+        minHeight: 0,
+      }}
+    >
+      <PlayerLabelSection
+        label={label}
+        playerId={playerId}
+        loading={loading}
+        playerStrategy={playerStrategy}
+        vpCount={vpCount}
+      />
+
+      {!inverted && (
+        <InPlayTop
+          player={player}
+          loading={loading}
+          hasMadePurchases={hasMadePurchases}
+          onInPlayClick={onInPlayClick}
+        />
+      )}
+
+      <HandAndDeckGrid
+        player={player}
+        showCards={showCards}
+        loading={loading}
+        selectedCardIndices={selectedCardIndices}
+        pendingDecision={pendingDecision}
+        isInteractive={isInteractive}
+        isActive={isActive}
+        playerId={playerId}
+        phase={phase}
+        actions={actions}
+        onCardClick={onCardClick}
+      />
+
+      {inverted && (
+        <InPlayBottom
+          player={player}
+          loading={loading}
+          hasMadePurchases={hasMadePurchases}
+          onInPlayClick={onInPlayClick}
+        />
+      )}
+
+      <LoadingAnimation show={loading} />
+    </div>
+  );
+}
+
 export function PlayerArea({
   player,
   label,
@@ -82,18 +309,15 @@ export function PlayerArea({
   onSkipDecision,
   complexDecisionData,
 }: PlayerAreaProps) {
-  const isInteractive = !!onCardClick; // Can interact if callbacks provided
+  const isInteractive = !!onCardClick;
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
-
-  // Check if any purchases have been made this turn (treasures become non-take-backable)
   const hasMadePurchases = turnHistory.some(
     action => action.type === "buy_card",
   );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* ActionBar always visible */}
       {gameState && (
         <ActionBar
           state={gameState}
@@ -110,104 +334,27 @@ export function PlayerArea({
         />
       )}
 
-      <div
-        style={{
-          padding: "var(--space-1) var(--space-2)",
-          borderLeft:
-            isActive && gameState
-              ? `2px solid ${borderColor}`
-              : `1px solid ${borderColor}`,
-          borderRight:
-            isActive && gameState
-              ? `2px solid ${borderColor}`
-              : `1px solid ${borderColor}`,
-          borderBottom:
-            isActive && gameState
-              ? `2px solid ${borderColor}`
-              : `1px solid ${borderColor}`,
-          borderTop: "none",
-          background: backgroundColor,
-          overflow: "auto",
-          minHeight: 0,
-        }}
-      >
-        <PlayerLabelSection
-          label={label}
-          playerId={playerId}
-          loading={loading}
-          playerStrategy={playerStrategy}
-          vpCount={vpCount}
-        />
-
-        {/* Render in-play at top for normal, at bottom for inverted */}
-        {!inverted && (
-          <InPlaySection
-            inPlay={player.inPlay}
-            loading={loading}
-            hasMadePurchases={hasMadePurchases}
-            onInPlayClick={onInPlayClick}
-          />
-        )}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "75% 24.5%",
-            gap: "var(--space-2)",
-            alignItems: "stretch",
-          }}
-        >
-          {/* Hand - show cards if showCards is true, otherwise show count */}
-          <HandSection
-            hand={player.hand}
-            showCards={showCards}
-            loading={loading}
-            selectedCardIndices={selectedCardIndices}
-            pendingDecision={pendingDecision}
-            isInteractive={isInteractive}
-            isActive={isActive}
-            playerId={playerId}
-            phase={phase}
-            actions={actions}
-            onCardClick={onCardClick}
-          />
-
-          {/* Deck & Discard box */}
-          {showCards && (
-            <DeckDiscardSection
-              deck={player.deck}
-              discard={player.discard}
-              loading={loading}
-              deckTopRevealed={player.deckTopRevealed}
-              pendingDecision={pendingDecision}
-              isInteractive={isInteractive}
-              onCardClick={onCardClick}
-            />
-          )}
-        </div>
-
-        {/* Render in-play at bottom for inverted */}
-        {inverted && (
-          <div style={{ marginBlockStart: "var(--space-2)" }}>
-            <InPlaySection
-              inPlay={player.inPlay}
-              loading={loading}
-              hasMadePurchases={hasMadePurchases}
-              onInPlayClick={onInPlayClick}
-            />
-          </div>
-        )}
-
-        {/* CSS Animations */}
-        {loading && (
-          <style>{`
-          @keyframes subtlePulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.2; }
-          }
-        `}</style>
-        )}
-      </div>
+      <PlayerAreaContent
+        player={player}
+        label={label}
+        vpCount={vpCount}
+        isActive={isActive}
+        showCards={showCards}
+        selectedCardIndices={selectedCardIndices}
+        onCardClick={onCardClick}
+        onInPlayClick={onInPlayClick}
+        inverted={inverted}
+        pendingDecision={pendingDecision}
+        playerId={playerId}
+        phase={phase}
+        actions={actions}
+        loading={loading}
+        hasMadePurchases={hasMadePurchases}
+        playerStrategy={playerStrategy}
+        borderColor={borderColor}
+        backgroundColor={backgroundColor}
+        isInteractive={isInteractive}
+      />
     </div>
   );
 }

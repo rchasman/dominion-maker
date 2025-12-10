@@ -9,18 +9,65 @@ interface ModelSettingsProps {
   onChange: (settings: ModelSettings) => void;
 }
 
-export function ModelSettingsAccordion({
-  settings,
-  onChange,
-}: ModelSettingsProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const handleConsensusCountChange = (value: number) => {
+function renderConsensusControl(
+  consensusCount: number,
+  onChange: (settings: ModelSettings) => void,
+  settings: ModelSettings,
+) {
+  const handleChange = (value: number) => {
     onChange({
       ...settings,
       consensusCount: Math.max(1, Math.min(MAX_CONSENSUS_COUNT, value)),
     });
   };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-2)",
+      }}
+    >
+      <label
+        style={{
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          color: "var(--color-text-secondary)",
+          textTransform: "uppercase",
+        }}
+      >
+        Consensus Count: {consensusCount}
+      </label>
+      <input
+        type="range"
+        min="1"
+        max={MAX_CONSENSUS_COUNT}
+        value={consensusCount}
+        onChange={e => handleChange(Number(e.target.value))}
+        style={{
+          width: "100%",
+          cursor: "pointer",
+        }}
+      />
+      <div
+        style={{
+          fontSize: "0.625rem",
+          color: "var(--color-text-tertiary)",
+          lineHeight: 1.4,
+        }}
+      >
+        Total models to run (may include duplicates)
+      </div>
+    </div>
+  );
+}
+
+export function ModelSettingsAccordion({
+  settings,
+  onChange,
+}: ModelSettingsProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div
@@ -67,46 +114,7 @@ export function ModelSettingsAccordion({
             gap: "var(--space-4)",
           }}
         >
-          {/* Consensus Count */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-            }}
-          >
-            <label
-              style={{
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                textTransform: "uppercase",
-              }}
-            >
-              Consensus Count: {settings.consensusCount}
-            </label>
-            <input
-              type="range"
-              min="1"
-              max={MAX_CONSENSUS_COUNT}
-              value={settings.consensusCount}
-              onChange={e => handleConsensusCountChange(Number(e.target.value))}
-              style={{
-                width: "100%",
-                cursor: "pointer",
-              }}
-            />
-            <div
-              style={{
-                fontSize: "0.625rem",
-                color: "var(--color-text-tertiary)",
-                lineHeight: 1.4,
-              }}
-            >
-              Total models to run (may include duplicates)
-            </div>
-          </div>
-
+          {renderConsensusControl(settings.consensusCount, onChange, settings)}
           {/* Model Checkboxes - Grouped by Provider */}
           <ModelPicker settings={settings} onChange={onChange} />
         </div>

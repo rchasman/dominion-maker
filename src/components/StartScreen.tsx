@@ -9,6 +9,86 @@ interface StartScreenProps {
   onStartMultiplayer?: () => void;
 }
 
+function getModeDescription(gameMode: string): string {
+  if (gameMode === "multiplayer") {
+    return "";
+  }
+  const config = GAME_MODE_CONFIG[gameMode as keyof typeof GAME_MODE_CONFIG];
+  return config?.description ?? "";
+}
+
+function renderModeButtons(
+  gameMode: string,
+  setGameMode: (mode: "engine" | "hybrid" | "full") => void,
+) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--space-4)",
+        padding: "var(--space-4)",
+        background: "var(--color-bg-secondary)",
+        border: "1px solid var(--color-border-primary)",
+        borderRadius: "8px",
+      }}
+    >
+      <ModeButton mode="engine" current={gameMode} onClick={setGameMode} />
+      <ModeButton mode="hybrid" current={gameMode} onClick={setGameMode} />
+      <ModeButton mode="full" current={gameMode} onClick={setGameMode} />
+    </div>
+  );
+}
+
+function renderActionButtons(
+  handleStartGame: () => void,
+  onStartMultiplayer?: () => void,
+) {
+  return (
+    <div style={{ display: "flex", gap: "var(--space-4)" }}>
+      <button
+        onClick={handleStartGame}
+        style={{
+          padding: "var(--space-6) var(--space-10)",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          background:
+            "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+          color: "#fff",
+          border: "2px solid var(--color-victory)",
+          cursor: "pointer",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem",
+          fontFamily: "inherit",
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
+        Single Player
+      </button>
+
+      {onStartMultiplayer && (
+        <button
+          onClick={onStartMultiplayer}
+          style={{
+            padding: "var(--space-6) var(--space-10)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+            color: "#fff",
+            border: "2px solid #3b82f6",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+            fontFamily: "inherit",
+            boxShadow: "var(--shadow-lg)",
+          }}
+        >
+          Multiplayer
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function StartScreen({
   onStartSinglePlayer,
   onStartMultiplayer,
@@ -18,12 +98,6 @@ export function StartScreen({
   const handleStartGame = () => {
     startGame();
     onStartSinglePlayer?.();
-  };
-
-  const getModeDescription = () => {
-    return gameMode === "multiplayer"
-      ? ""
-      : GAME_MODE_CONFIG[gameMode].description;
   };
 
   return (
@@ -62,20 +136,7 @@ export function StartScreen({
         Base Game
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-4)",
-          padding: "var(--space-4)",
-          background: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-border-primary)",
-          borderRadius: "8px",
-        }}
-      >
-        <ModeButton mode="engine" current={gameMode} onClick={setGameMode} />
-        <ModeButton mode="hybrid" current={gameMode} onClick={setGameMode} />
-        <ModeButton mode="full" current={gameMode} onClick={setGameMode} />
-      </div>
+      {renderModeButtons(gameMode, setGameMode)}
 
       <p
         style={{
@@ -87,51 +148,10 @@ export function StartScreen({
           lineHeight: 1.6,
         }}
       >
-        {getModeDescription()}
+        {getModeDescription(gameMode)}
       </p>
 
-      <div style={{ display: "flex", gap: "var(--space-4)" }}>
-        <button
-          onClick={handleStartGame}
-          style={{
-            padding: "var(--space-6) var(--space-10)",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            background:
-              "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-            color: "#fff",
-            border: "2px solid var(--color-victory)",
-            cursor: "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.125rem",
-            fontFamily: "inherit",
-            boxShadow: "var(--shadow-lg)",
-          }}
-        >
-          Single Player
-        </button>
-
-        {onStartMultiplayer && (
-          <button
-            onClick={onStartMultiplayer}
-            style={{
-              padding: "var(--space-6) var(--space-10)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
-              color: "#fff",
-              border: "2px solid #3b82f6",
-              cursor: "pointer",
-              textTransform: "uppercase",
-              letterSpacing: "0.125rem",
-              fontFamily: "inherit",
-              boxShadow: "var(--shadow-lg)",
-            }}
-          >
-            Multiplayer
-          </button>
-        )}
-      </div>
+      {renderActionButtons(handleStartGame, onStartMultiplayer)}
     </div>
   );
 }

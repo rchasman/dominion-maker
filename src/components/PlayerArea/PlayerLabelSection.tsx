@@ -26,20 +26,124 @@ interface PlayerLabelSectionProps {
   vpCount?: number;
 }
 
-export function PlayerLabelSection({
-  label,
-  playerId,
-  loading,
-  playerStrategy,
-  vpCount,
-}: PlayerLabelSectionProps) {
-  const hasStrategyContent =
-    playerStrategy &&
-    (playerStrategy.gameplan ||
-      playerStrategy.read ||
-      playerStrategy.recommendation);
+function renderStrategySection(playerStrategy: {
+  gameplan: string;
+  read: string;
+  recommendation: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: "0.6875rem",
+            textTransform: "uppercase",
+            opacity: 0.6,
+            marginBottom: "0.25rem",
+          }}
+        >
+          Gameplan
+        </div>
+        <div>{playerStrategy.gameplan}</div>
+      </div>
+      <div>
+        <div
+          style={{
+            fontSize: "0.6875rem",
+            textTransform: "uppercase",
+            opacity: 0.6,
+            marginBottom: "0.25rem",
+          }}
+        >
+          Read
+        </div>
+        <div style={{ lineHeight: "1.6" }}>{playerStrategy.read}</div>
+      </div>
+      <div>
+        <div
+          style={{
+            fontSize: "0.6875rem",
+            textTransform: "uppercase",
+            opacity: 0.6,
+            marginBottom: "0.25rem",
+          }}
+        >
+          Recommendation
+        </div>
+        <div style={{ lineHeight: "1.6" }}>{playerStrategy.recommendation}</div>
+      </div>
+    </div>
+  );
+}
 
-  const [isStrategyOpen, setIsStrategyOpen] = useState(false);
+function renderStrategyTooltip(params: {
+  floatingStyles: React.CSSProperties;
+  playerColor: string;
+  label: string;
+  playerStrategy: { gameplan: string; read: string; recommendation: string };
+  setFloating: (node: HTMLElement | null) => void;
+  getFloatingProps: () => Record<string, unknown>;
+}) {
+  const {
+    floatingStyles,
+    playerColor,
+    label,
+    playerStrategy,
+    setFloating,
+    getFloatingProps,
+  } = params;
+
+  return (
+    <div
+      ref={setFloating}
+      style={{
+        ...floatingStyles,
+        background: "rgba(26, 26, 46, 0.75)",
+        backdropFilter: "blur(12px)",
+        border: `2px solid ${playerColor}`,
+        padding: "1rem",
+        maxWidth: "320px",
+        zIndex: 10000,
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+        pointerEvents: "none",
+      }}
+      {...getFloatingProps()}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "var(--space-2)",
+          left: "var(--space-2)",
+          fontSize: "0.625rem",
+          color: playerColor,
+          fontWeight: 600,
+          textTransform: "uppercase",
+        }}
+      >
+        Strategy - {label}
+      </div>
+      <div
+        style={{
+          fontSize: "0.8125rem",
+          lineHeight: "1.5",
+          color: "var(--color-text-primary)",
+          paddingTop: "0.75rem",
+        }}
+      >
+        {renderStrategySection(playerStrategy)}
+      </div>
+    </div>
+  );
+}
+
+function useStrategyFloating(initialOpen = false) {
+  const [isStrategyOpen, setIsStrategyOpen] = useState(initialOpen);
 
   const { refs, floatingStyles, context } = useFloating({
     open: isStrategyOpen,
@@ -70,7 +174,43 @@ export function PlayerLabelSection({
     clientPoint,
   ]);
 
+  return {
+    isStrategyOpen,
+    floatingStyles,
+    setReference,
+    setFloating,
+    getReferenceProps,
+    getFloatingProps,
+  };
+}
+
+export function PlayerLabelSection({
+  label,
+  playerId,
+  loading,
+  playerStrategy,
+  vpCount,
+}: PlayerLabelSectionProps) {
+  const hasStrategyContent =
+    playerStrategy &&
+    (playerStrategy.gameplan ||
+      playerStrategy.read ||
+      playerStrategy.recommendation);
+
+  const {
+    isStrategyOpen,
+    floatingStyles,
+    setReference,
+    setFloating,
+    getReferenceProps,
+    getFloatingProps,
+  } = useStrategyFloating();
+
   const playerColor = playerId ? getPlayerColor(playerId) : "rgb(205 133 63)";
+
+  const labelColor = playerId
+    ? getPlayerColor(playerId)
+    : "var(--color-text-primary)";
 
   return (
     <div
@@ -104,9 +244,7 @@ export function PlayerLabelSection({
               {...(hasStrategyContent ? getReferenceProps() : {})}
               style={{
                 fontSize: "0.8125rem",
-                color: playerId
-                  ? getPlayerColor(playerId)
-                  : "var(--color-text-primary)",
+                color: labelColor,
                 display: "flex",
                 alignItems: "center",
                 gap: "var(--space-2)",
@@ -127,97 +265,17 @@ export function PlayerLabelSection({
                 </span>
               )}
             </strong>
-            {isStrategyOpen && hasStrategyContent && (
-              <div
-                ref={setFloating}
-                style={{
-                  ...floatingStyles,
-                  background: "rgba(26, 26, 46, 0.75)",
-                  backdropFilter: "blur(12px)",
-                  border: `2px solid ${playerColor}`,
-                  padding: "1rem",
-                  maxWidth: "320px",
-                  zIndex: 10000,
-                  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-                  pointerEvents: "none",
-                }}
-                {...getFloatingProps()}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "var(--space-2)",
-                    left: "var(--space-2)",
-                    fontSize: "0.625rem",
-                    color: playerColor,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Strategy - {label}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.8125rem",
-                    lineHeight: "1.5",
-                    color: "var(--color-text-primary)",
-                    paddingTop: "0.75rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "0.6875rem",
-                          textTransform: "uppercase",
-                          opacity: 0.6,
-                          marginBottom: "0.25rem",
-                        }}
-                      >
-                        Gameplan
-                      </div>
-                      <div>{playerStrategy.gameplan}</div>
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "0.6875rem",
-                          textTransform: "uppercase",
-                          opacity: 0.6,
-                          marginBottom: "0.25rem",
-                        }}
-                      >
-                        Read
-                      </div>
-                      <div style={{ lineHeight: "1.6" }}>
-                        {playerStrategy.read}
-                      </div>
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: "0.6875rem",
-                          textTransform: "uppercase",
-                          opacity: 0.6,
-                          marginBottom: "0.25rem",
-                        }}
-                      >
-                        Recommendation
-                      </div>
-                      <div style={{ lineHeight: "1.6" }}>
-                        {playerStrategy.recommendation}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {isStrategyOpen &&
+              hasStrategyContent &&
+              playerStrategy &&
+              renderStrategyTooltip({
+                floatingStyles,
+                playerColor,
+                label,
+                playerStrategy,
+                setFloating,
+                getFloatingProps,
+              })}
           </>
         )}
       </div>
@@ -225,9 +283,7 @@ export function PlayerLabelSection({
         <div
           style={{
             fontSize: "0.875rem",
-            color: playerId
-              ? getPlayerColor(playerId)
-              : "var(--color-victory)",
+            color: playerId ? getPlayerColor(playerId) : "var(--color-victory)",
             fontWeight: 600,
             display: "flex",
             alignItems: "center",

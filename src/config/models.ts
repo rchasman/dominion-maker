@@ -93,7 +93,21 @@ export const MODELS: ModelConfig[] = [
 ];
 
 // Derived exports
-export const MODEL_IDS = MODELS.map(m => m.id);
+export const MODEL_IDS = [
+  "claude-haiku",
+  "claude-sonnet",
+  "gpt-4o-mini",
+  "gpt-4o",
+  "gpt-oss-20b",
+  "gpt-oss-120b",
+  "gemini-2.5-flash-lite",
+  "ministral-3b",
+  "grok-4-fast",
+  "grok-code-fast-1",
+  "cerebras-llama-3.3-70b",
+  "groq-llama-3.3-70b",
+  "groq-llama-4-scout",
+] as const;
 export type ModelProvider = (typeof MODEL_IDS)[number];
 
 export const MODEL_MAP: Record<string, string> = Object.fromEntries(

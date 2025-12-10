@@ -133,12 +133,18 @@ interface RequestBody {
   strategySummary?: string;
 }
 
-type OnExtraTokenHandler = (text: string, data: unknown, reminding: string) => void;
+type OnExtraTokenHandler = (
+  text: string,
+  data: unknown,
+  reminding: string,
+) => void;
 
 // Parse and validate request body
 function parseRequestBody(req: VercelRequest): RequestBody {
   const rawBody = req.body || "{}";
-  return (typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody) as RequestBody;
+  return (
+    typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody
+  ) as RequestBody;
 }
 
 // Build prompt question based on game state
@@ -159,7 +165,14 @@ function buildUserMessage(params: {
   promptQuestion: string;
   humanChoice?: { selectedCards: string[] };
 }): string {
-  const { strategicContext, currentState, turnHistoryStr, legalActionsStr, promptQuestion, humanChoice } = params;
+  const {
+    strategicContext,
+    currentState,
+    turnHistoryStr,
+    legalActionsStr,
+    promptQuestion,
+    humanChoice,
+  } = params;
   const stateStr = JSON.stringify(currentState, null, JSON_INDENT_SPACES);
 
   return humanChoice
@@ -169,7 +182,11 @@ function buildUserMessage(params: {
 
 // Check if provider needs text fallback
 function needsTextFallback(provider: string): boolean {
-  return provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq");
+  return (
+    provider.includes("ministral") ||
+    provider.includes("cerebras") ||
+    provider.includes("groq")
+  );
 }
 
 // Extract JSON from markdown code blocks
@@ -182,8 +199,14 @@ function stripMarkdownCodeBlocks(text: string): string {
 function parseTextResponse(text: string, provider: string): unknown {
   const stripped = stripMarkdownCodeBlocks(text.trim());
 
-  const originalOnExtraToken = parseBestEffort.onExtraToken as OnExtraTokenHandler | undefined;
-  parseBestEffort.onExtraToken = (text: string, data: unknown, reminding: string) => {
+  const originalOnExtraToken = parseBestEffort.onExtraToken as
+    | OnExtraTokenHandler
+    | undefined;
+  parseBestEffort.onExtraToken = (
+    text: string,
+    data: unknown,
+    reminding: string,
+  ) => {
     apiLogger.debug(`${provider} JSON with extra tokens`, {
       extracted: data,
       extraText: reminding.slice(0, MAX_EXTRA_TEXT_LENGTH),
@@ -205,8 +228,8 @@ function tryRecoverActionFromText(
   const validAction = chunks
     .slice()
     .reverse()
-    .map((chunk) => chunk.trim())
-    .filter((chunk) => chunk.startsWith("{") && chunk.endsWith("}"))
+    .map(chunk => chunk.trim())
+    .filter(chunk => chunk.startsWith("{") && chunk.endsWith("}"))
     .reduce<{ validated?: z.infer<typeof ActionSchema> }>((result, chunk) => {
       if (result.validated) return result;
 
@@ -226,7 +249,11 @@ function tryRecoverActionFromText(
         }
 
         // Check if this is an action object
-        if (record.type && typeof record.type === "string" && record.type !== "object") {
+        if (
+          record.type &&
+          typeof record.type === "string" &&
+          record.type !== "object"
+        ) {
           const validated = ActionSchema.parse(parsed);
           return { validated };
         }
@@ -240,6 +267,18 @@ function tryRecoverActionFromText(
   return validAction.validated;
 }
 
+// Build JSON prompt for text fallback
+function buildTextFallbackJsonPrompt(userMessage: string): string {
+  return `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
+{ "type": "play_action", "card": "CardName", "reasoning": "..." }
+{ "type": "play_treasure", "card": "CardName", "reasoning": "..." }
+{ "type": "buy_card", "card": "CardName", "reasoning": "..." }
+{ "type": "gain_card", "card": "CardName", "reasoning": "..." }
+{ "type": "discard_card", "card": "CardName", "reasoning": "..." }
+{ "type": "trash_card", "card": "CardName", "reasoning": "..." }
+{ "type": "end_phase", "reasoning": "..." }`;
+}
+
 // Generate action using text fallback (for models without JSON schema support)
 async function generateActionWithTextFallback(params: {
   model: ReturnType<typeof gateway>;
@@ -250,14 +289,7 @@ async function generateActionWithTextFallback(params: {
 }): Promise<VercelResponse> {
   const { model, userMessage, provider, res, strategySummary } = params;
 
-  const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
-{ "type": "play_action", "card": "CardName", "reasoning": "..." }
-{ "type": "play_treasure", "card": "CardName", "reasoning": "..." }
-{ "type": "buy_card", "card": "CardName", "reasoning": "..." }
-{ "type": "gain_card", "card": "CardName", "reasoning": "..." }
-{ "type": "discard_card", "card": "CardName", "reasoning": "..." }
-{ "type": "trash_card", "card": "CardName", "reasoning": "..." }
-{ "type": "end_phase", "reasoning": "..." }`;
+  const jsonPrompt = buildTextFallbackJsonPrompt(userMessage);
 
   const result = await generateText({
     model,
@@ -272,7 +304,8 @@ async function generateActionWithTextFallback(params: {
     const action = ActionSchema.parse(parsed);
     return res.status(HTTP_OK).json({ action, strategySummary });
   } catch (parseErr) {
-    const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    const errorMessage =
+      parseErr instanceof Error ? parseErr.message : String(parseErr);
     apiLogger.error(`${provider} parse failed: ${errorMessage}`);
     apiLogger.error(`${provider} raw text output: ${result.text}`);
     apiLogger.error(`${provider} extracted json: ${JSON.stringify(parsed)}`);
@@ -300,7 +333,11 @@ function tryRecoverFromError(
   const errorRecord = err as Record<string, unknown>;
 
   // Handle Gemini wrapping response in extra "action" key
-  if (errorRecord.value && typeof errorRecord.value === "object" && errorRecord.value !== null) {
+  if (
+    errorRecord.value &&
+    typeof errorRecord.value === "object" &&
+    errorRecord.value !== null
+  ) {
     const valueRecord = errorRecord.value as Record<string, unknown>;
     if (valueRecord.action && provider.includes("gemini")) {
       try {
@@ -313,7 +350,11 @@ function tryRecoverFromError(
   }
 
   // Try to recover from text fallback providers
-  if (errorRecord.text && typeof errorRecord.text === "string" && needsTextFallback(provider)) {
+  if (
+    errorRecord.text &&
+    typeof errorRecord.text === "string" &&
+    needsTextFallback(provider)
+  ) {
     try {
       const validated = tryRecoverActionFromText(errorRecord.text);
       if (validated) {
@@ -327,7 +368,81 @@ function tryRecoverFromError(
   return undefined;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// Process request body and validate input
+async function processGenerationRequest(
+  body: RequestBody,
+  res: VercelResponse,
+): Promise<VercelResponse | null> {
+  const {
+    provider: bodyProvider,
+    currentState,
+    humanChoice,
+    legalActions,
+    strategySummary,
+  } = body;
+  const provider = bodyProvider;
+
+  if (!provider || !currentState) {
+    return res
+      .status(HTTP_BAD_REQUEST)
+      .json({ error: "Missing required fields: provider, currentState" });
+  }
+
+  const modelName = MODEL_MAP[provider];
+  if (!modelName) {
+    return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
+  }
+
+  const model = gateway(modelName);
+
+  const legalActionsStr =
+    legalActions && legalActions.length > 0
+      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
+      : "";
+
+  const turnHistoryStr =
+    currentState.turnHistory && currentState.turnHistory.length > 0
+      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
+      : "";
+
+  const strategicContext = buildStrategicContext(currentState, strategySummary);
+  const promptQuestion = buildPromptQuestion(currentState);
+  const userMessage = buildUserMessage({
+    strategicContext,
+    currentState,
+    turnHistoryStr,
+    legalActionsStr,
+    promptQuestion,
+    humanChoice,
+  });
+
+  // Some models don't support json_schema response format - use generateText with explicit JSON instructions
+  if (needsTextFallback(provider)) {
+    return await generateActionWithTextFallback({
+      model,
+      userMessage,
+      provider,
+      res,
+      strategySummary,
+    });
+  }
+
+  // Use generateObject for other models
+  const result = await generateObject({
+    model,
+    schema: ActionSchema,
+    system: DOMINION_SYSTEM_PROMPT,
+    prompt: userMessage,
+    maxRetries: 0,
+  });
+
+  return res.status(HTTP_OK).json({ action: result.object, strategySummary });
+}
+
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<VercelResponse> {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -347,54 +462,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const body = parseRequestBody(req);
-    const { provider: bodyProvider, currentState, humanChoice, legalActions, strategySummary } = body;
-    provider = bodyProvider;
+    provider = body.provider;
 
-    if (!provider || !currentState) {
-      return res.status(HTTP_BAD_REQUEST).json({ error: "Missing required fields: provider, currentState" });
-    }
+    const result = await processGenerationRequest(body, res);
+    if (result) return result;
 
-    const modelName = MODEL_MAP[provider];
-    if (!modelName) {
-      return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
-    }
-
-    const model = gateway(modelName);
-
-    const legalActionsStr = legalActions && legalActions.length > 0
-      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
-      : "";
-
-    const turnHistoryStr = currentState.turnHistory && currentState.turnHistory.length > 0
-      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
-      : "";
-
-    const strategicContext = buildStrategicContext(currentState, strategySummary);
-    const promptQuestion = buildPromptQuestion(currentState);
-    const userMessage = buildUserMessage({
-      strategicContext,
-      currentState,
-      turnHistoryStr,
-      legalActionsStr,
-      promptQuestion,
-      humanChoice,
+    // If no result returned, this shouldn't happen - return error
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: HTTP_INTERNAL_ERROR,
+      message: "Internal error: no response generated",
     });
-
-    // Some models don't support json_schema response format - use generateText with explicit JSON instructions
-    if (needsTextFallback(provider)) {
-      return await generateActionWithTextFallback({ model, userMessage, provider, res, strategySummary });
-    }
-
-    // Use generateObject for other models
-    const result = await generateObject({
-      model,
-      schema: ActionSchema,
-      system: DOMINION_SYSTEM_PROMPT,
-      prompt: userMessage,
-      maxRetries: 0,
-    });
-
-    return res.status(HTTP_OK).json({ action: result.object, strategySummary });
   } catch (err) {
     // Try recovery strategies
     const recovered = tryRecoverFromError(err, provider, res);

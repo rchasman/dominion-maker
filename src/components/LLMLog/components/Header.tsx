@@ -56,7 +56,9 @@ export function Header({
           {hasModelSettings && (
             <SettingsButton
               isExpanded={isModelSettingsExpanded}
-              onClick={() => setIsModelSettingsExpanded(!isModelSettingsExpanded)}
+              onClick={() =>
+                setIsModelSettingsExpanded(!isModelSettingsExpanded)
+              }
             />
           )}
           {turnsCount > 0 && (

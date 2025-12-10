@@ -13,44 +13,10 @@ import {
   createDrawEventsForCleanup,
   getNextPlayer,
   checkGameOver,
+  createResourceEvents,
+  calculateMerchantBonus,
 } from "./handle-helpers";
 import { handleSubmitDecision } from "./handle-decision";
-
-/** Create resource modification events with proper ID and causality */
-function createResourceEvents(
-  modifications: Array<{
-    type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED";
-    delta: number;
-  }>,
-  causedBy: string,
-): GameEvent[] {
-  return modifications.map(mod => ({
-    ...mod,
-    id: generateEventId(),
-    causedBy,
-  }));
-}
-
-/** Calculate Merchant bonus for Silver cards */
-function calculateMerchantBonus(
-  playerState: { inPlay: CardName[] },
-  card: CardName,
-  isPlaying: boolean,
-): number {
-  if (card !== "Silver") return 0;
-
-  const merchantsInPlay = playerState.inPlay.filter(
-    c => c === "Merchant",
-  ).length;
-  const silversInPlay = playerState.inPlay.filter(c => c === "Silver").length;
-
-  if (isPlaying) {
-    // When playing: first Silver gets +$1 per Merchant
-    return silversInPlay === 0 && merchantsInPlay > 0 ? merchantsInPlay : 0;
-  }
-  // When unplaying: if we had exactly 1 Silver, remove the bonus
-  return silversInPlay === 1 && merchantsInPlay > 0 ? -merchantsInPlay : 0;
-}
 
 /**
  * Handle a command and return the resulting events.

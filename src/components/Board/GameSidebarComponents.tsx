@@ -78,7 +78,7 @@ interface GameActionButtonsProps {
   onBackToHome?: () => void;
 }
 
-// eslint-disable-next-line max-lines-per-function
+ 
 export function GameActionButtons({
   onNewGame,
   onEndGame,

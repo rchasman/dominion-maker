@@ -1,7 +1,4 @@
-import type {
-  CardName,
-  Phase,
-} from "../../types/game-state";
+import type { CardName, Phase } from "../../types/game-state";
 import type { DecisionRequest } from "../../events/types";
 import { Card } from "../Card";
 import { CARDS } from "../../data/cards";
@@ -41,15 +38,27 @@ function getHandCardHighlightMode(
   return undefined;
 }
 
-function isHandCardDisabled(
-  card: CardName,
-  isInteractive: boolean,
-  isActive: boolean,
-  pendingDecision: DecisionRequest | null | undefined,
-  playerId: string | undefined,
-  phase: Phase,
-  actions: number | undefined,
-): boolean {
+interface CardDisabledContext {
+  card: CardName;
+  isInteractive: boolean;
+  isActive: boolean;
+  pendingDecision: DecisionRequest | null | undefined;
+  playerId: string | undefined;
+  phase: Phase;
+  actions: number | undefined;
+}
+
+function isHandCardDisabled(context: CardDisabledContext): boolean {
+  const {
+    card,
+    isInteractive,
+    isActive,
+    pendingDecision,
+    playerId,
+    phase,
+    actions,
+  } = context;
+
   if (!isInteractive) return true;
   if (!isActive) return true;
 
@@ -81,6 +90,81 @@ function isHandCardDisabled(
   return false;
 }
 
+function HandCountDisplay({ handLength }: { handLength: number }) {
+  return (
+    <div
+      style={{
+        padding: "var(--space-3) var(--space-6)",
+        background: "rgb(255 255 255 / 0.05)",
+        border: "1px solid var(--color-border)",
+        display: "flex",
+        alignItems: "center",
+        color: "var(--color-text-secondary)",
+        fontSize: "0.75rem",
+      }}
+    >
+      {handLength} cards in hand
+    </div>
+  );
+}
+
+function HandCardRenderer({
+  card,
+  index,
+  selectedCardIndices,
+  pendingDecision,
+  isInteractive,
+  isActive,
+  playerId,
+  phase,
+  actions,
+  onCardClick,
+}: {
+  card: CardName;
+  index: number;
+  selectedCardIndices: number[];
+  pendingDecision: DecisionRequest | null | undefined;
+  isInteractive: boolean;
+  isActive: boolean;
+  playerId: string | undefined;
+  phase: Phase;
+  actions: number | undefined;
+  onCardClick?: (card: CardName, index: number) => void;
+}) {
+  const isSelected =
+    (!pendingDecision ||
+      pendingDecision.from === "hand" ||
+      pendingDecision.from === "discard") &&
+    selectedCardIndices.includes(index);
+
+  return (
+    <div key={`${card}-${index}-wrapper`}>
+      <Card
+        key={`${card}-${index}`}
+        name={card}
+        size="large"
+        onClick={() => onCardClick?.(card, index)}
+        selected={isSelected}
+        highlightMode={getHandCardHighlightMode(
+          card,
+          pendingDecision,
+          isInteractive,
+          playerId,
+        )}
+        disabled={isHandCardDisabled({
+          card,
+          isInteractive,
+          isActive,
+          pendingDecision,
+          playerId,
+          phase,
+          actions,
+        })}
+      />
+    </div>
+  );
+}
+
 export function HandSection({
   hand,
   showCards,
@@ -95,21 +179,7 @@ export function HandSection({
   onCardClick,
 }: HandSectionProps) {
   if (!showCards) {
-    return (
-      <div
-        style={{
-          padding: "var(--space-3) var(--space-6)",
-          background: "rgb(255 255 255 / 0.05)",
-          border: "1px solid var(--color-border)",
-          display: "flex",
-          alignItems: "center",
-          color: "var(--color-text-secondary)",
-          fontSize: "0.75rem",
-        }}
-      >
-        {hand.length} cards in hand
-      </div>
-    );
+    return <HandCountDisplay handLength={hand.length} />;
   }
 
   return (
@@ -154,39 +224,21 @@ export function HandSection({
                 />
               </div>
             ))
-          : hand.map((card, i) => {
-              const isSelected =
-                (!pendingDecision ||
-                  pendingDecision.from === "hand" ||
-                  pendingDecision.from === "discard") &&
-                selectedCardIndices.includes(i);
-              return (
-                <div key={`${card}-${i}-wrapper`}>
-                  <Card
-                    key={`${card}-${i}`}
-                    name={card}
-                    size="large"
-                    onClick={() => onCardClick?.(card, i)}
-                    selected={isSelected}
-                    highlightMode={getHandCardHighlightMode(
-                      card,
-                      pendingDecision,
-                      isInteractive,
-                      playerId,
-                    )}
-                    disabled={isHandCardDisabled(
-                      card,
-                      isInteractive,
-                      isActive,
-                      pendingDecision,
-                      playerId,
-                      phase,
-                      actions,
-                    )}
-                  />
-                </div>
-              );
-            })}
+          : hand.map((card, i) => (
+              <HandCardRenderer
+                key={`${card}-${i}`}
+                card={card}
+                index={i}
+                selectedCardIndices={selectedCardIndices}
+                pendingDecision={pendingDecision}
+                isInteractive={isInteractive}
+                isActive={isActive}
+                playerId={playerId}
+                phase={phase}
+                actions={actions}
+                onCardClick={onCardClick}
+              />
+            ))}
       </div>
     </div>
   );
