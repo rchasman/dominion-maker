@@ -25,6 +25,7 @@ export type ModelResult = {
   result: Action | null;
   error: unknown;
   duration: number;
+  format: "json" | "toon";
 };
 
 export type ActionSignature = string;
@@ -50,6 +51,7 @@ export type ModelExecutionContext = {
   humanChoice?: { selectedCards: CardName[] };
   strategySummary?: string;
   customStrategy?: string;
+  format: "json" | "toon";
   abortController: AbortController;
   voteGroups: Map<ActionSignature, VoteGroup>;
   completedResults: ModelResult[];
@@ -121,6 +123,7 @@ export const checkEarlyConsensus = (
 // Handle successful model response
 export const handleModelSuccess = (
   action: Action,
+  format: "json" | "toon",
   params: ModelHandlerParams,
 ): ModelResult => {
   const { provider, index, modelStart, logger } = params;
@@ -134,6 +137,7 @@ export const handleModelSuccess = (
       duration: modelDuration,
       action,
       success: true,
+      format,
     },
   });
   return {
@@ -141,6 +145,7 @@ export const handleModelSuccess = (
     result: action,
     error: null,
     duration: modelDuration,
+    format,
   };
 };
 
@@ -177,7 +182,13 @@ export const handleModelError = (
       timeout: isTimeout,
     },
   });
-  return { provider, result: null, error: errorObj, duration: modelDuration };
+  return {
+    provider,
+    result: null,
+    error: errorObj,
+    duration: modelDuration,
+    format: "toon",
+  };
 };
 
 // Handle model result and check for early consensus

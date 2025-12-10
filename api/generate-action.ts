@@ -125,6 +125,7 @@ interface RequestBody {
   legalActions?: unknown[];
   strategySummary?: string;
   customStrategy?: string;
+  format?: "json" | "toon";
 }
 
 type OnExtraTokenHandler = (
@@ -158,6 +159,7 @@ function buildUserMessage(params: {
   legalActionsStr: string;
   promptQuestion: string;
   humanChoice?: { selectedCards: string[] };
+  format: "json" | "toon";
 }): string {
   const {
     strategicContext,
@@ -166,11 +168,20 @@ function buildUserMessage(params: {
     legalActionsStr,
     promptQuestion,
     humanChoice,
+    format,
   } = params;
-  const stateStr = encodeToon(currentState);
+  const stateStr = format === "toon"
+    ? encodeToon(currentState)
+    : JSON.stringify(currentState, null, JSON_INDENT_SPACES);
+
+  const humanChoiceStr = humanChoice
+    ? format === "toon"
+      ? encodeToon(humanChoice.selectedCards)
+      : JSON.stringify(humanChoice.selectedCards)
+    : "";
 
   return humanChoice
-    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${encodeToon(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
+    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${humanChoiceStr}${legalActionsStr}\n\n${promptQuestion}`
     : `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 }
 
@@ -282,8 +293,9 @@ async function generateActionWithTextFallback(params: {
   provider: string;
   res: VercelResponse;
   strategySummary: string | undefined;
+  format: "json" | "toon";
 }): Promise<VercelResponse> {
-  const { model, userMessage, provider, res, strategySummary } = params;
+  const { model, userMessage, provider, res, strategySummary, format } = params;
 
   const jsonPrompt = buildTextFallbackJsonPrompt(userMessage);
 
@@ -299,7 +311,7 @@ async function generateActionWithTextFallback(params: {
 
   try {
     const action = ActionSchema.parse(parsed);
-    return res.status(HTTP_OK).json({ action, strategySummary });
+    return res.status(HTTP_OK).json({ action, strategySummary, format });
   } catch (parseErr) {
     const errorMessage =
       parseErr instanceof Error ? parseErr.message : String(parseErr);
@@ -377,6 +389,7 @@ async function processGenerationRequest(
     legalActions,
     strategySummary,
     customStrategy,
+    format = "toon",
   } = body;
   const provider = bodyProvider;
 
@@ -395,12 +408,16 @@ async function processGenerationRequest(
 
   const legalActionsStr =
     legalActions && legalActions.length > 0
-      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${encodeToon(legalActions)}`
+      ? format === "toon"
+        ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${encodeToon(legalActions)}`
+        : `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
       : "";
 
   const turnHistoryStr =
     currentState.turnHistory && currentState.turnHistory.length > 0
-      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${encodeToon(currentState.turnHistory)}`
+      ? format === "toon"
+        ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${encodeToon(currentState.turnHistory)}`
+        : `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
       : "";
 
   const strategicContext = buildStrategicContext(
@@ -416,6 +433,7 @@ async function processGenerationRequest(
     legalActionsStr,
     promptQuestion,
     humanChoice,
+    format,
   });
 
   // Some models don't support json_schema response format - use generateText with explicit JSON instructions
@@ -426,6 +444,7 @@ async function processGenerationRequest(
       provider,
       res,
       strategySummary,
+      format,
     });
   }
 
@@ -439,7 +458,7 @@ async function processGenerationRequest(
     ...getProviderOptions(provider),
   });
 
-  return res.status(HTTP_OK).json({ action: result.object, strategySummary });
+  return res.status(HTTP_OK).json({ action: result.object, strategySummary, format });
 }
 
 export default async function handler(

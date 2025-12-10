@@ -129,10 +129,11 @@ const executeModel = (context: ModelExecutionContext): void => {
     signal: modelAbortController.signal,
     strategySummary,
     customStrategy,
+    format: context.format,
   })
-    .then(action => {
+    .then(({ action, format }) => {
       clearTimeout(timeoutId);
-      return handleModelSuccess(action, handlerParams);
+      return handleModelSuccess(action, format, handlerParams);
     })
     .catch(error => {
       clearTimeout(timeoutId);
@@ -233,12 +234,13 @@ type GenerateActionParams = {
   signal?: AbortSignal;
   strategySummary?: string;
   customStrategy?: string;
+  format?: "json" | "toon";
 };
 
 // Call backend API to generate action
 async function generateActionViaBackend(
   params: GenerateActionParams,
-): Promise<Action> {
+): Promise<{ action: Action; format: "json" | "toon" }> {
   const {
     provider,
     currentState,
@@ -246,6 +248,7 @@ async function generateActionViaBackend(
     signal,
     strategySummary,
     customStrategy,
+    format,
   } = params;
   const legalActions = getLegalActions(currentState);
 
@@ -257,6 +260,7 @@ async function generateActionViaBackend(
       legalActions,
       strategySummary,
       customStrategy,
+      format,
     },
     {
       fetch: { signal },
@@ -275,7 +279,7 @@ async function generateActionViaBackend(
     throw new Error("Backend returned no action");
   }
 
-  return data.action;
+  return { action: data.action, format: data.format || "toon" };
 }
 
 /**
@@ -383,6 +387,7 @@ const runModelsInParallel = async (
         humanChoice,
         strategySummary,
         customStrategy,
+        format: index % 2 === 0 ? "json" : "toon",
         abortController,
         voteGroups,
         completedResults,
