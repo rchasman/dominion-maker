@@ -1,4 +1,4 @@
-import { generateObject, createGateway } from "ai";
+import { generateObject, gateway } from "ai";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
@@ -23,11 +23,6 @@ const VP_VALUES = {
   CURSE: -1,
   GARDENS_DIVISOR: 10,
 } as const;
-
-// Configure AI Gateway
-const gateway = createGateway({
-  apiKey: process.env.AI_GATEWAY_API_KEY || "",
-});
 
 const STRATEGY_ANALYSIS_PROMPT = `You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
 

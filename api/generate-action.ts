@@ -1,4 +1,4 @@
-import { generateObject, generateText, createGateway } from "ai";
+import { generateObject, generateText, gateway } from "ai";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
@@ -77,11 +77,6 @@ const ActionSchema = z
       .describe("Explanation for why this action was chosen"),
   })
   .describe("A single atomic game action");
-
-// Configure AI Gateway
-const gateway = createGateway({
-  apiKey: process.env.AI_GATEWAY_API_KEY || "",
-});
 
 // Debug logging for deployment
 if (!process.env.AI_GATEWAY_API_KEY) {
