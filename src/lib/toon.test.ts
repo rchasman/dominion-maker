@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { encodeToon, decodeToon } from "../src/lib/toon";
+import { encodeToon, decodeToon } from "./toon";
 
 describe("TOON encoding and decoding", () => {
   test("encodes simple object with tab delimiters", () => {
