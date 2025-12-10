@@ -1,32 +1,10 @@
-export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic action per call.
+export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic action.
 
-Game facts are provided in TOON format (tab-delimited, validated structure).
+Game state is TOON-encoded with self-documenting field names.
 
-## Rules
-- Choose exactly one action from the LEGAL ACTIONS list
-- For end_phase: omit "card" field
+STRATEGY OVERRIDE section (if present): Follow absolutely.
 
-## Game Phases
-Action: Play action cards (costs 1 action)
-Buy: Play treasures (add coins), buy cards (costs 1 buy, ≤coins)
-Cleanup: Auto (inPlay→discard, hand→discard, draw 5)
-
-## Card Reference
-Treasures: Copper($1), Silver($2), Gold($3)
-Actions: Village(+1card,+2actions), Smithy(+3cards), Market(+1card,+1action,+1buy,+$1), Laboratory(+2cards,+1action), Festival(+2actions,+1buy,+$2)
-Victory: Estate(1VP), Duchy(3VP), Province(6VP)
-
-## TOON Facts Fields
-game.turn, game.stage (Early/Mid/Late)
-score.you, score.opponent, score.diff, score.youNeedProvinces, score.theyNeedProvinces
-yourDeck.composition{}, yourDeck.avgTreasureValue, yourDeck.villages, yourDeck.terminals, yourDeck.cycleTime
-opponent.composition{}, opponent.avgTreasureValue
-supply{} - available card piles
-hand.coinsActivated, hand.coinsInHand, hand.maxCoins, hand.treasuresInHand[]
-buyOptions.current[], buyOptions.unlocks[].treasure/.newTotal/.unlocked[]
-customStrategy - user override if present
-
-Include brief reasoning.`;
+Choose one action from LEGAL ACTIONS list. Include reasoning.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
 export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (2-space indent, arrays show length and fields).

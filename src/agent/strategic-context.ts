@@ -11,65 +11,55 @@ import { encodeToon } from "../lib/toon";
 import { z } from "zod";
 
 /**
- * Zod schema for strategic facts
+ * Zod schema with self-documenting field names
  */
 const StrategicFactsSchema = z.object({
-  game: z.object({
-    turn: z.number(),
-    stage: z.enum(["Early", "Mid", "Late"]),
-  }),
-  score: z.object({
-    you: z.number(),
-    opponent: z.number(),
-    diff: z.number(),
-    youNeedProvinces: z.number(),
-    theyNeedProvinces: z.number(),
-  }),
-  yourDeck: z.object({
-    total: z.number(),
-    composition: z.record(z.number()),
-    treasures: z.number(),
-    actions: z.number(),
-    victory: z.number(),
-    totalTreasureValue: z.number(),
-    avgTreasureValue: z.number(),
-    villages: z.number(),
-    terminals: z.number(),
-    cycleTime: z.number(),
-  }),
-  yourPiles: z.object({
-    deck: z.number(),
-    discard: z.number(),
-    shuffleSoon: z.boolean(),
-  }),
-  opponent: z.object({
-    total: z.number(),
-    composition: z.record(z.number()),
-    totalTreasureValue: z.number(),
-    avgTreasureValue: z.number(),
-  }),
-  supply: z.record(z.number()),
-  hand: z.object({
-    cards: z.array(z.string()),
-    coinsActivated: z.number(),
-    coinsInHand: z.number(),
-    maxCoins: z.number(),
-    treasuresInHand: z.array(z.string()),
-  }),
-  buyOptions: z
-    .object({
-      current: z.array(z.object({ card: z.string(), cost: z.number() })),
-      unlocks: z.array(
-        z.object({
-          treasure: z.string(),
-          value: z.number(),
-          newTotal: z.number(),
-          unlocked: z.array(z.object({ card: z.string(), cost: z.number() })),
-        }),
-      ),
-    })
+  currentTurnNumber: z.number(),
+  gameStage: z.enum(["Early", "Mid", "Late"]),
+  yourVictoryPoints: z.number(),
+  opponentVictoryPoints: z.number(),
+  victoryPointDifference: z.number(),
+  provincesYouNeedToWin: z.number(),
+  provincesTheyNeedToWin: z.number(),
+  yourDeckTotalCards: z.number(),
+  yourDeckComposition: z.record(z.number()),
+  yourTreasureCount: z.number(),
+  yourActionCount: z.number(),
+  yourVictoryCardCount: z.number(),
+  yourTotalTreasureValue: z.number(),
+  yourAvgTreasureValue: z.number(),
+  yourVillageCount: z.number(),
+  yourTerminalCount: z.number(),
+  yourDeckCycleTime: z.number(),
+  yourDrawPileCount: z.number(),
+  yourDiscardPileCount: z.number(),
+  shuffleNextTurn: z.boolean(),
+  opponentDeckTotalCards: z.number(),
+  opponentDeckComposition: z.record(z.number()),
+  opponentTotalTreasureValue: z.number(),
+  opponentAvgTreasureValue: z.number(),
+  supplyPiles: z.record(z.number()),
+  handCards: z.array(z.string()),
+  coinsActivatedThisTurn: z.number(),
+  coinsInUnplayedTreasures: z.number(),
+  maxCoinsIfAllTreasuresPlayed: z.number(),
+  unplayedTreasuresInHand: z.array(z.string()),
+  buyableWithCurrentCoins: z
+    .array(z.object({ card: z.string(), cost: z.number() }))
     .optional(),
-  customStrategy: z.string().optional(),
+  whatEachUnplayedTreasureUnlocks: z
+    .array(
+      z.object({
+        treasureName: z.string(),
+        coinValue: z.number(),
+        newCoinTotal: z.number(),
+        cardsUnlocked: z.array(
+          z.object({ card: z.string(), cost: z.number() }),
+        ),
+      }),
+    )
+    .optional(),
+  strategyOverride: z.string().optional(),
 });
 
 type StrategicFacts = z.infer<typeof StrategicFactsSchema>;
@@ -417,47 +407,38 @@ export function buildStrategicContext(
   const maxCoins = state.coins + treasureValue;
 
   const facts: StrategicFacts = {
-    game: { turn: state.turn, stage: gameStage },
-    score: {
-      you: currentVP,
-      opponent: opponentVP,
-      diff: currentVP - opponentVP,
-      youNeedProvinces: youNeed,
-      theyNeedProvinces: theyNeed,
-    },
-    yourDeck: {
-      total: currentAllCards.length,
-      composition: yourAnalysis.counts,
-      treasures: yourAnalysis.treasures,
-      actions: yourAnalysis.actions,
-      victory: yourAnalysis.victory,
-      totalTreasureValue: yourAnalysis.totalTreasureValue,
-      avgTreasureValue: yourAnalysis.avgTreasureValue,
-      villages: yourAnalysis.villages,
-      terminals: yourAnalysis.terminals,
-      cycleTime: parseFloat((currentAllCards.length / 5).toFixed(1)),
-    },
-    yourPiles: {
-      deck: currentPlayer.deck.length,
-      discard: currentPlayer.discard.length,
-      shuffleSoon:
-        currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0,
-    },
-    opponent: {
-      total: opponentAllCards.length,
-      composition: opponentAnalysis.counts,
-      totalTreasureValue: opponentAnalysis.totalTreasureValue,
-      avgTreasureValue: opponentAnalysis.avgTreasureValue,
-    },
-    supply: state.supply,
-    hand: {
-      cards: currentPlayer.hand,
-      coinsActivated: state.coins,
-      coinsInHand: treasureValue,
-      maxCoins,
-      treasuresInHand: treasures,
-    },
-    customStrategy: customStrategy?.trim() || undefined,
+    currentTurnNumber: state.turn,
+    gameStage,
+    yourVictoryPoints: currentVP,
+    opponentVictoryPoints: opponentVP,
+    victoryPointDifference: currentVP - opponentVP,
+    provincesYouNeedToWin: youNeed,
+    provincesTheyNeedToWin: theyNeed,
+    yourDeckTotalCards: currentAllCards.length,
+    yourDeckComposition: yourAnalysis.counts,
+    yourTreasureCount: yourAnalysis.treasures,
+    yourActionCount: yourAnalysis.actions,
+    yourVictoryCardCount: yourAnalysis.victory,
+    yourTotalTreasureValue: yourAnalysis.totalTreasureValue,
+    yourAvgTreasureValue: yourAnalysis.avgTreasureValue,
+    yourVillageCount: yourAnalysis.villages,
+    yourTerminalCount: yourAnalysis.terminals,
+    yourDeckCycleTime: parseFloat((currentAllCards.length / 5).toFixed(1)),
+    yourDrawPileCount: currentPlayer.deck.length,
+    yourDiscardPileCount: currentPlayer.discard.length,
+    shuffleNextTurn:
+      currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0,
+    opponentDeckTotalCards: opponentAllCards.length,
+    opponentDeckComposition: opponentAnalysis.counts,
+    opponentTotalTreasureValue: opponentAnalysis.totalTreasureValue,
+    opponentAvgTreasureValue: opponentAnalysis.avgTreasureValue,
+    supplyPiles: state.supply,
+    handCards: currentPlayer.hand,
+    coinsActivatedThisTurn: state.coins,
+    coinsInUnplayedTreasures: treasureValue,
+    maxCoinsIfAllTreasuresPlayed: maxCoins,
+    unplayedTreasuresInHand: treasures,
+    strategyOverride: customStrategy?.trim() || undefined,
   };
 
   // Add buy options if in buy phase
@@ -500,18 +481,26 @@ export function buildStrategicContext(
           }));
 
         return {
-          treasure,
-          value: treasureValue,
-          newTotal: runningTotal,
-          unlocked,
+          treasureName: treasure,
+          coinValue: treasureValue,
+          newCoinTotal: runningTotal,
+          cardsUnlocked: unlocked,
         };
       })
-      .filter(u => u.unlocked.length > 0);
+      .filter(u => u.cardsUnlocked.length > 0);
 
-    facts.buyOptions = { current, unlocks };
+    facts.buyableWithCurrentCoins = current;
+    facts.whatEachUnplayedTreasureUnlocks = unlocks;
   }
 
-  return encodeToon(facts);
+  const toonData = encodeToon(facts);
+
+  // Append strategy override prominently if present
+  if (customStrategy && customStrategy.trim()) {
+    return `${toonData}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nSTRATEGY OVERRIDE (follow absolutely):\n${customStrategy.trim()}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  return toonData;
 }
 
 const calculateVP = (
