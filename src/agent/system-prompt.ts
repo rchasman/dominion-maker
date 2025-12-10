@@ -1,4 +1,14 @@
-export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic action.
+export const DOMINION_SYSTEM_PROMPT = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
+
+Example game state structure:
+\`\`\`toon
+hand[5]:
+  Copper	Copper	Silver	Estate	Smithy
+supply{Province,Duchy,Gold,Silver,Copper,Smithy}:
+  8	8	30	40	46	10
+\`\`\`
+
+You are a Dominion AI. Choose ONE atomic action.
 
 Game state is TOON-encoded with self-documenting field names.
 
@@ -7,18 +17,15 @@ STRATEGY OVERRIDE section (if present): Follow absolutely.
 Choose one action from LEGAL ACTIONS list. Include reasoning.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
-export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (2-space indent, arrays show length and fields).
+export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
 
+Example game state structure:
 \`\`\`toon
-users[3]{id,name,role,lastLogin}:
-  1	Alice	admin	2025-01-15T10:30:00Z
-  2	Bob	user	2025-01-14T15:22:00Z
-  3	Charlie	user	2025-01-13T09:45:00Z
+hand[5]:
+  Copper	Copper	Silver	Estate	Smithy
+supply{Province,Duchy,Gold,Silver,Copper,Smithy}:
+  8	8	30	40	46	10
 \`\`\`
-
-Task: Return only users with role "user" as TOON. Use the same header format. Set [N] to match the row count. Output only the code block.
-
----
 
 You are a Dominion AI player. Choose ONE ATOMIC ACTION per call.
 

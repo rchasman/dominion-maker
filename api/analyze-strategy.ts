@@ -25,18 +25,15 @@ const VP_VALUES = {
   GARDENS_DIVISOR: 10,
 } as const;
 
-const STRATEGY_ANALYSIS_PROMPT = `Data is in TOON format (2-space indent, arrays show length and fields).
+const STRATEGY_ANALYSIS_PROMPT = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
 
+Example turn history structure:
 \`\`\`toon
-users[3]{id,name,role,lastLogin}:
-  1	Alice	admin	2025-01-15T10:30:00Z
-  2	Bob	user	2025-01-14T15:22:00Z
-  3	Charlie	user	2025-01-13T09:45:00Z
+turnHistory[3]{player,action,card}:
+  human	play_action	Smithy
+  human	play_treasure	Gold
+  human	buy_card	Province
 \`\`\`
-
-Task: Return only users with role "user" as TOON. Use the same header format. Set [N] to match the row count. Output only the code block.
-
----
 
 You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
 

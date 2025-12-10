@@ -6,6 +6,7 @@ import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
+import { encodeToon } from "../src/lib/toon";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -166,10 +167,10 @@ function buildUserMessage(params: {
     promptQuestion,
     humanChoice,
   } = params;
-  const stateStr = JSON.stringify(currentState, null, JSON_INDENT_SPACES);
+  const stateStr = encodeToon(currentState);
 
   return humanChoice
-    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
+    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${encodeToon(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
     : `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
 }
 
@@ -394,12 +395,12 @@ async function processGenerationRequest(
 
   const legalActionsStr =
     legalActions && legalActions.length > 0
-      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
+      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${encodeToon(legalActions)}`
       : "";
 
   const turnHistoryStr =
     currentState.turnHistory && currentState.turnHistory.length > 0
-      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
+      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${encodeToon(currentState.turnHistory)}`
       : "";
 
   const strategicContext = buildStrategicContext(
