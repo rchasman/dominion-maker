@@ -52,6 +52,8 @@ export function useStorageSync(state: {
     {
       enabledModels: Array.from(modelSettings.enabledModels),
       consensusCount: modelSettings.consensusCount,
+      customStrategy: modelSettings.customStrategy,
+      dataFormat: modelSettings.dataFormat,
     },
     {
       shouldSync: true,

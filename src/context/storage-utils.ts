@@ -91,10 +91,14 @@ export function loadModelSettings(): ModelSettings | null {
     const parsed = JSON.parse(savedSettings) as {
       enabledModels: ModelProvider[];
       consensusCount: number;
+      customStrategy?: string;
+      dataFormat?: "toon" | "json" | "mixed";
     };
     return {
       enabledModels: new Set(parsed.enabledModels),
       consensusCount: parsed.consensusCount,
+      customStrategy: parsed.customStrategy || "",
+      dataFormat: parsed.dataFormat || "mixed",
     };
   } catch {
     return null;
