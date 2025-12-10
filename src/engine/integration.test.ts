@@ -52,8 +52,12 @@ describe("Shuffle Mechanics", () => {
 
     const shuffleEvent = engine.eventLog.find(e => e.type === "DECK_SHUFFLED");
     expect(shuffleEvent).toBeDefined();
-    expect(shuffleEvent!.newDeckOrder).toBeDefined();
-    expect(shuffleEvent!.newDeckOrder!.length).toBeGreaterThan(0);
+    if (shuffleEvent) {
+      expect(shuffleEvent.newDeckOrder).toBeDefined();
+      if (shuffleEvent.newDeckOrder) {
+        expect(shuffleEvent.newDeckOrder.length).toBeGreaterThan(0);
+      }
+    }
   });
 });
 
