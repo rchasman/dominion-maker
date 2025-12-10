@@ -21,7 +21,7 @@ describe("Validation Middleware", () => {
       Copper: 30,
       Gold: 0,
     },
-  } as any;
+  } as unknown as GameState;
 
   describe("validators.phase", () => {
     test("should pass when phase matches", () => {
@@ -75,29 +75,49 @@ describe("Validation Middleware", () => {
 
   describe("validators.cardInHand", () => {
     test("should pass when card is in hand", () => {
-      const result = validators.cardInHand(mockState as GameState, "p1", "Village");
+      const result = validators.cardInHand(
+        mockState as GameState,
+        "p1",
+        "Village",
+      );
       expect(result).toBeUndefined();
     });
 
     test("should fail when card is not in hand", () => {
-      const result = validators.cardInHand(mockState as GameState, "p1", "Gold");
+      const result = validators.cardInHand(
+        mockState as GameState,
+        "p1",
+        "Gold",
+      );
       expect(result).toEqual({ ok: false, error: "Card not in hand" });
     });
 
     test("should fail when player doesn't exist", () => {
-      const result = validators.cardInHand(mockState as GameState, "p99", "Village");
+      const result = validators.cardInHand(
+        mockState as GameState,
+        "p99",
+        "Village",
+      );
       expect(result).toEqual({ ok: false, error: "Player not found" });
     });
   });
 
   describe("validators.cardInPlay", () => {
     test("should pass when card is in play", () => {
-      const result = validators.cardInPlay(mockState as GameState, "p1", "Smithy");
+      const result = validators.cardInPlay(
+        mockState as GameState,
+        "p1",
+        "Smithy",
+      );
       expect(result).toBeUndefined();
     });
 
     test("should fail when card is not in play", () => {
-      const result = validators.cardInPlay(mockState as GameState, "p1", "Gold");
+      const result = validators.cardInPlay(
+        mockState as GameState,
+        "p1",
+        "Gold",
+      );
       expect(result).toEqual({ ok: false, error: "Card not in play" });
     });
   });
@@ -110,7 +130,10 @@ describe("Validation Middleware", () => {
 
     test("should fail when card is not available", () => {
       const result = validators.cardInSupply(mockState as GameState, "Gold");
-      expect(result).toEqual({ ok: false, error: "Card not available in supply" });
+      expect(result).toEqual({
+        ok: false,
+        error: "Card not available in supply",
+      });
     });
   });
 
@@ -139,7 +162,7 @@ describe("Validation Middleware", () => {
         () => validators.phase(mockState as GameState, "buy"), // fails immediately
         () => {
           thirdValidatorCalled = true;
-          return undefined;
+          return null;
         },
       );
       expect(result).toEqual({ ok: false, error: "Not in buy phase" });

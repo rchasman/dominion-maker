@@ -16,7 +16,10 @@ type Validator = () => ValidationResult;
  * Run a series of validators in order, returning the first error or undefined if all pass
  */
 export function validateCommand(...validators: Validator[]): ValidationResult {
-  return validators.reduce<ValidationResult>((acc, validator) => acc || validator(), null);
+  return validators.reduce<ValidationResult>(
+    (acc, validator) => acc || validator(),
+    null,
+  );
 }
 
 /**
@@ -89,7 +92,11 @@ export const validators = {
   /**
    * Validate that a card is in the player's hand
    */
-  cardInHand: (state: GameState, player: PlayerId, card: CardName): ValidationResult => {
+  cardInHand: (
+    state: GameState,
+    player: PlayerId,
+    card: CardName,
+  ): ValidationResult => {
     const playerState = state.players[player];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
@@ -102,7 +109,11 @@ export const validators = {
   /**
    * Validate that a card is in the player's in-play area
    */
-  cardInPlay: (state: GameState, player: PlayerId, card: CardName): ValidationResult => {
+  cardInPlay: (
+    state: GameState,
+    player: PlayerId,
+    card: CardName,
+  ): ValidationResult => {
     const playerState = state.players[player];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
@@ -116,9 +127,7 @@ export const validators = {
    * Validate that a card exists in the CARDS registry
    */
   cardExists: (card: CardName): ValidationResult => {
-    return !CARDS[card]
-      ? { ok: false, error: "Unknown card" }
-      : undefined;
+    return !CARDS[card] ? { ok: false, error: "Unknown card" } : undefined;
   },
 
   /**
@@ -138,7 +147,10 @@ export const validators = {
       action => action.type === "buy_card",
     );
     return hasMadePurchases
-      ? { ok: false, error: "Cannot unplay treasures after already made purchases" }
+      ? {
+          ok: false,
+          error: "Cannot unplay treasures after already made purchases",
+        }
       : undefined;
   },
 };
