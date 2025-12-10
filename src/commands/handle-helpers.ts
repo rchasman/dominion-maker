@@ -19,7 +19,6 @@ export function createResourceEvents(
   }));
 }
 
-
 export const GAME_CONSTANTS = {
   INITIAL_HAND_SIZE: 5,
   KINGDOM_CARD_SELECTION: 10,

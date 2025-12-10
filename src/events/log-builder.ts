@@ -144,15 +144,18 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
     };
   };
 
-  const result: MaybeAggregatedEvent[] = [];
-  let i = 0;
+  const processEvents = (
+    index: number,
+    acc: MaybeAggregatedEvent[],
+  ): MaybeAggregatedEvent[] => {
+    if (index >= events.length) return acc;
 
-  while (i < events.length) {
-    const event = events[i];
+    const event = events[index];
 
     if (isCardEvent(event)) {
-      const { events: groupEvents, count } = collectConsecutive(i);
-      result.push(
+      const { events: groupEvents, count } = collectConsecutive(index);
+      return processEvents(index + count, [
+        ...acc,
         aggregateGroup(
           groupEvents as (
             | CardDrawnEvent
@@ -160,15 +163,13 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
             | CardTrashedEvent
           )[],
         ),
-      );
-      i += count;
-    } else {
-      result.push(event);
-      i++;
+      ]);
     }
-  }
 
-  return result;
+    return processEvents(index + 1, [...acc, event]);
+  };
+
+  return processEvents(0, []);
 }
 
 function isAggregatedEvent(

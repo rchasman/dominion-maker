@@ -1,29 +1,19 @@
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
-import type { GameEvent, PlayerId } from "../events/types";
-import {
-  CARDS,
-  isTreasureCard,
-  type TriggerType,
-  type TriggerContext,
-} from "../data/cards";
-import { getCardEffect } from "../cards/base";
-import { createDrawEvents } from "../cards/effect-types";
-import { applyEvents } from "../events/apply";
-import { shuffle } from "../lib/game-utils";
-import { generateEventId } from "../events/id-generator";
-import { EventBuilder } from "../events/event-builder";
-import {
-  GAME_CONSTANTS,
-  selectRandomKingdomCards,
-  calculateSupply,
-  getNextPlayer,
-  checkGameOver,
-  createResourceEvents,
-} from "./handle-helpers";
+import type { PlayerId } from "../events/types";
 import { handleSubmitDecision } from "./handle-decision";
-import { validators, validateCommand } from "./validators";
-import { orchestrateAttack } from "./attack-orchestration";
+import {
+  handlePlayAction,
+  handlePlayTreasure,
+  handlePlayAllTreasures,
+  handleUnplayTreasure,
+  handleBuyCard,
+} from "./handle-actions";
+import {
+  handleStartGame,
+  handleEndPhase,
+  handleRequestUndo,
+} from "./handle-flow";
 
 /**
  * Calculate the effective cost of a card considering active effects.
@@ -176,8 +166,6 @@ function handleStartGame(
   kingdomCards?: CardName[],
   seed?: number,
 ): CommandResult {
-  const events: GameEvent[] = [];
-
   // Select kingdom cards if not provided
   const selectedKingdom = kingdomCards || selectRandomKingdomCards();
 
@@ -186,14 +174,16 @@ function handleStartGame(
 
   // Root cause - initializing game
   const rootEventId = generateEventId();
-  events.push({
-    type: "GAME_INITIALIZED",
-    players,
-    kingdomCards: selectedKingdom,
-    supply,
-    seed,
-    id: rootEventId,
-  });
+  const events: GameEvent[] = [
+    {
+      type: "GAME_INITIALIZED",
+      players,
+      kingdomCards: selectedKingdom,
+      supply,
+      seed,
+      id: rootEventId,
+    },
+  ];
 
   // Deal starting decks (7 Copper, 3 Estate)
   const startingDeck: CardName[] = [
@@ -229,29 +219,31 @@ function handleStartGame(
       },
     ];
   });
-  events.push(...playerSetupEvents);
 
   // Start turn 1
   const turnStartId = generateEventId();
-  events.push({
-    type: "TURN_STARTED",
-    turn: 1,
-    player: players[0],
-    id: turnStartId,
-  });
 
   // Add initial resources as explicit events for log clarity
-  events.push(
-    ...createResourceEvents(
-      [
-        { type: "ACTIONS_MODIFIED", delta: 1 },
-        { type: "BUYS_MODIFIED", delta: 1 },
-      ],
-      turnStartId,
-    ),
-  );
-
-  return { ok: true, events };
+  return {
+    ok: true,
+    events: [
+      ...events,
+      ...playerSetupEvents,
+      {
+        type: "TURN_STARTED",
+        turn: 1,
+        player: players[0],
+        id: turnStartId,
+      },
+      ...createResourceEvents(
+        [
+          { type: "ACTIONS_MODIFIED", delta: 1 },
+          { type: "BUYS_MODIFIED", delta: 1 },
+        ],
+        turnStartId,
+      ),
+    ],
+  };
 }
 
 function handlePlayAction(
@@ -271,27 +263,23 @@ function handlePlayAction(
     return validationError;
   }
 
-  const events: GameEvent[] = [];
-
   // Root cause event - playing the card
   const rootEventId = generateEventId();
-  events.push({
-    type: "CARD_PLAYED",
-    player: player,
-    card,
-    id: rootEventId,
-  });
-
-  // Action cost - caused by playing the card
-  events.push(
+  const baseEvents: GameEvent[] = [
+    {
+      type: "CARD_PLAYED",
+      player: player,
+      card,
+      id: rootEventId,
+    },
     ...createResourceEvents(
       [{ type: "ACTIONS_MODIFIED", delta: -1 }],
       rootEventId,
     ),
-  );
+  ];
 
   // Apply these events to get intermediate state
-  const midState = applyEvents(state, events);
+  const midState = applyEvents(state, baseEvents);
 
   // Execute card effect
   const effect = getCardEffect(card);
@@ -302,15 +290,14 @@ function handlePlayAction(
 
     if (isAttackCard) {
       // Delegate to centralized attack orchestration
-      const attackEvents = orchestrateAttack(
-        midState,
-        player,
-        card,
+      const attackEvents = orchestrateAttack({
+        state: midState,
+        attacker: player,
+        attackCard: card,
         effect,
         rootEventId,
-      );
-      events.push(...attackEvents);
-      return { ok: true, events };
+      });
+      return { ok: true, events: [...baseEvents, ...attackEvents] };
     }
 
     // Not an attack card, call effect normally
@@ -325,27 +312,33 @@ function handlePlayAction(
       id: generateEventId(),
       causedBy: rootEventId,
     }));
-    events.push(...linkedEffectEvents);
 
     // Handle normal decision if present
-    if (result.pendingDecision) {
-      events.push({
-        type: "DECISION_REQUIRED",
-        decision: {
-          ...result.pendingDecision,
-          cardBeingPlayed: card,
-          metadata: {
-            ...result.pendingDecision.metadata,
-            originalCause: rootEventId, // Store original PLAY_ACTION event ID for causality chain
+    const decisionEvent = result.pendingDecision
+      ? [
+          {
+            type: "DECISION_REQUIRED" as const,
+            decision: {
+              ...result.pendingDecision,
+              cardBeingPlayed: card,
+              metadata: {
+                ...result.pendingDecision.metadata,
+                originalCause: rootEventId, // Store original PLAY_ACTION event ID for causality chain
+              },
+            },
+            id: generateEventId(),
+            causedBy: rootEventId,
           },
-        },
-        id: generateEventId(),
-        causedBy: rootEventId,
-      });
-    }
+        ]
+      : [];
+
+    return {
+      ok: true,
+      events: [...baseEvents, ...linkedEffectEvents, ...decisionEvent],
+    };
   }
 
-  return { ok: true, events };
+  return { ok: true, events: baseEvents };
 }
 
 function handlePlayTreasure(
@@ -365,27 +358,24 @@ function handlePlayTreasure(
   }
 
   const playerState = state.players[player];
-  const events: GameEvent[] = [];
 
   // Root cause event - playing the treasure
   const rootEventId = generateEventId();
-  events.push({
-    type: "CARD_PLAYED",
-    player: player,
-    card,
-    id: rootEventId,
-  });
+  const baseEvents: GameEvent[] = [
+    {
+      type: "CARD_PLAYED",
+      player: player,
+      card,
+      id: rootEventId,
+    },
+  ];
 
   // Add coins - caused by playing the treasure
   const coins = CARDS[card].coins || 0;
-  if (coins > 0) {
-    events.push(
-      ...createResourceEvents(
-        [{ type: "COINS_MODIFIED", delta: coins }],
-        rootEventId,
-      ),
-    );
-  }
+  const coinEvents =
+    coins > 0
+      ? createResourceEvents([{ type: "COINS_MODIFIED", delta: coins }], rootEventId)
+      : [];
 
   // Check for treasure triggers from cards in play
   const treasuresInPlay = playerState.inPlay.filter(c =>
@@ -399,17 +389,16 @@ function handlePlayTreasure(
     treasuresInPlay,
   });
 
-  if (triggerEvents.length > 0) {
-    events.push(
-      ...triggerEvents.map(e => ({
-        ...e,
-        id: generateEventId(),
-        causedBy: rootEventId,
-      })),
-    );
-  }
+  const linkedTriggerEvents = triggerEvents.map(e => ({
+    ...e,
+    id: generateEventId(),
+    causedBy: rootEventId,
+  }));
 
-  return { ok: true, events };
+  return {
+    ok: true,
+    events: [...baseEvents, ...coinEvents, ...linkedTriggerEvents],
+  };
 }
 
 function handlePlayAllTreasures(
@@ -583,17 +572,22 @@ function handleBuyCard(
 }
 
 function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
-  const events: GameEvent[] = [];
-
   if (state.phase === "action") {
     // Transition to buy phase
     const phaseEventId = generateEventId();
-    events.push({
-      type: "PHASE_CHANGED",
-      phase: "buy",
-      id: phaseEventId,
-    });
-  } else if (state.phase === "buy") {
+    return {
+      ok: true,
+      events: [
+        {
+          type: "PHASE_CHANGED",
+          phase: "buy",
+          id: phaseEventId,
+        },
+      ],
+    };
+  }
+
+  if (state.phase === "buy") {
     // End turn - cleanup and start next player's turn
     const playerState = state.players[player];
     if (!playerState) {
@@ -602,12 +596,12 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
     // Root cause - ending turn (add explicit TURN_ENDED event)
     const endTurnId = generateEventId();
-    events.push({
+    const turnEndedEvent: GameEvent = {
       type: "TURN_ENDED",
       player: player,
       turn: state.turn,
       id: endTurnId,
-    });
+    };
 
     // Discard hand and in-play cards (atomic events)
     const handDiscardEvents: GameEvent[] = playerState.hand.map(card => ({
@@ -628,36 +622,54 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
       causedBy: endTurnId,
     }));
 
-    events.push(...handDiscardEvents, ...inPlayDiscardEvents);
+    const cleanupEvents = [
+      turnEndedEvent,
+      ...handDiscardEvents,
+      ...inPlayDiscardEvents,
+    ];
 
     // Draw 5 new cards
     const drawEvents = createDrawEvents(
       player,
-      applyEvents(state, events).players[player],
+      applyEvents(state, cleanupEvents).players[player],
       GAME_CONSTANTS.INITIAL_HAND_SIZE,
     );
-    events.push(...createResourceEvents(drawEvents, endTurnId));
+
+    const allEvents = [
+      ...cleanupEvents,
+      ...createResourceEvents(drawEvents, endTurnId),
+    ];
 
     // Check game over
-    const stateAfterDraw = applyEvents(state, events);
+    const stateAfterDraw = applyEvents(state, allEvents);
     const gameOverEvent = checkGameOver(stateAfterDraw);
     if (gameOverEvent) {
-      gameOverEvent.id = generateEventId();
-      gameOverEvent.causedBy = endTurnId;
-      events.push(gameOverEvent);
-    } else {
-      // Start next turn - new root event (not caused by previous turn for log clarity)
-      const nextPlayer = getNextPlayer(stateAfterDraw, player);
-      const turnStartId = generateEventId();
-      events.push({
-        type: "TURN_STARTED",
-        turn: state.turn + 1,
-        player: nextPlayer,
-        id: turnStartId,
-      });
+      return {
+        ok: true,
+        events: [
+          ...allEvents,
+          {
+            ...gameOverEvent,
+            id: generateEventId(),
+            causedBy: endTurnId,
+          },
+        ],
+      };
+    }
 
-      // Add initial resources as explicit events for log clarity
-      events.push(
+    // Start next turn - new root event (not caused by previous turn for log clarity)
+    const nextPlayer = getNextPlayer(stateAfterDraw, player);
+    const turnStartId = generateEventId();
+    return {
+      ok: true,
+      events: [
+        ...allEvents,
+        {
+          type: "TURN_STARTED",
+          turn: state.turn + 1,
+          player: nextPlayer,
+          id: turnStartId,
+        },
         ...createResourceEvents(
           [
             { type: "ACTIONS_MODIFIED", delta: 1 },
@@ -665,11 +677,11 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
           ],
           turnStartId,
         ),
-      );
-    }
+      ],
+    };
   }
 
-  return { ok: true, events };
+  return { ok: true, events: [] };
 }
 
 function handleRequestUndo(

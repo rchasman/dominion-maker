@@ -46,10 +46,10 @@ export class EventBuilder {
     const eventWithMetadata: GameEvent = {
       ...event,
       id: isFirstEvent ? this.rootEventId : generateEventId(),
-      causedBy: isFirstEvent ? undefined : (causedBy || this.rootEventId),
-    } as GameEvent;
+      causedBy: isFirstEvent ? undefined : causedBy || this.rootEventId,
+    };
 
-    this.events.push(eventWithMetadata);
+    this.events = [...this.events, eventWithMetadata];
     return eventWithMetadata;
   }
 
@@ -63,7 +63,7 @@ export class EventBuilder {
     events: T[],
     causedBy?: string,
   ): void {
-    events.forEach(event => this.add(event, causedBy));
+    events.map(event => this.add(event, causedBy));
   }
 
   /**
@@ -103,7 +103,7 @@ export class EventBuilder {
    * @param other - Another EventBuilder to merge from
    */
   merge(other: EventBuilder): void {
-    this.events.push(...other.build());
+    this.events = [...this.events, ...other.build()];
   }
 }
 
