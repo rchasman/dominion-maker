@@ -57,6 +57,17 @@ export function useSyncToLocalStorage<T>(
       localStorage.setItem(key, serialize(value));
     } catch (error) {
       console.error(`Failed to save ${key} to localStorage:`, error);
+
+      // If quota exceeded, clear this specific key and retry once
+      if (error instanceof DOMException && error.name === "QuotaExceededError") {
+        console.warn(`Quota exceeded for ${key}, clearing and retrying...`);
+        try {
+          localStorage.removeItem(key);
+          localStorage.setItem(key, serialize(value));
+        } catch (retryError) {
+          console.error(`Retry failed for ${key}:`, retryError);
+        }
+      }
     }
   }, [key, value, serialize, shouldSync]);
 }
