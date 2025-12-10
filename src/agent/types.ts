@@ -23,7 +23,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 };
 
 // Available unique models
-export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS as ModelProvider[];
+export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS;
 
 // Default: fast model instances for maximum consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
