@@ -158,14 +158,17 @@ function formatHandStatus(
   );
   const maxCoins = currentCoins + treasureValue;
 
-  if (phase === "buy" && treasures.length > 0) {
+  if (phase === "buy") {
+    if (treasures.length > 0) {
+      return `HAND: ${hand.join(", ")}
+COINS: $${currentCoins} activated | $${treasureValue} in hand (${treasures.join(", ")}) | $${maxCoins} total if all treasures played`;
+    }
     return `HAND: ${hand.join(", ")}
-COINS: $${currentCoins} activated | $${treasureValue} unplayed (${treasures.join(", ")}) | $${maxCoins} POTENTIAL TOTAL
-⚠️ PLAY ALL TREASURES BEFORE BUYING to maximize your purchasing power!`;
+COINS: $${currentCoins} (all treasures played)`;
   }
 
   return `HAND: ${hand.join(", ")}
-${phase === "buy" ? `COINS: $${currentCoins} (all treasures played)` : `Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`}`;
+Treasures in hand: $${treasureValue} | Potential this turn: $${maxCoins}`;
 }
 
 function formatAvailableBuyOptions(
@@ -173,30 +176,8 @@ function formatAvailableBuyOptions(
   currentCoins: number,
   maxCoins: number,
 ): string {
-  const currentBuyable = Object.entries(supply)
-    .filter(([cardName, count]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      return count > 0 && cost <= currentCoins;
-    })
-    .map(([cardName]) => cardName as CardName);
-
-  const potentialBuyable = Object.entries(supply)
-    .filter(([cardName, count]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      return count > 0 && cost <= maxCoins && cost > currentCoins;
-    })
-    .map(([cardName]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      const cardInfo = CARDS[card];
-      const desc = cardInfo.description || "";
-      return `${card}($${cost}): ${desc}`;
-    });
-
   if (currentCoins === maxCoins) {
-    // All treasures played
+    // All treasures played - show single list
     const allCards = Object.entries(supply)
       .filter(([cardName, count]) => {
         const card = cardName as CardName;
@@ -208,26 +189,50 @@ function formatAvailableBuyOptions(
         const cost = CARDS[card]?.cost || 0;
         const cardInfo = CARDS[card];
         const desc = cardInfo.description || "";
-        return `${card}($${cost}): ${desc}`;
+        return `  ${card}($${cost}): ${desc}`;
       })
-      .join("\n  ");
+      .join("\n");
 
     if (!allCards) return "";
-    return `CARDS YOU CAN BUY NOW (with $${maxCoins}):\n  ${allCards}`;
+    return `BUYABLE:\n${allCards}`;
   }
 
-  // Have unplayed treasures
-  const currentList =
-    currentBuyable.length > 0 ? currentBuyable.join(", ") : "nothing good";
-  const potentialList =
-    potentialBuyable.length > 0
-      ? potentialBuyable.join("\n  ")
-      : "no additional cards";
+  // Have unplayed treasures - show current vs potential
+  const currentCards = Object.entries(supply)
+    .filter(([cardName, count]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      return count > 0 && cost <= currentCoins;
+    })
+    .map(([cardName]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      return `${card}($${cost})`;
+    });
 
-  return `BUYING POWER:
-- NOW with $${currentCoins}: ${currentList}
-- AFTER playing all treasures ($${maxCoins} total):
-  ${potentialList}`;
+  const potentialCards = Object.entries(supply)
+    .filter(([cardName, count]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      return count > 0 && cost <= maxCoins && cost > currentCoins;
+    })
+    .map(([cardName]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      const cardInfo = CARDS[card];
+      const desc = cardInfo.description || "";
+      return `  ${card}($${cost}): ${desc}`;
+    });
+
+  const currentList =
+    currentCards.length > 0 ? currentCards.join(", ") : "none";
+  const potentialList =
+    potentialCards.length > 0 ? potentialCards.join("\n") : "  none";
+
+  return `BUYABLE:
+  With $${currentCoins} now: ${currentList}
+  With $${maxCoins} (after all treasures):
+${potentialList}`;
 }
 
 function formatStrategyAnalysis(
