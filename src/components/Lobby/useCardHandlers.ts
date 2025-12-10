@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { uiLogger } from "../../lib/logger";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { getDisplayState } from "./game-board-helpers";
+import { useBuyCardLogic } from "../../hooks/useBuyCardLogic";
 import type { CardName, GameState } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 
@@ -34,6 +35,12 @@ export function useCardHandlers(params: CardHandlersParams) {
     submitDecision,
     getStateAtEvent,
   } = params;
+
+  const buyCardWithDecisionCheck = useBuyCardLogic({
+    buyCard,
+    submitDecision,
+    pendingDecision: gameState?.pendingDecision,
+  });
 
   const handleCardClick = useCallback(
     (card: CardName, index: number) => {
@@ -95,29 +102,21 @@ export function useCardHandlers(params: CardHandlersParams) {
       );
       if (!displayState) return;
 
-      // If there's a pending decision from supply, submit the decision
-      if (displayState.pendingDecision?.from === "supply") {
-        const result = submitDecision({ selectedCards: [card] });
-        if (!result.ok)
-          uiLogger.error("Failed to submit decision:", result.error);
-        return;
-      }
-
       const canBuy =
         isMyTurn &&
         displayState.phase === "buy" &&
         displayState.buys > ZERO &&
         !validPreviewEventId;
-      if (!canBuy) return;
 
-      const result = buyCard(card);
-      if (!result.ok) uiLogger.error("Failed to buy card:", result.error);
+      // Allow buying during buy phase OR when there's a pending decision from supply
+      if (!canBuy && displayState.pendingDecision?.from !== "supply") return;
+
+      buyCardWithDecisionCheck(card);
     },
     [
       isMyTurn,
       gameState,
-      buyCard,
-      submitDecision,
+      buyCardWithDecisionCheck,
       validPreviewEventId,
       getStateAtEvent,
     ],
