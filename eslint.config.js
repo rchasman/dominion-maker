@@ -100,7 +100,6 @@ export default defineConfig([
           ignoreDefaultValues: true,
         },
       ],
-      "consistent-return": "error",
       "prefer-template": "error",
     },
   },
