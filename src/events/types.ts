@@ -337,27 +337,33 @@ export function getCausalChain(
   eventId: string,
   allEvents: GameEvent[],
 ): Set<string> {
-  let chain = new Set([eventId]);
-  let changed = true;
-
-  while (changed) {
+  const expandChain = (
+    currentChain: Set<string>,
+  ): { chain: Set<string>; changed: boolean } => {
     const newChain = allEvents.reduce((acc, evt) => {
       if (
         evt.id &&
         evt.causedBy &&
-        chain.has(evt.causedBy) &&
-        !chain.has(evt.id)
+        currentChain.has(evt.causedBy) &&
+        !currentChain.has(evt.id)
       ) {
         return new Set([...acc, evt.id]);
       }
       return acc;
-    }, chain);
+    }, currentChain);
 
-    changed = newChain.size !== chain.size;
-    chain = newChain;
-  }
+    return {
+      chain: newChain,
+      changed: newChain.size !== currentChain.size,
+    };
+  };
 
-  return chain;
+  const findFixedPoint = (initialChain: Set<string>): Set<string> => {
+    const result = expandChain(initialChain);
+    return result.changed ? findFixedPoint(result.chain) : result.chain;
+  };
+
+  return findFixedPoint(new Set([eventId]));
 }
 
 /**
