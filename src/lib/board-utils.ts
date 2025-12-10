@@ -68,22 +68,20 @@ export function formatPlayerName(
 ): string {
   const { capitalize = true } = options || {};
 
-  let name = playerId;
-
-  // Friendly names for special IDs
-  if (playerId === "human") {
-    name = "You";
-  } else if (playerId === "player") {
-    name = capitalize ? "Player" : "player";
-  } else {
-    // Keep the name as-is (e.g., "Nova", "ai", "Cipher")
-    name = playerId;
-  }
+  const baseName =
+    playerId === "human"
+      ? "You"
+      : playerId === "player"
+        ? capitalize
+          ? "Player"
+          : "player"
+        : playerId;
 
   // Add AI suffix if needed (but not if already named "ai")
-  if (isAI && playerId !== "human" && playerId !== "ai") {
-    name = `${name} (AI)`;
-  }
+  const name =
+    isAI && playerId !== "human" && playerId !== "ai"
+      ? `${baseName} (AI)`
+      : baseName;
 
   return name;
 }
