@@ -16,6 +16,7 @@ import {
   createResourceEvents,
   calculateMerchantBonus,
 } from "./handle-helpers";
+import { calculateEffectiveCost } from "../cards/effect-types";
 import { handleSubmitDecision } from "./handle-decision";
 
 /**
@@ -454,7 +455,14 @@ function handleBuyCard(
   if (!cardDef) {
     return { ok: false, error: "Unknown card" };
   }
-  if (cardDef.cost > state.coins) {
+
+  // Calculate effective cost with modifiers
+  const { modifiedCost, baseCost, modifiers } = calculateEffectiveCost(
+    state,
+    card,
+  );
+
+  if (modifiedCost > state.coins) {
     return { ok: false, error: "Not enough coins" };
   }
   if ((state.supply[card] || 0) <= 0) {
@@ -463,7 +471,22 @@ function handleBuyCard(
 
   // Root cause event - gaining the card
   const rootEventId = generateEventId();
-  const events: GameEvent[] = [
+  const events: GameEvent[] = [];
+
+  // Emit cost modification event if cost was modified
+  if (baseCost !== modifiedCost) {
+    events.push({
+      type: "COST_MODIFIED",
+      card,
+      baseCost,
+      modifiedCost,
+      modifiers,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    });
+  }
+
+  events.push(
     {
       type: "CARD_GAINED",
       player: player,
@@ -474,11 +497,11 @@ function handleBuyCard(
     ...createResourceEvents(
       [
         { type: "BUYS_MODIFIED", delta: -1 },
-        { type: "COINS_MODIFIED", delta: -cardDef.cost },
+        { type: "COINS_MODIFIED", delta: -modifiedCost },
       ],
       rootEventId,
     ),
-  ];
+  );
 
   return { ok: true, events };
 }

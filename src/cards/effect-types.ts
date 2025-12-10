@@ -284,3 +284,32 @@ export function isTreasureCard(card: CardName): boolean {
 export function isVictoryCard(card: CardName): boolean {
   return CARDS[card].types.includes("victory");
 }
+
+// ============================================
+// COST CALCULATION
+// ============================================
+
+/**
+ * Calculate the effective cost of a card considering active effects.
+ * Returns base cost, modified cost, and list of applied modifiers.
+ */
+export function calculateEffectiveCost(
+  state: GameState,
+  card: CardName,
+): {
+  baseCost: number;
+  modifiedCost: number;
+  modifiers: Array<{ source: CardName; delta: number }>;
+} {
+  const baseCost = CARDS[card].cost;
+  const modifiers = state.activeEffects
+    .filter(e => e.effectType === "cost_reduction")
+    .map(e => ({ source: e.source, delta: -e.parameters.amount }));
+
+  const modifiedCost = Math.max(
+    0,
+    baseCost + modifiers.reduce((sum, m) => sum + m.delta, 0),
+  );
+
+  return { baseCost, modifiedCost, modifiers };
+}
