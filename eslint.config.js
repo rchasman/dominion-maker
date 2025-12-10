@@ -48,6 +48,10 @@ export default defineConfig([
           message: "Use spread [item, ...arr] instead of unshift() for immutability",
         },
         {
+          selector: "CallExpression[callee.name='require']",
+          message: "Use ES modules (import) instead of require()",
+        },
+        {
           selector: "ForStatement",
           message: "Use map/filter/reduce instead of for loops",
         },
