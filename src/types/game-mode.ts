@@ -78,6 +78,8 @@ export const GAME_MODE_CONFIG: Record<
   },
 };
 
+const EXPECTED_PLAYER_COUNT = 2;
+
 /**
  * Convert existing players when switching to full mode
  * Preserves player identities: "human" → "player", "ai" stays as is
@@ -85,17 +87,13 @@ export const GAME_MODE_CONFIG: Record<
 export function convertToFullModePlayers(
   existingPlayers: PlayerId[],
 ): PlayerId[] {
-  if (existingPlayers.length !== 2) {
-    // If not exactly 2 players, generate new random names
+  if (existingPlayers.length !== EXPECTED_PLAYER_COUNT) {
     return getPlayersForMode("full");
   }
 
-  const converted = existingPlayers.map(id => {
-    if (id === "human") return "player";
-    return id; // Keep ai, or any other existing name
-  });
-
-  return converted as PlayerId[];
+  return existingPlayers.map(
+    (id): PlayerId => (id === "human" ? "player" : id),
+  );
 }
 
 /**
