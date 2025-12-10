@@ -117,17 +117,36 @@ interface PlayerStrategyAnalysis {
 const DEFAULT_PROVINCE_COUNT = 8;
 const DEFAULT_DUCHY_COUNT = 8;
 const LOW_PILE_THRESHOLD = 3;
+const EARLY_GAME_TURN_THRESHOLD = 5;
+const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
-function formatScoreboard(currentVP: number, opponentVP: number): string {
+function formatScoreboard(
+  currentVP: number,
+  opponentVP: number,
+  turn: number,
+  provincesLeft: number,
+): string {
   const vpDiff = currentVP - opponentVP;
-  return `SCORE: You ${currentVP} VP, Opponent ${opponentVP} VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`;
+  const gameStage =
+    turn <= EARLY_GAME_TURN_THRESHOLD
+      ? "Early"
+      : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
+        ? "Late"
+        : "Mid";
+  return `Turn ${turn} (${gameStage} game) | SCORE: You ${currentVP}VP, Opponent ${opponentVP}VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`;
 }
 
 function formatDeckComposition(cards: CardName[]): string {
   const analysis = analyzeDeck(cards);
+  const treasureDensity = ((analysis.treasures / cards.length) * 100).toFixed(
+    0,
+  );
+  const actionDensity = ((analysis.actions / cards.length) * 100).toFixed(0);
+  const vpDensity = ((analysis.victory / cards.length) * 100).toFixed(0);
+
   return `YOUR DECK (${cards.length} cards): ${analysis.breakdown}
-Treasure value: $${analysis.totalTreasureValue} in ${analysis.treasures} cards (avg $${analysis.avgTreasureValue.toFixed(1)})
-Terminals: ${analysis.terminals}, Villages: ${analysis.villages}`;
+Economy: $${analysis.totalTreasureValue} in ${analysis.treasures} treasures (${treasureDensity}% density, avg $${analysis.avgTreasureValue.toFixed(1)}/card)
+Engine: ${analysis.actions} actions (${actionDensity}%) - ${analysis.villages} villages, ${analysis.terminals} terminals | VP cards: ${analysis.victory} (${vpDensity}%)`;
 }
 
 function formatSupplyStatus(supply: Record<string, number>): string {
@@ -175,6 +194,7 @@ function formatAvailableBuyOptions(
   supply: Record<string, number>,
   currentCoins: number,
   maxCoins: number,
+  unplayedTreasures: CardName[],
 ): string {
   if (currentCoins === maxCoins) {
     // All treasures played - show single list
@@ -197,7 +217,9 @@ function formatAvailableBuyOptions(
     return `BUYABLE:\n${allCards}`;
   }
 
-  // Have unplayed treasures - show current vs potential
+  // Have unplayed treasures - show what each treasure unlocks
+  const lines = [`BUYABLE NOW ($${currentCoins}):`];
+
   const currentCards = Object.entries(supply)
     .filter(([cardName, count]) => {
       const card = cardName as CardName;
@@ -210,29 +232,42 @@ function formatAvailableBuyOptions(
       return `${card}($${cost})`;
     });
 
-  const potentialCards = Object.entries(supply)
-    .filter(([cardName, count]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      return count > 0 && cost <= maxCoins && cost > currentCoins;
-    })
-    .map(([cardName]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      const cardInfo = CARDS[card];
-      const desc = cardInfo.description || "";
-      return `  ${card}($${cost}): ${desc}`;
+  lines.push(`  ${currentCards.length > 0 ? currentCards.join(", ") : "none"}`);
+
+  // Show what playing each treasure would unlock
+  if (unplayedTreasures.length > 0) {
+    lines.push("\nPLAY TREASURES TO UNLOCK:");
+    let runningTotal = currentCoins;
+
+    unplayedTreasures.map(treasure => {
+      const treasureValue = CARDS[treasure].coins || 0;
+      runningTotal += treasureValue;
+
+      const newlyUnlocked = Object.entries(supply)
+        .filter(([cardName, count]) => {
+          const card = cardName as CardName;
+          const cost = CARDS[card]?.cost || 0;
+          return (
+            count > 0 &&
+            cost <= runningTotal &&
+            cost > runningTotal - treasureValue
+          );
+        })
+        .map(([cardName]) => {
+          const card = cardName as CardName;
+          const cost = CARDS[card]?.cost || 0;
+          return `${card}($${cost})`;
+        });
+
+      if (newlyUnlocked.length > 0) {
+        lines.push(
+          `  Play ${treasure}(+$${treasureValue}) → $${runningTotal}: ${newlyUnlocked.join(", ")}`,
+        );
+      }
     });
+  }
 
-  const currentList =
-    currentCards.length > 0 ? currentCards.join(", ") : "none";
-  const potentialList =
-    potentialCards.length > 0 ? potentialCards.join("\n") : "  none";
-
-  return `BUYABLE:
-  With $${currentCoins} now: ${currentList}
-  With $${maxCoins} (after all treasures):
-${potentialList}`;
+  return lines.join("\n");
 }
 
 function formatStrategyAnalysis(
@@ -315,10 +350,14 @@ export function buildStrategicContext(
   );
   const maxCoins = state.coins + treasureValue;
 
+  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
+  const shuffleSoon =
+    currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0;
+
   const sections = [
-    formatScoreboard(currentVP, opponentVP),
+    formatScoreboard(currentVP, opponentVP, state.turn, provincesLeft),
     formatDeckComposition(currentAllCards),
-    `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards`,
+    `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards${shuffleSoon ? " (shuffle next turn)" : ""}`,
     formatSupplyStatus(state.supply),
     `OPPONENT DECK (${opponentAllCards.length} cards): ${analyzeDeck(opponentAllCards).breakdown}`,
     formatHandStatus(currentPlayer.hand, state.coins, state.phase),
@@ -329,6 +368,7 @@ export function buildStrategicContext(
       state.supply,
       state.coins,
       maxCoins,
+      treasures,
     );
     if (buyOptions) {
       sections.push(buyOptions);

@@ -16,9 +16,12 @@ Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
 ## Context Interpretation
 Your context shows:
-- "COINS: $X activated | $Y in hand | $Z total if all treasures played" - you have unplayed treasures
-- "BUYABLE: With $X now / With $Z (after all treasures)" - what you can buy at each coin level
-- Always check what becomes buyable with more coins before committing to a purchase
+- Turn number and game stage (Early/Mid/Late) - affects buying priorities
+- Deck efficiency: treasure density, action/village ratio, VP pollution %
+- "COINS: $X activated | $Y in hand" - you have unplayed treasures worth $Y
+- "PLAY TREASURES TO UNLOCK: Play Gold(+$3) → $8: Province($8)" - shows what each treasure unlocks
+- "shuffle next turn" - your discard pile will mix into deck soon
+- Legal actions list shows only currently available actions based on coins activated NOW
 
 ## Strategy Principles
 - Draw and +Action cards enable longer turns
