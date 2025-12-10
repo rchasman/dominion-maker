@@ -135,7 +135,9 @@ describe("peekDraw - Shuffle Mechanics", () => {
     expect(result.cards.length).toBe(2);
     expect(result.shuffled).toBe(true);
     expect(result.newDeckOrder).toBeDefined();
-    expect(result.newDeckOrder!.length).toBe(3);
+    if (result.newDeckOrder) {
+      expect(result.newDeckOrder.length).toBe(3);
+    }
   });
 
   it("should shuffle mid-draw when deck runs out", () => {
@@ -220,7 +222,9 @@ describe("createDrawEvents - Event Generation", () => {
 
     const shuffleEvent = events.find(e => e.type === "DECK_SHUFFLED");
     expect(shuffleEvent).toBeDefined();
-    expect(shuffleEvent!.newDeckOrder).toBeDefined();
+    if (shuffleEvent) {
+      expect(shuffleEvent.newDeckOrder).toBeDefined();
+    }
 
     const drawEvents = events.filter(e => e.type === "CARD_DRAWN");
     expect(drawEvents.length).toBe(2);
@@ -495,7 +499,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
     const actionsEvent = result.events.find(e => e.type === "ACTIONS_MODIFIED");
     expect(actionsEvent).toBeDefined();
-    expect(actionsEvent!.delta).toBe(2);
+    if (actionsEvent) {
+      expect(actionsEvent.delta).toBe(2);
+    }
   });
 
   it("should create effect that gives buys", () => {
@@ -506,7 +512,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
     const buysEvent = result.events.find(e => e.type === "BUYS_MODIFIED");
     expect(buysEvent).toBeDefined();
-    expect(buysEvent!.delta).toBe(1);
+    if (buysEvent) {
+      expect(buysEvent.delta).toBe(1);
+    }
   });
 
   it("should create effect that gives coins", () => {
@@ -517,7 +525,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
     const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
     expect(coinsEvent).toBeDefined();
-    expect(coinsEvent!.delta).toBe(2);
+    if (coinsEvent) {
+      expect(coinsEvent.delta).toBe(2);
+    }
   });
 
   it("should create effect with multiple benefits (Market)", () => {
