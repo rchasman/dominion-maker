@@ -14,7 +14,6 @@ import {
   getNextPlayer,
   checkGameOver,
   createResourceEvents,
-  calculateMerchantBonus,
 } from "./handle-helpers";
 import { calculateEffectiveCost, getAvailableReactions } from "../cards/effect-types";
 import { handleSubmitDecision } from "./handle-decision";
@@ -508,14 +507,24 @@ function handlePlayTreasure(
     );
   }
 
-  // Check for Merchant bonus (first Silver = +$1)
-  const merchantBonus = calculateMerchantBonus(playerState, card, true);
-  if (merchantBonus > 0) {
+  // Check for treasure triggers from cards in play
+  const treasuresInPlay = playerState.inPlay.filter(c => CARDS[c].types.includes("treasure"));
+  const isFirstOfType = !treasuresInPlay.includes(card);
+
+  const triggerEvents = playerState.inPlay.flatMap(inPlayCard => {
+    const trigger = CARDS[inPlayCard].triggers?.onTreasurePlayed;
+    return trigger
+      ? trigger(card, { isFirstOfType, treasuresInPlay })
+      : [];
+  });
+
+  if (triggerEvents.length > 0) {
     events.push(
-      ...createResourceEvents(
-        [{ type: "COINS_MODIFIED", delta: merchantBonus }],
-        rootEventId,
-      ),
+      ...triggerEvents.map(e => ({
+        ...e,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      })),
     );
   }
 
@@ -540,14 +549,8 @@ function handlePlayAllTreasures(
     return { ok: true, events: [] };
   }
 
-  // Play treasures in order: Copper, then Silver, then Gold (for Merchant)
-  const orderedTreasures = [
-    ...treasures.filter(c => c === "Copper"),
-    ...treasures.filter(c => c === "Silver"),
-    ...treasures.filter(c => c === "Gold"),
-  ];
-
-  const { events } = orderedTreasures.reduce(
+  // Play treasures in hand order (triggers fire automatically)
+  const { events } = treasures.reduce(
     (acc, card) => {
       const result = handlePlayTreasure(acc.currentState, player, card);
       if (!result.ok) return acc;
@@ -605,17 +608,43 @@ function handleUnplayTreasure(
     id: rootEventId,
   });
 
-  // Subtract coins - caused by unplaying the treasure
+  // Subtract coins
   const coins = CARDS[card].coins || 0;
-  const merchantBonus = calculateMerchantBonus(playerState, card, false);
-  const totalDelta = -coins + merchantBonus; // merchantBonus is already negative
 
-  if (totalDelta !== 0) {
+  if (coins > 0) {
     events.push(
       ...createResourceEvents(
-        [{ type: "COINS_MODIFIED", delta: totalDelta }],
+        [{ type: "COINS_MODIFIED", delta: -coins }],
         rootEventId,
       ),
+    );
+  }
+
+  // Reverse treasure triggers (e.g., remove Merchant bonus if unplaying Silver)
+  const treasuresInPlay = playerState.inPlay.filter(c => CARDS[c].types.includes("treasure"));
+  const wasFirstOfType = treasuresInPlay.filter(c => c === card).length === 1;
+
+  const reverseTriggerEvents = playerState.inPlay.flatMap(inPlayCard => {
+    const trigger = CARDS[inPlayCard].triggers?.onTreasurePlayed;
+    if (!trigger) return [];
+
+    // Reverse the trigger effect
+    const originalEvents = trigger(card, { isFirstOfType: wasFirstOfType, treasuresInPlay });
+    return originalEvents.map(e => {
+      if (e.type === "COINS_MODIFIED") {
+        return { type: "COINS_MODIFIED" as const, delta: -e.delta };
+      }
+      return e;
+    });
+  });
+
+  if (reverseTriggerEvents.length > 0) {
+    events.push(
+      ...reverseTriggerEvents.map(e => ({
+        ...e,
+        id: generateEventId(),
+        causedBy: rootEventId,
+      })),
     );
   }
 
