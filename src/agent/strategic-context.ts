@@ -110,31 +110,15 @@ function extractRecentTurns(
       const summary = state.turnMap.get(key);
       if (!summary) return state;
 
-      if (entry.type === "play-action" && entry.card) {
-        const newSummary = {
-          ...summary,
-          actionsPlayed: [...summary.actionsPlayed, entry.card],
-        };
-        const newTurnMap = new Map(state.turnMap);
-        newTurnMap.set(key, newSummary);
-        return { ...state, turnMap: newTurnMap };
-      }
+      const fieldMap = {
+        "play-action": "actionsPlayed",
+        "play-treasure": "treasuresPlayed",
+        "buy-card": "cardsBought",
+      } as const;
 
-      if (entry.type === "play-treasure" && entry.card) {
-        const newSummary = {
-          ...summary,
-          treasuresPlayed: [...summary.treasuresPlayed, entry.card],
-        };
-        const newTurnMap = new Map(state.turnMap);
-        newTurnMap.set(key, newSummary);
-        return { ...state, turnMap: newTurnMap };
-      }
-
-      if (entry.type === "buy-card" && entry.card) {
-        const newSummary = {
-          ...summary,
-          cardsBought: [...summary.cardsBought, entry.card],
-        };
+      const field = fieldMap[entry.type as keyof typeof fieldMap];
+      if (field && entry.card) {
+        const newSummary = { ...summary, [field]: [...summary[field], entry.card] };
         const newTurnMap = new Map(state.turnMap);
         newTurnMap.set(key, newSummary);
         return { ...state, turnMap: newTurnMap };
@@ -191,6 +175,32 @@ interface PlayerStrategyAnalysis {
 
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
+const DEFAULT_PROVINCE_COUNT = 8;
+const PROVINCE_VP = 6;
+
+const getAllCards = (player: GameState["players"][string]) => [
+  ...player.deck,
+  ...player.hand,
+  ...player.discard,
+  ...player.inPlay,
+];
+
+const calculateVP = (cards: CardName[]) => countVPFromCards(cards);
+
+const filterBuyableCards = (
+  supply: GameState["supply"],
+  maxCost: number,
+  minCost = 0,
+) =>
+  Object.entries(supply)
+    .filter(([cardName, count]) => {
+      const cost = CARDS[cardName as CardName]?.cost || 0;
+      return count > 0 && cost <= maxCost && cost > minCost;
+    })
+    .map(([cardName]) => ({
+      card: cardName,
+      cost: CARDS[cardName as CardName]?.cost || 0,
+    }));
 
 /**
  * Builds structured game facts as TOON-encoded data
@@ -206,31 +216,11 @@ export function buildStrategicContext(
   ) as keyof typeof state.players;
   const opponent = state.players[opponentId];
 
-  const currentAllCards = [
-    ...currentPlayer.deck,
-    ...currentPlayer.hand,
-    ...currentPlayer.discard,
-    ...currentPlayer.inPlay,
-  ];
-  const opponentAllCards = [
-    ...opponent.deck,
-    ...opponent.hand,
-    ...opponent.discard,
-    ...opponent.inPlay,
-  ];
+  const currentAllCards = getAllCards(currentPlayer);
+  const opponentAllCards = getAllCards(opponent);
 
-  const currentVP = calculateVP(
-    currentPlayer.deck,
-    currentPlayer.hand,
-    currentPlayer.discard,
-    currentPlayer.inPlay,
-  );
-  const opponentVP = calculateVP(
-    opponent.deck,
-    opponent.hand,
-    opponent.discard,
-    opponent.inPlay,
-  );
+  const currentVP = calculateVP(currentAllCards);
+  const opponentVP = calculateVP(opponentAllCards);
 
   const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
   const gameStage: "Early" | "Mid" | "Late" = run(() => {
@@ -239,7 +229,6 @@ export function buildStrategicContext(
     return "Mid";
   });
 
-  const PROVINCE_VP = 6;
   const youNeed = Math.ceil((opponentVP + 1 - currentVP) / PROVINCE_VP);
   const theyNeed = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
 
@@ -312,54 +301,28 @@ export function buildStrategicContext(
 
   // Add buy options if in buy phase
   if (state.phase === "buy") {
-    const current = Object.entries(state.supply)
-      .filter(([cardName, count]) => {
-        const card = cardName as CardName;
-        const cost = CARDS[card]?.cost || 0;
-        return count > 0 && cost <= state.coins;
-      })
-      .map(([cardName]) => ({
-        card: cardName,
-        cost: CARDS[cardName as CardName]?.cost || 0,
-      }));
+    facts.buyableWithCurrentCoins = filterBuyableCards(
+      state.supply,
+      state.coins,
+    );
 
-    const unlocks = treasures
-      .map((treasure, idx) => {
-        const treasureValue = CARDS[treasure].coins || 0;
-        const runningTotal =
-          state.coins +
-          treasures
-            .slice(0, idx + 1)
-            .reduce((sum, t) => sum + (CARDS[t].coins || 0), 0);
-        const prevTotal =
-          idx === 0
-            ? state.coins
-            : state.coins +
-              treasures
-                .slice(0, idx)
-                .reduce((sum, t) => sum + (CARDS[t].coins || 0), 0);
+    const cumulativeTotals = treasures.reduce(
+      (totals, t) => [...totals, totals[totals.length - 1] + (CARDS[t].coins || 0)],
+      [state.coins],
+    );
 
-        const unlocked = Object.entries(state.supply)
-          .filter(([cardName, count]) => {
-            const cost = CARDS[cardName as CardName]?.cost || 0;
-            return count > 0 && cost <= runningTotal && cost > prevTotal;
-          })
-          .map(([cardName]) => ({
-            card: cardName,
-            cost: CARDS[cardName as CardName]?.cost || 0,
-          }));
-
-        return {
-          treasureName: treasure,
-          coinValue: treasureValue,
-          newCoinTotal: runningTotal,
-          cardsUnlocked: unlocked,
-        };
-      })
+    facts.whatEachUnplayedTreasureUnlocks = treasures
+      .map((treasure, idx) => ({
+        treasureName: treasure,
+        coinValue: CARDS[treasure].coins || 0,
+        newCoinTotal: cumulativeTotals[idx + 1],
+        cardsUnlocked: filterBuyableCards(
+          state.supply,
+          cumulativeTotals[idx + 1],
+          cumulativeTotals[idx],
+        ),
+      }))
       .filter(u => u.cardsUnlocked.length > 0);
-
-    facts.buyableWithCurrentCoins = current;
-    facts.whatEachUnplayedTreasureUnlocks = unlocks;
   }
 
   return encodeToon(facts);

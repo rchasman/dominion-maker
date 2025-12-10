@@ -198,7 +198,7 @@ export const bandit: CardEffect = ({
         from: "deck" as const,
       }));
       return {
-        events: [...trashEvent, ...discardEvents, ...revealEvents],
+        events: [trashEvent, ...discardEvents, ...revealEvents] as GameEvent[],
         pendingDecision: createCardSelectionDecision({
           player: opponent,
           from: "revealed",
@@ -221,7 +221,7 @@ export const bandit: CardEffect = ({
       processOpponentAutoAttack(state, t),
     );
     return {
-      events: [...trashEvent, ...discardEvents, ...remainingAttackEvents],
+      events: [trashEvent, ...discardEvents, ...remainingAttackEvents] as GameEvent[],
     };
   }
 
