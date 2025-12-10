@@ -130,8 +130,9 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
   it("Smithy: +3 Cards", () => {
     const state = createTestState([], ["Copper", "Silver", "Gold", "Estate"]);
     const effect = getCardEffect("Smithy");
+    if (!effect) throw new Error("No effect for Smithy");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Smithy",
@@ -146,8 +147,9 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
   it("Village: +1 Card, +2 Actions", () => {
     const state = createTestState([], ["Copper"]);
     const effect = getCardEffect("Village");
+    if (!effect) throw new Error("No effect for Village");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Village",
@@ -158,14 +160,16 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
 
     const actionsEvent = result.events.find(e => e.type === "ACTIONS_MODIFIED");
     expect(actionsEvent).toBeDefined();
-    expect(actionsEvent!.delta).toBe(2);
+    if (!actionsEvent) throw new Error("No actions event");
+    expect(actionsEvent.delta).toBe(2);
   });
 
   it("Laboratory: +2 Cards, +1 Action", () => {
     const state = createTestState([], ["Copper", "Silver"]);
     const effect = getCardEffect("Laboratory");
+    if (!effect) throw new Error("No effect for Laboratory");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Laboratory",
@@ -176,14 +180,16 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
 
     const actionsEvent = result.events.find(e => e.type === "ACTIONS_MODIFIED");
     expect(actionsEvent).toBeDefined();
-    expect(actionsEvent!.delta).toBe(1);
+    if (!actionsEvent) throw new Error("No actions event");
+    expect(actionsEvent.delta).toBe(1);
   });
 
   it("Moat: +2 Cards", () => {
     const state = createTestState([], ["Copper", "Silver"]);
     const effect = getCardEffect("Moat");
+    if (!effect) throw new Error("No effect for Moat");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Moat",
@@ -196,8 +202,9 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
   it("Festival: +2 Actions, +1 Buy, +$2", () => {
     const state = createTestState([]);
     const effect = getCardEffect("Festival");
+    if (!effect) throw new Error("No effect for Festival");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Festival",
@@ -205,22 +212,26 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
 
     const actionsEvent = result.events.find(e => e.type === "ACTIONS_MODIFIED");
     expect(actionsEvent).toBeDefined();
-    expect(actionsEvent!.delta).toBe(2);
+    if (!actionsEvent) throw new Error("No actions event");
+    expect(actionsEvent.delta).toBe(2);
 
     const buysEvent = result.events.find(e => e.type === "BUYS_MODIFIED");
     expect(buysEvent).toBeDefined();
-    expect(buysEvent!.delta).toBe(1);
+    if (!buysEvent) throw new Error("No buys event");
+    expect(buysEvent.delta).toBe(1);
 
     const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
     expect(coinsEvent).toBeDefined();
-    expect(coinsEvent!.delta).toBe(2);
+    if (!coinsEvent) throw new Error("No coins event");
+    expect(coinsEvent.delta).toBe(2);
   });
 
   it("Market: +1 Card, +1 Action, +1 Buy, +$1", () => {
     const state = createTestState([], ["Copper"]);
     const effect = getCardEffect("Market");
+    if (!effect) throw new Error("No effect for Market");
 
-    const result = effect!({
+    const result = effect({
       state,
       player: "human",
       card: "Market",
@@ -243,8 +254,10 @@ describe("Multi-Stage Decision Cards", () => {
   describe("Cellar", () => {
     it("should give +1 Action and request discard decision", () => {
       const state = createTestState(["Copper", "Estate", "Duchy"]);
+      const effect = getCardEffect("Cellar");
+      if (!effect) throw new Error("No effect for Cellar");
 
-      const result = getCardEffect("Cellar")!({
+      const result = effect({
         state,
         player: "human",
         card: "Cellar",
@@ -255,13 +268,15 @@ describe("Multi-Stage Decision Cards", () => {
         e => e.type === "ACTIONS_MODIFIED",
       );
       expect(actionsEvent).toBeDefined();
-      expect(actionsEvent!.delta).toBe(1);
+      if (!actionsEvent) throw new Error("No actions event");
+      expect(actionsEvent.delta).toBe(1);
 
       // Should request discard decision
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.type).toBe("card_decision");
-      expect(result.pendingDecision!.from).toBe("hand");
-      expect(result.pendingDecision!.stage).toBe("discard");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.type).toBe("card_decision");
+      expect(result.pendingDecision.from).toBe("hand");
+      expect(result.pendingDecision.stage).toBe("discard");
     });
 
     it("should discard selected cards and draw same amount", () => {
@@ -304,17 +319,20 @@ describe("Multi-Stage Decision Cards", () => {
         "Estate",
         "Duchy",
       ]);
+      const effect = getCardEffect("Chapel");
+      if (!effect) throw new Error("No effect for Chapel");
 
-      const result = getCardEffect("Chapel")!({
+      const result = effect({
         state,
         player: "human",
         card: "Chapel",
       });
 
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.type).toBe("card_decision");
-      expect(result.pendingDecision!.min).toBe(0);
-      expect(result.pendingDecision!.max).toBe(4);
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.type).toBe("card_decision");
+      expect(result.pendingDecision.min).toBe(0);
+      expect(result.pendingDecision.max).toBe(4);
     });
 
     it("should trash selected cards", () => {
@@ -344,8 +362,10 @@ describe("Multi-Stage Decision Cards", () => {
   describe("Harbinger", () => {
     it("should draw 1 card, give +1 action, and request topdeck decision", () => {
       const state = createTestState([], ["Silver"], ["Copper", "Estate"]);
+      const effect = getCardEffect("Harbinger");
+      if (!effect) throw new Error("No effect for Harbinger");
 
-      const result = getCardEffect("Harbinger")!({
+      const result = effect({
         state,
         player: "human",
         card: "Harbinger",
@@ -356,7 +376,8 @@ describe("Multi-Stage Decision Cards", () => {
         result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.from).toBe("discard");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.from).toBe("discard");
     });
 
     it("should put selected card from discard on top of deck", () => {
@@ -385,27 +406,32 @@ describe("Multi-Stage Decision Cards", () => {
   describe("Workshop", () => {
     it("should request card to gain up to cost 4", () => {
       const state = createTestState([]);
+      const effect = getCardEffect("Workshop");
+      if (!effect) throw new Error("No effect for Workshop");
 
-      const result = getCardEffect("Workshop")!({
+      const result = effect({
         state,
         player: "human",
         card: "Workshop",
       });
 
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.from).toBe("supply");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.from).toBe("supply");
 
       // Should include cards costing up to 4
-      expect(result.pendingDecision!.cardOptions).toContain("Silver");
-      expect(result.pendingDecision!.cardOptions).toContain("Estate");
-      expect(result.pendingDecision!.cardOptions).not.toContain("Gold");
-      expect(result.pendingDecision!.cardOptions).not.toContain("Duchy");
+      expect(result.pendingDecision.cardOptions).toContain("Silver");
+      expect(result.pendingDecision.cardOptions).toContain("Estate");
+      expect(result.pendingDecision.cardOptions).not.toContain("Gold");
+      expect(result.pendingDecision.cardOptions).not.toContain("Duchy");
     });
 
     it("should gain selected card to discard", () => {
       const state = createTestState([]);
+      const effect = getCardEffect("Workshop");
+      if (!effect) throw new Error("No effect for Workshop");
 
-      const result = getCardEffect("Workshop")!({
+      const result = effect({
         state,
         player: "human",
         card: "Workshop",
@@ -417,24 +443,28 @@ describe("Multi-Stage Decision Cards", () => {
 
       const gainEvent = result.events.find(e => e.type === "CARD_GAINED");
       expect(gainEvent).toBeDefined();
-      expect(gainEvent!.card).toBe("Silver");
-      expect(gainEvent!.to).toBe("discard");
+      if (!gainEvent) throw new Error("No gain event");
+      expect(gainEvent.card).toBe("Silver");
+      expect(gainEvent.to).toBe("discard");
     });
   });
 
   describe("Remodel", () => {
     it("should request card to trash from hand", () => {
       const state = createTestState(["Copper", "Estate", "Silver"]);
+      const effect = getCardEffect("Remodel");
+      if (!effect) throw new Error("No effect for Remodel");
 
-      const result = getCardEffect("Remodel")!({
+      const result = effect({
         state,
         player: "human",
         card: "Remodel",
       });
 
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.from).toBe("hand");
-      expect(result.pendingDecision!.stage).toBe("trash");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.from).toBe("hand");
+      expect(result.pendingDecision.stage).toBe("trash");
     });
 
     it("should trash card and gain card costing up to +2", () => {
@@ -453,7 +483,8 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer cards up to cost 4 (2+2)
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.cardOptions).toContain("Silver");
+      if (!newState.pendingDecision) throw new Error("No pending decision");
+      expect(newState.pendingDecision.cardOptions).toContain("Silver");
 
       // Gain Silver
       newState = executeCard(
@@ -490,8 +521,9 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer treasures up to cost 3 (0+3)
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.cardOptions).toContain("Silver");
-      expect(newState.pendingDecision!.cardOptions).not.toContain("Gold");
+      if (!newState.pendingDecision) throw new Error("No pending decision");
+      expect(newState.pendingDecision.cardOptions).toContain("Silver");
+      expect(newState.pendingDecision.cardOptions).not.toContain("Gold");
 
       // Gain Silver to hand (not discard!)
       newState = executeCard(
@@ -527,7 +559,8 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Topdeck card from hand
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.from).toBe("hand");
+      if (!newState.pendingDecision) throw new Error("No pending decision");
+      expect(newState.pendingDecision.from).toBe("hand");
 
       newState = executeCard(
         "Artisan",
@@ -552,8 +585,10 @@ describe("Attack Cards", () => {
   describe("Militia", () => {
     it("should give +$2 to player", () => {
       const state = createTestState([]);
+      const effect = getCardEffect("Militia");
+      if (!effect) throw new Error("No effect for Militia");
 
-      const result = getCardEffect("Militia")!({
+      const result = effect({
         state,
         player: "human",
         card: "Militia",
@@ -561,7 +596,8 @@ describe("Attack Cards", () => {
 
       const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
       expect(coinsEvent).toBeDefined();
-      expect(coinsEvent!.delta).toBe(2);
+      if (!coinsEvent) throw new Error("No coins event");
+      expect(coinsEvent.delta).toBe(2);
     });
 
     it("should attack opponents with more than 3 cards", () => {
@@ -574,8 +610,10 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
+      const effect = getCardEffect("Militia");
+      if (!effect) throw new Error("No effect for Militia");
 
-      const result = getCardEffect("Militia")!({
+      const result = effect({
         state,
         player: "human",
         card: "Militia",
@@ -583,10 +621,11 @@ describe("Attack Cards", () => {
 
       // Should request opponent to discard down to 3
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.player).toBe("ai");
-      expect(result.pendingDecision!.stage).toBe("opponent_discard");
-      expect(result.pendingDecision!.min).toBe(2); // 5 - 3 = 2 cards to discard
-      expect(result.pendingDecision!.max).toBe(2);
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.player).toBe("ai");
+      expect(result.pendingDecision.stage).toBe("opponent_discard");
+      expect(result.pendingDecision.min).toBe(2); // 5 - 3 = 2 cards to discard
+      expect(result.pendingDecision.max).toBe(2);
     });
 
     it("should correctly discard cards and reduce hand to 3", () => {
@@ -614,8 +653,10 @@ describe("Attack Cards", () => {
           attackingPlayer: "human",
         },
       };
+      const effect = getCardEffect("Militia");
+      if (!effect) throw new Error("No effect for Militia");
 
-      const result = getCardEffect("Militia")!({
+      const result = effect({
         state,
         player: "human",
         card: "Militia",
@@ -641,8 +682,10 @@ describe("Attack Cards", () => {
   describe("Witch", () => {
     it("should draw 2 cards for player", () => {
       const state = createTestState([], ["Copper", "Silver"]);
+      const effect = getCardEffect("Witch");
+      if (!effect) throw new Error("No effect for Witch");
 
-      const result = getCardEffect("Witch")!({
+      const result = effect({
         state,
         player: "human",
         card: "Witch",
@@ -662,8 +705,10 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
+      const effect = getCardEffect("Witch");
+      if (!effect) throw new Error("No effect for Witch");
 
-      const result = getCardEffect("Witch")!({
+      const result = effect({
         state,
         player: "human",
         card: "Witch",
@@ -679,8 +724,10 @@ describe("Attack Cards", () => {
   describe("Bureaucrat", () => {
     it("should gain Silver to top of deck", () => {
       const state = createTestState([]);
+      const effect = getCardEffect("Bureaucrat");
+      if (!effect) throw new Error("No effect for Bureaucrat");
 
-      const result = getCardEffect("Bureaucrat")!({
+      const result = effect({
         state,
         player: "human",
         card: "Bureaucrat",
@@ -690,7 +737,8 @@ describe("Attack Cards", () => {
         e => e.type === "CARD_GAINED" && e.card === "Silver",
       );
       expect(gainEvent).toBeDefined();
-      expect(gainEvent!.to).toBe("deck");
+      if (!gainEvent) throw new Error("No gain event");
+      expect(gainEvent.to).toBe("deck");
     });
 
     it("should make opponents topdeck victory card", () => {
@@ -703,8 +751,10 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
+      const effect = getCardEffect("Bureaucrat");
+      if (!effect) throw new Error("No effect for Bureaucrat");
 
-      const result = getCardEffect("Bureaucrat")!({
+      const result = effect({
         state,
         player: "human",
         card: "Bureaucrat",
@@ -712,18 +762,21 @@ describe("Attack Cards", () => {
 
       // Should request opponent to topdeck victory card
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.player).toBe("ai");
-      expect(result.pendingDecision!.cardOptions).toContain("Estate");
-      expect(result.pendingDecision!.cardOptions).toContain("Duchy");
-      expect(result.pendingDecision!.cardOptions).not.toContain("Copper");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.player).toBe("ai");
+      expect(result.pendingDecision.cardOptions).toContain("Estate");
+      expect(result.pendingDecision.cardOptions).toContain("Duchy");
+      expect(result.pendingDecision.cardOptions).not.toContain("Copper");
     });
   });
 
   describe("Bandit", () => {
     it("should gain Gold", () => {
       const state = createTestState([]);
+      const effect = getCardEffect("Bandit");
+      if (!effect) throw new Error("No effect for Bandit");
 
-      const result = getCardEffect("Bandit")!({
+      const result = effect({
         state,
         player: "human",
         card: "Bandit",
@@ -745,8 +798,10 @@ describe("Attack Cards", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
+      const effect = getCardEffect("Bandit");
+      if (!effect) throw new Error("No effect for Bandit");
 
-      const result = getCardEffect("Bandit")!({
+      const result = effect({
         state,
         player: "human",
         card: "Bandit",
@@ -775,8 +830,10 @@ describe("Complex Card Interactions", () => {
         ["Copper"],
         ["Silver", "Gold", "Estate", "Duchy", "Province", "Village", "Copper"],
       );
+      const effect = getCardEffect("Library");
+      if (!effect) throw new Error("No effect for Library");
 
-      const result = getCardEffect("Library")!({
+      const result = effect({
         state,
         player: "human",
         card: "Library",
@@ -814,8 +871,10 @@ describe("Complex Card Interactions", () => {
   describe("Sentry", () => {
     it("should draw 1, give +1 action, and reveal 2 cards", () => {
       const state = createTestState([], ["Copper", "Silver", "Gold"]);
+      const effect = getCardEffect("Sentry");
+      if (!effect) throw new Error("No effect for Sentry");
 
-      const result = getCardEffect("Sentry")!({
+      const result = effect({
         state,
         player: "human",
         card: "Sentry",
@@ -835,34 +894,40 @@ describe("Complex Card Interactions", () => {
 
       // Should reveal 2 cards with decision
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.type).toBe("card_decision");
-      expect(newState.pendingDecision!.cardOptions.length).toBe(2);
-      expect(newState.pendingDecision!.actions).toHaveLength(3);
+      if (!newState.pendingDecision) throw new Error("No pending decision");
+      expect(newState.pendingDecision.type).toBe("card_decision");
+      expect(newState.pendingDecision.cardOptions.length).toBe(2);
+      expect(newState.pendingDecision.actions).toHaveLength(3);
     });
   });
 
   describe("Throne Room", () => {
     it("should request action card to play twice", () => {
       const state = createTestState(["Village", "Smithy", "Copper"]);
+      const effect = getCardEffect("Throne Room");
+      if (!effect) throw new Error("No effect for Throne Room");
 
-      const result = getCardEffect("Throne Room")!({
+      const result = effect({
         state,
         player: "human",
         card: "Throne Room",
       });
 
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.cardOptions).toContain("Village");
-      expect(result.pendingDecision!.cardOptions).toContain("Smithy");
-      expect(result.pendingDecision!.cardOptions).not.toContain("Copper");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.cardOptions).toContain("Village");
+      expect(result.pendingDecision.cardOptions).toContain("Smithy");
+      expect(result.pendingDecision.cardOptions).not.toContain("Copper");
     });
   });
 
   describe("Vassal", () => {
     it("should give +$2 and reveal top card", () => {
       const state = createTestState([], ["Village", "Copper"]);
+      const effect = getCardEffect("Vassal");
+      if (!effect) throw new Error("No effect for Vassal");
 
-      const result = getCardEffect("Vassal")!({
+      const result = effect({
         state,
         player: "human",
         card: "Vassal",
@@ -870,13 +935,16 @@ describe("Complex Card Interactions", () => {
 
       const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
       expect(coinsEvent).toBeDefined();
-      expect(coinsEvent!.delta).toBe(2);
+      if (!coinsEvent) throw new Error("No coins event");
+      expect(coinsEvent.delta).toBe(2);
     });
 
     it("should offer to play action from discard", () => {
       const state = createTestState([], ["Village"]);
+      const effect = getCardEffect("Vassal");
+      if (!effect) throw new Error("No effect for Vassal");
 
-      const result = getCardEffect("Vassal")!({
+      const result = effect({
         state,
         player: "human",
         card: "Vassal",
@@ -884,7 +952,8 @@ describe("Complex Card Interactions", () => {
 
       // Should discard Village and offer to play it
       expect(result.pendingDecision).toBeDefined();
-      expect(result.pendingDecision!.cardOptions).toContain("Village");
+      if (!result.pendingDecision) throw new Error("No pending decision");
+      expect(result.pendingDecision.cardOptions).toContain("Village");
     });
   });
 
@@ -894,8 +963,10 @@ describe("Complex Card Interactions", () => {
         [],
         ["Copper", "Silver", "Gold", "Estate", "Duchy"],
       );
+      const effect = getCardEffect("Council Room");
+      if (!effect) throw new Error("No effect for Council Room");
 
-      const result = getCardEffect("Council Room")!({
+      const result = effect({
         state,
         player: "human",
         card: "Council Room",
@@ -908,7 +979,8 @@ describe("Complex Card Interactions", () => {
 
       const buysEvent = result.events.find(e => e.type === "BUYS_MODIFIED");
       expect(buysEvent).toBeDefined();
-      expect(buysEvent!.delta).toBe(1);
+      if (!buysEvent) throw new Error("No buys event");
+      expect(buysEvent.delta).toBe(1);
     });
 
     it("should make each opponent draw 1 card", () => {
@@ -921,8 +993,10 @@ describe("Complex Card Interactions", () => {
         inPlaySourceIndices: [],
       };
       state.playerOrder = ["human", "ai"];
+      const effect = getCardEffect("Council Room");
+      if (!effect) throw new Error("No effect for Council Room");
 
-      const result = getCardEffect("Council Room")!({
+      const result = effect({
         state,
         player: "human",
         card: "Council Room",
@@ -938,8 +1012,10 @@ describe("Complex Card Interactions", () => {
   describe("Merchant", () => {
     it("should draw 1 card and give +1 action", () => {
       const state = createTestState([], ["Copper"]);
+      const effect = getCardEffect("Merchant");
+      if (!effect) throw new Error("No effect for Merchant");
 
-      const result = getCardEffect("Merchant")!({
+      const result = effect({
         state,
         player: "human",
         card: "Merchant",
@@ -955,8 +1031,10 @@ describe("Complex Card Interactions", () => {
   describe("Moneylender", () => {
     it("should trash Copper for +$3", () => {
       const state = createTestState(["Copper", "Silver"]);
+      const effect = getCardEffect("Moneylender");
+      if (!effect) throw new Error("No effect for Moneylender");
 
-      const result = getCardEffect("Moneylender")!({
+      const result = effect({
         state,
         player: "human",
         card: "Moneylender",
@@ -967,17 +1045,21 @@ describe("Complex Card Interactions", () => {
 
       const trashEvent = result.events.find(e => e.type === "CARD_TRASHED");
       expect(trashEvent).toBeDefined();
-      expect(trashEvent!.card).toBe("Copper");
+      if (!trashEvent) throw new Error("No trash event");
+      expect(trashEvent.card).toBe("Copper");
 
       const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
       expect(coinsEvent).toBeDefined();
-      expect(coinsEvent!.delta).toBe(3);
+      if (!coinsEvent) throw new Error("No coins event");
+      expect(coinsEvent.delta).toBe(3);
     });
 
     it("should do nothing if no Copper", () => {
       const state = createTestState(["Silver", "Gold"]);
+      const effect = getCardEffect("Moneylender");
+      if (!effect) throw new Error("No effect for Moneylender");
 
-      const result = getCardEffect("Moneylender")!({
+      const result = effect({
         state,
         player: "human",
         card: "Moneylender",
@@ -994,8 +1076,10 @@ describe("Complex Card Interactions", () => {
   describe("Poacher", () => {
     it("should draw 1, give +1 action, +1 coin", () => {
       const state = createTestState([], ["Copper"]);
+      const effect = getCardEffect("Poacher");
+      if (!effect) throw new Error("No effect for Poacher");
 
-      const result = getCardEffect("Poacher")!({
+      const result = effect({
         state,
         player: "human",
         card: "Poacher",
@@ -1020,8 +1104,9 @@ describe("Complex Card Interactions", () => {
 
       // Should request discarding 3 cards
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision!.min).toBe(3);
-      expect(newState.pendingDecision!.max).toBe(3);
+      if (!newState.pendingDecision) throw new Error("No pending decision");
+      expect(newState.pendingDecision.min).toBe(3);
+      expect(newState.pendingDecision.max).toBe(3);
     });
   });
 });
