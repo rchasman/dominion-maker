@@ -61,7 +61,9 @@ describe("Cellar - duplicate card handling", () => {
     expect(result1.pendingDecision).toBeDefined();
 
     // Simulate player discarding 2 Estates
-    state.pendingDecision = result1.pendingDecision!;
+    if (result1.pendingDecision) {
+      state.pendingDecision = result1.pendingDecision;
+    }
     const result2 = cellar({
       state,
       player: "human",
@@ -95,7 +97,9 @@ describe("Cellar - duplicate card handling", () => {
       card: "Cellar",
     });
 
-    state.pendingDecision = result1.pendingDecision!;
+    if (result1.pendingDecision) {
+      state.pendingDecision = result1.pendingDecision;
+    }
     const result2 = cellar({
       state,
       player: "human",
@@ -122,7 +126,9 @@ describe("Cellar - duplicate card handling", () => {
       card: "Cellar",
     });
 
-    state.pendingDecision = result1.pendingDecision!;
+    if (result1.pendingDecision) {
+      state.pendingDecision = result1.pendingDecision;
+    }
     const result2 = cellar({
       state,
       player: "human",
