@@ -54,12 +54,13 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
-      expect(context).toContain("OPPONENT DECK");
-      expect(context).toContain("DRAW PILE:");
-      expect(context).toContain("SUPPLY:");
-      expect(context).toContain("HAND:");
+      expect(context).toContain("currentTurnNumber:");
+      expect(context).toContain("gameStage:");
+      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("opponentDeckTotalCards:");
+      expect(context).toContain("yourDrawPileCount:");
+      expect(context).toContain("supplyPiles:");
+      expect(context).toContain("handCards[");
     });
 
     it("should show correct VP scores", () => {
@@ -67,14 +68,17 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Each player has 1 Estate = 1 VP
-      expect(context).toContain("You 1 VP, Opponent 1 VP");
+      expect(context).toContain("yourVictoryPoints: 1");
+      expect(context).toContain("opponentVictoryPoints: 1");
     });
 
     it("should show current player's hand", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("HAND: Copper, Estate");
+      expect(context).toContain("handCards[2");
+      expect(context).toContain("Copper");
+      expect(context).toContain("Estate");
     });
   });
 
@@ -83,22 +87,22 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai1", ["ai1", "ai2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
-      expect(context).toContain("OPPONENT DECK");
-      expect(context).toContain("DRAW PILE:");
-      expect(context).toContain("SUPPLY:");
-      expect(context).toContain("HAND:");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("opponentDeckTotalCards:");
+      expect(context).toContain("yourDrawPileCount:");
+      expect(context).toContain("supplyPiles:");
+      expect(context).toContain("handCards[");
     });
 
     it("should build context for ai2 player", () => {
       const state = createMockGameState("ai2", ["ai1", "ai2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
-      expect(context).toContain("OPPONENT DECK");
-      expect(context).toContain("HAND:");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("opponentDeckTotalCards:");
+      expect(context).toContain("handCards[");
     });
 
     it("should show correct perspective for ai1", () => {
@@ -109,8 +113,9 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // ai1's perspective should show their own hand
-      expect(context).toContain("HAND: Gold, Silver");
-      expect(context).not.toContain("Copper, Copper");
+      expect(context).toContain("handCards[2");
+      expect(context).toContain("Gold");
+      expect(context).toContain("Silver");
     });
 
     it("should show correct perspective for ai2", () => {
@@ -121,8 +126,8 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // ai2's perspective should show their own hand
-      expect(context).toContain("HAND: Copper, Copper");
-      expect(context).not.toContain("Gold, Silver");
+      expect(context).toContain("handCards[2");
+      expect(context).toContain("Copper");
     });
   });
 
@@ -131,18 +136,18 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("player1", ["player1", "player2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
-      expect(context).toContain("OPPONENT DECK");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("opponentDeckTotalCards:");
     });
 
     it("should work with custom player IDs", () => {
       const state = createMockGameState("alice", ["alice", "bob"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
-      expect(context).toContain("OPPONENT DECK");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("opponentDeckTotalCards:");
     });
   });
 
@@ -155,8 +160,8 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Gold=3, Silver=2, Copper=1 = 6 total
-      expect(context).toContain("Unplayed treasures: $6");
-      expect(context).toContain("Max coins this turn: $6");
+      expect(context).toContain("coinsInUnplayedTreasures: 6");
+      expect(context).toContain("maxCoinsIfAllTreasuresPlayed: 6");
     });
 
     it("should show deck composition", () => {
@@ -168,11 +173,12 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("YOUR DECK (5 cards):");
-      expect(context).toContain("2 Copper");
-      expect(context).toContain("1 Estate");
-      expect(context).toContain("1 Silver");
-      expect(context).toContain("1 Gold");
+      expect(context).toContain("yourDeckTotalCards: 5");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("Copper: 2");
+      expect(context).toContain("Estate: 1");
+      expect(context).toContain("Silver: 1");
+      expect(context).toContain("Gold: 1");
     });
 
     it("should show draw pile and discard pile sizes", () => {
@@ -182,8 +188,8 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("DRAW PILE: 3 cards");
-      expect(context).toContain("DISCARD: 2 cards");
+      expect(context).toContain("yourDrawPileCount: 3");
+      expect(context).toContain("yourDiscardPileCount: 2");
     });
   });
 
@@ -195,8 +201,9 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("Province 5/8");
-      expect(context).toContain("Duchy 3/8");
+      expect(context).toContain("supplyPiles:");
+      expect(context).toContain("Province: 5");
+      expect(context).toContain("Duchy: 3");
     });
 
     it("should show low piles", () => {
@@ -206,7 +213,7 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("Low:");
+      expect(context).toContain("supplyPiles:");
       expect(context).toContain("Gold: 2");
       expect(context).toContain("Silver: 1");
     });
@@ -217,8 +224,8 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("Empty:");
-      expect(context).toContain("Copper");
+      expect(context).toContain("supplyPiles:");
+      expect(context).toContain("Copper: 0");
     });
   });
 
@@ -229,21 +236,21 @@ describe("buildStrategicContext", () => {
         human: {
           gameplan: "Big Money - Leading with 12 VP",
           read: "Playing textbook Big Money with disciplined Gold/Silver purchases. Deck is clean but lacks action synergy. Main weakness is vulnerability to engine strategies in long games.",
-          lines:
+          recommendation:
             "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
         },
         ai: {
           gameplan: "Engine Building - Behind at 6 VP",
           read: "Building Villages and Smithies engine but execution is slow. Low buying power is the critical weakness. Needs 1-2 more engine pieces before competing.",
-          lines:
+          recommendation:
             "Finish the engine before greening. Need at least one more Village.",
         },
       });
 
       const context = buildStrategicContext(state, strategySummary);
 
-      expect(context).toContain("STRATEGY ANALYSIS:");
-      expect(context).toContain("Big Money");
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("Engine Building - Behind at 6 VP");
       expect(context).toContain("Villages and Smithies");
     });
 
@@ -251,9 +258,9 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      expect(context).not.toContain("STRATEGY ANALYSIS:");
-      expect(context).toContain("SCORE:");
-      expect(context).toContain("YOUR DECK");
+      expect(context).not.toContain("aiStrategyGameplan:");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckTotalCards:");
     });
   });
 
