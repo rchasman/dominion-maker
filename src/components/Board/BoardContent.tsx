@@ -190,6 +190,7 @@ export function BoardContent({
           isOpponentAI={isOpponentAI}
           mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
+          turnCount={displayState.turn}
           onNewGame={onNewGame}
         />
       )}

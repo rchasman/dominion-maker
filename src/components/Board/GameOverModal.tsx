@@ -8,6 +8,7 @@ interface GameOverModalProps {
   isOpponentAI: boolean;
   mainPlayerVP: number;
   opponentVP: number;
+  turnCount: number;
   onNewGame: () => void;
 }
 
@@ -19,6 +20,7 @@ export function GameOverModal({
   isOpponentAI,
   mainPlayerVP,
   opponentVP,
+  turnCount,
   onNewGame,
 }: GameOverModalProps) {
   const winnerName =
@@ -65,6 +67,15 @@ export function GameOverModal({
         >
           {winnerName} wins!
         </p>
+        <div
+          style={{
+            marginBlockStart: "var(--space-3)",
+            fontSize: "0.875rem",
+            color: "var(--color-text-muted)",
+          }}
+        >
+          {turnCount} turns
+        </div>
         <div
           style={{
             marginBlockStart: "var(--space-4)",
