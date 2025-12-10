@@ -90,7 +90,6 @@ interface GameLogSectionProps {
   turnStatusIndicator: React.ReactNode;
 }
 
- 
 export function GameLogSection({
   state,
   events,

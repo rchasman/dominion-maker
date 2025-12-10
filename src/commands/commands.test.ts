@@ -48,12 +48,14 @@ describe("Command System - START_GAME", () => {
 
     expect(result.ok).toBe(true);
     expect(result.events).toBeDefined();
-    expect(result.events!.length).toBeGreaterThan(0);
+    if (!result.events) throw new Error("Expected events");
+    expect(result.events.length).toBeGreaterThan(0);
 
     // Should have GAME_INITIALIZED event
-    const gameInit = result.events!.find(e => e.type === "GAME_INITIALIZED");
+    const gameInit = result.events.find(e => e.type === "GAME_INITIALIZED");
     expect(gameInit).toBeDefined();
-    expect(gameInit!.players).toEqual(["human", "ai"]);
+    if (!gameInit) throw new Error("Expected GAME_INITIALIZED event");
+    expect(gameInit.players).toEqual(["human", "ai"]);
   });
 
   it("should initialize supply with correct counts", () => {
@@ -64,18 +66,20 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
-    const gameInit = result.events!.find(e => e.type === "GAME_INITIALIZED");
+    if (!result.events) throw new Error("Expected events");
+    const gameInit = result.events.find(e => e.type === "GAME_INITIALIZED");
 
     expect(gameInit).toBeDefined();
+    if (!gameInit) throw new Error("Expected GAME_INITIALIZED event");
 
     // 2-player game supply counts
-    expect(gameInit!.supply.Estate).toBe(8);
-    expect(gameInit!.supply.Duchy).toBe(8);
-    expect(gameInit!.supply.Province).toBe(8);
-    expect(gameInit!.supply.Copper).toBe(60 - 2 * 7); // 46
-    expect(gameInit!.supply.Silver).toBe(40);
-    expect(gameInit!.supply.Gold).toBe(30);
-    expect(gameInit!.supply.Curse).toBe(10); // (2-1)*10
+    expect(gameInit.supply.Estate).toBe(8);
+    expect(gameInit.supply.Duchy).toBe(8);
+    expect(gameInit.supply.Province).toBe(8);
+    expect(gameInit.supply.Copper).toBe(60 - 2 * 7); // 46
+    expect(gameInit.supply.Silver).toBe(40);
+    expect(gameInit.supply.Gold).toBe(30);
+    expect(gameInit.supply.Curse).toBe(10); // (2-1)*10
   });
 
   it("should deal initial decks to all players", () => {
@@ -86,7 +90,8 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
-    const deckEvents = result.events!.filter(
+    if (!result.events) throw new Error("Expected events");
+    const deckEvents = result.events.filter(
       e => e.type === "INITIAL_DECK_DEALT",
     );
 
@@ -105,7 +110,8 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
-    const handEvents = result.events!.filter(
+    if (!result.events) throw new Error("Expected events");
+    const handEvents = result.events.filter(
       e => e.type === "INITIAL_HAND_DRAWN",
     );
 
@@ -122,18 +128,20 @@ describe("Command System - START_GAME", () => {
     };
 
     const result = handleCommand(state, command);
+    if (!result.events) throw new Error("Expected events");
 
     // Should have turn start
-    const turnStart = result.events!.find(e => e.type === "TURN_STARTED");
+    const turnStart = result.events.find(e => e.type === "TURN_STARTED");
     expect(turnStart).toBeDefined();
-    expect(turnStart!.turn).toBe(1);
-    expect(turnStart!.player).toBe("human");
+    if (!turnStart) throw new Error("Expected TURN_STARTED event");
+    expect(turnStart.turn).toBe(1);
+    expect(turnStart.player).toBe("human");
 
     // Should have initial resources
-    const actionsModified = result.events!.filter(
+    const actionsModified = result.events.filter(
       e => e.type === "ACTIONS_MODIFIED",
     );
-    const buysModified = result.events!.filter(e => e.type === "BUYS_MODIFIED");
+    const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
 
     expect(actionsModified.length).toBeGreaterThan(0);
     expect(buysModified.length).toBeGreaterThan(0);
@@ -176,20 +184,22 @@ describe("Command System - PLAY_ACTION", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
     // Should have CARD_PLAYED event
-    const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
+    const cardPlayed = result.events.find(e => e.type === "CARD_PLAYED");
     expect(cardPlayed).toBeDefined();
-    expect(cardPlayed!.card).toBe("Village");
+    if (!cardPlayed) throw new Error("Expected CARD_PLAYED event");
+    expect(cardPlayed.card).toBe("Village");
 
     // Should deduct action cost
-    const actionCost = result.events!.find(
+    const actionCost = result.events.find(
       e => e.type === "ACTIONS_MODIFIED" && e.delta === -1,
     );
     expect(actionCost).toBeDefined();
 
     // Village gives +1 card, +2 actions
-    const actionBonus = result.events!.find(
+    const actionBonus = result.events.find(
       e => e.type === "ACTIONS_MODIFIED" && e.delta === 2,
     );
     expect(actionBonus).toBeDefined();
@@ -294,11 +304,12 @@ describe("Command System - PLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
+    const cardPlayed = result.events.find(e => e.type === "CARD_PLAYED");
     expect(cardPlayed).toBeDefined();
 
-    const coinsAdded = result.events!.find(
+    const coinsAdded = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === 1,
     );
     expect(coinsAdded).toBeDefined();
@@ -315,8 +326,9 @@ describe("Command System - PLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const coinsAdded = result.events!.find(
+    const coinsAdded = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === 2,
     );
     expect(coinsAdded).toBeDefined();
@@ -333,8 +345,9 @@ describe("Command System - PLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const coinsAdded = result.events!.find(
+    const coinsAdded = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === 3,
     );
     expect(coinsAdded).toBeDefined();
@@ -369,9 +382,10 @@ describe("Command System - PLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
     // Should have 2 coins from Silver + 1 from Merchant bonus
-    const coinEvents = result.events!.filter(e => e.type === "COINS_MODIFIED");
+    const coinEvents = result.events.filter(e => e.type === "COINS_MODIFIED");
     const totalCoins = coinEvents.reduce((sum, e) => sum + e.delta, 0);
     expect(totalCoins).toBe(3); // 2 + 1
   });
@@ -423,18 +437,20 @@ describe("Command System - BUY_CARD", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const cardGained = result.events!.find(e => e.type === "CARD_GAINED");
+    const cardGained = result.events.find(e => e.type === "CARD_GAINED");
     expect(cardGained).toBeDefined();
-    expect(cardGained!.card).toBe("Silver");
-    expect(cardGained!.to).toBe("discard");
+    if (!cardGained) throw new Error("Expected CARD_GAINED event");
+    expect(cardGained.card).toBe("Silver");
+    expect(cardGained.to).toBe("discard");
 
-    const buysModified = result.events!.find(
+    const buysModified = result.events.find(
       e => e.type === "BUYS_MODIFIED" && e.delta === -1,
     );
     expect(buysModified).toBeDefined();
 
-    const coinsModified = result.events!.find(
+    const coinsModified = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === -3,
     );
     expect(coinsModified).toBeDefined();
@@ -495,8 +511,9 @@ describe("Command System - BUY_CARD", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const coinsModified = result.events!.find(
+    const coinsModified = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === -8,
     );
     expect(coinsModified).toBeDefined();
@@ -535,10 +552,12 @@ describe("Command System - END_PHASE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const phaseChanged = result.events!.find(e => e.type === "PHASE_CHANGED");
+    const phaseChanged = result.events.find(e => e.type === "PHASE_CHANGED");
     expect(phaseChanged).toBeDefined();
-    expect(phaseChanged!.phase).toBe("buy");
+    if (!phaseChanged) throw new Error("Expected PHASE_CHANGED event");
+    expect(phaseChanged.phase).toBe("buy");
   });
 
   it("should end turn and start next player's turn from buy phase", () => {
@@ -587,29 +606,32 @@ describe("Command System - END_PHASE", () => {
 
     expect(result.ok).toBe(true);
     expect(result.events).toBeDefined();
-    expect(result.events!.length).toBeGreaterThan(0);
+    if (!result.events) throw new Error("Expected events");
+    expect(result.events.length).toBeGreaterThan(0);
 
     // Should have turn ended event
-    const turnEnded = result.events!.find(e => e.type === "TURN_ENDED");
+    const turnEnded = result.events.find(e => e.type === "TURN_ENDED");
     expect(turnEnded).toBeDefined();
-    expect(turnEnded!.player).toBe("human");
-    expect(turnEnded!.turn).toBe(1);
+    if (!turnEnded) throw new Error("Expected TURN_ENDED event");
+    expect(turnEnded.player).toBe("human");
+    expect(turnEnded.turn).toBe(1);
 
     // Should have turn started event for next player
-    const turnStarted = result.events!.find(e => e.type === "TURN_STARTED");
+    const turnStarted = result.events.find(e => e.type === "TURN_STARTED");
     expect(turnStarted).toBeDefined();
-    expect(turnStarted!.turn).toBe(2);
-    expect(turnStarted!.player).toBe("ai");
+    if (!turnStarted) throw new Error("Expected TURN_STARTED event");
+    expect(turnStarted.turn).toBe(2);
+    expect(turnStarted.player).toBe("ai");
 
     // Should have discarded hand and in-play cards
-    const discarded = result.events!.filter(e => e.type === "CARD_DISCARDED");
+    const discarded = result.events.filter(e => e.type === "CARD_DISCARDED");
     expect(discarded.length).toBeGreaterThanOrEqual(2); // hand + in-play
 
     // Should have resource initialization for new turn
-    const actionsModified = result.events!.filter(
+    const actionsModified = result.events.filter(
       e => e.type === "ACTIONS_MODIFIED",
     );
-    const buysModified = result.events!.filter(e => e.type === "BUYS_MODIFIED");
+    const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
     expect(actionsModified.length).toBeGreaterThan(0);
     expect(buysModified.length).toBeGreaterThan(0);
   });
@@ -648,14 +670,17 @@ describe("Command System - UNPLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const returnedToHand = result.events!.find(
+    const returnedToHand = result.events.find(
       e => e.type === "CARD_RETURNED_TO_HAND",
     );
     expect(returnedToHand).toBeDefined();
-    expect(returnedToHand!.card).toBe("Copper");
+    if (!returnedToHand)
+      throw new Error("Expected CARD_RETURNED_TO_HAND event");
+    expect(returnedToHand.card).toBe("Copper");
 
-    const coinsRemoved = result.events!.find(
+    const coinsRemoved = result.events.find(
       e => e.type === "COINS_MODIFIED" && e.delta === -1,
     );
     expect(coinsRemoved).toBeDefined();
@@ -689,11 +714,13 @@ describe("Command System - UNPLAY_TREASURE", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
     // Should remove 2 coins from Silver + 1 from Merchant = -3 total
-    const coinsModified = result.events!.find(e => e.type === "COINS_MODIFIED");
+    const coinsModified = result.events.find(e => e.type === "COINS_MODIFIED");
     expect(coinsModified).toBeDefined();
-    expect(coinsModified!.delta).toBe(-3);
+    if (!coinsModified) throw new Error("Expected COINS_MODIFIED event");
+    expect(coinsModified.delta).toBe(-3);
   });
 
   it("should fail if treasure not in play", () => {
@@ -752,7 +779,8 @@ describe("Command System - UNPLAY_TREASURE", () => {
       card: "Copper",
     });
     expect(playResult.ok).toBe(true);
-    state = applyEvents(state, playResult.events!);
+    if (!playResult.ok) throw new Error("Expected successful play");
+    state = applyEvents(state, playResult.events);
 
     // Buy a card
     const buyResult = handleCommand(state, {
@@ -761,7 +789,8 @@ describe("Command System - UNPLAY_TREASURE", () => {
       card: "Copper",
     });
     expect(buyResult.ok).toBe(true);
-    state = applyEvents(state, buyResult.events!);
+    if (!buyResult.ok) throw new Error("Expected successful buy");
+    state = applyEvents(state, buyResult.events);
 
     // Try to unplay - should fail
     const unplayResult = handleCommand(state, {
@@ -799,7 +828,8 @@ describe("Command System - UNPLAY_TREASURE", () => {
       card: "Silver",
     });
     expect(playResult.ok).toBe(true);
-    state = applyEvents(state, playResult.events!);
+    if (!playResult.ok) throw new Error("Expected successful play");
+    state = applyEvents(state, playResult.events);
     expect(state.coins).toBe(2);
 
     // Unplay before buying - should work
@@ -810,7 +840,8 @@ describe("Command System - UNPLAY_TREASURE", () => {
     });
 
     expect(unplayResult.ok).toBe(true);
-    state = applyEvents(state, unplayResult.events!);
+    if (!unplayResult.ok) throw new Error("Expected successful unplay");
+    state = applyEvents(state, unplayResult.events);
     expect(state.coins).toBe(0);
     expect(state.players.human.hand).toContain("Silver");
   });
@@ -848,14 +879,16 @@ describe("Command System - Event Causality", () => {
 
     const result = handleCommand(state, command);
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
     // Find the root CARD_PLAYED event
-    const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
+    const cardPlayed = result.events.find(e => e.type === "CARD_PLAYED");
     expect(cardPlayed).toBeDefined();
-    expect(cardPlayed!.id).toBeDefined();
+    if (!cardPlayed) throw new Error("Expected CARD_PLAYED event");
+    expect(cardPlayed.id).toBeDefined();
 
     // All effect events should be caused by the card played
-    const effectEvents = result.events!.filter(
+    const effectEvents = result.events.filter(
       e =>
         e.type === "ACTIONS_MODIFIED" ||
         e.type === "BUYS_MODIFIED" ||
@@ -896,12 +929,15 @@ describe("Command System - Event Causality", () => {
 
     const result = handleCommand(state, command);
     expect(result.ok).toBe(true);
+    if (!result.events) throw new Error("Expected events");
 
-    const cardPlayed = result.events!.find(e => e.type === "CARD_PLAYED");
-    const coinsModified = result.events!.find(e => e.type === "COINS_MODIFIED");
+    const cardPlayed = result.events.find(e => e.type === "CARD_PLAYED");
+    const coinsModified = result.events.find(e => e.type === "COINS_MODIFIED");
 
-    expect(cardPlayed!.id).toBeDefined();
-    expect(coinsModified!.causedBy).toBe(cardPlayed!.id);
+    if (!cardPlayed) throw new Error("Expected CARD_PLAYED event");
+    if (!coinsModified) throw new Error("Expected COINS_MODIFIED event");
+    expect(cardPlayed.id).toBeDefined();
+    expect(coinsModified.causedBy).toBe(cardPlayed.id);
   });
 });
 

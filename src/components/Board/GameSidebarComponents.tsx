@@ -78,7 +78,6 @@ interface GameActionButtonsProps {
   onBackToHome?: () => void;
 }
 
- 
 export function GameActionButtons({
   onNewGame,
   onEndGame,

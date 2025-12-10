@@ -82,7 +82,11 @@ describe("Edge Cases - Empty Hand", () => {
 
   it("Cellar with empty hand gives +1 Action only", () => {
     const state = createTestState([]);
-    const result = getCardEffect("Cellar")!({
+    const effect = getCardEffect("Cellar");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Cellar",
@@ -96,7 +100,11 @@ describe("Edge Cases - Empty Hand", () => {
 
   it("Chapel with empty hand does nothing", () => {
     const state = createTestState([]);
-    const result = getCardEffect("Chapel")!({
+    const effect = getCardEffect("Chapel");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Chapel",
@@ -108,7 +116,11 @@ describe("Edge Cases - Empty Hand", () => {
 
   it("Mine with no treasures does nothing", () => {
     const state = createTestState(["Estate", "Duchy"]);
-    const result = getCardEffect("Mine")!({
+    const effect = getCardEffect("Mine");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Mine",
@@ -119,7 +131,11 @@ describe("Edge Cases - Empty Hand", () => {
 
   it("Remodel with empty hand does nothing", () => {
     const state = createTestState([]);
-    const result = getCardEffect("Remodel")!({
+    const effect = getCardEffect("Remodel");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Remodel",
@@ -130,7 +146,11 @@ describe("Edge Cases - Empty Hand", () => {
 
   it("Throne Room with no actions does nothing", () => {
     const state = createTestState(["Copper", "Estate"]);
-    const result = getCardEffect("Throne Room")!({
+    const effect = getCardEffect("Throne Room");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Throne Room",
@@ -145,7 +165,11 @@ describe("Edge Cases - Empty Deck", () => {
 
   it("Smithy with empty deck and discard draws nothing", () => {
     const state = createTestState([], [], []);
-    const result = getCardEffect("Smithy")!({
+    const effect = getCardEffect("Smithy");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Smithy",
@@ -159,7 +183,11 @@ describe("Edge Cases - Empty Deck", () => {
       ["Copper", "Silver", "Gold", "Estate", "Duchy", "Province", "Village"],
       [],
     );
-    const result = getCardEffect("Library")!({
+    const effect = getCardEffect("Library");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Library",
@@ -170,7 +198,11 @@ describe("Edge Cases - Empty Deck", () => {
 
   it("Vassal with empty deck gives +$2 only", () => {
     const state = createTestState([], []);
-    const result = getCardEffect("Vassal")!({
+    const effect = getCardEffect("Vassal");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Vassal",
@@ -182,7 +214,11 @@ describe("Edge Cases - Empty Deck", () => {
 
   it("Harbinger with empty discard skips topdeck decision", () => {
     const state = createTestState([], ["Copper"], []);
-    const result = getCardEffect("Harbinger")!({
+    const effect = getCardEffect("Harbinger");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Harbinger",
@@ -199,7 +235,11 @@ describe("Edge Cases - Supply Constraints", () => {
   it("Workshop with empty supply does nothing", () => {
     const state = createTestState([]);
     state.supply = {};
-    const result = getCardEffect("Workshop")!({
+    const effect = getCardEffect("Workshop");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Workshop",
@@ -210,26 +250,38 @@ describe("Edge Cases - Supply Constraints", () => {
 
   it("Workshop only offers cards costing ≤ 4", () => {
     const state = createTestState([]);
-    const result = getCardEffect("Workshop")!({
+    const effect = getCardEffect("Workshop");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Workshop",
     });
 
-    expect(result.pendingDecision!.cardOptions).not.toContain("Duchy");
-    expect(result.pendingDecision!.cardOptions).not.toContain("Gold");
+    expect(result.pendingDecision).toBeDefined();
+    if (!result.pendingDecision) return;
+    expect(result.pendingDecision.cardOptions).not.toContain("Duchy");
+    expect(result.pendingDecision.cardOptions).not.toContain("Gold");
   });
 
   it("Artisan only offers cards costing ≤ 5", () => {
     const state = createTestState(["Copper"]);
-    const result = getCardEffect("Artisan")!({
+    const effect = getCardEffect("Artisan");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Artisan",
     });
 
-    expect(result.pendingDecision!.cardOptions).toContain("Duchy");
-    expect(result.pendingDecision!.cardOptions).not.toContain("Gold");
+    expect(result.pendingDecision).toBeDefined();
+    if (!result.pendingDecision) return;
+    expect(result.pendingDecision.cardOptions).toContain("Duchy");
+    expect(result.pendingDecision.cardOptions).not.toContain("Gold");
   });
 });
 
@@ -247,7 +299,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     };
     state.playerOrder = ["human", "ai"];
 
-    const result = getCardEffect("Militia")!({
+    const effect = getCardEffect("Militia");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Militia",
@@ -268,7 +324,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     };
     state.playerOrder = ["human", "ai"];
 
-    const result = getCardEffect("Bureaucrat")!({
+    const effect = getCardEffect("Bureaucrat");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Bureaucrat",
@@ -298,7 +358,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     };
     state.playerOrder = ["human", "ai1", "ai2"];
 
-    const result = getCardEffect("Witch")!({
+    const effect = getCardEffect("Witch");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Witch",
@@ -314,7 +378,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     const state = createTestState([], ["Copper", "Silver", "Gold", "Estate"]);
     state.playerOrder = ["human"];
 
-    const result = getCardEffect("Council Room")!({
+    const effect = getCardEffect("Council Room");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
+    const result = effect({
       state,
       player: "human",
       card: "Council Room",
@@ -330,7 +398,10 @@ describe("Edge Cases - Decision Cancellation", () => {
   it("Chapel selecting 0 cards trashes nothing", () => {
     const state = createTestState(["Copper", "Estate"]);
 
-    const effect = getCardEffect("Chapel")!;
+    const effect = getCardEffect("Chapel");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
     let result = effect({ state, player: "human", card: "Chapel" });
 
     // Get decision
@@ -351,7 +422,10 @@ describe("Edge Cases - Decision Cancellation", () => {
   it("Cellar selecting 0 cards draws nothing", () => {
     const state = createTestState(["Copper"], ["Silver"]);
 
-    const effect = getCardEffect("Cellar")!;
+    const effect = getCardEffect("Cellar");
+    expect(effect).toBeDefined();
+    if (!effect) return;
+
     let result = effect({
       state,
       player: "human",

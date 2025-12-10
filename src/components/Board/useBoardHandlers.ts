@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { CardName, PlayerId, GameState } from "../../types/game-state";
+import type { CardName, GameState } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { DecisionChoice } from "../../events/types";
 import { shouldSelectCard, canPlayCard } from "./helpers";
@@ -35,8 +35,8 @@ function submitSimpleDecision(
   gameState: GameState,
   submitDecision: (choice: DecisionChoice) => CommandResult,
 ): CommandResult {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  const mainPlayer = gameState.players[mainPlayerId as PlayerId];
+   
+  const mainPlayer = gameState.players[mainPlayerId];
   if (!mainPlayer) {
     return { ok: false, error: "No main player" };
   }
@@ -45,7 +45,6 @@ function submitSimpleDecision(
   return submitDecision({ selectedCards });
 }
 
- 
 export function useBoardHandlers(params: BoardHandlersParams) {
   const {
     gameState,

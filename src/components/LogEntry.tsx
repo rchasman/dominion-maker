@@ -437,7 +437,7 @@ const ENTRY_RENDERERS = {
   "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
     const isAI =
       ctx.gameMode && ctx.gameMode !== "multiplayer"
-        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(entry.player ?? "")
+        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(String(entry.player ?? ""))
         : undefined;
     return renderTurnStart(
       entry as Extract<LogEntryType, { type: "turn-start" }>,

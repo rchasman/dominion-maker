@@ -44,10 +44,7 @@ export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
       stepNumber: 0,
     };
 
-    entries.reduce((_, entry, i) => {
-      processEntry(entry, i, entries, state);
-      return undefined;
-    }, undefined as void);
+    entries.map((entry, i) => processEntry(entry, i, entries, state));
 
     // Add the last turn if it has decisions OR is pending
     if (

@@ -1,6 +1,7 @@
 import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
-import type { GameState, CardName, PlayerId } from "../../types/game-state";
+import type { GameState, CardName } from "../../types/game-state";
+import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
 
 interface MainPlayerAreaProps {
@@ -70,7 +71,7 @@ export function MainPlayerArea({
         subPhase={displayState.subPhase}
         actions={displayState.actions}
         playerId={
-          /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+           
           mainPlayerId
         }
         turnHistory={displayState.turnHistory}

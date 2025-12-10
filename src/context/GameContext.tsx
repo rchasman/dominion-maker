@@ -99,7 +99,6 @@ function createLLMLogEntry(
   };
 }
 
- 
 export function GameProvider({ children }: { children: ReactNode }) {
   const storage = useGameStorage();
   const engineRef: MutableRefObject<DominionEngine | null> = useRef(null);

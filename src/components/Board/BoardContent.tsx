@@ -4,8 +4,8 @@ import { EventDevtools } from "../EventDevtools";
 import { formatPlayerName } from "../../lib/board-utils";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
-import type { CardName, PlayerId } from "../../types/game-state";
-import type { GameEvent } from "../../events/types";
+import type { CardName } from "../../types/game-state";
+import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
@@ -76,7 +76,6 @@ function SupplyArea({ displayState, onBuyCard, canBuy }: SupplyAreaProps) {
   );
 }
 
- 
 export function BoardContent({
   boardState,
   game,
@@ -185,11 +184,11 @@ export function BoardContent({
       {game.gameOver && game.winner && (
         <GameOverModal
           winner={
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
-            game.winner as PlayerId
+             
+            game.winner
           }
           mainPlayerId={
-            /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+             
             mainPlayerId as PlayerId
           }
           mainPlayerVP={mainPlayerVP}
