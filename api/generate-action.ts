@@ -10,6 +10,17 @@ import { Agent as HttpsAgent } from "node:https";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
 
+// HTTP Status Codes
+const HTTP_NO_CONTENT = 204;
+const HTTP_BAD_REQUEST = 400;
+const HTTP_METHOD_NOT_ALLOWED = 405;
+const HTTP_OK = 200;
+const HTTP_INTERNAL_ERROR = 500;
+
+// Formatting Constants
+const JSON_INDENT_SPACES = 2;
+const MAX_EXTRA_TEXT_LENGTH = 100;
+
 // Zod schemas for runtime validation (server-side only)
 const CardNameSchema = z.enum([
   "Copper",
@@ -114,92 +125,132 @@ interface VercelResponse {
   setHeader: (key: string, value: string) => VercelResponse;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+interface RequestBody {
+  provider: string;
+  currentState: GameState;
+  humanChoice?: { selectedCards: string[] };
+  legalActions?: unknown[];
+  strategySummary?: string;
+}
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
+type OnExtraTokenHandler = (text: string, data: unknown, reminding: string) => void;
+
+// Parse and validate request body
+function parseRequestBody(req: VercelRequest): RequestBody {
+  const rawBody = req.body || "{}";
+  return (typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody) as RequestBody;
+}
+
+// Build prompt question based on game state
+function buildPromptQuestion(currentState: GameState): string {
+  if (currentState.pendingDecision) {
+    const decision = currentState.pendingDecision;
+    return `${decision.player.toUpperCase()} must respond to: ${decision.prompt}\nWhat action should ${decision.player} take?`;
   }
+  return `What is the next atomic action for ${currentState.activePlayer}?`;
+}
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+// Build user message with context
+function buildUserMessage(params: {
+  strategicContext: string;
+  currentState: GameState;
+  turnHistoryStr: string;
+  legalActionsStr: string;
+  promptQuestion: string;
+  humanChoice?: { selectedCards: string[] };
+}): string {
+  const { strategicContext, currentState, turnHistoryStr, legalActionsStr, promptQuestion, humanChoice } = params;
+  const stateStr = JSON.stringify(currentState, null, JSON_INDENT_SPACES);
 
-  let provider: string = "";
+  return humanChoice
+    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
+    : `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
+}
 
-  try {
-    // Vercel with Bun runtime passes body as req.body, not req.json()
-    const rawBody = req.body || (req.text ? await req.text() : "{}");
-    const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+// Check if provider needs text fallback
+function needsTextFallback(provider: string): boolean {
+  return provider.includes("ministral") || provider.includes("cerebras") || provider.includes("groq");
+}
 
-    const {
-      provider: bodyProvider,
-      currentState,
-      humanChoice,
-      legalActions,
-    } = body as {
-      provider: string;
-      currentState: GameState;
-      humanChoice?: { selectedCards: string[] };
-      legalActions?: unknown[];
-    };
-    provider = bodyProvider;
+// Extract JSON from markdown code blocks
+function stripMarkdownCodeBlocks(text: string): string {
+  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  return codeBlockMatch ? codeBlockMatch[1].trim() : text;
+}
 
-    if (!provider || !currentState) {
-      return res
-        .status(400)
-        .json({ error: "Missing required fields: provider, currentState" });
-    }
+// Parse text response with best-effort JSON parser
+function parseTextResponse(text: string, provider: string): unknown {
+  const stripped = stripMarkdownCodeBlocks(text.trim());
 
-    const modelName = MODEL_MAP[provider];
-    if (!modelName) {
-      return res.status(400).json({ error: "Invalid provider" });
-    }
+  const originalOnExtraToken = parseBestEffort.onExtraToken as OnExtraTokenHandler | undefined;
+  parseBestEffort.onExtraToken = (text: string, data: unknown, reminding: string) => {
+    apiLogger.debug(`${provider} JSON with extra tokens`, {
+      extracted: data,
+      extraText: reminding.slice(0, MAX_EXTRA_TEXT_LENGTH),
+    });
+  };
 
-    const model = gateway(modelName);
-    const isAnthropic = provider.startsWith("claude");
+  const parsed = parseBestEffort(stripped) as unknown;
+  parseBestEffort.onExtraToken = originalOnExtraToken;
 
-    const legalActionsStr =
-      legalActions && legalActions.length > 0
-        ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, 2)}`
-        : "";
+  return parsed;
+}
 
-    const turnHistoryStr =
-      currentState.turnHistory && currentState.turnHistory.length > 0
-        ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, 2)}`
-        : "";
+// Try to recover action from error response text
+function tryRecoverActionFromText(
+  text: string,
+): z.infer<typeof ActionSchema> | undefined {
+  const chunks = text.split(/\n\n+/);
 
-    // Strategy summary is passed from client (fetched once per turn)
-    const strategySummary = body.strategySummary as string | undefined;
+  const validAction = chunks
+    .slice()
+    .reverse()
+    .map((chunk) => chunk.trim())
+    .filter((chunk) => chunk.startsWith("{") && chunk.endsWith("}"))
+    .reduce<{ validated?: z.infer<typeof ActionSchema> }>((result, chunk) => {
+      if (result.validated) return result;
 
-    const strategicContext = buildStrategicContext(
-      currentState,
-      strategySummary,
-    );
+      try {
+        const parsed: unknown = JSON.parse(chunk);
 
-    let promptQuestion: string;
-    if (currentState.pendingDecision) {
-      const decision = currentState.pendingDecision;
-      promptQuestion = `${decision.player.toUpperCase()} must respond to: ${decision.prompt}\nWhat action should ${decision.player} take?`;
-    } else {
-      promptQuestion = `What is the next atomic action for ${currentState.activePlayer}?`;
-    }
+        // Type guard: check if this is a record-like object
+        if (typeof parsed !== "object" || parsed === null) {
+          return result;
+        }
 
-    const userMessage = humanChoice
-      ? `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}\n\nHuman chose: ${JSON.stringify(humanChoice.selectedCards)}${legalActionsStr}\n\n${promptQuestion}`
-      : `${strategicContext}\n\nCurrent state:\n${JSON.stringify(currentState, null, 2)}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
+        const record = parsed as Record<string, unknown>;
 
-    // Some models don't support json_schema response format - use generateText with explicit JSON instructions
-    const useTextFallback =
-      provider.includes("ministral") ||
-      provider.includes("cerebras") ||
-      provider.includes("groq");
+        // Skip schema objects
+        if (record.properties || (record.description && record.required)) {
+          return result;
+        }
 
-    if (useTextFallback) {
-      const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
+        // Check if this is an action object
+        if (record.type && typeof record.type === "string" && record.type !== "object") {
+          const validated = ActionSchema.parse(parsed);
+          return { validated };
+        }
+      } catch {
+        // Continue to next chunk
+      }
+
+      return result;
+    }, {});
+
+  return validAction.validated;
+}
+
+// Generate action using text fallback (for models without JSON schema support)
+async function generateActionWithTextFallback(params: {
+  model: ReturnType<typeof gateway>;
+  userMessage: string;
+  provider: string;
+  res: VercelResponse;
+  strategySummary: string | undefined;
+}): Promise<VercelResponse> {
+  const { model, userMessage, provider, res, strategySummary } = params;
+
+  const jsonPrompt = `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
 { "type": "play_action", "card": "CardName", "reasoning": "..." }
 { "type": "play_treasure", "card": "CardName", "reasoning": "..." }
 { "type": "buy_card", "card": "CardName", "reasoning": "..." }
@@ -208,53 +259,130 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 { "type": "trash_card", "card": "CardName", "reasoning": "..." }
 { "type": "end_phase", "reasoning": "..." }`;
 
-      const result = await generateText({
-        model,
-        system: DOMINION_SYSTEM_PROMPT,
-        prompt: jsonPrompt,
-        maxRetries: 0,
-      });
+  const result = await generateText({
+    model,
+    system: DOMINION_SYSTEM_PROMPT,
+    prompt: jsonPrompt,
+    maxRetries: 0,
+  });
 
-      // Extract JSON from text using best-effort parser
-      let text = result.text.trim();
+  const parsed = parseTextResponse(result.text, provider);
 
-      // Strip markdown code blocks first
-      const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-      if (codeBlockMatch) {
-        text = codeBlockMatch[1].trim();
-      }
+  try {
+    const action = ActionSchema.parse(parsed);
+    return res.status(HTTP_OK).json({ action, strategySummary });
+  } catch (parseErr) {
+    const errorMessage = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    apiLogger.error(`${provider} parse failed: ${errorMessage}`);
+    apiLogger.error(`${provider} raw text output: ${result.text}`);
+    apiLogger.error(`${provider} extracted json: ${JSON.stringify(parsed)}`);
 
-      // Configure parser to use our logger for extra token warnings
-      const originalOnExtraToken = parseBestEffort.onExtraToken;
-      parseBestEffort.onExtraToken = (text, data, reminding) => {
-        apiLogger.debug(`${provider} JSON with extra tokens`, {
-          extracted: data,
-          extraText: reminding.slice(0, 100),
-        });
-      };
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: HTTP_INTERNAL_ERROR,
+      message: `Failed to parse model response: ${errorMessage}`,
+    });
+  }
+}
 
-      const parsed = parseBestEffort(text);
+// Try to recover from model generation errors
+function tryRecoverFromError(
+  err: unknown,
+  provider: string,
+  res: VercelResponse,
+): VercelResponse | undefined {
+  const strategySummary = undefined as string | undefined;
 
-      // Restore original handler
-      parseBestEffort.onExtraToken = originalOnExtraToken;
+  // Type guard: check if error is an object
+  if (typeof err !== "object" || err === null) {
+    return undefined;
+  }
 
+  const errorRecord = err as Record<string, unknown>;
+
+  // Handle Gemini wrapping response in extra "action" key
+  if (errorRecord.value && typeof errorRecord.value === "object" && errorRecord.value !== null) {
+    const valueRecord = errorRecord.value as Record<string, unknown>;
+    if (valueRecord.action && provider.includes("gemini")) {
       try {
-        const action = ActionSchema.parse(parsed);
-        return res.status(200).json({ action, strategySummary });
-      } catch (parseErr) {
-        const errorMessage =
-          parseErr instanceof Error ? parseErr.message : String(parseErr);
-        apiLogger.error(`${provider} parse failed: ${errorMessage}`);
-        apiLogger.error(`${provider} raw text output: ${result.text}`);
-        apiLogger.error(
-          `${provider} extracted json: ${JSON.stringify(parsed)}`,
-        );
-
-        return res.status(500).json({
-          error: 500,
-          message: `Failed to parse model response: ${errorMessage}`,
-        });
+        const validated = ActionSchema.parse(valueRecord.action);
+        return res.status(HTTP_OK).json({ action: validated, strategySummary });
+      } catch {
+        apiLogger.error(`${provider} recovery failed`);
       }
+    }
+  }
+
+  // Try to recover from text fallback providers
+  if (errorRecord.text && typeof errorRecord.text === "string" && needsTextFallback(provider)) {
+    try {
+      const validated = tryRecoverActionFromText(errorRecord.text);
+      if (validated) {
+        return res.status(HTTP_OK).json({ action: validated, strategySummary });
+      }
+    } catch {
+      apiLogger.error(`${provider} recovery failed`);
+    }
+  }
+
+  return undefined;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(HTTP_NO_CONTENT).send("");
+  }
+
+  if (req.method !== "POST") {
+    return res
+      .status(HTTP_METHOD_NOT_ALLOWED)
+      .json({ error: "Method not allowed" });
+  }
+
+  let provider: string = "";
+
+  try {
+    const body = parseRequestBody(req);
+    const { provider: bodyProvider, currentState, humanChoice, legalActions, strategySummary } = body;
+    provider = bodyProvider;
+
+    if (!provider || !currentState) {
+      return res.status(HTTP_BAD_REQUEST).json({ error: "Missing required fields: provider, currentState" });
+    }
+
+    const modelName = MODEL_MAP[provider];
+    if (!modelName) {
+      return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
+    }
+
+    const model = gateway(modelName);
+
+    const legalActionsStr = legalActions && legalActions.length > 0
+      ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
+      : "";
+
+    const turnHistoryStr = currentState.turnHistory && currentState.turnHistory.length > 0
+      ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
+      : "";
+
+    const strategicContext = buildStrategicContext(currentState, strategySummary);
+    const promptQuestion = buildPromptQuestion(currentState);
+    const userMessage = buildUserMessage({
+      strategicContext,
+      currentState,
+      turnHistoryStr,
+      legalActionsStr,
+      promptQuestion,
+      humanChoice,
+    });
+
+    // Some models don't support json_schema response format - use generateText with explicit JSON instructions
+    if (needsTextFallback(provider)) {
+      return await generateActionWithTextFallback({ model, userMessage, provider, res, strategySummary });
     }
 
     // Use generateObject for other models
@@ -266,69 +394,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       maxRetries: 0,
     });
 
-    return res.status(200).json({ action: result.object, strategySummary });
+    return res.status(HTTP_OK).json({ action: result.object, strategySummary });
   } catch (err) {
-    // Recovery logic for Ministral and Gemini
-    const errorWithText = err as {
-      text?: string;
-      value?: { action?: unknown };
-    };
+    // Try recovery strategies
+    const recovered = tryRecoverFromError(err, provider, res);
+    if (recovered) return recovered;
 
-    // Handle Gemini wrapping response in extra "action" key
-    if (errorWithText.value?.action && provider.includes("gemini")) {
-      try {
-        const validated = ActionSchema.parse(errorWithText.value.action);
-        return res.status(200).json({ action: validated, strategySummary });
-      } catch {
-        apiLogger.error(`${provider} recovery failed`);
-      }
-    }
-
-    if (
-      errorWithText.text &&
-      (provider.includes("ministral") ||
-        provider.includes("cerebras") ||
-        provider.includes("groq"))
-    ) {
-      try {
-        const text = errorWithText.text;
-        const chunks = text.split(/\n\n+/);
-        for (let i = chunks.length - 1; i >= 0; i--) {
-          const chunk = chunks[i].trim();
-          if (chunk.startsWith("{") && chunk.endsWith("}")) {
-            try {
-              const parsed = JSON.parse(chunk);
-              if (
-                parsed.properties ||
-                (parsed.description && parsed.required)
-              ) {
-                continue;
-              }
-              if (
-                parsed.type &&
-                typeof parsed.type === "string" &&
-                parsed.type !== "object"
-              ) {
-                const validated = ActionSchema.parse(parsed);
-                return res
-                  .status(200)
-                  .json({ action: validated, strategySummary });
-              }
-            } catch {
-              continue;
-            }
-          }
-        }
-      } catch {
-        apiLogger.error(`${provider} recovery failed`);
-      }
-    }
-
+    // Log and return error
     const error = err as Error & { cause?: unknown; text?: string };
     apiLogger.error(`${provider} failed: ${error.message}`);
 
-    return res.status(500).json({
-      error: 500,
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: HTTP_INTERNAL_ERROR,
       message: `Model failed: ${error.message}`,
     });
   }
