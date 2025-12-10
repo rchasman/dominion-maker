@@ -2,49 +2,44 @@
  * Chapel - Trash up to 4 cards from your hand
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { isInitialCall, createCardSelectionDecision } from "../effect-types";
+import { createMultiStageCard, generateDecisionFromSpec } from "../effect-types";
+import { CARDS } from "../../data/cards";
 
-const MAX_TRASH_COUNT = 4;
-
-export const chapel: CardEffect = ({
-  state,
-  player,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[player];
-
-  // Request trash choice
-  if (isInitialCall(decision, stage)) {
+export const chapel = createMultiStageCard({
+  initial: ({ state, player }) => {
+    const playerState = state.players[player];
     if (playerState.hand.length === 0) return { events: [] };
+
+    const cardDef = CARDS.Chapel;
+    const trashSpec = cardDef.decisions?.trash;
+    if (!trashSpec) {
+      return { events: [] };
+    }
 
     return {
       events: [],
-      pendingDecision: createCardSelectionDecision({
+      pendingDecision: generateDecisionFromSpec({
+        spec: trashSpec,
+        card: "Chapel",
         player,
-        from: "hand",
-        prompt: "Chapel: Trash up to 4 cards from your hand",
-        cardOptions: [...playerState.hand],
-        min: 0,
-        max: Math.min(MAX_TRASH_COUNT, playerState.hand.length),
-        cardBeingPlayed: "Chapel",
+        state,
         stage: "trash",
       }),
     };
-  }
+  },
 
-  // Execute trash (atomic events)
-  if (!decision) return { events: [] };
-  const toTrash = decision.selectedCards;
-  if (toTrash.length === 0) return { events: [] };
+  trash: ({ player, decision }) => {
+    if (!decision) return { events: [] };
+    const toTrash = decision.selectedCards;
+    if (toTrash.length === 0) return { events: [] };
 
-  const events = toTrash.map(card => ({
-    type: "CARD_TRASHED" as const,
-    player,
-    card,
-    from: "hand" as const,
-  }));
+    const events = toTrash.map(card => ({
+      type: "CARD_TRASHED" as const,
+      player,
+      card,
+      from: "hand" as const,
+    }));
 
-  return { events };
-};
+    return { events };
+  },
+});

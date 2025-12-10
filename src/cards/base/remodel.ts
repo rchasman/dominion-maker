@@ -2,23 +2,14 @@
  * Remodel - Trash a card from hand, gain a card costing up to $2 more
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { getGainableCards } from "../effect-types";
-import type { GameEvent } from "../../events/types";
+import { createMultiStageCard, getGainableCards } from "../effect-types";
 import { CARDS } from "../../data/cards";
 
 const COST_BONUS = 2;
 
-export const remodel: CardEffect = ({
-  state,
-  player,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[player];
-
-  // Stage 1: Choose card to trash
-  if (!decision || stage === undefined) {
+export const remodel = createMultiStageCard({
+  initial: ({ state, player }) => {
+    const playerState = state.players[player];
     if (playerState.hand.length === 0) return { events: [] };
 
     return {
@@ -35,10 +26,10 @@ export const remodel: CardEffect = ({
         stage: "trash",
       },
     };
-  }
+  },
 
-  // Stage 2: Trash chosen, now choose gain
-  if (stage === "trash") {
+  trash: ({ state, player, decision }) => {
+    if (!decision) return { events: [] };
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
 
@@ -46,13 +37,11 @@ export const remodel: CardEffect = ({
     const maxCost = trashCost + COST_BONUS;
     const gainOptions = getGainableCards(state, maxCost);
 
-    const events: GameEvent[] = [
-      { type: "CARD_TRASHED", player, card: toTrash, from: "hand" },
+    const events = [
+      { type: "CARD_TRASHED" as const, player, card: toTrash, from: "hand" as const },
     ];
 
-    if (gainOptions.length === 0) {
-      return { events };
-    }
+    if (gainOptions.length === 0) return { events };
 
     return {
       events,
@@ -69,17 +58,15 @@ export const remodel: CardEffect = ({
         metadata: { trashedCard: toTrash, maxCost },
       },
     };
-  }
+  },
 
-  // Stage 3: Execute gain
-  if (stage === "gain") {
+  gain: ({ player, decision }) => {
+    if (!decision) return { events: [] };
     const gained = decision.selectedCards[0];
     if (!gained) return { events: [] };
 
     return {
       events: [{ type: "CARD_GAINED", player, card: gained, to: "discard" }],
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

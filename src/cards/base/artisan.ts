@@ -2,21 +2,12 @@
  * Artisan - Gain a card costing up to $5 to your hand, put a card from hand onto your deck
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { getGainableCards } from "../effect-types";
+import { createMultiStageCard, getGainableCards } from "../effect-types";
 
 const MAX_GAIN_COST = 5;
 
-export const artisan: CardEffect = ({
-  state,
-  player,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[player];
-
-  // Stage 1: Choose card to gain
-  if (!decision || stage === undefined) {
+export const artisan = createMultiStageCard({
+  initial: ({ state, player }) => {
     const gainOptions = getGainableCards(state, MAX_GAIN_COST);
     if (gainOptions.length === 0) return { events: [] };
 
@@ -34,15 +25,14 @@ export const artisan: CardEffect = ({
         stage: "gain",
       },
     };
-  }
+  },
 
-  // Stage 2: Gain to hand, then choose card to put on deck
-  if (stage === "gain") {
+  gain: ({ state, player, decision }) => {
+    if (!decision) return { events: [] };
     const gained = decision.selectedCards[0];
     if (!gained) return { events: [] };
 
-    // Gain to hand, then must put a card from hand on deck
-    // Note: hand now includes the gained card
+    const playerState = state.players[player];
     const handAfterGain = [...playerState.hand, gained];
 
     return {
@@ -59,10 +49,10 @@ export const artisan: CardEffect = ({
         stage: "topdeck",
       },
     };
-  }
+  },
 
-  // Stage 3: Put card on deck
-  if (stage === "topdeck") {
+  topdeck: ({ player, decision }) => {
+    if (!decision) return { events: [] };
     const toPutOnDeck = decision.selectedCards[0];
     if (!toPutOnDeck) return { events: [] };
 
@@ -71,7 +61,5 @@ export const artisan: CardEffect = ({
         { type: "CARD_PUT_ON_DECK", player, card: toPutOnDeck, from: "hand" },
       ],
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

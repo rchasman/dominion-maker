@@ -17,7 +17,7 @@
     "check:unused": "depcheck",
     "check:circular": "dpdm --exit-code circular:1 --warning false --tree false 'src/**/*.{ts,tsx}'",
     "check:format": "bunx prettier . --check --experimental-cli",
-    "check": "bun run build & bun run type & bun lint:fast & bun test & bun check:server & bun check:unused & bun check:circular & bun check:format & wait",
+    "check": "bun build & bun type & bun lint & bun test & bun check:server & bun check:unused & bun check:circular & bun check:format & wait",
     "preview": "vite preview"
   },
   "dependencies": {
