@@ -78,7 +78,6 @@ export type CardPlayedEvent = EventMetadata & {
   type: "CARD_PLAYED";
   player: PlayerId;
   card: CardName;
-  playCount?: number; // For Throne Room: execute effect this many times (default: 1)
 };
 
 export type CardDiscardedEvent = EventMetadata & {
