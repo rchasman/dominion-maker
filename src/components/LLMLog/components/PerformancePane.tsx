@@ -1,5 +1,6 @@
 import { getModelColor } from "../../../config/models";
 import type { TimingData, ModelStatus } from "../types";
+import { run } from "../../../lib/run";
 
 interface PerformancePaneProps {
   data: TimingData | null | undefined;
@@ -486,12 +487,12 @@ export function PerformancePane({
   // eslint-disable-next-line react-hooks/purity
   const currentTime = now ?? Date.now();
 
-  const timings: TimingEntry[] =
-    liveStatuses && liveStatuses.size > 0
-      ? buildTimingsFromLiveStatuses(liveStatuses, currentTime)
-      : data?.timings
-        ? (data.timings as TimingEntry[])
-        : [];
+  const timings: TimingEntry[] = run(() => {
+    if (liveStatuses && liveStatuses.size > 0)
+      return buildTimingsFromLiveStatuses(liveStatuses, currentTime);
+    if (data?.timings) return data.timings as TimingEntry[];
+    return [];
+  });
 
   if (timings.length === 0) {
     return null;

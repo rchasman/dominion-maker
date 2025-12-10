@@ -1,5 +1,6 @@
 import type { CardName, LogEntry } from "../types/game-state";
 import { CARDS } from "../data/cards";
+import { run } from "./run";
 
 const HASH_MULTIPLIER = 5;
 const GARDENS_VP_DIVISOR = 10;
@@ -68,14 +69,11 @@ export function formatPlayerName(
 ): string {
   const { capitalize = true } = options || {};
 
-  const baseName =
-    playerId === "human"
-      ? "You"
-      : playerId === "player"
-        ? capitalize
-          ? "Player"
-          : "player"
-        : playerId;
+  const baseName = run(() => {
+    if (playerId === "human") return "You";
+    if (playerId === "player") return capitalize ? "Player" : "player";
+    return playerId;
+  });
 
   // Add AI suffix if needed (but not if already named "ai")
   const name =

@@ -7,6 +7,7 @@ import { apiLogger } from "../src/lib/logger";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
+import { run } from "../src/lib/run";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -175,11 +176,11 @@ function buildUserMessage(params: {
       ? encodeToon(currentState)
       : JSON.stringify(currentState, null, JSON_INDENT_SPACES);
 
-  const humanChoiceStr = humanChoice
-    ? format === "toon"
-      ? encodeToon(humanChoice.selectedCards)
-      : JSON.stringify(humanChoice.selectedCards)
-    : "";
+  const humanChoiceStr = run(() => {
+    if (!humanChoice) return "";
+    if (format === "toon") return encodeToon(humanChoice.selectedCards);
+    return JSON.stringify(humanChoice.selectedCards);
+  });
 
   return humanChoice
     ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${humanChoiceStr}${legalActionsStr}\n\n${promptQuestion}`
@@ -407,19 +408,24 @@ async function processGenerationRequest(
 
   const model = gateway(modelName);
 
-  const legalActionsStr =
-    legalActions && legalActions.length > 0
-      ? format === "toon"
-        ? `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${encodeToon(legalActions)}`
-        : `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${JSON.stringify(legalActions, null, JSON_INDENT_SPACES)}`
-      : "";
+  const legalActionsStr = run(() => {
+    if (!legalActions || legalActions.length === 0) return "";
+    const content =
+      format === "toon"
+        ? encodeToon(legalActions)
+        : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
+    return `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${content}`;
+  });
 
-  const turnHistoryStr =
-    currentState.turnHistory && currentState.turnHistory.length > 0
-      ? format === "toon"
-        ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${encodeToon(currentState.turnHistory)}`
-        : `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
-      : "";
+  const turnHistoryStr = run(() => {
+    if (!currentState.turnHistory || currentState.turnHistory.length === 0)
+      return "";
+    const content =
+      format === "toon"
+        ? encodeToon(currentState.turnHistory)
+        : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES);
+    return `\n\nACTIONS TAKEN THIS TURN (so far):\n${content}`;
+  });
 
   const strategicContext = buildStrategicContext(
     currentState,

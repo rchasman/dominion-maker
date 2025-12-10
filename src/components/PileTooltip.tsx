@@ -2,6 +2,7 @@ import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal as createReactPortal } from "react-dom";
 import type { ReactPortal } from "react";
+import { run } from "../lib/run";
 
 const MAX_TOOLTIP_HEIGHT = 500;
 const CARD_HEIGHT_ESTIMATE = 80;
@@ -48,19 +49,19 @@ function calculatePosition(
 ): TooltipPosition {
   const viewportWidth = window.innerWidth;
 
-  const left =
-    mouseX < 0
-      ? 0
-      : mouseX + tooltipWidth > viewportWidth
-        ? viewportWidth - tooltipWidth
-        : mouseX;
+  const left = run(() => {
+    if (mouseX < 0) return 0;
+    if (mouseX + tooltipWidth > viewportWidth)
+      return viewportWidth - tooltipWidth;
+    return mouseX;
+  });
 
-  const top =
-    mouseY < 0
-      ? 0
-      : mouseY + tooltipHeight > window.innerHeight
-        ? window.innerHeight - tooltipHeight
-        : mouseY;
+  const top = run(() => {
+    if (mouseY < 0) return 0;
+    if (mouseY + tooltipHeight > window.innerHeight)
+      return window.innerHeight - tooltipHeight;
+    return mouseY;
+  });
 
   return { left, top };
 }

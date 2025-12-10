@@ -2,6 +2,7 @@ import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
 import type { ReactPortal, ReactNode } from "react";
+import { run } from "../lib/run";
 
 interface CardTooltipProps {
   cardName: CardName;
@@ -42,20 +43,20 @@ export function CardTooltip({
   const rawTop = mouseY - tooltipHeight + offsetY;
 
   // Keep within viewport horizontally
-  const left =
-    rawLeft < 0
-      ? 0
-      : rawLeft + tooltipWidth > viewportWidth
-        ? viewportWidth - tooltipWidth
-        : rawLeft;
+  const left = run(() => {
+    if (rawLeft < 0) return 0;
+    if (rawLeft + tooltipWidth > viewportWidth)
+      return viewportWidth - tooltipWidth;
+    return rawLeft;
+  });
 
   // Keep within viewport vertically
-  const top =
-    rawTop < 0
-      ? 0
-      : rawTop + tooltipHeight > window.innerHeight
-        ? window.innerHeight - tooltipHeight
-        : rawTop;
+  const top = run(() => {
+    if (rawTop < 0) return 0;
+    if (rawTop + tooltipHeight > window.innerHeight)
+      return window.innerHeight - tooltipHeight;
+    return rawTop;
+  });
 
   return createTooltipPortal(
     <div

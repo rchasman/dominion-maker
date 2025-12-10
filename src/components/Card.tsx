@@ -3,6 +3,7 @@ import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { CardTooltip } from "./CardTooltip";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
+import { run } from "../lib/run";
 
 const TOOLTIP_DELAY_MS = 500;
 const OPACITY_DISABLED = 0.4;
@@ -194,9 +195,17 @@ export function Card({
     }
   };
 
-  const cursor = !onClick ? "default" : disabled ? "not-allowed" : "pointer";
+  const cursor = run(() => {
+    if (!onClick) return "default";
+    if (disabled) return "not-allowed";
+    return "pointer";
+  });
 
-  const opacity = disabled ? OPACITY_DISABLED : dimmed ? OPACITY_DIMMED : 1;
+  const opacity = run(() => {
+    if (disabled) return OPACITY_DISABLED;
+    if (dimmed) return OPACITY_DIMMED;
+    return 1;
+  });
 
   const transform = selected ? "translateY(calc(-1 * var(--space-2)))" : "none";
 
