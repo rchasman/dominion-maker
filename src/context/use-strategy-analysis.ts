@@ -16,7 +16,7 @@ type PlayerStrategyData = Record<
   {
     gameplan: string;
     read: string;
-    lines: string;
+    recommendation: string;
   }
 >;
 
@@ -42,11 +42,26 @@ function fetchStrategyAnalysis(
         return;
       }
 
-      const strategies = data.strategySummary as PlayerStrategyData;
+      const apiStrategies = data.strategySummary as Record<
+        string,
+        { gameplan: string; read: string; lines: string }
+      >;
 
-      if (Object.keys(strategies).length === 0) {
+      if (Object.keys(apiStrategies).length === 0) {
         return;
       }
+
+      // Map API response fields to UI format (lines -> recommendation)
+      const strategies: PlayerStrategyData = Object.entries(
+        apiStrategies,
+      ).reduce((acc, [playerId, strategy]) => {
+        acc[playerId] = {
+          gameplan: strategy.gameplan,
+          read: strategy.read,
+          recommendation: strategy.lines,
+        };
+        return acc;
+      }, {} as PlayerStrategyData);
 
       const stringifiedStrategies = JSON.stringify(strategies);
       strategy.setStrategySummary?.(stringifiedStrategies);
