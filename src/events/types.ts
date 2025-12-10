@@ -68,6 +68,12 @@ export type PhaseChangedEvent = EventMetadata & {
 };
 
 // Card Movements (atomic primitives)
+export type DrawEvent = EventMetadata & {
+  type: "DRAW";
+  player: PlayerId;
+  count: number;
+};
+
 export type CardDrawnEvent = EventMetadata & {
   type: "CARD_DRAWN";
   player: PlayerId;
@@ -256,6 +262,7 @@ export type GameEvent =
   | TurnEndedEvent
   | PhaseChangedEvent
   // Card movements
+  | DrawEvent
   | CardDrawnEvent
   | CardPlayedEvent
   | CardDiscardedEvent
