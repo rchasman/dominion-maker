@@ -120,6 +120,36 @@ const LOW_PILE_THRESHOLD = 3;
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
+function calculateWinCondition(
+  currentVP: number,
+  opponentVP: number,
+  provincesLeft: number,
+): string {
+  const PROVINCE_VP = 6;
+  const vpToWin = opponentVP + 1;
+  const provincesNeededToWin = Math.ceil((vpToWin - currentVP) / PROVINCE_VP);
+
+  if (provincesNeededToWin <= 0) {
+    return "Currently winning";
+  }
+
+  if (provincesNeededToWin > provincesLeft) {
+    return `Need ${provincesNeededToWin} Provinces but only ${provincesLeft} left (need Duchies)`;
+  }
+
+  if (provincesNeededToWin <= 1) {
+    return `Win condition: 1 Province`;
+  }
+
+  const theyNeedToWin = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
+
+  if (provincesLeft <= 2) {
+    return `Race: ${provincesLeft} Provinces left, you need ${provincesNeededToWin}, they need ${theyNeedToWin}`;
+  }
+
+  return `Win condition: ${provincesNeededToWin} Provinces (they need ${theyNeedToWin})`;
+}
+
 function formatScoreboard(
   currentVP: number,
   opponentVP: number,
@@ -133,10 +163,16 @@ function formatScoreboard(
       : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
         ? "Late"
         : "Mid";
-  return `Turn ${turn} (${gameStage} game) | SCORE: You ${currentVP}VP, Opponent ${opponentVP}VP (${vpDiff >= 0 ? "+" : ""}${vpDiff})`;
+  const winCondition = calculateWinCondition(
+    currentVP,
+    opponentVP,
+    provincesLeft,
+  );
+
+  return `Turn ${turn} (${gameStage} game) | SCORE: You ${currentVP}VP, Opponent ${opponentVP}VP (${vpDiff >= 0 ? "+" : ""}${vpDiff}) | ${winCondition}`;
 }
 
-function formatDeckComposition(cards: CardName[]): string {
+function formatDeckComposition(cards: CardName[], gameStage: string): string {
   const analysis = analyzeDeck(cards);
   const treasureDensity = ((analysis.treasures / cards.length) * 100).toFixed(
     0,
@@ -144,9 +180,35 @@ function formatDeckComposition(cards: CardName[]): string {
   const actionDensity = ((analysis.actions / cards.length) * 100).toFixed(0);
   const vpDensity = ((analysis.victory / cards.length) * 100).toFixed(0);
 
+  // Calculate terminal collision risk
+  const villageRatio = analysis.villages / Math.max(analysis.terminals, 1);
+  const engineHealth =
+    analysis.actions === 0
+      ? "No engine"
+      : villageRatio >= 0.6
+        ? "Healthy engine"
+        : villageRatio >= 0.4
+          ? "Village shortage"
+          : "Terminal collision risk";
+
+  // Calculate cycle time (rough estimate: deck size / 5 cards per turn)
+  const cycleTime = (cards.length / 5).toFixed(1);
+
+  // Build/buy guidance
+  const strategic =
+    gameStage === "Early"
+      ? "Building phase: prioritize economy/draw"
+      : gameStage === "Late"
+        ? "VP phase: buy Provinces/Duchies"
+        : analysis.avgTreasureValue < 1.8
+          ? "Mid-game: still need economy (avg treasure < $1.8)"
+          : "Mid-game: economy sufficient, can buy VP when $8+";
+
   return `YOUR DECK (${cards.length} cards): ${analysis.breakdown}
 Economy: $${analysis.totalTreasureValue} in ${analysis.treasures} treasures (${treasureDensity}% density, avg $${analysis.avgTreasureValue.toFixed(1)}/card)
-Engine: ${analysis.actions} actions (${actionDensity}%) - ${analysis.villages} villages, ${analysis.terminals} terminals | VP cards: ${analysis.victory} (${vpDensity}%)`;
+Engine: ${analysis.actions} actions (${actionDensity}%) - ${analysis.villages} villages, ${analysis.terminals} terminals [${engineHealth}]
+Deck cycle: ${cycleTime} turns | VP pollution: ${analysis.victory} cards (${vpDensity}%)
+Strategic: ${strategic}`;
 }
 
 function formatSupplyStatus(supply: Record<string, number>): string {
@@ -169,6 +231,7 @@ function formatHandStatus(
   hand: CardName[],
   currentCoins: number,
   phase: string,
+  supply: Record<string, number>,
 ): string {
   const treasures = hand.filter(c => isTreasureCard(c));
   const treasureValue = treasures.reduce(
@@ -177,13 +240,36 @@ function formatHandStatus(
   );
   const maxCoins = currentCoins + treasureValue;
 
+  // Calculate best possible outcome this turn
+  let bestOutcome = "";
+  if (phase === "buy") {
+    if (maxCoins >= 8 && (supply["Province"] ?? 0) > 0) {
+      bestOutcome = " | Best outcome: Province(6VP)";
+    } else if (maxCoins >= 6 && (supply["Gold"] ?? 0) > 0) {
+      bestOutcome = " | Best outcome: Gold(+$3 economy)";
+    } else if (maxCoins >= 5 && (supply["Duchy"] ?? 0) > 0) {
+      bestOutcome = " | Best outcome: Duchy(3VP)";
+    } else if (maxCoins >= 5) {
+      const goodFives = (
+        ["Market", "Laboratory", "Festival"] as CardName[]
+      ).filter(card => (supply[card] ?? 0) > 0);
+      if (goodFives.length > 0) {
+        bestOutcome = ` | Best outcome: ${goodFives[0]}`;
+      } else if ((supply["Silver"] ?? 0) > 0) {
+        bestOutcome = " | Best outcome: Silver(+$2)";
+      }
+    } else if (maxCoins >= 3 && (supply["Silver"] ?? 0) > 0) {
+      bestOutcome = " | Best outcome: Silver(+$2)";
+    }
+  }
+
   if (phase === "buy") {
     if (treasures.length > 0) {
       return `HAND: ${hand.join(", ")}
-COINS: $${currentCoins} activated | $${treasureValue} in hand (${treasures.join(", ")}) | $${maxCoins} total if all treasures played`;
+COINS: $${currentCoins} activated | $${treasureValue} in hand (${treasures.join(", ")}) | $${maxCoins} total if all played${bestOutcome}`;
     }
     return `HAND: ${hand.join(", ")}
-COINS: $${currentCoins} (all treasures played)`;
+COINS: $${currentCoins} (all treasures played)${bestOutcome}`;
   }
 
   return `HAND: ${hand.join(", ")}
@@ -354,13 +440,35 @@ export function buildStrategicContext(
   const shuffleSoon =
     currentPlayer.deck.length <= 5 && currentPlayer.discard.length > 0;
 
+  const gameStage =
+    state.turn <= EARLY_GAME_TURN_THRESHOLD
+      ? "Early"
+      : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
+        ? "Late"
+        : "Mid";
+
+  // Opponent analysis
+  const opponentAnalysis = analyzeDeck(opponentAllCards);
+  const opponentThreat =
+    opponentAnalysis.avgTreasureValue >= 2.0
+      ? "High threat: strong economy"
+      : opponentAnalysis.avgTreasureValue >= 1.5
+        ? "Medium threat"
+        : "Low threat: weak economy";
+
   const sections = [
     formatScoreboard(currentVP, opponentVP, state.turn, provincesLeft),
-    formatDeckComposition(currentAllCards),
+    formatDeckComposition(currentAllCards, gameStage),
     `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards${shuffleSoon ? " (shuffle next turn)" : ""}`,
     formatSupplyStatus(state.supply),
-    `OPPONENT DECK (${opponentAllCards.length} cards): ${analyzeDeck(opponentAllCards).breakdown}`,
-    formatHandStatus(currentPlayer.hand, state.coins, state.phase),
+    `OPPONENT DECK (${opponentAllCards.length} cards): ${opponentAnalysis.breakdown}
+Opponent economy: $${opponentAnalysis.totalTreasureValue} avg $${opponentAnalysis.avgTreasureValue.toFixed(1)}/treasure [${opponentThreat}]`,
+    formatHandStatus(
+      currentPlayer.hand,
+      state.coins,
+      state.phase,
+      state.supply,
+    ),
   ];
 
   if (state.phase === "buy") {

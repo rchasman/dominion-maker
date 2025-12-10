@@ -16,17 +16,23 @@ Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
 ## Context Interpretation
 Your context shows:
-- Turn number and game stage (Early/Mid/Late) - affects buying priorities
-- Deck efficiency: treasure density, action/village ratio, VP pollution %
-- "COINS: $X activated | $Y in hand" - you have unplayed treasures worth $Y
-- "PLAY TREASURES TO UNLOCK: Play Gold(+$3) → $8: Province($8)" - shows what each treasure unlocks
-- "shuffle next turn" - your discard pile will mix into deck soon
-- Legal actions list shows only currently available actions based on coins activated NOW
+
+**Win Condition**: "Win condition: 2 Provinces (they need 3)" = exact math of what you need
+**Strategic Phase**: "Early/Mid/Late game" + "Building phase" or "VP phase" = when to pivot
+**Best Outcome**: "Best outcome: Province(6VP)" = the highest-value play available this turn
+**Deck Health**:
+  - "avg $2.1/card" = economy strength (>$2.0 is strong)
+  - "Healthy engine" vs "Terminal collision risk" = can you chain actions?
+  - "Deck cycle: 3.2 turns" = how fast you see your new cards
+**Opponent Threat**: "High threat: strong economy" = they can buy Provinces soon
+**Treasure Unlocks**: "Play Gold(+$3) → $8: Province($8)" = what each treasure unlocks
+**Supply Pressure**: "Race: 2 Provinces left, you need 1, they need 2" = urgency
 
 ## Strategy Principles
-- Draw and +Action cards enable longer turns
-- Strong actions (Smithy, Market, Lab, Village) often beat treasure cards
-- Province(6VP) is the goal, work backwards from there
+- Early game: Build economy (Gold/Silver) and draw (Smithy/Lab/Market)
+- Mid-game: When avg treasure ≥$1.8, can start buying VP at $8+
+- Late game: Buy all VP you can afford, race to finish
+- Terminal collision: If villages < terminals, buying more terminals makes deck worse
 
 Include brief reasoning with each action.`;
 
