@@ -25,6 +25,7 @@ export function Board({ onBackToHome }: BoardProps) {
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleBuyCard,
   } = useBoardSetup();
 
   if (!game.gameState) return null;
@@ -61,7 +62,7 @@ export function Board({ onBackToHome }: BoardProps) {
     modelSettings: game.modelSettings,
     setModelSettings: game.setModelSettings,
     playerStrategies: game.playerStrategies,
-    buyCard: game.buyCard,
+    buyCard: handleBuyCard,
     playAllTreasures: game.playAllTreasures,
     endPhase: game.endPhase,
     hasTreasuresInHand: game.hasTreasuresInHand,

@@ -210,3 +210,33 @@ export function useCardActions(): CardActionsHook {
     handleUnplayTreasure,
   };
 }
+
+/**
+ * Hook that wraps buyCard to check for pending decisions from supply first.
+ * If there's a pending decision from supply (e.g., Workshop, Artisan),
+ * it submits the decision instead of attempting to buy.
+ */
+export function useBuyCardHandler(): (card: CardName) => CommandResult {
+  const { buyCard, submitDecision, gameState } = useTypedGame();
+
+  return useCallback(
+    (card: CardName): CommandResult => {
+      // If there's a pending decision from supply, submit the decision
+      if (gameState?.pendingDecision?.from === "supply") {
+        const result = submitDecision({ selectedCards: [card] });
+        if (!result.ok) {
+          uiLogger.error("Failed to submit decision:", result.error);
+        }
+        return result;
+      }
+
+      // Otherwise, buy the card normally
+      const result = buyCard(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to buy card:", result.error);
+      }
+      return result;
+    },
+    [buyCard, submitDecision, gameState],
+  );
+}

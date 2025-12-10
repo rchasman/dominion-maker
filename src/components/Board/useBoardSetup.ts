@@ -5,6 +5,7 @@ import {
   usePreviewMode,
   useComplexDecision,
   useCardActions,
+  useBuyCardHandler,
 } from "./hooks";
 import { useBoardHandlers } from "./useBoardHandlers";
 
@@ -22,6 +23,7 @@ export function useBoardSetup() {
     useComplexDecision();
   const { handlePlayAction, handlePlayTreasure, handleUnplayTreasure } =
     useCardActions();
+  const handleBuyCard = useBuyCardHandler();
 
   const [showDevtools, setShowDevtools] = useState(false);
 
@@ -74,5 +76,6 @@ export function useBoardSetup() {
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleBuyCard,
   };
 }
