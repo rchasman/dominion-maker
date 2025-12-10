@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import type { Turn } from "../types";
 
 export interface NavigationState {
@@ -25,7 +25,8 @@ type Action =
   | { type: "PREV_TURN" }
   | { type: "NEXT_TURN"; nextTurnIndex: number }
   | { type: "PREV_ACTION" }
-  | { type: "NEXT_ACTION"; isLastAction: boolean };
+  | { type: "NEXT_ACTION"; isLastAction: boolean }
+  | { type: "RESET_NAVIGATION" };
 
 function navigationReducer(state: State, action: Action): State {
   switch (action.type) {
@@ -59,6 +60,12 @@ function navigationReducer(state: State, action: Action): State {
         userNavigatedAway: !action.isLastAction,
       };
 
+    case "RESET_NAVIGATION":
+      return {
+        ...state,
+        userNavigatedAway: false,
+      };
+
     default:
       return state;
   }
@@ -74,6 +81,17 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
     currentActionIndex: 0,
     userNavigatedAway: false,
   });
+
+  // Track previous turn count to detect when AI begins new turn
+  const prevTurnCountRef = useRef(turns.length);
+
+  useEffect(() => {
+    if (turns.length > prevTurnCountRef.current) {
+      // New turn detected - reset to auto-follow latest
+      dispatch({ type: "RESET_NAVIGATION" });
+    }
+    prevTurnCountRef.current = turns.length;
+  }, [turns.length]);
 
   // Derive latest indices
   const latestTurnIndex = Math.max(0, turns.length - 1);
