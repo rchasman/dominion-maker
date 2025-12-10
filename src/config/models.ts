@@ -72,7 +72,7 @@ export const MODELS: ModelConfig[] = [
   // Ultra-fast Cerebras models (2000+ tokens/s)
   {
     id: "cerebras-llama-3.3-70b",
-    fullName: "cerebras/llama-3.3-70b",
+    fullName: "meta/llama-3.3-70b",
     provider: "cerebras",
     color: "#f472b6",
   },
@@ -80,13 +80,13 @@ export const MODELS: ModelConfig[] = [
   // Fast Groq models (low latency)
   {
     id: "groq-llama-3.3-70b",
-    fullName: "groq/llama-3.3-70b",
+    fullName: "meta/llama-3.3-70b",
     provider: "groq",
     color: "#fb923c",
   },
   {
     id: "groq-llama-4-scout",
-    fullName: "groq/llama-4-scout",
+    fullName: "meta/llama-4-scout",
     provider: "groq",
     color: "#fb923c",
   },
