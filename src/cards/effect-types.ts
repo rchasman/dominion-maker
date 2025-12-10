@@ -65,36 +65,56 @@ export function peekDraw(
   newDeckOrder?: CardName[];
   cardsBeforeShuffle?: CardName[];
 } {
-  let cards: CardName[] = [];
-  let cardsBeforeShuffle: CardName[] = [];
-  let deck = [...playerDeck];
-  let discard = [...playerDiscard];
-  let shuffled = false;
-  let newDeckOrder: CardName[] | undefined;
+  type AccState = {
+    cards: CardName[];
+    cardsBeforeShuffle: CardName[];
+    deck: CardName[];
+    discard: CardName[];
+    shuffled: boolean;
+    newDeckOrder?: CardName[];
+  };
 
-  let remaining = count;
-  while (remaining > 0) {
-    if (deck.length === 0) {
-      if (discard.length === 0) break;
+  const result = Array.from({ length: count }).reduce<AccState>(
+    acc => {
+      if (acc.deck.length === 0) {
+        if (acc.discard.length === 0) return acc;
 
-      // Capture state before shuffle
-      cardsBeforeShuffle = [...cards];
-      deck = shuffle(discard);
-      discard = [];
-      shuffled = true;
-      newDeckOrder = [...deck];
-    }
+        // Capture state before shuffle
+        const shuffledDeck = shuffle(acc.discard);
+        return {
+          ...acc,
+          cardsBeforeShuffle: [...acc.cards],
+          deck: shuffledDeck,
+          discard: [],
+          shuffled: true,
+          newDeckOrder: [...shuffledDeck],
+        };
+      }
 
-    const card = deck.pop();
-    if (card) cards = [...cards, card];
-    remaining--;
-  }
+      const card = acc.deck[acc.deck.length - 1];
+      return card
+        ? {
+            ...acc,
+            cards: [...acc.cards, card],
+            deck: acc.deck.slice(0, -1),
+          }
+        : acc;
+    },
+    {
+      cards: [],
+      cardsBeforeShuffle: [],
+      deck: [...playerDeck],
+      discard: [...playerDiscard],
+      shuffled: false,
+      newDeckOrder: undefined,
+    },
+  );
 
   return {
-    cards,
-    shuffled,
-    newDeckOrder,
-    cardsBeforeShuffle: shuffled ? cardsBeforeShuffle : undefined,
+    cards: result.cards,
+    shuffled: result.shuffled,
+    newDeckOrder: result.newDeckOrder,
+    cardsBeforeShuffle: result.shuffled ? result.cardsBeforeShuffle : undefined,
   };
 }
 
