@@ -8,12 +8,19 @@ import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
-import { useLiveTimer } from "../LLMLog/hooks/useLiveTimer";
+import { useState, useEffect } from "react";
 
 function CyclingSquare() {
   const glyphs = ["▤", "▥", "▦"];
-  const now = useLiveTimer([]);
-  const index = Math.floor(now / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
+  const [startTime] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), CYCLING_GLYPH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  const index = Math.floor((now - startTime) / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
 
   return <span>{glyphs[index]}</span>;
 }
