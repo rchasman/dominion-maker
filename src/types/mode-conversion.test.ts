@@ -36,12 +36,10 @@ describe("getPlayersForMode", () => {
   });
 
   it("should generate different names on each full mode call", () => {
-    const calls: string[] = [];
-
-    for (let i = 0; i < 5; i++) {
+    const calls = Array.from({ length: 5 }).map(() => {
       const players = getPlayersForMode("full");
-      calls.push(players.join("-"));
-    }
+      return players.join("-");
+    });
 
     // At least some should be different
     const unique = new Set(calls);

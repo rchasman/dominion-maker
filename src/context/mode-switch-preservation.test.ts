@@ -200,11 +200,11 @@ describe("Mode switching scenarios", () => {
     engine.startGame(["human", "ai"]);
 
     // Play several turns
-    for (let i = 0; i < 4; i++) {
+    Array.from({ length: 4 }).forEach(() => {
       const activePlayer = engine.state.activePlayer;
       if (engine.state.phase === "action") engine.endPhase(activePlayer);
       if (engine.state.phase === "buy") engine.endPhase(activePlayer);
-    }
+    });
 
     const turnNumber = engine.state.turn;
     expect(turnNumber).toBeGreaterThan(3);

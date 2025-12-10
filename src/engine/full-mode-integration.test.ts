@@ -195,11 +195,11 @@ describe("Full mode integration", () => {
 
     engine.startGame(["ai1", "ai2"]);
 
-    const turnSequence: string[] = [];
-
     // Record 10 turns
-    for (let i = 0; i < 10; i++) {
-      turnSequence.push(engine.state.activePlayer);
+    const turnSequence = Array.from({ length: 10 }).reduce<string[]>((acc) => {
+      if (engine.state.gameOver) return acc;
+
+      acc.push(engine.state.activePlayer);
 
       if (engine.state.phase === "action") {
         engine.endPhase(engine.state.activePlayer);
@@ -208,8 +208,8 @@ describe("Full mode integration", () => {
         engine.endPhase(engine.state.activePlayer);
       }
 
-      if (engine.state.gameOver) break;
-    }
+      return acc;
+    }, []);
 
     // Should alternate: ai1, ai2, ai1, ai2, ...
     expect(turnSequence[0]).toBe("ai1");

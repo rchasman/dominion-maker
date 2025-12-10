@@ -31,13 +31,11 @@ describe("AI name utilities", () => {
     });
 
     it("should generate different names on subsequent calls", () => {
-      const pairs: string[] = [];
-
       // Generate 10 pairs
-      for (let i = 0; i < 10; i++) {
+      const pairs = Array.from({ length: 10 }).map(() => {
         const [name1, name2] = generateAINames();
-        pairs.push(`${name1}-${name2}`);
-      }
+        return `${name1}-${name2}`;
+      });
 
       // At least some should be different (random)
       const uniquePairs = new Set(pairs);
