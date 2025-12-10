@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { GameEvent } from "../../events/types";
 import type { GameState } from "../../types/game-state";
 import type { PlayerInfo } from "../p2p-room";
@@ -29,37 +29,40 @@ export function useStorageEffects({
   players,
   setHasSavedSession,
 }: UseStorageEffectsParams) {
-  // Persist room state to localStorage (but not when game is over)
-  useEffect(() => {
+  // Derive whether we should save to localStorage
+  const shouldSave = useMemo(() => {
     const MIN_EVENTS = 0;
-    const shouldSave =
+    return (
       isPlaying &&
       events.length > MIN_EVENTS &&
       !gameState?.gameOver &&
-      roomCode &&
-      myPeerId;
+      !!roomCode &&
+      !!myPeerId
+    );
+  }, [isPlaying, events.length, gameState?.gameOver, roomCode, myPeerId]);
 
-    if (shouldSave) {
-      try {
-        saveSession(events, {
-          roomCode,
-          myPeerId,
-          isHost,
-          players,
-        });
-        setHasSavedSession(true);
-      } catch (error: unknown) {
-        multiplayerLogger.error("Failed to save to localStorage:", error);
-      }
+  // Persist room state to localStorage (but not when game is over)
+  useEffect(() => {
+    if (!shouldSave || !roomCode || !myPeerId) return;
+
+    try {
+      saveSession(events, {
+        roomCode,
+        myPeerId,
+        isHost,
+        players,
+      });
+      setHasSavedSession(true);
+    } catch (error: unknown) {
+      multiplayerLogger.error("Failed to save to localStorage:", error);
     }
   }, [
-    isPlaying,
+    shouldSave,
     events,
     roomCode,
     myPeerId,
     isHost,
     players,
-    gameState?.gameOver,
     setHasSavedSession,
   ]);
 
