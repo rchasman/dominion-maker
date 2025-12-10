@@ -205,16 +205,22 @@ function getLegalActions(state: GameState): Action[] {
       ...treasures.map(card => ({ type: "play_treasure" as const, card })),
     );
 
-    // Buyable cards
-    const buyableCards = Object.entries(state.supply)
-      .filter(([card, count]) => {
-        const cardName = card as CardName;
-        return (
-          count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
-        );
-      })
-      .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));
-    actions.push(...buyableCards);
+    // Only allow buying after all treasures are played (or if no treasures in hand)
+    if (treasures.length === 0) {
+      // Buyable cards
+      const buyableCards = Object.entries(state.supply)
+        .filter(([card, count]) => {
+          const cardName = card as CardName;
+          return (
+            count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
+          );
+        })
+        .map(([card]) => ({
+          type: "buy_card" as const,
+          card: card as CardName,
+        }));
+      actions.push(...buyableCards);
+    }
 
     actions.push({ type: "end_phase" });
   }
