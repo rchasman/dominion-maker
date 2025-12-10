@@ -183,14 +183,8 @@ export function BoardContent({
 
       {game.gameOver && game.winner && (
         <GameOverModal
-          winner={
-             
-            game.winner
-          }
-          mainPlayerId={
-             
-            mainPlayerId as PlayerId
-          }
+          winner={game.winner}
+          mainPlayerId={mainPlayerId as PlayerId}
           mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
           onNewGame={onNewGame}

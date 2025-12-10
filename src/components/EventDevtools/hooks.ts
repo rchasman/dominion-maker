@@ -114,7 +114,7 @@ export function usePlayback(config: PlaybackConfig, actions: PlaybackActions) {
       };
     }
 
-    return undefined;
+    return;
   }, [isPlaying, rootEvents, events, onScrub, setScrubberIndex, setIsPlaying]);
 
   useEffect(() => {

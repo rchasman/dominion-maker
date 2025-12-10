@@ -22,7 +22,7 @@ export function useResizeHandle() {
   });
 
   useEffect(() => {
-    if (!isDragging) return undefined;
+    if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (sidebarRef.current) {

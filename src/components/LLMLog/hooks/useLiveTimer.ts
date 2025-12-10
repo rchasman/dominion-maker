@@ -27,7 +27,7 @@ export const useLiveTimer = (entries: LLMLogEntry[]): number => {
       return false;
     });
 
-    if (!hasPending) return undefined;
+    if (!hasPending) return;
 
     const interval = setInterval(() => setNow(Date.now()), TIMER_INTERVAL_MS);
     return () => clearInterval(interval);

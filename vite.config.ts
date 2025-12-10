@@ -38,7 +38,7 @@ export default defineConfig({
           ) {
             return "game";
           }
-          return undefined;
+          return;
         },
       },
     },

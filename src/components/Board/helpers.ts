@@ -10,7 +10,7 @@ export function getPlayerIds(
 ): readonly string[] {
   if (state) return Object.keys(state.players);
   if (gameMode === "multiplayer") return ["human", "ai"] as const;
-   
+
   return getPlayersForMode(gameMode);
 }
 

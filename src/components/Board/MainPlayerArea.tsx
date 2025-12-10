@@ -70,10 +70,7 @@ export function MainPlayerArea({
         phase={displayState.phase}
         subPhase={displayState.subPhase}
         actions={displayState.actions}
-        playerId={
-           
-          mainPlayerId
-        }
+        playerId={mainPlayerId}
         turnHistory={displayState.turnHistory}
         playerStrategy={playerStrategy}
         gameState={displayState}

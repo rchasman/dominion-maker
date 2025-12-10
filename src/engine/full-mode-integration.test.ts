@@ -196,7 +196,7 @@ describe("Full mode integration", () => {
     engine.startGame(["ai1", "ai2"]);
 
     // Record 10 turns
-    const turnSequence = Array.from({ length: 10 }).reduce<string[]>((acc) => {
+    const turnSequence = Array.from({ length: 10 }).reduce<string[]>(acc => {
       if (engine.state.gameOver) return acc;
 
       acc.push(engine.state.activePlayer);

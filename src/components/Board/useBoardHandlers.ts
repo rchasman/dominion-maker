@@ -35,7 +35,6 @@ function submitSimpleDecision(
   gameState: GameState,
   submitDecision: (choice: DecisionChoice) => CommandResult,
 ): CommandResult {
-   
   const mainPlayer = gameState.players[mainPlayerId];
   if (!mainPlayer) {
     return { ok: false, error: "No main player" };
