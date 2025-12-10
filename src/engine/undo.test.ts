@@ -34,7 +34,9 @@ describe("Undo System - Immediate Undo", () => {
     expect(turnStartEvent).toBeDefined();
 
     // Undo to turn start (removes all actions)
-    engine.undoToEvent(turnStartEvent!.id!);
+    if (turnStartEvent.id) {
+      engine.undoToEvent(turnStartEvent.id);
+    }
 
     // Events after turn start should be removed
     expect(engine.eventLog.length).toBeLessThan(eventsAfter);
@@ -60,30 +62,32 @@ describe("Undo System - Immediate Undo", () => {
     expect(marketEvent).toBeDefined();
 
     // Count effects caused by Market
-    const marketEffects = engine.eventLog.filter(
-      e => e.causedBy === marketEvent!.id,
-    );
-    expect(marketEffects.length).toBeGreaterThan(0);
-
-    // Undo to before Market
-    const eventBeforeMarket =
-      engine.eventLog[
-        engine.eventLog.findIndex(e => e.id === marketEvent!.id) - 1
-      ];
-
-    if (eventBeforeMarket && eventBeforeMarket.id) {
-      engine.undoToEvent(eventBeforeMarket.id);
-
-      // Market and all its effects should be gone
-      const marketAfterUndo = engine.eventLog.find(
-        e => e.id === marketEvent!.id,
+    if (marketEvent && marketEvent.id) {
+      const marketEffects = engine.eventLog.filter(
+        e => e.causedBy === marketEvent.id,
       );
-      expect(marketAfterUndo).toBeUndefined();
+      expect(marketEffects.length).toBeGreaterThan(0);
 
-      const effectsAfterUndo = engine.eventLog.filter(
-        e => e.causedBy === marketEvent!.id,
-      );
-      expect(effectsAfterUndo.length).toBe(0);
+      // Undo to before Market
+      const eventBeforeMarket =
+        engine.eventLog[
+          engine.eventLog.findIndex(e => e.id === marketEvent.id) - 1
+        ];
+
+      if (eventBeforeMarket && eventBeforeMarket.id) {
+        engine.undoToEvent(eventBeforeMarket.id);
+
+        // Market and all its effects should be gone
+        const marketAfterUndo = engine.eventLog.find(
+          e => e.id === marketEvent.id,
+        );
+        expect(marketAfterUndo).toBeUndefined();
+
+        const effectsAfterUndo = engine.eventLog.filter(
+          e => e.causedBy === marketEvent.id,
+        );
+        expect(effectsAfterUndo.length).toBe(0);
+      }
     }
   });
 
