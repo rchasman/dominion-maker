@@ -1,4 +1,4 @@
-import type { GameState, PlayerId } from "../../types/game-state";
+import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import { countVP, getAllCards } from "../../lib/board-utils";
@@ -17,13 +17,13 @@ interface BoardStateParams {
 
 export interface BoardState {
   displayState: GameState;
-  playerIds: PlayerId[];
-  mainPlayerId: PlayerId;
-  opponentPlayerId: PlayerId;
+  playerIds: Player[];
+  mainPlayerId: Player;
+  opponentPlayerId: Player;
   isMainPlayerTurn: boolean;
   canBuy: boolean;
-  opponent: GameState["players"][PlayerId];
-  mainPlayer: GameState["players"][PlayerId];
+  opponent: GameState["players"][Player];
+  mainPlayer: GameState["players"][Player];
   mainPlayerVP: number;
   opponentVP: number;
   hint: string;
@@ -44,8 +44,8 @@ export function computeBoardState(params: BoardStateParams): BoardState {
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
   const playerIds = getPlayerIds(state, gameMode);
-  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX] as PlayerId;
-  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX] as PlayerId;
+  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX] as Player;
+  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX] as Player;
 
   const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
 

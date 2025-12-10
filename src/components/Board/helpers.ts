@@ -1,15 +1,15 @@
-import type { GameState, CardName, PlayerId } from "../../types/game-state";
+import type { GameState, CardName, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
-import { GAME_MODE_CONFIG, getPlayersForMode } from "../../types/game-mode";
+import { getPlayersForMode } from "../../types/game-mode";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { DEFAULT_DECISION_MAX } from "./constants";
 
 export function getPlayerIds(
   state: GameState | null,
   gameMode: GameMode,
-): PlayerId[] {
-  if (state) return Object.keys(state.players) as PlayerId[];
-  if (gameMode === "multiplayer") return ["human", "ai"] as PlayerId[];
+): Player[] {
+  if (state) return Object.keys(state.players) as Player[];
+  if (gameMode === "multiplayer") return ["human", "ai"] as Player[];
   return getPlayersForMode(gameMode);
 }
 
@@ -45,7 +45,7 @@ export function canPlayCard(
 
 export function getHintText(
   displayState: GameState,
-  mainPlayerId: PlayerId,
+  mainPlayerId: Player,
   isMainPlayerTurn: boolean,
   hasPlayableActions: boolean,
   hasTreasuresInHand: boolean,
@@ -93,7 +93,7 @@ export function canBuyCards(
 }
 
 export function formatPlayerLabel(
-  playerId: PlayerId,
+  playerId: Player,
   gameMode: GameMode,
   isAIPlayer: boolean,
 ): string {
