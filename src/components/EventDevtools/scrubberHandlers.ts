@@ -27,6 +27,47 @@ function stopPlayback(
   }
 }
 
+function useHandleScrubberChange(
+  rootEvents: GameEvent[],
+  events: GameEvent[],
+  onScrub: ((eventId: string | null) => void) | undefined,
+  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>,
+) {
+  return useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const rootIndex = parseInt(e.target.value, 10);
+      const rootEvent = rootEvents[rootIndex];
+      if (!rootEvent) return;
+
+      const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
+      setScrubberIndex(actualIndex);
+
+      if (onScrub && rootEvent.id) {
+        onScrub(rootEvent.id);
+      }
+    },
+    [rootEvents, events, onScrub, setScrubberIndex],
+  );
+}
+
+function useHandleRewindToBeginning(
+  rootEvents: GameEvent[],
+  events: GameEvent[],
+  onScrub: ((eventId: string | null) => void) | undefined,
+  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>,
+) {
+  return useCallback(() => {
+    if (rootEvents.length > 0) {
+      const firstRoot = rootEvents[0];
+      const actualIndex = events.findIndex(evt => evt.id === firstRoot?.id);
+      setScrubberIndex(actualIndex);
+      if (onScrub && firstRoot?.id) {
+        onScrub(firstRoot.id);
+      }
+    }
+  }, [rootEvents, events, onScrub, setScrubberIndex]);
+}
+
 export function useScrubberHandlers(
   deps: ScrubberDeps,
   actions: ScrubberActions,
@@ -42,20 +83,18 @@ export function useScrubberHandlers(
 
   const { setScrubberIndex, setSelectedEventId, setIsPlaying } = actions;
 
-  const handleScrubberChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rootIndex = parseInt(e.target.value, 10);
-      const rootEvent = rootEvents[rootIndex];
-      if (!rootEvent) return;
+  const handleScrubberChange = useHandleScrubberChange(
+    rootEvents,
+    events,
+    onScrub,
+    setScrubberIndex,
+  );
 
-      const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
-      setScrubberIndex(actualIndex);
-
-      if (onScrub && rootEvent.id) {
-        onScrub(rootEvent.id);
-      }
-    },
-    [rootEvents, events, onScrub, setScrubberIndex],
+  const handleRewindToBeginning = useHandleRewindToBeginning(
+    rootEvents,
+    events,
+    onScrub,
+    setScrubberIndex,
   );
 
   const handleResetScrubber = useCallback(() => {
@@ -77,17 +116,6 @@ export function useScrubberHandlers(
     setSelectedEventId,
     setIsPlaying,
   ]);
-
-  const handleRewindToBeginning = useCallback(() => {
-    if (rootEvents.length > 0) {
-      const firstRoot = rootEvents[0];
-      const actualIndex = events.findIndex(evt => evt.id === firstRoot?.id);
-      setScrubberIndex(actualIndex);
-      if (onScrub && firstRoot?.id) {
-        onScrub(firstRoot.id);
-      }
-    }
-  }, [rootEvents, events, onScrub, setScrubberIndex]);
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {

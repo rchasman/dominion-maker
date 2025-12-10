@@ -5,6 +5,8 @@ interface ActionNavigationControlsProps {
   onNext: () => void;
 }
 
+const DISABLED_OPACITY = 0.3;
+
 export function ActionNavigationControls({
   hasPrevAction,
   hasNextAction,
@@ -34,7 +36,7 @@ export function ActionNavigationControls({
           fontSize: "0.85rem",
           fontWeight: 700,
           fontFamily: "inherit",
-          opacity: hasPrevAction ? 1 : 0.3,
+          opacity: hasPrevAction ? 1 : DISABLED_OPACITY,
           padding: "var(--space-2)",
           minWidth: "24px",
           minHeight: "24px",
@@ -65,7 +67,7 @@ export function ActionNavigationControls({
           fontSize: "0.85rem",
           fontWeight: 700,
           fontFamily: "inherit",
-          opacity: hasNextAction ? 1 : 0.3,
+          opacity: hasNextAction ? 1 : DISABLED_OPACITY,
           padding: "var(--space-2)",
           minWidth: "24px",
           minHeight: "24px",

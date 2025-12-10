@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import type { CardName, PlayerId, GameState } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { DecisionChoice } from "../../events/types";
-import { run } from "../../lib/run";
 import { shouldSelectCard, canPlayCard } from "./helpers";
 import type { ComplexDecisionData } from "./hooks";
 
@@ -19,6 +18,34 @@ interface BoardHandlersParams {
   submitDecision: (choice: DecisionChoice) => CommandResult;
 }
 
+function submitComplexDecision(
+  data: ComplexDecisionData,
+  submitDecision: (choice: DecisionChoice) => CommandResult,
+): CommandResult {
+  return submitDecision({
+    selectedCards: [],
+    cardActions: data.cardActions,
+    cardOrder: data.cardOrder,
+  });
+}
+
+function submitSimpleDecision(
+  selectedCardIndices: number[],
+  mainPlayerId: string,
+  gameState: GameState,
+  submitDecision: (choice: DecisionChoice) => CommandResult,
+): CommandResult {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  const mainPlayer = gameState.players[mainPlayerId as PlayerId];
+  if (!mainPlayer) {
+    return { ok: false, error: "No main player" };
+  }
+
+  const selectedCards = selectedCardIndices.map(i => mainPlayer.hand[i]);
+  return submitDecision({ selectedCards });
+}
+
+// eslint-disable-next-line max-lines-per-function
 export function useBoardHandlers(params: BoardHandlersParams) {
   const {
     gameState,
@@ -34,7 +61,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   } = params;
 
   const handleCardClick = useCallback(
-    (card: CardName, index: number, mainPlayerId: PlayerId) => {
+    (card: CardName, index: number, mainPlayerId: string) => {
       if (!gameState?.activePlayer || gameState.activePlayer !== mainPlayerId) {
         return;
       }
@@ -78,7 +105,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   );
 
   const handleInPlayClick = useCallback(
-    (card: CardName, mainPlayerId: PlayerId) => {
+    (card: CardName, mainPlayerId: string) => {
       if (
         !gameState ||
         gameState.activePlayer !== mainPlayerId ||
@@ -93,27 +120,17 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   );
 
   const handleConfirmDecision = useCallback(
-    (data: ComplexDecisionData | null, mainPlayerId: PlayerId) => {
+    (data: ComplexDecisionData | null, mainPlayerId: string) => {
       if (!gameState) return;
 
-      const result = run(() => {
-        if (data) {
-          return submitDecision({
-            selectedCards: [],
-            cardActions: data.cardActions,
-            cardOrder: data.cardOrder,
-          });
-        }
-
-        const mainPlayer = gameState.players[mainPlayerId];
-        if (!mainPlayer) {
-          return { ok: false, error: "No main player" };
-        }
-
-        const selectedCards = selectedCardIndices.map(i => mainPlayer.hand[i]);
-
-        return submitDecision({ selectedCards });
-      });
+      const result = data
+        ? submitComplexDecision(data, submitDecision)
+        : submitSimpleDecision(
+            selectedCardIndices,
+            mainPlayerId,
+            gameState,
+            submitDecision,
+          );
 
       if (result.ok) {
         clearSelection();

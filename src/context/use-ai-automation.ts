@@ -41,7 +41,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
-      return;
+      return undefined;
     }
 
     const isAITurn =
@@ -49,7 +49,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
 
     if (!isAITurn) {
-      return;
+      return undefined;
     }
 
     const timer = setTimeout(() => {
@@ -102,11 +102,11 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
-      return;
+      return undefined;
     }
 
     if (gameState.subPhase !== "opponent_decision") {
-      return;
+      return undefined;
     }
 
     const isAIDecision =
@@ -115,7 +115,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
 
     if (!isAIDecision) {
-      return;
+      return undefined;
     }
 
     const timer = setTimeout(() => {
@@ -164,7 +164,7 @@ export function useAutoPhaseAdvance(
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || isProcessing || !engine) {
-      return;
+      return undefined;
     }
 
     if (engine.shouldAutoAdvancePhase("human")) {
@@ -179,5 +179,7 @@ export function useAutoPhaseAdvance(
         clearTimeout(timer);
       };
     }
+
+    return undefined;
   }, [gameState, isProcessing, engineRef, setEvents, setGameState]);
 }

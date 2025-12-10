@@ -123,6 +123,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const setGameMode = (mode: GameMode) => {
     abortOngoingConsensus();
+    setIsProcessing(false);
     setGameModeInternal(mode);
   };
 
@@ -160,17 +161,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
   }, [engineRef]);
 
-  // Strategy - create factory function to avoid accessing ref during render
+  // Strategy - create strategy instance without logger to avoid ref access during render
   const strategy: GameStrategy = useMemo(() => {
     if (gameMode === "engine") {
       return new EngineStrategy();
     }
-    // Pass a function that will access the ref when called, not during render
-    const loggerFn = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
-      llmLoggerRef.current(entry);
-    };
-    return new MakerStrategy("openai", loggerFn, modelSettings);
+    // Create MakerStrategy without logger initially
+    return new MakerStrategy("openai", undefined, modelSettings);
   }, [gameMode, modelSettings]);
+
+  // Set logger on strategy after creation (outside of render)
+  useEffect(() => {
+    if (strategy instanceof MakerStrategy) {
+      const loggerFn = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+        llmLoggerRef.current(entry);
+      };
+      strategy.setLogger(loggerFn);
+    }
+  }, [strategy]);
 
   // Strategy analysis
   useStrategyAnalysis(engineRef, strategy, setPlayerStrategies);
@@ -194,11 +202,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setLLMLogs,
     setPlayerStrategies,
   });
-
-  // Reset processing state on game mode change
-  useEffect(() => {
-    setIsProcessing(false);
-  }, [gameMode]);
 
   // Game actions
   const {

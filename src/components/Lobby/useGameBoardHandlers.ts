@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { uiLogger } from "../../lib/logger";
-import { run } from "../../lib/run";
 import { getDisplayState } from "./game-board-helpers";
 import { useCardHandlers } from "./useCardHandlers";
 import { useDecisionHandlers } from "./useDecisionHandlers";
@@ -27,6 +26,15 @@ interface GameBoardState {
   isMyTurn: boolean;
 }
 
+function validatePreviewEventId(
+  previewEventId: string | null,
+  events: GameEvent[],
+): string | null {
+  if (!previewEventId) return null;
+  const found = events.find(e => e.id === previewEventId);
+  return found ? previewEventId : null;
+}
+
 export function useGameBoardHandlers(
   gameActions: GameActions,
   gameBoardState: GameBoardState,
@@ -47,11 +55,7 @@ export function useGameBoardHandlers(
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
   const [showDevtools, setShowDevtools] = useState(false);
 
-  const validPreviewEventId = run(() => {
-    if (!previewEventId) return null;
-    const found = events.find(e => e.id === previewEventId);
-    return found ? previewEventId : null;
-  });
+  const validPreviewEventId = validatePreviewEventId(previewEventId, events);
 
   const handleRequestUndo = useCallback(
     (eventId: string) => {

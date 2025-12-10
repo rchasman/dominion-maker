@@ -69,7 +69,10 @@ export function MainPlayerArea({
         phase={displayState.phase}
         subPhase={displayState.subPhase}
         actions={displayState.actions}
-        playerId={mainPlayerId}
+        playerId={
+          /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+          mainPlayerId
+        }
         turnHistory={displayState.turnHistory}
         playerStrategy={playerStrategy}
         gameState={displayState}

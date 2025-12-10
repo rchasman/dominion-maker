@@ -7,9 +7,10 @@ import { DEFAULT_DECISION_MAX } from "./constants";
 export function getPlayerIds(
   state: GameState | null,
   gameMode: GameMode,
-): Player[] {
-  if (state) return Object.keys(state.players) as Player[];
-  if (gameMode === "multiplayer") return ["human", "ai"] as Player[];
+): readonly string[] {
+  if (state) return Object.keys(state.players);
+  if (gameMode === "multiplayer") return ["human", "ai"] as const;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return getPlayersForMode(gameMode);
 }
 
@@ -43,13 +44,21 @@ export function canPlayCard(
   };
 }
 
-export function getHintText(
-  displayState: GameState,
-  mainPlayerId: Player,
-  isMainPlayerTurn: boolean,
-  hasPlayableActions: boolean,
-  hasTreasuresInHand: boolean,
-): string {
+interface GetHintTextParams {
+  displayState: GameState;
+  mainPlayerId: Player;
+  isMainPlayerTurn: boolean;
+  hasPlayableActions: boolean;
+  hasTreasuresInHand: boolean;
+}
+
+export function getHintText({
+  displayState,
+  mainPlayerId,
+  isMainPlayerTurn,
+  hasPlayableActions,
+  hasTreasuresInHand,
+}: GetHintTextParams): string {
   if (
     displayState.pendingDecision &&
     displayState.pendingDecision.player === mainPlayerId

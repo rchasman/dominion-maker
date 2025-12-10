@@ -1,20 +1,20 @@
-import type { CardName, PlayerId } from "../../types/game-state";
+import type { CardName } from "../../types/game-state";
 import type { ComplexDecisionData } from "./hooks";
 
 interface BoardCallbacksParams {
   isPreviewMode: boolean;
   isMainPlayerTurn: boolean;
-  mainPlayerId: PlayerId;
+  mainPlayerId: string;
   phase: "action" | "buy" | "cleanup";
   handleCardClick: (
     card: CardName,
     index: number,
-    mainPlayerId: PlayerId,
+    mainPlayerId: string,
   ) => void;
-  handleInPlayClick: (card: CardName, mainPlayerId: PlayerId) => void;
+  handleInPlayClick: (card: CardName, mainPlayerId: string) => void;
   handleConfirmDecision: (
     data: ComplexDecisionData | null,
-    mainPlayerId: PlayerId,
+    mainPlayerId: string,
   ) => void;
   handleSkipDecision: () => void;
   playAllTreasures: () => void;

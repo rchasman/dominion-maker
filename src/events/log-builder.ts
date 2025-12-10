@@ -3,6 +3,9 @@ import type {
   CardDrawnEvent,
   CardDiscardedEvent,
   CardTrashedEvent,
+  ActionsModifiedEvent,
+  BuysModifiedEvent,
+  CoinsModifiedEvent,
 } from "./types";
 import type { LogEntry, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
@@ -175,9 +178,234 @@ function isAggregatedEvent(
 }
 
 /**
- * Convert a single event to a log entry (without nesting).
+ * Convert CARD_PLAYED event to log entry
  */
-function eventToLogEntry(
+function cardPlayedToLogEntry(
+  event: MaybeAggregatedEvent & { type: "CARD_PLAYED"; card: CardName },
+): LogEntry | null {
+  const cardDef = CARDS[event.card];
+  const isTreasure = cardDef.types.includes("treasure");
+  const isAction = cardDef.types.includes("action");
+
+  if (isTreasure) {
+    return {
+      type: "play-treasure",
+      player: event.player,
+      card: event.card,
+      coins: cardDef.coins || 0,
+      eventId: event.id,
+    };
+  }
+
+  if (isAction) {
+    return {
+      type: "play-action",
+      player: event.player,
+      card: event.card,
+      eventId: event.id,
+    };
+  }
+  return null;
+}
+
+/**
+ * Convert CARD_DRAWN event to log entry
+ */
+function cardDrawnToLogEntry(event: MaybeAggregatedEvent): LogEntry {
+  if (isAggregatedEvent(event)) {
+    return {
+      type: "draw-cards",
+      player: event.player,
+      count: event.count,
+      cards: event.cards,
+      cardCounts: event.cardCounts,
+      eventId: event.id,
+    };
+  }
+  return {
+    type: "draw-cards",
+    player: (event as CardDrawnEvent).player,
+    count: 1,
+    cards: [(event as CardDrawnEvent).card],
+    eventId: event.id,
+  };
+}
+
+/**
+ * Convert CARD_DISCARDED event to log entry
+ */
+function cardDiscardedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
+  if (isAggregatedEvent(event)) {
+    return {
+      type: "discard-cards",
+      player: event.player,
+      count: event.count,
+      cards: event.cards,
+      cardCounts: event.cardCounts,
+      eventId: event.id,
+    };
+  }
+  return {
+    type: "discard-cards",
+    player: (event as CardDiscardedEvent).player,
+    count: 1,
+    cards: [(event as CardDiscardedEvent).card],
+    eventId: event.id,
+  };
+}
+
+/**
+ * Convert CARD_TRASHED event to log entry
+ */
+function cardTrashedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
+  if (isAggregatedEvent(event)) {
+    return {
+      type: "trash-card",
+      player: event.player,
+      card: event.cards[0],
+      cards: event.cards,
+      count: event.count,
+      eventId: event.id,
+    };
+  }
+  return {
+    type: "trash-card",
+    player: (event as CardTrashedEvent).player,
+    card: (event as CardTrashedEvent).card,
+    eventId: event.id,
+  };
+}
+
+/**
+ * Convert CARD_GAINED event to log entry
+ */
+function cardGainedToLogEntry(
+  event: MaybeAggregatedEvent & { type: "CARD_GAINED"; card: CardName },
+): LogEntry {
+  const cardDef = CARDS[event.card];
+  const isBuy = !event.causedBy;
+
+  if (isBuy) {
+    return {
+      type: "buy-card",
+      player: event.player,
+      card: event.card,
+      vp: typeof cardDef.vp === "number" ? cardDef.vp : undefined,
+      eventId: event.id,
+      children: [
+        {
+          type: "gain-card",
+          player: event.player,
+          card: event.card,
+          eventId: event.id,
+        },
+      ],
+    };
+  }
+
+  return {
+    type: "gain-card",
+    player: event.player,
+    card: event.card,
+    eventId: event.id,
+  };
+}
+
+/**
+ * Convert CARD_RETURNED_TO_HAND event to log entry
+ */
+function cardReturnedToHandToLogEntry(
+  event: MaybeAggregatedEvent & {
+    type: "CARD_RETURNED_TO_HAND";
+    card: CardName;
+  },
+): LogEntry | null {
+  const cardDef = CARDS[event.card];
+  const isTreasure = cardDef.types.includes("treasure");
+
+  if (isTreasure && event.from === "inPlay") {
+    return {
+      type: "unplay-treasure",
+      player: event.player,
+      card: event.card,
+      coins: cardDef.coins || 0,
+      eventId: event.id,
+    };
+  }
+  return null;
+}
+
+/**
+ * Convert resource modification events to log entries
+ */
+function resourceModifiedToLogEntry(
+  event: ActionsModifiedEvent | BuysModifiedEvent | CoinsModifiedEvent,
+  currentPlayer: string,
+): LogEntry | null {
+  const typeMap = {
+    ACTIONS_MODIFIED: {
+      positive: "get-actions" as const,
+      negative: "use-actions" as const,
+    },
+    BUYS_MODIFIED: {
+      positive: "get-buys" as const,
+      negative: "use-buys" as const,
+    },
+    COINS_MODIFIED: {
+      positive: "get-coins" as const,
+      negative: "spend-coins" as const,
+    },
+  };
+
+  if (event.delta > 0) {
+    return {
+      type: typeMap[event.type].positive,
+      player: currentPlayer,
+      count: event.delta,
+      eventId: event.id,
+    };
+  }
+
+  if (event.delta < 0) {
+    return {
+      type: typeMap[event.type].negative,
+      player: currentPlayer,
+      count: -event.delta,
+      eventId: event.id,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Convert card-related events to log entries
+ */
+function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
+  switch (event.type) {
+    case "CARD_PLAYED":
+      return cardPlayedToLogEntry(event);
+    case "CARD_DRAWN":
+      return cardDrawnToLogEntry(event);
+    case "CARD_DISCARDED":
+      return cardDiscardedToLogEntry(event);
+    case "CARD_TRASHED":
+      return cardTrashedToLogEntry(event);
+    case "CARD_GAINED":
+      return cardGainedToLogEntry(event);
+    case "DECK_SHUFFLED":
+      return { type: "shuffle-deck", player: event.player, eventId: event.id };
+    case "CARD_RETURNED_TO_HAND":
+      return cardReturnedToHandToLogEntry(event);
+    default:
+      return null;
+  }
+}
+
+/**
+ * Convert game flow events to log entries
+ */
+function gameFlowEventToLogEntry(
   event: MaybeAggregatedEvent,
   currentPlayer: string,
 ): LogEntry | null {
@@ -189,7 +417,6 @@ function eventToLogEntry(
         player: event.player,
         eventId: event.id,
       };
-
     case "PHASE_CHANGED":
       return {
         type: "phase-change",
@@ -197,194 +424,6 @@ function eventToLogEntry(
         phase: event.phase,
         eventId: event.id,
       };
-
-    case "CARD_PLAYED": {
-      const cardDef = CARDS[event.card];
-      const isTreasure = cardDef.types.includes("treasure");
-      const isAction = cardDef.types.includes("action");
-
-      if (isTreasure) {
-        return {
-          type: "play-treasure",
-          player: event.player,
-          card: event.card,
-          coins: cardDef.coins || 0,
-          eventId: event.id,
-        };
-      } else if (isAction) {
-        return {
-          type: "play-action",
-          player: event.player,
-          card: event.card,
-          eventId: event.id,
-        };
-      }
-      return null;
-    }
-
-    case "CARD_DRAWN": {
-      if (isAggregatedEvent(event)) {
-        return {
-          type: "draw-cards",
-          player: event.player,
-          count: event.count,
-          cards: event.cards,
-          cardCounts: event.cardCounts,
-          eventId: event.id,
-        };
-      }
-      return {
-        type: "draw-cards",
-        player: event.player,
-        count: 1,
-        cards: [event.card],
-        eventId: event.id,
-      };
-    }
-
-    case "CARD_DISCARDED": {
-      if (isAggregatedEvent(event)) {
-        return {
-          type: "discard-cards",
-          player: event.player,
-          count: event.count,
-          cards: event.cards,
-          cardCounts: event.cardCounts,
-          eventId: event.id,
-        };
-      }
-      return {
-        type: "discard-cards",
-        player: event.player,
-        count: 1,
-        cards: [event.card],
-        eventId: event.id,
-      };
-    }
-
-    case "CARD_TRASHED": {
-      if (isAggregatedEvent(event)) {
-        return {
-          type: "trash-card",
-          player: event.player,
-          card: event.cards[0],
-          cards: event.cards,
-          count: event.count,
-          eventId: event.id,
-        };
-      }
-      return {
-        type: "trash-card",
-        player: event.player,
-        card: event.card,
-        eventId: event.id,
-      };
-    }
-
-    case "CARD_GAINED": {
-      const cardDef = CARDS[event.card];
-      const isBuy = !event.causedBy;
-
-      if (isBuy) {
-        // For buys, create a buy-card log with a nested gain-card child
-        return {
-          type: "buy-card",
-          player: event.player,
-          card: event.card,
-          vp: typeof cardDef.vp === "number" ? cardDef.vp : undefined,
-          eventId: event.id,
-          children: [
-            {
-              type: "gain-card",
-              player: event.player,
-              card: event.card,
-              eventId: event.id,
-            },
-          ],
-        };
-      } else {
-        return {
-          type: "gain-card",
-          player: event.player,
-          card: event.card,
-          eventId: event.id,
-        };
-      }
-    }
-
-    case "DECK_SHUFFLED":
-      return { type: "shuffle-deck", player: event.player, eventId: event.id };
-
-    case "CARD_RETURNED_TO_HAND": {
-      const cardDef = CARDS[event.card];
-      const isTreasure = cardDef.types.includes("treasure");
-
-      if (isTreasure && event.from === "inPlay") {
-        return {
-          type: "unplay-treasure",
-          player: event.player,
-          card: event.card,
-          coins: cardDef.coins || 0,
-          eventId: event.id,
-        };
-      }
-      return null;
-    }
-
-    case "ACTIONS_MODIFIED":
-      if (event.delta > 0) {
-        return {
-          type: "get-actions",
-          player: currentPlayer,
-          count: event.delta,
-          eventId: event.id,
-        };
-      } else if (event.delta < 0) {
-        return {
-          type: "use-actions",
-          player: currentPlayer,
-          count: -event.delta,
-          eventId: event.id,
-        };
-      }
-      return null;
-
-    case "BUYS_MODIFIED":
-      if (event.delta > 0) {
-        return {
-          type: "get-buys",
-          player: currentPlayer,
-          count: event.delta,
-          eventId: event.id,
-        };
-      } else if (event.delta < 0) {
-        return {
-          type: "use-buys",
-          player: currentPlayer,
-          count: -event.delta,
-          eventId: event.id,
-        };
-      }
-      return null;
-
-    case "COINS_MODIFIED":
-      if (event.delta > 0) {
-        return {
-          type: "get-coins",
-          player: currentPlayer,
-          count: event.delta,
-          eventId: event.id,
-        };
-      } else if (event.delta < 0) {
-        return {
-          type: "spend-coins",
-          player: currentPlayer,
-          count: -event.delta,
-          eventId: event.id,
-        };
-      }
-      return null;
-
     case "GAME_ENDED":
       return {
         type: "game-over",
@@ -392,25 +431,37 @@ function eventToLogEntry(
         winner: event.winner || currentPlayer,
         eventId: event.id,
       };
-
     case "TURN_ENDED":
       return { type: "turn-end", player: event.player, eventId: event.id };
-
-    // These don't show in log
-    case "GAME_INITIALIZED":
-    case "INITIAL_DECK_DEALT":
-    case "INITIAL_HAND_DRAWN":
-    case "CARD_REVEALED":
-    case "CARD_PUT_ON_DECK":
-    case "DECISION_REQUIRED":
-    case "DECISION_RESOLVED":
-    case "UNDO_REQUESTED":
-    case "UNDO_APPROVED":
-    case "UNDO_DENIED":
-    case "UNDO_EXECUTED":
-      return null;
-
     default:
       return null;
   }
+}
+
+/**
+ * Convert a single event to a log entry (without nesting).
+ */
+function eventToLogEntry(
+  event: MaybeAggregatedEvent,
+  currentPlayer: string,
+): LogEntry | null {
+  // Try card events
+  const cardLog = cardEventToLogEntry(event);
+  if (cardLog) return cardLog;
+
+  // Try game flow events
+  const flowLog = gameFlowEventToLogEntry(event, currentPlayer);
+  if (flowLog) return flowLog;
+
+  // Try resource events
+  if (
+    event.type === "ACTIONS_MODIFIED" ||
+    event.type === "BUYS_MODIFIED" ||
+    event.type === "COINS_MODIFIED"
+  ) {
+    return resourceModifiedToLogEntry(event, currentPlayer);
+  }
+
+  // All other events don't show in log
+  return null;
 }

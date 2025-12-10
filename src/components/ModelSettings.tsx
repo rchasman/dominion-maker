@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { ModelSettings } from "../agent/game-agent";
 import { ModelPicker } from "./ModelPicker";
 
+const MAX_CONSENSUS_COUNT = 50;
+
 interface ModelSettingsProps {
   settings: ModelSettings;
   onChange: (settings: ModelSettings) => void;
@@ -14,7 +16,10 @@ export function ModelSettingsAccordion({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleConsensusCountChange = (value: number) => {
-    onChange({ ...settings, consensusCount: Math.max(1, Math.min(50, value)) });
+    onChange({
+      ...settings,
+      consensusCount: Math.max(1, Math.min(MAX_CONSENSUS_COUNT, value)),
+    });
   };
 
   return (
@@ -83,7 +88,7 @@ export function ModelSettingsAccordion({
             <input
               type="range"
               min="1"
-              max="50"
+              max={MAX_CONSENSUS_COUNT}
               value={settings.consensusCount}
               onChange={e => handleConsensusCountChange(Number(e.target.value))}
               style={{

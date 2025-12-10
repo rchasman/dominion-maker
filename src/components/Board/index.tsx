@@ -39,13 +39,10 @@ export function Board({ onBackToHome }: BoardProps) {
     getStateAtEvent: game.getStateAtEvent,
   });
 
-  // ESLint: BoardState interface guarantees these types but TS can't infer through computed return
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const mainPlayerId = boardState.mainPlayerId;
   const callbacks = createBoardCallbacks({
     isPreviewMode,
     isMainPlayerTurn: boardState.isMainPlayerTurn,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     mainPlayerId,
     phase: boardState.displayState.phase,
     handleCardClick,

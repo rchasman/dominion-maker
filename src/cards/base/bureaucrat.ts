@@ -6,6 +6,55 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getOpponents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
+import type { CardName, GameState } from "../../types/game-state";
+
+type OpponentWithVictoryCards = {
+  opponent: string;
+  victoryCards: CardName[];
+  remainingOpponents: string[];
+};
+
+// Helper to get victory cards from player's hand
+const getVictoryCards = (hand: CardName[]): CardName[] =>
+  hand.filter(c => CARDS[c].types.includes("victory"));
+
+// Helper to find first opponent with victory cards
+const findOpponentWithVictoryCards = (
+  opponents: string[],
+  state: GameState,
+): OpponentWithVictoryCards | null => {
+  const opponentIndex = opponents.findIndex(opp => {
+    const oppState = state.players[opp];
+    return oppState && getVictoryCards(oppState.hand).length > 0;
+  });
+
+  if (opponentIndex === -1) return null;
+
+  const opponent = opponents[opponentIndex];
+  const oppState = state.players[opponent];
+  const victoryCards = getVictoryCards(oppState.hand);
+  const remainingOpponents = opponents.slice(opponentIndex + 1);
+
+  return { opponent, victoryCards, remainingOpponents };
+};
+
+// Helper to create opponent topdeck decision
+const createOpponentTopdeckDecision = (
+  opponent: string,
+  victoryCards: CardName[],
+  remainingOpponents: string[],
+) => ({
+  type: "card_decision" as const,
+  player: opponent,
+  from: "hand" as const,
+  prompt: "Bureaucrat: Put a Victory card on your deck",
+  cardOptions: victoryCards,
+  min: 1,
+  max: 1,
+  cardBeingPlayed: "Bureaucrat" as const,
+  stage: "opponent_topdeck" as const,
+  metadata: { remainingOpponents },
+});
 
 export const bureaucrat: CardEffect = ({
   state,
@@ -22,35 +71,16 @@ export const bureaucrat: CardEffect = ({
       events.push({ type: "CARD_GAINED", player, card: "Silver", to: "deck" });
     }
 
-    // Find first opponent with a Victory card
-    for (const opp of opponents) {
-      const oppState = state.players[opp];
-      if (!oppState) continue;
-
-      const victoryCards = oppState.hand.filter(c =>
-        CARDS[c].types.includes("victory"),
-      );
-
-      if (victoryCards.length > 0) {
-        return {
-          events,
-          pendingDecision: {
-            type: "card_decision",
-            player: opp,
-            from: "hand",
-            prompt: "Bureaucrat: Put a Victory card on your deck",
-            cardOptions: victoryCards,
-            min: 1,
-            max: 1,
-            cardBeingPlayed: "Bureaucrat",
-            stage: "opponent_topdeck",
-            metadata: {
-              remainingOpponents: opponents.filter(o => o !== opp),
-            },
-          },
-        };
-      }
-      // If no victory cards, reveal hand (handled in UI)
+    const opponentData = findOpponentWithVictoryCards(opponents, state);
+    if (opponentData) {
+      return {
+        events,
+        pendingDecision: createOpponentTopdeckDecision(
+          opponentData.opponent,
+          opponentData.victoryCards,
+          opponentData.remainingOpponents,
+        ),
+      };
     }
 
     return { events };
@@ -70,37 +100,22 @@ export const bureaucrat: CardEffect = ({
       });
     }
 
-    // Check for more opponents
     const metadata = state.pendingDecision?.metadata;
     const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
 
-    for (const opp of remainingOpponents) {
-      const oppState = state.players[opp];
-      if (!oppState) continue;
-
-      const victoryCards = oppState.hand.filter(c =>
-        CARDS[c].types.includes("victory"),
-      );
-
-      if (victoryCards.length > 0) {
-        return {
-          events,
-          pendingDecision: {
-            type: "card_decision",
-            player: opp,
-            from: "hand",
-            prompt: "Bureaucrat: Put a Victory card on your deck",
-            cardOptions: victoryCards,
-            min: 1,
-            max: 1,
-            cardBeingPlayed: "Bureaucrat",
-            stage: "opponent_topdeck",
-            metadata: {
-              remainingOpponents: remainingOpponents.filter(o => o !== opp),
-            },
-          },
-        };
-      }
+    const opponentData = findOpponentWithVictoryCards(
+      remainingOpponents,
+      state,
+    );
+    if (opponentData) {
+      return {
+        events,
+        pendingDecision: createOpponentTopdeckDecision(
+          opponentData.opponent,
+          opponentData.victoryCards,
+          opponentData.remainingOpponents,
+        ),
+      };
     }
 
     return { events };

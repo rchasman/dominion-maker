@@ -1,6 +1,7 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
+import type { ReactPortal } from "react";
 
 interface CardTooltipProps {
   cardName: CardName;
@@ -14,7 +15,7 @@ export function CardTooltip({
   mouseX,
   mouseY,
   showBack,
-}: CardTooltipProps) {
+}: CardTooltipProps): ReactPortal {
   const imageUrl = showBack
     ? "/cards/Card_back.jpg"
     : getCardImageUrl(cardName);

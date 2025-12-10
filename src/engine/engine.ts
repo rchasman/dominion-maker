@@ -275,7 +275,7 @@ export class DominionEngine {
    */
   static deserialize(json: string): DominionEngine {
     const engine = new DominionEngine();
-    engine.events = JSON.parse(json);
+    engine.events = JSON.parse(json) as GameEvent[];
     engine._state = null;
     return engine;
   }
@@ -334,9 +334,7 @@ export class DominionEngine {
 
   private notifyListeners(events: GameEvent[]): void {
     const state = this.state;
-    for (const listener of this.listeners) {
-      listener(events, state);
-    }
+    [...this.listeners].map(listener => listener(events, state));
   }
 
   private handleUndoResponse({

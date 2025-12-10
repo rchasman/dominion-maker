@@ -1,6 +1,9 @@
 import { useGame } from "../context/hooks";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 
+const FONT_WEIGHT_ACTIVE = 700;
+const FONT_WEIGHT_INACTIVE = 400;
+
 interface StartScreenProps {
   onStartSinglePlayer?: () => void;
   onStartMultiplayer?: () => void;
@@ -149,7 +152,7 @@ function ModeButton({
       style={{
         padding: "var(--space-3) var(--space-6)",
         fontSize: "0.75rem",
-        fontWeight: isActive ? 700 : 400,
+        fontWeight: isActive ? FONT_WEIGHT_ACTIVE : FONT_WEIGHT_INACTIVE,
         background: isActive ? "var(--color-victory-dark)" : "transparent",
         color: isActive ? "#fff" : "var(--color-text-secondary)",
         border: "1px solid",

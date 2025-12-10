@@ -69,7 +69,7 @@ export function useStrategyAnalysis(
     const engine = engineRef.current;
     if (!engine) {
       uiLogger.warn("Strategy subscription: no engine");
-      return;
+      return undefined;
     }
 
     const unsubscribe = engine.subscribe((newEvents, state) => {

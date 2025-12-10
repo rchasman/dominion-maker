@@ -4,6 +4,8 @@ import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 import { Pile } from "./Pile";
 
+const KINGDOM_GRID_COLUMNS = 5;
+
 interface SupplyProps {
   state: GameState;
   onBuyCard?: (card: CardName) => void;
@@ -51,7 +53,10 @@ export function Supply({
   const sorted = [...state.kingdomCards].sort(
     (a, b) => CARDS[a].cost - CARDS[b].cost,
   );
-  const sortedKingdom = [...sorted.slice(5), ...sorted.slice(0, 5)];
+  const sortedKingdom = [
+    ...sorted.slice(KINGDOM_GRID_COLUMNS),
+    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
+  ];
 
   return (
     <div

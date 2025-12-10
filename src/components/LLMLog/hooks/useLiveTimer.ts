@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import type { LLMLogEntry } from "../types";
 
+const TIMER_INTERVAL_MS = 50;
+
 /**
  * Hook to track live time for pending consensus operations
  * Returns current timestamp that updates every 50ms when there are pending operations
@@ -25,9 +27,9 @@ export const useLiveTimer = (entries: LLMLogEntry[]): number => {
       return false;
     });
 
-    if (!hasPending) return;
+    if (!hasPending) return undefined;
 
-    const interval = setInterval(() => setNow(Date.now()), 50);
+    const interval = setInterval(() => setNow(Date.now()), TIMER_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [entries]);
 

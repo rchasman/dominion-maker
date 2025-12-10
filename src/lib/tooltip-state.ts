@@ -1,3 +1,5 @@
+const TOOLTIP_RESET_DELAY = 200;
+
 let tooltipActiveGlobal = false;
 let hasShownFirstTooltip = false;
 let resetTimeoutId: NodeJS.Timeout | null = null;
@@ -22,6 +24,6 @@ export function setTooltipActive(active: boolean): void {
   } else {
     resetTimeoutId = setTimeout(() => {
       tooltipActiveGlobal = false;
-    }, 200);
+    }, TOOLTIP_RESET_DELAY);
   }
 }

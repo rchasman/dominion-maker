@@ -5,6 +5,8 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isInitialCall, createCardSelectionDecision } from "../effect-types";
 
+const MAX_TRASH_COUNT = 4;
+
 export const chapel: CardEffect = ({
   state,
   player,
@@ -25,7 +27,7 @@ export const chapel: CardEffect = ({
         prompt: "Chapel: Trash up to 4 cards from your hand",
         cardOptions: [...playerState.hand],
         min: 0,
-        max: Math.min(4, playerState.hand.length),
+        max: Math.min(MAX_TRASH_COUNT, playerState.hand.length),
         cardBeingPlayed: "Chapel",
         stage: "trash",
       }),

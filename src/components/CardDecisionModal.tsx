@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import type { CardName, CardAction } from "../types/game-state";
 import { Card } from "./Card";
 
+const OPACITY_DRAGGING = 0.5;
+
 interface CardDecisionModalProps {
   cards: CardName[];
   actions: CardAction[];
@@ -21,13 +23,15 @@ export function CardDecisionModal({
   const defaultAction = actions.find(a => a.isDefault);
 
   // Initialize all cards with default action - use index as key
-  const [cardActions, setCardActions] = useState<Record<number, string>>(() => {
-    const initial: Record<number, string> = {};
-    cards.forEach((_, index) => {
-      initial[index] = defaultAction?.id || actions[0].id;
-    });
-    return initial;
-  });
+  const [cardActions, setCardActions] = useState<Record<number, string>>(() =>
+    cards.reduce(
+      (acc, _, index) => ({
+        ...acc,
+        [index]: defaultAction?.id || actions[0].id,
+      }),
+      {} as Record<number, string>,
+    ),
+  );
 
   const [cardOrder, setCardOrder] = useState<number[]>(cards.map((_, i) => i));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -207,13 +211,14 @@ export function CardDecisionModal({
               if (action?.id === "discard") return "discard";
               if (action?.id === "topdeck" || action?.id === "keep")
                 return "gain";
+              return undefined;
             };
 
             return (
               <div
                 key={cardIndex}
                 style={{
-                  opacity: isDragging ? 0.5 : 1,
+                  opacity: isDragging ? OPACITY_DRAGGING : 1,
                   position: "relative",
                 }}
               >

@@ -29,6 +29,42 @@ function getPhaseBorderColor(
   return "var(--color-border)";
 }
 
+interface OpponentStatsProps {
+  opponent: PlayerState;
+}
+
+function OpponentStats({ opponent }: OpponentStatsProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--space-4)",
+        fontSize: "0.75rem",
+        color: "var(--color-text-secondary)",
+      }}
+    >
+      <span>
+        Deck:{" "}
+        <strong style={{ color: "var(--color-gold)" }}>
+          {opponent.deck.length}
+        </strong>
+      </span>
+      <span>
+        Hand:{" "}
+        <strong style={{ color: "var(--color-gold)" }}>
+          {opponent.hand.length}
+        </strong>
+      </span>
+      <span>
+        Discard:{" "}
+        <strong style={{ color: "var(--color-gold)" }}>
+          {opponent.discard.length}
+        </strong>
+      </span>
+    </div>
+  );
+}
+
 export function OpponentBar({
   opponent,
   opponentId = "ai",
@@ -82,33 +118,7 @@ export function OpponentBar({
             </span>
           )}
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-4)",
-            fontSize: "0.75rem",
-            color: "var(--color-text-secondary)",
-          }}
-        >
-          <span>
-            Deck:{" "}
-            <strong style={{ color: "var(--color-gold)" }}>
-              {opponent.deck.length}
-            </strong>
-          </span>
-          <span>
-            Hand:{" "}
-            <strong style={{ color: "var(--color-gold)" }}>
-              {opponent.hand.length}
-            </strong>
-          </span>
-          <span>
-            Discard:{" "}
-            <strong style={{ color: "var(--color-gold)" }}>
-              {opponent.discard.length}
-            </strong>
-          </span>
-        </div>
+        <OpponentStats opponent={opponent} />
       </div>
       <div
         style={{

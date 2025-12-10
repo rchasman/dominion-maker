@@ -277,22 +277,24 @@ export function getCausalChain(
   eventId: string,
   allEvents: GameEvent[],
 ): Set<string> {
-  const chain = new Set([eventId]);
+  let chain = new Set([eventId]);
   let changed = true;
 
   while (changed) {
-    changed = false;
-    for (const evt of allEvents) {
+    const newChain = allEvents.reduce((acc, evt) => {
       if (
         evt.id &&
         evt.causedBy &&
         chain.has(evt.causedBy) &&
         !chain.has(evt.id)
       ) {
-        chain.add(evt.id);
-        changed = true;
+        return new Set([...acc, evt.id]);
       }
-    }
+      return acc;
+    }, chain);
+
+    changed = newChain.size !== chain.size;
+    chain = newChain;
   }
 
   return chain;
@@ -313,19 +315,25 @@ export function removeEventChain(
 
   // "Undo to here" means: keep this event and all its direct effects (causedBy this event)
   // Find the last event that is caused by (or transitively caused by) the target event
-  let lastRelatedIndex = targetIndex;
 
   // Collect all events directly or transitively caused by target
-  const causedIds = new Set<string>([eventId]);
-
-  for (let i = targetIndex + 1; i < allEvents.length; i++) {
-    const event = allEvents[i];
-    if (event.id && event.causedBy && causedIds.has(event.causedBy)) {
-      causedIds.add(event.id);
-      lastRelatedIndex = i;
-    }
-  }
+  const result = allEvents.slice(targetIndex + 1).reduce<{
+    causedIds: Set<string>;
+    lastRelatedIndex: number;
+  }>(
+    (acc, event, idx) => {
+      const absoluteIndex = targetIndex + 1 + idx;
+      if (event.id && event.causedBy && acc.causedIds.has(event.causedBy)) {
+        return {
+          causedIds: new Set([...acc.causedIds, event.id]),
+          lastRelatedIndex: absoluteIndex,
+        };
+      }
+      return acc;
+    },
+    { causedIds: new Set<string>([eventId]), lastRelatedIndex: targetIndex },
+  );
 
   // Keep everything up to and including the last related event
-  return allEvents.slice(0, lastRelatedIndex + 1);
+  return allEvents.slice(0, result.lastRelatedIndex + 1);
 }

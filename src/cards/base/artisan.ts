@@ -5,6 +5,8 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getGainableCards } from "../effect-types";
 
+const MAX_GAIN_COST = 5;
+
 export const artisan: CardEffect = ({
   state,
   player,
@@ -15,7 +17,7 @@ export const artisan: CardEffect = ({
 
   // Stage 1: Choose card to gain
   if (!decision || stage === undefined) {
-    const gainOptions = getGainableCards(state, 5);
+    const gainOptions = getGainableCards(state, MAX_GAIN_COST);
     if (gainOptions.length === 0) return { events: [] };
 
     return {

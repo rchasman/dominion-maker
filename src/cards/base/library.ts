@@ -7,6 +7,8 @@ import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
+const TARGET_HAND_SIZE = 7;
+
 // Helper to safely extract CardName[] from metadata
 function getCardNamesFromMetadata(
   metadata: Record<string, unknown> | undefined,
@@ -32,7 +34,7 @@ export const library: CardEffect = ({
   // For simplicity, we'll handle it as a single decision
 
   if (!decision || stage === undefined) {
-    const cardsNeeded = 7 - playerState.hand.length;
+    const cardsNeeded = TARGET_HAND_SIZE - playerState.hand.length;
 
     if (cardsNeeded <= 0) {
       return { events: [] };
@@ -84,25 +86,29 @@ export const library: CardEffect = ({
   const cardActions = decision.cardActions || {};
 
   // Draw cards marked "draw" by index
-  for (const [indexStr, action] of Object.entries(cardActions)) {
-    const index = parseInt(indexStr);
-    if (action === "draw" && peeked[index]) {
-      events.push({ type: "CARD_DRAWN", player, card: peeked[index] });
-    }
-  }
+  const drawEvents = Object.entries(cardActions)
+    .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
+    .filter(({ index, action }) => action === "draw" && peeked[index])
+    .map(({ index }) => ({
+      type: "CARD_DRAWN" as const,
+      player,
+      card: peeked[index],
+    }));
+
+  events.push(...drawEvents);
 
   // Discard cards marked "set_aside" by index
-  for (const [indexStr, action] of Object.entries(cardActions)) {
-    const index = parseInt(indexStr);
-    if (action === "set_aside" && peeked[index]) {
-      events.push({
-        type: "CARD_DISCARDED",
-        player,
-        card: peeked[index],
-        from: "deck",
-      });
-    }
-  }
+  const discardEvents = Object.entries(cardActions)
+    .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
+    .filter(({ index, action }) => action === "set_aside" && peeked[index])
+    .map(({ index }) => ({
+      type: "CARD_DISCARDED" as const,
+      player,
+      card: peeked[index],
+      from: "deck" as const,
+    }));
+
+  events.push(...discardEvents);
 
   return { events };
 };

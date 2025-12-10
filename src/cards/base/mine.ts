@@ -7,6 +7,8 @@ import { getGainableTreasures, isTreasureCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
+const COST_BONUS = 3;
+
 export const mine: CardEffect = ({
   state,
   player,
@@ -42,7 +44,7 @@ export const mine: CardEffect = ({
     if (!toTrash) return { events: [] };
 
     const trashCost = CARDS[toTrash].cost;
-    const maxCost = trashCost + 3;
+    const maxCost = trashCost + COST_BONUS;
 
     // Find gainable treasures
     const gainableTreasures = getGainableTreasures(state, maxCost);

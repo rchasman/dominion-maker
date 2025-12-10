@@ -7,6 +7,8 @@ import { getGainableCards } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 import { CARDS } from "../../data/cards";
 
+const COST_BONUS = 2;
+
 export const remodel: CardEffect = ({
   state,
   player,
@@ -41,7 +43,7 @@ export const remodel: CardEffect = ({
     if (!toTrash) return { events: [] };
 
     const trashCost = CARDS[toTrash].cost;
-    const maxCost = trashCost + 2;
+    const maxCost = trashCost + COST_BONUS;
     const gainOptions = getGainableCards(state, maxCost);
 
     const events: GameEvent[] = [

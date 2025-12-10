@@ -35,7 +35,7 @@ interface BoardContentProps {
     endPhase: () => void;
     hasTreasuresInHand: boolean;
     gameOver: boolean;
-    winner: PlayerId | undefined;
+    winner: string | undefined;
   };
   isPreviewMode: boolean;
   selectedCardIndices: number[];
@@ -55,6 +55,28 @@ interface BoardContentProps {
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
 }
 
+interface SupplyAreaProps {
+  displayState: GameState;
+  onBuyCard?: (card: CardName) => void;
+  canBuy: boolean;
+}
+
+function SupplyArea({ displayState, onBuyCard, canBuy }: SupplyAreaProps) {
+  return (
+    <Supply
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      state={displayState}
+      onBuyCard={onBuyCard}
+      canBuy={canBuy}
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      availableCoins={displayState.coins}
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      pendingDecision={displayState.pendingDecision}
+    />
+  );
+}
+
+// eslint-disable-next-line max-lines-per-function
 export function BoardContent({
   boardState,
   game,
@@ -116,12 +138,10 @@ export function BoardContent({
           hasTreasuresInHand={false}
         />
 
-        <Supply
-          state={displayState}
+        <SupplyArea
+          displayState={displayState}
           onBuyCard={isPreviewMode ? undefined : game.buyCard}
           canBuy={isPreviewMode ? false : canBuy}
-          availableCoins={displayState.coins}
-          pendingDecision={displayState.pendingDecision}
         />
 
         <MainPlayerArea
@@ -162,10 +182,16 @@ export function BoardContent({
         onRequestUndo={onRequestUndo}
       />
 
-      {game.gameOver && (
+      {game.gameOver && game.winner && (
         <GameOverModal
-          winner={game.winner}
-          mainPlayerId={mainPlayerId}
+          winner={
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+            game.winner as PlayerId
+          }
+          mainPlayerId={
+            /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+            mainPlayerId as PlayerId
+          }
           mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
           onNewGame={onNewGame}

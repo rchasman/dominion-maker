@@ -4,6 +4,10 @@ import { getCardImageUrl } from "../data/cards";
 import { CardTooltip } from "./CardTooltip";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 
+const TOOLTIP_DELAY_MS = 500;
+const OPACITY_DISABLED = 0.4;
+const OPACITY_DIMMED = 0.5;
+
 interface CardProps {
   name: CardName;
   onClick?: () => void;
@@ -96,7 +100,7 @@ export function Card({
       timeoutRef.current = setTimeout(() => {
         setShowTooltip(true);
         setTooltipActive(true);
-      }, 500);
+      }, TOOLTIP_DELAY_MS);
     }
   };
 
@@ -134,8 +138,8 @@ export function Card({
   };
 
   const getOpacity = () => {
-    if (disabled) return 0.4;
-    if (dimmed) return 0.5;
+    if (disabled) return OPACITY_DISABLED;
+    if (dimmed) return OPACITY_DIMMED;
     return 1;
   };
 

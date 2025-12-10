@@ -20,20 +20,21 @@ export function resetEventCounter(): void {
   eventCounter = 0;
 }
 
+const EVENT_ID_PREFIX_LENGTH = 4;
+
 /**
  * Sync the event counter with existing events (for reconnect/undo)
  * Sets counter to the highest event number found in the event log
  */
 export function syncEventCounter(events: Array<{ id?: string }>): void {
-  let maxId = 0;
-  for (const event of events) {
+  const maxId = events.reduce((max, event) => {
     if (event.id && event.id.startsWith("evt-")) {
-      const num = parseInt(event.id.slice(4), 10);
-      if (!isNaN(num) && num > maxId) {
-        maxId = num;
-      }
+      const num = parseInt(event.id.slice(EVENT_ID_PREFIX_LENGTH), 10);
+      return !isNaN(num) && num > max ? num : max;
     }
-  }
+    return max;
+  }, 0);
+
   eventCounter = maxId;
   engineLogger.debug(
     `[id-generator] Synced counter to ${maxId} from ${events.length} events`,

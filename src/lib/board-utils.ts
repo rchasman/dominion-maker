@@ -1,6 +1,9 @@
 import type { CardName, LogEntry } from "../types/game-state";
 import { CARDS } from "../data/cards";
 
+const HASH_MULTIPLIER = 5;
+const GARDENS_VP_DIVISOR = 10;
+
 /**
  * Player colors for consistent visual identification
  * Ordered by distinctiveness for 2-player games
@@ -38,11 +41,10 @@ export function getPlayerColor(playerId: string): string {
   }
 
   // For dynamic player names, use hash-based color selection
-  let hash = 0;
-  for (let i = 0; i < playerId.length; i++) {
-    hash = (hash << 5) - hash + playerId.charCodeAt(i);
-    hash = hash & hash; // Convert to 32-bit integer
-  }
+  const hash = playerId.split("").reduce((acc, char) => {
+    const shifted = (acc << HASH_MULTIPLIER) - acc + char.charCodeAt(0);
+    return shifted & shifted; // Convert to 32-bit integer
+  }, 0);
 
   const index = Math.abs(hash) % PLAYER_COLORS.length;
   return PLAYER_COLORS[index];
@@ -90,7 +92,7 @@ export function countVP(cards: CardName[]): number {
   return cards.reduce((vp, card) => {
     const { vp: cardVP } = CARDS[card];
     if (cardVP === "variable") {
-      return vp + Math.floor(cards.length / 10);
+      return vp + Math.floor(cards.length / GARDENS_VP_DIVISOR);
     }
     return vp + (typeof cardVP === "number" ? cardVP : 0);
   }, 0);
@@ -112,123 +114,122 @@ export function getAllCards({
 
 // Aggregate consecutive identical log entries for display
 // Returns aggregated entries with eventIds preserved (array of eventIds for grouped entries)
+
+const isAggregatable = (entry: LogEntry) =>
+  [
+    "play-treasure",
+    "unplay-treasure",
+    "buy-card",
+    "gain-card",
+    "discard-cards",
+    "draw-cards",
+  ].includes(entry.type);
+
+const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
+  if (next.type !== current.type) return false;
+  if (!("player" in next) || !("player" in current)) return false;
+  if (next.player !== current.player) return false;
+
+  if ("card" in next && "card" in current) {
+    return next.card === current.card;
+  }
+  return current.type === "discard-cards" || current.type === "draw-cards";
+};
+
+const collectConsecutive = (
+  log: LogEntry[],
+  startIndex: number,
+): { entries: LogEntry[]; count: number } => {
+  const current = log[startIndex];
+  const consecutiveCount = log
+    .slice(startIndex + 1)
+    .findIndex(next => !canMatchNext(current, next));
+
+  const count =
+    consecutiveCount === -1 ? log.length - startIndex : consecutiveCount + 1;
+
+  return { entries: log.slice(startIndex, startIndex + count), count };
+};
+
+const aggregateGroup = (
+  entries: LogEntry[],
+): LogEntry & { eventIds?: string[] } => {
+  const [first] = entries;
+  const count = entries.length;
+
+  const eventIds = entries
+    .map(e => e.eventId)
+    .filter((id): id is string => id !== undefined);
+  const allCards = entries.flatMap(e =>
+    (e.type === "discard-cards" || e.type === "draw-cards") && e.cards
+      ? e.cards
+      : [],
+  );
+  const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
+  const aggregatedChildren =
+    allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
+
+  if (first.type === "play-treasure" || first.type === "unplay-treasure") {
+    const totalCoins = entries.reduce(
+      (sum, e) =>
+        sum +
+        (e.type === "play-treasure" || e.type === "unplay-treasure"
+          ? e.coins
+          : 0),
+      0,
+    );
+    return {
+      ...first,
+      coins: totalCoins,
+      children:
+        count > 1
+          ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
+          : aggregatedChildren,
+      eventIds,
+    };
+  }
+
+  if (first.type === "buy-card") {
+    const totalVP = entries.reduce(
+      (sum, e) =>
+        sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0),
+      0,
+    );
+    return {
+      ...first,
+      vp: totalVP !== 0 ? totalVP : undefined,
+      children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
+      eventIds,
+    };
+  }
+
+  if (first.type === "discard-cards" || first.type === "draw-cards") {
+    const totalCount = entries.reduce(
+      (sum, e) =>
+        sum +
+        (e.type === "discard-cards" || e.type === "draw-cards" ? e.count : 0),
+      0,
+    );
+    return {
+      ...first,
+      count: totalCount,
+      cards: allCards.length > 0 ? allCards : undefined,
+      eventIds,
+    };
+  }
+
+  // gain-card
+  return {
+    ...first,
+    children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
+    eventIds,
+  };
+};
+
 export function aggregateLogEntries(
   log: LogEntry[],
 ): (LogEntry & { eventIds?: string[] })[] {
   if (log.length === 0) return [];
-
-  const isAggregatable = (entry: LogEntry) =>
-    [
-      "play-treasure",
-      "unplay-treasure",
-      "buy-card",
-      "gain-card",
-      "discard-cards",
-      "draw-cards",
-    ].includes(entry.type);
-
-  const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
-    if (next.type !== current.type) return false;
-    if (!("player" in next) || !("player" in current)) return false;
-    if (next.player !== current.player) return false;
-
-    if ("card" in next && "card" in current) {
-      return next.card === current.card;
-    }
-    return current.type === "discard-cards" || current.type === "draw-cards";
-  };
-
-  const collectConsecutive = (
-    startIndex: number,
-  ): { entries: LogEntry[]; count: number } => {
-    const current = log[startIndex];
-    const consecutiveCount = log
-      .slice(startIndex + 1)
-      .findIndex(next => !canMatchNext(current, next));
-
-    const count =
-      consecutiveCount === -1 ? log.length - startIndex : consecutiveCount + 1;
-
-    return { entries: log.slice(startIndex, startIndex + count), count };
-  };
-
-  const aggregateGroup = (
-    entries: LogEntry[],
-  ): LogEntry & { eventIds?: string[] } => {
-    const [first] = entries;
-    const count = entries.length;
-
-    const eventIds = entries
-      .map(e => e.eventId)
-      .filter((id): id is string => id !== undefined);
-    const allCards = entries.flatMap(e =>
-      (e.type === "discard-cards" || e.type === "draw-cards") && e.cards
-        ? e.cards
-        : [],
-    );
-    const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
-    const aggregatedChildren =
-      allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
-
-    if (first.type === "play-treasure" || first.type === "unplay-treasure") {
-      const totalCoins = entries.reduce(
-        (sum, e) =>
-          sum +
-          (e.type === "play-treasure" || e.type === "unplay-treasure"
-            ? e.coins
-            : 0),
-        0,
-      );
-      return {
-        ...first,
-        coins: totalCoins,
-        children:
-          count > 1
-            ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
-            : aggregatedChildren,
-        eventIds,
-      };
-    }
-
-    if (first.type === "buy-card") {
-      const totalVP = entries.reduce(
-        (sum, e) =>
-          sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0),
-        0,
-      );
-      return {
-        ...first,
-        vp: totalVP !== 0 ? totalVP : undefined,
-        children: [
-          { type: "text", message: `${count}x` },
-          ...aggregatedChildren,
-        ],
-        eventIds,
-      };
-    }
-
-    if (first.type === "discard-cards" || first.type === "draw-cards") {
-      const totalCount = entries.reduce(
-        (sum, e) =>
-          sum +
-          (e.type === "discard-cards" || e.type === "draw-cards" ? e.count : 0),
-        0,
-      );
-      return {
-        ...first,
-        count: totalCount,
-        cards: allCards.length > 0 ? allCards : undefined,
-        eventIds,
-      };
-    }
-
-    // gain-card
-    return {
-      ...first,
-      children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
-      eventIds,
-    };
-  };
 
   const result: (LogEntry & { eventIds?: string[] })[] = [];
   let i = 0;
@@ -237,7 +238,7 @@ export function aggregateLogEntries(
     const current = log[i];
 
     if (isAggregatable(current)) {
-      const { entries, count } = collectConsecutive(i);
+      const { entries, count } = collectConsecutive(log, i);
       result.push(count > 1 ? aggregateGroup(entries) : current);
       i += count;
     } else {

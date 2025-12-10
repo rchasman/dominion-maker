@@ -56,11 +56,13 @@ const AI_NAMES = [
 
 export type AIName = (typeof AI_NAMES)[number];
 
+const SHUFFLE_THRESHOLD = 0.5;
+
 /**
  * Generate two unique random AI names
  */
 export function generateAINames(): [string, string] {
-  const shuffled = [...AI_NAMES].sort(() => Math.random() - 0.5);
+  const shuffled = [...AI_NAMES].sort(() => Math.random() - SHUFFLE_THRESHOLD);
   return [shuffled[0], shuffled[1]];
 }
 

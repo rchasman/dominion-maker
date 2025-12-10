@@ -24,6 +24,11 @@ export default defineConfig([
       },
     },
     rules: {
+      // Disable for test files - handled in override below
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
       // Existing
       "no-nested-ternary": "error",
 
@@ -97,6 +102,33 @@ export default defineConfig([
       ],
       "consistent-return": "error",
       "prefer-template": "error",
+    },
+  },
+  // Test file overrides - relax rules for test globals and structure
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      // Bun test globals aren't typed, causing false positives
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      // Test files often need more flexibility
+      "max-lines-per-function": "off",
+      "max-lines": "off",
+      "max-nested-callbacks": ["error", 5],
+      "no-magic-numbers": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ForStatement",
+          message: "Use map/filter/reduce instead of for loops",
+        },
+        {
+          selector: "ForInStatement",
+          message: "Use Object.keys/entries with map instead of for...in",
+        },
+      ],
     },
   },
 ]);

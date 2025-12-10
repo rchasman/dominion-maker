@@ -5,44 +5,157 @@
  */
 import { useMultiplayer } from "../../context/multiplayer-hooks";
 
-export function LobbyRoom() {
-  const { roomCode, isHost, myPeerId, players, startGame, leaveRoom } =
-    useMultiplayer();
+const MIN_PLAYERS = 2;
+const PLAYER_FONT_WEIGHT_ACTIVE = 600;
+const PLAYER_FONT_WEIGHT_INACTIVE = 400;
 
-  const canStart = isHost && players.length >= 2;
+interface RoomCodeDisplayProps {
+  roomCode: string | null;
+}
 
+function RoomCodeDisplay({ roomCode }: RoomCodeDisplayProps) {
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        minBlockSize: "100dvh",
-        gap: "var(--space-6)",
-        background:
-          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+        gap: "var(--space-2)",
       }}
     >
-      <h1
+      <span
         style={{
-          margin: 0,
-          fontSize: "2rem",
-          color: "var(--color-gold)",
-          textShadow: "var(--shadow-glow-gold)",
-          letterSpacing: "0.25rem",
+          color: "var(--color-text-secondary)",
+          fontSize: "0.75rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.1rem",
         }}
       >
-        LOBBY
-      </h1>
+        Room Code
+      </span>
+      <div
+        style={{
+          padding: "var(--space-3) var(--space-6)",
+          background: "var(--color-bg-tertiary)",
+          border: "2px dashed var(--color-gold)",
+          borderRadius: "4px",
+          fontSize: "2rem",
+          fontFamily: "monospace",
+          color: "var(--color-gold)",
+          letterSpacing: "0.5rem",
+          fontWeight: 700,
+        }}
+      >
+        {roomCode}
+      </div>
+      <span
+        style={{
+          color: "var(--color-text-tertiary)",
+          fontSize: "0.75rem",
+        }}
+      >
+        Share this code with friends to join
+      </span>
+    </div>
+  );
+}
 
-      {/* Room Code */}
+interface PlayerItemProps {
+  player: {
+    id: string;
+    name: string;
+    isAI?: boolean;
+    connected: boolean;
+  };
+  index: number;
+  isMe: boolean;
+}
+
+function PlayerItem({ player, index, isMe }: PlayerItemProps) {
+  const fontWeight = isMe
+    ? PLAYER_FONT_WEIGHT_ACTIVE
+    : PLAYER_FONT_WEIGHT_INACTIVE;
+
+  return (
+    <div
+      key={player.id}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-3)",
+        padding: "var(--space-2)",
+        background: isMe
+          ? "rgba(34, 197, 94, 0.1)"
+          : "var(--color-bg-tertiary)",
+        borderRadius: "4px",
+        border: isMe
+          ? "1px solid rgba(34, 197, 94, 0.3)"
+          : "1px solid transparent",
+      }}
+    >
+      <span
+        style={{
+          width: "24px",
+          height: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--color-bg-primary)",
+          borderRadius: "50%",
+          fontSize: "0.75rem",
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        {index + 1}
+      </span>
+
+      <span
+        style={{
+          flex: 1,
+          color: isMe ? "var(--color-victory)" : "var(--color-text-primary)",
+          fontWeight,
+        }}
+      >
+        {player.name}
+        {isMe && " (you)"}
+        {player.isAI && " [AI]"}
+        {!player.connected && " [Disconnected]"}
+      </span>
+    </div>
+  );
+}
+
+interface PlayerListProps {
+  players: Array<{
+    id: string;
+    name: string;
+    isAI?: boolean;
+    connected: boolean;
+  }>;
+  myPeerId: string | null;
+}
+
+function PlayerList({ players, myPeerId }: PlayerListProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-3)",
+        padding: "var(--space-4)",
+        background: "var(--color-bg-secondary)",
+        border: "1px solid var(--color-border-primary)",
+        borderRadius: "8px",
+        minWidth: "300px",
+      }}
+    >
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: "var(--space-2)",
+          paddingBottom: "var(--space-2)",
+          borderBottom: "1px solid var(--color-border-primary)",
         }}
       >
         <span
@@ -53,135 +166,48 @@ export function LobbyRoom() {
             letterSpacing: "0.1rem",
           }}
         >
-          Room Code
+          Players
         </span>
-        <div
-          style={{
-            padding: "var(--space-3) var(--space-6)",
-            background: "var(--color-bg-tertiary)",
-            border: "2px dashed var(--color-gold)",
-            borderRadius: "4px",
-            fontSize: "2rem",
-            fontFamily: "monospace",
-            color: "var(--color-gold)",
-            letterSpacing: "0.5rem",
-            fontWeight: 700,
-          }}
-        >
-          {roomCode}
-        </div>
         <span
           style={{
             color: "var(--color-text-tertiary)",
             fontSize: "0.75rem",
           }}
         >
-          Share this code with friends to join
+          {players.length}/4
         </span>
       </div>
 
-      {/* Players List */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-          padding: "var(--space-4)",
-          background: "var(--color-bg-secondary)",
-          border: "1px solid var(--color-border-primary)",
-          borderRadius: "8px",
-          minWidth: "300px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            paddingBottom: "var(--space-2)",
-            borderBottom: "1px solid var(--color-border-primary)",
-          }}
-        >
-          <span
-            style={{
-              color: "var(--color-text-secondary)",
-              fontSize: "0.75rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.1rem",
-            }}
-          >
-            Players
-          </span>
-          <span
-            style={{
-              color: "var(--color-text-tertiary)",
-              fontSize: "0.75rem",
-            }}
-          >
-            {players.length}/4
-          </span>
-        </div>
+      {players.map((player, i) => (
+        <PlayerItem
+          key={player.id}
+          player={player}
+          index={i}
+          isMe={player.id === myPeerId}
+        />
+      ))}
+    </div>
+  );
+}
 
-        {players.map((player, i) => {
-          const isMe = player.id === myPeerId;
-          return (
-            <div
-              key={player.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-3)",
-                padding: "var(--space-2)",
-                background: isMe
-                  ? "rgba(34, 197, 94, 0.1)"
-                  : "var(--color-bg-tertiary)",
-                borderRadius: "4px",
-                border: isMe
-                  ? "1px solid rgba(34, 197, 94, 0.3)"
-                  : "1px solid transparent",
-              }}
-            >
-              {/* Player number */}
-              <span
-                style={{
-                  width: "24px",
-                  height: "24px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "var(--color-bg-primary)",
-                  borderRadius: "50%",
-                  fontSize: "0.75rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {i + 1}
-              </span>
+interface LobbyActionsProps {
+  isHost: boolean;
+  canStart: boolean;
+  onStartGame: () => void;
+  onLeave: () => void;
+}
 
-              {/* Player name */}
-              <span
-                style={{
-                  flex: 1,
-                  color: isMe
-                    ? "var(--color-victory)"
-                    : "var(--color-text-primary)",
-                  fontWeight: isMe ? 600 : 400,
-                }}
-              >
-                {player.name}
-                {isMe && " (you)"}
-                {player.isAI && " [AI]"}
-                {!player.connected && " [Disconnected]"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Start button (host only) */}
+function LobbyActions({
+  isHost,
+  canStart,
+  onStartGame,
+  onLeave,
+}: LobbyActionsProps) {
+  return (
+    <>
       {isHost && (
         <button
-          onClick={startGame}
+          onClick={onStartGame}
           disabled={!canStart}
           style={{
             padding: "var(--space-6) var(--space-10)",
@@ -217,9 +243,8 @@ export function LobbyRoom() {
         </p>
       )}
 
-      {/* Leave button */}
       <button
-        onClick={leaveRoom}
+        onClick={onLeave}
         style={{
           marginTop: "var(--space-4)",
           padding: "var(--space-2) var(--space-4)",
@@ -234,6 +259,51 @@ export function LobbyRoom() {
       >
         Leave Room
       </button>
+    </>
+  );
+}
+
+export function LobbyRoom() {
+  const { roomCode, isHost, myPeerId, players, startGame, leaveRoom } =
+    useMultiplayer();
+
+  const canStart = isHost && players.length >= MIN_PLAYERS;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minBlockSize: "100dvh",
+        gap: "var(--space-6)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+      }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          fontSize: "2rem",
+          color: "var(--color-gold)",
+          textShadow: "var(--shadow-glow-gold)",
+          letterSpacing: "0.25rem",
+        }}
+      >
+        LOBBY
+      </h1>
+
+      <RoomCodeDisplay roomCode={roomCode} />
+
+      <PlayerList players={players} myPeerId={myPeerId} />
+
+      <LobbyActions
+        isHost={isHost}
+        canStart={canStart}
+        onStartGame={startGame}
+        onLeave={leaveRoom}
+      />
     </div>
   );
 }

@@ -7,18 +7,51 @@ interface PerformancePaneProps {
   now?: number;
 }
 
-function getBarColor(
-  isAborted: boolean,
-  isFailed: boolean,
-  isPending: boolean,
-  isFastest: boolean,
-  isSlowest: boolean,
-): string {
-  if (isAborted) return "var(--color-text-secondary)";
-  if (isFailed) return "#ef4444";
-  if (isPending) return "var(--color-gold)";
-  if (isFastest) return "var(--color-action)";
-  if (isSlowest) return "var(--color-gold)";
+// Visual constants
+const OPACITY = {
+  PENDING: 0.5,
+  ABORTED: 0.2,
+  FAILED: 0.6,
+  NORMAL: 0.8,
+  PENDING_LINE: 0.1,
+  FAILED_LINE: 0.15,
+  LINE: 0.2,
+  PENDING_NAME: 0.6,
+  ABORTED_NAME: 0.4,
+} as const;
+
+const COLOR_FAILED = "#ef4444";
+
+// Layout constants
+const CHAR_WIDTH = {
+  TIMING: 7,
+  MODEL_NAME: 6.5,
+} as const;
+
+const LAYOUT = {
+  TOTAL_WIDTH: 288,
+  GAP: 16,
+  MIN_BAR_WIDTH: 4,
+  FONT_WEIGHT: {
+    BOLD: 700,
+    NORMAL: 400,
+  },
+} as const;
+
+interface BarStyleState {
+  isAborted: boolean;
+  isFailed: boolean;
+  isPending: boolean;
+  isFastest: boolean;
+  isSlowest: boolean;
+}
+
+function getBarColor(state: BarStyleState): string {
+  if (state.isAborted) return "var(--color-text-secondary)";
+  if (state.isFailed) return COLOR_FAILED;
+  if (state.isPending) return "var(--color-gold)";
+  if (state.isFastest) return "var(--color-action)";
+  if (state.isSlowest) return "var(--color-gold)";
   return "var(--color-text-secondary)";
 }
 
@@ -27,20 +60,20 @@ function getBarOpacity(
   isAborted: boolean,
   isFailed: boolean,
 ): number {
-  if (isPending) return 0.5;
-  if (isAborted) return 0.2;
-  if (isFailed) return 0.6;
-  return 0.8;
+  if (isPending) return OPACITY.PENDING;
+  if (isAborted) return OPACITY.ABORTED;
+  if (isFailed) return OPACITY.FAILED;
+  return OPACITY.NORMAL;
 }
 
 function getDottedLineOpacity(isPending: boolean, isFailed: boolean): number {
-  if (isPending) return 0.1;
-  if (isFailed) return 0.15;
-  return 0.2;
+  if (isPending) return OPACITY.PENDING_LINE;
+  if (isFailed) return OPACITY.FAILED_LINE;
+  return OPACITY.LINE;
 }
 
 function getDottedLineColor(isFailed: boolean, providerColor: string): string {
-  return isFailed ? "#ef4444" : providerColor;
+  return isFailed ? COLOR_FAILED : providerColor;
 }
 
 function getModelNameColor(
@@ -49,13 +82,13 @@ function getModelNameColor(
   providerColor: string,
 ): string {
   if (isAborted) return "var(--color-text-secondary)";
-  if (isFailed) return "#ef4444";
+  if (isFailed) return COLOR_FAILED;
   return providerColor;
 }
 
 function getModelNameOpacity(isPending: boolean, isAborted: boolean): number {
-  if (isPending) return 0.6;
-  if (isAborted) return 0.4;
+  if (isPending) return OPACITY.PENDING_NAME;
+  if (isAborted) return OPACITY.ABORTED_NAME;
   return 1;
 }
 
@@ -68,6 +101,360 @@ function getModelNameTitle(
   return undefined;
 }
 
+interface TimingBarProps {
+  timing: {
+    provider: string;
+    duration: number;
+    pending?: boolean;
+    failed?: boolean;
+    aborted?: boolean;
+  };
+  maxDuration: number;
+  minDuration: number;
+  hasMultipleCompleted: boolean;
+  timingWidth: number;
+  modelNameWidth: number;
+  barAreaWidth: number;
+}
+
+const PERCENTAGE_SCALE = 100;
+
+interface TimingBarState {
+  isPending: boolean;
+  isFailed: boolean;
+  isAborted: boolean;
+  isFastest: boolean;
+  isSlowest: boolean;
+  percentage: number;
+  barWidthPx: number;
+  extraSpace: number;
+}
+
+interface TimingBarCalculationContext {
+  maxDuration: number;
+  minDuration: number;
+  hasMultipleCompleted: boolean;
+  modelNameWidth: number;
+  barAreaWidth: number;
+}
+
+function calculateTimingBarState(
+  timing: TimingBarProps["timing"],
+  context: TimingBarCalculationContext,
+): TimingBarState {
+  const {
+    maxDuration,
+    minDuration,
+    hasMultipleCompleted,
+    modelNameWidth,
+    barAreaWidth,
+  } = context;
+  const isPending = timing.pending ?? false;
+  const isFailed = timing.failed ?? false;
+  const isAborted = timing.aborted ?? false;
+  const percentage =
+    maxDuration > 0 ? (timing.duration / maxDuration) * PERCENTAGE_SCALE : 0;
+  const isFastest =
+    !isPending &&
+    !isFailed &&
+    !isAborted &&
+    timing.duration === minDuration &&
+    hasMultipleCompleted;
+  const isSlowest =
+    !isPending &&
+    !isFailed &&
+    !isAborted &&
+    timing.duration === maxDuration &&
+    hasMultipleCompleted;
+
+  const thisModelNameWidth = timing.provider.length * CHAR_WIDTH.MODEL_NAME;
+  const extraSpace = modelNameWidth - thisModelNameWidth;
+  const barWidthPx = Math.max(
+    LAYOUT.MIN_BAR_WIDTH,
+    (percentage / PERCENTAGE_SCALE) * barAreaWidth,
+  );
+
+  return {
+    isPending,
+    isFailed,
+    isAborted,
+    isFastest,
+    isSlowest,
+    percentage,
+    barWidthPx,
+    extraSpace,
+  };
+}
+
+interface TimingDisplayProps {
+  timing: string;
+  color: string;
+  fontWeight: number;
+  width: number;
+}
+
+function TimingDisplay({
+  timing,
+  color,
+  fontWeight,
+  width,
+}: TimingDisplayProps) {
+  return (
+    <span
+      style={{
+        fontSize: "0.7rem",
+        color,
+        fontWeight,
+        textAlign: "left",
+        width: `${width}px`,
+        flexShrink: 0,
+        fontFamily: "monospace",
+      }}
+    >
+      {timing}
+    </span>
+  );
+}
+
+interface ModelNameDisplayProps {
+  name: string;
+  color: string;
+  opacity: number;
+  title?: string;
+  strikethrough: boolean;
+  isHelp: boolean;
+}
+
+function ModelNameDisplay({
+  name,
+  color,
+  opacity,
+  title,
+  strikethrough,
+  isHelp,
+}: ModelNameDisplayProps) {
+  return (
+    <span
+      title={title}
+      style={{
+        fontSize: "0.7rem",
+        color,
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        opacity,
+        textDecoration: strikethrough ? "line-through" : "none",
+        cursor: isHelp ? "help" : "default",
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
+interface DottedLineProps {
+  width: number;
+  color: string;
+  opacity: number;
+}
+
+function DottedLine({ width, color, opacity }: DottedLineProps) {
+  return (
+    <div
+      style={{
+        width: `${width}px`,
+        color,
+        opacity,
+        fontSize: "0.6rem",
+        lineHeight: "5px",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        letterSpacing: "1px",
+        textAlign: "left",
+        flexShrink: 0,
+      }}
+    >
+      ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+    </div>
+  );
+}
+
+interface BarVisualizationProps {
+  barWidthPx: number;
+  barColor: string;
+  barOpacity: number;
+}
+
+function BarVisualization({
+  barWidthPx,
+  barColor,
+  barOpacity,
+}: BarVisualizationProps) {
+  return (
+    <div
+      style={{
+        height: "5px",
+        width: `${barWidthPx}px`,
+        backgroundColor: barColor,
+        opacity: barOpacity,
+        borderRadius: "3px",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+function TimingBar({
+  timing,
+  maxDuration,
+  minDuration,
+  hasMultipleCompleted,
+  timingWidth,
+  modelNameWidth,
+  barAreaWidth,
+}: TimingBarProps) {
+  const state = calculateTimingBarState(timing, {
+    maxDuration,
+    minDuration,
+    hasMultipleCompleted,
+    modelNameWidth,
+    barAreaWidth,
+  });
+
+  const barState: BarStyleState = {
+    isAborted: state.isAborted,
+    isFailed: state.isFailed,
+    isPending: state.isPending,
+    isFastest: state.isFastest,
+    isSlowest: state.isSlowest,
+  };
+
+  const barColor = getBarColor(barState);
+  const fontWeight =
+    state.isPending || state.isFastest || state.isSlowest || state.isFailed
+      ? LAYOUT.FONT_WEIGHT.BOLD
+      : LAYOUT.FONT_WEIGHT.NORMAL;
+
+  return (
+    <div
+      style={{
+        marginBottom: "6px",
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+      }}
+    >
+      <TimingDisplay
+        timing={`${timing.duration.toFixed(0)}ms`}
+        color={barColor}
+        fontWeight={fontWeight}
+        width={timingWidth}
+      />
+      <BarVisualization
+        barWidthPx={state.barWidthPx}
+        barColor={barColor}
+        barOpacity={getBarOpacity(
+          state.isPending,
+          state.isAborted,
+          state.isFailed,
+        )}
+      />
+      <DottedLine
+        width={barAreaWidth - state.barWidthPx + state.extraSpace}
+        color={getDottedLineColor(
+          state.isFailed,
+          getModelColor(timing.provider),
+        )}
+        opacity={getDottedLineOpacity(state.isPending, state.isFailed)}
+      />
+      <ModelNameDisplay
+        name={timing.provider}
+        color={getModelNameColor(
+          state.isAborted,
+          state.isFailed,
+          getModelColor(timing.provider),
+        )}
+        opacity={getModelNameOpacity(state.isPending, state.isAborted)}
+        title={getModelNameTitle(state.isAborted, state.isFailed)}
+        strikethrough={state.isFailed || state.isAborted}
+        isHelp={state.isAborted || state.isFailed}
+      />
+    </div>
+  );
+}
+
+interface TimingEntry {
+  provider: string;
+  duration: number;
+  pending?: boolean;
+  failed?: boolean;
+  aborted?: boolean;
+}
+
+function buildTimingsFromLiveStatuses(
+  liveStatuses: Map<number, ModelStatus>,
+  currentTime: number,
+): TimingEntry[] {
+  const statusArray = Array.from(liveStatuses.values());
+  const hasAnyNonAbortedPending = statusArray.some(
+    s => !s.completed && !s.aborted,
+  );
+
+  // Find current max duration among non-aborted requests (for aborted items to track)
+  const nonAbortedDurations = statusArray
+    .filter(s => !s.aborted)
+    .map(s => (s.completed ? s.duration || 0 : currentTime - s.startTime));
+  const maxNonAbortedDuration =
+    nonAbortedDurations.length > 0 ? Math.max(...nonAbortedDurations) : 0;
+
+  return statusArray
+    .map(status => {
+      const isAborted = status.aborted;
+      const showAsAborted = isAborted && !hasAnyNonAbortedPending;
+      const actualDuration = status.completed
+        ? status.duration || 0
+        : currentTime - status.startTime;
+
+      // Aborted items that are still showing as pending should track the longest non-aborted duration
+      const displayDuration =
+        isAborted && hasAnyNonAbortedPending
+          ? maxNonAbortedDuration
+          : actualDuration;
+
+      return {
+        provider: status.provider,
+        duration: displayDuration,
+        pending: !status.completed || (isAborted && hasAnyNonAbortedPending),
+        failed: status.completed && status.success === false && !status.aborted,
+        aborted: showAsAborted,
+      };
+    })
+    .sort((a, b) => {
+      // Failed and aborted at bottom, then completed before pending, then by duration
+      if (a.failed && !b.failed) return 1;
+      if (!a.failed && b.failed) return -1;
+      if (a.aborted && !b.aborted) return 1;
+      if (!a.aborted && b.aborted) return -1;
+      if (a.pending && !b.pending) return 1;
+      if (!a.pending && b.pending) return -1;
+      return a.duration - b.duration;
+    });
+}
+
+function calculateWidths(timings: TimingEntry[]) {
+  const longestTimingString = Math.max(
+    ...timings.map(t => `${t.duration.toFixed(0)}ms`.length),
+  );
+  const timingWidth = longestTimingString * CHAR_WIDTH.TIMING;
+
+  const longestModelName = Math.max(...timings.map(t => t.provider.length));
+  const modelNameWidth = longestModelName * CHAR_WIDTH.MODEL_NAME;
+
+  const barAreaWidth =
+    LAYOUT.TOTAL_WIDTH - timingWidth - modelNameWidth - LAYOUT.GAP;
+
+  return { timingWidth, modelNameWidth, barAreaWidth };
+}
+
 export function PerformancePane({
   data,
   liveStatuses,
@@ -75,64 +462,13 @@ export function PerformancePane({
 }: PerformancePaneProps) {
   // eslint-disable-next-line react-hooks/purity
   const currentTime = now ?? Date.now();
-  // Build timings array from either final data or live statuses
-  let timings: Array<{
-    provider: string;
-    duration: number;
-    pending?: boolean;
-    failed?: boolean;
-    aborted?: boolean;
-  }>;
+
+  let timings: TimingEntry[];
 
   if (liveStatuses && liveStatuses.size > 0) {
-    // Use live model statuses with countup for pending
-    const statusArray = Array.from(liveStatuses.values());
-    const hasAnyNonAbortedPending = statusArray.some(
-      s => !s.completed && !s.aborted,
-    );
-
-    // Find current max duration among non-aborted requests (for aborted items to track)
-    const nonAbortedDurations = statusArray
-      .filter(s => !s.aborted)
-      .map(s => (s.completed ? s.duration || 0 : currentTime - s.startTime));
-    const maxNonAbortedDuration =
-      nonAbortedDurations.length > 0 ? Math.max(...nonAbortedDurations) : 0;
-
-    timings = statusArray
-      .map(status => {
-        const isAborted = status.aborted;
-        const showAsAborted = isAborted && !hasAnyNonAbortedPending;
-        const actualDuration = status.completed
-          ? status.duration || 0
-          : currentTime - status.startTime;
-
-        // Aborted items that are still showing as pending should track the longest non-aborted duration
-        const displayDuration =
-          isAborted && hasAnyNonAbortedPending
-            ? maxNonAbortedDuration
-            : actualDuration;
-
-        return {
-          provider: status.provider,
-          duration: displayDuration,
-          pending: !status.completed || (isAborted && hasAnyNonAbortedPending),
-          failed:
-            status.completed && status.success === false && !status.aborted,
-          aborted: showAsAborted,
-        };
-      })
-      .sort((a, b) => {
-        // Failed and aborted at bottom, then completed before pending, then by duration
-        if (a.failed && !b.failed) return 1;
-        if (!a.failed && b.failed) return -1;
-        if (a.aborted && !b.aborted) return 1;
-        if (!a.aborted && b.aborted) return -1;
-        if (a.pending && !b.pending) return 1;
-        if (!a.pending && b.pending) return -1;
-        return a.duration - b.duration;
-      });
+    timings = buildTimingsFromLiveStatuses(liveStatuses, currentTime);
   } else if (data?.timings) {
-    timings = data.timings as Array<{ provider: string; duration: number }>;
+    timings = data.timings as TimingEntry[];
   } else {
     return null;
   }
@@ -145,19 +481,8 @@ export function PerformancePane({
       ? Math.min(...completedTimings.map(t => t.duration))
       : 0;
 
-  // Calculate width needed for longest timing string (e.g., "2776ms" = 6 chars)
-  const longestTimingString = Math.max(
-    ...timings.map(t => `${t.duration.toFixed(0)}ms`.length),
-  );
-  const timingWidth = longestTimingString * 7; // ~7px per char at 0.7rem
-
-  // Calculate width needed for longest model name (fixed width for alignment)
-  const longestModelName = Math.max(...timings.map(t => t.provider.length));
-  const modelNameWidth = longestModelName * 6.5; // ~6.5px per char at 0.7rem
-
-  // Calculate fixed bar area width (normalize to shortest bar capacity)
-  // Total available ~= 288px (pane width - padding), minus timing and model name
-  const barAreaWidth = 288 - timingWidth - modelNameWidth - 16; // 16px for gaps
+  const { timingWidth, modelNameWidth, barAreaWidth } =
+    calculateWidths(timings);
 
   return (
     <div
@@ -170,126 +495,18 @@ export function PerformancePane({
       }}
     >
       <div>
-        {timings.map((timing, idx) => {
-          const isPending = timing.pending;
-          const isFailed = timing.failed;
-          const isAborted = timing.aborted;
-          const percentage =
-            maxDuration > 0 ? (timing.duration / maxDuration) * 100 : 0;
-          const isFastest =
-            !isPending &&
-            !isFailed &&
-            !isAborted &&
-            timing.duration === minDuration &&
-            completedTimings.length > 1;
-          const isSlowest =
-            !isPending &&
-            !isFailed &&
-            !isAborted &&
-            timing.duration === maxDuration &&
-            completedTimings.length > 1;
-
-          // Calculate actual width this model name takes
-          const thisModelNameWidth = timing.provider.length * 6.5;
-          // Extra space in the model column for this row
-          const extraSpace = modelNameWidth - thisModelNameWidth;
-
-          // Bar width in pixels (percentage of the fixed bar area) - grows for pending too
-          const barWidthPx = Math.max(4, (percentage / 100) * barAreaWidth);
-
-          const barColor = getBarColor(
-            isAborted,
-            isFailed,
-            isPending,
-            isFastest,
-            isSlowest,
-          );
-          const textColor = getBarColor(
-            isAborted,
-            isFailed,
-            isPending,
-            isFastest,
-            isSlowest,
-          );
-
-          return (
-            <div
-              key={idx}
-              style={{
-                marginBottom: "6px",
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "0.7rem",
-                  color: textColor,
-                  fontWeight:
-                    isPending || isFastest || isSlowest || isFailed ? 700 : 400,
-                  textAlign: "left",
-                  width: `${timingWidth}px`,
-                  flexShrink: 0,
-                  fontFamily: "monospace",
-                }}
-              >
-                {timing.duration.toFixed(0)}ms
-              </span>
-              {/* Actual timing bar - fixed pixel width based on percentage */}
-              <div
-                style={{
-                  height: "5px",
-                  width: `${barWidthPx}px`,
-                  backgroundColor: barColor,
-                  opacity: getBarOpacity(isPending, isAborted, isFailed),
-                  borderRadius: "3px",
-                  flexShrink: 0,
-                }}
-              />
-              {/* Dotted line fills rest of bar area + extra space from short model names */}
-              <div
-                style={{
-                  width: `${barAreaWidth - barWidthPx + extraSpace}px`,
-                  color: getDottedLineColor(
-                    isFailed,
-                    getModelColor(timing.provider),
-                  ),
-                  opacity: getDottedLineOpacity(isPending, isFailed),
-                  fontSize: "0.6rem",
-                  lineHeight: "5px",
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  letterSpacing: "1px",
-                  textAlign: "left",
-                  flexShrink: 0,
-                }}
-              >
-                ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
-              </div>
-              {/* Model name at the end */}
-              <span
-                title={getModelNameTitle(isAborted, isFailed)}
-                style={{
-                  fontSize: "0.7rem",
-                  color: getModelNameColor(
-                    isAborted,
-                    isFailed,
-                    getModelColor(timing.provider),
-                  ),
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  opacity: getModelNameOpacity(isPending, isAborted),
-                  textDecoration:
-                    isFailed || isAborted ? "line-through" : "none",
-                  cursor: isAborted || isFailed ? "help" : "default",
-                }}
-              >
-                {timing.provider}
-              </span>
-            </div>
-          );
-        })}
+        {timings.map((timing, idx) => (
+          <TimingBar
+            key={idx}
+            timing={timing}
+            maxDuration={maxDuration}
+            minDuration={minDuration}
+            hasMultipleCompleted={completedTimings.length > 1}
+            timingWidth={timingWidth}
+            modelNameWidth={modelNameWidth}
+            barAreaWidth={barAreaWidth}
+          />
+        ))}
       </div>
     </div>
   );

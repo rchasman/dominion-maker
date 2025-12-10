@@ -7,6 +7,26 @@ import { run } from "../src/lib/run";
 import { Agent as HttpAgent } from "node:http";
 import { Agent as HttpsAgent } from "node:https";
 
+// HTTP status codes
+const HTTP_STATUS = {
+  OK: 200,
+  NO_CONTENT: 204,
+  BAD_REQUEST: 400,
+  METHOD_NOT_ALLOWED: 405,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+// Game constants
+const INITIAL_PROVINCE_COUNT = 8;
+const INITIAL_DUCHY_COUNT = 8;
+const VP_VALUES = {
+  ESTATE: 1,
+  DUCHY: 3,
+  PROVINCE: 6,
+  CURSE: -1,
+  GARDENS_DIVISOR: 10,
+} as const;
+
 // Create HTTP agents with unlimited concurrent connections
 const httpAgent = new HttpAgent({ maxSockets: Infinity, keepAlive: true });
 const httpsAgent = new HttpsAgent({ maxSockets: Infinity, keepAlive: true });
@@ -70,6 +90,79 @@ interface VercelResponse {
   setHeader: (key: string, value: string) => VercelResponse;
 }
 
+interface CardCounts {
+  counts: Record<string, number>;
+  vp: number;
+}
+
+// Calculate VP and card counts using reduce
+function calculatePlayerStats(allCards: string[]): CardCounts {
+  return allCards.reduce<CardCounts>(
+    (acc, card) => {
+      const newCounts = { ...acc.counts, [card]: (acc.counts[card] || 0) + 1 };
+      const vpDelta = run(() => {
+        if (card === "Estate") return VP_VALUES.ESTATE;
+        if (card === "Duchy") return VP_VALUES.DUCHY;
+        if (card === "Province") return VP_VALUES.PROVINCE;
+        if (card === "Curse") return VP_VALUES.CURSE;
+        if (card === "Gardens")
+          return Math.floor(allCards.length / VP_VALUES.GARDENS_DIVISOR);
+        return 0;
+      });
+      return { counts: newCounts, vp: acc.vp + vpDelta };
+    },
+    { counts: {}, vp: 0 },
+  );
+}
+
+// Build supply status string
+function buildSupplyStatus(supply: Record<string, number>): string {
+  const provincesLeft = supply["Province"] ?? INITIAL_PROVINCE_COUNT;
+  const duchiesLeft = supply["Duchy"] ?? INITIAL_DUCHY_COUNT;
+  const emptyPiles = Object.entries(supply)
+    .filter(([, count]) => count === 0)
+    .map(([card]) => card)
+    .join(", ");
+  return `SUPPLY: Provinces ${provincesLeft}/${INITIAL_PROVINCE_COUNT}, Duchies ${duchiesLeft}/${INITIAL_DUCHY_COUNT}${emptyPiles ? `, Empty piles: ${emptyPiles}` : ""}`;
+}
+
+// Build player deck information
+function buildPlayerDeckInfo(
+  playerIds: string[],
+  currentState: GameState,
+): string {
+  return playerIds
+    .map(playerId => {
+      const player = currentState.players[playerId];
+      const allCards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.discard,
+        ...player.inPlay,
+      ];
+
+      const { counts, vp } = calculatePlayerStats(allCards);
+
+      const summary = Object.entries(counts)
+        .sort(([, a], [, b]) => b - a)
+        .map(([card, count]) => `${count}x ${card}`)
+        .join(", ");
+
+      return `${playerId.toUpperCase()} (${vp} VP, ${allCards.length} cards): ${summary}`;
+    })
+    .join("\n");
+}
+
+// Parse request body safely
+async function parseRequestBody(
+  req: VercelRequest,
+): Promise<{ currentState: GameState }> {
+  const rawBody = req.body || (req.text ? await req.text() : "{}");
+  const parsed: unknown =
+    typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+  return parsed as { currentState: GameState };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -77,24 +170,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
-    return res.status(204).send("");
+    return res.status(HTTP_STATUS.NO_CONTENT).send("");
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res
+      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
+      .json({ error: "Method not allowed" });
   }
 
   try {
-    const rawBody = req.body || (req.text ? await req.text() : "{}");
-    const body = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-
-    const { currentState } = body as {
-      currentState: GameState;
-    };
+    const { currentState } = await parseRequestBody(req);
 
     if (!currentState) {
       return res
-        .status(400)
+        .status(HTTP_STATUS.BAD_REQUEST)
         .json({ error: "Missing required field: currentState" });
     }
 
@@ -103,64 +193,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // If no turn history yet, return empty object
     if (!turnHistory) {
-      return res.status(200).json({ strategySummary: {} });
+      return res.status(HTTP_STATUS.OK).json({ strategySummary: {} });
     }
 
     // Get all player IDs
     const playerIds = Object.keys(currentState.players);
 
     // Build comprehensive game state context
-    const gameContext: string[] = [];
+    const gameProgress = `GAME STATE: Turn ${currentState.turn}, Phase: ${currentState.phase}`;
+    const supplyStatus = buildSupplyStatus(currentState.supply);
+    const deckInfo = buildPlayerDeckInfo(playerIds, currentState);
 
-    // Game progress
-    gameContext.push(
-      `GAME STATE: Turn ${currentState.turn}, Phase: ${currentState.phase}`,
-    );
-
-    // Supply status
-    const provincesLeft = currentState.supply["Province"] ?? 8;
-    const duchiesLeft = currentState.supply["Duchy"] ?? 8;
-    const emptyPiles = Object.entries(currentState.supply)
-      .filter(([, count]) => count === 0)
-      .map(([card]) => card)
-      .join(", ");
-    gameContext.push(
-      `SUPPLY: Provinces ${provincesLeft}/8, Duchies ${duchiesLeft}/8${emptyPiles ? `, Empty piles: ${emptyPiles}` : ""}`,
-    );
-
-    // Build detailed player info with VP scores
-    const deckInfo = playerIds
-      .map(playerId => {
-        const player = currentState.players[playerId];
-        const allCards = [
-          ...player.deck,
-          ...player.hand,
-          ...player.discard,
-          ...player.inPlay,
-        ];
-
-        // Calculate VP
-        let vp = 0;
-        const cardCounts: Record<string, number> = {};
-        for (const card of allCards) {
-          cardCounts[card] = (cardCounts[card] || 0) + 1;
-          if (card === "Estate") vp += 1;
-          else if (card === "Duchy") vp += 3;
-          else if (card === "Province") vp += 6;
-          else if (card === "Curse") vp -= 1;
-          else if (card === "Gardens") vp += Math.floor(allCards.length / 10);
-        }
-
-        const summary = Object.entries(cardCounts)
-          .sort(([, a], [, b]) => b - a)
-          .map(([card, count]) => `${count}x ${card}`)
-          .join(", ");
-
-        return `${playerId.toUpperCase()} (${vp} VP, ${allCards.length} cards): ${summary}`;
-      })
-      .join("\n");
-
-    const prompt = `${gameContext.join("\n")}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
+    const prompt = `${gameProgress}\n${supplyStatus}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use Claude Opus for high-quality strategy analysis
     const model = gateway("claude-opus-4-5-20251101");
@@ -175,25 +219,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     apiLogger.info("Strategy analysis completed");
 
-    return res.status(200).json({
+    return res.status(HTTP_STATUS.OK).json({
       strategySummary: result.object.players,
     });
   } catch (err) {
     const error = err as Error;
 
+    type ErrorWithDetails = Error & {
+      details?: unknown;
+      error?: unknown;
+      issues?: unknown;
+    };
+
+    const errorWithDetails = error as ErrorWithDetails;
+
     // Extract detailed error information
     const errorDetails = {
       message: error.message,
-      cause: error.cause,
+      cause: "cause" in error ? error.cause : undefined,
       stack: error.stack,
-      // @ts-expect-error - Check for additional error properties
-      details: error.details || error.error || error.issues,
+      details:
+        errorWithDetails.details ||
+        errorWithDetails.error ||
+        errorWithDetails.issues,
     };
 
     apiLogger.error("Strategy analysis failed:", errorDetails);
 
-    return res.status(500).json({
-      error: 500,
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      error: HTTP_STATUS.INTERNAL_SERVER_ERROR,
       message: `Strategy analysis failed: ${error.message}`,
       details: errorDetails,
     });

@@ -44,8 +44,8 @@ export function computeBoardState(params: BoardStateParams): BoardState {
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
   const playerIds = getPlayerIds(state, gameMode);
-  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX] as Player;
-  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX] as Player;
+  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX];
+  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX];
 
   const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
 
@@ -62,13 +62,13 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   const mainPlayerVP = countVP(getAllCards(mainPlayer));
   const opponentVP = countVP(getAllCards(opponent));
 
-  const hint = getHintText(
+  const hint = getHintText({
     displayState,
     mainPlayerId,
     isMainPlayerTurn,
     hasPlayableActions,
     hasTreasuresInHand,
-  );
+  });
 
   const isOpponentAI =
     gameMode !== "multiplayer" &&

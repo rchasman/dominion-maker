@@ -11,42 +11,81 @@ interface ReconnectScreenProps {
   onBack: () => void;
 }
 
-export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
-  const { reconnectToSavedRoom, error } = useMultiplayer();
-  const [isReconnecting, setIsReconnecting] = useState(false);
+const BUTTON_OPACITY_DISABLED = 0.7;
 
-  const handleReconnect = async () => {
-    setIsReconnecting(true);
-    try {
-      await reconnectToSavedRoom();
-    } catch (e) {
-      uiLogger.error("[ReconnectScreen] Reconnect failed:", e);
-      setIsReconnecting(false);
-    }
-  };
+interface ReconnectButtonsProps {
+  isReconnecting: boolean;
+  onReconnect: () => void;
+  onStartNew: () => void;
+}
 
-  const handleStartNew = () => {
-    // Clear saved session
-    localStorage.removeItem("dominion-maker-multiplayer-events");
-    localStorage.removeItem("dominion-maker-multiplayer-room");
-    // Reload to reset MultiplayerProvider state
-    window.location.reload();
-  };
-
+function ReconnectButtons({
+  isReconnecting,
+  onReconnect,
+  onStartNew,
+}: ReconnectButtonsProps) {
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100dvh",
-        background:
-          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
-        padding: "var(--space-4)",
-        gap: "var(--space-6)",
+        gap: "var(--space-3)",
+        alignItems: "stretch",
+        minWidth: "300px",
       }}
     >
+      <button
+        onClick={onReconnect}
+        disabled={isReconnecting}
+        style={{
+          padding: "var(--space-6) var(--space-10)",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+          color: "#fff",
+          border: "2px solid #3b82f6",
+          cursor: isReconnecting ? "wait" : "pointer",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem",
+          fontFamily: "inherit",
+          boxShadow: "var(--shadow-lg)",
+          opacity: isReconnecting ? BUTTON_OPACITY_DISABLED : 1,
+          borderRadius: "4px",
+        }}
+      >
+        {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
+      </button>
+
+      <button
+        onClick={onStartNew}
+        disabled={isReconnecting}
+        style={{
+          padding: "var(--space-4) var(--space-8)",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          background: "var(--color-bg-secondary)",
+          color: "var(--color-text-primary)",
+          border: "1px solid var(--color-border-primary)",
+          cursor: isReconnecting ? "not-allowed" : "pointer",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem",
+          fontFamily: "inherit",
+          borderRadius: "4px",
+        }}
+      >
+        Start New Game
+      </button>
+    </div>
+  );
+}
+
+interface ScreenHeaderProps {
+  error: string | null;
+}
+
+function ScreenHeader({ error }: ScreenHeaderProps) {
+  return (
+    <>
       <h1
         style={{
           margin: 0,
@@ -83,58 +122,53 @@ export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
       >
         You have an active game session
       </p>
+    </>
+  );
+}
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
-          alignItems: "stretch",
-          minWidth: "300px",
-        }}
-      >
-        <button
-          onClick={handleReconnect}
-          disabled={isReconnecting}
-          style={{
-            padding: "var(--space-6) var(--space-10)",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
-            color: "#fff",
-            border: "2px solid #3b82f6",
-            cursor: isReconnecting ? "wait" : "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.125rem",
-            fontFamily: "inherit",
-            boxShadow: "var(--shadow-lg)",
-            opacity: isReconnecting ? 0.7 : 1,
-            borderRadius: "4px",
-          }}
-        >
-          {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
-        </button>
+export function ReconnectScreen({ onBack }: ReconnectScreenProps) {
+  const { reconnectToSavedRoom, error } = useMultiplayer();
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
-        <button
-          onClick={handleStartNew}
-          disabled={isReconnecting}
-          style={{
-            padding: "var(--space-4) var(--space-8)",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            background: "var(--color-bg-secondary)",
-            color: "var(--color-text-primary)",
-            border: "1px solid var(--color-border-primary)",
-            cursor: isReconnecting ? "not-allowed" : "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.125rem",
-            fontFamily: "inherit",
-            borderRadius: "4px",
-          }}
-        >
-          Start New Game
-        </button>
-      </div>
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    try {
+      await reconnectToSavedRoom();
+    } catch (e) {
+      uiLogger.error("[ReconnectScreen] Reconnect failed:", e);
+      setIsReconnecting(false);
+    }
+  };
+
+  const handleStartNew = () => {
+    // Clear saved session
+    localStorage.removeItem("dominion-maker-multiplayer-events");
+    localStorage.removeItem("dominion-maker-multiplayer-room");
+    // Reload to reset MultiplayerProvider state
+    window.location.reload();
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100dvh",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+        padding: "var(--space-4)",
+        gap: "var(--space-6)",
+      }}
+    >
+      <ScreenHeader error={error} />
+
+      <ReconnectButtons
+        isReconnecting={isReconnecting}
+        onReconnect={handleReconnect}
+        onStartNew={handleStartNew}
+      />
 
       <button
         onClick={onBack}

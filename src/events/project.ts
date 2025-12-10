@@ -52,26 +52,32 @@ export function getEventsForTurn(
   events: GameEvent[],
   turn: number,
 ): GameEvent[] {
-  const turnEvents: GameEvent[] = [];
-  let currentTurn = 0;
-  let inTargetTurn = false;
+  const result = events.reduce<{
+    turnEvents: GameEvent[];
+    currentTurn: number;
+    inTargetTurn: boolean;
+    done: boolean;
+  }>(
+    (acc, event) => {
+      if (acc.done) return acc;
 
-  for (const event of events) {
-    if (event.type === "TURN_STARTED") {
-      currentTurn = event.turn;
-      inTargetTurn = currentTurn === turn;
-    }
+      const currentTurn =
+        event.type === "TURN_STARTED" ? event.turn : acc.currentTurn;
+      const inTargetTurn = currentTurn === turn;
 
-    if (inTargetTurn) {
-      turnEvents.push(event);
-    }
+      const turnEvents = inTargetTurn
+        ? [...acc.turnEvents, event]
+        : acc.turnEvents;
 
-    if (inTargetTurn && event.type === "TURN_STARTED" && currentTurn > turn) {
-      break;
-    }
-  }
+      const done =
+        inTargetTurn && event.type === "TURN_STARTED" && currentTurn > turn;
 
-  return turnEvents;
+      return { turnEvents, currentTurn, inTargetTurn, done };
+    },
+    { turnEvents: [], currentTurn: 0, inTargetTurn: false, done: false },
+  );
+
+  return result.turnEvents;
 }
 
 /**
@@ -86,9 +92,11 @@ export function findTurnStartIndex(events: GameEvent[], turn: number): number {
  * Count events by type (for debugging/analytics).
  */
 export function countEventsByType(events: GameEvent[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const event of events) {
-    counts[event.type] = (counts[event.type] || 0) + 1;
-  }
-  return counts;
+  return events.reduce(
+    (counts, event) => ({
+      ...counts,
+      [event.type]: (counts[event.type] || 0) + 1,
+    }),
+    {} as Record<string, number>,
+  );
 }

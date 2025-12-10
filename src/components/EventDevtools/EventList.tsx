@@ -62,6 +62,78 @@ function renderEventRightButton({
   return null;
 }
 
+interface EventItemProps {
+  event: GameEvent;
+  events: GameEvent[];
+  selectedEventId: string | null;
+  scrubberIndex: number | null;
+  onEventClick: (
+    event: GameEvent,
+    eventIndex: number,
+    isScrubberPosition: boolean,
+  ) => void;
+  onBranchFrom: ((eventId: string) => void) | undefined;
+  handleBranch: (eventId: string | undefined) => void;
+}
+
+function EventItem({
+  event,
+  events,
+  selectedEventId,
+  scrubberIndex,
+  onEventClick,
+  onBranchFrom,
+  handleBranch,
+}: EventItemProps) {
+  const eventIndex = events.indexOf(event);
+  const isSelected =
+    selectedEventId === event.id || scrubberIndex === eventIndex;
+  const isRoot = isRootCauseEvent(event);
+  const hasParent = Boolean(event.causedBy);
+  const isScrubberPosition = scrubberIndex === eventIndex;
+
+  return (
+    <div
+      key={`${event.id}-${eventIndex}`}
+      data-event-index={eventIndex}
+      onClick={() => {
+        onEventClick(event, eventIndex, isScrubberPosition);
+      }}
+      style={{
+        ...styles.eventItem,
+        background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
+        borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
+        paddingLeft: hasParent
+          ? `${PADDING_LEFT_NESTED}px`
+          : `${PADDING_LEFT_BASE}px`,
+        position: "relative",
+        borderRight: isScrubberPosition
+          ? `${BORDER_RIGHT_WIDTH}px solid #6366f1`
+          : "none",
+      }}
+    >
+      {hasParent && <span style={styles.causalArrow}>{CAUSAL_ARROW}</span>}
+      <span style={styles.eventId}>{event.id}</span>
+      <span
+        style={{
+          ...styles.eventType,
+          color: EVENT_COLORS[event.type] || "#6b7280",
+        }}
+      >
+        {event.type}
+      </span>
+      <span style={styles.eventDetail}>{formatEvent(event)}</span>
+      {renderEventRightButton({
+        isScrubberPosition,
+        isRoot,
+        eventId: event.id,
+        onBranchFrom,
+        handleBranch,
+      })}
+    </div>
+  );
+}
+
 /**
  * Event list rendering
  */
@@ -83,66 +155,6 @@ export function EventList({
     [onBranchFrom],
   );
 
-  const renderEvent = useCallback(
-    (event: GameEvent) => {
-      const eventIndex = events.indexOf(event);
-      const isSelected =
-        selectedEventId === event.id || scrubberIndex === eventIndex;
-      const isRoot = isRootCauseEvent(event);
-      const hasParent = Boolean(event.causedBy);
-      const isScrubberPosition = scrubberIndex === eventIndex;
-
-      return (
-        <div
-          key={`${event.id}-${eventIndex}`}
-          data-event-index={eventIndex}
-          onClick={() => {
-            onEventClick(event, eventIndex, isScrubberPosition);
-          }}
-          style={{
-            ...styles.eventItem,
-            background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
-            borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
-            paddingLeft: hasParent
-              ? `${PADDING_LEFT_NESTED}px`
-              : `${PADDING_LEFT_BASE}px`,
-            position: "relative",
-            borderRight: isScrubberPosition
-              ? `${BORDER_RIGHT_WIDTH}px solid #6366f1`
-              : "none",
-          }}
-        >
-          {hasParent && <span style={styles.causalArrow}>{CAUSAL_ARROW}</span>}
-          <span style={styles.eventId}>{event.id}</span>
-          <span
-            style={{
-              ...styles.eventType,
-              color: EVENT_COLORS[event.type] || "#6b7280",
-            }}
-          >
-            {event.type}
-          </span>
-          <span style={styles.eventDetail}>{formatEvent(event)}</span>
-          {renderEventRightButton({
-            isScrubberPosition,
-            isRoot,
-            eventId: event.id,
-            onBranchFrom,
-            handleBranch,
-          })}
-        </div>
-      );
-    },
-    [
-      events,
-      selectedEventId,
-      scrubberIndex,
-      onEventClick,
-      onBranchFrom,
-      handleBranch,
-    ],
-  );
-
   return (
     <div
       ref={listRef}
@@ -151,7 +163,18 @@ export function EventList({
         flex: "0 1 50%",
       }}
     >
-      {filteredEvents.map(renderEvent)}
+      {filteredEvents.map(event => (
+        <EventItem
+          key={`${event.id}-${events.indexOf(event)}`}
+          event={event}
+          events={events}
+          selectedEventId={selectedEventId}
+          scrubberIndex={scrubberIndex}
+          onEventClick={onEventClick}
+          onBranchFrom={onBranchFrom}
+          handleBranch={handleBranch}
+        />
+      ))}
     </div>
   );
 }

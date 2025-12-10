@@ -11,63 +11,218 @@ interface CreateJoinScreenProps {
   onBack: () => void;
 }
 
-export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
-  const {
-    createRoom,
-    joinRoom,
-    isConnecting,
-    isReconnecting,
-    error,
-    hasSavedSession,
-    reconnectToSavedRoom,
-  } = useMultiplayer();
+const MAX_RANDOM_PLAYER_NUMBER = 9999;
+const MIN_ROOM_CODE_LENGTH = 6;
+const BUTTON_OPACITY_DISABLED = 0.7;
 
-  // Auto-reconnect on mount if saved session exists
-  useEffect(() => {
-    if (hasSavedSession && !isConnecting && !isReconnecting) {
-      uiLogger.debug("[CreateJoinScreen] Auto-reconnecting to saved session");
-      reconnectToSavedRoom().catch(e => {
-        uiLogger.error("[CreateJoinScreen] Auto-reconnect failed:", e);
-      });
-    }
-  }, [hasSavedSession, reconnectToSavedRoom, isConnecting, isReconnecting]);
+function generateRandomPlayerName() {
+  return `Player${Math.floor(Math.random() * MAX_RANDOM_PLAYER_NUMBER)}`;
+}
 
-  const [joinCode, setJoinCode] = useState("");
-  const [showJoinInput, setShowJoinInput] = useState(false);
+const baseButtonStyle = {
+  padding: "var(--space-6) var(--space-10)",
+  fontSize: "0.875rem",
+  fontWeight: 600,
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.125rem",
+  fontFamily: "inherit",
+  boxShadow: "var(--shadow-lg)",
+  borderRadius: "4px",
+};
 
-  const handleCreate = async () => {
-    try {
-      // Auto-generate player name
-      const randomName = `Player${Math.floor(Math.random() * 9999)}`;
-      await createRoom(randomName);
-    } catch {
-      // Error is handled in context
-    }
-  };
+const primaryButtonStyle = {
+  ...baseButtonStyle,
+  background:
+    "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+  color: "#fff",
+  border: "2px solid var(--color-victory)",
+};
 
-  const handleJoin = async () => {
-    if (joinCode.length < 6) return;
-    try {
-      const randomName = `Player${Math.floor(Math.random() * 9999)}`;
-      await joinRoom(joinCode.trim(), randomName);
-    } catch {
-      // Error is handled in context
-    }
-  };
+const reconnectButtonStyle = {
+  ...baseButtonStyle,
+  background: "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
+  color: "#fff",
+  border: "2px solid #3b82f6",
+};
+
+const secondaryButtonStyle = {
+  ...baseButtonStyle,
+  background: "var(--color-bg-secondary)",
+  color: "var(--color-text-primary)",
+  border: "1px solid var(--color-border-primary)",
+};
+
+interface ActionButtonsProps {
+  hasSavedSession: boolean;
+  isConnecting: boolean;
+  isReconnecting: boolean;
+  onReconnect: () => void;
+  onCreate: () => void;
+  onJoin: () => void;
+}
+
+function ActionButtons({
+  hasSavedSession,
+  isConnecting,
+  isReconnecting,
+  onReconnect,
+  onCreate,
+  onJoin,
+}: ActionButtonsProps) {
+  const isDisabled = isConnecting || isReconnecting;
+  const opacity = isDisabled ? BUTTON_OPACITY_DISABLED : 1;
+  const cursor = isDisabled ? "wait" : "pointer";
 
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minBlockSize: "100dvh",
-        gap: "var(--space-8)",
-        background:
-          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+        gap: "var(--space-3)",
+        alignItems: "stretch",
+        minWidth: "300px",
       }}
     >
+      {hasSavedSession && (
+        <button
+          onClick={onReconnect}
+          disabled={isDisabled}
+          style={{ ...reconnectButtonStyle, cursor, opacity }}
+        >
+          {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
+        </button>
+      )}
+      <button
+        onClick={onCreate}
+        disabled={isDisabled}
+        style={{ ...primaryButtonStyle, cursor, opacity }}
+      >
+        {isConnecting ? "Creating..." : "Create Room"}
+      </button>
+      <button
+        onClick={onJoin}
+        disabled={isDisabled}
+        style={{
+          ...secondaryButtonStyle,
+          cursor: isDisabled ? "not-allowed" : "pointer",
+        }}
+      >
+        Join Room
+      </button>
+    </div>
+  );
+}
+
+interface RoomCodeInputProps {
+  value: string;
+  onChange: (code: string) => void;
+}
+
+function RoomCodeInput({ value, onChange }: RoomCodeInputProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-2)",
+        alignItems: "center",
+      }}
+    >
+      <label
+        style={{
+          color: "var(--color-text-secondary)",
+          fontSize: "0.75rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.1rem",
+        }}
+      >
+        Room Code
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value.toUpperCase())}
+        placeholder="ABCDEF"
+        maxLength={MIN_ROOM_CODE_LENGTH}
+        style={{
+          padding: "var(--space-3) var(--space-4)",
+          fontSize: "1.5rem",
+          background: "var(--color-bg-secondary)",
+          border: "1px solid var(--color-border-primary)",
+          borderRadius: "4px",
+          color: "var(--color-text-primary)",
+          width: "150px",
+          textAlign: "center",
+          fontFamily: "monospace",
+          letterSpacing: "0.25rem",
+        }}
+      />
+    </div>
+  );
+}
+
+interface JoinInputProps {
+  joinCode: string;
+  isConnecting: boolean;
+  onJoinCodeChange: (code: string) => void;
+  onJoin: () => void;
+  onBack: () => void;
+}
+
+function JoinInput({
+  joinCode,
+  isConnecting,
+  onJoinCodeChange,
+  onJoin,
+  onBack,
+}: JoinInputProps) {
+  const isCodeValid = joinCode.length >= MIN_ROOM_CODE_LENGTH;
+  const isDisabled = isConnecting || !isCodeValid;
+
+  const buttonStyle = {
+    ...baseButtonStyle,
+    background: isCodeValid
+      ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
+      : "var(--color-bg-tertiary)",
+    color: isCodeValid ? "#fff" : "var(--color-text-tertiary)",
+    border: isCodeValid
+      ? "2px solid var(--color-victory)"
+      : "2px solid var(--color-border-primary)",
+    cursor: isDisabled ? "not-allowed" : "pointer",
+    opacity: isConnecting ? BUTTON_OPACITY_DISABLED : 1,
+  };
+
+  return (
+    <>
+      <RoomCodeInput value={joinCode} onChange={onJoinCodeChange} />
+      <button onClick={onJoin} disabled={isDisabled} style={buttonStyle}>
+        {isConnecting ? "Joining..." : "Join Room"}
+      </button>
+      <button
+        onClick={onBack}
+        style={{
+          padding: "var(--space-2) var(--space-4)",
+          fontSize: "0.75rem",
+          background: "transparent",
+          color: "var(--color-text-tertiary)",
+          border: "none",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        Back
+      </button>
+    </>
+  );
+}
+
+interface ScreenHeaderProps {
+  error: string | null;
+}
+
+function ScreenHeader({ error }: ScreenHeaderProps) {
+  return (
+    <>
       <h1
         style={{
           margin: 0,
@@ -94,188 +249,145 @@ export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
           {error}
         </div>
       )}
+    </>
+  );
+}
 
-      {!showJoinInput && (
-        <>
-          {hasSavedSession && (
-            <p
-              style={{
-                color: "var(--color-text-secondary)",
-                margin: 0,
-                fontSize: "0.875rem",
-              }}
-            >
-              You have an active game session
-            </p>
-          )}
+interface ScreenContentProps {
+  showJoinInput: boolean;
+  hasSavedSession: boolean;
+  isConnecting: boolean;
+  isReconnecting: boolean;
+  joinCode: string;
+  onReconnect: () => void;
+  onCreate: () => void;
+  onShowJoin: () => void;
+  onJoinCodeChange: (code: string) => void;
+  onJoin: () => void;
+  onBackFromJoin: () => void;
+}
 
-          {/* Action Buttons */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-3)",
-              alignItems: "stretch",
-              minWidth: "300px",
-            }}
-          >
-            {hasSavedSession && (
-              <button
-                onClick={reconnectToSavedRoom}
-                disabled={isConnecting || isReconnecting}
-                style={{
-                  padding: "var(--space-6) var(--space-10)",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  background:
-                    "linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%)",
-                  color: "#fff",
-                  border: "2px solid #3b82f6",
-                  cursor: isConnecting || isReconnecting ? "wait" : "pointer",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.125rem",
-                  fontFamily: "inherit",
-                  boxShadow: "var(--shadow-lg)",
-                  opacity: isConnecting || isReconnecting ? 0.7 : 1,
-                  borderRadius: "4px",
-                }}
-              >
-                {isReconnecting ? "Reconnecting..." : "Rejoin Room"}
-              </button>
-            )}
-            <button
-              onClick={handleCreate}
-              disabled={isConnecting || isReconnecting}
-              style={{
-                padding: "var(--space-6) var(--space-10)",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                background:
-                  "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-                color: "#fff",
-                border: "2px solid var(--color-victory)",
-                cursor: isConnecting || isReconnecting ? "wait" : "pointer",
-                textTransform: "uppercase",
-                letterSpacing: "0.125rem",
-                fontFamily: "inherit",
-                boxShadow: "var(--shadow-lg)",
-                opacity: isConnecting || isReconnecting ? 0.7 : 1,
-                borderRadius: "4px",
-              }}
-            >
-              {isConnecting ? "Creating..." : "Create Room"}
-            </button>
-            <button
-              onClick={() => setShowJoinInput(true)}
-              disabled={isConnecting || isReconnecting}
-              style={{
-                padding: "var(--space-6) var(--space-10)",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                background: "var(--color-bg-secondary)",
-                color: "var(--color-text-primary)",
-                border: "1px solid var(--color-border-primary)",
-                cursor:
-                  isConnecting || isReconnecting ? "not-allowed" : "pointer",
-                textTransform: "uppercase",
-                letterSpacing: "0.125rem",
-                fontFamily: "inherit",
-                boxShadow: "var(--shadow-lg)",
-                borderRadius: "4px",
-              }}
-            >
-              Join Room
-            </button>
-          </div>
-        </>
+function ScreenContent({
+  showJoinInput,
+  hasSavedSession,
+  isConnecting,
+  isReconnecting,
+  joinCode,
+  onReconnect,
+  onCreate,
+  onShowJoin,
+  onJoinCodeChange,
+  onJoin,
+  onBackFromJoin,
+}: ScreenContentProps) {
+  if (showJoinInput) {
+    return (
+      <JoinInput
+        joinCode={joinCode}
+        isConnecting={isConnecting}
+        onJoinCodeChange={onJoinCodeChange}
+        onJoin={onJoin}
+        onBack={onBackFromJoin}
+      />
+    );
+  }
+
+  return (
+    <>
+      {hasSavedSession && (
+        <p
+          style={{
+            color: "var(--color-text-secondary)",
+            margin: 0,
+            fontSize: "0.875rem",
+          }}
+        >
+          You have an active game session
+        </p>
       )}
 
-      {showJoinInput && (
-        <>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-2)",
-              alignItems: "center",
-            }}
-          >
-            <label
-              style={{
-                color: "var(--color-text-secondary)",
-                fontSize: "0.75rem",
-                textTransform: "uppercase",
-                letterSpacing: "0.1rem",
-              }}
-            >
-              Room Code
-            </label>
-            <input
-              type="text"
-              value={joinCode}
-              onChange={e => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="ABCDEF"
-              maxLength={6}
-              style={{
-                padding: "var(--space-3) var(--space-4)",
-                fontSize: "1.5rem",
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border-primary)",
-                borderRadius: "4px",
-                color: "var(--color-text-primary)",
-                width: "150px",
-                textAlign: "center",
-                fontFamily: "monospace",
-                letterSpacing: "0.25rem",
-              }}
-            />
-          </div>
-          <button
-            onClick={handleJoin}
-            disabled={isConnecting || joinCode.length < 6}
-            style={{
-              padding: "var(--space-6) var(--space-10)",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              background:
-                joinCode.length >= 6
-                  ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
-                  : "var(--color-bg-tertiary)",
-              color:
-                joinCode.length >= 6 ? "#fff" : "var(--color-text-tertiary)",
-              border:
-                joinCode.length >= 6
-                  ? "2px solid var(--color-victory)"
-                  : "2px solid var(--color-border-primary)",
-              cursor:
-                isConnecting || joinCode.length < 6 ? "not-allowed" : "pointer",
-              textTransform: "uppercase",
-              letterSpacing: "0.125rem",
-              fontFamily: "inherit",
-              boxShadow: "var(--shadow-lg)",
-              opacity: isConnecting ? 0.7 : 1,
-            }}
-          >
-            {isConnecting ? "Joining..." : "Join Room"}
-          </button>
-          <button
-            onClick={() => setShowJoinInput(false)}
-            style={{
-              padding: "var(--space-2) var(--space-4)",
-              fontSize: "0.75rem",
-              background: "transparent",
-              color: "var(--color-text-tertiary)",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Back
-          </button>
-        </>
-      )}
+      <ActionButtons
+        hasSavedSession={hasSavedSession}
+        isConnecting={isConnecting}
+        isReconnecting={isReconnecting}
+        onReconnect={onReconnect}
+        onCreate={onCreate}
+        onJoin={onShowJoin}
+      />
+    </>
+  );
+}
 
-      {/* Back to main menu */}
+export function CreateJoinScreen({ onBack }: CreateJoinScreenProps) {
+  const {
+    createRoom,
+    joinRoom,
+    isConnecting,
+    isReconnecting,
+    error,
+    hasSavedSession,
+    reconnectToSavedRoom,
+  } = useMultiplayer();
+
+  // Auto-reconnect on mount if saved session exists
+  useEffect(() => {
+    if (hasSavedSession && !isConnecting && !isReconnecting) {
+      uiLogger.debug("[CreateJoinScreen] Auto-reconnecting to saved session");
+      reconnectToSavedRoom().catch(e => {
+        uiLogger.error("[CreateJoinScreen] Auto-reconnect failed:", e);
+      });
+    }
+  }, [hasSavedSession, reconnectToSavedRoom, isConnecting, isReconnecting]);
+
+  const [joinCode, setJoinCode] = useState("");
+  const [showJoinInput, setShowJoinInput] = useState(false);
+
+  const handleCreate = async () => {
+    try {
+      await createRoom(generateRandomPlayerName());
+    } catch {
+      // Error is handled in context
+    }
+  };
+
+  const handleJoin = async () => {
+    if (joinCode.length < MIN_ROOM_CODE_LENGTH) return;
+    try {
+      await joinRoom(joinCode.trim(), generateRandomPlayerName());
+    } catch {
+      // Error is handled in context
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minBlockSize: "100dvh",
+        gap: "var(--space-8)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+      }}
+    >
+      <ScreenHeader error={error} />
+
+      <ScreenContent
+        showJoinInput={showJoinInput}
+        hasSavedSession={hasSavedSession}
+        isConnecting={isConnecting}
+        isReconnecting={isReconnecting}
+        joinCode={joinCode}
+        onReconnect={reconnectToSavedRoom}
+        onCreate={handleCreate}
+        onShowJoin={() => setShowJoinInput(true)}
+        onJoinCodeChange={setJoinCode}
+        onJoin={handleJoin}
+        onBackFromJoin={() => setShowJoinInput(false)}
+      />
+
       <button
         onClick={onBack}
         style={{

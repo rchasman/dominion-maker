@@ -1,6 +1,11 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal } from "react-dom";
+import type { ReactPortal } from "react";
+
+const MAX_TOOLTIP_HEIGHT = 500;
+const CARD_HEIGHT_ESTIMATE = 80;
+const TOOLTIP_PADDING = 100;
 
 interface PileTooltipProps {
   cards: CardName[];
@@ -16,7 +21,7 @@ export function PileTooltip({
   mouseX,
   mouseY,
   pileType,
-}: PileTooltipProps) {
+}: PileTooltipProps): ReactPortal | null {
   if (cards.length === 0) return null;
 
   // Group cards by name and count
@@ -36,7 +41,10 @@ export function PileTooltip({
   const unknownCards = cards.filter(card => !knownSet.has(card));
 
   const tooltipWidth = 320;
-  const tooltipHeight = Math.min(500, uniqueCards.length * 80 + 100);
+  const tooltipHeight = Math.min(
+    MAX_TOOLTIP_HEIGHT,
+    uniqueCards.length * CARD_HEIGHT_ESTIMATE + TOOLTIP_PADDING,
+  );
 
   const viewportWidth = window.innerWidth;
 

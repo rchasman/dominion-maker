@@ -241,7 +241,10 @@ export const handleModelResult = (
 };
 
 // Validate if an action is legal
-export const isActionValid = (action: Action, legalActions: Action[]): boolean => {
+export const isActionValid = (
+  action: Action,
+  legalActions: Action[],
+): boolean => {
   return legalActions.some(legal => {
     if (legal.type !== action.type) return false;
 

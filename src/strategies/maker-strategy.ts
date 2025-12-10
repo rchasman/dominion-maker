@@ -44,6 +44,10 @@ export class MakerStrategy implements GameStrategy {
     this.strategySummary = summary;
   }
 
+  setLogger(logger: LLMLogger | undefined): void {
+    this.logger = logger;
+  }
+
   async runAITurn(
     engine: DominionEngine,
     onStateChange?: (state: GameState) => void,
