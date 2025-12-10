@@ -143,6 +143,7 @@ function handleConsensusModelComplete(
   status.completed = true;
   status.action = data.action as Action | undefined;
   status.aborted = data.aborted as boolean | undefined;
+  status.format = data.format as "json" | "toon" | undefined;
 }
 
 function handleConsensusModelAborted(

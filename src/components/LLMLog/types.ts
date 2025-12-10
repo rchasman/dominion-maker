@@ -106,6 +106,7 @@ export interface ModelStatus {
   completed: boolean;
   aborted?: boolean;
   action?: Action;
+  format?: "json" | "toon";
 }
 
 export interface PendingData {

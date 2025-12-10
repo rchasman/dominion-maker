@@ -223,6 +223,7 @@ interface ModelNameDisplayProps {
   title?: string;
   strikethrough: boolean;
   isHelp: boolean;
+  format?: "json" | "toon";
 }
 
 function ModelNameDisplay({
@@ -232,6 +233,7 @@ function ModelNameDisplay({
   title,
   strikethrough,
   isHelp,
+  format,
 }: ModelNameDisplayProps) {
   return (
     <span
@@ -244,9 +246,27 @@ function ModelNameDisplay({
         opacity,
         textDecoration: strikethrough ? "line-through" : "none",
         cursor: isHelp ? "help" : "default",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
       }}
     >
-      {name}
+      <span>{name}</span>
+      {format && (
+        <span
+          style={{
+            fontSize: "0.6rem",
+            padding: "1px 3px",
+            borderRadius: "2px",
+            backgroundColor: format === "json" ? "#3b82f6" : "#f59e0b",
+            color: "#ffffff",
+            fontWeight: "bold",
+            opacity: 0.8,
+          }}
+        >
+          {format.toUpperCase()}
+        </span>
+      )}
     </span>
   );
 }
@@ -377,6 +397,7 @@ function TimingBar({
         title={getModelNameTitle(state.isAborted, state.isFailed)}
         strikethrough={state.isFailed || state.isAborted}
         isHelp={state.isAborted || state.isFailed}
+        format={timing.format}
       />
     </div>
   );
@@ -388,6 +409,7 @@ interface TimingEntry {
   pending?: boolean;
   failed?: boolean;
   aborted?: boolean;
+  format?: "json" | "toon";
 }
 
 function buildTimingsFromLiveStatuses(
@@ -426,6 +448,7 @@ function buildTimingsFromLiveStatuses(
         pending: !status.completed || (isAborted && hasAnyNonAbortedPending),
         failed: status.completed && status.success === false && !status.aborted,
         aborted: showAsAborted,
+        format: status.format,
       };
     })
     .sort((a, b) => {
