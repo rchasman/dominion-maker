@@ -52,7 +52,8 @@ function extractRecentTurns(
 
       if (state.currentTurn === 0) return state;
 
-      const key = `${entry.player || state.currentPlayer}-${state.currentTurn}`;
+      const player = "player" in entry ? entry.player : state.currentPlayer;
+      const key = `${player}-${state.currentTurn}`;
       const summary = state.turnMap.get(key);
       if (!summary) return state;
 

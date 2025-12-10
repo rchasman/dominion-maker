@@ -214,7 +214,9 @@ function parseTextResponse(text: string, provider: string): unknown {
   };
 
   const parsed = parseBestEffort(stripped) as unknown;
-  parseBestEffort.onExtraToken = originalOnExtraToken;
+  if (originalOnExtraToken) {
+    parseBestEffort.onExtraToken = originalOnExtraToken;
+  }
 
   return parsed;
 }

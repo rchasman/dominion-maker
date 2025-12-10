@@ -95,6 +95,7 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   });
 
   // Derive target indices for auto-advance
+  const lastTurn = turns[turns.length - 1];
   const targetIndices = useMemo(() => {
     if (state.userNavigatedAway || turns.length === 0) return null;
 
@@ -105,7 +106,13 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
       : lastTurn.decisions.length - 1;
 
     return { lastTurnIndex, lastActionIndex };
-  }, [turns, state.userNavigatedAway]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    turns.length,
+    lastTurn?.decisions.length,
+    lastTurn?.pending,
+    state.userNavigatedAway,
+  ]);
 
   // Auto-advance to latest turn and action when new data arrives
   useEffect(() => {
