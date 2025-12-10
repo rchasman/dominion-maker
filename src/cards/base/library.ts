@@ -28,7 +28,6 @@ export const library: CardEffect = ({
   stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
-  const events: GameEvent[] = [];
 
   // Note: Library is complex because it needs to draw one at a time
   // For simplicity, we'll handle it as a single decision
@@ -46,8 +45,8 @@ export const library: CardEffect = ({
 
     if (actionsInDraw.length === 0) {
       // No actions, just draw all
-      events.push(...createDrawEvents(player, playerState, cardsNeeded));
-      return { events };
+      const drawEvents = createDrawEvents(player, playerState, cardsNeeded);
+      return { events: drawEvents };
     }
 
     // Ask which actions to skip
@@ -95,8 +94,6 @@ export const library: CardEffect = ({
       card: peeked[index],
     }));
 
-  events.push(...drawEvents);
-
   // Discard cards marked "set_aside" by index
   const discardEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
@@ -108,7 +105,5 @@ export const library: CardEffect = ({
       from: "deck" as const,
     }));
 
-  events.push(...discardEvents);
-
-  return { events };
+  return { events: [...drawEvents, ...discardEvents] };
 };

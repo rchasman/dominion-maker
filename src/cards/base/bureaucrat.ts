@@ -63,19 +63,18 @@ export const bureaucrat: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const events: GameEvent[] = [];
-
   // Gain Silver to deck
-  if (state.supply.Silver > 0) {
-    events.push({ type: "CARD_GAINED", player, card: "Silver", to: "deck" });
-  }
+  const silverEvents: GameEvent[] =
+    state.supply.Silver > 0
+      ? [{ type: "CARD_GAINED", player, card: "Silver", to: "deck" }]
+      : [];
 
   // Engine auto-handles reactions, provides resolved targets
   if (!stage && attackTargets) {
     const opponentData = findOpponentWithVictoryCards(attackTargets, state);
     if (opponentData) {
       return {
-        events,
+        events: silverEvents,
         pendingDecision: createOpponentTopdeckDecision(
           opponentData.opponent,
           opponentData.victoryCards,
@@ -83,7 +82,7 @@ export const bureaucrat: CardEffect = ({
         ),
       };
     }
-    return { events };
+    return { events: silverEvents };
   }
 
   // Process opponent's card to deck
@@ -91,14 +90,17 @@ export const bureaucrat: CardEffect = ({
     const toPutOnDeck = decision.selectedCards[0];
     const affectedPlayer = state.pendingDecision?.player;
 
-    if (toPutOnDeck && affectedPlayer) {
-      events.push({
-        type: "CARD_PUT_ON_DECK",
-        player: affectedPlayer,
-        card: toPutOnDeck,
-        from: "hand",
-      });
-    }
+    const topdeckEvents: GameEvent[] =
+      toPutOnDeck && affectedPlayer
+        ? [
+            {
+              type: "CARD_PUT_ON_DECK",
+              player: affectedPlayer,
+              card: toPutOnDeck,
+              from: "hand",
+            },
+          ]
+        : [];
 
     const metadata = state.pendingDecision?.metadata;
     const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
@@ -109,7 +111,7 @@ export const bureaucrat: CardEffect = ({
     );
     if (opponentData) {
       return {
-        events,
+        events: [...silverEvents, ...topdeckEvents],
         pendingDecision: createOpponentTopdeckDecision(
           opponentData.opponent,
           opponentData.victoryCards,
@@ -118,7 +120,7 @@ export const bureaucrat: CardEffect = ({
       };
     }
 
-    return { events };
+    return { events: [...silverEvents, ...topdeckEvents] };
   }
 
   return { events: [] };

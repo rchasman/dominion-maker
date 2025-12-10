@@ -13,23 +13,22 @@ export const witch: CardEffect = ({
   player,
   attackTargets,
 }): CardEffectResult => {
-  const events: GameEvent[] = createDrawEvents(
+  const drawEvents = createDrawEvents(
     player,
     state.players[player],
     CARDS_TO_DRAW,
   );
 
   // Engine auto-handles reactions, provides resolved targets
-  if (attackTargets && state.supply.Curse > 0) {
-    events.push(
-      ...attackTargets.map(target => ({
-        type: "CARD_GAINED" as const,
-        player: target,
-        card: "Curse" as const,
-        to: "discard" as const,
-      })),
-    );
-  }
+  const curseEvents =
+    attackTargets && state.supply.Curse > 0
+      ? attackTargets.map(target => ({
+          type: "CARD_GAINED" as const,
+          player: target,
+          card: "Curse" as const,
+          to: "discard" as const,
+        }))
+      : [];
 
-  return { events };
+  return { events: [...drawEvents, ...curseEvents] };
 };

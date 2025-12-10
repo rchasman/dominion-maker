@@ -18,18 +18,17 @@ export const cellar: CardEffect = ({
   stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
-  const events: GameEvent[] = [];
 
   // Initial call: +1 Action, then request discards
   if (isInitialCall(decision, stage)) {
-    events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
+    const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
 
     if (playerState.hand.length === 0) {
-      return { events };
+      return { events: [actionEvent] };
     }
 
     return {
-      events,
+      events: [actionEvent],
       pendingDecision: createCardSelectionDecision({
         player,
         from: "hand",
@@ -58,7 +57,6 @@ export const cellar: CardEffect = ({
       card,
       from: "hand" as const,
     }));
-    events.push(...discardEvents);
 
     // Draw equal number - compute from state AFTER discards
     const simulatedState = {
@@ -73,9 +71,8 @@ export const cellar: CardEffect = ({
       simulatedState,
       toDiscard.length,
     );
-    events.push(...drawEvents);
 
-    return { events };
+    return { events: [...discardEvents, ...drawEvents] };
   }
 
   return { events: [] };

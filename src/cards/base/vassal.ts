@@ -13,28 +13,30 @@ export const vassal: CardEffect = ({
   stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
-  const events: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
+  const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
 
   // Initial: +$2, reveal and discard top card
   if (!decision || stage === undefined) {
     const { cards: revealed } = peekDraw(playerState, 1);
 
     if (revealed.length === 0) {
-      return { events };
+      return { events: coinEvents };
     }
 
     const topCard = revealed[0];
-    events.push({
-      type: "CARD_DISCARDED",
-      player,
-      card: topCard,
-      from: "deck",
-    });
+    const discardEvents: GameEvent[] = [
+      {
+        type: "CARD_DISCARDED",
+        player,
+        card: topCard,
+        from: "deck",
+      },
+    ];
 
     // If it's an action, offer to play it
     if (isActionCard(topCard)) {
       return {
-        events,
+        events: [...coinEvents, ...discardEvents],
         pendingDecision: {
           type: "card_decision",
           player,
@@ -50,7 +52,7 @@ export const vassal: CardEffect = ({
       };
     }
 
-    return { events };
+    return { events: [...coinEvents, ...discardEvents] };
   }
 
   // Play the action from discard
@@ -59,10 +61,12 @@ export const vassal: CardEffect = ({
     // This just signals the intent
     if (decision.selectedCards.length > 0) {
       const cardToPlay = decision.selectedCards[0];
-      // Move from discard to play area (the effect will be executed by engine)
-      events.push({ type: "CARD_PLAYED", player, card: cardToPlay });
+      const playEvents: GameEvent[] = [
+        { type: "CARD_PLAYED", player, card: cardToPlay },
+      ];
+      return { events: [...coinEvents, ...playEvents] };
     }
-    return { events };
+    return { events: coinEvents };
   }
 
   return { events: [] };

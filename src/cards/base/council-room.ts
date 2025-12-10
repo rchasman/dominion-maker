@@ -12,12 +12,13 @@ export const councilRoom: CardEffect = ({
   state,
   player,
 }): CardEffectResult => {
-  const events: GameEvent[] = createDrawEvents(
+  const drawEvents = createDrawEvents(
     player,
     state.players[player],
     CARDS_TO_DRAW,
   );
-  events.push({ type: "BUYS_MODIFIED", delta: 1 });
+
+  const buyEvent: GameEvent = { type: "BUYS_MODIFIED", delta: 1 };
 
   // Each opponent draws a card
   const playerOrder = state.playerOrder || ["human", "ai"];
@@ -27,7 +28,5 @@ export const councilRoom: CardEffect = ({
       createDrawEvents(opponent, state.players[opponent], 1),
     );
 
-  events.push(...opponentDrawEvents);
-
-  return { events };
+  return { events: [...drawEvents, buyEvent, ...opponentDrawEvents] };
 };

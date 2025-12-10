@@ -115,28 +115,25 @@ export const bandit: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const events: GameEvent[] = [];
-
   // Gain Gold
-  if (state.supply.Gold > 0) {
-    events.push({ type: "CARD_GAINED", player, card: "Gold", to: "discard" });
-  }
+  const gainGoldEvents: GameEvent[] =
+    state.supply.Gold > 0
+      ? [{ type: "CARD_GAINED" as const, player, card: "Gold" as const, to: "discard" as const }]
+      : [];
 
   // Engine auto-handles reactions, provides resolved targets
   if (!stage && attackTargets) {
     const needsChoice = findOpponentNeedingChoice(state, attackTargets, player);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
-      events.push(
-        ...attackData.revealed.map(card => ({
-          type: "CARD_REVEALED" as const,
-          player: opponent,
-          card,
-          from: "deck" as const,
-        })),
-      );
+      const revealEvents = attackData.revealed.map(card => ({
+        type: "CARD_REVEALED" as const,
+        player: opponent,
+        card,
+        from: "deck" as const,
+      }));
       return {
-        events,
+        events: [...gainGoldEvents, ...revealEvents],
         pendingDecision: createCardSelectionDecision({
           player: opponent,
           from: "revealed",
@@ -156,8 +153,8 @@ export const bandit: CardEffect = ({
     }
 
     // All targets can be auto-processed
-    events.push(...attackTargets.flatMap(t => processOpponentAutoAttack(state, t)));
-    return { events };
+    const attackEvents = attackTargets.flatMap(t => processOpponentAutoAttack(state, t));
+    return { events: [...gainGoldEvents, ...attackEvents] };
   }
 
   // Process victim's trash choice
@@ -171,37 +168,33 @@ export const bandit: CardEffect = ({
     const remainingTargets = (metadata?.remainingTargets as PlayerId[]) || [];
 
     // Trash chosen card, discard the rest
-    events.push({
+    const trashEvent: GameEvent = {
       type: "CARD_TRASHED",
       player: victimPlayer,
       card: toTrash,
       from: "deck",
-    });
+    };
 
     const remaining = revealed.filter(c => c !== toTrash);
-    events.push(
-      ...remaining.map(card => ({
-        type: "CARD_DISCARDED" as const,
-        player: victimPlayer,
-        card,
-        from: "deck" as const,
-      })),
-    );
+    const discardEvents = remaining.map(card => ({
+      type: "CARD_DISCARDED" as const,
+      player: victimPlayer,
+      card,
+      from: "deck" as const,
+    }));
 
     // Check if more targets need choices
     const needsChoice = findOpponentNeedingChoice(state, remainingTargets, player);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
-      events.push(
-        ...attackData.revealed.map(card => ({
-          type: "CARD_REVEALED" as const,
-          player: opponent,
-          card,
-          from: "deck" as const,
-        })),
-      );
+      const revealEvents = attackData.revealed.map(card => ({
+        type: "CARD_REVEALED" as const,
+        player: opponent,
+        card,
+        from: "deck" as const,
+      }));
       return {
-        events,
+        events: [...trashEvent, ...discardEvents, ...revealEvents],
         pendingDecision: createCardSelectionDecision({
           player: opponent,
           from: "revealed",
@@ -221,8 +214,8 @@ export const bandit: CardEffect = ({
     }
 
     // All remaining auto-processed
-    events.push(...remainingTargets.flatMap(t => processOpponentAutoAttack(state, t)));
-    return { events };
+    const remainingAttackEvents = remainingTargets.flatMap(t => processOpponentAutoAttack(state, t));
+    return { events: [...trashEvent, ...discardEvents, ...remainingAttackEvents] };
   }
 
   return { events: [] };

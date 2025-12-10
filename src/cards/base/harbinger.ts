@@ -13,12 +13,12 @@ export const harbinger: CardEffect = ({
   stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
-  const events: GameEvent[] = [];
 
   // Initial: +1 Card, +1 Action
   if (!decision || stage === undefined) {
-    events.push(...createDrawEvents(player, playerState, 1));
-    events.push({ type: "ACTIONS_MODIFIED", delta: 1 });
+    const drawEvents = createDrawEvents(player, playerState, 1);
+    const actionEvents = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
+    const events = [...drawEvents, ...actionEvents];
 
     // If discard pile is empty, we're done
     if (playerState.discard.length === 0) {
@@ -44,10 +44,17 @@ export const harbinger: CardEffect = ({
 
   // Put card on deck
   if (stage === "topdeck") {
-    if (decision.selectedCards.length > 0) {
-      const card = decision.selectedCards[0];
-      events.push({ type: "CARD_PUT_ON_DECK", player, card, from: "discard" });
-    }
+    const events =
+      decision.selectedCards.length > 0
+        ? [
+            {
+              type: "CARD_PUT_ON_DECK" as const,
+              player,
+              card: decision.selectedCards[0],
+              from: "discard" as const,
+            },
+          ]
+        : [];
     return { events };
   }
 
