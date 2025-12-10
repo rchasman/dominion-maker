@@ -143,7 +143,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     playerStrategies,
   });
 
-  // LLM Logger - stable reference
+  // LLM Logger - stable reference that reads current engine when called
   const llmLoggerRef = useRef(
     (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
       const engine = engineRef.current;
@@ -151,15 +151,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLLMLogs(prev => [...prev, logEntry]);
     },
   );
-
-  // Update llmLogger ref when dependencies change
-  useEffect(() => {
-    llmLoggerRef.current = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
-      const engine = engineRef.current;
-      const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
-      setLLMLogs(prev => [...prev, logEntry]);
-    };
-  }, [engineRef]);
 
   // Strategy - create strategy instance without logger to avoid ref access during render
   const strategy: GameStrategy = useMemo(() => {
