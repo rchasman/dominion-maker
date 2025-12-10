@@ -8,61 +8,45 @@
 import {
   createContext,
   useState,
-  useCallback,
   useEffect,
   useRef,
   useMemo,
   type ReactNode,
 } from "react";
-import { useSyncToLocalStorage } from "../hooks/useSyncToLocalStorage";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
-import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { ModelSettings, ModelProvider } from "../agent/game-agent";
-import {
-  DEFAULT_MODEL_SETTINGS,
-  abortOngoingConsensus,
-} from "../agent/game-agent";
-import { DominionEngine } from "../engine";
-import { isActionCard, isTreasureCard } from "../data/cards";
+import type { ModelSettings } from "../agent/game-agent";
 import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
-import { uiLogger } from "../lib/logger";
-import { resetPlayerColors } from "../lib/board-utils";
-import { api } from "../api/client";
-
-const STORAGE_EVENTS_KEY = "dominion-maker-sp-events";
-const STORAGE_MODE_KEY = "dominion-maker-game-mode";
-const STORAGE_LLM_LOGS_KEY = "dominion-maker-llm-logs";
-const STORAGE_MODEL_SETTINGS_KEY = "dominion-maker-model-settings";
-const STORAGE_STRATEGIES_KEY = "dominion-maker-strategies";
+import { useGameActions } from "./use-game-actions";
+import {
+  hasPlayableActions as computeHasPlayableActions,
+  hasTreasuresInHand as computeHasTreasuresInHand,
+} from "./derived-state";
+import {
+  useAITurnAutomation,
+  useAIDecisionAutomation,
+  useAutoPhaseAdvance,
+} from "./use-ai-automation";
+import { useStrategyAnalysis } from "./use-strategy-analysis";
+import { useGameStorage } from "./use-game-storage";
+import { useStartGame } from "./use-start-game";
+import { useStorageSync } from "./use-storage-sync";
 
 interface GameContextValue {
-  // Game state
   gameState: GameState | null;
   events: GameEvent[];
   gameMode: GameMode;
   isProcessing: boolean;
-  isLoading: boolean; // Loading from localStorage
+  isLoading: boolean;
   modelSettings: ModelSettings;
-  playerStrategies: Record<
-    string,
-    {
-      gameplan: string;
-      read: string;
-      lines: string;
-    }
-  >;
-
-  // Derived state
+  playerStrategies: PlayerStrategyData;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   strategy: GameStrategy;
-
-  // Actions
   setGameMode: (mode: GameMode) => void;
   setModelSettings: (settings: ModelSettings) => void;
   startGame: () => void;
@@ -81,605 +65,203 @@ interface LLMLogsContextValue {
   llmLogs: LLMLogEntry[];
 }
 
+type PlayerStrategyData = Record<
+  string,
+  {
+    gameplan: string;
+    read: string;
+    lines: string;
+  }
+>;
+
 const GameContext = createContext<GameContextValue | null>(null);
 const LLMLogsContext = createContext<LLMLogsContextValue | null>(null);
 
-// Re-export for hooks module
 export { GameContext, LLMLogsContext };
 
+/**
+ * Create LLM log entry with metadata
+ */
+function createLLMLogEntry(
+  entry: Omit<LLMLogEntry, "id" | "timestamp">,
+  eventCount: number | undefined,
+): LLMLogEntry {
+  return {
+    ...entry,
+    id: `${Date.now()}-${Math.random()}`,
+    timestamp: Date.now(),
+    data: {
+      ...entry.data,
+      eventCount,
+    },
+  };
+}
+
+
+
+// eslint-disable-next-line max-lines-per-function -- Complex provider with extracted hooks
 export function GameProvider({ children }: { children: ReactNode }) {
-  const engineRef = useRef<DominionEngine | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [gameMode, setGameModeState] = useState<GameMode>(() => {
-    const savedModeRaw = localStorage.getItem(STORAGE_MODE_KEY);
-    if (savedModeRaw) {
-      try {
-        const savedMode = JSON.parse(savedModeRaw) as string;
-        const validModes: GameMode[] = [
-          "engine",
-          "hybrid",
-          "full",
-          "multiplayer",
-        ];
-        if (validModes.includes(savedMode as GameMode)) {
-          return savedMode as GameMode;
-        }
-      } catch {
-        // Invalid JSON, ignore
-      }
-    }
-    return "engine";
-  });
+  const storage = useGameStorage();
+  const engineRef = useRef<import("../engine").DominionEngine | null>(null);
+  const setEngine = (engine: import("../engine").DominionEngine | null) => {
+    engineRef.current = engine;
+  };
+
+  const [gameState, setGameState] = useState<GameState | null>(
+    storage.gameState,
+  );
+  const [events, setEvents] = useState<GameEvent[]>(storage.events);
+  const [gameMode, setGameModeInternal] = useState<GameMode>(storage.gameMode);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Track loading state
-  const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>([]);
-  const [modelSettings, setModelSettingsState] = useState<ModelSettings>(
-    DEFAULT_MODEL_SETTINGS,
+  const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>(storage.llmLogs);
+  const [modelSettings, setModelSettings] = useState<ModelSettings>(
+    storage.modelSettings,
   );
-  const [playerStrategies, setPlayerStrategies] = useState<
-    Record<
-      string,
-      {
-        gameplan: string;
-        read: string;
-        lines: string;
-      }
-    >
-  >({});
-
-  // Restore from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedEvents = localStorage.getItem(STORAGE_EVENTS_KEY);
-      const savedLogs = localStorage.getItem(STORAGE_LLM_LOGS_KEY);
-      const savedSettings = localStorage.getItem(STORAGE_MODEL_SETTINGS_KEY);
-      const savedStrategies = localStorage.getItem(STORAGE_STRATEGIES_KEY);
-
-      if (savedLogs) {
-        setLLMLogs(JSON.parse(savedLogs));
-      }
-
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        setModelSettingsState({
-          enabledModels: new Set(parsed.enabledModels as ModelProvider[]),
-          consensusCount: parsed.consensusCount,
-        });
-      }
-
-      if (savedStrategies) {
-        setPlayerStrategies(JSON.parse(savedStrategies));
-      }
-
-      if (savedEvents) {
-        const parsedEvents = JSON.parse(savedEvents) as GameEvent[];
-        const engine = new DominionEngine();
-        engine.loadEvents(parsedEvents);
-        engineRef.current = engine;
-        setEvents(parsedEvents);
-        setGameState(engine.state);
-        uiLogger.info(`Restored game from ${parsedEvents.length} events`);
-      }
-    } catch (error) {
-      uiLogger.error("Failed to restore game state", { error });
-      localStorage.removeItem(STORAGE_EVENTS_KEY);
-      localStorage.removeItem(STORAGE_MODE_KEY);
-      localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
-      localStorage.removeItem(STORAGE_STRATEGIES_KEY);
-      localStorage.removeItem(STORAGE_MODEL_SETTINGS_KEY);
-    } finally {
-      setIsLoading(false); // Done loading
-    }
-  }, []);
-
-  // Sync state to localStorage (skips initial hydration)
-  useSyncToLocalStorage(STORAGE_EVENTS_KEY, events, {
-    shouldSync: events.length > 0,
-  });
-
-  useSyncToLocalStorage(STORAGE_MODE_KEY, gameMode);
-
-  useSyncToLocalStorage(STORAGE_LLM_LOGS_KEY, llmLogs, {
-    shouldSync: llmLogs.length > 0,
-  });
-
-  useSyncToLocalStorage(
-    STORAGE_MODEL_SETTINGS_KEY,
-    {
-      enabledModels: Array.from(modelSettings.enabledModels),
-      consensusCount: modelSettings.consensusCount,
-    },
-    {
-      shouldSync: true,
-    },
+  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
+    storage.playerStrategies,
   );
 
-  useSyncToLocalStorage(STORAGE_STRATEGIES_KEY, playerStrategies);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
+  const setGameMode = (mode: GameMode) => {
+    import("../agent/game-agent").then(({ abortOngoingConsensus }) => {
       abortOngoingConsensus();
-    };
-  }, []);
+    }).catch(() => {
+      // Ignore error
+    });
+    setGameModeInternal(mode);
+  };
 
-  // LLM Logger
-  const llmLogger = useCallback(
-    (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+  // Sync engine ref with storage on mount
+  useEffect(() => {
+    if (storage.engineRef) {
+      engineRef.current = storage.engineRef;
+    }
+  }, [storage.engineRef, engineRef]);
+
+  // Sync to localStorage
+  useStorageSync({ events, gameMode, llmLogs, modelSettings, playerStrategies });
+
+  // LLM Logger - stable reference
+  const llmLoggerRef = useRef((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+    const engine = engineRef.current;
+    const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
+    setLLMLogs(prev => [...prev, logEntry]);
+  });
+
+  // Update llmLogger ref when dependencies change
+  useEffect(() => {
+    llmLoggerRef.current = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
       const engine = engineRef.current;
-      const logEntry: LLMLogEntry = {
-        ...entry,
-        id: `${Date.now()}-${Math.random()}`,
-        timestamp: Date.now(),
-        data: {
-          ...entry.data,
-          eventCount: engine?.eventLog.length, // Track event count when log was created
-        },
-      };
+      const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
       setLLMLogs(prev => [...prev, logEntry]);
-    },
-    [],
-  );
+    };
+  }, [engineRef]);
 
-  // Strategy
+  // Strategy - create factory function to avoid accessing ref during render
   const strategy: GameStrategy = useMemo(() => {
     if (gameMode === "engine") {
       return new EngineStrategy();
-    } else {
-      // Both hybrid and full modes use MAKER strategy
-      return new MakerStrategy("openai", llmLogger, modelSettings);
     }
-  }, [gameMode, llmLogger, modelSettings]);
+    // Pass a function that will access the ref when called, not during render
+    const loggerFn = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+      llmLoggerRef.current(entry);
+    };
+    return new MakerStrategy("openai", loggerFn, modelSettings);
+  }, [gameMode, modelSettings]);
 
-  // Wrap setGameMode to handle side effects synchronously
-  const setGameMode = useCallback((mode: GameMode) => {
-    // Abort ongoing consensus and reset processing when mode changes
-    // Game state is preserved - just the strategy changes
-    abortOngoingConsensus();
-    setIsProcessing(false);
-    setGameModeState(mode);
-  }, []);
-
-  // Fetch and store strategy analysis once per turn
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (!engine) {
-      uiLogger.warn("Strategy subscription: no engine");
-      return;
-    }
-
-    const unsubscribe = engine.subscribe((events, state) => {
-      // Check if any TURN_ENDED event occurred
-      const hasTurnEnded = events.some(e => e.type === "TURN_ENDED");
-
-      if (hasTurnEnded && state.turn >= 1) {
-        // Fetch strategy analysis with FULL game state (all events)
-        api.api["analyze-strategy"]
-          .post({
-            currentState: state,
-          })
-          .then(({ data, error }) => {
-            if (error) {
-              uiLogger.warn("Failed to fetch strategy analysis:", error);
-              return;
-            }
-
-            if (data?.strategySummary) {
-              const strategies = data.strategySummary as Record<
-                string,
-                {
-                  gameplan: string;
-                  read: string;
-                  lines: string;
-                }
-              >;
-
-              if (Object.keys(strategies).length === 0) {
-                return;
-              }
-
-              const stringifiedStrategies = JSON.stringify(strategies);
-
-              // Update strategy with new summary
-              strategy.setStrategySummary?.(stringifiedStrategies);
-
-              // Display in UI
-              setPlayerStrategies(strategies);
-            }
-          });
-      }
-    });
-
-    return unsubscribe;
-  }, [strategy]);
+  // Strategy analysis
+  useStrategyAnalysis(engineRef, strategy, setPlayerStrategies);
 
   // Derived state
-  const hasPlayableActionsValue = useMemo(() => {
-    if (!gameState) return false;
-    const humanState = gameState.players.human;
-    if (!humanState) return false;
-    return humanState.hand.some(isActionCard) && gameState.actions > 0;
-  }, [gameState]);
-
-  const hasTreasuresInHandValue = useMemo(() => {
-    if (!gameState) return false;
-    const humanState = gameState.players.human;
-    if (!humanState) return false;
-    return humanState.hand.some(isTreasureCard);
-  }, [gameState]);
-
-  // Start new game
-  const startGame = useCallback(() => {
-    abortOngoingConsensus();
-    setIsProcessing(false);
-    localStorage.removeItem(STORAGE_EVENTS_KEY);
-    localStorage.removeItem(STORAGE_LLM_LOGS_KEY);
-    localStorage.removeItem(STORAGE_STRATEGIES_KEY);
-    setLLMLogs([]);
-    setPlayerStrategies({});
-    resetPlayerColors(); // Reset color assignments for new game
-
-    const engine = new DominionEngine();
-    engineRef.current = engine;
-
-    // Determine players based on game mode
-    const players =
-      gameMode === "multiplayer"
-        ? ["human", "ai"]
-        : getPlayersForMode(gameMode);
-
-    const result = engine.dispatch({
-      type: "START_GAME",
-      players,
-      kingdomCards: undefined, // Will use random 10
-    });
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    } else {
-      uiLogger.error("Failed to start game", { error: result.error });
-    }
-  }, [gameMode]);
-
-  // Game actions - all dispatch commands to engine
-  const playAction = useCallback((card: CardName): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine) return { ok: false, error: "No engine" };
-
-    const result = engine.dispatch(
-      {
-        type: "PLAY_ACTION",
-        player: "human",
-        card,
-      },
-      "human",
-    );
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    }
-
-    return result;
-  }, []);
-
-  const playTreasure = useCallback((card: CardName): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine) return { ok: false, error: "No engine" };
-
-    const result = engine.dispatch(
-      {
-        type: "PLAY_TREASURE",
-        player: "human",
-        card,
-      },
-      "human",
-    );
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    }
-
-    return result;
-  }, []);
-
-  const unplayTreasure = useCallback((card: CardName): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine) return { ok: false, error: "No engine" };
-
-    const result = engine.dispatch(
-      {
-        type: "UNPLAY_TREASURE",
-        player: "human",
-        card,
-      },
-      "human",
-    );
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    }
-
-    return result;
-  }, []);
-
-  const playAllTreasures = useCallback((): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine || !gameState) return { ok: false, error: "No engine" };
-
-    const humanState = gameState.players.human;
-    if (!humanState) return { ok: false, error: "No human player" };
-
-    const treasures = humanState.hand.filter(isTreasureCard);
-
-    for (const treasure of treasures) {
-      const result = engine.dispatch(
-        {
-          type: "PLAY_TREASURE",
-          player: "human",
-          card: treasure,
-        },
-        "human",
-      );
-
-      if (!result.ok) {
-        uiLogger.error(`Failed to play ${treasure}`, { error: result.error });
-      }
-    }
-
-    setEvents([...engine.eventLog]);
-    setGameState(engine.state);
-
-    return { ok: true, events: [] };
-  }, [gameState]);
-
-  const buyCard = useCallback((card: CardName): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine) return { ok: false, error: "No engine" };
-
-    const result = engine.dispatch(
-      {
-        type: "BUY_CARD",
-        player: "human",
-        card,
-      },
-      "human",
-    );
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    }
-
-    return result;
-  }, []);
-
-  const endPhase = useCallback((): CommandResult => {
-    const engine = engineRef.current;
-    if (!engine) return { ok: false, error: "No engine" };
-
-    const result = engine.dispatch(
-      {
-        type: "END_PHASE",
-        player: "human",
-      },
-      "human",
-    );
-
-    if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
-    }
-
-    return result;
-  }, []);
-
-  const submitDecision = useCallback(
-    (choice: DecisionChoice): CommandResult => {
-      const engine = engineRef.current;
-      if (!engine) return { ok: false, error: "No engine" };
-
-      const result = engine.dispatch(
-        {
-          type: "SUBMIT_DECISION",
-          player: "human",
-          choice,
-        },
-        "human",
-      );
-
-      if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
-      }
-
-      return result;
-    },
-    [],
-  );
-
-  const requestUndo = useCallback((toEventId: string) => {
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    // In single-player, undo immediately (no consensus needed)
-    engine.undoToEvent(toEventId);
-    const eventsAfterUndo = engine.eventLog.length;
-    setEvents([...engine.eventLog]);
-    setGameState(engine.state);
-
-    // Clear LLM logs that were created after the undo point
-    setLLMLogs(prev =>
-      prev.filter(log => {
-        const logEventCount = log.data?.eventCount;
-        // Keep logs that were created when event count was <= current count
-        return (
-          logEventCount === undefined ||
-          (typeof logEventCount === "number" &&
-            logEventCount <= eventsAfterUndo)
-        );
-      }),
-    );
-  }, []);
-
-  const getStateAtEvent = useCallback(
-    (eventId: string): GameState => {
-      const engine = engineRef.current;
-      if (!engine) return gameState!;
-
-      return engine.getStateAtEvent(eventId);
-    },
+  const hasPlayableActionsValue = useMemo(
+    () => computeHasPlayableActions(gameState),
     [gameState],
   );
 
-  // Auto-run AI turn using strategy
-  useEffect(() => {
-    if (!gameState || gameState.gameOver || isProcessing) return;
-
-    // Check if current active player is an AI player based on game mode
-    const isAITurn =
-      gameMode !== "multiplayer" &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
-
-    if (!isAITurn) return;
-
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    const timer = setTimeout(async () => {
-      setIsProcessing(true);
-      try {
-        await strategy.runAITurn(engine, state => {
-          setGameState(state);
-        });
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
-      } catch (error) {
-        uiLogger.error("AI turn error", { error });
-      } finally {
-        setIsProcessing(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [gameState, isProcessing, strategy, gameMode]);
-
-  // Auto-resolve opponent decisions during turn (e.g., AI responding to Militia attack)
-  useEffect(() => {
-    if (!gameState || gameState.gameOver || isProcessing) return;
-    if (gameState.subPhase !== "opponent_decision") return;
-
-    // Check if pending decision is for an AI player based on game mode
-    const isAIDecision =
-      gameMode !== "multiplayer" &&
-      gameState.pendingDecision?.player &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
-
-    if (!isAIDecision) return;
-
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    const timer = setTimeout(async () => {
-      setIsProcessing(true);
-      try {
-        await strategy.resolveAIPendingDecision(engine);
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
-      } catch (error) {
-        uiLogger.error("AI pending decision error", { error });
-      } finally {
-        setIsProcessing(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [gameState, isProcessing, strategy, gameMode]);
-
-  // Auto-transition to buy phase when human has no actions to play
-  useEffect(() => {
-    if (!gameState || isProcessing) return;
-
-    const engine = engineRef.current;
-    if (!engine) return;
-
-    // Use engine to check if auto-advance should happen
-    if (engine.shouldAutoAdvancePhase("human")) {
-      const timer = setTimeout(() => {
-        uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
-        engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
-      }, 300); // Small delay to make it feel natural
-
-      return () => clearTimeout(timer);
-    }
-  }, [gameState, isProcessing]);
-
-  const gameValue: GameContextValue = useMemo(
-    () => ({
-      gameState,
-      events,
-      gameMode,
-      isProcessing,
-      isLoading,
-      modelSettings,
-      playerStrategies,
-      hasPlayableActions: hasPlayableActionsValue,
-      hasTreasuresInHand: hasTreasuresInHandValue,
-      strategy,
-      setGameMode,
-      setModelSettings: setModelSettingsState,
-      startGame,
-      playAction,
-      playTreasure,
-      unplayTreasure,
-      playAllTreasures,
-      buyCard,
-      endPhase,
-      submitDecision,
-      requestUndo,
-      getStateAtEvent,
-    }),
-    [
-      gameState,
-      events,
-      gameMode,
-      isProcessing,
-      isLoading,
-      modelSettings,
-      playerStrategies,
-      hasPlayableActionsValue,
-      hasTreasuresInHandValue,
-      strategy,
-      setGameMode,
-      startGame,
-      playAction,
-      playTreasure,
-      unplayTreasure,
-      playAllTreasures,
-      buyCard,
-      endPhase,
-      submitDecision,
-      requestUndo,
-      getStateAtEvent,
-    ],
+  const hasTreasuresInHandValue = useMemo(
+    () => computeHasTreasuresInHand(gameState),
+    [gameState],
   );
 
-  const llmLogsValue: LLMLogsContextValue = useMemo(
-    () => ({
-      llmLogs,
-    }),
-    [llmLogs],
-  );
+  // Start new game
+  const startGame = useStartGame(gameMode, {
+    setEngine,
+    setEvents,
+    setGameState,
+    setLLMLogs,
+    setPlayerStrategies,
+  });
+
+  // Reset processing state on game mode change
+  useEffect(() => {
+    setIsProcessing(false);
+  }, [gameMode]);
+
+  // Game actions
+  const {
+    playAction,
+    playTreasure,
+    unplayTreasure,
+    playAllTreasures,
+    buyCard,
+    endPhase,
+    submitDecision,
+    requestUndo,
+    getStateAtEvent,
+  } = useGameActions(engineRef, gameState, { setEvents, setGameState, setLLMLogs });
+
+  // AI Automation
+  useAITurnAutomation({
+    gameState,
+    isProcessing,
+    gameMode,
+    strategy,
+    engineRef,
+    setIsProcessing,
+    setEvents,
+    setGameState,
+  });
+
+  useAIDecisionAutomation({
+    gameState,
+    isProcessing,
+    gameMode,
+    strategy,
+    engineRef,
+    setIsProcessing,
+    setEvents,
+    setGameState,
+  });
+
+  useAutoPhaseAdvance(gameState, isProcessing, engineRef, { setEvents, setGameState });
 
   return (
-    <GameContext.Provider value={gameValue}>
-      <LLMLogsContext.Provider value={llmLogsValue}>
+    <GameContext.Provider
+      value={{
+        gameState,
+        events,
+        gameMode,
+        isProcessing,
+        isLoading: storage.isLoading,
+        modelSettings,
+        playerStrategies,
+        hasPlayableActions: hasPlayableActionsValue,
+        hasTreasuresInHand: hasTreasuresInHandValue,
+        strategy,
+        setGameMode,
+        setModelSettings,
+        startGame,
+        playAction,
+        playTreasure,
+        unplayTreasure,
+        playAllTreasures,
+        buyCard,
+        endPhase,
+        submitDecision,
+        requestUndo,
+        getStateAtEvent,
+      }}
+    >
+      <LLMLogsContext.Provider value={{ llmLogs }}>
         {children}
       </LLMLogsContext.Provider>
     </GameContext.Provider>
