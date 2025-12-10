@@ -62,7 +62,6 @@ function createTestState(
       Artisan: 10,
     },
     kingdomCards: [],
-    playerOrder: ["human"],
     turn: 1,
     phase: "action",
     activePlayer: "human",
