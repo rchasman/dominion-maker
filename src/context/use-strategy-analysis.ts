@@ -3,9 +3,11 @@
  * Fetches and stores strategy analysis after turns
  */
 
-import { useEffect } from "react";
+import { useEffect, type MutableRefObject } from "react";
 import type { DominionEngine } from "../engine";
 import type { GameStrategy } from "../types/game-mode";
+import type { GameState } from "../types/game-state";
+import { api } from "../api/client";
 import { uiLogger } from "../lib/logger";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 
@@ -22,15 +24,13 @@ type PlayerStrategyData = Record<
  * Fetch strategy analysis from API
  */
 function fetchStrategyAnalysis(
-  state: import("../types/game-state").GameState,
+  state: GameState,
   strategy: GameStrategy,
   setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
-  import("../api/client")
-    .then(({ api }) => {
-      return api.api["analyze-strategy"].post({
-        currentState: state,
-      });
+  api.api["analyze-strategy"]
+    .post({
+      currentState: state,
     })
     .then(({ data, error }) => {
       if (error) {
@@ -61,7 +61,7 @@ function fetchStrategyAnalysis(
  * Hook to subscribe to turn endings and fetch strategy analysis
  */
 export function useStrategyAnalysis(
-  engineRef: import("react").MutableRefObject<DominionEngine | null>,
+  engineRef: MutableRefObject<DominionEngine | null>,
   strategy: GameStrategy,
   setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
@@ -69,7 +69,7 @@ export function useStrategyAnalysis(
     const engine = engineRef.current;
     if (!engine) {
       uiLogger.warn("Strategy subscription: no engine");
-      return undefined;
+      return;
     }
 
     const unsubscribe = engine.subscribe((newEvents, state) => {

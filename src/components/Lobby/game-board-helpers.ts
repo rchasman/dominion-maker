@@ -1,4 +1,8 @@
-import type { GameState, Player, DecisionRequest } from "../../types/game-state";
+import type {
+  GameState,
+  Player,
+  DecisionRequest,
+} from "../../types/game-state";
 import type { PlayerInfo } from "../../multiplayer/p2p-room";
 
 const ZERO = 0;
@@ -22,7 +26,10 @@ export function getHintText(params: {
   if (params.isPreview && params.previewEventId) {
     return `Previewing @ ${params.previewEventId}`;
   }
-  if (params.pendingDecision && params.pendingDecision.player === params.myPlayer) {
+  if (
+    params.pendingDecision &&
+    params.pendingDecision.player === params.myPlayer
+  ) {
     return params.pendingDecision.prompt;
   }
   if (!params.isMyTurn) {
@@ -46,7 +53,7 @@ export function getHintText(params: {
 export function getDisplayState(
   validPreviewEventId: string | null,
   gameState: GameState | null,
-  getStateAtEvent: (eventId: string) => GameState
+  getStateAtEvent: (eventId: string) => GameState,
 ): GameState | null {
   return validPreviewEventId ? getStateAtEvent(validPreviewEventId) : gameState;
 }

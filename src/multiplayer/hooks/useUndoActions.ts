@@ -120,7 +120,7 @@ export function useUndoActions({
 
   const getStateAtEvent = useCallback(
     (eventId: string): GameState => {
-      const eventIndex = events.findIndex((e) => e.id === eventId);
+      const eventIndex = events.findIndex(e => e.id === eventId);
       const NOT_FOUND = -1;
       if (eventIndex === NOT_FOUND) {
         throw new Error(`Event ${eventId} not found`);

@@ -27,7 +27,11 @@ export function useDecisionHandlers(params: DecisionHandlersParams) {
   } = params;
 
   const handleSubmitDecision = useCallback(() => {
-    const displayState = getDisplayState(validPreviewEventId, gameState, getStateAtEvent);
+    const displayState = getDisplayState(
+      validPreviewEventId,
+      gameState,
+      getStateAtEvent,
+    );
     if (!displayState) return;
     const myPlayer = myGamePlayerId;
     const myPlayerState = myPlayer ? displayState.players[myPlayer] : null;
@@ -40,15 +44,33 @@ export function useDecisionHandlers(params: DecisionHandlersParams) {
     } else {
       uiLogger.error("Failed to submit decision:", result.error);
     }
-  }, [gameState, myGamePlayerId, selectedCardIndices, submitDecision, validPreviewEventId, getStateAtEvent, setSelectedCardIndices]);
+  }, [
+    gameState,
+    myGamePlayerId,
+    selectedCardIndices,
+    submitDecision,
+    validPreviewEventId,
+    getStateAtEvent,
+    setSelectedCardIndices,
+  ]);
 
   const handleSkipDecision = useCallback(() => {
-    const displayState = getDisplayState(validPreviewEventId, gameState, getStateAtEvent);
+    const displayState = getDisplayState(
+      validPreviewEventId,
+      gameState,
+      getStateAtEvent,
+    );
     if (!displayState?.pendingDecision?.canSkip) return;
 
     const result = submitDecision({ selectedCards: [] });
     if (result.ok) setSelectedCardIndices(() => []);
-  }, [gameState, submitDecision, validPreviewEventId, getStateAtEvent, setSelectedCardIndices]);
+  }, [
+    gameState,
+    submitDecision,
+    validPreviewEventId,
+    getStateAtEvent,
+    setSelectedCardIndices,
+  ]);
 
   return { handleSubmitDecision, handleSkipDecision };
 }

@@ -24,9 +24,7 @@ export function TurnIndicator({
     <div
       style={{
         ...styles.turnIndicator,
-        background: isMyTurn
-          ? TURN_ACTIVE_BG
-          : "var(--color-bg-secondary)",
+        background: isMyTurn ? TURN_ACTIVE_BG : "var(--color-bg-secondary)",
         borderColor: isMyTurn
           ? TURN_ACTIVE_BORDER
           : "var(--color-border-primary)",

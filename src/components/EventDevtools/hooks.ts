@@ -68,10 +68,7 @@ export function useScrubberScroll(
   }, [scrubberIndex, listRefInternal]);
 }
 
-export function usePlayback(
-  config: PlaybackConfig,
-  actions: PlaybackActions,
-) {
+export function usePlayback(config: PlaybackConfig, actions: PlaybackActions) {
   const { isPlaying, rootEvents, events, onScrub } = config;
   const { setScrubberIndex, setIsPlaying } = actions;
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,8 +113,6 @@ export function usePlayback(
         }
       };
     }
-
-    return undefined;
   }, [isPlaying, rootEvents, events, onScrub, setScrubberIndex, setIsPlaying]);
 
   useEffect(() => {

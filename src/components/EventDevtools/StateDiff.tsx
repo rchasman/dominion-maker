@@ -85,9 +85,7 @@ function comparePlayerStates(
       to: `${nextPlayer.discard.length} cards`,
     });
   }
-  if (
-    JSON.stringify(prevPlayer.inPlay) !== JSON.stringify(nextPlayer.inPlay)
-  ) {
+  if (JSON.stringify(prevPlayer.inPlay) !== JSON.stringify(nextPlayer.inPlay)) {
     changes.push({
       path: `${playerId}.inPlay`,
       from: prevPlayer.inPlay.join(", ") || "(none)",
@@ -133,9 +131,5 @@ export function StateDiff({ prev, next }: StateDiffProps) {
     return <div style={styles.noChanges}>No state changes</div>;
   }
 
-  return (
-    <div style={styles.diffContent}>
-      {allChanges.map(renderDiffRow)}
-    </div>
-  );
+  return <div style={styles.diffContent}>{allChanges.map(renderDiffRow)}</div>;
 }

@@ -37,11 +37,16 @@ export function useCardHandlers(params: CardHandlersParams) {
     (card: CardName, index: number) => {
       if (validPreviewEventId !== null || !isMyTurn) return;
 
-      const displayState = getDisplayState(validPreviewEventId, gameState, getStateAtEvent);
+      const displayState = getDisplayState(
+        validPreviewEventId,
+        gameState,
+        getStateAtEvent,
+      );
       if (!displayState) return;
 
       if (displayState.pendingDecision) {
-        const maxCount = displayState.pendingDecision.max ?? DEFAULT_MAX_DECISION_COUNT;
+        const maxCount =
+          displayState.pendingDecision.max ?? DEFAULT_MAX_DECISION_COUNT;
         if (selectedCardIndices.includes(index)) {
           setSelectedCardIndices(prev => prev.filter(i => i !== index));
         } else if (selectedCardIndices.length < maxCount) {
@@ -50,7 +55,11 @@ export function useCardHandlers(params: CardHandlersParams) {
         return;
       }
 
-      if (displayState.phase === "action" && isActionCard(card) && displayState.actions > ZERO) {
+      if (
+        displayState.phase === "action" &&
+        isActionCard(card) &&
+        displayState.actions > ZERO
+      ) {
         const result = playAction(card);
         if (!result.ok) uiLogger.error("Failed to play action:", result.error);
         return;
@@ -58,24 +67,42 @@ export function useCardHandlers(params: CardHandlersParams) {
 
       if (displayState.phase === "buy" && isTreasureCard(card)) {
         const result = playTreasure(card);
-        if (!result.ok) uiLogger.error("Failed to play treasure:", result.error);
+        if (!result.ok)
+          uiLogger.error("Failed to play treasure:", result.error);
       }
     },
-    [isMyTurn, gameState, selectedCardIndices, playAction, playTreasure, validPreviewEventId, getStateAtEvent, setSelectedCardIndices]
+    [
+      isMyTurn,
+      gameState,
+      selectedCardIndices,
+      playAction,
+      playTreasure,
+      validPreviewEventId,
+      getStateAtEvent,
+      setSelectedCardIndices,
+    ],
   );
 
   const handleBuyCard = useCallback(
     (card: CardName) => {
       if (validPreviewEventId !== null) return;
-      const displayState = getDisplayState(validPreviewEventId, gameState, getStateAtEvent);
+      const displayState = getDisplayState(
+        validPreviewEventId,
+        gameState,
+        getStateAtEvent,
+      );
       if (!displayState) return;
-      const canBuy = isMyTurn && displayState.phase === "buy" && displayState.buys > ZERO && !validPreviewEventId;
+      const canBuy =
+        isMyTurn &&
+        displayState.phase === "buy" &&
+        displayState.buys > ZERO &&
+        !validPreviewEventId;
       if (!canBuy) return;
 
       const result = buyCard(card);
       if (!result.ok) uiLogger.error("Failed to buy card:", result.error);
     },
-    [isMyTurn, gameState, buyCard, validPreviewEventId, getStateAtEvent]
+    [isMyTurn, gameState, buyCard, validPreviewEventId, getStateAtEvent],
   );
 
   return { handleCardClick, handleBuyCard };

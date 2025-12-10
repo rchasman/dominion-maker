@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, type MutableRefObject } from "react";
+import { useState, useCallback, type MutableRefObject } from "react";
 import { P2PRoom, generateRoomCode, type PlayerInfo } from "../p2p-room";
 import { multiplayerLogger } from "../../lib/logger";
 import { saveSession, clearSession } from "../storage";
@@ -48,7 +48,7 @@ export function useRoomConnection({
         setIsConnecting(false);
 
         // Subscribe to state changes
-        room.onStateChange((state) => {
+        room.onStateChange(state => {
           multiplayerLogger.debug(
             `Host state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? "pending" : "null"}`,
           );
@@ -139,7 +139,7 @@ export function useRoomConnection({
         });
 
         // Subscribe to state changes
-        room.onStateChange((state) => {
+        room.onStateChange(state => {
           multiplayerLogger.debug(
             `Client state update: ${state.events.length} events, ${state.players.length} players, pendingUndo: ${state.pendingUndo ? "pending" : "null"}`,
           );
@@ -147,7 +147,7 @@ export function useRoomConnection({
         });
 
         // Subscribe to events
-        room.onEvents((newEvents) => {
+        room.onEvents(newEvents => {
           multiplayerLogger.debug(`Received ${newEvents.length} events`);
           // State will be updated via onStateChange
         });

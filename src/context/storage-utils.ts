@@ -18,7 +18,12 @@ export const STORAGE_KEYS = {
 } as const;
 
 // Valid game modes for validation
-const VALID_GAME_MODES: GameMode[] = ["engine", "hybrid", "full", "multiplayer"];
+const VALID_GAME_MODES: GameMode[] = [
+  "engine",
+  "hybrid",
+  "full",
+  "multiplayer",
+];
 
 /**
  * Load game mode from localStorage with validation

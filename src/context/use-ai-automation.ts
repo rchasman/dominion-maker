@@ -41,7 +41,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
-      return undefined;
+      return;
     }
 
     const isAITurn =
@@ -49,7 +49,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
 
     if (!isAITurn) {
-      return undefined;
+      return;
     }
 
     const timer = setTimeout(() => {
@@ -102,11 +102,11 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
-      return undefined;
+      return;
     }
 
     if (gameState.subPhase !== "opponent_decision") {
-      return undefined;
+      return;
     }
 
     const isAIDecision =
@@ -115,7 +115,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
 
     if (!isAIDecision) {
-      return undefined;
+      return;
     }
 
     const timer = setTimeout(() => {
@@ -154,7 +154,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 export function useAutoPhaseAdvance(
   gameState: GameState | null,
   isProcessing: boolean,
-  engineRef: import("react").MutableRefObject<DominionEngine | null>,
+  engineRef: MutableRefObject<DominionEngine | null>,
   actions: {
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
@@ -164,7 +164,7 @@ export function useAutoPhaseAdvance(
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || isProcessing || !engine) {
-      return undefined;
+      return;
     }
 
     if (engine.shouldAutoAdvancePhase("human")) {
@@ -179,7 +179,5 @@ export function useAutoPhaseAdvance(
         clearTimeout(timer);
       };
     }
-
-    return undefined;
   }, [gameState, isProcessing, engineRef, setEvents, setGameState]);
 }

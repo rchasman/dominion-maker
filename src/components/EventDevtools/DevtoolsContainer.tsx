@@ -27,9 +27,15 @@ interface DevtoolsContainerProps {
   handlers: {
     handleRewindToBeginning: () => void;
     handlePlayPause: () => void;
-    handleScrubberChangeWithPause: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleScrubberChangeWithPause: (
+      e: React.ChangeEvent<HTMLInputElement>,
+    ) => void;
     handleResetScrubber: () => void;
-    handleEventClick: (event: GameEvent, eventIndex: number, isScrubberPosition: boolean) => void;
+    handleEventClick: (
+      event: GameEvent,
+      eventIndex: number,
+      isScrubberPosition: boolean,
+    ) => void;
     handleBranchFromEvent: (eventId: string) => void;
   };
 }

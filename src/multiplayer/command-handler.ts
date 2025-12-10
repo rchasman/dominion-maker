@@ -66,9 +66,7 @@ export function handleUndoCommand({
   }
 
   if (isApproveUndoCommand(command)) {
-    multiplayerLogger.debug(
-      `Processing APPROVE_UNDO from ${customPlayerId}`,
-    );
+    multiplayerLogger.debug(`Processing APPROVE_UNDO from ${customPlayerId}`);
     const wasExecuted = room.approveUndo(customPlayerId);
 
     multiplayerLogger.debug(`After approval, wasExecuted:`, wasExecuted);
@@ -130,7 +128,7 @@ export function handleGameCommand({
 }: HandleGameCommandParams): void {
   // Map custom player ID to game player ID (player0, player1, etc.)
   const PLAYER_NOT_FOUND = -1;
-  const playerIndex = players.findIndex((p) => p.id === customPlayerId);
+  const playerIndex = players.findIndex(p => p.id === customPlayerId);
   if (playerIndex === PLAYER_NOT_FOUND) {
     multiplayerLogger.error(`Unknown custom player ID: ${customPlayerId}`);
     return;

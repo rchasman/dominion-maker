@@ -14,6 +14,10 @@ import { multiplayerLogger } from "../lib/logger";
 
 const APP_ID = "dominion-maker-p2p-v2"; // Bumped version for event-driven
 
+const RANDOM_ID_RADIX = 36;
+const RANDOM_ID_SLICE_START = 2;
+const ROOM_CODE_LENGTH = 6;
+
 export interface PlayerInfo {
   id: string;
   name: string;
@@ -74,16 +78,20 @@ export class P2PRoom {
 
   constructor(roomCode: string, isHost: boolean, savedPeerId?: string) {
     this.isHost = isHost;
-
-    // Use saved peer ID if reconnecting, otherwise generate new one
     this.myPeerId = savedPeerId || crypto.randomUUID();
 
     multiplayerLogger.debug(
       `Creating room: ${roomCode}, isHost: ${isHost}, myPeerId: ${this.myPeerId}${savedPeerId ? " (restored)" : " (new)"}`,
     );
 
-    // Join Trystero room with multiple reliable WebTorrent trackers
-    this.room = joinTrysteroRoom(
+    this.room = this.createTrysteroRoom(roomCode);
+    this.setupPeerHandlers();
+    this.setupMessageChannels();
+    this.initializeHostPlayer();
+  }
+
+  private createTrysteroRoom(roomCode: string): Room {
+    return joinTrysteroRoom(
       {
         appId: APP_ID,
         trackerUrls: [
@@ -95,13 +103,13 @@ export class P2PRoom {
       },
       roomCode,
     );
+  }
 
-    // When a peer connects, send them our current state (host only)
+  private setupPeerHandlers(): void {
     this.room.onPeerJoin(trysteroPeerId => {
       multiplayerLogger.debug(`✅ Trystero peer connected: ${trysteroPeerId}`);
 
       if (this.isHost) {
-        // Send current state to the newly connected peer immediately
         const state = this.getState();
         multiplayerLogger.debug(
           `Sending initial state to new peer: ${state.players.length} players`,
@@ -110,7 +118,36 @@ export class P2PRoom {
       }
     });
 
-    // Set up message channels (types don't satisfy Trystero's strict DataPayload constraint)
+    this.room.onPeerLeave(trysteroPeerId => {
+      this.handlePeerLeave(trysteroPeerId);
+    });
+  }
+
+  private handlePeerLeave(trysteroPeerId: string): void {
+    multiplayerLogger.debug(`Trystero peer left: ${trysteroPeerId}`);
+
+    if (this.isHost) {
+      const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
+      if (playerId) {
+        const player = this.players.get(playerId);
+        if (player) {
+          if (this.isStarted) {
+            player.connected = false;
+            player.isAI = true;
+          } else {
+            this.players.delete(playerId);
+          }
+          this.trysteroToPlayerId.delete(trysteroPeerId);
+          this.broadcastState();
+        }
+      }
+      return;
+    }
+    this.players.clear();
+    this.notifyStateChange();
+  }
+
+  private setupMessageChannels(): void {
     // @ts-expect-error - RoomState has complex nested types that don't match JsonValue constraint
     const [sendFullState, receiveFullState] =
       this.room.makeAction<RoomState>("fullState");
@@ -133,147 +170,131 @@ export class P2PRoom {
     this.sendJoin = sendJoin;
     this.sendGameEnd = sendGameEnd;
 
-    // Handle full state sync (for initial sync / rejoins)
+    this.setupFullStateReceiver(receiveFullState);
+    this.setupEventsReceiver(receiveEvents);
+    this.setupCommandReceiver(receiveCommand);
+    this.setupJoinReceiver(receiveJoin);
+    this.setupGameEndReceiver(receiveGameEnd);
+  }
+
+  private setupFullStateReceiver(
+    receiveFullState: (
+      handler: (state: RoomState, peerId: string) => void,
+    ) => void,
+  ): void {
     receiveFullState((state, peerId) => {
-      if (!this.isHost) {
+      if (this.isHost) return;
+
+      multiplayerLogger.debug(
+        `Received full state from ${peerId}: ${state.players.length} players, ${state.events.length} events, pendingUndo: ${state.pendingUndo?.requestId || "none"}`,
+      );
+      this.players = new Map(state.players.map((p: PlayerInfo) => [p.id, p]));
+      this.events = state.events;
+      this.pendingUndo = state.pendingUndo;
+      this.isStarted = state.isStarted;
+
+      this.gameState =
+        state.events.length > 0 ? projectState(state.events) : state.gameState;
+
+      multiplayerLogger.debug(`Client recomputed state:`, {
+        turn: this.gameState?.turn,
+        phase: this.gameState?.phase,
+        activePlayer: this.gameState?.activePlayer,
+      });
+
+      this.notifyStateChange();
+      this.isConnectedToHost = true;
+
+      if (this.pendingJoinName && this.myPeerId) {
         multiplayerLogger.debug(
-          `Received full state from ${peerId}: ${state.players.length} players, ${state.events.length} events, pendingUndo: ${state.pendingUndo?.requestId || "none"}`,
+          `Connection established, sending pending join message`,
         );
-        this.players = new Map(state.players.map((p: PlayerInfo) => [p.id, p]));
-        this.events = state.events;
-        this.pendingUndo = state.pendingUndo;
-        this.isStarted = state.isStarted;
-
-        // Recompute game state from events (important for undo)
-        this.gameState =
-          state.events.length > 0
-            ? projectState(state.events)
-            : state.gameState;
-
-        multiplayerLogger.debug(`Client recomputed state:`, {
-          turn: this.gameState?.turn,
-          phase: this.gameState?.phase,
-          activePlayer: this.gameState?.activePlayer,
+        this.sendJoin({
+          playerId: this.myPeerId,
+          name: this.pendingJoinName,
         });
-
-        this.notifyStateChange();
-
-        // Mark as connected to host
-        this.isConnectedToHost = true;
-
-        // If we have a pending join name, send it now
-        if (this.pendingJoinName && this.myPeerId) {
-          multiplayerLogger.debug(
-            `Connection established, sending pending join message`,
-          );
-          this.sendJoin({
-            playerId: this.myPeerId,
-            name: this.pendingJoinName,
-          });
-          this.pendingJoinName = null;
-        }
+        this.pendingJoinName = null;
       }
     });
+  }
 
-    // Handle incremental events (clients only)
+  private setupEventsReceiver(
+    receiveEvents: (
+      handler: (events: GameEvent[], peerId: string) => void,
+    ) => void,
+  ): void {
     receiveEvents((newEvents: GameEvent[], peerId) => {
-      if (!this.isHost) {
-        multiplayerLogger.debug(
-          `Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`,
-        );
-        this.events.push(...newEvents);
+      if (this.isHost) return;
 
-        // Recompute game state from full event log
-        this.gameState = projectState(this.events);
-
-        // Notify event handlers
-        for (const handler of this.eventHandlers) {
-          handler(newEvents);
-        }
-
-        // Notify state change handlers
-        this.notifyStateChange();
-      }
+      multiplayerLogger.debug(
+        `Received ${newEvents.length} events from ${peerId}, total: ${this.events.length + newEvents.length}`,
+      );
+      this.events.push(...newEvents);
+      this.gameState = projectState(this.events);
+      Array.from(this.eventHandlers).map(handler => handler(newEvents));
+      this.notifyStateChange();
     });
+  }
 
-    // Handle commands from clients (host only)
+  private setupCommandReceiver(
+    receiveCommand: (
+      handler: (command: GameCommand, peerId: string) => void,
+    ) => void,
+  ): void {
     receiveCommand((command, trysteroPeerId) => {
-      if (this.isHost) {
-        // Translate Trystero peer ID to custom player ID
-        const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
-        if (!playerId) {
-          multiplayerLogger.error(
-            `Received command from unknown Trystero peer: ${trysteroPeerId}`,
-          );
-          return;
-        }
-        multiplayerLogger.debug(
-          `Received command from ${playerId} (Trystero: ${trysteroPeerId}):`,
-          command.type,
-        );
-        for (const handler of this.commandHandlers) {
-          handler(command, playerId);
-        }
-      }
-    });
+      if (!this.isHost) return;
 
-    // Handle player joins
+      const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
+      if (!playerId) {
+        multiplayerLogger.error(
+          `Received command from unknown Trystero peer: ${trysteroPeerId}`,
+        );
+        return;
+      }
+      multiplayerLogger.debug(
+        `Received command from ${playerId} (Trystero: ${trysteroPeerId}):`,
+        command.type,
+      );
+      Array.from(this.commandHandlers).map(handler =>
+        handler(command, playerId),
+      );
+    });
+  }
+
+  private setupJoinReceiver(
+    receiveJoin: (
+      handler: (
+        info: { playerId: string; name: string },
+        peerId: string,
+      ) => void,
+    ) => void,
+  ): void {
     receiveJoin((info, trysteroPeerId) => {
       multiplayerLogger.debug(
         `Player joined: ${info.playerId} (Trystero: ${trysteroPeerId}) - ${info.name}`,
       );
 
-      if (this.isHost) {
-        // Map Trystero peer ID to custom player ID
-        this.trysteroToPlayerId.set(trysteroPeerId, info.playerId);
+      if (!this.isHost) return;
 
-        // Add player to our list using their custom player ID
-        this.players.set(info.playerId, {
-          id: info.playerId,
-          name: info.name,
-          isAI: false,
-          connected: true,
-        });
-
-        // Broadcast updated state to all
-        this.broadcastState();
-      }
+      this.trysteroToPlayerId.set(trysteroPeerId, info.playerId);
+      this.players.set(info.playerId, {
+        id: info.playerId,
+        name: info.name,
+        isAI: false,
+        connected: true,
+      });
+      this.broadcastState();
     });
+  }
 
-    // Handle peer leaves
-    this.room.onPeerLeave(trysteroPeerId => {
-      multiplayerLogger.debug(`Trystero peer left: ${trysteroPeerId}`);
-
-      if (this.isHost) {
-        // Look up custom player ID from Trystero peer ID
-        const playerId = this.trysteroToPlayerId.get(trysteroPeerId);
-        if (playerId) {
-          const player = this.players.get(playerId);
-          if (player) {
-            if (this.isStarted) {
-              // Mark as AI if game started
-              player.connected = false;
-              player.isAI = true;
-            } else {
-              // Remove if in lobby
-              this.players.delete(playerId);
-            }
-            this.trysteroToPlayerId.delete(trysteroPeerId);
-            this.broadcastState();
-          }
-        }
-      } else {
-        // If we're a client and host left, we're disconnected
-        this.players.clear();
-        this.notifyStateChange();
-      }
-    });
-
-    // Handle game end broadcast (all peers)
+  private setupGameEndReceiver(
+    receiveGameEnd: (
+      handler: (data: { reason: string }, peerId: string) => void,
+    ) => void,
+  ): void {
     receiveGameEnd(data => {
       multiplayerLogger.debug(`Game ended by peer: ${data.reason}`);
 
-      // Set game state to game over
       if (this.gameState) {
         this.gameState = {
           ...this.gameState,
@@ -284,8 +305,9 @@ export class P2PRoom {
 
       this.notifyStateChange();
     });
+  }
 
-    // If host, add ourselves to players immediately
+  private initializeHostPlayer(): void {
     if (this.isHost && this.myPeerId) {
       this.players.set(this.myPeerId, {
         id: this.myPeerId,
@@ -360,9 +382,7 @@ export class P2PRoom {
    */
   restorePlayers(players: PlayerInfo[]): void {
     this.players.clear();
-    for (const player of players) {
-      this.players.set(player.id, player);
-    }
+    players.map(player => this.players.set(player.id, player));
     multiplayerLogger.debug(`Restored ${this.players.size} players`);
   }
 
@@ -413,7 +433,7 @@ export class P2PRoom {
    * Request undo (anyone can request)
    */
   requestUndo(playerId: string, toEventId: string, reason?: string): void {
-    const requestId = `undo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const requestId = `undo_${Date.now()}_${Math.random().toString(RANDOM_ID_RADIX).slice(RANDOM_ID_SLICE_START)}`;
     const playerCount = this.players.size;
 
     multiplayerLogger.debug(
@@ -490,13 +510,12 @@ export class P2PRoom {
         `Undo executed, returning control to caller for state recomputation`,
       );
       return true;
-    } else {
-      multiplayerLogger.debug(
-        `Waiting for more approvals... (need ${this.pendingUndo.needed - this.pendingUndo.approvals.length} more)`,
-      );
-      this.broadcastState();
-      return false;
     }
+    multiplayerLogger.debug(
+      `Waiting for more approvals... (need ${this.pendingUndo.needed - this.pendingUndo.approvals.length} more)`,
+    );
+    this.broadcastState();
+    return false;
   }
 
   /**
@@ -606,9 +625,7 @@ export class P2PRoom {
    */
   private notifyStateChange(): void {
     const state = this.getState();
-    for (const handler of this.stateHandlers) {
-      handler(state);
-    }
+    Array.from(this.stateHandlers).map(handler => handler(state));
   }
 }
 
@@ -617,9 +634,8 @@ export class P2PRoom {
  */
 export function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+  return Array.from(
+    { length: ROOM_CODE_LENGTH },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 }

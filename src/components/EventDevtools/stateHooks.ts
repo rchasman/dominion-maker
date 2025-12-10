@@ -19,7 +19,10 @@ export function useRootEvents(events: GameEvent[]) {
   }, [events]);
 }
 
-export function useSelectedState(events: GameEvent[], displayIndex: number | null) {
+export function useSelectedState(
+  events: GameEvent[],
+  displayIndex: number | null,
+) {
   return useMemo(() => {
     if (displayIndex === null || displayIndex === -1) return null;
     return projectState(events.slice(0, displayIndex + 1));

@@ -1,5 +1,5 @@
 import type { CardName } from "../types/game-state";
-import type { DecisionChoice, PlayerId } from "../events/types";
+import type { DecisionChoice, PlayerId, GameEvent } from "../events/types";
 
 /**
  * Commands represent player intent.
@@ -96,5 +96,5 @@ export type GameCommand =
  * Result of handling a command.
  */
 export type CommandResult =
-  | { ok: true; events: import("../events/types").GameEvent[] }
+  | { ok: true; events: GameEvent[] }
   | { ok: false; error: string };

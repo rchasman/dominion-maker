@@ -6,7 +6,13 @@ interface FilterBarProps {
   onFilterChange: (filter: EventCategory) => void;
 }
 
-const EVENT_CATEGORY_OPTIONS: EventCategory[] = ["all", "turns", "cards", "resources", "decisions"];
+const EVENT_CATEGORY_OPTIONS: EventCategory[] = [
+  "all",
+  "turns",
+  "cards",
+  "resources",
+  "decisions",
+];
 
 export function FilterBar({ filter, onFilterChange }: FilterBarProps) {
   return (
@@ -17,8 +23,7 @@ export function FilterBar({ filter, onFilterChange }: FilterBarProps) {
           onClick={() => onFilterChange(cat)}
           style={{
             ...styles.filterButton,
-            background:
-              filter === cat ? "rgba(99, 102, 241, 0.3)" : undefined,
+            background: filter === cat ? "rgba(99, 102, 241, 0.3)" : undefined,
             borderColor:
               filter === cat ? "rgba(99, 102, 241, 0.5)" : "transparent",
           }}

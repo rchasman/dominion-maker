@@ -40,7 +40,7 @@ export function MultiplayerGameBoard({
       requestUndo: multiplayerContext.requestUndo,
       getStateAtEvent: multiplayerContext.getStateAtEvent,
     },
-    { gameState, events, myGamePlayerId, isMyTurn }
+    { gameState, events, myGamePlayerId, isMyTurn },
   );
 
   const handleEndGame = useCallback(() => {
@@ -57,7 +57,7 @@ export function MultiplayerGameBoard({
   const displayState = getDisplayState(
     handlers.validPreviewEventId,
     gameState,
-    multiplayerContext.getStateAtEvent
+    multiplayerContext.getStateAtEvent,
   );
 
   if (!displayState) {

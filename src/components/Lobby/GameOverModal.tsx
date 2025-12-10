@@ -25,10 +25,9 @@ export function GameOverModal({
   }, [leaveRoom, onBackToHome]);
 
   const getWinnerName = (winnerId: Player): string => {
-    const winnerIndex = displayState.playerOrder?.indexOf(winnerId) ?? NEGATIVE_ONE;
-    return (
-      players.find(p => p.id === winnerIndex.toString())?.name ?? winnerId
-    );
+    const winnerIndex =
+      displayState.playerOrder?.indexOf(winnerId) ?? NEGATIVE_ONE;
+    return players.find(p => p.id === winnerIndex.toString())?.name ?? winnerId;
   };
 
   const scoreRows = displayState.playerOrder?.map((playerId, idx) => {

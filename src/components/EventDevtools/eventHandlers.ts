@@ -19,10 +19,7 @@ interface HandlerActions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function useEventHandlers(
-  deps: HandlerDeps,
-  actions: HandlerActions,
-) {
+export function useEventHandlers(deps: HandlerDeps, actions: HandlerActions) {
   const {
     events,
     rootEvents,
@@ -41,28 +38,38 @@ export function useEventHandlers(
     { setScrubberIndex, setSelectedEventId, setIsPlaying },
   );
 
-  const handleEventClick = useCallback((
-    event: GameEvent,
-    eventIndex: number,
-    isScrubberPosition: boolean,
-  ) => {
-    const isSelected = selectedEventId === event.id || scrubberIndex === eventIndex;
-    const newSelectedId = isSelected && !isScrubberPosition ? null : (event.id || null);
+  const handleEventClick = useCallback(
+    (event: GameEvent, eventIndex: number, isScrubberPosition: boolean) => {
+      const isSelected =
+        selectedEventId === event.id || scrubberIndex === eventIndex;
+      const newSelectedId =
+        isSelected && !isScrubberPosition ? null : event.id || null;
 
-    setSelectedEventId(newSelectedId);
-    setScrubberIndex(eventIndex);
+      setSelectedEventId(newSelectedId);
+      setScrubberIndex(eventIndex);
 
-    if (onScrub && event.id) {
-      onScrub(event.id);
-    }
-  }, [selectedEventId, scrubberIndex, onScrub, setSelectedEventId, setScrubberIndex]);
+      if (onScrub && event.id) {
+        onScrub(event.id);
+      }
+    },
+    [
+      selectedEventId,
+      scrubberIndex,
+      onScrub,
+      setSelectedEventId,
+      setScrubberIndex,
+    ],
+  );
 
-  const handleBranchFromEvent = useCallback((eventId: string) => {
-    if (onBranchFrom) {
-      onBranchFrom(eventId);
-      scrubberHandlers.handleResetScrubber();
-    }
-  }, [onBranchFrom, scrubberHandlers]);
+  const handleBranchFromEvent = useCallback(
+    (eventId: string) => {
+      if (onBranchFrom) {
+        onBranchFrom(eventId);
+        scrubberHandlers.handleResetScrubber();
+      }
+    },
+    [onBranchFrom, scrubberHandlers],
+  );
 
   return {
     ...scrubberHandlers,

@@ -15,10 +15,7 @@ type DecisionContext = {
   rootEventId: string;
 };
 
-function linkEffectEvents(
-  events: GameEvent[],
-  causedBy: string,
-): GameEvent[] {
+function linkEffectEvents(events: GameEvent[], causedBy: string): GameEvent[] {
   return events.map(event => ({
     ...event,
     id: generateEventId(),
@@ -82,7 +79,10 @@ function handleThroneRoomExecution(
   });
   const withSecond = [
     ...newEvents,
-    ...linkEffectEvents(secondResult.events, ctx.originalCause || ctx.rootEventId),
+    ...linkEffectEvents(
+      secondResult.events,
+      ctx.originalCause || ctx.rootEventId,
+    ),
   ];
 
   if (secondResult.pendingDecision) {
@@ -150,7 +150,10 @@ function handleCardEffectContinuation(
       ...newEvents,
       {
         type: "DECISION_REQUIRED",
-        decision: { ...result.pendingDecision, cardBeingPlayed: ctx.cardBeingPlayed },
+        decision: {
+          ...result.pendingDecision,
+          cardBeingPlayed: ctx.cardBeingPlayed,
+        },
         id: generateEventId(),
         causedBy: ctx.rootEventId,
       },
@@ -171,7 +174,12 @@ export function handleSubmitDecision(
     return { ok: false, error: "Not your decision" };
   }
 
-  const { player: decisionPlayer, cardBeingPlayed, stage, metadata } = state.pendingDecision;
+  const {
+    player: decisionPlayer,
+    cardBeingPlayed,
+    stage,
+    metadata,
+  } = state.pendingDecision;
   const originalCause = metadata?.originalCause as string | undefined;
   const rootEventId = generateEventId();
   const baseEvents: GameEvent[] = [
@@ -189,10 +197,17 @@ export function handleSubmitDecision(
   };
 
   const throneRoomTarget = metadata?.throneRoomTarget as string | undefined;
-  const executionsRemaining = metadata?.throneRoomExecutionsRemaining as number | undefined;
+  const executionsRemaining = metadata?.throneRoomExecutionsRemaining as
+    | number
+    | undefined;
 
   if (throneRoomTarget && executionsRemaining && executionsRemaining > 0) {
-    const events = handleThroneRoomExecution(ctx, baseEvents, throneRoomTarget, executionsRemaining);
+    const events = handleThroneRoomExecution(
+      ctx,
+      baseEvents,
+      throneRoomTarget,
+      executionsRemaining,
+    );
     return { ok: true, events };
   }
 

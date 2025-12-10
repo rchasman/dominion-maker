@@ -12,13 +12,15 @@ import {
   useRef,
   useMemo,
   type ReactNode,
+  type MutableRefObject,
 } from "react";
 import type { GameState, CardName } from "../types/game-state";
+import type { DominionEngine } from "../engine";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { ModelSettings } from "../agent/game-agent";
+import { abortOngoingConsensus, type ModelSettings } from "../agent/game-agent";
 import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
 import { useGameActions } from "./use-game-actions";
@@ -97,13 +99,11 @@ function createLLMLogEntry(
   };
 }
 
-
-
 // eslint-disable-next-line max-lines-per-function -- Complex provider with extracted hooks
 export function GameProvider({ children }: { children: ReactNode }) {
   const storage = useGameStorage();
-  const engineRef = useRef<import("../engine").DominionEngine | null>(null);
-  const setEngine = (engine: import("../engine").DominionEngine | null) => {
+  const engineRef: MutableRefObject<DominionEngine | null> = useRef(null);
+  const setEngine = (engine: DominionEngine | null) => {
     engineRef.current = engine;
   };
 
@@ -122,11 +122,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const setGameMode = (mode: GameMode) => {
-    import("../agent/game-agent").then(({ abortOngoingConsensus }) => {
-      abortOngoingConsensus();
-    }).catch(() => {
-      // Ignore error
-    });
+    abortOngoingConsensus();
     setGameModeInternal(mode);
   };
 
@@ -138,14 +134,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [storage.engineRef, engineRef]);
 
   // Sync to localStorage
-  useStorageSync({ events, gameMode, llmLogs, modelSettings, playerStrategies });
+  useStorageSync({
+    events,
+    gameMode,
+    llmLogs,
+    modelSettings,
+    playerStrategies,
+  });
 
   // LLM Logger - stable reference
-  const llmLoggerRef = useRef((entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
-    const engine = engineRef.current;
-    const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
-    setLLMLogs(prev => [...prev, logEntry]);
-  });
+  const llmLoggerRef = useRef(
+    (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
+      const engine = engineRef.current;
+      const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
+      setLLMLogs(prev => [...prev, logEntry]);
+    },
+  );
 
   // Update llmLogger ref when dependencies change
   useEffect(() => {
@@ -207,7 +211,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     submitDecision,
     requestUndo,
     getStateAtEvent,
-  } = useGameActions(engineRef, gameState, { setEvents, setGameState, setLLMLogs });
+  } = useGameActions(engineRef, gameState, {
+    setEvents,
+    setGameState,
+    setLLMLogs,
+  });
 
   // AI Automation
   useAITurnAutomation({
@@ -232,7 +240,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGameState,
   });
 
-  useAutoPhaseAdvance(gameState, isProcessing, engineRef, { setEvents, setGameState });
+  useAutoPhaseAdvance(gameState, isProcessing, engineRef, {
+    setEvents,
+    setGameState,
+  });
 
   return (
     <GameContext.Provider

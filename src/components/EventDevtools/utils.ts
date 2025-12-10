@@ -32,7 +32,8 @@ export function getDisplayIndex(
  * Format event for display
  */
 export function formatEvent(event: GameEvent): string {
-  const formatDelta = (delta: number) => (delta >= 0 ? `+${delta}` : String(delta));
+  const formatDelta = (delta: number) =>
+    delta >= 0 ? `+${delta}` : String(delta);
 
   switch (event.type) {
     case "CARD_DRAWN":

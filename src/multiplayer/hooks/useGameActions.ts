@@ -108,7 +108,7 @@ export function useGameActions({
         isHost,
         roomRef,
         engineRef,
-        hostAction: (engine) => engine.submitDecision(decisionPlayer, choice),
+        hostAction: engine => engine.submitDecision(decisionPlayer, choice),
         clientCommand: createSubmitDecisionCommand(decisionPlayer, choice),
       });
     },

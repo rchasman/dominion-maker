@@ -29,7 +29,7 @@ interface GameBoardState {
 
 export function useGameBoardHandlers(
   gameActions: GameActions,
-  gameBoardState: GameBoardState
+  gameBoardState: GameBoardState,
 ) {
   const {
     playAction,
@@ -59,7 +59,7 @@ export function useGameBoardHandlers(
       setSelectedCardIndices([]);
       requestUndo(eventId);
     },
-    [requestUndo]
+    [requestUndo],
   );
 
   const { handleCardClick, handleBuyCard } = useCardHandlers({
@@ -92,7 +92,11 @@ export function useGameBoardHandlers(
 
   const handlePlayAllTreasures = useCallback(() => {
     if (previewEventId !== null) return;
-    const displayState = getDisplayState(previewEventId, gameState, getStateAtEvent);
+    const displayState = getDisplayState(
+      previewEventId,
+      gameState,
+      getStateAtEvent,
+    );
     if (!displayState || !isMyTurn || displayState.phase !== "buy") return;
 
     const result = playAllTreasures();

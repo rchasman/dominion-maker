@@ -146,10 +146,7 @@ export function createDrawEventsForCleanup(
   return cards.map(createDrawEvent);
 }
 
-export function getNextPlayer(
-  state: GameState,
-  currentPlayer: string,
-): string {
+export function getNextPlayer(state: GameState, currentPlayer: string): string {
   const playerOrder = state.playerOrder || ["human", "ai"];
   const currentIdx = playerOrder.indexOf(currentPlayer);
   const nextIdx = (currentIdx + 1) % playerOrder.length;

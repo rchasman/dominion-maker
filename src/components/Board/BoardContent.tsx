@@ -4,7 +4,7 @@ import { EventDevtools } from "../EventDevtools";
 import { formatPlayerName } from "../../lib/board-utils";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
-import type { CardName, GameState, PlayerId } from "../../types/game-state";
+import type { CardName, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";

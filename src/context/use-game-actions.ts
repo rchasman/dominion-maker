@@ -8,6 +8,7 @@ import type { DominionEngine } from "../engine";
 import type { CardName, GameState } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
+import type { LLMLogEntry } from "../components/LLMLog";
 import {
   executePlayAction,
   executePlayTreasure,
@@ -24,9 +25,9 @@ import {
  * Filter LLM logs after undo
  */
 function filterLogsAfterUndo(
-  logs: import("../components/LLMLog").LLMLogEntry[],
+  logs: LLMLogEntry[],
   eventsAfterUndo: number,
-): import("../components/LLMLog").LLMLogEntry[] {
+): LLMLogEntry[] {
   return logs.filter(log => {
     const logEventCount = log.data?.eventCount;
     return (
@@ -58,11 +59,7 @@ export function useGameActions(
   actions: {
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
-    setLLMLogs: (
-      setter: (
-        prev: import("../components/LLMLog").LLMLogEntry[],
-      ) => import("../components/LLMLog").LLMLogEntry[],
-    ) => void;
+    setLLMLogs: (setter: (prev: LLMLogEntry[]) => LLMLogEntry[]) => void;
   },
 ): GameActions {
   const { setEvents, setGameState, setLLMLogs } = actions;

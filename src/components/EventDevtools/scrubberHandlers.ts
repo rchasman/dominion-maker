@@ -42,18 +42,21 @@ export function useScrubberHandlers(
 
   const { setScrubberIndex, setSelectedEventId, setIsPlaying } = actions;
 
-  const handleScrubberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const rootIndex = parseInt(e.target.value, 10);
-    const rootEvent = rootEvents[rootIndex];
-    if (!rootEvent) return;
+  const handleScrubberChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const rootIndex = parseInt(e.target.value, 10);
+      const rootEvent = rootEvents[rootIndex];
+      if (!rootEvent) return;
 
-    const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
-    setScrubberIndex(actualIndex);
+      const actualIndex = events.findIndex(evt => evt.id === rootEvent.id);
+      setScrubberIndex(actualIndex);
 
-    if (onScrub && rootEvent.id) {
-      onScrub(rootEvent.id);
-    }
-  }, [rootEvents, events, onScrub, setScrubberIndex]);
+      if (onScrub && rootEvent.id) {
+        onScrub(rootEvent.id);
+      }
+    },
+    [rootEvents, events, onScrub, setScrubberIndex],
+  );
 
   const handleResetScrubber = useCallback(() => {
     if (isPlaying) {
@@ -66,7 +69,14 @@ export function useScrubberHandlers(
     if (onScrub) {
       onScrub(null);
     }
-  }, [isPlaying, onScrub, playIntervalRef, setScrubberIndex, setSelectedEventId, setIsPlaying]);
+  }, [
+    isPlaying,
+    onScrub,
+    playIntervalRef,
+    setScrubberIndex,
+    setSelectedEventId,
+    setIsPlaying,
+  ]);
 
   const handleRewindToBeginning = useCallback(() => {
     if (rootEvents.length > 0) {
@@ -93,14 +103,25 @@ export function useScrubberHandlers(
     if (scrubberIndex === null || scrubberIndex >= lastRootIndex) {
       handleRewindToBeginning();
     }
-  }, [isPlaying, scrubberIndex, events, rootEvents, handleRewindToBeginning, playIntervalRef, setIsPlaying]);
+  }, [
+    isPlaying,
+    scrubberIndex,
+    events,
+    rootEvents,
+    handleRewindToBeginning,
+    playIntervalRef,
+    setIsPlaying,
+  ]);
 
-  const handleScrubberChangeWithPause = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isPlaying) {
-      stopPlayback(playIntervalRef, setIsPlaying);
-    }
-    handleScrubberChange(e);
-  }, [isPlaying, handleScrubberChange, playIntervalRef, setIsPlaying]);
+  const handleScrubberChangeWithPause = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isPlaying) {
+        stopPlayback(playIntervalRef, setIsPlaying);
+      }
+      handleScrubberChange(e);
+    },
+    [isPlaying, handleScrubberChange, playIntervalRef, setIsPlaying],
+  );
 
   return {
     handleScrubberChange,

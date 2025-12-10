@@ -59,7 +59,10 @@ function renderDecisionPanel(params: {
   onSubmitDecision: () => void;
   onSkipDecision: () => void;
 }) {
-  if (!params.pendingDecision || params.pendingDecision.player !== params.myPlayer) {
+  if (
+    !params.pendingDecision ||
+    params.pendingDecision.player !== params.myPlayer
+  ) {
     return null;
   }
 
@@ -75,7 +78,9 @@ function renderDecisionPanel(params: {
 }
 
 export function GameBoardMainArea(props: GameBoardMainAreaProps) {
-  const myPlayerState = props.myPlayer ? props.displayState.players[props.myPlayer] : null;
+  const myPlayerState = props.myPlayer
+    ? props.displayState.players[props.myPlayer]
+    : null;
   const playerInfo = props.displayState.playerInfo;
 
   return (

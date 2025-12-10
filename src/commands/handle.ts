@@ -18,10 +18,17 @@ import { handleSubmitDecision } from "./handle-decision";
 
 /** Create resource modification events with proper ID and causality */
 function createResourceEvents(
-  modifications: Array<{ type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED"; delta: number }>,
+  modifications: Array<{
+    type: "ACTIONS_MODIFIED" | "BUYS_MODIFIED" | "COINS_MODIFIED";
+    delta: number;
+  }>,
   causedBy: string,
 ): GameEvent[] {
-  return modifications.map(mod => ({ ...mod, id: generateEventId(), causedBy }));
+  return modifications.map(mod => ({
+    ...mod,
+    id: generateEventId(),
+    causedBy,
+  }));
 }
 
 /** Calculate Merchant bonus for Silver cards */

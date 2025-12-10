@@ -21,6 +21,13 @@ import {
 } from "./types";
 import { agentLogger } from "../lib/logger";
 
+// Constants
+const CONSENSUS_AHEAD_BY_K_MIN = 2;
+const CONSENSUS_AHEAD_BY_K_DIVISOR = 3;
+const MODEL_TIMEOUT_MS = 5000;
+const PERCENTAGE_MULTIPLIER = 100;
+const MAX_TURN_STEPS = 20;
+
 // Re-export for convenience
 export {
   AVAILABLE_MODELS,
@@ -45,6 +52,269 @@ export function abortOngoingConsensus() {
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
 
+// Configuration for consensus operations
+type ConsensusConfig = {
+  humanChoice?: { selectedCards: CardName[] };
+  providers?: ModelProvider[];
+  logger?: LLMLogger;
+  strategySummary?: string;
+};
+
+// Configuration for AI turn operations
+type AITurnConfig = {
+  providers: ModelProvider[];
+  logger?: LLMLogger;
+  onStateChange?: (state: GameState) => void;
+  strategySummary?: string;
+};
+
+// Types for consensus voting system
+type ModelResult = {
+  provider: ModelProvider;
+  result: Action | null;
+  error: unknown;
+  duration: number;
+};
+type ActionSignature = string;
+type VoteGroup = {
+  signature: ActionSignature;
+  action: Action;
+  voters: ModelProvider[];
+  count: number;
+};
+
+// Helper to create action signature for voting
+const createActionSignature = (action: Action): ActionSignature => {
+  return JSON.stringify(stripReasoning(action));
+};
+
+// Check if we have early consensus (leader ahead by K votes)
+const checkEarlyConsensus = (
+  voteGroups: Map<ActionSignature, VoteGroup>,
+  aheadByK: number,
+): VoteGroup | null => {
+  const groups = Array.from(voteGroups.values()).sort(
+    (a, b) => b.count - a.count,
+  );
+  if (groups.length === 0) return null;
+
+  const leader = groups[0];
+  const runnerUp = groups[1]?.count ?? 0;
+
+  if (leader.count - runnerUp >= aheadByK) {
+    return leader;
+  }
+  return null;
+};
+
+type ModelExecutionContext = {
+  provider: ModelProvider;
+  index: number;
+  currentState: GameState;
+  humanChoice?: { selectedCards: CardName[] };
+  strategySummary?: string;
+  abortController: AbortController;
+  voteGroups: Map<ActionSignature, VoteGroup>;
+  completedResults: ModelResult[];
+  aheadByK: number;
+  logger?: LLMLogger;
+  pendingModels: Set<number>;
+  modelStartTimes: Map<number, number>;
+  providers: ModelProvider[];
+  onEarlyConsensus: (winner: VoteGroup) => void;
+  onComplete: () => void;
+};
+
+// Handle model result and check for early consensus
+const handleModelResult = (
+  modelResult: ModelResult,
+  context: Omit<ModelExecutionContext, "provider" | "index">,
+): void => {
+  const {
+    voteGroups,
+    completedResults,
+    aheadByK,
+    abortController,
+    pendingModels,
+    modelStartTimes,
+    providers,
+    logger,
+    onEarlyConsensus,
+    onComplete,
+  } = context;
+
+  completedResults.push(modelResult);
+
+  if (modelResult.result) {
+    const signature = createActionSignature(modelResult.result);
+    const existing = voteGroups.get(signature);
+    if (existing) {
+      existing.voters.push(modelResult.provider);
+      existing.count++;
+    } else {
+      voteGroups.set(signature, {
+        signature,
+        action: modelResult.result,
+        voters: [modelResult.provider],
+        count: 1,
+      });
+    }
+
+    const winner = checkEarlyConsensus(voteGroups, aheadByK);
+    if (winner) {
+      abortController.abort();
+
+      const nowTime = Date.now();
+      Array.from(pendingModels).map(pendingIndex => {
+        const startTime = modelStartTimes.get(pendingIndex) || nowTime;
+        return logger?.({
+          type: "consensus-model-aborted",
+          message: `${providers[pendingIndex]} aborted (early consensus)`,
+          data: {
+            provider: providers[pendingIndex],
+            index: pendingIndex,
+            duration: nowTime - startTime,
+          },
+        });
+      });
+
+      onEarlyConsensus(winner);
+      return;
+    }
+  }
+
+  onComplete();
+};
+
+type ModelHandlerParams = {
+  provider: ModelProvider;
+  index: number;
+  modelStart: number;
+  logger?: LLMLogger;
+};
+
+// Handle successful model response
+const handleModelSuccess = (
+  action: Action,
+  params: ModelHandlerParams,
+): ModelResult => {
+  const { provider, index, modelStart, logger } = params;
+  const modelDuration = performance.now() - modelStart;
+  logger?.({
+    type: "consensus-model-complete",
+    message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
+    data: {
+      provider,
+      index,
+      duration: modelDuration,
+      action,
+      success: true,
+    },
+  });
+  return {
+    provider,
+    result: action,
+    error: null,
+    duration: modelDuration,
+  };
+};
+
+// Handle model error
+const handleModelError = (
+  error: unknown,
+  params: ModelHandlerParams,
+): ModelResult => {
+  const { provider, index, modelStart, logger } = params;
+  const modelDuration = performance.now() - modelStart;
+  const errorObj = error as { name?: string; message?: string };
+  const isAborted =
+    errorObj.name === "AbortError" || errorObj.message?.includes("abort");
+  const isTimeout = modelDuration >= MODEL_TIMEOUT_MS;
+
+  logger?.({
+    type: "consensus-model-complete",
+    message: run(() => {
+      if (isTimeout) {
+        return `${provider} timed out after ${modelDuration.toFixed(0)}ms`;
+      }
+      if (isAborted) {
+        return `${provider} aborted after ${modelDuration.toFixed(0)}ms`;
+      }
+      return `${provider} failed after ${modelDuration.toFixed(0)}ms`;
+    }),
+    data: {
+      provider,
+      index,
+      duration: modelDuration,
+      error: String(error),
+      success: false,
+      aborted: isAborted,
+      timeout: isTimeout,
+    },
+  });
+  return { provider, result: null, error: errorObj, duration: modelDuration };
+};
+
+// Execute a single model and handle its result
+const executeModel = (context: ModelExecutionContext): void => {
+  const {
+    provider,
+    index,
+    currentState,
+    humanChoice,
+    strategySummary,
+    abortController,
+    pendingModels,
+    modelStartTimes,
+    logger,
+  } = context;
+
+  const modelStart = performance.now();
+  const uiStartTime = Date.now();
+
+  pendingModels.add(index);
+  modelStartTimes.set(index, uiStartTime);
+
+  logger?.({
+    type: "consensus-model-pending",
+    message: `${provider} started`,
+    data: { provider, index, startTime: uiStartTime },
+  });
+
+  const modelAbortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    modelAbortController.abort();
+  }, MODEL_TIMEOUT_MS);
+
+  const abortHandler = () => modelAbortController.abort();
+  abortController.signal.addEventListener("abort", abortHandler);
+
+  const handlerParams: ModelHandlerParams = { provider, index, modelStart, logger };
+
+  void generateActionViaBackend({
+    provider,
+    currentState,
+    humanChoice,
+    signal: modelAbortController.signal,
+    strategySummary,
+  })
+    .then(action => {
+      clearTimeout(timeoutId);
+      return handleModelSuccess(action, handlerParams);
+    })
+    .catch(error => {
+      clearTimeout(timeoutId);
+      return handleModelError(error, handlerParams);
+    })
+    .finally(() => {
+      abortController.signal.removeEventListener("abort", abortHandler);
+    })
+    .then(modelResult => {
+      pendingModels.delete(index);
+      handleModelResult(modelResult, context);
+    });
+};
+
 /**
  * Get legal actions from current game state for LLM context
  * Adapted to work with event-sourced state
@@ -63,23 +333,23 @@ function getLegalActions(state: GameState): Action[] {
     const options = decision.cardOptions || [];
 
     if (decision.stage === "trash") {
-      for (const card of options) {
-        actions.push({ type: "trash_card", card });
-      }
+      actions.push(
+        ...options.map(card => ({ type: "trash_card" as const, card })),
+      );
       // Can't skip trashing by selecting nothing - that would be end_phase or a different action
     } else if (
       decision.stage === "discard" ||
       decision.stage === "opponent_discard"
     ) {
       // Single card at a time (atomic)
-      for (const card of options) {
-        actions.push({ type: "discard_card", card });
-      }
+      actions.push(
+        ...options.map(card => ({ type: "discard_card" as const, card })),
+      );
       // Can't skip discarding by selecting nothing - that would be end_phase or a different action
     } else if (decision.stage === "gain" || decision.from === "supply") {
-      for (const card of options) {
-        actions.push({ type: "gain_card", card });
-      }
+      actions.push(
+        ...options.map(card => ({ type: "gain_card" as const, card })),
+      );
     }
     return actions;
   }
@@ -92,10 +362,10 @@ function getLegalActions(state: GameState): Action[] {
   // Action phase
   if (state.phase === "action") {
     const actionCards = playerState.hand.filter(isActionCard);
-    for (const card of actionCards) {
-      if (state.actions > 0) {
-        actions.push({ type: "play_action", card });
-      }
+    if (state.actions > 0) {
+      actions.push(
+        ...actionCards.map(card => ({ type: "play_action" as const, card })),
+      );
     }
     actions.push({ type: "end_phase" });
   }
@@ -103,17 +373,20 @@ function getLegalActions(state: GameState): Action[] {
   // Buy phase
   if (state.phase === "buy") {
     const treasures = playerState.hand.filter(isTreasureCard);
-    for (const treasure of treasures) {
-      actions.push({ type: "play_treasure", card: treasure });
-    }
+    actions.push(
+      ...treasures.map(card => ({ type: "play_treasure" as const, card })),
+    );
 
     // Buyable cards
-    for (const [card, count] of Object.entries(state.supply)) {
-      const cardName = card as CardName;
-      if (count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0) {
-        actions.push({ type: "buy_card", card: cardName });
-      }
-    }
+    const buyableCards = Object.entries(state.supply)
+      .filter(([card, count]) => {
+        const cardName = card as CardName;
+        return (
+          count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
+        );
+      })
+      .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));
+    actions.push(...buyableCards);
 
     actions.push({ type: "end_phase" });
   }
@@ -121,14 +394,20 @@ function getLegalActions(state: GameState): Action[] {
   return actions;
 }
 
+type GenerateActionParams = {
+  provider: ModelProvider;
+  currentState: GameState;
+  humanChoice?: { selectedCards: CardName[] };
+  signal?: AbortSignal;
+  strategySummary?: string;
+};
+
 // Call backend API to generate action
 async function generateActionViaBackend(
-  provider: ModelProvider,
-  currentState: GameState,
-  humanChoice?: { selectedCards: CardName[] },
-  signal?: AbortSignal,
-  strategySummary?: string,
+  params: GenerateActionParams,
 ): Promise<Action> {
+  const { provider, currentState, humanChoice, signal, strategySummary } =
+    params;
   const legalActions = getLegalActions(currentState);
 
   const { data, error } = await api.api["generate-action"].post(
@@ -204,30 +483,276 @@ function executeActionWithEngine(
         playerId,
       ).ok;
     default:
-      agentLogger.error(`Unknown action type: ${action.type}`);
+      agentLogger.error(`Unknown action type: ${String(action.type)}`);
       return false;
   }
 }
 
-/**
- * Consensus system adapted for event-sourced engine
- * Runs multiple LLMs, votes on actions, executes winner via engine commands
- */
-export async function advanceGameStateWithConsensus(
-  engine: DominionEngine,
-  playerId: string,
-  humanChoice?: { selectedCards: CardName[] },
-  providers: ModelProvider[] = ALL_FAST_MODELS,
-  logger?: LLMLogger,
-  strategySummary?: string,
-): Promise<void> {
-  const currentState = engine.state;
-  const overallStart = performance.now();
+// Validate if an action is legal
+const isActionValid = (action: Action, legalActions: Action[]): boolean => {
+  return legalActions.some(legal => {
+    if (legal.type !== action.type) return false;
 
-  agentLogger.info(`Starting consensus with ${providers.length} models`);
+    // All actions with card field (atomic)
+    if (
+      action.type === "play_action" ||
+      action.type === "play_treasure" ||
+      action.type === "buy_card" ||
+      action.type === "gain_card" ||
+      action.type === "discard_card" ||
+      action.type === "trash_card"
+    ) {
+      return "card" in legal && legal.card === action.card;
+    }
 
-  const legalActions = getLegalActions(currentState);
+    // end_phase has no card
+    return action.type === "end_phase";
+  });
+};
 
+type ConsensusWinnerResult = {
+  winner: VoteGroup;
+  votesConsidered: number;
+  validEarlyConsensus: boolean;
+  rankedGroups: VoteGroup[];
+};
+
+// Select consensus winner from voting results
+const selectConsensusWinner = (
+  voteGroups: Map<ActionSignature, VoteGroup>,
+  results: ModelResult[],
+  earlyConsensus: VoteGroup | null,
+  legalActions: Action[],
+): ConsensusWinnerResult => {
+  const successfulResults = results.filter(r => r.result !== null && !r.error);
+
+  if (!earlyConsensus && successfulResults.length === 0) {
+    agentLogger.error("All models failed to generate actions");
+    throw new Error("All AI models failed - check connection");
+  }
+
+  const rankedGroups = Array.from(voteGroups.values()).sort(
+    (a, b) => b.count - a.count,
+  );
+
+  const validRankedGroups = rankedGroups.filter(g =>
+    isActionValid(g.action, legalActions),
+  );
+  const validEarlyConsensus =
+    earlyConsensus && isActionValid(earlyConsensus.action, legalActions)
+      ? earlyConsensus
+      : null;
+
+  if (!validEarlyConsensus && validRankedGroups.length === 0) {
+    agentLogger.error("All LLM actions were invalid");
+    throw new Error("All AI actions invalid - models may be confused");
+  }
+
+  const winner = validEarlyConsensus || validRankedGroups[0];
+  const votesConsidered = earlyConsensus
+    ? results.length
+    : successfulResults.length;
+
+  return {
+    winner,
+    votesConsidered,
+    validEarlyConsensus: !!validEarlyConsensus,
+    rankedGroups,
+  };
+};
+
+type ConsensusStartParams = {
+  currentState: GameState;
+  playerId: string;
+  providers: ModelProvider[];
+  legalActions: Action[];
+  logger?: LLMLogger;
+};
+
+type VotingResultsParams = {
+  winner: VoteGroup;
+  votesConsidered: number;
+  validEarlyConsensus: boolean;
+  rankedGroups: VoteGroup[];
+  aheadByK: number;
+  completedResults: ModelResult[];
+  legalActions: Action[];
+  overallStart: number;
+  currentState: GameState;
+  playerState: GameState["players"][string] | undefined;
+  hand: CardName[];
+  inPlay: CardName[];
+  handCounts: { treasures: number; actions: number; total: number };
+  logger?: LLMLogger;
+};
+
+type RunModelsParams = {
+  providers: ModelProvider[];
+  currentState: GameState;
+  humanChoice?: { selectedCards: CardName[] };
+  strategySummary?: string;
+  logger?: LLMLogger;
+  aheadByK: number;
+};
+
+type RunModelsResult = {
+  results: ModelResult[];
+  earlyConsensus: VoteGroup | null;
+  voteGroups: Map<ActionSignature, VoteGroup>;
+  completedResults: ModelResult[];
+};
+
+// Run all models in parallel with early consensus detection
+const runModelsInParallel = async (
+  params: RunModelsParams,
+): Promise<RunModelsResult> => {
+  const {
+    providers,
+    currentState,
+    humanChoice,
+    strategySummary,
+    logger,
+    aheadByK,
+  } = params;
+
+  const voteGroups = new Map<ActionSignature, VoteGroup>();
+  const completedResults: ModelResult[] = [];
+  const totalModels = providers.length;
+  const pendingModels = new Set<number>();
+  const modelStartTimes = new Map<number, number>();
+
+  globalAbortController = new AbortController();
+  const abortController = globalAbortController;
+
+  const { results, earlyConsensus } = await new Promise<{
+    results: ModelResult[];
+    earlyConsensus: VoteGroup | null;
+  }>(resolveAll => {
+    let resolved = false;
+    let completedCount = 0;
+
+    providers.map((provider, index) =>
+      executeModel({
+        provider,
+        index,
+        currentState,
+        humanChoice,
+        strategySummary,
+        abortController,
+        voteGroups,
+        completedResults,
+        aheadByK,
+        logger,
+        pendingModels,
+        modelStartTimes,
+        providers,
+        onEarlyConsensus: (winner: VoteGroup) => {
+          if (resolved) return;
+          resolved = true;
+          resolveAll({ results: completedResults, earlyConsensus: winner });
+        },
+        onComplete: () => {
+          if (resolved) return;
+          completedCount++;
+          if (completedCount === totalModels) {
+            resolveAll({ results: completedResults, earlyConsensus: null });
+          }
+        },
+      }),
+    );
+  });
+
+  if (globalAbortController === abortController) {
+    globalAbortController = null;
+  }
+
+  return { results, earlyConsensus, voteGroups, completedResults };
+};
+
+// Log voting results
+const logVotingResults = (params: VotingResultsParams): void => {
+  const {
+    winner,
+    votesConsidered,
+    validEarlyConsensus,
+    rankedGroups,
+    aheadByK,
+    completedResults,
+    legalActions,
+    overallStart,
+    currentState,
+    playerState,
+    hand,
+    inPlay,
+    handCounts,
+    logger,
+  } = params;
+
+  const consensusStrength = winner.count / votesConsidered;
+  const actionDesc = formatActionDescription(winner.action);
+
+  logger?.({
+    type: "consensus-voting",
+    message: validEarlyConsensus
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} votes)`
+      : `◉ Voting: winner ${actionDesc} (${winner.count}/${votesConsidered})`,
+    data: {
+      topResult: {
+        action: winner.action,
+        votes: winner.count,
+        voters: winner.voters,
+        percentage: `${(consensusStrength * PERCENTAGE_MULTIPLIER).toFixed(1)}%`,
+        totalVotes: votesConsidered,
+        completed: votesConsidered,
+        earlyConsensus: validEarlyConsensus,
+      },
+      allResults: rankedGroups.map(g => ({
+        action: g.action,
+        votes: g.count,
+        voters: g.voters,
+        valid: isActionValid(g.action, legalActions),
+        reasonings: g.voters.map(voter => {
+          const result = completedResults.find(r => {
+            if (!r.result) return false;
+            return (
+              r.provider === voter &&
+              JSON.stringify(stripReasoning(r.result)) ===
+                JSON.stringify(stripReasoning(g.action))
+            );
+          });
+          return {
+            provider: voter,
+            reasoning: result?.result?.reasoning,
+          };
+        }),
+      })),
+      votingDuration: performance.now() - overallStart,
+      currentPhase: currentState.phase,
+      gameState: {
+        turn: currentState.turn,
+        phase: currentState.phase,
+        activePlayer: playerState || {
+          hand: [],
+          deck: [],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
+        actions: currentState.actions,
+        buys: currentState.buys,
+        coins: currentState.coins,
+        hand,
+        inPlay,
+        handCounts,
+        turnHistory: currentState.turnHistory,
+      },
+    },
+  });
+};
+
+// Log consensus start
+const logConsensusStart = (params: ConsensusStartParams): void => {
+  const { currentState, playerId, providers, legalActions, logger } = params;
   const playerState = currentState.players[playerId];
   const hand = playerState?.hand || [];
   const inPlay = playerState?.inPlay || [];
@@ -266,312 +791,78 @@ export async function advanceGameStateWithConsensus(
       },
     },
   });
+};
 
-  type ModelResult = {
-    provider: ModelProvider;
-    result: Action | null;
-    error: unknown;
-    duration: number;
-  };
-  type ActionSignature = string;
-  type VoteGroup = {
-    signature: ActionSignature;
-    action: Action;
-    voters: ModelProvider[];
-    count: number;
+/**
+ * Consensus system adapted for event-sourced engine
+ * Runs multiple LLMs, votes on actions, executes winner via engine commands
+ */
+export async function advanceGameStateWithConsensus(
+  engine: DominionEngine,
+  playerId: string,
+  config: ConsensusConfig = {},
+): Promise<void> {
+  const {
+    humanChoice,
+    providers = ALL_FAST_MODELS,
+    logger,
+    strategySummary,
+  } = config;
+  const currentState = engine.state;
+  const overallStart = performance.now();
+
+  agentLogger.info(`Starting consensus with ${providers.length} models`);
+
+  const legalActions = getLegalActions(currentState);
+  logConsensusStart({ currentState, playerId, providers, legalActions, logger });
+
+  const playerState = currentState.players[playerId];
+  const hand = playerState?.hand || [];
+  const inPlay = playerState?.inPlay || [];
+  const handCounts = {
+    treasures: hand.filter(isTreasureCard).length,
+    actions: hand.filter(isActionCard).length,
+    total: hand.length,
   };
 
-  const createActionSignature = (action: Action): ActionSignature => {
-    return JSON.stringify(stripReasoning(action));
-  };
-
-  const voteGroups = new Map<ActionSignature, VoteGroup>();
-  const completedResults: ModelResult[] = [];
   const totalModels = providers.length;
-  const aheadByK = Math.max(2, Math.ceil(totalModels / 3));
-
-  const pendingModels = new Set<number>();
-  const modelStartTimes = new Map<number, number>();
-
-  globalAbortController = new AbortController();
-  const abortController = globalAbortController;
-
-  // Run all models in parallel with early consensus detection
-  const { results, earlyConsensus } = await new Promise<{
-    results: ModelResult[];
-    earlyConsensus: VoteGroup | null;
-  }>(resolveAll => {
-    let resolved = false;
-    let completedCount = 0;
-
-    const checkEarlyConsensus = (): VoteGroup | null => {
-      const groups = Array.from(voteGroups.values()).sort(
-        (a, b) => b.count - a.count,
-      );
-      if (groups.length === 0) return null;
-
-      const leader = groups[0];
-      const runnerUp = groups[1]?.count ?? 0;
-
-      if (leader.count - runnerUp >= aheadByK) {
-        return leader;
-      }
-      return null;
-    };
-
-    providers.forEach((provider, index) => {
-      const modelStart = performance.now();
-      const uiStartTime = Date.now();
-
-      pendingModels.add(index);
-      modelStartTimes.set(index, uiStartTime);
-
-      logger?.({
-        type: "consensus-model-pending",
-        message: `${provider} started`,
-        data: { provider, index, startTime: uiStartTime },
-      });
-
-      // Create combined abort controller for both timeout and early consensus
-      const modelAbortController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        modelAbortController.abort();
-      }, 5000);
-
-      // Link parent abort to model abort
-      const abortHandler = () => modelAbortController.abort();
-      abortController.signal.addEventListener("abort", abortHandler);
-
-      void generateActionViaBackend(
-        provider,
-        currentState,
-        humanChoice,
-        modelAbortController.signal,
-        strategySummary,
-      )
-        .then(action => {
-          clearTimeout(timeoutId);
-          const modelDuration = performance.now() - modelStart;
-          logger?.({
-            type: "consensus-model-complete",
-            message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
-            data: {
-              provider,
-              index,
-              duration: modelDuration,
-              action,
-              success: true,
-            },
-          });
-          return {
-            provider,
-            result: action,
-            error: null,
-            duration: modelDuration,
-          };
-        })
-        .catch(error => {
-          clearTimeout(timeoutId);
-          const modelDuration = performance.now() - modelStart;
-          const isAborted =
-            error.name === "AbortError" || error.message?.includes("abort");
-          const isTimeout = modelDuration >= 5000;
-
-          logger?.({
-            type: "consensus-model-complete",
-            message: run(() => {
-              if (isTimeout) {
-                return `${provider} timed out after ${modelDuration.toFixed(0)}ms`;
-              }
-              if (isAborted) {
-                return `${provider} aborted after ${modelDuration.toFixed(0)}ms`;
-              }
-              return `${provider} failed after ${modelDuration.toFixed(0)}ms`;
-            }),
-            data: {
-              provider,
-              index,
-              duration: modelDuration,
-              error: String(error),
-              success: false,
-              aborted: isAborted,
-              timeout: isTimeout,
-            },
-          });
-          return { provider, result: null, error, duration: modelDuration };
-        })
-        .finally(() => {
-          abortController.signal.removeEventListener("abort", abortHandler);
-        })
-        .then(modelResult => {
-          pendingModels.delete(index);
-
-          if (resolved) return;
-
-          completedResults.push(modelResult);
-          completedCount++;
-
-          if (modelResult.result) {
-            const signature = createActionSignature(modelResult.result);
-            const existing = voteGroups.get(signature);
-            if (existing) {
-              existing.voters.push(modelResult.provider);
-              existing.count++;
-            } else {
-              voteGroups.set(signature, {
-                signature,
-                action: modelResult.result,
-                voters: [modelResult.provider],
-                count: 1,
-              });
-            }
-
-            const winner = checkEarlyConsensus();
-            if (winner) {
-              resolved = true;
-              abortController.abort();
-
-              const nowTime = Date.now();
-              for (const pendingIndex of pendingModels) {
-                const startTime = modelStartTimes.get(pendingIndex) || nowTime;
-                logger?.({
-                  type: "consensus-model-aborted",
-                  message: `${providers[pendingIndex]} aborted (early consensus)`,
-                  data: {
-                    provider: providers[pendingIndex],
-                    index: pendingIndex,
-                    duration: nowTime - startTime,
-                  },
-                });
-              }
-
-              resolveAll({ results: completedResults, earlyConsensus: winner });
-              return;
-            }
-          }
-
-          if (completedCount === totalModels) {
-            resolveAll({ results: completedResults, earlyConsensus: null });
-          }
-        });
-    });
-  });
-
-  if (globalAbortController === abortController) {
-    globalAbortController = null;
-  }
-
-  const successfulResults = results.filter(r => r.result !== null && !r.error);
-
-  if (!earlyConsensus && successfulResults.length === 0) {
-    agentLogger.error("All models failed to generate actions");
-    throw new Error("All AI models failed - check connection");
-  }
-
-  const rankedGroups = Array.from(voteGroups.values()).sort(
-    (a, b) => b.count - a.count,
+  const aheadByK = Math.max(
+    CONSENSUS_AHEAD_BY_K_MIN,
+    Math.ceil(totalModels / CONSENSUS_AHEAD_BY_K_DIVISOR),
   );
 
-  // Validate actions
-  const isActionValid = (action: Action): boolean => {
-    return legalActions.some(legal => {
-      if (legal.type !== action.type) return false;
-
-      // All actions with card field (atomic)
-      if (
-        action.type === "play_action" ||
-        action.type === "play_treasure" ||
-        action.type === "buy_card" ||
-        action.type === "gain_card" ||
-        action.type === "discard_card" ||
-        action.type === "trash_card"
-      ) {
-        return "card" in legal && legal.card === action.card;
-      }
-
-      // end_phase has no card
-      return action.type === "end_phase";
+  const { results, earlyConsensus, voteGroups, completedResults } =
+    await runModelsInParallel({
+      providers,
+      currentState,
+      humanChoice,
+      strategySummary,
+      logger,
+      aheadByK,
     });
-  };
 
-  const validRankedGroups = rankedGroups.filter(g => isActionValid(g.action));
-  const validEarlyConsensus =
-    earlyConsensus && isActionValid(earlyConsensus.action)
-      ? earlyConsensus
-      : null;
+  const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
+    selectConsensusWinner(voteGroups, results, earlyConsensus, legalActions);
 
-  if (!validEarlyConsensus && validRankedGroups.length === 0) {
-    agentLogger.error("All LLM actions were invalid");
-    throw new Error("All AI actions invalid - models may be confused");
-  }
-
-  const winner = validEarlyConsensus || validRankedGroups[0];
-  const votesConsidered = earlyConsensus
-    ? completedResults.length
-    : successfulResults.length;
-  const consensusStrength = winner.count / votesConsidered;
-
-  const actionDesc = formatActionDescription(winner.action);
-
-  logger?.({
-    type: "consensus-voting",
-    message: validEarlyConsensus
-      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} votes)`
-      : `◉ Voting: winner ${actionDesc} (${winner.count}/${votesConsidered})`,
-    data: {
-      topResult: {
-        action: winner.action,
-        votes: winner.count,
-        voters: winner.voters,
-        percentage: (consensusStrength * 100).toFixed(1) + "%",
-        totalVotes: votesConsidered,
-        completed: votesConsidered,
-        earlyConsensus: !!validEarlyConsensus,
-      },
-      allResults: rankedGroups.map(g => ({
-        action: g.action,
-        votes: g.count,
-        voters: g.voters,
-        valid: isActionValid(g.action),
-        reasonings: g.voters.map(voter => {
-          const result = completedResults.find(r => {
-            if (!r.result) return false;
-            return (
-              r.provider === voter &&
-              JSON.stringify(stripReasoning(r.result)) ===
-                JSON.stringify(stripReasoning(g.action))
-            );
-          });
-          return {
-            provider: voter,
-            reasoning: result?.result?.reasoning,
-          };
-        }),
-      })),
-      votingDuration: performance.now() - overallStart,
-      currentPhase: currentState.phase,
-      gameState: {
-        turn: currentState.turn,
-        phase: currentState.phase,
-        activePlayer: playerState || {
-          hand: [],
-          deck: [],
-          discard: [],
-          inPlay: [],
-          inPlaySourceIndices: [],
-        },
-        actions: currentState.actions,
-        buys: currentState.buys,
-        coins: currentState.coins,
-        hand,
-        inPlay,
-        handCounts,
-        turnHistory: currentState.turnHistory,
-      },
-    },
+  logVotingResults({
+    winner,
+    votesConsidered,
+    validEarlyConsensus,
+    rankedGroups,
+    aheadByK,
+    completedResults,
+    legalActions,
+    overallStart,
+    currentState,
+    playerState,
+    hand,
+    inPlay,
+    handCounts,
+    logger,
   });
 
   // Execute winner action via engine
+  const actionDesc = formatActionDescription(winner.action);
   const success = executeActionWithEngine(engine, winner.action, playerId);
 
   if (!success) {
@@ -590,11 +881,9 @@ export async function advanceGameStateWithConsensus(
 export async function runAITurnWithConsensus(
   engine: DominionEngine,
   playerId: string,
-  providers: ModelProvider[],
-  logger?: LLMLogger,
-  onStateChange?: (state: GameState) => void,
-  strategySummary?: string,
+  config: AITurnConfig,
 ): Promise<void> {
+  const { providers, logger, onStateChange, strategySummary } = config;
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
@@ -604,25 +893,21 @@ export async function runAITurnWithConsensus(
   });
 
   let stepCount = 0;
-  const MAX_STEPS = 20;
 
   while (
     engine.state.activePlayer === playerId &&
     !engine.state.gameOver &&
     !engine.state.pendingDecision &&
-    stepCount < MAX_STEPS
+    stepCount < MAX_TURN_STEPS
   ) {
     stepCount++;
 
     try {
-      await advanceGameStateWithConsensus(
-        engine,
-        playerId,
-        undefined,
+      await advanceGameStateWithConsensus(engine, playerId, {
         providers,
         logger,
         strategySummary,
-      );
+      });
 
       // Handle AI pending decisions
       const hasAIDecision = (): boolean => {
@@ -632,27 +917,26 @@ export async function runAITurnWithConsensus(
 
       while (hasAIDecision()) {
         agentLogger.debug("Resolving pending decision");
-        await advanceGameStateWithConsensus(
-          engine,
-          playerId,
-          undefined,
+        await advanceGameStateWithConsensus(engine, playerId, {
           providers,
           logger,
           strategySummary,
-        );
+        });
         onStateChange?.(engine.state);
 
         // Safety check
-        if (stepCount++ >= MAX_STEPS) break;
+        if (stepCount++ >= MAX_TURN_STEPS) break;
       }
 
       onStateChange?.(engine.state);
-    } catch (error) {
-      agentLogger.error(`Consensus step failed: ${error}`);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      agentLogger.error(`Consensus step failed: ${errorMessage}`);
       logger?.({
         type: "consensus-step-error",
-        message: `Error: ${String(error)}`,
-        data: { error: String(error) },
+        message: `Error: ${errorMessage}`,
+        data: { error: errorMessage },
       });
       return;
     }

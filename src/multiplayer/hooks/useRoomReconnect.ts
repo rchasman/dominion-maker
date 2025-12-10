@@ -8,7 +8,6 @@ import { projectState } from "../../events/project";
 import { syncEventCounter } from "../../events/id-generator";
 import { createCommandHandler } from "../command-handler";
 
-const RECONNECT_LOG_PREFIX = "(Reconnect)";
 const MIN_PLAYERS_FOR_STATE = 0;
 const MIN_EVENTS_FOR_STATE = 0;
 
@@ -102,7 +101,7 @@ export function useRoomReconnect({
       setRoomState(initialRoomState);
 
       // Subscribe to state changes (will update when peers connect)
-      room.onStateChange((state) => {
+      room.onStateChange(state => {
         multiplayerLogger.debug(
           `Room state update: ${state.events.length} events, ${state.players.length} players`,
         );
@@ -116,20 +115,14 @@ export function useRoomReconnect({
       });
 
       if (roomInfo.isHost) {
-        reconnectAsHost(
-          room,
-          engineRef,
-          events,
-          roomInfo.players,
-          setRoomState,
-        );
+        reconnectAsHost(room, engineRef, events, roomInfo.players);
       } else {
         reconnectAsClient(room, engineRef, events, roomInfo.players);
       }
 
       // Set name (will trigger rejoin message to host)
       const myName =
-        roomInfo.players.find((p) => p.id === roomInfo.myPeerId)?.name ??
+        roomInfo.players.find(p => p.id === roomInfo.myPeerId)?.name ??
         "Player";
       room.setMyName(myName);
 
@@ -166,7 +159,6 @@ function reconnectAsHost(
   engineRef: MutableRefObject<DominionEngine | null>,
   events: ReadonlyArray<unknown>,
   players: PlayerInfo[],
-  setRoomState: (state: RoomState) => void,
 ): void {
   syncEventCounter(events);
   const engine = new DominionEngine();
@@ -176,9 +168,7 @@ function reconnectAsHost(
   engine.loadEvents(events);
   const engineState = engine.state;
 
-  multiplayerLogger.debug(
-    `Host restored engine with ${events.length} events`,
-  );
+  multiplayerLogger.debug(`Host restored engine with ${events.length} events`);
 
   // Restore players BEFORE starting game (critical!)
   room.restorePlayers(players);
@@ -216,7 +206,7 @@ function reconnectAsClient(
   room.restorePlayers(players);
 
   // Subscribe to events from host
-  room.onEvents((newEvents) => {
+  room.onEvents(newEvents => {
     multiplayerLogger.debug(
       `Client received ${newEvents.length} events, applying locally`,
     );

@@ -28,9 +28,7 @@ export function StateView({ state }: StateViewProps) {
         </div>
         <div style={styles.stateRow}>
           <span>Discard:</span>{" "}
-          <span style={styles.stateValue}>
-            {player.discard.length} cards
-          </span>
+          <span style={styles.stateValue}>{player.discard.length} cards</span>
         </div>
         <div style={styles.stateRow}>
           <span>In Play:</span>{" "}

@@ -29,7 +29,7 @@ export function useDerivedState({
       return null;
     }
     const PLAYER_NOT_FOUND = -1;
-    const index = players.findIndex((p) => p.id === myPeerId);
+    const index = players.findIndex(p => p.id === myPeerId);
     return index === PLAYER_NOT_FOUND ? null : index;
   }, [myPeerId, players]);
 

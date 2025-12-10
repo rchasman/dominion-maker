@@ -9,6 +9,7 @@ import { getPlayersForMode } from "../types/game-mode";
 import type { GameMode } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "../events/types";
+import type { LLMLogEntry } from "../components/LLMLog";
 import { abortOngoingConsensus } from "../agent/game-agent";
 import { uiLogger } from "../lib/logger";
 import { resetPlayerColors } from "../lib/board-utils";
@@ -32,12 +33,17 @@ export function useStartGame(
     setEngine: (engine: DominionEngine) => void;
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
-    setLLMLogs: (logs: import("../components/LLMLog").LLMLogEntry[]) => void;
+    setLLMLogs: (logs: LLMLogEntry[]) => void;
     setPlayerStrategies: (strategies: PlayerStrategyData) => void;
   },
 ): () => void {
-  const { setEngine, setEvents, setGameState, setLLMLogs, setPlayerStrategies } =
-    actions;
+  const {
+    setEngine,
+    setEvents,
+    setGameState,
+    setLLMLogs,
+    setPlayerStrategies,
+  } = actions;
   return useCallback(() => {
     abortOngoingConsensus();
     clearGameStateStorage();
