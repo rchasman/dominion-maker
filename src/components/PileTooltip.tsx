@@ -48,21 +48,19 @@ function calculatePosition(
 ): TooltipPosition {
   const viewportWidth = window.innerWidth;
 
-  let left = mouseX;
-  let top = mouseY;
+  const left =
+    mouseX < 0
+      ? 0
+      : mouseX + tooltipWidth > viewportWidth
+        ? viewportWidth - tooltipWidth
+        : mouseX;
 
-  // Keep within viewport
-  if (left < 0) {
-    left = 0;
-  } else if (left + tooltipWidth > viewportWidth) {
-    left = viewportWidth - tooltipWidth;
-  }
-
-  if (top < 0) {
-    top = 0;
-  } else if (top + tooltipHeight > window.innerHeight) {
-    top = window.innerHeight - tooltipHeight;
-  }
+  const top =
+    mouseY < 0
+      ? 0
+      : mouseY + tooltipHeight > window.innerHeight
+        ? window.innerHeight - tooltipHeight
+        : mouseY;
 
   return { left, top };
 }
