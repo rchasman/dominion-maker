@@ -401,6 +401,42 @@ describe("Multi-Stage Decision Cards", () => {
       const player = newState.players.human;
       expect(player.deck[player.deck.length - 1]).toBe("Gold");
     });
+
+    it("should not create topdeck decision when discard is empty", () => {
+      // Create state with empty discard
+      const state = createTestState([], ["Silver"], []);
+      const effect = getCardEffect("Harbinger");
+      if (!effect) throw new Error("No effect for Harbinger");
+
+      const result = effect({
+        state,
+        player: "human",
+        card: "Harbinger",
+      });
+
+      // Should draw 1 card and give +1 action
+      expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
+      expect(
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
+      ).toBe(1);
+
+      // Should NOT create a pending decision since discard is empty
+      expect(result.pendingDecision).toBeUndefined();
+    });
+
+    it("should allow skipping topdeck decision with min: 0", () => {
+      const state = createTestState([], ["Silver"], ["Copper", "Estate"]);
+
+      const newState = executeCard("Harbinger", state);
+
+      // Should create decision with min: 0 (can skip)
+      expect(newState.pendingDecision).toBeDefined();
+      expect(newState.pendingDecision?.min).toBe(0);
+      expect(newState.pendingDecision?.max).toBe(1);
+
+      // Discard should still have the cards until decision is resolved
+      expect(newState.players.human.discard).toEqual(["Copper", "Estate"]);
+    });
   });
 
   describe("Workshop", () => {
