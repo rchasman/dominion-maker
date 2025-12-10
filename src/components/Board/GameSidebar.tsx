@@ -16,11 +16,15 @@ function CyclingSquare() {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), CYCLING_GLYPH_INTERVAL_MS);
+    const interval = setInterval(
+      () => setNow(Date.now()),
+      CYCLING_GLYPH_INTERVAL_MS,
+    );
     return () => clearInterval(interval);
   }, []);
 
-  const index = Math.floor((now - startTime) / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
+  const index =
+    Math.floor((now - startTime) / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
 
   return <span>{glyphs[index]}</span>;
 }

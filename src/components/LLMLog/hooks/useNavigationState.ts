@@ -78,10 +78,9 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   // Derive latest indices
   const latestTurnIndex = Math.max(0, turns.length - 1);
   const latestTurn = turns[latestTurnIndex];
-  const latestActionIndex =
-    latestTurn?.pending
-      ? latestTurn.decisions.length
-      : Math.max(0, (latestTurn?.decisions.length || 0) - 1);
+  const latestActionIndex = latestTurn?.pending
+    ? latestTurn.decisions.length
+    : Math.max(0, (latestTurn?.decisions.length || 0) - 1);
 
   // Auto-advance: use manual position if navigated away, otherwise latest
   const currentTurnIndex = state.userNavigatedAway
