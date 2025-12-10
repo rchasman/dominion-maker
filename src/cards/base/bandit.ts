@@ -119,14 +119,8 @@ export const bandit: CardEffect = ({
   ];
 
   // Engine auto-handles reactions, provides resolved targets
-  // Fallback for tests: if attackTargets not provided, detect opponents
-  if (!stage) {
-    const targets =
-      attackTargets !== undefined
-        ? attackTargets
-        : state.playerOrder?.filter(p => p !== player) || [];
-
-    const needsChoice = findOpponentNeedingChoice(state, targets);
+  if (!stage && attackTargets) {
+    const needsChoice = findOpponentNeedingChoice(state, attackTargets);
     if (needsChoice) {
       const { opponent, attackData } = needsChoice;
       const revealEvents = attackData.revealed.map(card => ({
@@ -148,14 +142,14 @@ export const bandit: CardEffect = ({
           stage: "victim_trash_choice",
           metadata: {
             revealed: attackData.revealed,
-            remainingTargets: targets.filter(t => t !== opponent),
+            remainingTargets: attackTargets.filter(t => t !== opponent),
           },
         }),
       };
     }
 
     // All targets can be auto-processed
-    const attackEvents = targets.flatMap(t =>
+    const attackEvents = attackTargets.flatMap(t =>
       processOpponentAutoAttack(state, t),
     );
     return { events: [...gainGoldEvents, ...attackEvents] };
