@@ -146,7 +146,11 @@ function formatSupplyStatus(supply: Record<string, number>): string {
   return `SUPPLY: Province ${provincesLeft}/${DEFAULT_PROVINCE_COUNT}, Duchy ${duchiesLeft}/${DEFAULT_DUCHY_COUNT}${lowPiles ? ` | Low: ${lowPiles}` : ""}${emptyPiles ? ` | Empty: ${emptyPiles}` : ""}`;
 }
 
-function formatHandStatus(hand: CardName[], currentCoins: number): string {
+function formatHandStatus(
+  hand: CardName[],
+  currentCoins: number,
+  phase: string,
+): string {
   const treasures = hand.filter(c => isTreasureCard(c));
   const treasureValue = treasures.reduce(
     (sum, c) => sum + (CARDS[c].coins || 0),
@@ -154,19 +158,34 @@ function formatHandStatus(hand: CardName[], currentCoins: number): string {
   );
   const maxCoins = currentCoins + treasureValue;
 
+  if (phase === "buy" && treasures.length > 0) {
+    return `HAND: ${hand.join(", ")}
+COINS: $${currentCoins} activated | $${treasureValue} unplayed (${treasures.join(", ")}) | $${maxCoins} POTENTIAL TOTAL
+⚠️ PLAY ALL TREASURES BEFORE BUYING to maximize your purchasing power!`;
+  }
+
   return `HAND: ${hand.join(", ")}
-Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`;
+${phase === "buy" ? `COINS: $${currentCoins} (all treasures played)` : `Unplayed treasures: $${treasureValue} | Max coins this turn: $${maxCoins}`}`;
 }
 
 function formatAvailableBuyOptions(
   supply: Record<string, number>,
+  currentCoins: number,
   maxCoins: number,
 ): string {
-  const availableCards = Object.entries(supply)
+  const currentBuyable = Object.entries(supply)
     .filter(([cardName, count]) => {
       const card = cardName as CardName;
       const cost = CARDS[card]?.cost || 0;
-      return count > 0 && cost <= maxCoins;
+      return count > 0 && cost <= currentCoins;
+    })
+    .map(([cardName]) => cardName as CardName);
+
+  const potentialBuyable = Object.entries(supply)
+    .filter(([cardName, count]) => {
+      const card = cardName as CardName;
+      const cost = CARDS[card]?.cost || 0;
+      return count > 0 && cost <= maxCoins && cost > currentCoins;
     })
     .map(([cardName]) => {
       const card = cardName as CardName;
@@ -174,12 +193,41 @@ function formatAvailableBuyOptions(
       const cardInfo = CARDS[card];
       const desc = cardInfo.description || "";
       return `${card}($${cost}): ${desc}`;
-    })
-    .join("\n  ");
+    });
 
-  if (!availableCards) return "";
+  if (currentCoins === maxCoins) {
+    // All treasures played
+    const allCards = Object.entries(supply)
+      .filter(([cardName, count]) => {
+        const card = cardName as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        return count > 0 && cost <= maxCoins;
+      })
+      .map(([cardName]) => {
+        const card = cardName as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        const cardInfo = CARDS[card];
+        const desc = cardInfo.description || "";
+        return `${card}($${cost}): ${desc}`;
+      })
+      .join("\n  ");
 
-  return `CARDS YOU CAN BUY (with $${maxCoins}):\n  ${availableCards}`;
+    if (!allCards) return "";
+    return `CARDS YOU CAN BUY NOW (with $${maxCoins}):\n  ${allCards}`;
+  }
+
+  // Have unplayed treasures
+  const currentList =
+    currentBuyable.length > 0 ? currentBuyable.join(", ") : "nothing good";
+  const potentialList =
+    potentialBuyable.length > 0
+      ? potentialBuyable.join("\n  ")
+      : "no additional cards";
+
+  return `BUYING POWER:
+- NOW with $${currentCoins}: ${currentList}
+- AFTER playing all treasures ($${maxCoins} total):
+  ${potentialList}`;
 }
 
 function formatStrategyAnalysis(
@@ -268,11 +316,15 @@ export function buildStrategicContext(
     `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards`,
     formatSupplyStatus(state.supply),
     `OPPONENT DECK (${opponentAllCards.length} cards): ${analyzeDeck(opponentAllCards).breakdown}`,
-    formatHandStatus(currentPlayer.hand, state.coins),
+    formatHandStatus(currentPlayer.hand, state.coins, state.phase),
   ];
 
   if (state.phase === "buy") {
-    const buyOptions = formatAvailableBuyOptions(state.supply, maxCoins);
+    const buyOptions = formatAvailableBuyOptions(
+      state.supply,
+      state.coins,
+      maxCoins,
+    );
     if (buyOptions) {
       sections.push(buyOptions);
     }
