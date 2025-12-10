@@ -134,14 +134,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [storage.engineRef, engineRef]);
 
-  // Sync gameState and events when storage loads them
-  useEffect(() => {
-    if (storage.gameState) {
-      setGameState(storage.gameState);
-      setEvents(storage.events);
-    }
-  }, [storage.gameState, storage.events]);
-
   // Sync to localStorage
   useStorageSync({
     events,

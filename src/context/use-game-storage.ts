@@ -3,7 +3,7 @@
  * Handles localStorage persistence and restoration
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings } from "../agent/game-agent";
@@ -43,34 +43,16 @@ interface GameStorageState {
 }
 
 /**
- * Hook to manage game storage restoration
+ * Load all game storage synchronously
+ * Returns immediately with restored state or defaults
  */
 export function useGameStorage(): GameStorageState {
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [gameMode] = useState<GameMode>(loadGameMode);
-  const [isLoading, setIsLoading] = useState(true);
-  const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>([]);
-  const [modelSettings, setModelSettings] = useState<ModelSettings>(
-    DEFAULT_MODEL_SETTINGS,
-  );
-  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
-    {},
-  );
-  const [engineRef, setEngineRef] = useState<DominionEngine | null>(null);
-
-  useEffect(() => {
+  const [storage] = useState<GameStorageState>(() => {
     try {
-      const savedLogs = loadLLMLogs();
-      setLLMLogs(savedLogs);
-
-      const savedSettings = loadModelSettings();
-      if (savedSettings) {
-        setModelSettings(savedSettings);
-      }
-
-      const savedStrategies = loadPlayerStrategies();
-      setPlayerStrategies(savedStrategies);
+      const gameMode = loadGameMode();
+      const llmLogs = loadLLMLogs();
+      const modelSettings = loadModelSettings() ?? DEFAULT_MODEL_SETTINGS;
+      const playerStrategies = loadPlayerStrategies();
 
       const savedEvents = loadEvents();
       if (savedEvents) {
@@ -80,9 +62,16 @@ export function useGameStorage(): GameStorageState {
           const restoredState = engine.state;
 
           uiLogger.info(`Restored game from ${savedEvents.length} events`);
-          setEngineRef(engine);
-          setEvents(savedEvents);
-          setGameState(restoredState);
+          return {
+            gameState: restoredState,
+            events: savedEvents,
+            gameMode,
+            isLoading: false,
+            llmLogs,
+            modelSettings,
+            playerStrategies,
+            engineRef: engine,
+          };
         } catch (eventError: unknown) {
           uiLogger.error(
             "Failed to restore events, clearing only event storage",
@@ -91,26 +80,34 @@ export function useGameStorage(): GameStorageState {
               eventCount: savedEvents.length,
             },
           );
-          // Only clear events, preserve settings and logs
           localStorage.removeItem(STORAGE_KEYS.EVENTS);
         }
       }
+
+      return {
+        gameState: null,
+        events: [],
+        gameMode,
+        isLoading: false,
+        llmLogs,
+        modelSettings,
+        playerStrategies,
+        engineRef: null,
+      };
     } catch (error: unknown) {
       uiLogger.error("Failed to restore game storage", { error });
-      // Don't clear storage on general errors, just log
-    } finally {
-      setIsLoading(false);
+      return {
+        gameState: null,
+        events: [],
+        gameMode: "engine",
+        isLoading: false,
+        llmLogs: [],
+        modelSettings: DEFAULT_MODEL_SETTINGS,
+        playerStrategies: {},
+        engineRef: null,
+      };
     }
-  }, []);
+  });
 
-  return {
-    gameState,
-    events,
-    gameMode,
-    isLoading,
-    llmLogs,
-    modelSettings,
-    playerStrategies,
-    engineRef,
-  };
+  return storage;
 }
