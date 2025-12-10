@@ -627,8 +627,8 @@ describe("Attack Cards", () => {
 
       const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
 
+      if (!result.ok) console.log("ERROR:", result.error);
       expect(result.ok).toBe(true);
-      if (!result.ok) throw new Error("Command failed");
 
       const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
       expect(coinsEvent).toBeDefined();
