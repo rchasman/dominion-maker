@@ -196,26 +196,24 @@ export function createSimpleCardEffect(benefits: {
   buys?: number;
   coins?: number;
 }): CardEffect {
-  return ({ player }): CardEffectResult => {
-    const events: GameEvent[] = [];
+  return ({ player, state }): CardEffectResult => {
+    const cardEvents = benefits.cards
+      ? createDrawEvents(player, state.players[player], benefits.cards)
+      : [];
 
-    if (benefits.cards) {
-      events.push({ type: "DRAW", player, count: benefits.cards });
-    }
+    const resourceEvents: GameEvent[] = [
+      ...(benefits.actions
+        ? [{ type: "ACTIONS_MODIFIED" as const, delta: benefits.actions }]
+        : []),
+      ...(benefits.buys
+        ? [{ type: "BUYS_MODIFIED" as const, delta: benefits.buys }]
+        : []),
+      ...(benefits.coins
+        ? [{ type: "COINS_MODIFIED" as const, delta: benefits.coins }]
+        : []),
+    ];
 
-    if (benefits.actions) {
-      events.push({ type: "ACTIONS_MODIFIED", delta: benefits.actions });
-    }
-
-    if (benefits.buys) {
-      events.push({ type: "BUYS_MODIFIED", delta: benefits.buys });
-    }
-
-    if (benefits.coins) {
-      events.push({ type: "COINS_MODIFIED", delta: benefits.coins });
-    }
-
-    return { events };
+    return { events: [...cardEvents, ...resourceEvents] };
   };
 }
 
@@ -275,15 +273,19 @@ export function generateDecisionFromSpec(params: {
   const { spec, card, player, state, stage } = params;
   const ctx: import("../data/cards").DecisionContext = { state, player, stage };
 
-  const prompt = typeof spec.prompt === "function" ? spec.prompt(ctx) : spec.prompt;
-  const cardOptions = typeof spec.cardOptions === "function"
-    ? spec.cardOptions(ctx)
-    : spec.cardOptions;
+  const prompt =
+    typeof spec.prompt === "function" ? spec.prompt(ctx) : spec.prompt;
+  const cardOptions =
+    typeof spec.cardOptions === "function"
+      ? spec.cardOptions(ctx)
+      : spec.cardOptions;
   const min = typeof spec.min === "function" ? spec.min(ctx) : spec.min;
   const max = typeof spec.max === "function" ? spec.max(ctx) : spec.max;
   const metadata = run(() => {
-    if (!spec.metadata) return undefined;
-    return typeof spec.metadata === "function" ? spec.metadata(ctx) : spec.metadata;
+    if (!spec.metadata) return;
+    return typeof spec.metadata === "function"
+      ? spec.metadata(ctx)
+      : spec.metadata;
   });
 
   return {
@@ -423,7 +425,10 @@ export type OpponentDecisionData<T = Record<string, unknown>> = {
  */
 export type OpponentIteratorConfig<T = Record<string, unknown>> = {
   /** Filter to determine which opponents need a decision */
-  filter: (opponent: string, state: GameState) => OpponentDecisionData<T> | null;
+  filter: (
+    opponent: string,
+    state: GameState,
+  ) => OpponentDecisionData<T> | null;
   /** Create decision request for an opponent */
   createDecision: (
     opponentData: OpponentDecisionData<T>,
@@ -447,23 +452,37 @@ export type OpponentIteratorConfig<T = Record<string, unknown>> = {
  */
 export function createOpponentIteratorEffect<T = Record<string, unknown>>(
   config: OpponentIteratorConfig<T>,
-  initialEvents: GameEvent[] | ((state: GameState, player: string) => GameEvent[]) = [],
+  initialEvents:
+    | GameEvent[]
+    | ((state: GameState, player: string) => GameEvent[]) = [],
 ): CardEffect {
-  return ({ state, player, attackTargets, decision, stage }): CardEffectResult => {
-    const events = typeof initialEvents === "function"
-      ? initialEvents(state, player)
-      : [...initialEvents];
+  return ({
+    state,
+    player,
+    attackTargets,
+    decision,
+    stage,
+  }): CardEffectResult => {
+    const events =
+      typeof initialEvents === "function"
+        ? initialEvents(state, player)
+        : [...initialEvents];
 
     // Initial call: find first opponent needing decision
     if (!stage) {
-      const targets = attackTargets !== undefined
-        ? attackTargets
-        : getOpponents(state, player);
+      const targets =
+        attackTargets !== undefined
+          ? attackTargets
+          : getOpponents(state, player);
 
       const opponentData = run(() => {
         for (const target of targets) {
           const data = config.filter(target, state);
-          if (data) return { ...data, remainingTargets: targets.filter(t => t !== target) };
+          if (data)
+            return {
+              ...data,
+              remainingTargets: targets.filter(t => t !== target),
+            };
         }
         return null;
       });
@@ -486,14 +505,19 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
     // Process opponent decision
     if (stage === config.stage && decision) {
       const metadata = state.pendingDecision?.metadata;
-      const remainingOpponents = (metadata?.remainingOpponents as string[]) || [];
+      const remainingOpponents =
+        (metadata?.remainingOpponents as string[]) || [];
       const attackingPlayer = (metadata?.attackingPlayer as string) || player;
       const currentOpponent = state.pendingDecision?.player || "";
 
       // Reconstruct opponent data for processing
       const opponentData = config.filter(currentOpponent, state);
       if (opponentData) {
-        const choiceEvents = config.processChoice(decision, opponentData, state);
+        const choiceEvents = config.processChoice(
+          decision,
+          opponentData,
+          state,
+        );
         events.push(...choiceEvents);
       }
 
@@ -501,7 +525,11 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
       const nextOpponentData = run(() => {
         for (const target of remainingOpponents) {
           const data = config.filter(target, state);
-          if (data) return { ...data, remainingTargets: remainingOpponents.filter(t => t !== target) };
+          if (data)
+            return {
+              ...data,
+              remainingTargets: remainingOpponents.filter(t => t !== target),
+            };
         }
         return null;
       });

@@ -3,6 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
 const CARDS_TO_DRAW = 2;
@@ -12,7 +13,12 @@ export const witch: CardEffect = ({
   player,
   attackTargets,
 }): CardEffectResult => {
-  const events: GameEvent[] = [{ type: "DRAW", player, count: CARDS_TO_DRAW }];
+  const playerState = state.players[player];
+  const events: GameEvent[] = createDrawEvents(
+    player,
+    playerState,
+    CARDS_TO_DRAW,
+  );
 
   // Engine auto-handles reactions, provides resolved targets
   // Fallback for tests: if attackTargets not provided, detect opponents

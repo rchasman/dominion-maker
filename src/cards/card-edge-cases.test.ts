@@ -16,6 +16,7 @@ function createTestState(
   discard: CardName[] = [],
 ): GameState {
   return {
+    playerOrder: ["human"],
     players: {
       human: {
         deck,
@@ -302,14 +303,20 @@ describe("Edge Cases - Opponent Interactions", () => {
     state.playerOrder = ["human", "ai"];
     state.actions = 1;
 
-    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
+    const result = handleCommand(
+      state,
+      { type: "PLAY_ACTION", card: "Militia", player: "human" },
+      "human",
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);
     // Should not request decision since opponent has ≤3 cards
-    expect(result.events.find(e => e.type === "DECISION_REQUIRED")).toBeUndefined();
+    expect(
+      result.events.find(e => e.type === "DECISION_REQUIRED"),
+    ).toBeUndefined();
   });
 
   it("Bureaucrat vs opponent with no victory cards skips them", () => {
@@ -325,7 +332,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     state.playerOrder = ["human", "ai"];
     state.actions = 1;
 
-    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
+    const result = handleCommand(
+      state,
+      { type: "PLAY_ACTION", card: "Bureaucrat", player: "human" },
+      "human",
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -334,7 +345,9 @@ describe("Edge Cases - Opponent Interactions", () => {
       result.events.find(e => e.type === "CARD_GAINED" && e.card === "Silver"),
     ).toBeDefined();
     // Should not request decision since opponent has no victory cards
-    expect(result.events.find(e => e.type === "DECISION_REQUIRED")).toBeUndefined();
+    expect(
+      result.events.find(e => e.type === "DECISION_REQUIRED"),
+    ).toBeUndefined();
   });
 
   it("Witch with 2 opponents curses both", () => {
@@ -357,7 +370,11 @@ describe("Edge Cases - Opponent Interactions", () => {
     state.playerOrder = ["human", "ai1", "ai2"];
     state.actions = 1;
 
-    const result = handleCommand(state, { type: "PLAY_ACTION", card: "Witch" }, "human");
+    const result = handleCommand(
+      state,
+      { type: "PLAY_ACTION", card: "Witch", player: "human" },
+      "human",
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;

@@ -4,7 +4,6 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
-import type { GameEvent } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 
 const TARGET_HAND_SIZE = 7;

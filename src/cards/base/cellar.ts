@@ -8,7 +8,6 @@ import {
   isInitialCall,
   createCardSelectionDecision,
 } from "../effect-types";
-import type { GameEvent } from "../../events/types";
 import { removeCards } from "../../lib/card-array-utils";
 
 export const cellar: CardEffect = ({

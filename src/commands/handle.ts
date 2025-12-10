@@ -1,8 +1,14 @@
 import type { GameState, CardName } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
 import type { GameEvent, PlayerId } from "../events/types";
-import { CARDS, isTreasureCard, type TriggerType, type TriggerContext } from "../data/cards";
+import {
+  CARDS,
+  isTreasureCard,
+  type TriggerType,
+  type TriggerContext,
+} from "../data/cards";
 import { getCardEffect } from "../cards/base";
+import { createDrawEvents } from "../cards/effect-types";
 import { applyEvents } from "../events/apply";
 import { shuffle } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
@@ -382,7 +388,9 @@ function handlePlayTreasure(
   }
 
   // Check for treasure triggers from cards in play
-  const treasuresInPlay = playerState.inPlay.filter(c => CARDS[c].types.includes("treasure"));
+  const treasuresInPlay = playerState.inPlay.filter(c =>
+    CARDS[c].types.includes("treasure"),
+  );
   const isFirstOfType = !treasuresInPlay.includes(card);
 
   const triggerEvents = processTriggers(state, player, "treasure_played", {
@@ -487,14 +495,21 @@ function handleUnplayTreasure(
   }
 
   // Reverse treasure triggers (e.g., remove Merchant bonus if unplaying Silver)
-  const treasuresInPlay = playerState.inPlay.filter(c => CARDS[c].types.includes("treasure"));
+  const treasuresInPlay = playerState.inPlay.filter(c =>
+    CARDS[c].types.includes("treasure"),
+  );
   const wasFirstOfType = treasuresInPlay.filter(c => c === card).length === 1;
 
-  const originalTriggerEvents = processTriggers(state, player, "treasure_played", {
-    card,
-    isFirstOfType: wasFirstOfType,
-    treasuresInPlay,
-  });
+  const originalTriggerEvents = processTriggers(
+    state,
+    player,
+    "treasure_played",
+    {
+      card,
+      isFirstOfType: wasFirstOfType,
+      treasuresInPlay,
+    },
+  );
 
   const reverseTriggerEvents = originalTriggerEvents.map(e => {
     if (e.type === "COINS_MODIFIED") {
@@ -615,14 +630,13 @@ function handleEndPhase(state: GameState, player: PlayerId): CommandResult {
 
     events.push(...handDiscardEvents, ...inPlayDiscardEvents);
 
-    // Draw 5 new cards - engine will handle shuffle logic
-    events.push({
-      type: "DRAW",
+    // Draw 5 new cards
+    const drawEvents = createDrawEvents(
       player,
-      count: GAME_CONSTANTS.INITIAL_HAND_SIZE,
-      id: generateEventId(),
-      causedBy: endTurnId,
-    });
+      applyEvents(state, events).players[player],
+      GAME_CONSTANTS.INITIAL_HAND_SIZE,
+    );
+    events.push(...createResourceEvents(drawEvents, endTurnId));
 
     // Check game over
     const stateAfterDraw = applyEvents(state, events);

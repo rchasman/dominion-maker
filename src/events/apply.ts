@@ -7,7 +7,6 @@ import {
   applyAttackAndReactionEvent,
   applyDecisionEvent,
   applyGameEndEvent,
-  expandDrawEvent,
 } from "./apply-handlers";
 
 // Helper to create the players record with proper typing
@@ -154,17 +153,8 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
 }
 
 /**
- * Apply multiple events in sequence, expanding DRAW events as needed
+ * Apply multiple events in sequence
  */
 export function applyEvents(state: GameState, events: GameEvent[]): GameState {
-  return events.reduce((currentState, event) => {
-    // Expand DRAW events into CARD_DRAWN + DECK_SHUFFLED events
-    const expandedEvents = expandDrawEvent(currentState, event);
-    if (expandedEvents !== null) {
-      // Apply all expanded events sequentially
-      return expandedEvents.reduce(applyEvent, currentState);
-    }
-    // Not a DRAW event, apply normally
-    return applyEvent(currentState, event);
-  }, state);
+  return events.reduce(applyEvent, state);
 }

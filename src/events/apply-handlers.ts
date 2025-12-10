@@ -1,8 +1,6 @@
 import type { GameState, PlayerState, CardName } from "../types/game-state";
 import type { GameEvent } from "./types";
 import { removeCard } from "../lib/card-array-utils";
-import { peekDraw } from "../cards/effect-types";
-import { generateEventId } from "./id-generator";
 
 /**
  * Helper: Remove a card from inPlay zone along with its source index.
@@ -378,56 +376,6 @@ function applyCardReposition(
   }
 
   return null;
-}
-
-/**
- * Expand DRAW event into CARD_DRAWN and DECK_SHUFFLED events.
- * This is the centralized draw logic that handles shuffle mid-draw.
- */
-export function expandDrawEvent(
-  state: GameState,
-  event: GameEvent,
-): GameEvent[] | null {
-  if (event.type !== "DRAW") return null;
-
-  const playerState = state.players[event.player];
-  if (!playerState) return [];
-
-  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
-    playerState,
-    event.count,
-  );
-
-  const createDrawEvent = (card: CardName): GameEvent => ({
-    type: "CARD_DRAWN",
-    player: event.player,
-    card,
-    id: generateEventId(),
-    causedBy: event.id,
-  });
-
-  if (shuffled && cardsBeforeShuffle) {
-    // Draw cards before shuffle
-    const beforeShuffleEvents = cardsBeforeShuffle.map(createDrawEvent);
-
-    // Then shuffle
-    const shuffleEvent: GameEvent = {
-      type: "DECK_SHUFFLED",
-      player: event.player,
-      newDeckOrder,
-      id: generateEventId(),
-      causedBy: event.id,
-    };
-
-    // Then draw remaining cards after shuffle
-    const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
-    const afterShuffleEvents = cardsAfterShuffle.map(createDrawEvent);
-
-    return [...beforeShuffleEvents, shuffleEvent, ...afterShuffleEvents];
-  }
-
-  // No shuffle, just draw all cards
-  return cards.map(createDrawEvent);
 }
 
 /**

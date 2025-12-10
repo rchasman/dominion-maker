@@ -808,7 +808,7 @@ describe("Event Application - Edge Cases", () => {
     expect(newState.players.human.discard).toEqual(["Gold"]);
   });
 
-  it("should handle gaining from empty supply (decrements to -1)", () => {
+  it("should silently ignore gaining from empty supply", () => {
     const state = createBasicGameState();
     state.supply.Silver = 0;
     state.players.human.discard = [];
@@ -822,8 +822,8 @@ describe("Event Application - Edge Cases", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.discard).toEqual(["Silver"]);
-    expect(newState.supply.Silver).toBe(-1); // Event still applies
+    expect(newState.players.human.discard).toEqual([]);
+    expect(newState.supply.Silver).toBe(0); // No-op when supply is empty
   });
 
   it("should handle event for nonexistent player (no-op)", () => {

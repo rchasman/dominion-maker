@@ -40,6 +40,7 @@ function createTestState(
 ): GameState {
   return {
     ...createEmptyState(),
+    playerOrder: ["human"],
     players: {
       human: {
         deck,
@@ -625,7 +626,11 @@ describe("Attack Cards", () => {
       state.players.human.hand = ["Militia"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Militia", player: "human" },
+        "human",
+      );
 
       if (!result.ok) console.log("ERROR:", result.error);
       expect(result.ok).toBe(true);
@@ -649,15 +654,22 @@ describe("Attack Cards", () => {
       state.playerOrder = ["human", "ai"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Militia" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Militia", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
 
       // Should emit DECISION_REQUIRED event for opponent to discard down to 3
-      const decisionEvent = result.events.find(e => e.type === "DECISION_REQUIRED");
+      const decisionEvent = result.events.find(
+        e => e.type === "DECISION_REQUIRED",
+      );
       expect(decisionEvent).toBeDefined();
-      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED") throw new Error("No decision event");
+      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED")
+        throw new Error("No decision event");
       expect(decisionEvent.decision.player).toBe("ai");
       expect(decisionEvent.decision.stage).toBe("opponent_discard");
       expect(decisionEvent.decision.min).toBe(2); // 5 - 3 = 2 cards to discard
@@ -744,7 +756,11 @@ describe("Attack Cards", () => {
       state.playerOrder = ["human", "ai"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Witch" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Witch", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
@@ -762,7 +778,11 @@ describe("Attack Cards", () => {
       state.players.human.hand = ["Bureaucrat"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Bureaucrat", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
@@ -788,15 +808,22 @@ describe("Attack Cards", () => {
       state.playerOrder = ["human", "ai"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bureaucrat" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Bureaucrat", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
 
       // Should emit DECISION_REQUIRED event for opponent to topdeck victory card
-      const decisionEvent = result.events.find(e => e.type === "DECISION_REQUIRED");
+      const decisionEvent = result.events.find(
+        e => e.type === "DECISION_REQUIRED",
+      );
       expect(decisionEvent).toBeDefined();
-      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED") throw new Error("No decision event");
+      if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED")
+        throw new Error("No decision event");
       expect(decisionEvent.decision.player).toBe("ai");
       expect(decisionEvent.decision.cardOptions).toContain("Estate");
       expect(decisionEvent.decision.cardOptions).toContain("Duchy");
@@ -810,7 +837,11 @@ describe("Attack Cards", () => {
       state.players.human.hand = ["Bandit"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bandit" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Bandit", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
@@ -834,7 +865,11 @@ describe("Attack Cards", () => {
       state.playerOrder = ["human", "ai"];
       state.actions = 1;
 
-      const result = handleCommand(state, { type: "PLAY_ACTION", card: "Bandit" }, "human");
+      const result = handleCommand(
+        state,
+        { type: "PLAY_ACTION", card: "Bandit", player: "human" },
+        "human",
+      );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");

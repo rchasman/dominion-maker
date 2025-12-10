@@ -4,7 +4,6 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
-import type { GameEvent } from "../../events/types";
 
 export const poacher: CardEffect = ({
   state,
