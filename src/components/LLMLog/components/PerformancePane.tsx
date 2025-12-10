@@ -486,13 +486,14 @@ export function PerformancePane({
   // eslint-disable-next-line react-hooks/purity
   const currentTime = now ?? Date.now();
 
-  let timings: TimingEntry[];
+  const timings: TimingEntry[] =
+    liveStatuses && liveStatuses.size > 0
+      ? buildTimingsFromLiveStatuses(liveStatuses, currentTime)
+      : data?.timings
+        ? (data.timings as TimingEntry[])
+        : [];
 
-  if (liveStatuses && liveStatuses.size > 0) {
-    timings = buildTimingsFromLiveStatuses(liveStatuses, currentTime);
-  } else if (data?.timings) {
-    timings = data.timings as TimingEntry[];
-  } else {
+  if (timings.length === 0) {
     return null;
   }
 
