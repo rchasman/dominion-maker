@@ -36,16 +36,22 @@ export default defineConfig([
       "no-restricted-syntax": [
         "error",
         {
+          selector: "VariableDeclaration[kind='let']",
+          message: "Use const instead of let for immutability",
+        },
+        {
           selector: "CallExpression[callee.property.name='forEach']",
           message: "Use map/filter/reduce instead of forEach",
         },
         {
           selector: "CallExpression[callee.property.name='push']",
-          message: "Use spread [...arr, item] instead of push() for immutability",
+          message:
+            "Use spread [...arr, item] instead of push() for immutability",
         },
         {
           selector: "CallExpression[callee.property.name='unshift']",
-          message: "Use spread [item, ...arr] instead of unshift() for immutability",
+          message:
+            "Use spread [item, ...arr] instead of unshift() for immutability",
         },
         {
           selector: "CallExpression[callee.name='require']",
