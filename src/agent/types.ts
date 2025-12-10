@@ -10,6 +10,7 @@ import { MODEL_IDS } from "../config/models";
 export interface ModelSettings {
   enabledModels: Set<ModelProvider>;
   consensusCount: number;
+  customStrategy?: string;
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
@@ -20,6 +21,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
     "groq-llama-4-scout", // 412 tok/s - Groq
   ]),
   consensusCount: 12,
+  customStrategy: "",
 };
 
 // Available unique models

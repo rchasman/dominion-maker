@@ -61,6 +61,7 @@ export class MakerStrategy implements GameStrategy {
       logger: this.logger,
       onStateChange,
       strategySummary: this.strategySummary,
+      customStrategy: this.modelSettings.customStrategy,
     });
   }
 
@@ -88,6 +89,7 @@ export class MakerStrategy implements GameStrategy {
       providers: models,
       logger: this.logger,
       strategySummary: this.strategySummary,
+      customStrategy: this.modelSettings.customStrategy,
     });
   }
 

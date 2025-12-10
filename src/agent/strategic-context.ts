@@ -120,36 +120,6 @@ const LOW_PILE_THRESHOLD = 3;
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
-function calculateWinCondition(
-  currentVP: number,
-  opponentVP: number,
-  provincesLeft: number,
-): string {
-  const PROVINCE_VP = 6;
-  const vpToWin = opponentVP + 1;
-  const provincesNeededToWin = Math.ceil((vpToWin - currentVP) / PROVINCE_VP);
-
-  if (provincesNeededToWin <= 0) {
-    return "Currently winning";
-  }
-
-  if (provincesNeededToWin > provincesLeft) {
-    return `Need ${provincesNeededToWin} Provinces but only ${provincesLeft} left (need Duchies)`;
-  }
-
-  if (provincesNeededToWin <= 1) {
-    return `Win condition: 1 Province`;
-  }
-
-  const theyNeedToWin = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
-
-  if (provincesLeft <= 2) {
-    return `Race: ${provincesLeft} Provinces left, you need ${provincesNeededToWin}, they need ${theyNeedToWin}`;
-  }
-
-  return `Win condition: ${provincesNeededToWin} Provinces (they need ${theyNeedToWin})`;
-}
-
 function formatScoreboard(
   currentVP: number,
   opponentVP: number,
@@ -163,52 +133,27 @@ function formatScoreboard(
       : provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD
         ? "Late"
         : "Mid";
-  const winCondition = calculateWinCondition(
-    currentVP,
-    opponentVP,
-    provincesLeft,
-  );
 
-  return `Turn ${turn} (${gameStage} game) | SCORE: You ${currentVP}VP, Opponent ${opponentVP}VP (${vpDiff >= 0 ? "+" : ""}${vpDiff}) | ${winCondition}`;
+  const PROVINCE_VP = 6;
+  const youNeed = Math.ceil((opponentVP + 1 - currentVP) / PROVINCE_VP);
+  const theyNeed = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
+
+  return `Turn ${turn} (${gameStage}) | You ${currentVP}VP, Opp ${opponentVP}VP (${vpDiff >= 0 ? "+" : ""}${vpDiff}) | You need ${youNeed}P, they need ${theyNeed}P`;
 }
 
-function formatDeckComposition(cards: CardName[], gameStage: string): string {
+function formatDeckComposition(cards: CardName[]): string {
   const analysis = analyzeDeck(cards);
   const treasureDensity = ((analysis.treasures / cards.length) * 100).toFixed(
     0,
   );
   const actionDensity = ((analysis.actions / cards.length) * 100).toFixed(0);
   const vpDensity = ((analysis.victory / cards.length) * 100).toFixed(0);
-
-  // Calculate terminal collision risk
-  const villageRatio = analysis.villages / Math.max(analysis.terminals, 1);
-  const engineHealth =
-    analysis.actions === 0
-      ? "No engine"
-      : villageRatio >= 0.6
-        ? "Healthy engine"
-        : villageRatio >= 0.4
-          ? "Village shortage"
-          : "Terminal collision risk";
-
-  // Calculate cycle time (rough estimate: deck size / 5 cards per turn)
   const cycleTime = (cards.length / 5).toFixed(1);
-
-  // Build/buy guidance
-  const strategic =
-    gameStage === "Early"
-      ? "Building phase: prioritize economy/draw"
-      : gameStage === "Late"
-        ? "VP phase: buy Provinces/Duchies"
-        : analysis.avgTreasureValue < 1.8
-          ? "Mid-game: still need economy (avg treasure < $1.8)"
-          : "Mid-game: economy sufficient, can buy VP when $8+";
 
   return `YOUR DECK (${cards.length} cards): ${analysis.breakdown}
 Economy: $${analysis.totalTreasureValue} in ${analysis.treasures} treasures (${treasureDensity}% density, avg $${analysis.avgTreasureValue.toFixed(1)}/card)
-Engine: ${analysis.actions} actions (${actionDensity}%) - ${analysis.villages} villages, ${analysis.terminals} terminals [${engineHealth}]
-Deck cycle: ${cycleTime} turns | VP pollution: ${analysis.victory} cards (${vpDensity}%)
-Strategic: ${strategic}`;
+Engine: ${analysis.actions} actions (${actionDensity}%) - ${analysis.villages} villages, ${analysis.terminals} terminals
+Cycle: ${cycleTime} turns | VP: ${analysis.victory} cards (${vpDensity}%)`;
 }
 
 function formatSupplyStatus(supply: Record<string, number>): string {
@@ -231,7 +176,6 @@ function formatHandStatus(
   hand: CardName[],
   currentCoins: number,
   phase: string,
-  supply: Record<string, number>,
 ): string {
   const treasures = hand.filter(c => isTreasureCard(c));
   const treasureValue = treasures.reduce(
@@ -240,36 +184,13 @@ function formatHandStatus(
   );
   const maxCoins = currentCoins + treasureValue;
 
-  // Calculate best possible outcome this turn
-  let bestOutcome = "";
-  if (phase === "buy") {
-    if (maxCoins >= 8 && (supply["Province"] ?? 0) > 0) {
-      bestOutcome = " | Best outcome: Province(6VP)";
-    } else if (maxCoins >= 6 && (supply["Gold"] ?? 0) > 0) {
-      bestOutcome = " | Best outcome: Gold(+$3 economy)";
-    } else if (maxCoins >= 5 && (supply["Duchy"] ?? 0) > 0) {
-      bestOutcome = " | Best outcome: Duchy(3VP)";
-    } else if (maxCoins >= 5) {
-      const goodFives = (
-        ["Market", "Laboratory", "Festival"] as CardName[]
-      ).filter(card => (supply[card] ?? 0) > 0);
-      if (goodFives.length > 0) {
-        bestOutcome = ` | Best outcome: ${goodFives[0]}`;
-      } else if ((supply["Silver"] ?? 0) > 0) {
-        bestOutcome = " | Best outcome: Silver(+$2)";
-      }
-    } else if (maxCoins >= 3 && (supply["Silver"] ?? 0) > 0) {
-      bestOutcome = " | Best outcome: Silver(+$2)";
-    }
-  }
-
   if (phase === "buy") {
     if (treasures.length > 0) {
       return `HAND: ${hand.join(", ")}
-COINS: $${currentCoins} activated | $${treasureValue} in hand (${treasures.join(", ")}) | $${maxCoins} total if all played${bestOutcome}`;
+COINS: $${currentCoins} activated | $${treasureValue} in hand (${treasures.join(", ")}) | $${maxCoins} total if all played`;
     }
     return `HAND: ${hand.join(", ")}
-COINS: $${currentCoins} (all treasures played)${bestOutcome}`;
+COINS: $${currentCoins} (all treasures played)`;
   }
 
   return `HAND: ${hand.join(", ")}
@@ -282,8 +203,8 @@ function formatAvailableBuyOptions(
   maxCoins: number,
   unplayedTreasures: CardName[],
 ): string {
+  // All treasures played - show single list
   if (currentCoins === maxCoins) {
-    // All treasures played - show single list
     const allCards = Object.entries(supply)
       .filter(([cardName, count]) => {
         const card = cardName as CardName;
@@ -293,67 +214,45 @@ function formatAvailableBuyOptions(
       .map(([cardName]) => {
         const card = cardName as CardName;
         const cost = CARDS[card]?.cost || 0;
-        const cardInfo = CARDS[card];
-        const desc = cardInfo.description || "";
-        return `  ${card}($${cost}): ${desc}`;
+        return `${card}($${cost})`;
       })
-      .join("\n");
+      .join(", ");
 
-    if (!allCards) return "";
-    return `BUYABLE:\n${allCards}`;
+    return allCards ? `BUYABLE ($${maxCoins}): ${allCards}` : "";
   }
 
-  // Have unplayed treasures - show what each treasure unlocks
-  const lines = [`BUYABLE NOW ($${currentCoins}):`];
+  // Have unplayed treasures - show what each unlocks
+  const lines: string[] = [];
+  let runningTotal = currentCoins;
 
-  const currentCards = Object.entries(supply)
-    .filter(([cardName, count]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      return count > 0 && cost <= currentCoins;
-    })
-    .map(([cardName]) => {
-      const card = cardName as CardName;
-      const cost = CARDS[card]?.cost || 0;
-      return `${card}($${cost})`;
-    });
+  unplayedTreasures.map(treasure => {
+    const treasureValue = CARDS[treasure].coins || 0;
+    runningTotal += treasureValue;
 
-  lines.push(`  ${currentCards.length > 0 ? currentCards.join(", ") : "none"}`);
-
-  // Show what playing each treasure would unlock
-  if (unplayedTreasures.length > 0) {
-    lines.push("\nPLAY TREASURES TO UNLOCK:");
-    let runningTotal = currentCoins;
-
-    unplayedTreasures.map(treasure => {
-      const treasureValue = CARDS[treasure].coins || 0;
-      runningTotal += treasureValue;
-
-      const newlyUnlocked = Object.entries(supply)
-        .filter(([cardName, count]) => {
-          const card = cardName as CardName;
-          const cost = CARDS[card]?.cost || 0;
-          return (
-            count > 0 &&
-            cost <= runningTotal &&
-            cost > runningTotal - treasureValue
-          );
-        })
-        .map(([cardName]) => {
-          const card = cardName as CardName;
-          const cost = CARDS[card]?.cost || 0;
-          return `${card}($${cost})`;
-        });
-
-      if (newlyUnlocked.length > 0) {
-        lines.push(
-          `  Play ${treasure}(+$${treasureValue}) → $${runningTotal}: ${newlyUnlocked.join(", ")}`,
+    const newlyUnlocked = Object.entries(supply)
+      .filter(([cardName, count]) => {
+        const card = cardName as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        return (
+          count > 0 &&
+          cost <= runningTotal &&
+          cost > runningTotal - treasureValue
         );
-      }
-    });
-  }
+      })
+      .map(([cardName]) => {
+        const card = cardName as CardName;
+        const cost = CARDS[card]?.cost || 0;
+        return `${card}($${cost})`;
+      });
 
-  return lines.join("\n");
+    if (newlyUnlocked.length > 0) {
+      lines.push(
+        `Play ${treasure}(+$${treasureValue}) → $${runningTotal}: ${newlyUnlocked.join(", ")}`,
+      );
+    }
+  });
+
+  return lines.length > 0 ? lines.join("\n") : "";
 }
 
 function formatStrategyAnalysis(
@@ -396,6 +295,7 @@ function formatStrategyAnalysis(
 export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
+  customStrategy?: string,
 ): string {
   const currentPlayer = state.players[state.activePlayer];
   const opponentId = Object.keys(state.players).find(
@@ -447,28 +347,16 @@ export function buildStrategicContext(
         ? "Late"
         : "Mid";
 
-  // Opponent analysis
   const opponentAnalysis = analyzeDeck(opponentAllCards);
-  const opponentThreat =
-    opponentAnalysis.avgTreasureValue >= 2.0
-      ? "High threat: strong economy"
-      : opponentAnalysis.avgTreasureValue >= 1.5
-        ? "Medium threat"
-        : "Low threat: weak economy";
 
   const sections = [
     formatScoreboard(currentVP, opponentVP, state.turn, provincesLeft),
-    formatDeckComposition(currentAllCards, gameStage),
+    formatDeckComposition(currentAllCards),
     `DRAW PILE: ${currentPlayer.deck.length} cards | DISCARD: ${currentPlayer.discard.length} cards${shuffleSoon ? " (shuffle next turn)" : ""}`,
     formatSupplyStatus(state.supply),
     `OPPONENT DECK (${opponentAllCards.length} cards): ${opponentAnalysis.breakdown}
-Opponent economy: $${opponentAnalysis.totalTreasureValue} avg $${opponentAnalysis.avgTreasureValue.toFixed(1)}/treasure [${opponentThreat}]`,
-    formatHandStatus(
-      currentPlayer.hand,
-      state.coins,
-      state.phase,
-      state.supply,
-    ),
+Opponent: $${opponentAnalysis.totalTreasureValue} total, avg $${opponentAnalysis.avgTreasureValue.toFixed(1)}/treasure`,
+    formatHandStatus(currentPlayer.hand, state.coins, state.phase),
   ];
 
   if (state.phase === "buy") {
@@ -491,6 +379,10 @@ Opponent economy: $${opponentAnalysis.totalTreasureValue} avg $${opponentAnalysi
         opponentId,
       ),
     );
+  }
+
+  if (customStrategy && customStrategy.trim()) {
+    sections.push(`\nCUSTOM STRATEGY OVERRIDE:\n${customStrategy.trim()}`);
   }
 
   return sections.join("\n");

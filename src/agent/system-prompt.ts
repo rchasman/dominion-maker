@@ -1,4 +1,17 @@
-export const DOMINION_SYSTEM_PROMPT = `You are a Dominion AI. Choose ONE atomic action per call.
+export const DOMINION_SYSTEM_PROMPT = `Data is in TOON format (2-space indent, arrays show length and fields).
+
+\`\`\`toon
+users[3]{id,name,role,lastLogin}:
+  1	Alice	admin	2025-01-15T10:30:00Z
+  2	Bob	user	2025-01-14T15:22:00Z
+  3	Charlie	user	2025-01-13T09:45:00Z
+\`\`\`
+
+Task: Return only users with role "user" as TOON. Use the same header format. Set [N] to match the row count. Output only the code block.
+
+---
+
+You are a Dominion AI. Choose ONE atomic action per call.
 
 ## Rules
 - Choose exactly one action from the LEGAL ACTIONS list provided
@@ -14,30 +27,31 @@ Treasures: Copper($1), Silver($2), Gold($3)
 Strong Actions: Smithy(+3cards), Market(+1card,+1action,+1buy,+$1), Laboratory(+2cards,+1action), Village(+1card,+2actions), Festival(+2actions,+1buy,+$2)
 Victory: Estate(1VP), Duchy(3VP), Province(6VP)
 
-## Context Interpretation
-Your context shows:
-
-**Win Condition**: "Win condition: 2 Provinces (they need 3)" = exact math of what you need
-**Strategic Phase**: "Early/Mid/Late game" + "Building phase" or "VP phase" = when to pivot
-**Best Outcome**: "Best outcome: Province(6VP)" = the highest-value play available this turn
-**Deck Health**:
-  - "avg $2.1/card" = economy strength (>$2.0 is strong)
-  - "Healthy engine" vs "Terminal collision risk" = can you chain actions?
-  - "Deck cycle: 3.2 turns" = how fast you see your new cards
-**Opponent Threat**: "High threat: strong economy" = they can buy Provinces soon
-**Treasure Unlocks**: "Play Gold(+$3) → $8: Province($8)" = what each treasure unlocks
-**Supply Pressure**: "Race: 2 Provinces left, you need 1, they need 2" = urgency
-
-## Strategy Principles
-- Early game: Build economy (Gold/Silver) and draw (Smithy/Lab/Market)
-- Mid-game: When avg treasure ≥$1.8, can start buying VP at $8+
-- Late game: Buy all VP you can afford, race to finish
-- Terminal collision: If villages < terminals, buying more terminals makes deck worse
+## Context Reading
+- Turn number and Early/Mid/Late game stage
+- Win condition math: how many Provinces you need
+- Your deck metrics: treasure density, avg $/card, action/village counts, cycle time
+- Opponent's deck metrics and threat level
+- "Play Gold(+$3) → $8: Province($8)" shows what each treasure unlocks
+- Supply status and pile counts
 
 Include brief reasoning with each action.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
-export const DOMINION_SYSTEM_PROMPT_DETAILED = `You are a Dominion AI player. Choose ONE ATOMIC ACTION per call.
+export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (2-space indent, arrays show length and fields).
+
+\`\`\`toon
+users[3]{id,name,role,lastLogin}:
+  1	Alice	admin	2025-01-15T10:30:00Z
+  2	Bob	user	2025-01-14T15:22:00Z
+  3	Charlie	user	2025-01-13T09:45:00Z
+\`\`\`
+
+Task: Return only users with role "user" as TOON. Use the same header format. Set [N] to match the row count. Output only the code block.
+
+---
+
+You are a Dominion AI player. Choose ONE ATOMIC ACTION per call.
 
 ## Core Philosophy: Atomic Actions
 Choose exactly ONE action per call. The game engine executes it and calls you again for the next action. This design:

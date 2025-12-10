@@ -49,6 +49,7 @@ export type ModelExecutionContext = {
   currentState: GameState;
   humanChoice?: { selectedCards: CardName[] };
   strategySummary?: string;
+  customStrategy?: string;
   abortController: AbortController;
   voteGroups: Map<ActionSignature, VoteGroup>;
   completedResults: ModelResult[];

@@ -123,6 +123,7 @@ interface RequestBody {
   humanChoice?: { selectedCards: string[] };
   legalActions?: unknown[];
   strategySummary?: string;
+  customStrategy?: string;
 }
 
 type OnExtraTokenHandler = (
@@ -374,6 +375,7 @@ async function processGenerationRequest(
     humanChoice,
     legalActions,
     strategySummary,
+    customStrategy,
   } = body;
   const provider = bodyProvider;
 
@@ -400,7 +402,11 @@ async function processGenerationRequest(
       ? `\n\nACTIONS TAKEN THIS TURN (so far):\n${JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`
       : "";
 
-  const strategicContext = buildStrategicContext(currentState, strategySummary);
+  const strategicContext = buildStrategicContext(
+    currentState,
+    strategySummary,
+    customStrategy,
+  );
   const promptQuestion = buildPromptQuestion(currentState);
   const userMessage = buildUserMessage({
     strategicContext,

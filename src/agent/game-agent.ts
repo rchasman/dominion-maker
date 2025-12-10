@@ -68,6 +68,7 @@ type ConsensusConfig = {
   providers?: ModelProvider[];
   logger?: LLMLogger;
   strategySummary?: string;
+  customStrategy?: string;
 };
 
 // Configuration for AI turn operations
@@ -76,6 +77,7 @@ type AITurnConfig = {
   logger?: LLMLogger;
   onStateChange?: (state: GameState) => void;
   strategySummary?: string;
+  customStrategy?: string;
 };
 
 // Execute a single model and handle its result
@@ -125,6 +127,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     humanChoice,
     signal: modelAbortController.signal,
     strategySummary,
+    customStrategy,
   })
     .then(action => {
       clearTimeout(timeoutId);
@@ -228,14 +231,21 @@ type GenerateActionParams = {
   humanChoice?: { selectedCards: CardName[] };
   signal?: AbortSignal;
   strategySummary?: string;
+  customStrategy?: string;
 };
 
 // Call backend API to generate action
 async function generateActionViaBackend(
   params: GenerateActionParams,
 ): Promise<Action> {
-  const { provider, currentState, humanChoice, signal, strategySummary } =
-    params;
+  const {
+    provider,
+    currentState,
+    humanChoice,
+    signal,
+    strategySummary,
+    customStrategy,
+  } = params;
   const legalActions = getLegalActions(currentState);
 
   const { data, error } = await api.api["generate-action"].post(
@@ -245,6 +255,7 @@ async function generateActionViaBackend(
       humanChoice,
       legalActions,
       strategySummary,
+      customStrategy,
     },
     {
       fetch: { signal },
@@ -321,6 +332,7 @@ type RunModelsParams = {
   currentState: GameState;
   humanChoice?: { selectedCards: CardName[] };
   strategySummary?: string;
+  customStrategy?: string;
   logger?: LLMLogger;
   aheadByK: number;
 };
@@ -341,6 +353,7 @@ const runModelsInParallel = async (
     currentState,
     humanChoice,
     strategySummary,
+    customStrategy,
     logger,
     aheadByK,
   } = params;
@@ -368,6 +381,7 @@ const runModelsInParallel = async (
         currentState,
         humanChoice,
         strategySummary,
+        customStrategy,
         abortController,
         voteGroups,
         completedResults,
@@ -413,6 +427,7 @@ export async function advanceGameStateWithConsensus(
     providers = ALL_FAST_MODELS,
     logger,
     strategySummary,
+    customStrategy,
   } = config;
   const currentState = engine.state;
   const overallStart = performance.now();
@@ -478,6 +493,7 @@ export async function advanceGameStateWithConsensus(
       currentState,
       humanChoice,
       strategySummary,
+      customStrategy,
       logger,
       aheadByK,
     });
@@ -524,7 +540,8 @@ export async function runAITurnWithConsensus(
   playerId: string,
   config: AITurnConfig,
 ): Promise<void> {
-  const { providers, logger, onStateChange, strategySummary } = config;
+  const { providers, logger, onStateChange, strategySummary, customStrategy } =
+    config;
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
@@ -548,6 +565,7 @@ export async function runAITurnWithConsensus(
         providers,
         logger,
         strategySummary,
+        customStrategy,
       });
 
       // Handle AI pending decisions
@@ -562,6 +580,7 @@ export async function runAITurnWithConsensus(
           providers,
           logger,
           strategySummary,
+          customStrategy,
         });
         onStateChange?.(engine.state);
 
