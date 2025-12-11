@@ -150,6 +150,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     })
     .then(modelResult => {
       pendingModels.delete(index);
+      context.completedResults.push(modelResult);
       handleModelResult(modelResult, context);
     });
 };
