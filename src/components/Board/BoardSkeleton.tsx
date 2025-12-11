@@ -1,9 +1,47 @@
+/* eslint-disable max-lines-per-function */
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { Card } from "../Card";
 import { DEFAULT_LOG_HEIGHT_PERCENT } from "./constants";
 
 const STORAGE_LOG_HEIGHT_KEY = "dominion-maker-log-height";
 const STORAGE_GAME_MODE_KEY = "dominion-maker-game-mode";
+
+// Skeleton display constants
+const STARTING_HAND_SIZE = 5;
+const VICTORY_PILE_COUNT = 3;
+const TREASURE_PILE_COUNT = 3;
+const KINGDOM_CARD_COUNT = 10;
+
+// Game log skeleton line widths (percentages)
+const GAME_LOG_WIDTH_1 = 90;
+const GAME_LOG_WIDTH_2 = 75;
+const GAME_LOG_WIDTH_3 = 85;
+const GAME_LOG_WIDTH_4 = 70;
+const GAME_LOG_WIDTH_5 = 80;
+const GAME_LOG_WIDTH_6 = 65;
+const GAME_LOG_SKELETON_WIDTHS = [
+  GAME_LOG_WIDTH_1,
+  GAME_LOG_WIDTH_2,
+  GAME_LOG_WIDTH_3,
+  GAME_LOG_WIDTH_4,
+  GAME_LOG_WIDTH_5,
+  GAME_LOG_WIDTH_6,
+];
+
+// Consensus viewer skeleton line widths (percentages)
+const CONSENSUS_WIDTH_1 = 85;
+const CONSENSUS_WIDTH_2 = 70;
+const CONSENSUS_WIDTH_3 = 80;
+const CONSENSUS_WIDTH_4 = 75;
+const CONSENSUS_VIEWER_SKELETON_WIDTHS = [
+  CONSENSUS_WIDTH_1,
+  CONSENSUS_WIDTH_2,
+  CONSENSUS_WIDTH_3,
+  CONSENSUS_WIDTH_4,
+];
+
+const BUTTON_FONT_WEIGHT_SELECTED = 700;
+const BUTTON_FONT_WEIGHT_UNSELECTED = 400;
 
 type GameMode = "engine" | "hybrid" | "full";
 
@@ -231,7 +269,7 @@ function SkeletonHandSection() {
         Hand (5)
       </div>
       <div className="hand-grid">
-        {[1, 2, 3, 4, 5].map(i => (
+        {Array.from({ length: STARTING_HAND_SIZE }, (_, i) => (
           <SkeletonCard key={i} size="large" />
         ))}
       </div>
@@ -386,7 +424,7 @@ function SkeletonSupply() {
             gap: "var(--space-1)",
           }}
         >
-          {[1, 2, 3].map(i => (
+          {Array.from({ length: VICTORY_PILE_COUNT }, (_, i) => (
             <SkeletonCard key={i} size="small" />
           ))}
         </div>
@@ -411,7 +449,7 @@ function SkeletonSupply() {
             gap: "var(--space-1)",
           }}
         >
-          {[1, 2, 3].map(i => (
+          {Array.from({ length: TREASURE_PILE_COUNT }, (_, i) => (
             <SkeletonCard key={i} size="small" />
           ))}
         </div>
@@ -447,7 +485,7 @@ function SkeletonSupply() {
             gap: "var(--space-2)",
           }}
         >
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+          {Array.from({ length: KINGDOM_CARD_COUNT }, (_, i) => (
             <SkeletonCard key={i} size="large" />
           ))}
         </div>
@@ -551,7 +589,7 @@ function SkeletonSidebar() {
             overflow: "hidden",
           }}
         >
-          {[90, 75, 85, 70, 80, 65].map((width, i) => (
+          {GAME_LOG_SKELETON_WIDTHS.map((width, i) => (
             <div
               key={i}
               style={{
@@ -735,7 +773,7 @@ function SkeletonSidebar() {
                 overflow: "hidden",
               }}
             >
-              {[85, 70, 80, 75].map((width, i) => (
+              {CONSENSUS_VIEWER_SKELETON_WIDTHS.map((width, i) => (
                 <div
                   key={i}
                   style={{
@@ -789,7 +827,9 @@ function SkeletonSidebar() {
                   style={{
                     padding: "3px 8px",
                     fontSize: "0.65rem",
-                    fontWeight: isSelected ? 700 : 400,
+                    fontWeight: isSelected
+                      ? BUTTON_FONT_WEIGHT_SELECTED
+                      : BUTTON_FONT_WEIGHT_UNSELECTED,
                     background: isSelected
                       ? "var(--color-victory-dark)"
                       : "transparent",
