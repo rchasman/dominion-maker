@@ -24,6 +24,11 @@ interface PlayerLabelSectionProps {
     recommendation: string;
   };
   vpCount?: number;
+  phase?: string;
+  actions?: number;
+  buys?: number;
+  coins?: number;
+  isActive?: boolean;
 }
 
 function renderStrategySection(playerStrategy: {
@@ -190,6 +195,11 @@ export function PlayerLabelSection({
   loading,
   playerStrategy,
   vpCount,
+  phase,
+  actions,
+  buys,
+  coins,
+  isActive,
 }: PlayerLabelSectionProps) {
   const hasStrategyContent =
     playerStrategy &&
@@ -215,104 +225,164 @@ export function PlayerLabelSection({
   return (
     <div
       style={{
-        marginBlockEnd: "var(--space-1)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        gap: "var(--space-4)",
+        paddingBlock: "var(--space-1)",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-4)",
-        }}
-      >
-        {loading ? (
-          <span
+      {loading ? (
+        <span
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--color-text-tertiary)",
+          }}
+        >
+          Reconnecting...
+        </span>
+      ) : (
+        <>
+          <strong
+            ref={setReference}
+            {...(hasStrategyContent ? getReferenceProps() : {})}
             style={{
               fontSize: "0.8125rem",
-              color: "var(--color-text-tertiary)",
+              color: labelColor,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              cursor: hasStrategyContent ? "help" : "default",
             }}
           >
-            Reconnecting...
-          </span>
-        ) : (
-          <>
-            <strong
-              ref={setReference}
-              {...(hasStrategyContent ? getReferenceProps() : {})}
+            {label}
+            {hasStrategyContent && (
+              <span
+                style={{
+                  fontSize: "0.875rem",
+                  opacity: 0.7,
+                  color: "var(--color-info)",
+                  fontWeight: "normal",
+                }}
+              >
+                ⓘ
+              </span>
+            )}
+          </strong>
+          {isStrategyOpen &&
+            hasStrategyContent &&
+            playerStrategy &&
+            renderStrategyTooltip({
+              floatingStyles,
+              playerColor,
+              label,
+              playerStrategy,
+              setFloating,
+              getFloatingProps,
+            })}
+          {vpCount !== undefined && (
+            <div
               style={{
                 fontSize: "0.8125rem",
-                color: labelColor,
+                color: playerId
+                  ? getPlayerColor(playerId)
+                  : "var(--color-victory)",
+                fontWeight: 600,
                 display: "flex",
                 alignItems: "center",
                 gap: "var(--space-2)",
-                cursor: hasStrategyContent ? "help" : "default",
               }}
             >
-              {label}
-              {hasStrategyContent && (
-                <span
-                  style={{
-                    fontSize: "0.875rem",
-                    opacity: 0.7,
-                    color: "var(--color-info)",
-                    fontWeight: "normal",
-                  }}
-                >
-                  ⓘ
-                </span>
-              )}
-            </strong>
-            {isStrategyOpen &&
-              hasStrategyContent &&
-              playerStrategy &&
-              renderStrategyTooltip({
-                floatingStyles,
-                playerColor,
-                label,
-                playerStrategy,
-                setFloating,
-                getFloatingProps,
-              })}
-          </>
-        )}
-      </div>
-      {vpCount !== undefined && (
-        <div
-          style={{
-            fontSize: "0.875rem",
-            color: playerId ? getPlayerColor(playerId) : "var(--color-victory)",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-          }}
-        >
-          <span
-            style={{
-              color: "var(--color-text-secondary)",
-              fontWeight: 400,
-              fontSize: "0.75rem",
-            }}
-          >
-            VP:
-          </span>
-          {loading ? (
-            <div
-              style={{
-                width: "24px",
-                height: "16px",
-                background: "var(--color-bg-secondary)",
-                borderRadius: "4px",
-                opacity: 0.5,
-              }}
-            />
-          ) : (
-            vpCount
+              <span
+                style={{
+                  color: "var(--color-text-secondary)",
+                  fontWeight: 400,
+                  fontSize: "0.75rem",
+                }}
+              >
+                VP:
+              </span>
+              {vpCount}
+            </div>
           )}
-        </div>
+          <>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+                marginLeft: "auto",
+              }}
+            >
+              Actions:{" "}
+              <strong
+                style={{
+                  color: isActive
+                    ? "var(--color-action-phase)"
+                    : "var(--color-border)",
+                  fontWeight: 700,
+                }}
+              >
+                {isActive && actions !== undefined ? actions : "-"}
+              </strong>
+            </span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+              }}
+            >
+              Buys:{" "}
+              <strong
+                style={{
+                  color: isActive
+                    ? "var(--color-buy-phase)"
+                    : "var(--color-border)",
+                  fontWeight: 700,
+                }}
+              >
+                {isActive && buys !== undefined ? buys : "-"}
+              </strong>
+            </span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+              }}
+            >
+              Coins:{" "}
+              <strong
+                style={{
+                  color: isActive
+                    ? "var(--color-gold-bright)"
+                    : "var(--color-border)",
+                  fontWeight: 700,
+                }}
+              >
+                {isActive && coins !== undefined ? coins : "-"}
+              </strong>
+            </span>
+          </>
+          {phase !== undefined && (
+            <span
+              style={{
+                textTransform: "uppercase",
+                color: isActive ? "#fff" : "var(--color-border)",
+                fontSize: "0.625rem",
+                background: isActive
+                  ? `color-mix(in srgb, ${phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)"} 30%, transparent)`
+                  : "transparent",
+                border: isActive
+                  ? `1px solid color-mix(in srgb, ${phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)"} 60%, transparent)`
+                  : "1px dashed var(--color-border)",
+                padding: "var(--space-1) var(--space-2)",
+                fontWeight: 600,
+                minWidth: "4.5rem",
+                textAlign: "center",
+              }}
+            >
+              {isActive ? phase : "waiting"}
+            </span>
+          )}
+        </>
       )}
     </div>
   );

@@ -6,7 +6,6 @@ import type {
   GameState,
 } from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
-import { ActionBar } from "./Board/ActionBar";
 import { PlayerLabelSection } from "./PlayerArea/PlayerLabelSection";
 import { InPlaySection } from "./PlayerArea/InPlaySection";
 import { DeckDiscardSection } from "./PlayerArea/DeckDiscardSection";
@@ -38,21 +37,7 @@ interface PlayerAreaProps {
     read: string;
     recommendation: string;
   };
-  // ActionBar props
   gameState?: GameState;
-  actionBarHint?: string;
-  hasTreasuresInHand?: boolean;
-  onPlayAllTreasures?: () => void;
-  onEndPhase?: () => void;
-  onConfirmDecision?: (complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  }) => void;
-  onSkipDecision?: () => void;
-  complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  } | null;
 }
 
 function getBorderStyle(
@@ -64,56 +49,11 @@ function getBorderStyle(
   const borderStyle = `${borderWidth} solid ${borderColor}`;
 
   return {
-    borderLeft: borderStyle,
-    borderRight: borderStyle,
-    borderBottom: borderStyle,
-    borderTop: "none",
+    border: borderStyle,
+    boxShadow: isActive && gameState ? `0 0 var(--space-5) ${borderColor}66` : "none",
   };
 }
 
-function InPlayTop({
-  player,
-  loading,
-  hasMadePurchases,
-  onInPlayClick,
-}: {
-  player: PlayerState;
-  loading: boolean;
-  hasMadePurchases: boolean;
-  onInPlayClick?: (card: CardName, index: number) => void;
-}) {
-  return (
-    <InPlaySection
-      inPlay={player.inPlay}
-      loading={loading}
-      hasMadePurchases={hasMadePurchases}
-      onInPlayClick={onInPlayClick}
-    />
-  );
-}
-
-function InPlayBottom({
-  player,
-  loading,
-  hasMadePurchases,
-  onInPlayClick,
-}: {
-  player: PlayerState;
-  loading: boolean;
-  hasMadePurchases: boolean;
-  onInPlayClick?: (card: CardName, index: number) => void;
-}) {
-  return (
-    <div style={{ marginBlockStart: "var(--space-2)" }}>
-      <InPlaySection
-        inPlay={player.inPlay}
-        loading={loading}
-        hasMadePurchases={hasMadePurchases}
-        onInPlayClick={onInPlayClick}
-      />
-    </div>
-  );
-}
 
 function LoadingAnimation({ show }: { show: boolean }) {
   if (!show) return null;
@@ -211,17 +151,8 @@ function PlayerAreaContent({
   borderColor,
   backgroundColor,
   isInteractive,
-}: Omit<
-  PlayerAreaProps,
-  | "gameState"
-  | "actionBarHint"
-  | "hasTreasuresInHand"
-  | "onPlayAllTreasures"
-  | "onEndPhase"
-  | "onConfirmDecision"
-  | "onSkipDecision"
-  | "complexDecisionData"
-> & {
+  gameState,
+}: PlayerAreaProps & {
   hasMadePurchases: boolean;
   borderColor: string;
   backgroundColor: string;
@@ -230,51 +161,88 @@ function PlayerAreaContent({
   return (
     <div
       style={{
-        padding: "var(--space-1) var(--space-2)",
+        padding: inverted
+          ? "var(--space-1) var(--space-2) 0 var(--space-2)"
+          : "0 var(--space-2) var(--space-1) var(--space-2)",
         ...getBorderStyle(isActive, undefined, borderColor),
         background: backgroundColor,
         overflow: "auto",
         minHeight: 0,
       }}
     >
-      <PlayerLabelSection
-        label={label}
-        playerId={playerId}
-        loading={loading}
-        playerStrategy={playerStrategy}
-        vpCount={vpCount}
-      />
+      {inverted ? (
+        <>
+          <HandAndDeckGrid
+            player={player}
+            showCards={showCards}
+            loading={loading}
+            selectedCardIndices={selectedCardIndices}
+            pendingDecision={pendingDecision}
+            isInteractive={isInteractive}
+            isActive={isActive}
+            playerId={playerId}
+            phase={phase}
+            actions={actions}
+            onCardClick={onCardClick}
+          />
 
-      {!inverted && (
-        <InPlayTop
-          player={player}
-          loading={loading}
-          hasMadePurchases={hasMadePurchases}
-          onInPlayClick={onInPlayClick}
-        />
-      )}
+          <InPlaySection
+            inPlay={player.inPlay}
+            loading={loading}
+            hasMadePurchases={hasMadePurchases}
+            onInPlayClick={onInPlayClick}
+            inverted={inverted}
+          />
 
-      <HandAndDeckGrid
-        player={player}
-        showCards={showCards}
-        loading={loading}
-        selectedCardIndices={selectedCardIndices}
-        pendingDecision={pendingDecision}
-        isInteractive={isInteractive}
-        isActive={isActive}
-        playerId={playerId}
-        phase={phase}
-        actions={actions}
-        onCardClick={onCardClick}
-      />
+          <PlayerLabelSection
+            label={label}
+            playerId={playerId}
+            loading={loading}
+            playerStrategy={playerStrategy}
+            vpCount={vpCount}
+            phase={gameState?.phase}
+            actions={gameState?.actions}
+            buys={gameState?.buys}
+            coins={gameState?.coins}
+            isActive={isActive}
+          />
+        </>
+      ) : (
+        <>
+          <PlayerLabelSection
+            label={label}
+            playerId={playerId}
+            loading={loading}
+            playerStrategy={playerStrategy}
+            vpCount={vpCount}
+            phase={gameState?.phase}
+            actions={gameState?.actions}
+            buys={gameState?.buys}
+            coins={gameState?.coins}
+            isActive={isActive}
+          />
 
-      {inverted && (
-        <InPlayBottom
-          player={player}
-          loading={loading}
-          hasMadePurchases={hasMadePurchases}
-          onInPlayClick={onInPlayClick}
-        />
+          <InPlaySection
+            inPlay={player.inPlay}
+            loading={loading}
+            hasMadePurchases={hasMadePurchases}
+            onInPlayClick={onInPlayClick}
+          />
+
+          <HandAndDeckGrid
+            player={player}
+            showCards={showCards}
+            loading={loading}
+            selectedCardIndices={selectedCardIndices}
+            pendingDecision={pendingDecision}
+            isInteractive={isInteractive}
+            isActive={isActive}
+            playerId={playerId}
+            phase={phase}
+            actions={actions}
+            onCardClick={onCardClick}
+          />
+        </>
       )}
 
       <LoadingAnimation show={loading} />
@@ -301,13 +269,6 @@ export function PlayerArea({
   turnHistory = [],
   playerStrategy,
   gameState,
-  actionBarHint = "",
-  hasTreasuresInHand = false,
-  onPlayAllTreasures,
-  onEndPhase,
-  onConfirmDecision,
-  onSkipDecision,
-  complexDecisionData,
 }: PlayerAreaProps) {
   const isInteractive = !!onCardClick;
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
@@ -317,44 +278,28 @@ export function PlayerArea({
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {gameState && (
-        <ActionBar
-          state={gameState}
-          hint={actionBarHint}
-          hasTreasuresInHand={hasTreasuresInHand}
-          onPlayAllTreasures={onPlayAllTreasures}
-          onEndPhase={onEndPhase}
-          selectedCardIndices={selectedCardIndices}
-          complexDecisionData={complexDecisionData}
-          onConfirmDecision={onConfirmDecision}
-          onSkipDecision={onSkipDecision}
-          borderColor={borderColor}
-          isActive={isActive}
-        />
-      )}
-
-      <PlayerAreaContent
-        player={player}
-        label={label}
-        vpCount={vpCount}
-        isActive={isActive}
-        showCards={showCards}
-        selectedCardIndices={selectedCardIndices}
-        onCardClick={onCardClick}
-        onInPlayClick={onInPlayClick}
-        inverted={inverted}
-        pendingDecision={pendingDecision}
-        playerId={playerId}
-        phase={phase}
-        actions={actions}
-        loading={loading}
-        hasMadePurchases={hasMadePurchases}
-        playerStrategy={playerStrategy}
-        borderColor={borderColor}
-        backgroundColor={backgroundColor}
-        isInteractive={isInteractive}
-      />
-    </div>
+    <PlayerAreaContent
+      player={player}
+      label={label}
+      vpCount={vpCount}
+      isActive={isActive}
+      showCards={showCards}
+      selectedCardIndices={selectedCardIndices}
+      onCardClick={onCardClick}
+      onInPlayClick={onInPlayClick}
+      inverted={inverted}
+      pendingDecision={pendingDecision}
+      playerId={playerId}
+      phase={phase}
+      subPhase={subPhase}
+      actions={actions}
+      loading={loading}
+      hasMadePurchases={hasMadePurchases}
+      playerStrategy={playerStrategy}
+      borderColor={borderColor}
+      backgroundColor={backgroundColor}
+      isInteractive={isInteractive}
+      gameState={gameState}
+    />
   );
 }

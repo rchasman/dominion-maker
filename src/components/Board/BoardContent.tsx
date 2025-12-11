@@ -4,7 +4,7 @@ import { EventDevtools } from "../EventDevtools";
 import { formatPlayerName } from "../../lib/board-utils";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
-import type { CardName } from "../../types/game-state";
+import type { CardName, GameState } from "../../types/game-state";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
@@ -59,9 +59,29 @@ interface SupplyAreaProps {
   displayState: GameState;
   onBuyCard?: (card: CardName) => void;
   canBuy: boolean;
+  isPlayerActive: boolean;
+  hasTreasuresInHand: boolean;
+  onPlayAllTreasures?: () => void;
+  onEndPhase?: () => void;
+  selectedCardIndices: number[];
+  onConfirmDecision?: (data: ComplexDecisionData | null) => void;
+  onSkipDecision?: () => void;
+  complexDecisionData: ComplexDecisionData | null;
 }
 
-function SupplyArea({ displayState, onBuyCard, canBuy }: SupplyAreaProps) {
+function SupplyArea({
+  displayState,
+  onBuyCard,
+  canBuy,
+  isPlayerActive,
+  hasTreasuresInHand,
+  onPlayAllTreasures,
+  onEndPhase,
+  selectedCardIndices,
+  onConfirmDecision,
+  onSkipDecision,
+  complexDecisionData,
+}: SupplyAreaProps) {
   return (
     <Supply
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -72,6 +92,14 @@ function SupplyArea({ displayState, onBuyCard, canBuy }: SupplyAreaProps) {
       availableCoins={displayState.coins}
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       pendingDecision={displayState.pendingDecision}
+      isPlayerActive={isPlayerActive}
+      hasTreasuresInHand={hasTreasuresInHand}
+      onPlayAllTreasures={onPlayAllTreasures}
+      onEndPhase={onEndPhase}
+      selectedCardIndices={selectedCardIndices}
+      onConfirmDecision={onConfirmDecision}
+      onSkipDecision={onSkipDecision}
+      complexDecisionData={complexDecisionData}
     />
   );
 }
@@ -129,18 +157,20 @@ export function BoardContent({
           turnHistory={displayState.turnHistory}
           playerStrategy={game.playerStrategies[opponentPlayerId]}
           gameState={displayState}
-          actionBarHint={
-            displayState.pendingDecision?.player === opponentPlayerId
-              ? displayState.pendingDecision.prompt
-              : ""
-          }
-          hasTreasuresInHand={false}
         />
 
         <SupplyArea
           displayState={displayState}
           onBuyCard={isPreviewMode ? undefined : game.buyCard}
           canBuy={isPreviewMode ? false : canBuy}
+          isPlayerActive={isMainPlayerTurn}
+          hasTreasuresInHand={game.hasTreasuresInHand}
+          onPlayAllTreasures={onPlayAllTreasures}
+          onEndPhase={onEndPhase}
+          selectedCardIndices={selectedCardIndices}
+          onConfirmDecision={onConfirmDecision}
+          onSkipDecision={onSkipDecision}
+          complexDecisionData={complexDecisionData}
         />
 
         <MainPlayerArea

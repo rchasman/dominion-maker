@@ -74,13 +74,6 @@ export function MainPlayerArea({
         turnHistory={displayState.turnHistory}
         playerStrategy={playerStrategy}
         gameState={displayState}
-        actionBarHint={hint}
-        hasTreasuresInHand={hasTreasuresInHand}
-        onPlayAllTreasures={onPlayAllTreasures}
-        onEndPhase={onEndPhase}
-        complexDecisionData={complexDecisionData}
-        onConfirmDecision={onConfirmDecision}
-        onSkipDecision={onSkipDecision}
       />
 
       {displayState.pendingDecision &&
