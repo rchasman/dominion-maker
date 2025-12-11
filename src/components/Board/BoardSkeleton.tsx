@@ -1,4 +1,5 @@
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
+import { Card } from "../Card";
 import { DEFAULT_LOG_HEIGHT_PERCENT } from "./constants";
 
 const STORAGE_LOG_HEIGHT_KEY = "dominion-maker-log-height";
@@ -12,6 +13,24 @@ function getStoredLogHeight(): number {
   }
 }
 
+interface SkeletonCardProps {
+  size: "small" | "medium" | "large";
+}
+
+function SkeletonCard({ size }: SkeletonCardProps) {
+  return (
+    <div style={{ opacity: 0.15 }}>
+      <Card
+        name="Copper"
+        showBack={true}
+        size={size}
+        disabled={true}
+        disableTooltip={true}
+      />
+    </div>
+  );
+}
+
 function SkeletonAnimation() {
   return (
     <style>{`
@@ -20,32 +39,6 @@ function SkeletonAnimation() {
         50% { opacity: 0.2; }
       }
     `}</style>
-  );
-}
-
-interface SkeletonCardProps {
-  size: "small" | "medium" | "large";
-}
-
-function SkeletonCard({ size }: SkeletonCardProps) {
-  const width =
-    size === "small"
-      ? "var(--card-width-small)"
-      : size === "large"
-        ? "var(--card-width-large)"
-        : "var(--card-width-medium)";
-
-  return (
-    <div
-      style={{
-        width,
-        aspectRatio: "7/10",
-        background: "rgb(255 255 255 / 0.08)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "0.25rem",
-        animation: "subtlePulse 3s ease-in-out infinite",
-      }}
-    />
   );
 }
 
@@ -135,21 +128,13 @@ function SkeletonHandSection() {
           color: "var(--color-text-muted)",
           fontWeight: 600,
           textTransform: "uppercase",
-          animation: "subtlePulse 3s ease-in-out infinite",
         }}
       >
         Hand (5)
       </div>
       <div className="hand-grid">
         {[1, 2, 3, 4, 5].map(i => (
-          <div
-            key={i}
-            style={{
-              animation: "subtlePulse 3s ease-in-out infinite",
-            }}
-          >
-            <SkeletonCard size="large" />
-          </div>
+          <SkeletonCard key={i} size="large" />
         ))}
       </div>
     </div>
@@ -188,13 +173,7 @@ function SkeletonDeckDiscardSection() {
           >
             Deck
           </div>
-          <div
-            style={{
-              animation: "subtlePulse 3s ease-in-out infinite",
-            }}
-          >
-            <SkeletonCard size="medium" />
-          </div>
+          <SkeletonCard size="medium" />
         </div>
 
         <div
@@ -215,13 +194,7 @@ function SkeletonDeckDiscardSection() {
           >
             Discard
           </div>
-          <div
-            style={{
-              animation: "subtlePulse 3s ease-in-out infinite",
-            }}
-          >
-            <SkeletonCard size="medium" />
-          </div>
+          <SkeletonCard size="medium" />
         </div>
       </div>
     </div>
@@ -480,21 +453,21 @@ function SkeletonSidebar() {
       <div
         style={{
           height: "8px",
-          background: "var(--color-bg-surface)",
-          borderTop: "1px solid var(--color-border)",
-          borderBottom: "1px solid var(--color-border)",
+          background: "var(--color-border)",
+          cursor: "ns-resize",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          cursor: "ns-resize",
+          transition: "background 0.15s",
         }}
       >
         <div
           style={{
-            width: "2rem",
-            height: "2px",
-            background: "var(--color-border)",
-            borderRadius: "1px",
+            width: "40px",
+            height: "3px",
+            background: "var(--color-text-secondary)",
+            borderRadius: "2px",
+            opacity: 0.5,
           }}
         />
       </div>
