@@ -3,6 +3,14 @@ import type { GameEvent } from "../events/types";
 import { peekDraw } from "../cards/effect-types";
 import { countVP } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
+import { CARDS } from "../data/cards";
+import {
+  getCopperSupplyCount,
+  getVictoryCardCount,
+  getCurseCardCount,
+  getKingdomCardCount,
+  TREASURE_SUPPLY,
+} from "../data/supply-constants";
 
 /** Create resource modification events with proper ID and causality */
 export function createResourceEvents(
@@ -29,16 +37,6 @@ export const GAME_CONSTANTS = {
   UUID_SLICE: 2,
 } as const;
 
-export const SUPPLY_CONSTANTS = {
-  COPPER_BASE: 60,
-  COPPER_PER_PLAYER: 7,
-  SILVER_COUNT: 40,
-  GOLD_COUNT: 30,
-  CURSE_PER_OPPONENT: 10,
-  KINGDOM_CARD_COUNT: 10,
-  VICTORY_CARD_COUNT_2P: 8,
-  VICTORY_CARD_COUNT_3P_PLUS: 12,
-} as const;
 
 export function selectRandomKingdomCards(): CardName[] {
   const allKingdom: CardName[] = [
@@ -83,35 +81,30 @@ export function calculateSupply(
 ): Record<string, number> {
   const supply: Record<string, number> = {};
 
-  // Victory cards scale with player count
-  const victoryCount =
-    playerCount <= GAME_CONSTANTS.TWO_PLAYERS
-      ? SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_2P
-      : SUPPLY_CONSTANTS.VICTORY_CARD_COUNT_3P_PLUS;
+  // Victory cards: Estate and Duchy follow base count, Province scales for 5-6 players
+  supply.Estate = getVictoryCardCount(playerCount, "Estate");
+  supply.Duchy = getVictoryCardCount(playerCount, "Duchy");
+  supply.Province = getVictoryCardCount(playerCount, "Province");
 
-  supply.Estate = victoryCount;
-  supply.Duchy = victoryCount;
-  supply.Province = victoryCount;
+  // Treasure cards: Copper adjusted for starting decks (7 per player)
+  supply.Copper = getCopperSupplyCount(playerCount);
+  supply.Silver = TREASURE_SUPPLY.SILVER;
+  supply.Gold = TREASURE_SUPPLY.GOLD;
 
-  // Treasure cards
-  supply.Copper =
-    SUPPLY_CONSTANTS.COPPER_BASE -
-    playerCount * SUPPLY_CONSTANTS.COPPER_PER_PLAYER;
-  supply.Silver = SUPPLY_CONSTANTS.SILVER_COUNT;
-  supply.Gold = SUPPLY_CONSTANTS.GOLD_COUNT;
+  // Curses: Scale with player count (10 per opponent)
+  supply.Curse = getCurseCardCount(playerCount);
 
-  // Curses scale with player count
-  supply.Curse = (playerCount - 1) * SUPPLY_CONSTANTS.CURSE_PER_OPPONENT;
-
-  // Kingdom cards (10 each)
-  const kingdomSupply = kingdomCards.reduce(
-    (acc, card) => ({
-      ...acc,
-      [card]:
-        card === "Gardens" ? victoryCount : SUPPLY_CONSTANTS.KINGDOM_CARD_COUNT,
-    }),
-    {} as Record<string, number>,
-  );
+  // Kingdom cards: 8 for 2 players, 10 for 3+ players
+  // Victory-type kingdom cards (e.g., Gardens) use victory card counts
+  const kingdomCardCount = getKingdomCardCount(playerCount);
+  const kingdomSupply = kingdomCards.reduce((acc, card) => {
+    const cardDef = CARDS[card];
+    const isVictoryKingdom = cardDef?.types.includes("victory");
+    const count = isVictoryKingdom
+      ? getVictoryCardCount(playerCount, "Estate")
+      : kingdomCardCount;
+    return { ...acc, [card]: count };
+  }, {} as Record<string, number>);
 
   return { ...supply, ...kingdomSupply };
 }
