@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { getModelColor } from "../../../config/models";
 import type { TimingData, ModelStatus } from "../types";
 import { run } from "../../../lib/run";
@@ -484,8 +485,7 @@ export function PerformancePane({
   liveStatuses,
   now,
 }: PerformancePaneProps) {
-  // eslint-disable-next-line react-hooks/purity
-  const currentTime = now ?? Date.now();
+  const currentTime = useMemo(() => now ?? Date.now(), [now]);
 
   const timings: TimingEntry[] = run(() => {
     if (liveStatuses && liveStatuses.size > 0)
