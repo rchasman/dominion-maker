@@ -30,8 +30,8 @@ export function CardTooltip({
     ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
     : `https://robinzigmond.github.io/Dominion-app/images/card_images/${cardName.replace(/ /g, "_")}.jpg`;
 
-  const tooltipWidth = 180;
-  const tooltipHeight = 280;
+  const tooltipWidth = 216;
+  const tooltipHeight = 336;
 
   const viewportWidth = window.innerWidth;
 
@@ -84,7 +84,7 @@ export function CardTooltip({
           src={imageUrl}
           alt={showBack ? "Card back" : cardName}
           style={{
-            width: "180px",
+            width: "216px",
             height: "auto",
             display: "block",
             borderRadius: "4px",
