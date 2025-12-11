@@ -1,4 +1,16 @@
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
+import { DEFAULT_LOG_HEIGHT_PERCENT } from "./constants";
+
+const STORAGE_LOG_HEIGHT_KEY = "dominion-maker-log-height";
+
+function getStoredLogHeight(): number {
+  try {
+    const saved = localStorage.getItem(STORAGE_LOG_HEIGHT_KEY);
+    return saved ? parseFloat(saved) : DEFAULT_LOG_HEIGHT_PERCENT;
+  } catch {
+    return DEFAULT_LOG_HEIGHT_PERCENT;
+  }
+}
 
 function SkeletonAnimation() {
   return (
@@ -405,19 +417,25 @@ function SkeletonSupply() {
 }
 
 function SkeletonSidebar() {
+  const gameLogHeight = getStoredLogHeight();
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        background: "var(--color-bg-secondary)",
-        borderLeft: "1px solid var(--color-border)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
+        borderInlineStart: "1px solid var(--color-border)",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          flex: "0 0 40%",
+          height: `${gameLogHeight}%`,
+          flex: "none",
+          minBlockSize: 0,
           display: "flex",
           flexDirection: "column",
           padding: "var(--space-3)",
@@ -437,7 +455,13 @@ function SkeletonSidebar() {
         >
           GAME LOG
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-2)",
+          }}
+        >
           {[90, 75, 85, 70, 80, 65].map((width, i) => (
             <div
               key={i}
@@ -542,7 +566,11 @@ function SkeletonSidebar() {
 
 export function BoardSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading game...">
+    <div
+      aria-busy="true"
+      aria-label="Loading game..."
+      style={{ position: "relative", width: "100vw", height: "100dvh" }}
+    >
       <SkeletonAnimation />
       <BoardLayout isPreviewMode={false}>
         <GameAreaLayout isPreviewMode={false}>
@@ -552,6 +580,63 @@ export function BoardSkeleton() {
         </GameAreaLayout>
         <SkeletonSidebar />
       </BoardLayout>
+
+      {/* Glassmorphic Loading Overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(20, 20, 35, 0.75)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "var(--space-4)",
+            padding: "var(--space-6)",
+            background: "rgba(40, 40, 60, 0.6)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "1rem",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+          }}
+        >
+          <div
+            style={{
+              width: "3rem",
+              height: "3rem",
+              border: "3px solid rgba(255, 255, 255, 0.2)",
+              borderTop: "3px solid var(--color-victory)",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <div
+            style={{
+              fontSize: "1rem",
+              color: "var(--color-text-primary)",
+              fontWeight: 500,
+              letterSpacing: "0.025em",
+            }}
+          >
+            Loading game...
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
