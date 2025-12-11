@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { LogEntry as LogEntryType, CardName } from "../types/game-state";
 import {
   PlayerName,
