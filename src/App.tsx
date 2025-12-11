@@ -3,6 +3,7 @@ import { GameProvider } from "./context/GameContext";
 import { useGame } from "./context/hooks";
 import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { StartScreen } from "./components/StartScreen";
+import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { uiLogger } from "./lib/logger";
 
 const Board = lazy(() =>
@@ -78,19 +79,7 @@ function App() {
 }
 
 function LoadingScreen() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100dvh",
-        color: "var(--color-text-secondary)",
-      }}
-    >
-      Loading...
-    </div>
-  );
+  return <BoardSkeleton />;
 }
 
 function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
@@ -98,19 +87,7 @@ function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
 
   // Wait for loading to complete
   if (isLoading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100dvh",
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        Loading...
-      </div>
-    );
+    return <BoardSkeleton />;
   }
 
   // Auto-start game only if no saved game exists
