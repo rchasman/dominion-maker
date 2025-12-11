@@ -189,6 +189,192 @@ function useStrategyFloating(initialOpen = false) {
   };
 }
 
+function hasStrategyContent(playerStrategy?: {
+  gameplan: string;
+  read: string;
+  recommendation: string;
+}): playerStrategy is {
+  gameplan: string;
+  read: string;
+  recommendation: string;
+} {
+  return !!(
+    playerStrategy &&
+    (playerStrategy.gameplan ||
+      playerStrategy.read ||
+      playerStrategy.recommendation)
+  );
+}
+
+function getStatValue(
+  isActive: boolean | undefined,
+  value: number | undefined,
+): string | number {
+  return isActive && value !== undefined ? value : "-";
+}
+
+function getStatColor(isActive: boolean | undefined): string {
+  return isActive ? "var(--color-text-secondary)" : "var(--color-border)";
+}
+
+function getPhaseColor(phase: string): string {
+  return phase === "action"
+    ? "var(--color-action-phase)"
+    : "var(--color-buy-phase)";
+}
+
+function getPhaseStyles(isActive: boolean | undefined, phase: string) {
+  if (!isActive) {
+    return {
+      color: "var(--color-border)",
+      background: "transparent",
+      border: "1px dashed var(--color-border)",
+    };
+  }
+
+  const phaseColor = getPhaseColor(phase);
+  return {
+    color: "#fff",
+    background: `color-mix(in srgb, ${phaseColor} 30%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${phaseColor} 60%, transparent)`,
+  };
+}
+
+function PlayerLabel({
+  label,
+  labelColor,
+  hasStrategy,
+  setReference,
+  getReferenceProps,
+}: {
+  label: string;
+  labelColor: string;
+  hasStrategy: boolean;
+  setReference: (node: HTMLElement | null) => void;
+  getReferenceProps: () => Record<string, unknown>;
+}) {
+  return (
+    <strong
+      ref={setReference}
+      {...(hasStrategy ? getReferenceProps() : {})}
+      style={{
+        fontSize: "0.8125rem",
+        color: labelColor,
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        cursor: hasStrategy ? "help" : "default",
+      }}
+    >
+      {label}
+      {hasStrategy && (
+        <span
+          style={{
+            fontSize: "0.875rem",
+            opacity: 0.7,
+            color: "var(--color-info)",
+            fontWeight: "normal",
+          }}
+        >
+          ⓘ
+        </span>
+      )}
+    </strong>
+  );
+}
+
+function VictoryPoints({
+  vpCount,
+  playerId,
+}: {
+  vpCount: number;
+  playerId?: string;
+}) {
+  return (
+    <div
+      style={{
+        fontSize: "0.8125rem",
+        color: playerId ? getPlayerColor(playerId) : "var(--color-victory)",
+        fontWeight: 600,
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+      }}
+    >
+      <span
+        style={{
+          color: "var(--color-text-secondary)",
+          fontWeight: 400,
+          fontSize: "0.75rem",
+        }}
+      >
+        VP:
+      </span>
+      {vpCount}
+    </div>
+  );
+}
+
+function StatDisplay({
+  label,
+  value,
+  isActive,
+  activeColor,
+  marginLeft,
+}: {
+  label: string;
+  value: string | number;
+  isActive: boolean | undefined;
+  activeColor: string;
+  marginLeft?: string;
+}) {
+  return (
+    <span
+      style={{
+        fontSize: "0.75rem",
+        color: getStatColor(isActive),
+        marginLeft,
+      }}
+    >
+      {label}:{" "}
+      <strong
+        style={{
+          color: isActive ? activeColor : "var(--color-border)",
+          fontWeight: 700,
+        }}
+      >
+        {value}
+      </strong>
+    </span>
+  );
+}
+
+function PhaseIndicator({
+  phase,
+  isActive,
+}: {
+  phase: string;
+  isActive: boolean | undefined;
+}) {
+  const phaseStyles = getPhaseStyles(isActive, phase);
+
+  return (
+    <span
+      style={{
+        textTransform: "uppercase",
+        fontSize: "0.625rem",
+        padding: "var(--space-1) var(--space-2)",
+        fontWeight: 600,
+        minWidth: "4.5rem",
+        textAlign: "center",
+        ...phaseStyles,
+      }}
+    >
+      {isActive ? phase : "waiting"}
+    </span>
+  );
+}
+
 export function PlayerLabelSection({
   label,
   playerId,
@@ -201,11 +387,7 @@ export function PlayerLabelSection({
   coins,
   isActive,
 }: PlayerLabelSectionProps) {
-  const hasStrategyContent =
-    playerStrategy &&
-    (playerStrategy.gameplan ||
-      playerStrategy.read ||
-      playerStrategy.recommendation);
+  const hasStrategy = hasStrategyContent(playerStrategy);
 
   const {
     isStrategyOpen,
@@ -217,10 +399,31 @@ export function PlayerLabelSection({
   } = useStrategyFloating();
 
   const playerColor = playerId ? getPlayerColor(playerId) : "rgb(205 133 63)";
-
   const labelColor = playerId
     ? getPlayerColor(playerId)
     : "var(--color-text-primary)";
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-4)",
+          paddingBlock: "var(--space-1)",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.8125rem",
+            color: "var(--color-text-tertiary)",
+          }}
+        >
+          Reconnecting...
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -231,164 +434,47 @@ export function PlayerLabelSection({
         paddingBlock: "var(--space-1)",
       }}
     >
-      {loading ? (
-        <span
-          style={{
-            fontSize: "0.8125rem",
-            color: "var(--color-text-tertiary)",
-          }}
-        >
-          Reconnecting...
-        </span>
-      ) : (
-        <>
-          <strong
-            ref={setReference}
-            {...(hasStrategyContent ? getReferenceProps() : {})}
-            style={{
-              fontSize: "0.8125rem",
-              color: labelColor,
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              cursor: hasStrategyContent ? "help" : "default",
-            }}
-          >
-            {label}
-            {hasStrategyContent && (
-              <span
-                style={{
-                  fontSize: "0.875rem",
-                  opacity: 0.7,
-                  color: "var(--color-info)",
-                  fontWeight: "normal",
-                }}
-              >
-                ⓘ
-              </span>
-            )}
-          </strong>
-          {isStrategyOpen &&
-            hasStrategyContent &&
-            playerStrategy &&
-            renderStrategyTooltip({
-              floatingStyles,
-              playerColor,
-              label,
-              playerStrategy,
-              setFloating,
-              getFloatingProps,
-            })}
-          {vpCount !== undefined && (
-            <div
-              style={{
-                fontSize: "0.8125rem",
-                color: playerId
-                  ? getPlayerColor(playerId)
-                  : "var(--color-victory)",
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-2)",
-              }}
-            >
-              <span
-                style={{
-                  color: "var(--color-text-secondary)",
-                  fontWeight: 400,
-                  fontSize: "0.75rem",
-                }}
-              >
-                VP:
-              </span>
-              {vpCount}
-            </div>
-          )}
-          <>
-            <span
-              style={{
-                fontSize: "0.75rem",
-                color: isActive
-                  ? "var(--color-text-secondary)"
-                  : "var(--color-border)",
-                marginLeft: "auto",
-              }}
-            >
-              Actions:{" "}
-              <strong
-                style={{
-                  color: isActive
-                    ? "var(--color-action-phase)"
-                    : "var(--color-border)",
-                  fontWeight: 700,
-                }}
-              >
-                {isActive && actions !== undefined ? actions : "-"}
-              </strong>
-            </span>
-            <span
-              style={{
-                fontSize: "0.75rem",
-                color: isActive
-                  ? "var(--color-text-secondary)"
-                  : "var(--color-border)",
-              }}
-            >
-              Buys:{" "}
-              <strong
-                style={{
-                  color: isActive
-                    ? "var(--color-buy-phase)"
-                    : "var(--color-border)",
-                  fontWeight: 700,
-                }}
-              >
-                {isActive && buys !== undefined ? buys : "-"}
-              </strong>
-            </span>
-            <span
-              style={{
-                fontSize: "0.75rem",
-                color: isActive
-                  ? "var(--color-text-secondary)"
-                  : "var(--color-border)",
-              }}
-            >
-              Coins:{" "}
-              <strong
-                style={{
-                  color: isActive
-                    ? "var(--color-gold-bright)"
-                    : "var(--color-border)",
-                  fontWeight: 700,
-                }}
-              >
-                {isActive && coins !== undefined ? coins : "-"}
-              </strong>
-            </span>
-          </>
-          {phase !== undefined && (
-            <span
-              style={{
-                textTransform: "uppercase",
-                color: isActive ? "#fff" : "var(--color-border)",
-                fontSize: "0.625rem",
-                background: isActive
-                  ? `color-mix(in srgb, ${phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)"} 30%, transparent)`
-                  : "transparent",
-                border: isActive
-                  ? `1px solid color-mix(in srgb, ${phase === "action" ? "var(--color-action-phase)" : "var(--color-buy-phase)"} 60%, transparent)`
-                  : "1px dashed var(--color-border)",
-                padding: "var(--space-1) var(--space-2)",
-                fontWeight: 600,
-                minWidth: "4.5rem",
-                textAlign: "center",
-              }}
-            >
-              {isActive ? phase : "waiting"}
-            </span>
-          )}
-        </>
+      <PlayerLabel
+        label={label}
+        labelColor={labelColor}
+        hasStrategy={hasStrategy}
+        setReference={setReference}
+        getReferenceProps={getReferenceProps}
+      />
+      {isStrategyOpen &&
+        hasStrategy &&
+        renderStrategyTooltip({
+          floatingStyles,
+          playerColor,
+          label,
+          playerStrategy,
+          setFloating,
+          getFloatingProps,
+        })}
+      {vpCount !== undefined && (
+        <VictoryPoints vpCount={vpCount} playerId={playerId} />
+      )}
+      <StatDisplay
+        label="Actions"
+        value={getStatValue(isActive, actions)}
+        isActive={isActive}
+        activeColor="var(--color-action-phase)"
+        marginLeft="auto"
+      />
+      <StatDisplay
+        label="Buys"
+        value={getStatValue(isActive, buys)}
+        isActive={isActive}
+        activeColor="var(--color-buy-phase)"
+      />
+      <StatDisplay
+        label="Coins"
+        value={getStatValue(isActive, coins)}
+        isActive={isActive}
+        activeColor="var(--color-gold-bright)"
+      />
+      {phase !== undefined && (
+        <PhaseIndicator phase={phase} isActive={isActive} />
       )}
     </div>
   );
