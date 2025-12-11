@@ -1,4 +1,4 @@
-import { generateText, gateway } from "ai";
+import { generateObject, gateway } from "ai";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
@@ -148,25 +148,6 @@ async function parseRequestBody(
   return parsed as { currentState: GameState };
 }
 
-// Extract JSON from markdown code blocks
-function stripMarkdownCodeBlocks(text: string): string {
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  return codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
-}
-
-// Parse text response and handle string-wrapped objects
-function parseTextResponse(text: string): { players: Record<string, unknown> } {
-  const cleaned = stripMarkdownCodeBlocks(text);
-  const parsed = JSON.parse(cleaned);
-
-  // If players is a string, parse it
-  if (typeof parsed.players === "string") {
-    return { players: JSON.parse(parsed.players) };
-  }
-
-  return parsed;
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -208,27 +189,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supplyStatus = buildSupplyStatus(currentState.supply);
     const deckInfo = buildPlayerDeckInfo(playerIds, currentState);
 
-    const prompt = `${gameProgress}\n${supplyStatus}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.\n\nRespond with ONLY a JSON object in this exact format (no markdown, no code blocks):\n{\n  "players": {\n    "playerId": {\n      "gameplan": "...",\n      "read": "...",\n      "recommendation": "..."\n    }\n  }\n}`;
+    const prompt = `${gameProgress}\n${supplyStatus}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use Claude Opus for high-quality strategy analysis
     const model = gateway("claude-opus-4-5-20251101");
 
-    // Use generateText instead of generateObject for Claude Opus compatibility
-    const result = await generateText({
+    // Try generateObject with structured outputs beta header
+    const result = await generateObject({
       model,
       system: STRATEGY_ANALYSIS_PROMPT,
       prompt,
+      schema: StrategyAnalysisSchema,
       maxRetries: 1,
+      providerOptions: {
+        anthropic: {
+          headers: {
+            "anthropic-beta": "structured-outputs-2025-11-13",
+          },
+        },
+      },
     });
-
-    // Parse and validate the response
-    const parsed = parseTextResponse(result.text);
-    const validated = StrategyAnalysisSchema.parse(parsed);
 
     apiLogger.info("Strategy analysis completed");
 
     return res.status(HTTP_STATUS.OK).json({
-      strategySummary: validated.players,
+      strategySummary: result.object.players,
     });
   } catch (err) {
     const error = err as Error;
