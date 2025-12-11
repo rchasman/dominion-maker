@@ -42,10 +42,15 @@ export function handleStartGame(
   ];
 
   // Deal starting decks (7 Copper, 3 Estate per official rules)
-  const startingDeck: CardName[] = [
-    ...Array(STARTING_DECK.COPPER).fill("Copper"),
-    ...Array(STARTING_DECK.ESTATE).fill("Estate"),
-  ];
+  const copperCards: CardName[] = Array.from(
+    { length: STARTING_DECK.COPPER },
+    () => "Copper" as CardName,
+  );
+  const estateCards: CardName[] = Array.from(
+    { length: STARTING_DECK.ESTATE },
+    () => "Estate" as CardName,
+  );
+  const startingDeck: CardName[] = [...copperCards, ...estateCards];
 
   const playerSetupEvents = players.flatMap(player => {
     const shuffledDeck = shuffle([...startingDeck]);
