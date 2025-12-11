@@ -52,24 +52,102 @@ function SkeletonPlayerLabelSection() {
         paddingBlock: "var(--space-1)",
       }}
     >
+      <strong
+        style={{
+          fontSize: "0.8125rem",
+          color: "var(--color-text-secondary)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+        }}
+      >
+        Player
+      </strong>
       <div
         style={{
-          width: "8rem",
-          height: "0.8125rem",
-          background: "rgb(255 255 255 / 0.12)",
-          borderRadius: "0.25rem",
-          animation: "subtlePulse 3s ease-in-out infinite",
+          fontSize: "0.8125rem",
+          color: "var(--color-victory)",
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
         }}
-      />
-      <div
+      >
+        <span
+          style={{
+            color: "var(--color-text-secondary)",
+            fontWeight: 400,
+            fontSize: "0.75rem",
+          }}
+        >
+          VP:
+        </span>
+        0
+      </div>
+      <span
         style={{
-          width: "3rem",
-          height: "0.8125rem",
-          background: "rgb(255 255 255 / 0.12)",
-          borderRadius: "0.25rem",
-          animation: "subtlePulse 3s ease-in-out infinite",
+          fontSize: "0.75rem",
+          color: "var(--color-border)",
+          marginLeft: "auto",
         }}
-      />
+      >
+        Actions:{" "}
+        <strong
+          style={{
+            color: "var(--color-border)",
+            fontWeight: 700,
+          }}
+        >
+          -
+        </strong>
+      </span>
+      <span
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--color-border)",
+        }}
+      >
+        Buys:{" "}
+        <strong
+          style={{
+            color: "var(--color-border)",
+            fontWeight: 700,
+          }}
+        >
+          -
+        </strong>
+      </span>
+      <span
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--color-border)",
+        }}
+      >
+        Coins:{" "}
+        <strong
+          style={{
+            color: "var(--color-border)",
+            fontWeight: 700,
+          }}
+        >
+          -
+        </strong>
+      </span>
+      <span
+        style={{
+          textTransform: "uppercase",
+          color: "var(--color-border)",
+          fontSize: "0.625rem",
+          background: "transparent",
+          border: "1px dashed var(--color-border)",
+          padding: "var(--space-1) var(--space-2)",
+          fontWeight: 600,
+          minWidth: "4.5rem",
+          textAlign: "center",
+        }}
+      >
+        waiting
+      </span>
     </div>
   );
 }
