@@ -42,7 +42,7 @@ function SkeletonAnimation() {
   );
 }
 
-function SkeletonPlayerLabelSection() {
+function SkeletonPlayerLabelSection({ inverted }: { inverted: boolean }) {
   return (
     <div
       style={{
@@ -55,18 +55,18 @@ function SkeletonPlayerLabelSection() {
       <strong
         style={{
           fontSize: "0.8125rem",
-          color: "var(--color-text-secondary)",
+          color: "var(--color-border)",
           display: "flex",
           alignItems: "center",
           gap: "var(--space-2)",
         }}
       >
-        Player
+        {inverted ? "ai" : "You"}
       </strong>
       <div
         style={{
           fontSize: "0.8125rem",
-          color: "var(--color-victory)",
+          color: "var(--color-border)",
           fontWeight: 600,
           display: "flex",
           alignItems: "center",
@@ -75,7 +75,6 @@ function SkeletonPlayerLabelSection() {
       >
         <span
           style={{
-            color: "var(--color-text-secondary)",
             fontWeight: 400,
             fontSize: "0.75rem",
           }}
@@ -316,11 +315,11 @@ function SkeletonPlayerArea({ inverted }: SkeletonPlayerAreaProps) {
         <>
           <SkeletonHandAndDeckGrid />
           <SkeletonInPlaySection inverted={inverted} />
-          <SkeletonPlayerLabelSection />
+          <SkeletonPlayerLabelSection inverted={inverted} />
         </>
       ) : (
         <>
-          <SkeletonPlayerLabelSection />
+          <SkeletonPlayerLabelSection inverted={inverted} />
           <SkeletonInPlaySection inverted={inverted} />
           <SkeletonHandAndDeckGrid />
         </>
