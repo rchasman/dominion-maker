@@ -44,24 +44,15 @@ function fetchStrategyAnalysis(
 
       const apiStrategies = data.strategySummary as Record<
         string,
-        { gameplan: string; read: string; lines: string }
+        { gameplan: string; read: string; recommendation: string }
       >;
 
       if (Object.keys(apiStrategies).length === 0) {
         return;
       }
 
-      // Map API response fields to UI format (lines -> recommendation)
-      const strategies: PlayerStrategyData = Object.entries(
-        apiStrategies,
-      ).reduce((acc, [playerId, strategy]) => {
-        acc[playerId] = {
-          gameplan: strategy.gameplan,
-          read: strategy.read,
-          recommendation: strategy.lines,
-        };
-        return acc;
-      }, {} as PlayerStrategyData);
+      // API response already matches UI format
+      const strategies: PlayerStrategyData = apiStrategies;
 
       const stringifiedStrategies = JSON.stringify(strategies);
       strategy.setStrategySummary?.(stringifiedStrategies);
