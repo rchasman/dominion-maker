@@ -284,7 +284,7 @@ export function PileTooltip({
   const borderColor = getBorderColor(pileType);
   const titleText = getTitleText(pileType);
 
-  const element = (
+  return createReactPortal(
     <div
       style={{
         position: "fixed",
@@ -319,9 +319,7 @@ export function PileTooltip({
           titleText={titleText}
         />
       </div>
-    </div>
-  );
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  return createReactPortal(element, document.body) as ReactPortal;
+    </div>,
+    document.body,
+  ) as ReactPortal;
 }
