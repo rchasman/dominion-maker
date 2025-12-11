@@ -7,6 +7,7 @@ interface InPlaySectionProps {
   loading: boolean;
   hasMadePurchases: boolean;
   onInPlayClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
 }
 
 export function InPlaySection({
@@ -14,13 +15,15 @@ export function InPlaySection({
   loading,
   hasMadePurchases,
   onInPlayClick,
+  inverted = false,
 }: InPlaySectionProps) {
   return (
     <div
       style={{
         position: "relative",
         padding: "var(--space-2)",
-        marginBlockEnd: "var(--space-2)",
+        marginBlockStart: inverted ? "var(--space-2)" : undefined,
+        marginBlockEnd: inverted ? undefined : "var(--space-2)",
         background:
           inPlay.length > 0
             ? "rgb(255 255 255 / 0.05)"
