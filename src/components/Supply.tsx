@@ -4,9 +4,7 @@ import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 import { Pile } from "./Pile";
 import { run } from "../lib/run";
-import {
-  DISABLED_BUTTON_OPACITY,
-} from "./Board/constants";
+import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -294,9 +292,10 @@ function renderSupplyGrid(params: {
     cardOrder?: number[];
   }) => void;
   onSkipDecision?: () => void;
-  complexDecisionData?:
-    | { cardActions: Record<number, string>; cardOrder?: number[] }
-    | null;
+  complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  } | null;
 }) {
   const {
     state,

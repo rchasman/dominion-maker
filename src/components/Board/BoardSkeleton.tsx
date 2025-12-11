@@ -21,7 +21,11 @@ function getStoredGameMode(): GameMode {
     const savedModeRaw = localStorage.getItem(STORAGE_GAME_MODE_KEY);
     if (!savedModeRaw) return "engine";
     const savedMode = JSON.parse(savedModeRaw) as string;
-    if (savedMode === "engine" || savedMode === "hybrid" || savedMode === "full") {
+    if (
+      savedMode === "engine" ||
+      savedMode === "hybrid" ||
+      savedMode === "full"
+    ) {
       return savedMode;
     }
   } catch {
@@ -438,7 +442,8 @@ function SkeletonSupply() {
           className="kingdom-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, var(--card-width-large)))",
+            gridTemplateColumns:
+              "repeat(5, minmax(0, var(--card-width-large)))",
             gap: "var(--space-2)",
           }}
         >
@@ -463,9 +468,7 @@ function SkeletonSupply() {
         <SkeletonCard size="small" />
       </div>
 
-      <div
-        style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}
-      >
+      <div style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}>
         <div
           style={{
             fontSize: "0.625rem",
@@ -777,7 +780,7 @@ function SkeletonSidebar() {
             >
               Mode:
             </span>
-            {(["Engine", "Hybrid", "Full"] as const).map((modeName) => {
+            {(["Engine", "Hybrid", "Full"] as const).map(modeName => {
               const isSelected = modeName.toLowerCase() === gameMode;
               return (
                 <button
@@ -787,10 +790,14 @@ function SkeletonSidebar() {
                     padding: "3px 8px",
                     fontSize: "0.65rem",
                     fontWeight: isSelected ? 700 : 400,
-                    background: isSelected ? "var(--color-victory-dark)" : "transparent",
+                    background: isSelected
+                      ? "var(--color-victory-dark)"
+                      : "transparent",
                     color: isSelected ? "#fff" : "var(--color-text-secondary)",
                     border: "1px solid",
-                    borderColor: isSelected ? "var(--color-victory)" : "var(--color-border-secondary)",
+                    borderColor: isSelected
+                      ? "var(--color-victory)"
+                      : "var(--color-border-secondary)",
                     cursor: "default",
                     textTransform: "uppercase",
                     letterSpacing: "0.05rem",

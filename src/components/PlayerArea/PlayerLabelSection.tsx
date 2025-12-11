@@ -308,7 +308,9 @@ export function PlayerLabelSection({
             <span
               style={{
                 fontSize: "0.75rem",
-                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+                color: isActive
+                  ? "var(--color-text-secondary)"
+                  : "var(--color-border)",
                 marginLeft: "auto",
               }}
             >
@@ -327,7 +329,9 @@ export function PlayerLabelSection({
             <span
               style={{
                 fontSize: "0.75rem",
-                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+                color: isActive
+                  ? "var(--color-text-secondary)"
+                  : "var(--color-border)",
               }}
             >
               Buys:{" "}
@@ -345,7 +349,9 @@ export function PlayerLabelSection({
             <span
               style={{
                 fontSize: "0.75rem",
-                color: isActive ? "var(--color-text-secondary)" : "var(--color-border)",
+                color: isActive
+                  ? "var(--color-text-secondary)"
+                  : "var(--color-border)",
               }}
             >
               Coins:{" "}

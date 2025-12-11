@@ -51,12 +51,17 @@ export function getVictoryCardCount(
   playerCount: number,
   cardType: "Province" | "Duchy" | "Estate",
 ): number {
-  const counts = VICTORY_CARDS_BY_PLAYERS[
-    playerCount as keyof typeof VICTORY_CARDS_BY_PLAYERS
-  ] || VICTORY_CARDS_BY_PLAYERS[4];
+  const counts =
+    VICTORY_CARDS_BY_PLAYERS[
+      playerCount as keyof typeof VICTORY_CARDS_BY_PLAYERS
+    ] || VICTORY_CARDS_BY_PLAYERS[4];
 
+  const MIN_PLAYER_COUNT_FOR_PROVINCE_SCALING = 5;
   // Provinces scale for 5-6 players, Duchy/Estate stay at 12
-  if (playerCount >= 5 && cardType !== "Province") {
+  if (
+    playerCount >= MIN_PLAYER_COUNT_FOR_PROVINCE_SCALING &&
+    cardType !== "Province"
+  ) {
     return VICTORY_CARDS_BY_PLAYERS[4];
   }
 
