@@ -67,12 +67,7 @@ interface LLMLogsContextValue {
   llmLogs: LLMLogEntry[];
 }
 
-type PlayerStrategyData = Array<{
-  id: string;
-  gameplan: string;
-  read: string;
-  recommendation: string;
-}>;
+import type { PlayerStrategyData } from "../types/player-strategy";
 
 const GameContext = createContext<GameContextValue | null>(null);
 const LLMLogsContext = createContext<LLMLogsContextValue | null>(null);

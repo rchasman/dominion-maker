@@ -12,6 +12,7 @@ import type { CommandResult } from "../../commands/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import type { DecisionChoice } from "../../events/types";
+import type { PlayerStrategyData } from "../../types/player-strategy";
 import { uiLogger } from "../../lib/logger";
 
 interface TypedGameContext {
@@ -34,14 +35,7 @@ interface TypedGameContext {
   setModelSettings: (settings: ModelSettings) => void;
   requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
-  playerStrategies: Record<
-    string,
-    {
-      gameplan: string;
-      read: string;
-      lines: string;
-    }
-  >;
+  playerStrategies: PlayerStrategyData;
 }
 
 export function useTypedGame(): TypedGameContext {

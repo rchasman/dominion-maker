@@ -2,6 +2,7 @@ import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import type { CardName, GameState } from "../../types/game-state";
+import type { PlayerStrategyData } from "../../types/player-strategy";
 
 export function createGameProps(gameContext: {
   events: GameEvent[];
@@ -10,14 +11,7 @@ export function createGameProps(gameContext: {
   setGameMode: (mode: GameMode) => void;
   modelSettings: ModelSettings;
   setModelSettings: (settings: ModelSettings) => void;
-  playerStrategies: Record<
-    string,
-    {
-      gameplan: string;
-      read: string;
-      lines: string;
-    }
-  >;
+  playerStrategies: PlayerStrategyData;
   buyCard: (card: CardName) => void;
   playAllTreasures: () => void;
   endPhase: () => void;

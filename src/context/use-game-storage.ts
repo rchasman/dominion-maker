@@ -10,6 +10,7 @@ import type { ModelSettings } from "../agent/game-agent";
 import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
 import type { GameMode } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
+import type { PlayerStrategyData } from "../types/player-strategy";
 import { DominionEngine } from "../engine";
 import { uiLogger } from "../lib/logger";
 import {
@@ -20,15 +21,6 @@ import {
   loadPlayerStrategies,
   STORAGE_KEYS,
 } from "./storage-utils";
-
-type PlayerStrategyData = Record<
-  string,
-  {
-    gameplan: string;
-    read: string;
-    lines: string;
-  }
->;
 
 interface GameStorageState {
   gameState: GameState | null;

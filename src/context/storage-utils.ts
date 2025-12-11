@@ -7,6 +7,7 @@ import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings, ModelProvider } from "../agent/game-agent";
 import type { GameMode } from "../types/game-mode";
+import type { PlayerStrategyData } from "../types/player-strategy";
 
 // Storage keys
 export const STORAGE_KEYS = {
@@ -108,30 +109,16 @@ export function loadModelSettings(): ModelSettings | null {
 /**
  * Load player strategies from localStorage
  */
-export function loadPlayerStrategies(): Record<
-  string,
-  {
-    gameplan: string;
-    read: string;
-    lines: string;
-  }
-> {
+export function loadPlayerStrategies(): PlayerStrategyData {
   const savedStrategies = localStorage.getItem(STORAGE_KEYS.STRATEGIES);
   if (!savedStrategies) {
-    return {};
+    return [];
   }
 
   try {
-    return JSON.parse(savedStrategies) as Record<
-      string,
-      {
-        gameplan: string;
-        read: string;
-        lines: string;
-      }
-    >;
+    return JSON.parse(savedStrategies) as PlayerStrategyData;
   } catch {
-    return {};
+    return [];
   }
 }
 

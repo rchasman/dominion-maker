@@ -10,19 +10,11 @@ import type { GameMode } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
+import type { PlayerStrategyData } from "../types/player-strategy";
 import { abortOngoingConsensus } from "../agent/game-agent";
 import { uiLogger } from "../lib/logger";
 import { resetPlayerColors } from "../lib/board-utils";
 import { clearGameStateStorage } from "./storage-utils";
-
-type PlayerStrategyData = Record<
-  string,
-  {
-    gameplan: string;
-    read: string;
-    lines: string;
-  }
->;
 
 /**
  * Hook to create startGame callback
@@ -48,7 +40,7 @@ export function useStartGame(
     abortOngoingConsensus();
     clearGameStateStorage();
     setLLMLogs([]);
-    setPlayerStrategies({});
+    setPlayerStrategies([]);
     resetPlayerColors();
 
     const newEngine = new DominionEngine();

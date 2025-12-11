@@ -7,16 +7,10 @@ import { useEffect, type MutableRefObject } from "react";
 import type { DominionEngine } from "../engine";
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
+import type { PlayerStrategyData } from "../types/player-strategy";
 import { api } from "../api/client";
 import { uiLogger } from "../lib/logger";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
-
-type PlayerStrategyData = Array<{
-  id: string;
-  gameplan: string;
-  read: string;
-  recommendation: string;
-}>;
 
 /**
  * Fetch strategy analysis from API

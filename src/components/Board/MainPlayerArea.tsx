@@ -3,6 +3,7 @@ import { CardDecisionModal } from "../CardDecisionModal";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
+import type { PlayerStrategyData } from "../../types/player-strategy";
 
 interface MainPlayerAreaProps {
   mainPlayer: GameState["players"][PlayerId];
@@ -16,13 +17,7 @@ interface MainPlayerAreaProps {
   hint: string;
   hasTreasuresInHand: boolean;
   complexDecisionData: ComplexDecisionData | null;
-  playerStrategy:
-    | {
-        gameplan: string;
-        read: string;
-        lines: string;
-      }
-    | undefined;
+  playerStrategy: PlayerStrategyData[number] | undefined;
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName) => void;
   onPlayAllTreasures?: () => void;

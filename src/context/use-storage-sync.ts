@@ -9,17 +9,9 @@ import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings } from "../agent/game-agent";
 import type { GameMode } from "../types/game-mode";
+import type { PlayerStrategyData } from "../types/player-strategy";
 import { STORAGE_KEYS } from "./storage-utils";
 import { abortOngoingConsensus } from "../agent/game-agent";
-
-type PlayerStrategyData = Record<
-  string,
-  {
-    gameplan: string;
-    read: string;
-    lines: string;
-  }
->;
 
 /**
  * Hook to sync all game state to localStorage

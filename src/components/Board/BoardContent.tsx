@@ -8,6 +8,7 @@ import type { CardName, GameState } from "../../types/game-state";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
+import type { PlayerStrategyData } from "../../types/player-strategy";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
@@ -22,14 +23,7 @@ interface BoardContentProps {
     setGameMode: (mode: GameMode) => void;
     modelSettings: ModelSettings;
     setModelSettings: (settings: ModelSettings) => void;
-    playerStrategies: Record<
-      string,
-      {
-        gameplan: string;
-        read: string;
-        lines: string;
-      }
-    >;
+    playerStrategies: PlayerStrategyData;
     buyCard: (card: CardName) => void;
     playAllTreasures: () => void;
     endPhase: () => void;
@@ -84,13 +78,10 @@ function SupplyArea({
 }: SupplyAreaProps) {
   return (
     <Supply
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state={displayState}
       onBuyCard={onBuyCard}
       canBuy={canBuy}
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       availableCoins={displayState.coins}
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       pendingDecision={displayState.pendingDecision}
       isPlayerActive={isPlayerActive}
       hasTreasuresInHand={hasTreasuresInHand}
