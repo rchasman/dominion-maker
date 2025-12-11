@@ -37,145 +37,231 @@ function SkeletonCard({ size }: SkeletonCardProps) {
   );
 }
 
-interface SkeletonPlayerAreaProps {
-  inverted: boolean;
-}
-
-function SkeletonPlayerArea({ inverted }: SkeletonPlayerAreaProps) {
-  const inPlaySection = (
-    <div
-      style={{
-        minHeight: "5.625rem",
-        padding: "var(--space-2)",
-        background: "rgb(255 255 255 / 0.05)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "0.25rem",
-        marginBlockStart: inverted ? "var(--space-2)" : "0",
-        marginBlockEnd: inverted ? "0" : "var(--space-2)",
-      }}
-    />
-  );
-
+function SkeletonPlayerLabelSection() {
   return (
     <div
       style={{
-        padding: "var(--space-1) var(--space-2)",
-        background: "rgb(255 255 255 / 0.05)",
-        border: "1px solid var(--color-border)",
-        overflow: "auto",
-        minHeight: 0,
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-4)",
+        paddingBlock: "var(--space-1)",
       }}
     >
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBlockEnd: "var(--space-2)",
+          width: "8rem",
+          height: "0.8125rem",
+          background: "rgb(255 255 255 / 0.12)",
+          borderRadius: "0.25rem",
+          animation: "subtlePulse 3s ease-in-out infinite",
         }}
-      >
-        <div
-          style={{
-            width: "8rem",
-            height: "1rem",
-            background: "rgb(255 255 255 / 0.12)",
-            borderRadius: "0.25rem",
-            animation: "subtlePulse 3s ease-in-out infinite",
-          }}
-        />
-        <div
-          style={{
-            width: "3rem",
-            height: "1rem",
-            background: "rgb(255 255 255 / 0.12)",
-            borderRadius: "0.25rem",
-            animation: "subtlePulse 3s ease-in-out infinite",
-          }}
-        />
-      </div>
-
-      {!inverted && inPlaySection}
-
+      />
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "75% 24.5%",
-          gap: "var(--space-2)",
+          width: "3rem",
+          height: "0.8125rem",
+          background: "rgb(255 255 255 / 0.12)",
+          borderRadius: "0.25rem",
+          animation: "subtlePulse 3s ease-in-out infinite",
+        }}
+      />
+    </div>
+  );
+}
+
+function SkeletonInPlaySection({ inverted }: { inverted: boolean }) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        padding: "var(--space-2)",
+        marginBlockStart: inverted ? "var(--space-2)" : undefined,
+        marginBlockEnd: inverted ? undefined : "var(--space-2)",
+        background: "rgb(255 255 255 / 0.02)",
+        border: "1px dashed var(--color-border)",
+        minBlockSize: "calc(var(--card-height-small) + var(--space-4) + 12px)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          insetBlockStart: "var(--space-1)",
+          insetInlineStart: "var(--space-2)",
+          fontSize: "0.5625rem",
+          color: "var(--color-text-muted)",
+          textTransform: "uppercase",
+          fontWeight: 600,
+          animation: "subtlePulse 3s ease-in-out infinite",
         }}
       >
+        In Play (empty)
+      </div>
+    </div>
+  );
+}
+
+function SkeletonHandSection() {
+  return (
+    <div
+      className="hand-container"
+      style={{
+        position: "relative",
+        minInlineSize: 0,
+        padding: "var(--space-2)",
+        background: "rgb(255 255 255 / 0.05)",
+        border: "1px solid var(--color-border)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          insetBlockStart: "var(--space-1)",
+          insetInlineStart: "var(--space-2)",
+          fontSize: "0.5625rem",
+          color: "var(--color-text-muted)",
+          fontWeight: 600,
+          textTransform: "uppercase",
+          animation: "subtlePulse 3s ease-in-out infinite",
+        }}
+      >
+        Hand (5)
+      </div>
+      <div className="hand-grid">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div
+            key={i}
+            style={{
+              animation: "subtlePulse 3s ease-in-out infinite",
+            }}
+          >
+            <SkeletonCard size="large" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SkeletonDeckDiscardSection() {
+  return (
+    <div
+      className="deck-discard-container"
+      style={{
+        padding: "var(--space-2)",
+        background: "var(--color-bg-surface)",
+        border: "1px solid var(--color-border)",
+        display: "flex",
+        alignItems: "center",
+        minHeight: 0,
+      }}
+    >
+      <div className="deck-discard-wrapper" style={{ width: "100%" }}>
         <div
           style={{
             display: "flex",
-            gap: "var(--space-2)",
-            padding: "var(--space-2)",
-            background: "rgb(255 255 255 / 0.05)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "0.25rem",
-            minHeight: "8rem",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
-          {[1, 2, 3, 4, 5].map(i => (
-            <SkeletonCard key={i} size="large" />
-          ))}
+          <div
+            style={{
+              fontSize: "0.5625rem",
+              color: "rgb(205 133 63)",
+              marginBlockEnd: "var(--space-2)",
+              fontWeight: 600,
+              textTransform: "uppercase",
+            }}
+          >
+            Deck
+          </div>
+          <div
+            style={{
+              animation: "subtlePulse 3s ease-in-out infinite",
+            }}
+          >
+            <SkeletonCard size="medium" />
+          </div>
         </div>
 
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "var(--space-2)",
+            alignItems: "center",
           }}
         >
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              padding: "var(--space-2)",
-              background: "rgb(255 255 255 / 0.05)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "0.25rem",
+              fontSize: "0.5625rem",
+              color: "rgb(180 180 180)",
+              marginBlockEnd: "var(--space-2)",
+              fontWeight: 600,
+              textTransform: "uppercase",
             }}
           >
-            <SkeletonCard size="medium" />
-            <div
-              style={{
-                width: "3rem",
-                height: "0.75rem",
-                background: "rgb(255 255 255 / 0.12)",
-                borderRadius: "0.25rem",
-                animation: "subtlePulse 3s ease-in-out infinite",
-              }}
-            />
+            Discard
           </div>
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "var(--space-1)",
-              padding: "var(--space-2)",
-              background: "rgb(255 255 255 / 0.05)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "0.25rem",
+              animation: "subtlePulse 3s ease-in-out infinite",
             }}
           >
             <SkeletonCard size="medium" />
-            <div
-              style={{
-                width: "3rem",
-                height: "0.75rem",
-                background: "rgb(255 255 255 / 0.12)",
-                borderRadius: "0.25rem",
-                animation: "subtlePulse 3s ease-in-out infinite",
-              }}
-            />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {inverted && inPlaySection}
+function SkeletonHandAndDeckGrid() {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "75% 24.5%",
+        gap: "var(--space-2)",
+        alignItems: "stretch",
+      }}
+    >
+      <SkeletonHandSection />
+      <SkeletonDeckDiscardSection />
+    </div>
+  );
+}
+
+interface SkeletonPlayerAreaProps {
+  inverted: boolean;
+}
+
+function SkeletonPlayerArea({ inverted }: SkeletonPlayerAreaProps) {
+  return (
+    <div
+      style={{
+        padding: inverted
+          ? "var(--space-1) var(--space-2) 0 var(--space-2)"
+          : "0 var(--space-2) var(--space-1) var(--space-2)",
+        border: "1px solid var(--color-border)",
+        background: "rgb(255 255 255 / 0.05)",
+        overflow: "auto",
+        minHeight: 0,
+      }}
+    >
+      {inverted ? (
+        <>
+          <SkeletonHandAndDeckGrid />
+          <SkeletonInPlaySection inverted={inverted} />
+          <SkeletonPlayerLabelSection />
+        </>
+      ) : (
+        <>
+          <SkeletonPlayerLabelSection />
+          <SkeletonInPlaySection inverted={inverted} />
+          <SkeletonHandAndDeckGrid />
+        </>
+      )}
     </div>
   );
 }
