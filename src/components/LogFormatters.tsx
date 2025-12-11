@@ -2,9 +2,6 @@ import type { CardName } from "../types/game-state";
 import { getPlayerColor } from "../lib/board-utils";
 import { getCardColor } from "../lib/card-colors";
 
-// eslint-disable-next-line react-refresh/only-export-components
-export { getCardColor };
-
 export function PlayerName({
   player,
   isAI,
