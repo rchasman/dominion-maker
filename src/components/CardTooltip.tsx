@@ -53,7 +53,7 @@ export function CardTooltip({
     return rawTop;
   });
 
-  return createPortal(
+  const element = (
     <div
       style={{
         position: "fixed",
@@ -92,7 +92,13 @@ export function CardTooltip({
           }}
         />
       </div>
-    </div>,
-    document.body,
-  ) as ReactPortal;
+    </div>
+  );
+
+  const container = document.body;
+  if (!container) {
+    throw new Error("document.body is null");
+  }
+
+  return createPortal(element, container);
 }

@@ -284,7 +284,7 @@ export function PileTooltip({
   const borderColor = getBorderColor(pileType);
   const titleText = getTitleText(pileType);
 
-  return createReactPortal(
+  const element = (
     <div
       style={{
         position: "fixed",
@@ -319,7 +319,13 @@ export function PileTooltip({
           titleText={titleText}
         />
       </div>
-    </div>,
-    document.body,
-  ) as ReactPortal;
+    </div>
+  );
+
+  const container = document.body;
+  if (!container) {
+    throw new Error("document.body is null");
+  }
+
+  return createReactPortal(element, container);
 }
