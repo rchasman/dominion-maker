@@ -1,7 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
 import type { CardAction } from "../../types/game-state";
-
-const OPACITY_DRAGGING = 0.5;
 
 export interface ActionIndicatorProps {
   action: CardAction | undefined;
@@ -17,16 +14,7 @@ export interface ReorderButtonsProps {
   onReorder: (newOrder: number[]) => void;
 }
 
-export function getHighlightMode(
-  actionId: string | undefined,
-): "trash" | "discard" | "gain" | undefined {
-  if (actionId === "trash") return "trash";
-  if (actionId === "discard") return "discard";
-  if (actionId === "topdeck" || actionId === "keep") return "gain";
-  return undefined;
-}
-
-export function swapInOrder(
+function swapInOrder(
   cardOrder: number[],
   idx1: number,
   idx2: number,
@@ -134,5 +122,3 @@ export function ReorderButtons({
     </div>
   );
 }
-
-export const OPACITY_DRAGGING_EXPORT = OPACITY_DRAGGING;
