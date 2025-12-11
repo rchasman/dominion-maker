@@ -12,6 +12,7 @@ import {
   checkGameOver,
   createResourceEvents,
 } from "./handle-helpers";
+import { STARTING_DECK } from "../data/supply-constants";
 import { createDrawEvents } from "../cards/effect-types";
 import { applyEvents } from "../events/apply";
 
@@ -40,18 +41,10 @@ export function handleStartGame(
     },
   ];
 
-  // Deal starting decks (7 Copper, 3 Estate)
+  // Deal starting decks (7 Copper, 3 Estate per official rules)
   const startingDeck: CardName[] = [
-    "Copper",
-    "Copper",
-    "Copper",
-    "Copper",
-    "Copper",
-    "Copper",
-    "Copper",
-    "Estate",
-    "Estate",
-    "Estate",
+    ...Array(STARTING_DECK.COPPER).fill("Copper"),
+    ...Array(STARTING_DECK.ESTATE).fill("Estate"),
   ];
 
   const playerSetupEvents = players.flatMap(player => {
