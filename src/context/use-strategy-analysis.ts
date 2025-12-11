@@ -11,14 +11,12 @@ import { api } from "../api/client";
 import { uiLogger } from "../lib/logger";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 
-type PlayerStrategyData = Record<
-  string,
-  {
-    gameplan: string;
-    read: string;
-    recommendation: string;
-  }
->;
+type PlayerStrategyData = Array<{
+  id: string;
+  gameplan: string;
+  read: string;
+  recommendation: string;
+}>;
 
 /**
  * Fetch strategy analysis from API
@@ -38,25 +36,13 @@ function fetchStrategyAnalysis(
         return;
       }
 
-      if (!data?.strategySummary) {
+      if (!data?.strategySummary || data.strategySummary.length === 0) {
         return;
       }
 
-      const apiStrategies = data.strategySummary as Record<
-        string,
-        { gameplan: string; read: string; recommendation: string }
-      >;
-
-      if (Object.keys(apiStrategies).length === 0) {
-        return;
-      }
-
-      // API response already matches UI format
-      const strategies: PlayerStrategyData = apiStrategies;
-
-      const stringifiedStrategies = JSON.stringify(strategies);
+      const stringifiedStrategies = JSON.stringify(data.strategySummary);
       strategy.setStrategySummary?.(stringifiedStrategies);
-      setPlayerStrategies(strategies);
+      setPlayerStrategies(data.strategySummary);
     })
     .catch((err: unknown) => {
       uiLogger.warn("Failed to fetch strategy analysis:", err);

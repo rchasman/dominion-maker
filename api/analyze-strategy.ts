@@ -45,6 +45,7 @@ For each player, provide:
 Write with confidence and personality. Be analytical but engaging. No fluff - every word should matter.`;
 
 const PlayerAnalysisSchema = z.object({
+  id: z.string().describe("Player ID (e.g., 'human', 'ai')"),
   gameplan: z
     .string()
     .describe("One-line summary of strategy and current standing"),
@@ -59,7 +60,7 @@ const PlayerAnalysisSchema = z.object({
 });
 
 const StrategyAnalysisSchema = z.object({
-  players: z.record(z.string(), PlayerAnalysisSchema),
+  players: z.array(PlayerAnalysisSchema),
 });
 
 interface VercelRequest {
@@ -194,7 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Use Claude Opus for high-quality strategy analysis
     const model = gateway("claude-opus-4-5-20251101");
 
-    // Try generateObject with structured outputs beta header
+    // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({
       model,
       system: STRATEGY_ANALYSIS_PROMPT,

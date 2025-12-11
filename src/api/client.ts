@@ -26,7 +26,12 @@ interface AnalyzeStrategyRequest {
 }
 
 interface AnalyzeStrategyResponse {
-  strategySummary?: Record<string, string>;
+  strategySummary?: Array<{
+    id: string;
+    gameplan: string;
+    read: string;
+    recommendation: string;
+  }>;
   error?: number;
   message?: string;
 }

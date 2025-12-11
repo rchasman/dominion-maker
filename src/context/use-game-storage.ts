@@ -102,7 +102,7 @@ export function useGameStorage(): GameStorageState {
         isLoading: false,
         llmLogs: [],
         modelSettings: DEFAULT_MODEL_SETTINGS,
-        playerStrategies: {},
+        playerStrategies: [],
         engineRef: null,
       };
     }

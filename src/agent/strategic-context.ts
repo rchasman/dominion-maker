@@ -284,11 +284,10 @@ export function buildStrategicContext(
 
   // Add AI's own strategy analysis (not opponent's - no cheating)
   if (strategySummary) {
-    const strategies = JSON.parse(strategySummary) as Record<
-      string,
-      PlayerStrategyAnalysis
+    const strategies = JSON.parse(strategySummary) as Array<
+      PlayerStrategyAnalysis & { id: string }
     >;
-    const aiStrategy = strategies[state.activePlayer];
+    const aiStrategy = strategies.find(s => s.id === state.activePlayer);
 
     if (aiStrategy) {
       facts.aiStrategyGameplan = aiStrategy.gameplan;
