@@ -1,12 +1,21 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import type { CardName, CardAction } from "../types/game-state";
 import { Card } from "./Card";
 import {
-  getHighlightMode,
   ActionIndicator,
   ReorderButtons,
-  OPACITY_DRAGGING_EXPORT as OPACITY_DRAGGING,
 } from "./CardDecisionModal/CardRowComponents";
+
+const OPACITY_DRAGGING = 0.5;
+
+function getHighlightMode(
+  actionId: string | undefined,
+): "trash" | "discard" | "gain" | undefined {
+  if (actionId === "trash") return "trash";
+  if (actionId === "discard") return "discard";
+  if (actionId === "topdeck" || actionId === "keep") return "gain";
+  return undefined;
+}
 
 interface CardDecisionModalProps {
   cards: CardName[];
@@ -87,16 +96,6 @@ function useCardDecisionState(
   );
   const [cardOrder, setCardOrder] = useState(cards.map((_, i) => i));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    onDataChange({
-      cardActions,
-      cardOrder: requiresOrdering
-        ? getCardsToOrder(cardOrder, cardActions)
-        : undefined,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const toggleCardAction = useCallback(
     (index: number) => {
