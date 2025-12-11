@@ -396,17 +396,26 @@ function SkeletonSupply() {
         </div>
       </div>
 
-      <div style={{ gridArea: "kingdom" }}>
+      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
         <div
           style={{
-            fontSize: "0.625rem",
-            color: "var(--color-text-secondary)",
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(5, minmax(0, var(--card-width-large)))",
+            justifyContent: "center",
             marginBlockEnd: "var(--space-2)",
-            textTransform: "uppercase",
-            fontWeight: 600,
           }}
         >
-          KINGDOM
+          <div
+            style={{
+              fontSize: "0.625rem",
+              color: "var(--color-text-primary)",
+              textTransform: "uppercase",
+              fontWeight: 600,
+            }}
+          >
+            Kingdom
+          </div>
         </div>
         <div
           className="kingdom-grid"
