@@ -54,7 +54,7 @@ export type ModelExecutionContext = {
   format: "json" | "toon";
   abortController: AbortController;
   voteGroups: Map<ActionSignature, VoteGroup>;
-  completedResults: ModelResult[];
+  completedResultsMap: Map<number, ModelResult>;
   aheadByK: number;
   logger?: LLMLogger;
   pendingModels: Set<number>;

@@ -150,7 +150,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     })
     .then(modelResult => {
       pendingModels.delete(index);
-      context.completedResults.push(modelResult);
+      context.completedResultsMap.set(index, modelResult);
       handleModelResult(modelResult, context);
     });
 };
@@ -189,7 +189,7 @@ const runModelsInParallel = async (
   } = params;
 
   const voteGroups = new Map<ActionSignature, VoteGroup>();
-  const completedResults: ModelResult[] = [];
+  const completedResultsMap = new Map<number, ModelResult>();
   const totalModels = providers.length;
   const pendingModels = new Set<number>();
   const modelStartTimes = new Map<number, number>();
@@ -222,7 +222,7 @@ const runModelsInParallel = async (
         format: modelFormat,
         abortController,
         voteGroups,
-        completedResults,
+        completedResultsMap,
         aheadByK,
         logger,
         pendingModels,
@@ -231,13 +231,15 @@ const runModelsInParallel = async (
         onEarlyConsensus: (winner: VoteGroup) => {
           if (state.resolved) return;
           state.resolved = true;
-          resolveAll({ results: completedResults, earlyConsensus: winner });
+          const results = Array.from(completedResultsMap.values());
+          resolveAll({ results, earlyConsensus: winner });
         },
         onComplete: () => {
           if (state.resolved) return;
           state.completedCount++;
           if (state.completedCount === totalModels) {
-            resolveAll({ results: completedResults, earlyConsensus: null });
+            const results = Array.from(completedResultsMap.values());
+            resolveAll({ results, earlyConsensus: null });
           }
         },
       });
@@ -248,6 +250,7 @@ const runModelsInParallel = async (
     globalAbortState.current = null;
   }
 
+  const completedResults = Array.from(completedResultsMap.values());
   return { results, earlyConsensus, voteGroups, completedResults };
 };
 
