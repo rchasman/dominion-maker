@@ -3,6 +3,10 @@ import type { DecisionRequest } from "../events/types";
 import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 import { Pile } from "./Pile";
+import { run } from "../lib/run";
+import {
+  DISABLED_BUTTON_OPACITY,
+} from "./Board/constants";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -12,6 +16,21 @@ interface SupplyProps {
   canBuy: boolean;
   availableCoins: number;
   pendingDecision?: DecisionRequest | null;
+  // Action button props
+  isPlayerActive?: boolean;
+  hasTreasuresInHand?: boolean;
+  onPlayAllTreasures?: () => void;
+  onEndPhase?: () => void;
+  selectedCardIndices?: number[];
+  onConfirmDecision?: (complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void;
+  onSkipDecision?: () => void;
+  complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  } | null;
 }
 
 function canInteractWithCard(
@@ -44,6 +63,178 @@ function getSupplyCardHighlightMode(
   const options = pendingDecision.cardOptions || [];
   const isGainable = options.includes(card);
   return isGainable ? "gain" : undefined;
+}
+
+function getButtonOpacity(disabled: boolean): number {
+  return disabled ? DISABLED_BUTTON_OPACITY : 1;
+}
+
+function getButtonCursor(disabled: boolean): string {
+  return disabled ? "not-allowed" : "pointer";
+}
+
+function getEndPhaseButtonBackground(
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (pendingDecision && pendingDecision.canSkip) {
+    return "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)";
+  }
+  if (phase === "action") {
+    return "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)";
+  }
+  return "linear-gradient(180deg, #555 0%, #333 100%)";
+}
+
+function getEndPhaseButtonBorder(
+  isTurnComplete: boolean,
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (isTurnComplete) return "1px solid #a89968";
+  if (pendingDecision && pendingDecision.canSkip) return "1px solid #fbbf24";
+  if (phase === "action") return "1px solid var(--color-victory)";
+  return "1px solid #666";
+}
+
+function getEndPhaseButtonText(
+  pendingDecision: DecisionRequest | null | undefined,
+  phase: string,
+): string {
+  if (pendingDecision && pendingDecision.canSkip) return "Skip";
+  if (phase === "action") return "Skip to Buy";
+  return "End Turn";
+}
+
+function ConfirmButton({
+  onConfirmDecision,
+  complexDecisionData,
+  selectedCardIndices,
+  minRequired,
+}: {
+  onConfirmDecision: (complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void;
+  complexDecisionData:
+    | { cardActions: Record<number, string>; cardOrder?: number[] }
+    | null
+    | undefined;
+  selectedCardIndices: number[];
+  minRequired: number;
+}) {
+  const disabled =
+    !complexDecisionData && selectedCardIndices.length < minRequired;
+
+  return (
+    <button
+      onClick={() => onConfirmDecision(complexDecisionData)}
+      disabled={disabled}
+      style={{
+        padding: "var(--space-2) var(--space-4)",
+        background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
+        color: "#fff",
+        border: "1px solid #a5b4fc",
+        cursor: getButtonCursor(disabled),
+        opacity: getButtonOpacity(disabled),
+        fontSize: "0.6875rem",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        fontFamily: "inherit",
+      }}
+    >
+      Confirm
+    </button>
+  );
+}
+
+function SkipButton({ onSkipDecision }: { onSkipDecision: () => void }) {
+  return (
+    <button
+      onClick={onSkipDecision}
+      style={{
+        padding: "var(--space-2) var(--space-4)",
+        background: "linear-gradient(180deg, #555 0%, #333 100%)",
+        color: "#fff",
+        border: "1px solid #666",
+        cursor: "pointer",
+        fontSize: "0.6875rem",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        fontFamily: "inherit",
+      }}
+    >
+      Skip
+    </button>
+  );
+}
+
+function PlayTreasuresButton({
+  onPlayAllTreasures,
+  pendingDecision,
+}: {
+  onPlayAllTreasures: () => void;
+  pendingDecision: DecisionRequest | null | undefined;
+}) {
+  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+
+  return (
+    <button
+      onClick={onPlayAllTreasures}
+      disabled={disabled}
+      style={{
+        padding: "var(--space-2) var(--space-4)",
+        background:
+          "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
+        color: "var(--color-bg-primary)",
+        border: "1px solid var(--color-gold-bright)",
+        cursor: getButtonCursor(disabled),
+        opacity: getButtonOpacity(disabled),
+        fontSize: "0.6875rem",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        fontFamily: "inherit",
+      }}
+    >
+      Play Treasures
+    </button>
+  );
+}
+
+function EndPhaseButton({
+  onEndPhase,
+  pendingDecision,
+  phase,
+  isTurnComplete,
+}: {
+  onEndPhase: () => void;
+  pendingDecision: DecisionRequest | null | undefined;
+  phase: string;
+  isTurnComplete: boolean;
+}) {
+  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+
+  return (
+    <button
+      onClick={onEndPhase}
+      disabled={disabled}
+      style={{
+        padding: "var(--space-2) var(--space-4)",
+        background: getEndPhaseButtonBackground(pendingDecision, phase),
+        color: isTurnComplete ? "#a89968" : "#fff",
+        border: getEndPhaseButtonBorder(isTurnComplete, pendingDecision, phase),
+        cursor: getButtonCursor(disabled),
+        opacity: getButtonOpacity(disabled),
+        fontSize: "0.6875rem",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        fontFamily: "inherit",
+        animation: isTurnComplete ? "glow 2s ease-in-out infinite" : "none",
+      }}
+    >
+      {getEndPhaseButtonText(pendingDecision, phase)}
+    </button>
+  );
 }
 
 function renderSupplyColumn(params: {
@@ -93,6 +284,19 @@ function renderSupplyGrid(params: {
   treasures: CardName[];
   victory: CardName[];
   sortedKingdom: CardName[];
+  isPlayerActive: boolean;
+  hasTreasuresInHand: boolean;
+  onPlayAllTreasures?: () => void;
+  onEndPhase?: () => void;
+  selectedCardIndices: number[];
+  onConfirmDecision?: (complexDecisionData?: {
+    cardActions: Record<number, string>;
+    cardOrder?: number[];
+  }) => void;
+  onSkipDecision?: () => void;
+  complexDecisionData?:
+    | { cardActions: Record<number, string>; cardOrder?: number[] }
+    | null;
 }) {
   const {
     state,
@@ -102,16 +306,34 @@ function renderSupplyGrid(params: {
     treasures,
     victory,
     sortedKingdom,
+    isPlayerActive,
+    hasTreasuresInHand,
+    onPlayAllTreasures,
+    onEndPhase,
+    selectedCardIndices,
+    onConfirmDecision,
+    onSkipDecision,
+    complexDecisionData,
   } = params;
+
+  const isTurnComplete =
+    !state.pendingDecision &&
+    ((state.phase === "action" && state.actions === 0) ||
+      (state.phase === "buy" && state.buys === 0 && !hasTreasuresInHand));
+
+  const hasPendingDecision =
+    state.pendingDecision && state.pendingDecision.player === "human";
 
   return (
     <div
       style={{
+        position: "relative",
         display: "grid",
         gridTemplateColumns: "auto auto 1fr auto auto",
         gridTemplateAreas: '"victory treasure kingdom curse trash"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
+        paddingBlockEnd: "calc(var(--space-3) + 2.5rem)",
         background: "rgba(70, 70, 95, 0.25)",
         backdropFilter: "blur(12px)",
         borderRadius: "0.5rem",
@@ -273,6 +495,60 @@ function renderSupplyGrid(params: {
           />
         </div>
       </div>
+
+      {/* Action buttons */}
+      {isPlayerActive && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "var(--space-3)",
+            right: "var(--space-4)",
+            display: "flex",
+            gap: "var(--space-3)",
+            alignItems: "center",
+          }}
+        >
+          {run(() => {
+            if (onConfirmDecision && hasPendingDecision) {
+              const minRequired = state.pendingDecision?.min ?? 0;
+              return (
+                <>
+                  <ConfirmButton
+                    onConfirmDecision={onConfirmDecision}
+                    complexDecisionData={complexDecisionData}
+                    selectedCardIndices={selectedCardIndices}
+                    minRequired={minRequired}
+                  />
+                  {onSkipDecision && minRequired === 0 && (
+                    <SkipButton onSkipDecision={onSkipDecision} />
+                  )}
+                </>
+              );
+            }
+
+            return (
+              <>
+                {onPlayAllTreasures &&
+                  state.phase === "buy" &&
+                  hasTreasuresInHand && (
+                    <PlayTreasuresButton
+                      onPlayAllTreasures={onPlayAllTreasures}
+                      pendingDecision={state.pendingDecision}
+                    />
+                  )}
+                {onEndPhase && (
+                  <EndPhaseButton
+                    onEndPhase={onEndPhase}
+                    pendingDecision={state.pendingDecision}
+                    phase={state.phase}
+                    isTurnComplete={isTurnComplete}
+                  />
+                )}
+              </>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -283,6 +559,14 @@ export function Supply({
   canBuy,
   availableCoins,
   pendingDecision,
+  isPlayerActive = false,
+  hasTreasuresInHand = false,
+  onPlayAllTreasures,
+  onEndPhase,
+  selectedCardIndices = [],
+  onConfirmDecision,
+  onSkipDecision,
+  complexDecisionData,
 }: SupplyProps) {
   const treasures: CardName[] = ["Copper", "Silver", "Gold"];
   const victory: CardName[] = ["Estate", "Duchy", "Province"];
@@ -305,5 +589,13 @@ export function Supply({
     treasures,
     victory,
     sortedKingdom,
+    isPlayerActive,
+    hasTreasuresInHand,
+    onPlayAllTreasures,
+    onEndPhase,
+    selectedCardIndices,
+    onConfirmDecision,
+    onSkipDecision,
+    complexDecisionData,
   });
 }
