@@ -440,6 +440,7 @@ async function processGenerationRequest(
     currentState,
     strategySummary,
     customStrategy,
+    format,
   );
   const promptQuestion = buildPromptQuestion(currentState);
   const userMessage = buildUserMessage({

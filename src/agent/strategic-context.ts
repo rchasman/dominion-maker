@@ -206,12 +206,13 @@ const filterBuyableCards = (
     }));
 
 /**
- * Builds structured game facts as TOON-encoded data
+ * Builds structured game facts encoded based on format
  */
 export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
   customStrategy?: string,
+  format: "json" | "toon" = "toon",
 ): string {
   const currentPlayer = state.players[state.activePlayer];
   const opponentId = Object.keys(state.players).find(
@@ -330,7 +331,7 @@ export function buildStrategicContext(
       .filter(u => u.cardsUnlocked.length > 0);
   }
 
-  return encodeToon(facts);
+  return format === "toon" ? encodeToon(facts) : JSON.stringify(facts, null, 2);
 }
 
 interface DeckAnalysis {
