@@ -117,7 +117,9 @@ function executeCard(
   // Update pending decision
   if (result.pendingDecision) {
     state = { ...state, pendingDecision: result.pendingDecision };
-  } else if (result.events.length > 0) {
+  } else if (decision !== undefined) {
+    // If a decision was provided but result has no pendingDecision, clear it
+    // (mimics DECISION_RESOLVED behavior in real engine)
     state = { ...state, pendingDecision: null };
   }
 
@@ -313,7 +315,7 @@ describe("Multi-Stage Decision Cards", () => {
   });
 
   describe("Chapel", () => {
-    it("should request trash decision up to 4 cards", () => {
+    it("should request trash decision one card at a time", () => {
       const state = createTestState([
         "Copper",
         "Copper",
@@ -334,27 +336,55 @@ describe("Multi-Stage Decision Cards", () => {
       if (!result.pendingDecision) throw new Error("No pending decision");
       expect(result.pendingDecision.type).toBe("card_decision");
       expect(result.pendingDecision.min).toBe(0);
-      expect(result.pendingDecision.max).toBe(4);
+      expect(result.pendingDecision.max).toBe(1);
+      expect(result.pendingDecision.canSkip).toBe(true);
     });
 
-    it("should trash selected cards", () => {
+    it("should trash selected cards iteratively", () => {
       const state = createTestState(["Copper", "Copper", "Estate", "Duchy"]);
 
       // First get the decision
       let newState = executeCard("Chapel", state);
       expect(newState.pendingDecision).toBeDefined();
 
-      // Then execute with decision
+      // Trash first Copper
       newState = executeCard(
         "Chapel",
         newState,
-        {
-          selectedCards: ["Copper", "Copper", "Estate"],
-        },
+        { selectedCards: ["Copper"] },
         "trash",
       );
+      expect(newState.trash.length).toBe(1);
+      expect(newState.pendingDecision).toBeDefined(); // Should ask again
 
-      // Check trash pile has the cards
+      // Trash second Copper
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Copper"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(2);
+      expect(newState.pendingDecision).toBeDefined(); // Should ask again
+
+      // Trash Estate
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Estate"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(3);
+      expect(newState.pendingDecision).toBeDefined(); // Should ask again (not at limit yet)
+
+      // Skip the rest
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: [] },
+        "trash",
+      );
+      expect(newState.pendingDecision).toBeNull(); // Done
       expect(newState.trash.length).toBe(3);
       expect(newState.trash).toContain("Copper");
       expect(newState.trash).toContain("Estate");

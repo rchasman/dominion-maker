@@ -371,13 +371,31 @@ describe("DominionEngine - Full Game Flow", () => {
       expect(engine.state.pendingDecision.cardBeingPlayed).toBe("Chapel");
     }
 
-    // Submit decision to trash 2 cards
-    const decisionResult = engine.submitDecision("human", {
-      selectedCards: ["Copper", "Copper"],
+    // Trash first Copper
+    const firstTrash = engine.submitDecision("human", {
+      selectedCards: ["Copper"],
     });
 
-    expect(decisionResult.ok).toBe(true);
-    expect(engine.state.pendingDecision).toBeNull();
+    expect(firstTrash.ok).toBe(true);
+    expect(engine.state.pendingDecision).toBeDefined(); // Should ask again
+    expect(engine.state.trash.length).toBe(1);
+
+    // Trash second Copper
+    const secondTrash = engine.submitDecision("human", {
+      selectedCards: ["Copper"],
+    });
+
+    expect(secondTrash.ok).toBe(true);
+    expect(engine.state.pendingDecision).toBeDefined(); // Should ask again
+    expect(engine.state.trash.length).toBe(2);
+
+    // Skip the rest
+    const skipDecision = engine.submitDecision("human", {
+      selectedCards: [],
+    });
+
+    expect(skipDecision.ok).toBe(true);
+    expect(engine.state.pendingDecision).toBeNull(); // Done
     expect(engine.state.trash.length).toBe(2);
   });
 });

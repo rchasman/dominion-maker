@@ -26,18 +26,33 @@ export function getLegalActions(state: GameState): Action[] {
     const options = decision.cardOptions || [];
 
     if (decision.stage === "trash") {
-      // Can't skip trashing by selecting nothing - that would be end_phase or a different action
-      return options.map(card => ({ type: "trash_card" as const, card }));
+      const trashActions = options.map(card => ({
+        type: "trash_card" as const,
+        card,
+      }));
+      return decision.canSkip
+        ? [...trashActions, { type: "skip_decision" as const }]
+        : trashActions;
     }
 
     if (decision.stage === "discard" || decision.stage === "opponent_discard") {
-      // Single card at a time (atomic)
-      // Can't skip discarding by selecting nothing - that would be end_phase or a different action
-      return options.map(card => ({ type: "discard_card" as const, card }));
+      const discardActions = options.map(card => ({
+        type: "discard_card" as const,
+        card,
+      }));
+      return decision.canSkip
+        ? [...discardActions, { type: "skip_decision" as const }]
+        : discardActions;
     }
 
     if (decision.stage === "gain" || decision.from === "supply") {
-      return options.map(card => ({ type: "gain_card" as const, card }));
+      const gainActions = options.map(card => ({
+        type: "gain_card" as const,
+        card,
+      }));
+      return decision.canSkip
+        ? [...gainActions, { type: "skip_decision" as const }]
+        : gainActions;
     }
 
     return [];
@@ -168,6 +183,15 @@ export function executeActionWithEngine(
       if (!action.card) throw new Error("buy_card requires card");
       return engine.dispatch(
         { type: "BUY_CARD", player: playerId, card: action.card },
+        playerId,
+      ).ok;
+    case "skip_decision":
+      return engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: playerId,
+          choice: { selectedCards: [] },
+        },
         playerId,
       ).ok;
     case "end_phase":

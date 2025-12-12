@@ -1,12 +1,16 @@
 import type { Action } from "../types/action";
 
 /**
- * Check if an action has a card field (all actions except end_phase)
+ * Check if an action has a card field (all actions except end_phase and skip_decision)
  */
 export function hasCardField(
   action: Action,
 ): action is Action & { card: string } {
-  return action.type !== "end_phase" && action.card !== undefined;
+  return (
+    action.type !== "end_phase" &&
+    action.type !== "skip_decision" &&
+    action.card !== undefined
+  );
 }
 
 /**

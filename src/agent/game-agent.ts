@@ -398,10 +398,14 @@ export async function runAITurnWithConsensus(
   });
 
   const runTurnSteps = async (stepCount: number): Promise<number> => {
+    const hasOpponentDecision =
+      engine.state.pendingDecision &&
+      engine.state.pendingDecision.player !== playerId;
+
     if (
       engine.state.activePlayer !== playerId ||
       engine.state.gameOver ||
-      engine.state.pendingDecision ||
+      hasOpponentDecision ||
       stepCount >= MAX_TURN_STEPS
     ) {
       return stepCount;
