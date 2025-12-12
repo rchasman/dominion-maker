@@ -49,6 +49,7 @@ export function applyTurnEvent(
     return {
       ...state,
       phase: event.phase,
+      turnHistory: [...state.turnHistory, { type: "end_phase" }],
       log: [
         ...state.log,
         {

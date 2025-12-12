@@ -2,6 +2,7 @@ import type { GameState, PlayerState, CardName } from "../types/game-state";
 import type { GameEvent } from "./types";
 import { removeCard } from "../lib/card-array-utils";
 import { run } from "../lib/run";
+import { CARDS } from "../data/cards";
 
 /**
  * Helper: Remove a card from inPlay zone along with its source index.
@@ -68,6 +69,18 @@ export function applyCardPlayed(
   if (handIndex === -1) return state;
   const newHand = [...playerState.hand];
   newHand.splice(handIndex, 1);
+
+  // Determine action type for turnHistory based on card type
+  const cardDef = CARDS[event.card];
+  const isTreasure = cardDef?.types.includes("treasure");
+  const isAction = cardDef?.types.includes("action");
+
+  const turnHistoryEntry = run(() => {
+    if (isTreasure) return { type: "play_treasure" as const, card: event.card };
+    if (isAction) return { type: "play_action" as const, card: event.card };
+    return null;
+  });
+
   return {
     ...state,
     players: {
@@ -79,6 +92,9 @@ export function applyCardPlayed(
         inPlaySourceIndices: [...playerState.inPlaySourceIndices, handIndex],
       },
     },
+    turnHistory: turnHistoryEntry
+      ? [...state.turnHistory, turnHistoryEntry]
+      : state.turnHistory,
   };
 }
 
