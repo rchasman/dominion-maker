@@ -1,9 +1,16 @@
-import type { CardName } from "../../../types/game-state";
+import { useState } from "react";
+import type { CardName, TurnAction } from "../../../types/game-state";
 import type { GameStateSnapshot } from "../types";
 import { getCardColor } from "../utils/cardUtils";
 
 interface GameStatePaneProps {
   gameState: GameStateSnapshot | undefined;
+}
+
+function getPhaseColor(phase: string): string {
+  if (phase === "action") return "var(--color-action-phase)";
+  if (phase === "buy") return "var(--color-buy-phase)";
+  return "var(--color-text-primary)";
 }
 
 function renderResourcesLine(
@@ -25,7 +32,7 @@ function renderResourcesLine(
         <span style={{ color: "var(--color-text-secondary)" }}>Phase:</span>{" "}
         <span
           style={{
-            color: "var(--color-text-primary)",
+            color: getPhaseColor(phase),
             fontWeight: 600,
             display: "inline-block",
             minWidth: "50px",
@@ -162,10 +169,88 @@ function renderInPlaySection(inPlay: string[] | undefined) {
   );
 }
 
+const JSON_INDENT = 2;
+const COPY_FEEDBACK_DURATION = 2000;
+
+function TurnActionsSection({ turnHistory }: { turnHistory: TurnAction[] }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const json = JSON.stringify(turnHistory, null, JSON_INDENT);
+    void navigator.clipboard.writeText(json);
+    setCopied(true);
+    setTimeout(() => setCopied(false), COPY_FEEDBACK_DURATION);
+  };
+
+  if (!turnHistory || turnHistory.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: "var(--space-6)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "var(--space-2)",
+        }}
+      >
+        <div
+          style={{
+            color: "var(--color-text-secondary)",
+            fontSize: "0.65rem",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
+          Turn Actions ({turnHistory.length})
+        </div>
+        <button
+          onClick={handleCopy}
+          style={{
+            padding: "var(--space-1) var(--space-3)",
+            fontSize: "0.65rem",
+            fontWeight: 500,
+            color: copied
+              ? "var(--color-success)"
+              : "var(--color-text-primary)",
+            background: "var(--color-bg-tertiary)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.03em",
+            transition: "all 0.15s ease",
+          }}
+        >
+          {copied ? "Copied!" : "Copy JSON"}
+        </button>
+      </div>
+      <pre
+        style={{
+          fontSize: "0.65rem",
+          color: "var(--color-text-primary)",
+          background: "var(--color-bg-tertiary)",
+          padding: "var(--space-3)",
+          borderRadius: "4px",
+          overflow: "auto",
+          maxHeight: "300px",
+          border: "1px solid var(--color-border)",
+          fontFamily: "monospace",
+          lineHeight: 1.5,
+        }}
+      >
+        {JSON.stringify(turnHistory, null, JSON_INDENT)}
+      </pre>
+    </div>
+  );
+}
+
 export function GameStatePane({ gameState }: GameStatePaneProps) {
   if (!gameState) return null;
 
-  const { phase, actions, buys, coins, hand, handCounts, inPlay } = gameState;
+  const { phase, actions, buys, coins, hand, handCounts, inPlay, turnHistory } =
+    gameState;
 
   return (
     <div
@@ -199,6 +284,7 @@ export function GameStatePane({ gameState }: GameStatePaneProps) {
         {renderResourcesLine(phase, actions, buys, coins)}
         {renderHandComposition(handCounts, hand)}
         {renderInPlaySection(inPlay)}
+        <TurnActionsSection turnHistory={turnHistory} />
       </div>
     </div>
   );
