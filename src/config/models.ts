@@ -5,6 +5,9 @@ export interface ModelConfig {
   fullName: string; // Full API name (e.g., "anthropic/claude-haiku-4.5")
   provider: string; // Provider name for grouping/coloring
   color: string; // UI color
+  inputPrice: number; // Price per 1M input tokens in USD
+  outputPrice: number; // Price per 1M output tokens in USD
+  maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)
 }
 
 export const MODELS: ModelConfig[] = [
@@ -13,60 +16,97 @@ export const MODELS: ModelConfig[] = [
     fullName: "anthropic/claude-haiku-4.5",
     provider: "anthropic",
     color: "#a78bfa",
+    inputPrice: 1.0,
+    outputPrice: 5.0,
   },
   {
     id: "claude-sonnet",
     fullName: "anthropic/claude-sonnet-4.5",
     provider: "anthropic",
     color: "#a78bfa",
+    inputPrice: 3.0,
+    outputPrice: 15.0,
   },
   {
     id: "gpt-4o-mini",
     fullName: "openai/gpt-4o-mini",
     provider: "openai",
     color: "#86efac",
+    inputPrice: 0.15,
+    outputPrice: 0.6,
   },
   {
     id: "gpt-4o",
     fullName: "openai/gpt-4o",
     provider: "openai",
     color: "#86efac",
+    inputPrice: 3.0,
+    outputPrice: 10.0,
+  },
+  {
+    id: "gpt-5.2",
+    fullName: "openai/gpt-5.2",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 1.75,
+    outputPrice: 14.0,
+  },
+  {
+    id: "gpt-5.2-pro",
+    fullName: "openai/gpt-5.2-pro",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 21.0,
+    outputPrice: 168.0,
+    maxInstances: 3,
   },
   {
     id: "gpt-oss-20b",
     fullName: "openai/gpt-oss-20b",
     provider: "openai",
     color: "#86efac",
+    inputPrice: 0.08,
+    outputPrice: 0.16,
   },
   {
     id: "gpt-oss-120b",
     fullName: "openai/gpt-oss-120b",
     provider: "openai",
     color: "#86efac",
+    inputPrice: 0.25,
+    outputPrice: 0.69,
   },
   {
     id: "gemini-2.5-flash-lite",
     fullName: "google/gemini-2.5-flash-lite",
     provider: "google",
     color: "#93c5fd",
+    inputPrice: 0.1,
+    outputPrice: 0.4,
   },
   {
     id: "ministral-3b",
     fullName: "mistral/ministral-3b",
     provider: "mistral",
     color: "#fda4af",
+    inputPrice: 0.04,
+    outputPrice: 0.04,
   },
   {
     id: "grok-4-fast",
     fullName: "xai/grok-4.1-fast-non-reasoning",
     provider: "xai",
     color: "#fbbf24",
+    inputPrice: 5.0,
+    outputPrice: 25.0,
   },
   {
     id: "grok-code-fast-1",
     fullName: "xai/grok-code-fast-1",
     provider: "xai",
     color: "#fbbf24",
+    inputPrice: 0.2,
+    outputPrice: 0.6,
   },
 
   // Ultra-fast Cerebras models (2000+ tokens/s)
@@ -75,6 +115,8 @@ export const MODELS: ModelConfig[] = [
     fullName: "meta/llama-3.3-70b",
     provider: "cerebras",
     color: "#f472b6",
+    inputPrice: 0.08,
+    outputPrice: 0.2,
   },
 
   // Fast Groq models (low latency)
@@ -83,12 +125,16 @@ export const MODELS: ModelConfig[] = [
     fullName: "meta/llama-3.3-70b",
     provider: "groq",
     color: "#fb923c",
+    inputPrice: 0.15,
+    outputPrice: 0.75,
   },
   {
     id: "groq-llama-4-scout",
     fullName: "meta/llama-4-scout",
     provider: "groq",
     color: "#fb923c",
+    inputPrice: 0.11,
+    outputPrice: 0.34,
   },
 ];
 
@@ -98,6 +144,8 @@ export const MODEL_IDS = [
   "claude-sonnet",
   "gpt-4o-mini",
   "gpt-4o",
+  "gpt-5.2",
+  "gpt-5.2-pro",
   "gpt-oss-20b",
   "gpt-oss-120b",
   "gemini-2.5-flash-lite",
