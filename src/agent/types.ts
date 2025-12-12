@@ -4,7 +4,7 @@ import { uiLogger } from "../lib/logger";
  */
 
 import type { ModelProvider } from "../config/models";
-import { MODEL_IDS } from "../config/models";
+import { MODEL_IDS, MODELS } from "../config/models";
 
 // Model settings for consensus
 export interface ModelSettings {
@@ -57,11 +57,50 @@ export function buildModelsFromSettings({
     return ALL_FAST_MODELS;
   }
 
-  // Create array by cycling through enabled models then shuffle
-  const models = Array.from(
-    { length: consensusCount },
-    (_, i) => enabled[i % enabled.length],
-  );
+  // Separate models with maxInstances from those without
+  const modelsWithLimits = enabled.filter(modelId => {
+    const config = MODELS.find(m => m.id === modelId);
+    return config?.maxInstances !== undefined;
+  });
+
+  const modelsWithoutLimits = enabled.filter(modelId => {
+    const config = MODELS.find(m => m.id === modelId);
+    return config?.maxInstances === undefined;
+  });
+
+  // Build array respecting maxInstances
+  const models: ModelProvider[] = [];
+  const instanceCounts = new Map<ModelProvider, number>();
+
+  // Fill array by cycling through all enabled models
+  for (let i = 0; i < consensusCount; i++) {
+    const modelId = enabled[i % enabled.length];
+    const config = MODELS.find(m => m.id === modelId);
+    const currentCount = instanceCounts.get(modelId) ?? 0;
+
+    // Check if model has reached its limit
+    if (config?.maxInstances && currentCount >= config.maxInstances) {
+      // Try to find another model that hasn't reached its limit
+      const availableModel = enabled.find(id => {
+        const cfg = MODELS.find(m => m.id === id);
+        const count = instanceCounts.get(id) ?? 0;
+        return !cfg?.maxInstances || count < cfg.maxInstances;
+      });
+
+      if (availableModel) {
+        models.push(availableModel);
+        instanceCounts.set(availableModel, (instanceCounts.get(availableModel) ?? 0) + 1);
+      } else {
+        // All models at limit, fall back to cycling through unlimited models
+        const fallbackModel = modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ?? enabled[0];
+        models.push(fallbackModel);
+        instanceCounts.set(fallbackModel, (instanceCounts.get(fallbackModel) ?? 0) + 1);
+      }
+    } else {
+      models.push(modelId);
+      instanceCounts.set(modelId, currentCount + 1);
+    }
+  }
 
   // Shuffle for randomness
   return models
