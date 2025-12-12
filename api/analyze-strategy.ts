@@ -26,6 +26,9 @@ const VP_VALUES = {
   GARDENS_DIVISOR: 10,
 } as const;
 
+// Create devtools middleware once at module level (singleton pattern)
+const sharedDevToolsMiddleware = devToolsMiddleware();
+
 const STRATEGY_ANALYSIS_PROMPT = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
 
 Example turn history structure:
@@ -196,7 +199,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Use Claude Opus for high-quality strategy analysis
     const model = wrapLanguageModel({
       model: gateway("claude-opus-4-5-20251101"),
-      middleware: devToolsMiddleware,
+      middleware: sharedDevToolsMiddleware,
     });
 
     // Use generateObject with array schema (avoids z.record gateway bug)

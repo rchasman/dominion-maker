@@ -88,6 +88,11 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
+// Create devtools middleware once at module level (singleton pattern)
+// Each call to devToolsMiddleware() creates a new run ID, so we create it once
+// and reuse it across all requests to maintain shared database state
+const sharedDevToolsMiddleware = devToolsMiddleware();
+
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
   const modelConfig = MODELS.find(m => m.id === providerId);
@@ -409,7 +414,7 @@ async function processGenerationRequest(
 
   const model = wrapLanguageModel({
     model: gateway(modelName),
-    middleware: devToolsMiddleware,
+    middleware: sharedDevToolsMiddleware,
   });
 
   const legalActionsStr = run(() => {
