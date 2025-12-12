@@ -1,15 +1,117 @@
 import type { ModelSettings } from "../../../agent/types";
 import { ModelPicker } from "../../ModelPicker";
+import { useState, useEffect, useRef } from "preact/hooks";
 
 interface ModelSettingsPanelProps {
   settings: ModelSettings;
   onChange: (settings: ModelSettings) => void;
 }
 
+interface ConversationEntry {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
+const STORAGE_KEY = "dominion-strategy-conversation";
+const TYPING_DEBOUNCE_MS = 2000;
+
 export function ModelSettingsPanel({
   settings,
   onChange,
 }: ModelSettingsPanelProps) {
+  const [conversation, setConversation] = useState<ConversationEntry[]>([]);
+  const [isReacting, setIsReacting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const typingTimeoutRef = useRef<number>();
+
+  // Load conversation from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setConversation(JSON.parse(stored));
+      } catch {
+        // Invalid storage, ignore
+      }
+    }
+  }, []);
+
+  // Save conversation to localStorage whenever it changes
+  useEffect(() => {
+    if (conversation.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversation));
+    }
+  }, [conversation]);
+
+  // Handle strategy changes with debounce
+  useEffect(() => {
+    const strategy = settings.customStrategy?.trim();
+
+    if (!strategy) {
+      setShowConfirmation(false);
+      return;
+    }
+
+    setShowConfirmation(true);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout
+    typingTimeoutRef.current = window.setTimeout(() => {
+      void (async () => {
+        setIsReacting(true);
+
+        try {
+          const response = await fetch("/api/strategy-react", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              strategy,
+              conversationHistory: conversation.map(({ role, content }) => ({
+                role,
+                content,
+              })),
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to get reaction");
+          }
+
+          const data = (await response.json()) as { reaction: string };
+
+          setConversation(prev => [
+            ...prev,
+            {
+              role: "user",
+              content: strategy,
+              timestamp: Date.now(),
+            },
+            {
+              role: "assistant",
+              content: data.reaction,
+              timestamp: Date.now(),
+            },
+          ]);
+        } catch (error) {
+          console.error("Strategy reaction failed:", error);
+        } finally {
+          setIsReacting(false);
+        }
+      })();
+    }, TYPING_DEBOUNCE_MS);
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [settings.customStrategy]);
+
   return (
     <div
       style={{
@@ -152,9 +254,25 @@ export function ModelSettingsPanel({
             fontWeight: 600,
             color: "var(--color-text-secondary)",
             textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-2)",
           }}
         >
           Custom Strategy Override
+          {showConfirmation && (
+            <span
+              style={{
+                fontSize: "0.875rem",
+                color: "#10b981",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+              title="Custom strategy active"
+            >
+              ✓
+            </span>
+          )}
         </label>
         <textarea
           value={settings.customStrategy || ""}
@@ -193,6 +311,96 @@ export function ModelSettingsPanel({
           Custom behavioral strategy that overrides default AI guidance. Be
           specific about priorities, timing, and conditions.
         </div>
+
+        {/* Strategy Reaction Easter Egg */}
+        {conversation.length > 0 && (
+          <div
+            style={{
+              marginTop: "var(--space-2)",
+              padding: "var(--space-3)",
+              background: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "4px",
+              maxHeight: "300px",
+              overflowY: "auto",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.6875rem",
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: "var(--space-2)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span>Strategy Analysis</span>
+              <button
+                onClick={() => {
+                  setConversation([]);
+                  localStorage.removeItem(STORAGE_KEY);
+                }}
+                style={{
+                  fontSize: "0.625rem",
+                  padding: "2px 6px",
+                  background: "transparent",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "3px",
+                  color: "var(--color-text-tertiary)",
+                  cursor: "pointer",
+                }}
+                title="Clear conversation"
+              >
+                Clear
+              </button>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-2)",
+              }}
+            >
+              {conversation.map((entry, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "var(--space-2)",
+                    borderRadius: "3px",
+                    background:
+                      entry.role === "assistant"
+                        ? "var(--color-bg)"
+                        : "transparent",
+                    color:
+                      entry.role === "assistant"
+                        ? "var(--color-text-primary)"
+                        : "var(--color-text-secondary)",
+                    fontStyle: entry.role === "user" ? "italic" : "normal",
+                    borderLeft:
+                      entry.role === "assistant" ? "2px solid #f59e0b" : "none",
+                  }}
+                >
+                  {entry.content}
+                </div>
+              ))}
+              {isReacting && (
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "var(--color-text-tertiary)",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Analyzing...
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
