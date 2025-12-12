@@ -30,3 +30,6 @@ dist-ssr
 .workflow-data/
 .well-known/
 .vercel
+
+# AI SDK DevTools
+.devtools/

@@ -1,4 +1,5 @@
-import { generateObject, gateway } from "ai";
+import { generateObject, gateway, wrapLanguageModel } from "ai";
+import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
@@ -193,7 +194,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const prompt = `${gameProgress}\n${supplyStatus}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use Claude Opus for high-quality strategy analysis
-    const model = gateway("claude-opus-4-5-20251101");
+    const model = wrapLanguageModel({
+      model: gateway("claude-opus-4-5-20251101"),
+      middleware: devToolsMiddleware,
+    });
 
     // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({

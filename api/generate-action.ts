@@ -1,4 +1,5 @@
-import { generateObject, generateText, gateway } from "ai";
+import { generateObject, generateText, gateway, wrapLanguageModel } from "ai";
+import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
@@ -406,7 +407,10 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
-  const model = gateway(modelName);
+  const model = wrapLanguageModel({
+    model: gateway(modelName),
+    middleware: devToolsMiddleware,
+  });
 
   const legalActionsStr = run(() => {
     if (!legalActions || legalActions.length === 0) return "";
