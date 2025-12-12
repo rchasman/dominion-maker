@@ -58,11 +58,6 @@ export function buildModelsFromSettings({
   }
 
   // Separate models with maxInstances from those without
-  const modelsWithLimits = enabled.filter(modelId => {
-    const config = MODELS.find(m => m.id === modelId);
-    return config?.maxInstances !== undefined;
-  });
-
   const modelsWithoutLimits = enabled.filter(modelId => {
     const config = MODELS.find(m => m.id === modelId);
     return config?.maxInstances === undefined;
@@ -89,12 +84,20 @@ export function buildModelsFromSettings({
 
       if (availableModel) {
         models.push(availableModel);
-        instanceCounts.set(availableModel, (instanceCounts.get(availableModel) ?? 0) + 1);
+        instanceCounts.set(
+          availableModel,
+          (instanceCounts.get(availableModel) ?? 0) + 1,
+        );
       } else {
         // All models at limit, fall back to cycling through unlimited models
-        const fallbackModel = modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ?? enabled[0];
+        const fallbackModel =
+          modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ??
+          enabled[0];
         models.push(fallbackModel);
-        instanceCounts.set(fallbackModel, (instanceCounts.get(fallbackModel) ?? 0) + 1);
+        instanceCounts.set(
+          fallbackModel,
+          (instanceCounts.get(fallbackModel) ?? 0) + 1,
+        );
       }
     } else {
       models.push(modelId);
