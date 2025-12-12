@@ -27,6 +27,10 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "GPT-4o Mini";
     case "gpt-4o":
       return "GPT-4o";
+    case "gpt-5.2":
+      return "GPT-5.2";
+    case "gpt-5.2-pro":
+      return "GPT-5.2 Pro (max 3)";
     case "gpt-oss-20b":
       return "GPT OSS 20B";
     case "gpt-oss-120b":
