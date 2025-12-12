@@ -1,6 +1,7 @@
 // Simple Bun HTTP server for local API development
 import generateActionHandler from "./api/generate-action";
 import analyzeStrategyHandler from "./api/analyze-strategy";
+import strategyReactHandler from "./api/strategy-react";
 import { serverLogger } from "./src/lib/logger";
 
 // HTTP Status Codes
@@ -67,7 +68,8 @@ const server = Bun.serve({
     // Route API requests
     if (
       url.pathname === "/api/generate-action" ||
-      url.pathname === "/api/analyze-strategy"
+      url.pathname === "/api/analyze-strategy" ||
+      url.pathname === "/api/strategy-react"
     ) {
       // Adapt Bun Request to Vercel-style request/response
       const body = await req.text();
@@ -129,7 +131,9 @@ const server = Bun.serve({
       const handler =
         url.pathname === "/api/generate-action"
           ? generateActionHandler
-          : analyzeStrategyHandler;
+          : url.pathname === "/api/strategy-react"
+            ? strategyReactHandler
+            : analyzeStrategyHandler;
       await handler(vercelReq, vercelRes);
 
       const { statusCode, responseData, responseHeaders } =
