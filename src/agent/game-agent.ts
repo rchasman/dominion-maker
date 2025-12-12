@@ -269,7 +269,7 @@ export async function advanceGameStateWithConsensus(
     logger,
     strategySummary,
     customStrategy,
-    dataFormat = "mixed",
+    dataFormat = "toon",
   } = config;
   const currentState = engine.state;
   const overallStart = performance.now();

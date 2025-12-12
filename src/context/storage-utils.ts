@@ -99,7 +99,7 @@ export function loadModelSettings(): ModelSettings | null {
       enabledModels: new Set(parsed.enabledModels),
       consensusCount: parsed.consensusCount,
       customStrategy: parsed.customStrategy || "",
-      dataFormat: parsed.dataFormat || "mixed",
+      dataFormat: parsed.dataFormat || "toon",
     };
   } catch {
     return null;

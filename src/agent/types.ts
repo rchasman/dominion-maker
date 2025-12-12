@@ -23,7 +23,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   ]),
   consensusCount: 12,
   customStrategy: "",
-  dataFormat: "mixed",
+  dataFormat: "toon",
 };
 
 // Available unique models
