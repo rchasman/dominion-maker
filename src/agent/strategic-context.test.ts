@@ -51,18 +51,21 @@ function createMockGameState(
 
 describe("buildStrategicContext", () => {
   describe("with human vs ai players", () => {
-    it("should build context for ai player", () => {
+    it("should build minimal strategic context", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("currentTurnNumber:");
+      // Core strategic insights only
       expect(context).toContain("gameStage:");
-      expect(context).toContain("yourDeckTotalCards:");
-      expect(context).toContain("opponentDeckTotalCards:");
-      // Redundant fields removed - data already in state
-      expect(context).not.toContain("yourDrawPileCount:");
-      expect(context).not.toContain("supplyPiles:");
-      expect(context).not.toContain("handCards[");
+      expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("opponentDeckComposition:");
+
+      // All derivable stats removed
+      expect(context).not.toContain("currentTurnNumber:");
+      expect(context).not.toContain("yourTreasureCount:");
+      expect(context).not.toContain("yourDeckTotalCards:");
+      expect(context).not.toContain("yourDeckCycleTime:");
     });
 
     it("should show correct VP scores", () => {
@@ -91,12 +94,9 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckTotalCards:");
-      expect(context).toContain("opponentDeckTotalCards:");
-      // Redundant fields removed
-      expect(context).not.toContain("yourDrawPileCount:");
-      expect(context).not.toContain("supplyPiles:");
-      expect(context).not.toContain("handCards[");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("opponentDeckComposition:");
+      expect(context).toContain("gameStage:");
     });
 
     it("should build context for ai2 player", () => {
@@ -104,9 +104,8 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckTotalCards:");
-      expect(context).toContain("opponentDeckTotalCards:");
-      expect(context).not.toContain("handCards[");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("opponentDeckComposition:");
     });
 
     it("should show correct perspective for ai1", () => {
@@ -141,8 +140,8 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckTotalCards:");
-      expect(context).toContain("opponentDeckTotalCards:");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("opponentDeckComposition:");
     });
 
     it("should work with custom player IDs", () => {
@@ -150,27 +149,13 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckTotalCards:");
-      expect(context).toContain("opponentDeckTotalCards:");
+      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("opponentDeckComposition:");
     });
   });
 
-  describe("deck analysis", () => {
-    it("should calculate treasure value correctly", () => {
-      const state = createMockGameState("ai", ["human", "ai"]);
-      state.players.ai.hand = ["Gold", "Silver", "Copper"];
-      state.coins = 0;
-
-      const context = buildStrategicContext(state);
-
-      // Gold (3) + Silver (2) + Copper (1) + existing 3 = 9 total treasure value
-      expect(context).toContain("yourTotalTreasureValue: 11");
-      // Redundant treasure calculations removed
-      expect(context).not.toContain("coinsInUnplayedTreasures:");
-      expect(context).not.toContain("maxCoinsIfAllTreasuresPlayed:");
-    });
-
-    it("should show deck composition", () => {
+  describe("deck composition", () => {
+    it("should show composition across all zones", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.players.ai.deck = ["Copper", "Copper", "Estate"];
       state.players.ai.hand = ["Silver"];
@@ -179,12 +164,16 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourDeckTotalCards: 5");
       expect(context).toContain("yourDeckComposition:");
       expect(context).toContain("Copper: 2");
       expect(context).toContain("Estate: 1");
       expect(context).toContain("Silver: 1");
       expect(context).toContain("Gold: 1");
+
+      // All calculated stats removed
+      expect(context).not.toContain("yourDeckTotalCards:");
+      expect(context).not.toContain("yourTreasureCount:");
+      expect(context).not.toContain("yourTotalTreasureValue:");
     });
 
     it("should focus on deck composition not zone sizes", () => {
@@ -249,7 +238,7 @@ describe("buildStrategicContext", () => {
 
       expect(context).not.toContain("aiStrategyGameplan:");
       expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckTotalCards:");
+      expect(context).toContain("yourDeckComposition:");
     });
   });
 
@@ -294,8 +283,8 @@ describe("buildStrategicContext", () => {
     });
   });
 
-  describe("optimized format (redundancies removed)", () => {
-    it("should exclude all redundant fields", () => {
+  describe("minimal strategic context", () => {
+    it("should only include non-derivable strategic insights", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.phase = "buy";
       state.coins = 5;
@@ -305,24 +294,26 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      // Should NOT include redundant data
-      expect(context).not.toContain("handCards:");
-      expect(context).not.toContain("supplyPiles:");
-      expect(context).not.toContain("coinsActivatedThisTurn:");
-      expect(context).not.toContain("yourDrawPileCount:");
-      expect(context).not.toContain("yourDiscardPileCount:");
-      expect(context).not.toContain("unplayedTreasuresInHand:");
-      expect(context).not.toContain("buyableWithCurrentCoins:");
-      expect(context).not.toContain("whatEachUnplayedTreasureUnlocks:");
-
-      // Should STILL include strategic insights
+      // Core strategic insights only
+      expect(context).toContain("gameStage:");
       expect(context).toContain("yourVictoryPoints:");
+      expect(context).toContain("opponentVictoryPoints:");
       expect(context).toContain("yourDeckComposition:");
       expect(context).toContain("opponentDeckComposition:");
-      expect(context).toContain("gameStage:");
+      expect(context).toContain("provincesYouNeedToWin:");
+
+      // All derivable/redundant fields removed
+      expect(context).not.toContain("currentTurnNumber:");
+      expect(context).not.toContain("yourDeckTotalCards:");
+      expect(context).not.toContain("yourTreasureCount:");
+      expect(context).not.toContain("yourAvgTreasureValue:");
+      expect(context).not.toContain("yourDeckCycleTime:");
+      expect(context).not.toContain("opponentTotalTreasureValue:");
+      expect(context).not.toContain("handCards:");
+      expect(context).not.toContain("supplyPiles:");
     });
 
-    it("should work correctly in action phase", () => {
+    it("should be minimal even with complex state", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.phase = "action";
       state.actions = 1;
@@ -330,12 +321,13 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      // Should NOT include buy phase calculations (not in buy phase)
-      expect(context).not.toContain("buyableWithCurrentCoins:");
-      expect(context).not.toContain("whatEachUnplayedTreasureUnlocks:");
-
-      // Should still have core data
+      // Core insights only
       expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("gameStage:");
+
+      // Everything else removed
+      expect(context).not.toContain("yourActionCount:");
+      expect(context).not.toContain("buyableWithCurrentCoins:");
     });
   });
 });

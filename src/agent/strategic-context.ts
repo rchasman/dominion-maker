@@ -11,40 +11,20 @@ import { encodeToon } from "../lib/toon";
 import { GAME_CONSTANTS } from "../commands/handle-helpers";
 
 type StrategicFacts = {
-  // Core strategic insights
-  currentTurnNumber: number;
+  // Core strategic insights (not derivable from raw state)
   gameStage: "Early" | "Mid" | "Late";
   yourVictoryPoints: number;
   opponentVictoryPoints: number;
-  victoryPointDifference: number;
   provincesYouNeedToWin: number;
   provincesTheyNeedToWin: number;
-  yourDeckTotalCards: number;
   yourDeckComposition: Record<string, number>;
-  yourTreasureCount: number;
-  yourActionCount: number;
-  yourVictoryCardCount: number;
-  yourTotalTreasureValue: number;
-  yourAvgTreasureValue: number;
-  yourVillageCount: number;
-  yourTerminalCount: number;
-  yourDeckCycleTime: number;
-  opponentDeckTotalCards: number;
   opponentDeckComposition: Record<string, number>;
-  opponentTotalTreasureValue: number;
-  opponentAvgTreasureValue: number;
 
   // Optional AI memory
   aiStrategyGameplan?: string;
   aiStrategyRead?: string;
   aiStrategyRecommendation?: string;
   strategyOverride?: string;
-
-  // Removed (redundant with game state - no longer included):
-  // supplyPiles, handCards, coinsActivatedThisTurn, yourDrawPileCount,
-  // yourDiscardPileCount, shuffleNextTurn, coinsInUnplayedTreasures,
-  // maxCoinsIfAllTreasuresPlayed, unplayedTreasuresInHand,
-  // buyableWithCurrentCoins, whatEachUnplayedTreasureUnlocks
 };
 
 /**
@@ -240,31 +220,15 @@ export function buildStrategicContext(
   );
   const maxCoins = state.coins + treasureValue;
 
-  // Strategic insights only - no data duplication with game state
+  // Strategic insights only - no derivable stats or duplicates
   const facts: StrategicFacts = {
-    currentTurnNumber: state.turn,
     gameStage,
     yourVictoryPoints: currentVP,
     opponentVictoryPoints: opponentVP,
-    victoryPointDifference: currentVP - opponentVP,
     provincesYouNeedToWin: youNeed,
     provincesTheyNeedToWin: theyNeed,
-    yourDeckTotalCards: currentAllCards.length,
     yourDeckComposition: yourAnalysis.counts,
-    yourTreasureCount: yourAnalysis.treasures,
-    yourActionCount: yourAnalysis.actions,
-    yourVictoryCardCount: yourAnalysis.victory,
-    yourTotalTreasureValue: yourAnalysis.totalTreasureValue,
-    yourAvgTreasureValue: yourAnalysis.avgTreasureValue,
-    yourVillageCount: yourAnalysis.villages,
-    yourTerminalCount: yourAnalysis.terminals,
-    yourDeckCycleTime: parseFloat(
-      (currentAllCards.length / GAME_CONSTANTS.INITIAL_HAND_SIZE).toFixed(1),
-    ),
-    opponentDeckTotalCards: opponentAllCards.length,
     opponentDeckComposition: opponentAnalysis.counts,
-    opponentTotalTreasureValue: opponentAnalysis.totalTreasureValue,
-    opponentAvgTreasureValue: opponentAnalysis.avgTreasureValue,
   };
 
   // Add AI's own strategy analysis (not opponent's - no cheating)

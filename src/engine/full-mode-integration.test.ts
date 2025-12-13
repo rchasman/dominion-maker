@@ -82,10 +82,9 @@ describe("Full mode integration", () => {
     const context = buildStrategicContext(engine.state);
 
     expect(context).toContain("yourVictoryPoints:");
-    expect(context).toContain("yourDeckTotalCards:");
-    expect(context).toContain("opponentDeckTotalCards:");
     expect(context).toContain("yourDeckComposition:");
-    expect(context).not.toContain("handCards[");
+    expect(context).toContain("opponentDeckComposition:");
+    expect(context).toContain("gameStage:");
   });
 
   it("should generate valid strategic context for ai2", () => {
@@ -103,10 +102,8 @@ describe("Full mode integration", () => {
     const context = buildStrategicContext(engine.state);
 
     expect(context).toContain("yourVictoryPoints:");
-    expect(context).toContain("yourDeckTotalCards:");
-    expect(context).toContain("opponentDeckTotalCards:");
     expect(context).toContain("yourDeckComposition:");
-    expect(context).not.toContain("handCards[");
+    expect(context).toContain("opponentDeckComposition:");
   });
 
   it("should allow both AIs to buy cards", () => {
