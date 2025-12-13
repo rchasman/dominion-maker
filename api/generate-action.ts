@@ -7,7 +7,11 @@ import { buildStrategicContext } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
-import { encodeToon } from "../src/lib/toon";
+import {
+  encodeToon,
+  decodeToon,
+  TOON_FORMAT_INSTRUCTION,
+} from "../src/lib/toon";
 import { run } from "../src/lib/run";
 
 // HTTP Status Codes
@@ -171,6 +175,7 @@ function cardArrayToCounts(cards: string[]): Record<string, number> {
 }
 
 // Transform game state to use counts instead of arrays for AI consumption
+// Removes redundant data already present in strategic context or irrelevant to decisions
 function optimizeStateForAI(state: GameState): unknown {
   const optimizedPlayers: Record<string, unknown> = {};
 
@@ -191,8 +196,35 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   return {
-    ...state,
+    // Core game state
+    phase: state.phase,
+    activePlayer: state.activePlayer,
     players: optimizedPlayers,
+    supply: state.supply,
+    trash: state.trash,
+    kingdomCards: state.kingdomCards,
+
+    // Resources
+    actions: state.actions,
+    buys: state.buys,
+    coins: state.coins,
+
+    // Decisions
+    pendingDecision: state.pendingDecision,
+
+    // Active effects (cost modifiers, etc)
+    activeEffects: state.activeEffects,
+
+    // Optional fields (only include if meaningful)
+    ...(state.subPhase ? { subPhase: state.subPhase } : {}),
+
+    // Removed (redundant):
+    // - turn (duplicate of strategic.currentTurnNumber)
+    // - log (full event history - not needed for decisions)
+    // - turnHistory (shown separately as "ACTIONS TAKEN THIS TURN")
+    // - decisionQueue (duplicate of pendingDecision)
+    // - gameOver, winner (always false/null during play)
+    // - playerOrder (not used for decision making)
   };
 }
 
@@ -250,9 +282,32 @@ function stripMarkdownCodeBlocks(text: string): string {
   return codeBlockMatch ? codeBlockMatch[1].trim() : text;
 }
 
-// Parse text response with best-effort JSON parser
-function parseTextResponse(text: string, provider: string): unknown {
+// Parse text response with best-effort JSON parser or TOON decoder
+function parseTextResponse(
+  text: string,
+  provider: string,
+  format: "json" | "toon",
+): unknown {
   const stripped = stripMarkdownCodeBlocks(text.trim());
+
+  // For TOON format, try decoding first
+  if (format === "toon") {
+    try {
+      // TOON responses should be in code blocks, extract them
+      const toonMatch = stripped.match(/```toon\s*\n?([\s\S]*?)\n?```/);
+      if (toonMatch) {
+        return decodeToon(toonMatch[1]);
+      }
+      // Try parsing as raw TOON (no code block)
+      return decodeToon(stripped);
+    } catch (toonError) {
+      apiLogger.debug(`${provider} TOON decode failed, falling back to JSON`, {
+        error:
+          toonError instanceof Error ? toonError.message : String(toonError),
+      });
+      // Fall through to JSON parsing
+    }
+  }
 
   const originalOnExtraToken = parseBestEffort.onExtraToken as
     | OnExtraTokenHandler
@@ -324,8 +379,25 @@ function tryRecoverActionFromText(
   return validAction.validated;
 }
 
-// Build JSON prompt for text fallback
-function buildTextFallbackJsonPrompt(userMessage: string): string {
+// Build output format prompt for text fallback
+function buildTextFallbackPrompt(
+  userMessage: string,
+  format: "json" | "toon",
+): string {
+  if (format === "toon") {
+    return `${userMessage}\n\n${TOON_FORMAT_INSTRUCTION}\n\nRespond with ONLY a TOON object with these fields {type,card,reasoning}. Examples:
+\`\`\`toon
+type	card	reasoning:
+play_action	Village	Need +2 actions to chain cards
+\`\`\`
+\`\`\`toon
+type	reasoning:
+end_phase	No more actions to play
+\`\`\`
+
+Valid types: play_action, play_treasure, buy_card, gain_card, discard_card, trash_card, skip_decision, end_phase`;
+  }
+
   return `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
 { "type": "play_action", "card": "CardName", "reasoning": "..." }
 { "type": "play_treasure", "card": "CardName", "reasoning": "..." }
@@ -348,17 +420,17 @@ async function generateActionWithTextFallback(params: {
 }): Promise<VercelResponse> {
   const { model, userMessage, provider, res, strategySummary, format } = params;
 
-  const jsonPrompt = buildTextFallbackJsonPrompt(userMessage);
+  const prompt = buildTextFallbackPrompt(userMessage, format);
 
   const result = await generateText({
     model,
     system: DOMINION_SYSTEM_PROMPT,
-    prompt: jsonPrompt,
+    prompt,
     maxRetries: 0,
     ...getProviderOptions(provider),
   });
 
-  const parsed = parseTextResponse(result.text, provider);
+  const parsed = parseTextResponse(result.text, provider, format);
 
   try {
     const action = ActionSchema.parse(parsed);
@@ -368,7 +440,7 @@ async function generateActionWithTextFallback(params: {
       parseErr instanceof Error ? parseErr.message : String(parseErr);
     apiLogger.error(`${provider} parse failed: ${errorMessage}`);
     apiLogger.error(`${provider} raw text output: ${result.text}`);
-    apiLogger.error(`${provider} extracted json: ${JSON.stringify(parsed)}`);
+    apiLogger.error(`${provider} extracted data: ${JSON.stringify(parsed)}`);
 
     return res.status(HTTP_INTERNAL_ERROR).json({
       error: HTTP_INTERNAL_ERROR,
