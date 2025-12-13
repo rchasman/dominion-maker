@@ -1,9 +1,10 @@
 import { generateObject, generateText, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
-import type { GameState } from "../src/types/game-state";
+import type { GameState, CardName } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
 import { buildStrategicContext, formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
+import { CARDS } from "../src/data/cards";
 import { apiLogger } from "../src/lib/logger";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
@@ -185,6 +186,23 @@ function optimizeStateForAI(state: GameState): unknown {
     optimizedPlayers[playerId] = optimizedPlayer;
   });
 
+  // Calculate effective card costs (base cost - active reductions)
+  const costReduction = state.activeEffects
+    .filter(e => e.effectType === "cost_reduction")
+    .reduce((total, e) => total + ((e.parameters as { amount?: number })?.amount ?? 0), 0);
+
+  // Transform supply with clear cost labeling
+  const supplyWithCosts: Record<string, number> = {};
+  Object.entries(state.supply).forEach(([card, count]) => {
+    const baseCost = CARDS[card as CardName]?.cost ?? 0;
+    const effectiveCost = Math.max(0, baseCost - costReduction);
+    // Include cost in key for clarity (Estate @ $2: 8)
+    const key = costReduction > 0 && baseCost !== effectiveCost
+      ? `${card} @ $${effectiveCost} (was $${baseCost})`
+      : `${card} @ $${baseCost}`;
+    supplyWithCosts[key] = count;
+  });
+
   return {
     // Current phase
     phase: state.phase,
@@ -198,13 +216,12 @@ function optimizeStateForAI(state: GameState): unknown {
     // Player zones
     players: optimizedPlayers,
 
-    // Board state
-    supply: state.supply,
+    // Board state (with effective costs baked in)
+    supply: supplyWithCosts,
     trash: state.trash,
 
-    // Decisions and effects
-    pendingDecision: state.pendingDecision,
-    activeEffects: state.activeEffects,
+    // Decisions
+    ...(state.pendingDecision ? { pendingDecision: state.pendingDecision } : {}),
 
     // Optional fields
     ...(state.subPhase ? { subPhase: state.subPhase } : {}),
@@ -212,6 +229,7 @@ function optimizeStateForAI(state: GameState): unknown {
     // Removed (redundant or unclear):
     // - activePlayer (renamed to 'you')
     // - actions/buys/coins (renamed with 'your' prefix for clarity)
+    // - activeEffects (cost reductions baked into supply display)
     // - turn, log, turnHistory, decisionQueue, gameOver, winner, playerOrder
     // - kingdomCards, inPlaySourceIndices, opponent's hand
   };

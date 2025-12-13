@@ -316,7 +316,6 @@ describe("buildStrategicContext", () => {
       expect(context).toContain("opponentVictoryPoints:");
       expect(context).toContain("yourDeckComposition:");
       expect(context).toContain("opponentDeckComposition:");
-      expect(context).toContain("provincesYouNeedToWin:");
 
       // All derivable/redundant fields removed
       expect(context).not.toContain("currentTurnNumber:");

@@ -15,8 +15,6 @@ type StrategicFacts = {
   gameStage: "Early" | "Mid" | "Late";
   yourVictoryPoints: number;
   opponentVictoryPoints: number;
-  provincesYouNeedToWin: number;
-  provincesTheyNeedToWin: number;
   yourDeckComposition: Record<string, number>;
   opponentDeckComposition: Record<string, number>;
 
@@ -215,26 +213,14 @@ export function buildStrategicContext(
     return "Mid";
   });
 
-  const youNeed = Math.ceil((opponentVP + 1 - currentVP) / PROVINCE_VP);
-  const theyNeed = Math.ceil((currentVP + 1 - opponentVP) / PROVINCE_VP);
-
   const yourAnalysis = analyzeDeck(currentAllCards);
   const opponentAnalysis = analyzeDeck(opponentAllCards);
-
-  const treasures = currentPlayer.hand.filter(c => isTreasureCard(c));
-  const treasureValue = treasures.reduce(
-    (sum, c) => sum + (CARDS[c].coins || 0),
-    0,
-  );
-  const maxCoins = state.coins + treasureValue;
 
   // Strategic insights only - no derivable stats or duplicates
   const facts: StrategicFacts = {
     gameStage,
     yourVictoryPoints: currentVP,
     opponentVictoryPoints: opponentVP,
-    provincesYouNeedToWin: youNeed,
-    provincesTheyNeedToWin: theyNeed,
     yourDeckComposition: yourAnalysis.counts,
     opponentDeckComposition: opponentAnalysis.counts,
   };
