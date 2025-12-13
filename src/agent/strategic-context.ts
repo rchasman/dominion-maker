@@ -38,7 +38,8 @@ interface TurnSummary {
   cardsBought: CardName[];
 }
 
-const DEFAULT_LAST_N_TURNS = 3;
+const DEFAULT_LAST_N_TURNS = 3; // For quick decision-making (per action)
+export const STRATEGY_ANALYSIS_TURNS = 7; // For strategy analysis (once per turn)
 const SUMMARIES_PER_TURN = 2;
 
 function extractRecentTurns(
@@ -117,30 +118,37 @@ function extractRecentTurns(
 
 /**
  * Formats turn history for LLM analysis
+ * Returns TOON-encoded compact turn summaries
+ *
+ * @param state - Current game state
+ * @param format - Output format (toon or json)
+ * @param turnCount - Number of turns to include (default 3 for decisions, use 7 for strategy)
  */
-export function formatTurnHistoryForAnalysis(state: GameState): string {
-  const recentTurns = extractRecentTurns(state.log, DEFAULT_LAST_N_TURNS);
+export function formatTurnHistoryForAnalysis(
+  state: GameState,
+  format: "json" | "toon" = "toon",
+  turnCount = DEFAULT_LAST_N_TURNS,
+): string {
+  const recentTurns = extractRecentTurns(state.log, turnCount);
 
   if (recentTurns.length === 0) {
     return "";
   }
 
-  const lines = ["RECENT TURN HISTORY:"].concat(
-    recentTurns.flatMap(turn => {
-      const actions =
-        turn.actionsPlayed.length > 0 ? turn.actionsPlayed.join(", ") : "none";
-      const buys =
-        turn.cardsBought.length > 0 ? turn.cardsBought.join(", ") : "none";
+  // Convert to compact format for TOON encoding
+  const compactTurns = recentTurns.map(turn => ({
+    turn: turn.turn,
+    player: turn.player,
+    actions: turn.actionsPlayed.length > 0 ? turn.actionsPlayed : null,
+    bought: turn.cardsBought.length > 0 ? turn.cardsBought : null,
+  }));
 
-      return [
-        `Turn ${turn.turn} (${turn.player}):`,
-        `  Actions played: ${actions}`,
-        `  Bought: ${buys}`,
-      ];
-    }),
-  );
+  const content =
+    format === "toon"
+      ? encodeToon(compactTurns)
+      : JSON.stringify(compactTurns, null, 2);
 
-  return lines.join("\n");
+  return `RECENT TURN HISTORY:\n${content}`;
 }
 
 interface PlayerStrategyAnalysis {

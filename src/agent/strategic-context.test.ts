@@ -243,7 +243,7 @@ describe("buildStrategicContext", () => {
   });
 
   describe("formatTurnHistoryForAnalysis", () => {
-    it("should format recent turns for LLM analysis", () => {
+    it("should format recent turns in TOON format", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
 
       // Add some log entries
@@ -265,12 +265,11 @@ describe("buildStrategicContext", () => {
       const formatted = formatTurnHistoryForAnalysis(state);
 
       expect(formatted).toContain("RECENT TURN HISTORY:");
-      expect(formatted).toContain("Turn 1");
-      expect(formatted).toContain("Turn 2");
-      expect(formatted).toContain("Village, Smithy");
+      // TOON format should be compact
+      expect(formatted).toContain("turn:");
+      expect(formatted).toContain("player:");
+      expect(formatted).toContain("Village");
       expect(formatted).toContain("Silver");
-      expect(formatted).toContain("Market");
-      expect(formatted).toContain("Gold");
     });
 
     it("should return empty string when no turns", () => {
@@ -280,6 +279,23 @@ describe("buildStrategicContext", () => {
       const formatted = formatTurnHistoryForAnalysis(state);
 
       expect(formatted).toBe("");
+    });
+
+    it("should support custom turn count for strategy analysis", () => {
+      const state = createMockGameState("ai", ["human", "ai"]);
+
+      // Add 10 turns of history
+      state.log = Array.from({ length: 10 }, (_, i) => ({
+        type: "turn-start" as const,
+        turn: i + 1,
+        player: i % 2 === 0 ? "human" : "ai",
+      }));
+
+      const formatted3 = formatTurnHistoryForAnalysis(state, "toon", 3);
+      const formatted7 = formatTurnHistoryForAnalysis(state, "toon", 7);
+
+      // 7-turn window should be longer
+      expect(formatted7.length).toBeGreaterThan(formatted3.length);
     });
   });
 
