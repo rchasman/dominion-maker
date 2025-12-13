@@ -84,7 +84,8 @@ describe("Full mode integration", () => {
     expect(context).toContain("yourVictoryPoints:");
     expect(context).toContain("yourDeckTotalCards:");
     expect(context).toContain("opponentDeckTotalCards:");
-    expect(context).toContain("handCards[");
+    expect(context).toContain("yourDeckComposition:");
+    expect(context).not.toContain("handCards[");
   });
 
   it("should generate valid strategic context for ai2", () => {
@@ -104,7 +105,8 @@ describe("Full mode integration", () => {
     expect(context).toContain("yourVictoryPoints:");
     expect(context).toContain("yourDeckTotalCards:");
     expect(context).toContain("opponentDeckTotalCards:");
-    expect(context).toContain("handCards[");
+    expect(context).toContain("yourDeckComposition:");
+    expect(context).not.toContain("handCards[");
   });
 
   it("should allow both AIs to buy cards", () => {

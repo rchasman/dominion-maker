@@ -68,11 +68,12 @@ const ActionSchema = z
         "gain_card",
         "discard_card",
         "trash_card",
+        "skip_decision",
         "end_phase",
       ])
       .describe("The type of action to perform"),
     card: CardNameSchema.nullish().describe(
-      "The card to act on (not needed for end_phase)",
+      "The card to act on (not needed for skip_decision or end_phase)",
     ),
     reasoning: z
       .string()
@@ -158,6 +159,43 @@ function buildPromptQuestion(currentState: GameState): string {
   return `What is the next atomic action for ${currentState.activePlayer}?`;
 }
 
+// Convert card array to counts for token efficiency
+function cardArrayToCounts(cards: string[]): Record<string, number> {
+  return cards.reduce(
+    (counts, card) => {
+      counts[card] = (counts[card] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>,
+  );
+}
+
+// Transform game state to use counts instead of arrays for AI consumption
+function optimizeStateForAI(state: GameState): unknown {
+  const optimizedPlayers: Record<string, unknown> = {};
+
+  Object.entries(state.players).forEach(([playerId, player]) => {
+    const optimizedPlayer: Record<string, unknown> = {
+      // Convert arrays to counts
+      hand: cardArrayToCounts(player.hand),
+      deck: player.deck.length, // Always just count (hidden info)
+      discard: cardArrayToCounts(player.discard),
+      inPlay: cardArrayToCounts(player.inPlay),
+      // Add revealed deck cards when applicable
+      ...(player.deckTopRevealed && player.deck.length > 0
+        ? { deckTopCards: player.deck }
+        : {}),
+    };
+
+    optimizedPlayers[playerId] = optimizedPlayer;
+  });
+
+  return {
+    ...state,
+    players: optimizedPlayers,
+  };
+}
+
 // Build user message with context
 function buildUserMessage(params: {
   strategicContext: string;
@@ -177,10 +215,14 @@ function buildUserMessage(params: {
     humanChoice,
     format,
   } = params;
+
+  // Optimize state by converting arrays to counts
+  const optimizedState = optimizeStateForAI(currentState);
+
   const stateStr =
     format === "toon"
-      ? encodeToon(currentState)
-      : JSON.stringify(currentState, null, JSON_INDENT_SPACES);
+      ? encodeToon(optimizedState)
+      : JSON.stringify(optimizedState, null, JSON_INDENT_SPACES);
 
   const humanChoiceStr = run(() => {
     if (!humanChoice) return "";
@@ -291,6 +333,7 @@ function buildTextFallbackJsonPrompt(userMessage: string): string {
 { "type": "gain_card", "card": "CardName", "reasoning": "..." }
 { "type": "discard_card", "card": "CardName", "reasoning": "..." }
 { "type": "trash_card", "card": "CardName", "reasoning": "..." }
+{ "type": "skip_decision", "reasoning": "..." }
 { "type": "end_phase", "reasoning": "..." }`;
 }
 

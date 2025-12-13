@@ -293,6 +293,7 @@ export const styles: Record<string, React.CSSProperties> = {
   eventList: {
     flex: 1,
     overflowY: "scroll",
+    overflowX: "auto",
     minHeight: 0,
   },
   eventItem: {
@@ -302,6 +303,7 @@ export const styles: Record<string, React.CSSProperties> = {
     borderLeft: `${BORDER_WIDTH_MEDIUM}px solid`,
     cursor: "pointer",
     alignItems: "center",
+    minWidth: "fit-content",
   },
   eventId: {
     color: "#6b7280",
@@ -321,8 +323,6 @@ export const styles: Record<string, React.CSSProperties> = {
   },
   eventDetail: {
     color: "#a0a0b0",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
   inspector: {

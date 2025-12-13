@@ -207,6 +207,7 @@ const filterBuyableCards = (
 
 /**
  * Builds structured game facts encoded based on format
+ * Only includes strategic insights - removes data already present in game state
  */
 export function buildStrategicContext(
   state: GameState,
@@ -246,6 +247,7 @@ export function buildStrategicContext(
   );
   const maxCoins = state.coins + treasureValue;
 
+  // Strategic insights only - no data duplication with game state
   const facts: StrategicFacts = {
     currentTurnNumber: state.turn,
     gameStage,
@@ -266,21 +268,10 @@ export function buildStrategicContext(
     yourDeckCycleTime: parseFloat(
       (currentAllCards.length / GAME_CONSTANTS.INITIAL_HAND_SIZE).toFixed(1),
     ),
-    yourDrawPileCount: currentPlayer.deck.length,
-    yourDiscardPileCount: currentPlayer.discard.length,
-    shuffleNextTurn:
-      currentPlayer.deck.length <= GAME_CONSTANTS.INITIAL_HAND_SIZE &&
-      currentPlayer.discard.length > 0,
     opponentDeckTotalCards: opponentAllCards.length,
     opponentDeckComposition: opponentAnalysis.counts,
     opponentTotalTreasureValue: opponentAnalysis.totalTreasureValue,
     opponentAvgTreasureValue: opponentAnalysis.avgTreasureValue,
-    supplyPiles: state.supply,
-    handCards: currentPlayer.hand,
-    coinsActivatedThisTurn: state.coins,
-    coinsInUnplayedTreasures: treasureValue,
-    maxCoinsIfAllTreasuresPlayed: maxCoins,
-    unplayedTreasuresInHand: treasures,
   };
 
   // Add AI's own strategy analysis (not opponent's - no cheating)
@@ -302,34 +293,7 @@ export function buildStrategicContext(
     facts.strategyOverride = customStrategy.trim();
   }
 
-  // Add buy options if in buy phase
-  if (state.phase === "buy") {
-    facts.buyableWithCurrentCoins = filterBuyableCards(
-      state.supply,
-      state.coins,
-    );
-
-    const cumulativeTotals = treasures.reduce(
-      (totals, t) => [
-        ...totals,
-        totals[totals.length - 1] + (CARDS[t].coins || 0),
-      ],
-      [state.coins],
-    );
-
-    facts.whatEachUnplayedTreasureUnlocks = treasures
-      .map((treasure, idx) => ({
-        treasureName: treasure,
-        coinValue: CARDS[treasure].coins || 0,
-        newCoinTotal: cumulativeTotals[idx + 1],
-        cardsUnlocked: filterBuyableCards(
-          state.supply,
-          cumulativeTotals[idx + 1],
-          cumulativeTotals[idx],
-        ),
-      }))
-      .filter(u => u.cardsUnlocked.length > 0);
-  }
+  // No buy phase calculations - legal actions already shows buyable cards
 
   return format === "toon" ? encodeToon(facts) : JSON.stringify(facts, null, 2);
 }

@@ -1,6 +1,5 @@
 import type { GameEvent } from "../../events/types";
 import { styles } from "./constants";
-import { ScrubberButtons } from "./ScrubberButtons";
 
 interface TimelineScrubberProps {
   rootEvents: GameEvent[];
@@ -55,17 +54,35 @@ export function TimelineScrubber({
     rootEvents.length,
   );
 
+  const playButtonStyle = {
+    ...styles.scrubberButton,
+    background: isPlaying ? "rgba(99, 102, 241, 0.3)" : "transparent",
+    borderColor: isPlaying ? "rgba(99, 102, 241, 0.5)" : "#2d2d44",
+  };
+
+  const PLAY_BUTTON = "▶";
+  const PAUSE_BUTTON = "⏸";
+  const REWIND_BUTTON = "⏮";
+  const FAST_FORWARD_BUTTON = "⏭";
+
   return (
     <div style={styles.scrubber}>
       <div style={styles.scrubberControls}>
-        <ScrubberButtons
-          isAtBeginning={isAtBeginning}
-          isPlaying={isPlaying}
-          scrubberIndex={scrubberIndex}
-          onRewindToBeginning={onRewindToBeginning}
-          onPlayPause={onPlayPause}
-          onResetScrubber={onResetScrubber}
-        />
+        <button
+          onClick={onRewindToBeginning}
+          style={styles.scrubberButton}
+          title="Rewind to beginning"
+          disabled={isAtBeginning}
+        >
+          {REWIND_BUTTON}
+        </button>
+        <button
+          onClick={onPlayPause}
+          style={playButtonStyle}
+          title={isPlaying ? "Pause replay" : "Play replay"}
+        >
+          {isPlaying ? PAUSE_BUTTON : PLAY_BUTTON}
+        </button>
         <div style={styles.scrubberSliderContainer}>
           <input
             type="range"
@@ -77,6 +94,26 @@ export function TimelineScrubber({
           />
           <span style={styles.scrubberLabel}>{scrubberLabel}</span>
         </div>
+        {scrubberIndex !== null ? (
+          <button
+            onClick={onResetScrubber}
+            style={styles.liveButtonInline}
+            title="Jump to live"
+          >
+            {FAST_FORWARD_BUTTON}
+          </button>
+        ) : (
+          <button
+            style={{
+              ...styles.scrubberButton,
+              ...styles.scrubberButtonDisabled,
+            }}
+            disabled
+            title="Already at live"
+          >
+            {FAST_FORWARD_BUTTON}
+          </button>
+        )}
       </div>
     </div>
   );
