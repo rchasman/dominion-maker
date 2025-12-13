@@ -191,17 +191,12 @@ function optimizeStateForAI(state: GameState): unknown {
     .filter(e => e.effectType === "cost_reduction")
     .reduce((total, e) => total + ((e.parameters as { amount?: number })?.amount ?? 0), 0);
 
-  // Transform supply with clear cost labeling
-  const supplyWithCosts: Record<string, number> = {};
-  Object.entries(state.supply).forEach(([card, count]) => {
-    const baseCost = CARDS[card as CardName]?.cost ?? 0;
-    const effectiveCost = Math.max(0, baseCost - costReduction);
-    // Include cost in key for clarity (Estate @ $2: 8)
-    const key = costReduction > 0 && baseCost !== effectiveCost
-      ? `${card} @ $${effectiveCost} (was $${baseCost})`
-      : `${card} @ $${baseCost}`;
-    supplyWithCosts[key] = count;
-  });
+  // Transform supply to array with effective costs pre-calculated
+  const supplyWithCosts = Object.entries(state.supply).map(([card, count]) => ({
+    card,
+    count,
+    cost: Math.max(0, (CARDS[card as CardName]?.cost ?? 0) - costReduction),
+  }));
 
   return {
     // Current phase
@@ -216,7 +211,7 @@ function optimizeStateForAI(state: GameState): unknown {
     // Player zones
     players: optimizedPlayers,
 
-    // Board state (with effective costs baked in)
+    // Board state (costs pre-calculated with active effects)
     supply: supplyWithCosts,
     trash: state.trash,
 
@@ -229,7 +224,7 @@ function optimizeStateForAI(state: GameState): unknown {
     // Removed (redundant or unclear):
     // - activePlayer (renamed to 'you')
     // - actions/buys/coins (renamed with 'your' prefix for clarity)
-    // - activeEffects (cost reductions baked into supply display)
+    // - activeEffects (only used for cost_reduction, baked into supply costs)
     // - turn, log, turnHistory, decisionQueue, gameOver, winner, playerOrder
     // - kingdomCards, inPlaySourceIndices, opponent's hand
   };
