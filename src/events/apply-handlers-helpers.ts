@@ -116,6 +116,14 @@ export function applyCardDiscarded(
           event.card,
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
+
+  // Track discard decisions from hand (Cellar, Militia response, etc)
+  // Don't track end-of-turn cleanup discards
+  const shouldTrack = event.from === "hand" && event.player === state.activePlayer;
+  const turnHistoryEntry = shouldTrack
+    ? { type: "discard_card" as const, card: event.card }
+    : null;
+
   return {
     ...state,
     players: {
@@ -135,6 +143,9 @@ export function applyCardDiscarded(
         discard: [...playerState.discard, event.card],
       },
     },
+    turnHistory: turnHistoryEntry
+      ? [...state.turnHistory, turnHistoryEntry]
+      : state.turnHistory,
     log: [
       ...state.log,
       {
@@ -165,6 +176,13 @@ export function applyCardTrashed(
           event.card,
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
+
+  // Track trash decisions from hand (Chapel, Mine, etc)
+  const shouldTrack = event.from === "hand";
+  const turnHistoryEntry = shouldTrack
+    ? { type: "trash_card" as const, card: event.card }
+    : null;
+
   return {
     ...state,
     players: {
@@ -184,6 +202,9 @@ export function applyCardTrashed(
       },
     },
     trash: [...state.trash, event.card],
+    turnHistory: turnHistoryEntry
+      ? [...state.turnHistory, turnHistoryEntry]
+      : state.turnHistory,
     log: [
       ...state.log,
       { type: "trash-card", player: event.player, card: event.card },
@@ -217,10 +238,17 @@ export function applyCardGained(
     if (event.to === "deck") return { deck: [...playerState.deck, event.card] };
     return {};
   });
-  const newTurnHistory =
-    event.to === "discard"
-      ? [...state.turnHistory, { type: "buy_card" as const, card: event.card }]
-      : state.turnHistory;
+
+  // Track gain actions in turnHistory:
+  // - Buys (buy phase + to discard) -> "buy_card"
+  // - Card effect gains (Workshop, Artisan, etc) -> "gain_card"
+  const isBuy = state.phase === "buy" && event.to === "discard";
+  const newTurnHistory = run(() => {
+    if (isBuy) return [...state.turnHistory, { type: "buy_card" as const, card: event.card }];
+    // Track all other gains (Workshop to discard, Artisan to hand, etc)
+    return [...state.turnHistory, { type: "gain_card" as const, card: event.card }];
+  });
+
   return {
     ...state,
     players: {
