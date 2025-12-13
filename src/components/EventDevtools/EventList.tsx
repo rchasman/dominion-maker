@@ -92,6 +92,19 @@ function EventItem({
   const hasParent = Boolean(event.causedBy);
   const isScrubberPosition = scrubberIndex === eventIndex;
 
+  // Calculate actual nesting depth by traversing causedBy chain
+  const getDepth = (evt: GameEvent): number => {
+    if (!evt.causedBy) return 0;
+    const parent = events.find(e => e.id === evt.causedBy);
+    if (!parent) return 1;
+    return 1 + getDepth(parent);
+  };
+
+  const depth = getDepth(event);
+  const paddingPerLevel = 20;
+  const basePadding = 12;
+  const calculatedPadding = basePadding + depth * paddingPerLevel;
+
   return (
     <div
       key={`${event.id}-${eventIndex}`}
@@ -103,9 +116,7 @@ function EventItem({
         ...styles.eventItem,
         background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
         borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
-        paddingLeft: hasParent
-          ? `${PADDING_LEFT_NESTED}px`
-          : `${PADDING_LEFT_BASE}px`,
+        paddingLeft: `${calculatedPadding}px`,
         position: "relative",
         borderRight: isScrubberPosition
           ? `${BORDER_RIGHT_WIDTH}px solid #6366f1`
