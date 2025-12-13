@@ -180,12 +180,14 @@ function optimizeStateForAI(state: GameState): unknown {
   const optimizedPlayers: Record<string, unknown> = {};
 
   Object.entries(state.players).forEach(([playerId, player]) => {
+    const isActivePlayer = playerId === state.activePlayer;
+
     const optimizedPlayer: Record<string, unknown> = {
-      // Convert arrays to counts
-      hand: cardArrayToCounts(player.hand),
-      deck: player.deck.length, // Always just count (hidden info)
-      discard: cardArrayToCounts(player.discard),
-      inPlay: cardArrayToCounts(player.inPlay),
+      // Only show active player's hand (opponent's hand is hidden information)
+      ...(isActivePlayer ? { hand: cardArrayToCounts(player.hand) } : {}),
+      deck: player.deck.length, // Always just count (hidden info for both)
+      discard: cardArrayToCounts(player.discard), // Public info
+      inPlay: cardArrayToCounts(player.inPlay), // Public info
       // Add revealed deck cards when applicable
       ...(player.deckTopRevealed && player.deck.length > 0
         ? { deckTopCards: player.deck }
@@ -202,7 +204,6 @@ function optimizeStateForAI(state: GameState): unknown {
     players: optimizedPlayers,
     supply: state.supply,
     trash: state.trash,
-    kingdomCards: state.kingdomCards,
 
     // Resources
     actions: state.actions,
@@ -225,6 +226,9 @@ function optimizeStateForAI(state: GameState): unknown {
     // - decisionQueue (duplicate of pendingDecision)
     // - gameOver, winner (always false/null during play)
     // - playerOrder (not used for decision making)
+    // - kingdomCards (derive from supply - non-basic cards)
+    // - inPlaySourceIndices (internal tracking)
+    // - opponent's hand (hidden information)
   };
 }
 
