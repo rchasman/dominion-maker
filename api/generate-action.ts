@@ -191,12 +191,27 @@ function optimizeStateForAI(state: GameState): unknown {
     .filter(e => e.effectType === "cost_reduction")
     .reduce((total, e) => total + ((e.parameters as { amount?: number })?.amount ?? 0), 0);
 
-  // Transform supply to array with effective costs pre-calculated
-  const supplyWithCosts = Object.entries(state.supply).map(([card, count]) => ({
-    card,
-    count,
-    cost: Math.max(0, (CARDS[card as CardName]?.cost ?? 0) - costReduction),
-  }));
+  // Transform supply to array with costs and effects
+  const supplyWithCosts = Object.entries(state.supply).map(([card, count]) => {
+    const cardData = CARDS[card as CardName];
+    const baseCost = cardData?.cost ?? 0;
+    const effectiveCost = Math.max(0, baseCost - costReduction);
+
+    // Build compact effect description
+    const effect = run(() => {
+      if (cardData?.coins) return `+$${cardData.coins}`;
+      if (cardData?.vp) return `${cardData.vp} VP`;
+      // For kingdom cards, use first 40 chars of description
+      return cardData?.description?.slice(0, 40) || "";
+    });
+
+    return {
+      card,
+      count,
+      cost: effectiveCost,
+      effect,
+    };
+  });
 
   return {
     // Current phase
