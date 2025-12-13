@@ -43,13 +43,13 @@ function renderResourcesLine(
       </span>
       <span>
         <span style={{ color: "var(--color-text-secondary)" }}>Actions:</span>{" "}
-        <span style={{ color: "var(--color-action)", fontWeight: 700 }}>
+        <span style={{ color: "var(--color-action-phase)", fontWeight: 700 }}>
           {actions}
         </span>
       </span>
       <span>
         <span style={{ color: "var(--color-text-secondary)" }}>Buys:</span>{" "}
-        <span style={{ color: "var(--color-buy)", fontWeight: 700 }}>
+        <span style={{ color: "var(--color-buy-phase)", fontWeight: 700 }}>
           {buys}
         </span>
       </span>
@@ -61,7 +61,7 @@ function renderResourcesLine(
             fontWeight: 700,
           }}
         >
-          ${coins}
+          {coins}
         </span>
       </span>
     </div>
@@ -123,7 +123,7 @@ function renderHandComposition(
             {handCounts.treasures}T
           </span>
           {" / "}
-          <span style={{ color: "var(--color-action)" }}>
+          <span style={{ color: "var(--color-action-phase)" }}>
             {handCounts.actions}A
           </span>
           {" / "}
