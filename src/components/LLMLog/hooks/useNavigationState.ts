@@ -22,7 +22,7 @@ interface State {
 }
 
 type Action =
-  | { type: "PREV_TURN"; prevTurnIndex: number }
+  | { type: "PREV_TURN"; prevTurnIndex: number; actionIndex?: number }
   | { type: "NEXT_TURN"; nextTurnIndex: number }
   | { type: "PREV_ACTION"; prevActionIndex: number }
   | { type: "NEXT_ACTION"; isLastAction: boolean }
@@ -34,7 +34,7 @@ function navigationReducer(state: State, action: Action): State {
       return {
         ...state,
         currentTurnIndex: action.prevTurnIndex,
-        currentActionIndex: 0,
+        currentActionIndex: action.actionIndex ?? 0,
         userNavigatedAway: true,
       };
 
@@ -113,12 +113,14 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   // Derive booleans
   const hasPrevTurn = currentTurnIndex > 0;
   const hasNextTurn = currentTurnIndex < turns.length - 1;
-  const hasPrevAction = currentActionIndex > 0;
+  // Can go back if either: action > 0 in current turn, OR at action 0 with previous turn available
+  const hasPrevAction = currentActionIndex > 0 || (currentActionIndex === 0 && hasPrevTurn);
 
   const maxActionIndex = currentTurn?.pending
     ? currentTurn.decisions.length
     : Math.max(0, (currentTurn?.decisions.length || 0) - 1);
-  const hasNextAction = currentActionIndex < maxActionIndex;
+  // Can go forward if either: action < max in current turn, OR at last action with next turn available
+  const hasNextAction = currentActionIndex < maxActionIndex || (currentActionIndex === maxActionIndex && hasNextTurn);
 
   // Handlers - plain functions, no useCallback
   const handlePrevTurn = () => {
@@ -137,18 +139,38 @@ export const useNavigationState = (turns: Turn[]): NavigationState => {
   };
 
   const handlePrevAction = () => {
-    if (hasPrevAction) {
+    if (currentActionIndex > 0) {
+      // Go back within current turn
       dispatch({
         type: "PREV_ACTION",
         prevActionIndex: currentActionIndex - 1,
+      });
+    } else if (hasPrevTurn) {
+      // At action 0, wrap to previous turn's last action
+      const prevTurn = turns[currentTurnIndex - 1];
+      const prevTurnLastActionIndex = prevTurn.pending
+        ? prevTurn.decisions.length
+        : Math.max(0, prevTurn.decisions.length - 1);
+
+      dispatch({
+        type: "PREV_TURN",
+        prevTurnIndex: currentTurnIndex - 1,
+        actionIndex: prevTurnLastActionIndex,
       });
     }
   };
 
   const handleNextAction = () => {
-    if (hasNextAction) {
+    if (currentActionIndex < maxActionIndex) {
+      // Go forward within current turn
       const isLastAction = currentActionIndex + 1 >= maxActionIndex;
       dispatch({ type: "NEXT_ACTION", isLastAction });
+    } else if (hasNextTurn) {
+      // At last action, wrap to next turn's first action
+      dispatch({
+        type: "NEXT_TURN",
+        nextTurnIndex: currentTurnIndex + 1,
+      });
     }
   };
 
