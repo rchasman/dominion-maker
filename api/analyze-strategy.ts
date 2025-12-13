@@ -2,9 +2,10 @@ import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { z } from "zod";
 import type { GameState } from "../src/types/game-state";
-import { formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
+import { formatTurnHistoryForAnalysis, STRATEGY_ANALYSIS_TURNS } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { run } from "../src/lib/run";
+import { encodeToon } from "../src/lib/toon";
 
 // HTTP status codes
 const HTTP_STATUS = {
@@ -29,15 +30,7 @@ const VP_VALUES = {
 // Create devtools middleware once at module level (singleton pattern)
 const sharedDevToolsMiddleware = devToolsMiddleware();
 
-const STRATEGY_ANALYSIS_PROMPT = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
-
-Example turn history structure:
-\`\`\`toon
-turnHistory[3]{player,action,card}:
-  human	play_action	Smithy
-  human	play_treasure	Gold
-  human	buy_card	Province
-\`\`\`
+const STRATEGY_ANALYSIS_PROMPT = `Data is TOON-encoded (self-documenting, tab-delimited).
 
 You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
 
@@ -105,42 +98,34 @@ function calculatePlayerStats(allCards: string[]): CardCounts {
   );
 }
 
-// Build supply status string
-function buildSupplyStatus(supply: Record<string, number>): string {
-  const provincesLeft = supply["Province"] ?? INITIAL_PROVINCE_COUNT;
-  const duchiesLeft = supply["Duchy"] ?? INITIAL_DUCHY_COUNT;
-  const emptyPiles = Object.entries(supply)
-    .filter(([, count]) => count === 0)
-    .map(([card]) => card)
-    .join(", ");
-  return `SUPPLY: Provinces ${provincesLeft}/${INITIAL_PROVINCE_COUNT}, Duchies ${duchiesLeft}/${INITIAL_DUCHY_COUNT}${emptyPiles ? `, Empty piles: ${emptyPiles}` : ""}`;
-}
-
-// Build player deck information
+// Build player deck information as structured data for TOON encoding
 function buildPlayerDeckInfo(
   playerIds: string[],
   currentState: GameState,
-): string {
-  return playerIds
-    .map(playerId => {
-      const player = currentState.players[playerId];
-      const allCards = [
-        ...player.deck,
-        ...player.hand,
-        ...player.discard,
-        ...player.inPlay,
-      ];
+): Array<{
+  id: string;
+  vp: number;
+  totalCards: number;
+  composition: Record<string, number>;
+}> {
+  return playerIds.map(playerId => {
+    const player = currentState.players[playerId];
+    const allCards = [
+      ...player.deck,
+      ...player.hand,
+      ...player.discard,
+      ...player.inPlay,
+    ];
 
-      const { counts, vp } = calculatePlayerStats(allCards);
+    const { counts, vp } = calculatePlayerStats(allCards);
 
-      const summary = Object.entries(counts)
-        .sort(([, a], [, b]) => b - a)
-        .map(([card, count]) => `${count}x ${card}`)
-        .join(", ");
-
-      return `${playerId.toUpperCase()} (${vp} VP, ${allCards.length} cards): ${summary}`;
-    })
-    .join("\n");
+    return {
+      id: playerId,
+      vp,
+      totalCards: allCards.length,
+      composition: counts,
+    };
+  });
 }
 
 // Parse request body safely
@@ -178,8 +163,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .json({ error: "Missing required field: currentState" });
     }
 
-    // Extract turn history
-    const turnHistory = formatTurnHistoryForAnalysis(currentState);
+    // Extract turn history (use longer window for strategy - runs once per turn)
+    const turnHistory = formatTurnHistoryForAnalysis(currentState, "toon", STRATEGY_ANALYSIS_TURNS);
 
     // If no turn history yet, return empty array
     if (!turnHistory) {
@@ -189,12 +174,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get all player IDs
     const playerIds = Object.keys(currentState.players);
 
-    // Build comprehensive game state context
-    const gameProgress = `GAME STATE: Turn ${currentState.turn}, Phase: ${currentState.phase}`;
-    const supplyStatus = buildSupplyStatus(currentState.supply);
-    const deckInfo = buildPlayerDeckInfo(playerIds, currentState);
+    // Build comprehensive game state context using TOON encoding
+    const gameContext = {
+      turn: currentState.turn,
+      phase: currentState.phase,
+      provincesLeft: currentState.supply["Province"] ?? INITIAL_PROVINCE_COUNT,
+      duchiesLeft: currentState.supply["Duchy"] ?? INITIAL_DUCHY_COUNT,
+    };
 
-    const prompt = `${gameProgress}\n${supplyStatus}\n\n${turnHistory}\n\nPLAYER DECKS:\n${deckInfo}\n\nProvide a strategic analysis for each player: ${playerIds.join(", ")}.`;
+    const playerDecks = buildPlayerDeckInfo(playerIds, currentState);
+
+    const prompt = `${encodeToon(gameContext)}
+
+${turnHistory}
+
+PLAYER DECKS:
+${encodeToon(playerDecks)}
+
+Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use Claude Opus for high-quality strategy analysis
     const model = wrapLanguageModel({

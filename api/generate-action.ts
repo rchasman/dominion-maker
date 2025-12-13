@@ -3,7 +3,7 @@ import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState } from "../src/types/game-state";
 import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
-import { buildStrategicContext } from "../src/agent/strategic-context";
+import { buildStrategicContext, formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
@@ -150,14 +150,6 @@ function parseRequestBody(req: VercelRequest): RequestBody {
   ) as RequestBody;
 }
 
-// Build prompt question based on game state
-function buildPromptQuestion(currentState: GameState): string {
-  if (currentState.pendingDecision) {
-    const decision = currentState.pendingDecision;
-    return `${decision.player.toUpperCase()} must respond to: ${decision.prompt}\nWhat action should ${decision.player} take?`;
-  }
-  return `What is the next atomic action for ${currentState.activePlayer}?`;
-}
 
 // Convert card array to counts for token efficiency
 function cardArrayToCounts(cards: string[]): Record<string, number> {
@@ -232,18 +224,16 @@ function optimizeStateForAI(state: GameState): unknown {
 function buildUserMessage(params: {
   strategicContext: string;
   currentState: GameState;
-  turnHistoryStr: string;
-  legalActionsStr: string;
-  promptQuestion: string;
+  recentTurnsStr: string;
+  legalActions: unknown[];
   humanChoice?: { selectedCards: string[] };
   format: "json" | "toon";
 }): string {
   const {
     strategicContext,
     currentState,
-    turnHistoryStr,
-    legalActionsStr,
-    promptQuestion,
+    recentTurnsStr,
+    legalActions,
     humanChoice,
     format,
   } = params;
@@ -251,20 +241,53 @@ function buildUserMessage(params: {
   // Optimize state by converting arrays to counts
   const optimizedState = optimizeStateForAI(currentState);
 
+  // Build structured prompt sections
+  const sections: string[] = [strategicContext];
+
+  // Current state
   const stateStr =
     format === "toon"
       ? encodeToon(optimizedState)
       : JSON.stringify(optimizedState, null, JSON_INDENT_SPACES);
+  sections.push(`Current state:\n${stateStr}`);
 
-  const humanChoiceStr = run(() => {
-    if (!humanChoice) return "";
-    if (format === "toon") return encodeToon(humanChoice.selectedCards);
-    return JSON.stringify(humanChoice.selectedCards);
-  });
+  // Recent turn history (if available)
+  if (recentTurnsStr) {
+    sections.push(recentTurnsStr);
+  }
 
-  return humanChoice
-    ? `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}\n\nHuman chose: ${humanChoiceStr}${legalActionsStr}\n\n${promptQuestion}`
-    : `${strategicContext}\n\nCurrent state:\n${stateStr}${turnHistoryStr}${legalActionsStr}\n\n${promptQuestion}`;
+  // This turn's actions
+  if (currentState.turnHistory && currentState.turnHistory.length > 0) {
+    const turnHistoryContent =
+      format === "toon"
+        ? encodeToon(currentState.turnHistory)
+        : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES);
+    sections.push(`ACTIONS TAKEN THIS TURN (so far):\n${turnHistoryContent}`);
+  }
+
+  // Human choice (if applicable)
+  if (humanChoice) {
+    const choiceStr =
+      format === "toon"
+        ? encodeToon(humanChoice.selectedCards)
+        : JSON.stringify(humanChoice.selectedCards);
+    sections.push(`Human chose: ${choiceStr}`);
+  }
+
+  // Legal actions
+  const legalActionsContent =
+    format === "toon"
+      ? encodeToon(legalActions)
+      : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
+  sections.push(`LEGAL ACTIONS (you MUST choose one of these):\n${legalActionsContent}`);
+
+  // Question prompt
+  const promptQuestion = currentState.pendingDecision
+    ? `${currentState.pendingDecision.player.toUpperCase()} must respond to: ${currentState.pendingDecision.prompt}\nWhat action should ${currentState.pendingDecision.player} take?`
+    : `What is the next atomic action for ${currentState.activePlayer}?`;
+  sections.push(promptQuestion);
+
+  return sections.join("\n\n");
 }
 
 // Check if provider needs text fallback
@@ -492,24 +515,8 @@ async function processGenerationRequest(
     middleware: sharedDevToolsMiddleware,
   });
 
-  const legalActionsStr = run(() => {
-    if (!legalActions || legalActions.length === 0) return "";
-    const content =
-      format === "toon"
-        ? encodeToon(legalActions)
-        : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
-    return `\n\nLEGAL ACTIONS (you MUST choose one of these):\n${content}`;
-  });
-
-  const turnHistoryStr = run(() => {
-    if (!currentState.turnHistory || currentState.turnHistory.length === 0)
-      return "";
-    const content =
-      format === "toon"
-        ? encodeToon(currentState.turnHistory)
-        : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES);
-    return `\n\nACTIONS TAKEN THIS TURN (so far):\n${content}`;
-  });
+  // Format recent turn history (last 3 turns) from log with TOON encoding
+  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState, format);
 
   const strategicContext = buildStrategicContext(
     currentState,
@@ -517,13 +524,12 @@ async function processGenerationRequest(
     customStrategy,
     format,
   );
-  const promptQuestion = buildPromptQuestion(currentState);
+
   const userMessage = buildUserMessage({
     strategicContext,
     currentState,
-    turnHistoryStr,
-    legalActionsStr,
-    promptQuestion,
+    recentTurnsStr,
+    legalActions: legalActions || [],
     humanChoice,
     format,
   });
