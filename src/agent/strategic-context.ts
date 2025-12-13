@@ -143,7 +143,7 @@ export function formatTurnHistoryForAnalysis(
   const content =
     format === "toon"
       ? encodeToon(compactTurns)
-      : JSON.stringify(compactTurns, null, 2);
+      : JSON.stringify(compactTurns, null, JSON_INDENT_SPACES);
 
   return `RECENT TURN HISTORY:\n${content}`;
 }
@@ -157,6 +157,7 @@ interface PlayerStrategyAnalysis {
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
 const DEFAULT_PROVINCE_COUNT = 8;
+const JSON_INDENT_SPACES = 2;
 
 const getAllCards = (player: GameState["players"][string]) => [
   ...player.deck,
@@ -229,7 +230,9 @@ export function buildStrategicContext(
 
   // No buy phase calculations - legal actions already shows buyable cards
 
-  return format === "toon" ? encodeToon(facts) : JSON.stringify(facts, null, 2);
+  return format === "toon"
+    ? encodeToon(facts)
+    : JSON.stringify(facts, null, JSON_INDENT_SPACES);
 }
 
 interface DeckAnalysis {
