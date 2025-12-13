@@ -1,20 +1,10 @@
-export const DOMINION_SYSTEM_PROMPT = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
+export const DOMINION_SYSTEM_PROMPT = `Data is TOON-encoded (self-documenting, tab-delimited).
 
-Example game state structure:
-\`\`\`toon
-hand[5]:
-  Copper	Copper	Silver	Estate	Smithy
-supply{Province,Duchy,Gold,Silver,Copper,Smithy}:
-  8	8	30	40	46	10
-\`\`\`
+You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
 
-You are a Dominion AI. Choose ONE atomic action.
+If STRATEGY OVERRIDE present: follow absolutely.
 
-Game state is TOON-encoded with self-documenting field names.
-
-STRATEGY OVERRIDE section (if present): Follow absolutely.
-
-Choose one action from LEGAL ACTIONS list. Include reasoning.`;
+Include reasoning.`;
 
 // Longer detailed prompt (for non-consensus, single model play)
 export const DOMINION_SYSTEM_PROMPT_DETAILED = `Data is in TOON format (tab-delimited, 2-space indent, arrays show [length] and {fields}).
