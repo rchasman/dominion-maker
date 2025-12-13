@@ -8,7 +8,6 @@ import {
 import { countVP as countVPFromCards } from "../lib/board-utils";
 import { run } from "../lib/run";
 import { encodeToon } from "../lib/toon";
-import { GAME_CONSTANTS } from "../commands/handle-helpers";
 
 type StrategicFacts = {
   // Core strategic insights (not derivable from raw state)
