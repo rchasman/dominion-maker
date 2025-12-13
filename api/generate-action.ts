@@ -186,37 +186,34 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   return {
-    // Core game state
+    // Current phase
     phase: state.phase,
-    activePlayer: state.activePlayer,
+
+    // YOUR resources (belong to active player)
+    you: state.activePlayer,
+    yourActions: state.actions,
+    yourBuys: state.buys,
+    yourCoins: state.coins,
+
+    // Player zones
     players: optimizedPlayers,
+
+    // Board state
     supply: state.supply,
     trash: state.trash,
 
-    // Resources
-    actions: state.actions,
-    buys: state.buys,
-    coins: state.coins,
-
-    // Decisions
+    // Decisions and effects
     pendingDecision: state.pendingDecision,
-
-    // Active effects (cost modifiers, etc)
     activeEffects: state.activeEffects,
 
-    // Optional fields (only include if meaningful)
+    // Optional fields
     ...(state.subPhase ? { subPhase: state.subPhase } : {}),
 
-    // Removed (redundant):
-    // - turn (duplicate of strategic.currentTurnNumber)
-    // - log (full event history - not needed for decisions)
-    // - turnHistory (shown separately as "ACTIONS TAKEN THIS TURN")
-    // - decisionQueue (duplicate of pendingDecision)
-    // - gameOver, winner (always false/null during play)
-    // - playerOrder (not used for decision making)
-    // - kingdomCards (derive from supply - non-basic cards)
-    // - inPlaySourceIndices (internal tracking)
-    // - opponent's hand (hidden information)
+    // Removed (redundant or unclear):
+    // - activePlayer (renamed to 'you')
+    // - actions/buys/coins (renamed with 'your' prefix for clarity)
+    // - turn, log, turnHistory, decisionQueue, gameOver, winner, playerOrder
+    // - kingdomCards, inPlaySourceIndices, opponent's hand
   };
 }
 
