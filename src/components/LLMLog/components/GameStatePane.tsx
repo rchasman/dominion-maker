@@ -240,7 +240,7 @@ function TurnActionsSection({ turnHistory }: { turnHistory: TurnAction[] }) {
           lineHeight: 1.5,
         }}
       >
-        {JSON.stringify(turnHistory, null, JSON_INDENT)}
+        {turnHistory.map((action) => JSON.stringify(action)).join("\n")}
       </pre>
     </div>
   );
