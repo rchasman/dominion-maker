@@ -11,6 +11,7 @@ import { encodeToon } from "../lib/toon";
 import { GAME_CONSTANTS } from "../commands/handle-helpers";
 
 type StrategicFacts = {
+  // Core strategic insights
   currentTurnNumber: number;
   gameStage: "Early" | "Mid" | "Late";
   yourVictoryPoints: number;
@@ -28,30 +29,22 @@ type StrategicFacts = {
   yourVillageCount: number;
   yourTerminalCount: number;
   yourDeckCycleTime: number;
-  yourDrawPileCount: number;
-  yourDiscardPileCount: number;
-  shuffleNextTurn: boolean;
   opponentDeckTotalCards: number;
   opponentDeckComposition: Record<string, number>;
   opponentTotalTreasureValue: number;
   opponentAvgTreasureValue: number;
-  supplyPiles: Record<string, number>;
-  handCards: string[];
-  coinsActivatedThisTurn: number;
-  coinsInUnplayedTreasures: number;
-  maxCoinsIfAllTreasuresPlayed: number;
-  unplayedTreasuresInHand: string[];
-  buyableWithCurrentCoins?: Array<{ card: string; cost: number }>;
-  whatEachUnplayedTreasureUnlocks?: Array<{
-    treasureName: string;
-    coinValue: number;
-    newCoinTotal: number;
-    cardsUnlocked: Array<{ card: string; cost: number }>;
-  }>;
+
+  // Optional AI memory
   aiStrategyGameplan?: string;
   aiStrategyRead?: string;
   aiStrategyRecommendation?: string;
   strategyOverride?: string;
+
+  // Removed (redundant with game state - no longer included):
+  // supplyPiles, handCards, coinsActivatedThisTurn, yourDrawPileCount,
+  // yourDiscardPileCount, shuffleNextTurn, coinsInUnplayedTreasures,
+  // maxCoinsIfAllTreasuresPlayed, unplayedTreasuresInHand,
+  // buyableWithCurrentCoins, whatEachUnplayedTreasureUnlocks
 };
 
 /**
