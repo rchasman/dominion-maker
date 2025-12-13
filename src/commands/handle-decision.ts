@@ -411,12 +411,14 @@ export function handleSubmitDecision(
 
   const builder = new EventBuilder();
   // Link DECISION_RESOLVED to the DECISION_REQUIRED that created it
-  builder.add({
-    type: "DECISION_RESOLVED",
-    player,
-    choice,
-    causedBy: state.pendingDecisionEventId || undefined,
-  });
+  builder.add(
+    {
+      type: "DECISION_RESOLVED",
+      player,
+      choice,
+    },
+    state.pendingDecisionEventId || undefined,
+  );
   const rootEventId = builder.getRootId();
   const baseEvents = builder.build();
 
