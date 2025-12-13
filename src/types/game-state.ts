@@ -311,6 +311,7 @@ export type GameState = {
   coins: number;
 
   pendingDecision: DecisionRequest | null;
+  pendingDecisionEventId: string | null; // Event ID that created pendingDecision (for causality)
 
   gameOver: boolean;
   winner: string | null;

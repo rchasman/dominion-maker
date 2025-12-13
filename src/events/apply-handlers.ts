@@ -256,6 +256,7 @@ export function applyDecisionEvent(
       subPhase:
         decision.player !== state.activePlayer ? "opponent_decision" : null,
       pendingDecision: decision,
+      pendingDecisionEventId: event.id || null, // Track which event created this decision
     };
   }
 
@@ -263,6 +264,7 @@ export function applyDecisionEvent(
     return {
       ...state,
       pendingDecision: null,
+      pendingDecisionEventId: null,
       subPhase: null,
     };
   }
