@@ -45,6 +45,7 @@ function createMockGameState(
     turnHistory: [],
     kingdomCards: [],
     pendingDecision: null,
+    pendingDecisionEventId: null,
   };
 }
 

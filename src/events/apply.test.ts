@@ -24,6 +24,7 @@ function createEmptyState(): GameState {
     gameOver: false,
     winner: null,
     pendingDecision: null,
+    pendingDecisionEventId: null,
     subPhase: null,
     trash: [],
     log: [],

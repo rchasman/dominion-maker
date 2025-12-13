@@ -21,6 +21,7 @@ export function createEmptyState(): GameState {
     buys: 0,
     coins: 0,
     pendingDecision: null,
+    pendingDecisionEventId: null,
     gameOver: false,
     winner: null,
     log: [],
