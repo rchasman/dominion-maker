@@ -178,8 +178,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const gameContext = {
       turn: currentState.turn,
       phase: currentState.phase,
-      provincesLeft: currentState.supply["Province"] ?? INITIAL_PROVINCE_COUNT,
-      duchiesLeft: currentState.supply["Duchy"] ?? INITIAL_DUCHY_COUNT,
+      supply: currentState.supply,
+      trash: currentState.trash,
     };
 
     const playerDecks = buildPlayerDeckInfo(playerIds, currentState);

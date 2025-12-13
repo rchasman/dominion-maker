@@ -157,7 +157,6 @@ interface PlayerStrategyAnalysis {
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
 const DEFAULT_PROVINCE_COUNT = 8;
-const PROVINCE_VP = 6;
 
 const getAllCards = (player: GameState["players"][string]) => [
   ...player.deck,
@@ -167,21 +166,6 @@ const getAllCards = (player: GameState["players"][string]) => [
 ];
 
 const calculateVP = (cards: CardName[]) => countVPFromCards(cards);
-
-const filterBuyableCards = (
-  supply: GameState["supply"],
-  maxCost: number,
-  minCost = 0,
-) =>
-  Object.entries(supply)
-    .filter(([cardName, count]) => {
-      const cost = CARDS[cardName as CardName]?.cost || 0;
-      return count > 0 && cost <= maxCost && cost > minCost;
-    })
-    .map(([cardName]) => ({
-      card: cardName,
-      cost: CARDS[cardName as CardName]?.cost || 0,
-    }));
 
 /**
  * Builds structured game facts encoded based on format
