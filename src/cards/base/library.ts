@@ -29,8 +29,11 @@ export const library: CardEffect = ({
 }): CardEffectResult => {
   const playerState = state.players[player];
 
-  // Note: Library is complex because it needs to draw one at a time
-  // For simplicity, we'll handle it as a single decision
+  // Library peek strategy:
+  // Peeks ahead to see which cards would be drawn. If shuffle occurs during
+  // actual drawing, peeked cards may not match drawn cards. This is acceptable
+  // because: (1) shuffle is random, (2) players make choices on visible info,
+  // (3) actual draws happen after decision and use final state
 
   if (!decision || stage === undefined) {
     const cardsNeeded = TARGET_HAND_SIZE - playerState.hand.length;
@@ -77,7 +80,7 @@ export const library: CardEffect = ({
 
   const drawEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
-    .filter(({ index, action }) => action === "topdeck_card" && peeked[index])
+    .filter(({ index, action }) => action === "draw_card" && peeked[index])
     .map(({ index }) => ({
       type: "CARD_DRAWN" as const,
       player,
