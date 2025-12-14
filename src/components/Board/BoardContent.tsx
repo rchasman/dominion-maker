@@ -1,6 +1,6 @@
+import { lazy, Suspense } from "preact/compat";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
-import { EventDevtools } from "../EventDevtools";
 import { formatPlayerName } from "../../lib/board-utils";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
@@ -13,6 +13,10 @@ import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
 import type { ComplexDecisionData } from "./hooks";
+
+const EventDevtools = lazy(() =>
+  import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
+);
 
 interface BoardContentProps {
   boardState: BoardState;
@@ -212,13 +216,15 @@ export function BoardContent({
         />
       )}
 
-      <EventDevtools
-        events={game.events}
-        isOpen={showDevtools}
-        onToggle={onToggleDevtools}
-        onBranchFrom={onRequestUndo}
-        onScrub={onScrub}
-      />
+      <Suspense fallback={null}>
+        <EventDevtools
+          events={game.events}
+          isOpen={showDevtools}
+          onToggle={onToggleDevtools}
+          onBranchFrom={onRequestUndo}
+          onScrub={onScrub}
+        />
+      </Suspense>
     </BoardLayout>
   );
 }
