@@ -16,6 +16,147 @@ interface ConversationEntry {
 const STORAGE_KEY = "dominion-strategy-conversation";
 const TYPING_DEBOUNCE_MS = 2000;
 
+function ConsensusCountSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (count: number) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-2)",
+        paddingTop: "var(--space-4)",
+      }}
+    >
+      <label
+        style={{
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          color: "var(--color-text-secondary)",
+          textTransform: "uppercase",
+        }}
+      >
+        Consensus Count: {value}
+      </label>
+      <input
+        type="range"
+        min="1"
+        max="50"
+        value={value}
+        onChange={e => onChange(Number((e.target as HTMLInputElement).value))}
+        style={{
+          width: "100%",
+          cursor: "pointer",
+        }}
+      />
+      <div
+        style={{
+          fontSize: "0.625rem",
+          color: "var(--color-text-tertiary)",
+          lineHeight: 1.4,
+        }}
+      >
+        Total models to run (may include duplicates)
+      </div>
+    </div>
+  );
+}
+
+function ConversationHistory({
+  conversation,
+  isReacting,
+  onClear,
+}: {
+  conversation: ConversationEntry[];
+  isReacting: boolean;
+  onClear: () => void;
+}) {
+  if (conversation.length === 0) return null;
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "var(--space-2)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "0.625rem",
+            fontWeight: 600,
+            color: "var(--color-text-secondary)",
+            textTransform: "uppercase",
+          }}
+        >
+          Conversation History
+        </div>
+        <button
+          onClick={onClear}
+          style={{
+            padding: "2px 8px",
+            fontSize: "0.625rem",
+            background: "transparent",
+            border: "1px solid var(--color-border)",
+            borderRadius: "3px",
+            color: "var(--color-text-tertiary)",
+            cursor: "pointer",
+          }}
+          title="Clear conversation"
+        >
+          Clear
+        </button>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-2)",
+        }}
+      >
+        {conversation.map((entry, idx) => (
+          <div
+            key={idx}
+            style={{
+              fontSize: "0.75rem",
+              padding: "var(--space-2)",
+              borderRadius: "3px",
+              background:
+                entry.role === "assistant" ? "var(--color-bg)" : "transparent",
+              color:
+                entry.role === "assistant"
+                  ? "var(--color-text-primary)"
+                  : "var(--color-text-secondary)",
+              fontStyle: entry.role === "user" ? "italic" : "normal",
+              borderLeft:
+                entry.role === "assistant" ? "2px solid #f59e0b" : "none",
+            }}
+          >
+            {entry.content}
+          </div>
+        ))}
+        {isReacting && (
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--color-text-tertiary)",
+              fontStyle: "italic",
+            }}
+          >
+            Analyzing...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ModelSettingsPanel({
   settings,
   onChange,
@@ -30,7 +171,8 @@ export function ModelSettingsPanel({
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        setConversation(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as ConversationEntry[];
+        setConversation(parsed);
       } catch {
         // Invalid storage, ignore
       }
@@ -110,6 +252,7 @@ export function ModelSettingsPanel({
         clearTimeout(typingTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.customStrategy]);
 
   return (
@@ -127,50 +270,10 @@ export function ModelSettingsPanel({
         overflow: "auto",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-2)",
-          paddingTop: "var(--space-4)",
-        }}
-      >
-        <label
-          style={{
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            color: "var(--color-text-secondary)",
-            textTransform: "uppercase",
-          }}
-        >
-          Consensus Count: {settings.consensusCount}
-        </label>
-        <input
-          type="range"
-          min="1"
-          max="50"
-          value={settings.consensusCount}
-          onChange={e =>
-            onChange({
-              ...settings,
-              consensusCount: Number(e.target.value),
-            })
-          }
-          style={{
-            width: "100%",
-            cursor: "pointer",
-          }}
-        />
-        <div
-          style={{
-            fontSize: "0.625rem",
-            color: "var(--color-text-tertiary)",
-            lineHeight: 1.4,
-          }}
-        >
-          Total models to run (may include duplicates)
-        </div>
-      </div>
+      <ConsensusCountSlider
+        value={settings.consensusCount}
+        onChange={count => onChange({ ...settings, consensusCount: count })}
+      />
 
       <ModelPicker settings={settings} onChange={onChange} />
 
@@ -276,12 +379,13 @@ export function ModelSettingsPanel({
         </label>
         <textarea
           value={settings.customStrategy || ""}
-          onChange={e =>
+          onChange={e => {
+            const target = e.target as HTMLTextAreaElement;
             onChange({
               ...settings,
-              customStrategy: e.target.value,
-            })
-          }
+              customStrategy: target.value,
+            });
+          }}
           placeholder="Override AI strategy guidance (leave empty for default)&#10;&#10;Example:&#10;- Always buy Province when $8+&#10;- Prioritize Laboratory over Smithy&#10;- Never buy Silver after turn 5"
           style={{
             width: "100%",
@@ -325,80 +429,14 @@ export function ModelSettingsPanel({
               overflowY: "auto",
             }}
           >
-            <div
-              style={{
-                fontSize: "0.6875rem",
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                textTransform: "uppercase",
-                marginBottom: "var(--space-2)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+            <ConversationHistory
+              conversation={conversation}
+              isReacting={isReacting}
+              onClear={() => {
+                setConversation([]);
+                localStorage.removeItem(STORAGE_KEY);
               }}
-            >
-              <span>Strategy Analysis</span>
-              <button
-                onClick={() => {
-                  setConversation([]);
-                  localStorage.removeItem(STORAGE_KEY);
-                }}
-                style={{
-                  fontSize: "0.625rem",
-                  padding: "2px 6px",
-                  background: "transparent",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "3px",
-                  color: "var(--color-text-tertiary)",
-                  cursor: "pointer",
-                }}
-                title="Clear conversation"
-              >
-                Clear
-              </button>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-2)",
-              }}
-            >
-              {conversation.map((entry, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    fontSize: "0.75rem",
-                    padding: "var(--space-2)",
-                    borderRadius: "3px",
-                    background:
-                      entry.role === "assistant"
-                        ? "var(--color-bg)"
-                        : "transparent",
-                    color:
-                      entry.role === "assistant"
-                        ? "var(--color-text-primary)"
-                        : "var(--color-text-secondary)",
-                    fontStyle: entry.role === "user" ? "italic" : "normal",
-                    borderLeft:
-                      entry.role === "assistant" ? "2px solid #f59e0b" : "none",
-                  }}
-                >
-                  {entry.content}
-                </div>
-              ))}
-              {isReacting && (
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-tertiary)",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Analyzing...
-                </div>
-              )}
-            </div>
+            />
           </div>
         )}
       </div>

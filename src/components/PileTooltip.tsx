@@ -1,7 +1,6 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { createPortal as createReactPortal } from "preact/compat";
-import type { ReactPortal } from "preact/compat";
 import { run } from "../lib/run";
 
 const MAX_TOOLTIP_HEIGHT = 500;
@@ -249,7 +248,7 @@ export function PileTooltip({
   mouseX,
   mouseY,
   pileType,
-}: PileTooltipProps): ReactPortal | null {
+}: PileTooltipProps) {
   if (cards.length === 0) return null;
 
   // Group cards by name and count

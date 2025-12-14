@@ -63,7 +63,7 @@ export default async function handler(
         content: STRATEGY_REACTOR_SYSTEM,
       },
       ...conversationHistory.map(msg => ({
-        role: msg.role as "user" | "assistant",
+        role: msg.role,
         content: msg.content,
       })),
       {

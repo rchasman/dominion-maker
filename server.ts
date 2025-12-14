@@ -3,6 +3,7 @@ import generateActionHandler from "./api/generate-action";
 import analyzeStrategyHandler from "./api/analyze-strategy";
 import strategyReactHandler from "./api/strategy-react";
 import { serverLogger } from "./src/lib/logger";
+import { run } from "./src/lib/run";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -128,12 +129,12 @@ const server = Bun.serve({
       };
 
       // Route to appropriate handler
-      const handler =
-        url.pathname === "/api/generate-action"
-          ? generateActionHandler
-          : url.pathname === "/api/strategy-react"
-            ? strategyReactHandler
-            : analyzeStrategyHandler;
+      const handler = run(() => {
+        if (url.pathname === "/api/generate-action")
+          return generateActionHandler;
+        if (url.pathname === "/api/strategy-react") return strategyReactHandler;
+        return analyzeStrategyHandler;
+      });
       await handler(vercelReq, vercelRes);
 
       const { statusCode, responseData, responseHeaders } =
