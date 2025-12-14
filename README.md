@@ -2,58 +2,39 @@
 
 MAKER = **M**aximal **A**gentic decomposition + ahead-by-**K** voting + **E**rror correction + **R**ed-flagging
 
-Implementation of the MAKER framework ([arXiv:2511.09030](https://arxiv.org/html/2511.09030v1)) applied to Dominion.
+Implementation of the [MAKER framework](https://arxiv.org/abs/2511.09030) applied to Dominion. MAKER solved Towers of Hanoi with 20 disks (>1M steps) with zero errors. This applies the same approach to a deck-building card game with 200-400 decisions, hidden information, and strategic depth.
 
-The original MAKER paper solved Towers of Hanoi with 20 disks (>1M steps) with zero errors. This applies the same approach to a card game with hidden information and strategic decisions.
-
-> **Non-commercial research project**
->
-> This is an academic implementation of the MAKER framework for research purposes. **Dominion** is a trademark of Rio Grande Games. All game content, rules, and card designs are © Donald X. Vaccarino and Rio Grande Games. This project is not affiliated with, endorsed by, or commercially licensed by Rio Grande Games. No commercial use intended or permitted.
+> **Non-commercial research** — Dominion © Donald X. Vaccarino / Rio Grande Games.
 
 ## How It Works
 
-LLMs make mistakes on long sequential tasks. MAKER addresses this by breaking tasks into atomic steps and using multiple models to vote on each step independently.
+LLMs make mistakes on long sequential tasks. MAKER fixes this with multi-model voting on atomic steps:
 
-**MAKER's Principles**: Break tasks into atomic steps. Vote on each step with multiple agents. First valid move to get k votes ahead wins.
+1. 8 LLMs (Claude, GPT, Gemini, Mistral) receive game state
+2. Each votes for an action in parallel
+3. Invalid actions filtered (red-flagging)
+4. First action k votes ahead wins (early termination)
+5. Engine executes, repeats
 
-For each decision in the game:
+## Architecture
 
-1. 8 different LLMs (Claude, GPT, Gemini, Mistral) receive the game state
-2. Each model votes for an action
-3. Invalid actions are filtered out
-4. First action to get k votes ahead of the runner-up wins
-5. Game engine executes that action and asks "what's next?"
+**Event-driven with full undo** — designed for consensus research.
 
-## Why Dominion?
+The engine emits immutable events (`CARD_PLAYED`, `TURN_STARTED`). State derives from events. Every event tracks causality (`causedBy` links effects to cause). This enables:
 
-- 200-400 sequential decisions per game
-- Complex game state (deck, hand, supply, opponents)
-- Invalid moves are objectively detectable
-- Strategic depth requires reasoning
+- **Rewind** to any decision, replay with different models
+- **Atomic undo** — action + all its effects in one operation
+- **Deterministic replay** — shuffles stored for perfect fidelity
+- **A/B test consensus** — same game state, different voter configs
 
-## Implementation Details
+## Consensus Panel
 
-### Atomic Actions
+Real-time visualization of multi-model voting with 4 tabbed panes:
 
-Each decision is a single action:
-
-```typescript
-{ type: "play_action", card: "Smithy" }
-```
-
-No multi-step plans. The game engine executes one action, then the models vote on the next.
-
-### Ahead-by-K Voting
-
-8 models vote in parallel. First action to get k votes ahead of the runner-up (default k=3) wins and executes immediately. This stops unnecessary API calls when consensus is obvious.
-
-### Red-Flagging
-
-Invalid actions are filtered before counting votes. If a model votes to play a card that's not in hand, that vote is discarded. ~5-7% of votes get filtered, but zero illegal moves execute.
-
-### Transparency
-
-The UI shows which models voted for what, their reasoning, response times, and which votes were invalid.
+- **Voting** — vote breakdown bars, color-coded model dots, valid/invalid badges per action
+- **Performance** — timing waterfall (ms per model), fastest/slowest highlighting, aborted calls
+- **Reasoning** — each model's reasoning grouped by action voted for
+- **State** — game snapshot at decision time (phase, resources, hand, cards in play)
 
 ## Quick Start
 
@@ -63,68 +44,16 @@ echo "AI_GATEWAY_API_KEY=your-key" > .env
 bun run dev
 ```
 
-Open http://localhost:5173. You can configure which models vote (Claude Haiku, GPT-4o-mini, Gemini Flash, Ministral), how many voters (1-16, default 8), and the k-value (default ahead-by-3).
-
-## What is Dominion?
-
-Deck-building card game. Start with 7 Copper ($1 each) and 3 Estate (1 VP each).
-
-Each turn: play action cards, buy new cards, discard hand, draw 5 new cards. Your deck grows. Buy better cards (Gold, Smithy), trash weak cards (Copper, Estate). Game ends when Provinces run out. Most VP wins.
-
-## Technical Details
-
-### Action Schema
-
-```typescript
-type Action =
-  | { type: "play_action"; card: CardName; reasoning?: string }
-  | { type: "play_treasure"; card: CardName }
-  | { type: "buy_card"; card: CardName; reasoning?: string }
-  | { type: "gain_card"; card: CardName }
-  | { type: "discard_card"; card: CardName }
-  | { type: "trash_card"; card: CardName }
-  | { type: "end_phase" };
-```
-
-### Early Consensus
-
-Models vote in parallel. As votes complete, check if leader is k votes ahead. If yes, abort remaining API calls and execute the winning action.
-
-### Complex Cards
-
-Cards like Chapel ("trash up to 4 cards") break down into iterative decisions:
-
-1. "Which card should I trash first?" → Vote → "Curse"
-2. "Which card should I trash second?" → Vote → "Estate"
-3. "Trash more or done?" → Vote → "Done"
-
-## Results
-
-Typical game (300 actions, 8 voters):
-
-- Invalid actions filtered: ~5-7%
-- Illegal moves executed: 0
-- Average consensus: 5.2 votes per action
-- Early terminations: 85%
-- Total API calls: ~2,400
-- Wall time: 8-12 minutes
+http://localhost:5173 — configure models, voter count (1-16), k-value.
 
 ## Tech Stack
 
-React 19, TypeScript, Bun, Elysia, Vercel AI SDK v6
+Preact, TypeScript, Bun, Vite 8 beta, Vercel AI SDK v6 beta
 
-## Limitations
-
-- 2-3s per action vs <1ms for rule-based AI
-- $0.02-0.05 per game
-- 25 cards (base set) implemented (500+ exist in full game)
+- **Build**: 58ms build, 81ms types, 73ms tests (497), ~15s deploy
+- **Multiplayer**: P2P via trystero (WebRTC)
+- **Dev tools**: Event scrubber for time-travel debugging
 
 ## License
 
-**Code**: MIT License - See [LICENSE](LICENSE)
-
-**Game Content**: Dominion is © Donald X. Vaccarino and Rio Grande Games. Game rules, card names, and mechanics are used for non-commercial research purposes only under fair use. This project claims no ownership of Dominion intellectual property.
-
-## Credits
-
-MAKER framework: Cognizant AI Labs ([paper](https://arxiv.org/abs/2511.09030))
+MIT ([LICENSE](LICENSE)) — MAKER framework: [Cognizant AI Labs](https://arxiv.org/abs/2511.09030)
