@@ -39,6 +39,15 @@ const DEFAULT_LAST_N_TURNS = 3; // For quick decision-making (per action)
 export const STRATEGY_ANALYSIS_TURNS = 7; // For strategy analysis (once per turn)
 const SUMMARIES_PER_TURN = 2;
 
+/**
+ * Default neutral strategy used before first analysis completes
+ */
+export const DEFAULT_STRATEGY = {
+  gameplan: "Adaptive Play",
+  read: "Evaluating kingdom cards and determining optimal strategy based on available synergies and opponent behavior.",
+  recommendation: "Play your best move each turn based on current game state and available options.",
+};
+
 function extractRecentTurns(
   log: LogEntry[],
   lastNTurns = DEFAULT_LAST_N_TURNS,
@@ -210,17 +219,21 @@ export function buildStrategicContext(
   };
 
   // Add AI's own strategy analysis (not opponent's - no cheating)
-  if (strategySummary) {
-    const strategies = JSON.parse(strategySummary) as Array<
-      PlayerStrategyAnalysis & { id: string }
-    >;
-    const aiStrategy = strategies.find(s => s.id === state.activePlayer);
-
-    if (aiStrategy) {
-      facts.aiStrategyGameplan = aiStrategy.gameplan;
-      facts.aiStrategyRead = aiStrategy.read;
-      facts.aiStrategyRecommendation = aiStrategy.recommendation;
+  // Use provided strategy or default neutral strategy
+  const aiStrategy = run(() => {
+    if (strategySummary) {
+      const strategies = JSON.parse(strategySummary) as Array<
+        PlayerStrategyAnalysis & { id: string }
+      >;
+      return strategies.find(s => s.id === state.activePlayer);
     }
+    return DEFAULT_STRATEGY;
+  });
+
+  if (aiStrategy) {
+    facts.aiStrategyGameplan = aiStrategy.gameplan;
+    facts.aiStrategyRead = aiStrategy.read;
+    facts.aiStrategyRecommendation = aiStrategy.recommendation;
   }
 
   // Add custom override

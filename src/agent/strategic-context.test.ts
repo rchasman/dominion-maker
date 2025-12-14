@@ -232,11 +232,13 @@ describe("buildStrategicContext", () => {
       expect(context).toContain("Villages and Smithies");
     });
 
-    it("should work without strategy summary", () => {
+    it("should use default strategy when none provided", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      expect(context).not.toContain("aiStrategyGameplan:");
+      // Default strategy is always included
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("Adaptive Play");
       expect(context).toContain("yourVictoryPoints:");
       expect(context).toContain("yourDeckComposition:");
     });
