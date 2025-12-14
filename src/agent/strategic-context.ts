@@ -40,12 +40,13 @@ export const STRATEGY_ANALYSIS_TURNS = 7; // For strategy analysis (once per tur
 const SUMMARIES_PER_TURN = 2;
 
 /**
- * Default neutral strategy used before first analysis completes
+ * Default strategy used before first analysis completes
+ * Provides essential strategic context without prescribing specific moves
  */
 export const DEFAULT_STRATEGY = {
-  gameplan: "Adaptive Play",
-  read: "Evaluating kingdom cards and determining optimal strategy based on available synergies and opponent behavior.",
-  recommendation: "Play your best move each turn based on current game state and available options.",
+  gameplan: "Adaptive - Evaluating Options",
+  read: "Early turns establish deck foundation. Victory cards (Estate/Duchy) dilute deck by reducing draws of treasure and action cards. Economy cards (Silver/Gold) and useful actions improve future buying power.",
+  recommendation: "Prioritize cards that improve future turns over immediate VP. Consider deck composition impact.",
 };
 
 function extractRecentTurns(
