@@ -40,14 +40,12 @@ export function getLegalActions(state: GameState): Action[] {
       decision.actions.length > 0 &&
       !decision.actions.every(a => a.id === "select" || a.id === "skip")
     ) {
-      // For decisions with custom actions, create one action per (card, action) combo
-      // This allows AI to vote on specific card-action pairs
-      return decomposeDecisionForAI(decision, state);
+      return decomposeDecisionForAI(decision);
     }
 
     // Check if this is a batch decision that needs decomposition for AI
     if (decision.max > 1) {
-      return decomposeDecisionForAI(decision, state);
+      return decomposeDecisionForAI(decision);
     }
 
     if (decision.stage === "trash") {

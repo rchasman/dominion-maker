@@ -1,4 +1,4 @@
-import type { DecisionRequest, GameState } from "../types/game-state";
+import type { DecisionRequest } from "../types/game-state";
 import type { Action } from "../types/action";
 
 /**
@@ -11,10 +11,7 @@ import type { Action } from "../types/action";
  * For multi-action decisions (like Sentry), returns actions for the NEXT card
  * based on currentRoundIndex in metadata.
  */
-export function decomposeDecisionForAI(
-  decision: DecisionRequest,
-  state: GameState,
-): Action[] {
+export function decomposeDecisionForAI(decision: DecisionRequest): Action[] {
   const { min, max, cardOptions, stage, actions: availableActions } = decision;
 
   // Decision with custom actions (like Sentry: topdeck/trash/discard per card)
@@ -24,30 +21,25 @@ export function decomposeDecisionForAI(
     availableActions.length > 0 &&
     !availableActions.every(a => a.id === "select" || a.id === "skip")
   ) {
-    const result: Action[] = [];
-
     const roundIndex = (decision.metadata?.currentRoundIndex as number) || 0;
 
     if (roundIndex >= cardOptions.length) {
-      // All cards decided, should not reach here
       return [{ type: "skip_decision" as const }];
     }
 
     const currentCard = cardOptions[roundIndex];
 
-    availableActions.forEach(action => {
-      result.push({ type: action.id as Action["type"], card: currentCard });
-    });
+    const cardActions = availableActions.map(action => ({
+      type: action.id as Action["type"],
+      card: currentCard,
+    }));
 
-    // Can always skip to accept defaults for remaining cards
-    result.push({ type: "skip_decision" as const });
-
-    return result;
+    return [...cardActions, { type: "skip_decision" as const }];
   }
 
   // Multi-card decision: decompose into atomic actions
   if (max > 1) {
-    const actions: Action[] = cardOptions.map(card => {
+    const actions = cardOptions.map(card => {
       if (stage === "trash") {
         return { type: "trash_card" as const, card };
       }
@@ -60,11 +52,7 @@ export function decomposeDecisionForAI(
       throw new Error(`Unknown batch decision stage: ${stage}`);
     });
 
-    if (min === 0) {
-      actions.push({ type: "skip_decision" as const });
-    }
-
-    return actions;
+    return min === 0 ? [...actions, { type: "skip_decision" as const }] : actions;
   }
 
   return [];

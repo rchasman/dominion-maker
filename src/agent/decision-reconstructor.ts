@@ -1,11 +1,5 @@
 import type { DominionEngine } from "../engine/engine";
-import type {
-  DecisionChoice,
-  CardName,
-  DecisionRequest,
-} from "../types/game-state";
-import type { Action } from "../types/action";
-import { agentLogger } from "../lib/logger";
+import type { CardName, DecisionRequest } from "../types/game-state";
 
 /**
  * Helper functions for multi-round consensus decision reconstruction.
@@ -70,67 +64,4 @@ export function isMultiActionDecision(
     decision.actions.length > 0 &&
     !decision.actions.every(a => a.id === "select" || a.id === "skip")
   );
-}
-
-/**
- * Reconstruct a multi-action decision (like Sentry) from atomic actions.
- * Each atomic action specifies what to do with one card.
- *
- * Example: Sentry reveals [Copper, Estate]
- * - Round 1: AI votes "trash Copper" -> cardActions[0] = "trash_card"
- * - Round 2: AI votes "topdeck Estate" -> cardActions[1] = "topdeck_card"
- * - Result: { selectedCards: [], cardActions: {0: "trash_card", 1: "topdeck_card"}, cardOrder: [1] }
- */
-export async function reconstructMultiActionDecision(
-  initialEngine: DominionEngine,
-  atomicActions: Action[],
-): Promise<DecisionChoice> {
-  const decision = initialEngine.state.pendingDecision;
-  if (!decision) throw new Error("No pending decision for reconstruction");
-
-  const cardActions: Record<number, string> = {};
-  const numCards = decision.cardOptions.length;
-
-  agentLogger.info(
-    `Reconstructing multi-action decision: ${numCards} cards, ${atomicActions.length} actions`,
-  );
-
-  // Process one action per card
-  for (let i = 0; i < Math.min(atomicActions.length, numCards); i++) {
-    const action = atomicActions[i];
-
-    if (action.type === "skip_decision") {
-      agentLogger.debug(
-        `AI voted to skip after ${i} decisions, applying defaults`,
-      );
-      const defaultAction = decision.actions?.find(a => a.isDefault);
-      if (!defaultAction) {
-        throw new Error("Decision has no default action - cannot skip");
-      }
-
-      for (let j = i; j < numCards; j++) {
-        if (!(j in cardActions)) {
-          cardActions[j] = defaultAction.id;
-        }
-      }
-      break;
-    }
-
-    cardActions[i] = action.type;
-
-    agentLogger.debug(
-      `Card ${i} (${decision.cardOptions[i]}): ${action.type}`,
-    );
-  }
-
-  // Build cardOrder: topdecked cards in the order they appear
-  const cardOrder = Object.entries(cardActions)
-    .filter(([, actionId]) => actionId === "topdeck_card")
-    .map(([index]) => parseInt(index));
-
-  agentLogger.info(
-    `Multi-action reconstructed: ${Object.keys(cardActions).length} actions, ${cardOrder.length} topdecked`,
-  );
-
-  return { selectedCards: [], cardActions, cardOrder };
 }
