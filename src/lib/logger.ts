@@ -1,31 +1,60 @@
-import { Logger } from "tslog";
+// Lightweight logger using native console with ANSI colors
+// Replaces tslog to save ~28KB from bundle
 
-// Configure logger with beautiful formatting
-export const logger = new Logger({
-  type: "pretty",
-  minLevel: 3, // info and above (0=silly, 1=trace, 2=debug, 3=info, 4=warn, 5=error, 6=fatal)
-  hideLogPositionForProduction: process.env.NODE_ENV === "production",
-  prettyLogTemplate: "{{hh}}:{{MM}}:{{ss}} {{logLevelName}} {{name}} ",
-  prettyLogStyles: {
-    logLevelName: {
-      "*": ["bold", "black", "bgWhiteBright", "dim"],
-      SILLY: ["bold", "white"],
-      TRACE: ["bold", "whiteBright"],
-      DEBUG: ["bold", "green"],
-      INFO: ["bold", "blue"],
-      WARN: ["bold", "yellow"],
-      ERROR: ["bold", "red"],
-      FATAL: ["bold", "redBright"],
-    },
-    dateIsoStr: "white",
-    filePathWithLine: "white",
-    name: ["white", "bold"],
-    nameWithDelimiterPrefix: ["white", "bold"],
-    nameWithDelimiterSuffix: ["white", "bold"],
-    errorName: ["bold", "bgRedBright", "whiteBright"],
-    fileName: ["yellow"],
-  },
-});
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+// ANSI color codes
+const colors = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  white: "\x1b[37m",
+  green: "\x1b[32m",
+  blue: "\x1b[34m",
+  yellow: "\x1b[33m",
+  red: "\x1b[31m",
+};
+
+class SimpleLogger {
+  constructor(private name: string) {}
+
+  private log(level: LogLevel, ...args: unknown[]) {
+    const timestamp = new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
+
+    const levelColor = {
+      debug: colors.green,
+      info: colors.blue,
+      warn: colors.yellow,
+      error: colors.red,
+    }[level];
+
+    const levelName = `${levelColor}${colors.bold}${level.toUpperCase()}${colors.reset}`;
+    const prefix = `${timestamp} ${levelName} ${colors.bold}${colors.white}${this.name}${colors.reset}`;
+
+    console[level](prefix, ...args);
+  }
+
+  debug(...args: unknown[]) {
+    this.log("debug", ...args);
+  }
+
+  info(...args: unknown[]) {
+    this.log("info", ...args);
+  }
+
+  warn(...args: unknown[]) {
+    this.log("warn", ...args);
+  }
+
+  error(...args: unknown[]) {
+    this.log("error", ...args);
+  }
+
+  getSubLogger(opts: { name: string }) {
+    return new SimpleLogger(opts.name);
+  }
+}
+
+export const logger = new SimpleLogger("app");
 
 // Create sub-loggers for different parts of the application
 export const engineLogger = logger.getSubLogger({ name: "⚙ engine" });
