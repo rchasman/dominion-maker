@@ -9,11 +9,19 @@ import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { api } from "../api/client";
 import { agentLogger } from "../lib/logger";
+import { decomposeDecisionForAI } from "./decision-decomposer";
 
 /**
  * Get legal actions from current game state for LLM context
  * Adapted to work with event-sourced state
  */
+function withSkipOption<T extends Action>(
+  actions: T[],
+  canSkip: boolean,
+): Action[] {
+  return canSkip ? [...actions, { type: "skip_decision" as const }] : actions;
+}
+
 export function getLegalActions(state: GameState): Action[] {
   // Pending decision actions - use decision.player, not activePlayer!
   // (e.g., Militia makes opponent discard while human is still active)
@@ -24,35 +32,32 @@ export function getLegalActions(state: GameState): Action[] {
     if (!playerState) return [];
 
     const options = decision.cardOptions || [];
+    const canSkip = decision.min === 0;
+
+    // Check if this is a batch decision that needs decomposition for AI
+    if (decision.max > 1) {
+      return decomposeDecisionForAI(decision, state);
+    }
 
     if (decision.stage === "trash") {
-      const trashActions = options.map(card => ({
-        type: "trash_card" as const,
-        card,
-      }));
-      return decision.canSkip
-        ? [...trashActions, { type: "skip_decision" as const }]
-        : trashActions;
+      return withSkipOption(
+        options.map(card => ({ type: "trash_card" as const, card })),
+        canSkip,
+      );
     }
 
     if (decision.stage === "discard" || decision.stage === "opponent_discard") {
-      const discardActions = options.map(card => ({
-        type: "discard_card" as const,
-        card,
-      }));
-      return decision.canSkip
-        ? [...discardActions, { type: "skip_decision" as const }]
-        : discardActions;
+      return withSkipOption(
+        options.map(card => ({ type: "discard_card" as const, card })),
+        canSkip,
+      );
     }
 
     if (decision.stage === "gain" || decision.from === "supply") {
-      const gainActions = options.map(card => ({
-        type: "gain_card" as const,
-        card,
-      }));
-      return decision.canSkip
-        ? [...gainActions, { type: "skip_decision" as const }]
-        : gainActions;
+      return withSkipOption(
+        options.map(card => ({ type: "gain_card" as const, card })),
+        canSkip,
+      );
     }
 
     return [];

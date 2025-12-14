@@ -285,6 +285,21 @@ export async function advanceGameStateWithConsensus(
 
   agentLogger.info(`Starting consensus with ${providers.length} models`);
 
+  // Check for batch decision (max > 1) - requires multi-round consensus
+  const decision = currentState.pendingDecision;
+  if (decision?.type === "card_decision" && decision.max > 1) {
+    agentLogger.info(
+      `Batch decision detected: max=${decision.max}, running multi-round consensus`,
+    );
+
+    const { isBatchDecision } = await import("./decision-reconstructor");
+    if (isBatchDecision(decision)) {
+      // TODO: Implement multi-round consensus loop
+      // For now, fall through to single-action consensus
+      agentLogger.warn("Multi-round batch consensus not implemented yet - using single action");
+    }
+  }
+
   const legalActions = getLegalActions(currentState);
 
   // Log legal actions for debugging
