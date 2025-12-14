@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun server.ts & vite",
     "build": "vite build",
+    "build:analyze": "ANALYZE=true vite build",
     "type": "tsc --incremental --noEmit",
     "lint": "bunx oxlint && bunx eslint . && bunx stylelint 'src/**/*.css'",
     "lint:fast": "bunx oxlint",
@@ -46,6 +47,7 @@
     "stylelint-config-standard": "^39.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.49.0",
+    "vite-bundle-analyzer": "^1.3.1",
     "vite": "^8.0.0-beta.2"
   }
 }

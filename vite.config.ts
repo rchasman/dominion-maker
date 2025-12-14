@@ -1,8 +1,19 @@
-import { defineConfig } from "vite";
+import { createLogger, defineConfig } from "vite";
+import { analyzer } from "vite-bundle-analyzer";
+
+const logger = createLogger();
+const originalWarn = logger.warn;
+logger.warn = (msg, options) => {
+  if (msg.includes("PLUGIN_TIMINGS")) return;
+  originalWarn(msg, options);
+};
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [],
+  customLogger: logger,
+  plugins: [
+    process.env.ANALYZE && analyzer(),
+  ],
   oxc: {
     jsx: {
       runtime: "automatic",
