@@ -52,6 +52,7 @@ export type ModelExecutionContext = {
   strategySummary?: string;
   customStrategy?: string;
   format: "json" | "toon";
+  actionId: string;
   abortController: AbortController;
   voteGroups: Map<ActionSignature, VoteGroup>;
   completedResultsMap: Map<number, ModelResult>;

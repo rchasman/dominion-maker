@@ -41,6 +41,11 @@ export class DominionEngine {
   private listeners: Set<EventListener> = new Set();
   private pendingUndo: PendingUndoRequest | null = null;
 
+  // Unique game ID for devtools grouping (uses first event ID)
+  get gameId(): string | undefined {
+    return this.events[0]?.id;
+  }
+
   /**
    * Get current game state (cached, invalidated on new events).
    */

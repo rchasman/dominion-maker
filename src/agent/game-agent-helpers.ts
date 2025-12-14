@@ -105,6 +105,7 @@ type GenerateActionParams = {
   strategySummary?: string;
   customStrategy?: string;
   format?: "json" | "toon";
+  actionId?: string; // For grouping consensus votes in devtools
 };
 
 /**
@@ -121,6 +122,7 @@ export async function generateActionViaBackend(
     strategySummary,
     customStrategy,
     format,
+    actionId,
   } = params;
   const legalActions = getLegalActions(currentState);
 
@@ -133,6 +135,7 @@ export async function generateActionViaBackend(
       strategySummary,
       customStrategy,
       format,
+      actionId,
     },
     {
       fetch: { signal },

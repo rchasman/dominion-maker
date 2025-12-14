@@ -95,6 +95,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     humanChoice,
     strategySummary,
     customStrategy,
+    actionId,
     abortController,
     pendingModels,
     modelStartTimes,
@@ -136,6 +137,7 @@ const executeModel = (context: ModelExecutionContext): void => {
     strategySummary,
     customStrategy,
     format: context.format,
+    actionId,
   })
     .then(({ action, format }) => {
       clearTimeout(timeoutId);
@@ -164,6 +166,7 @@ type RunModelsParams = {
   logger?: LLMLogger;
   aheadByK: number;
   dataFormat: "toon" | "json" | "mixed";
+  actionId: string;
 };
 
 type RunModelsResult = {
@@ -186,6 +189,7 @@ const runModelsInParallel = async (
     logger,
     aheadByK,
     dataFormat,
+    actionId,
   } = params;
 
   const voteGroups = new Map<ActionSignature, VoteGroup>();
@@ -220,6 +224,7 @@ const runModelsInParallel = async (
         strategySummary,
         customStrategy,
         format: modelFormat,
+        actionId,
         abortController,
         voteGroups,
         completedResultsMap,
@@ -273,6 +278,10 @@ export async function advanceGameStateWithConsensus(
   } = config;
   const currentState = engine.state;
   const overallStart = performance.now();
+
+  // Generate actionId to group all consensus votes in devtools
+  // Cache cleared on new game, so just use turn+phase+timestamp
+  const actionId = `t${currentState.turn}-${currentState.phase}-${Date.now()}`;
 
   agentLogger.info(`Starting consensus with ${providers.length} models`);
 
@@ -337,6 +346,7 @@ export async function advanceGameStateWithConsensus(
       logger,
       aheadByK,
       dataFormat,
+      actionId,
     });
 
   const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
