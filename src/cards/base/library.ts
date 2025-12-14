@@ -6,20 +6,9 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
 import type { CardName } from "../../types/game-state";
 import { CARD_ACTIONS } from "../card-actions";
+import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
 
 const TARGET_HAND_SIZE = 7;
-
-// Helper to safely extract CardName[] from metadata
-function getCardNamesFromMetadata(
-  metadata: Record<string, unknown> | undefined,
-  key: string,
-): CardName[] {
-  const value = metadata?.[key];
-  if (Array.isArray(value)) {
-    return value as CardName[];
-  }
-  return [];
-}
 
 export const library: CardEffect = ({
   state,

@@ -7,6 +7,10 @@ import type {
 import { shuffle } from "../lib/game-utils";
 import { CARDS, type ReactionTrigger } from "../data/cards";
 import { run } from "../lib/run";
+import {
+  getStringArrayFromMetadata,
+  getStringFromMetadata,
+} from "../lib/metadata-helpers";
 
 // Type guard for CardName - validates that a string is a known card
 function isCardName(card: string): card is CardName {
@@ -531,9 +535,15 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
     // Process opponent decision
     if (stage === config.stage && decision) {
       const metadata = state.pendingDecision?.metadata;
-      const remainingOpponents =
-        (metadata?.remainingOpponents as string[]) || [];
-      const attackingPlayer = (metadata?.attackingPlayer as string) || player;
+      const remainingOpponents = getStringArrayFromMetadata(
+        metadata,
+        "remainingOpponents",
+      );
+      const attackingPlayer = getStringFromMetadata(
+        metadata,
+        "attackingPlayer",
+        player,
+      );
       const currentOpponent = state.pendingDecision?.player || "";
 
       // Reconstruct opponent data for processing

@@ -7,6 +7,7 @@ import { createDrawEvents, peekDraw } from "../effect-types";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { CardName } from "../../types/game-state";
 import { CARD_ACTIONS } from "../card-actions";
+import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
 
 const SENTRY_PEEK_COUNT = 2;
 
@@ -111,8 +112,10 @@ export const sentry: CardEffect = ({
   }
 
   // Process the decision
-  const revealed =
-    (state.pendingDecision?.metadata?.revealedCards as CardName[]) || [];
+  const revealed = getCardNamesFromMetadata(
+    state.pendingDecision?.metadata,
+    "revealedCards",
+  );
   const cardActions = decision.cardActions || {};
   const cardOrder = (decision.cardOrder || []) as number[];
 
