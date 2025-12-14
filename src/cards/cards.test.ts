@@ -367,7 +367,7 @@ describe("Multi-Stage Decision Cards", () => {
       let newState = executeCard("Chapel", state);
       expect(newState.pendingDecision).toBeDefined();
 
-      // Trash 3 cards in one batch submission
+      // Trash 3 cards including 2 Coppers in one batch submission
       newState = executeCard(
         "Chapel",
         newState,
@@ -376,11 +376,15 @@ describe("Multi-Stage Decision Cards", () => {
       );
       expect(newState.trash.length).toBe(3);
       expect(newState.pendingDecision).toBeNull(); // Done after batch
-      expect(newState.trash).toContain("Copper");
+
+      // Verify both Coppers were trashed
+      const coppersInTrash = newState.trash.filter(c => c === "Copper").length;
+      expect(coppersInTrash).toBe(2);
       expect(newState.trash).toContain("Estate");
 
-      // Hand should have remaining card
+      // Hand should have remaining card (only Duchy)
       expect(newState.players["human"].hand).toEqual(["Duchy"]);
+      expect(newState.players["human"].hand).not.toContain("Copper");
     });
 
     it("should handle AI reconstructed batch submission", () => {
