@@ -65,7 +65,7 @@ export function GameOverModal({
             color: winner === mainPlayerId ? "var(--color-victory)" : "#ef5350",
           }}
         >
-          {winnerName} wins!
+          {winnerName} {winnerName === "You" ? "win" : "wins"}!
         </p>
         <div
           style={{
