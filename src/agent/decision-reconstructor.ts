@@ -99,11 +99,13 @@ export async function reconstructMultiActionDecision(
         `AI voted to skip after ${i} decisions, applying defaults`,
       );
       const defaultAction = decision.actions?.find(a => a.isDefault);
-      const defaultId = defaultAction?.id || "topdeck_card";
+      if (!defaultAction) {
+        throw new Error("Decision has no default action - cannot skip");
+      }
 
       for (let j = i; j < numCards; j++) {
         if (!(j in cardActions)) {
-          cardActions[j] = defaultId;
+          cardActions[j] = defaultAction.id;
         }
       }
       break;

@@ -8,8 +8,8 @@ import type { Action } from "../types/action";
  * Action IDs in decisions now match action types directly (e.g., "topdeck_card"),
  * eliminating the need for mapping layers.
  *
- * For multi-action decisions (like Sentry), this returns actions for the NEXT card
- * to be decided on, based on already-made decisions in metadata.
+ * For multi-action decisions (like Sentry), returns actions for the NEXT card
+ * based on currentRoundIndex in metadata.
  */
 export function decomposeDecisionForAI(
   decision: DecisionRequest,
@@ -49,7 +49,6 @@ export function decomposeDecisionForAI(
   // Multi-card decision: decompose into atomic actions
   if (max > 1) {
     const actions: Action[] = cardOptions.map(card => {
-      // Map stage to action type
       if (stage === "trash") {
         return { type: "trash_card" as const, card };
       }
@@ -59,11 +58,9 @@ export function decomposeDecisionForAI(
       if (stage === "gain") {
         return { type: "gain_card" as const, card };
       }
-      // Generic selection - use most specific available action
-      return { type: "play_action" as const, card };
+      throw new Error(`Unknown batch decision stage: ${stage}`);
     });
 
-    // Add skip option if min is 0 (skip allowed)
     if (min === 0) {
       actions.push({ type: "skip_decision" as const });
     }
@@ -71,7 +68,5 @@ export function decomposeDecisionForAI(
     return actions;
   }
 
-  // Single-card decision: already atomic
-  // This will be handled by existing getLegalActions logic
   return [];
 }
