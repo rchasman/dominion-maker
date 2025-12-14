@@ -239,7 +239,7 @@ describe("buildStrategicContext", () => {
       // Default strategy is always included
       expect(context).toContain("aiStrategyGameplan:");
       expect(context).toContain("Adaptive");
-      expect(context).toContain("dilute deck");
+      expect(context).toContain("probability");
       expect(context).toContain("yourVictoryPoints:");
       expect(context).toContain("yourDeckComposition:");
     });
