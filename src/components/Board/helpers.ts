@@ -14,6 +14,12 @@ export function getPlayerIds(
   return getPlayersForMode(gameMode);
 }
 
+export function canSkipDecision(
+  decision: GameState["pendingDecision"],
+): boolean {
+  return (decision?.min ?? 1) === 0;
+}
+
 export function shouldSelectCard(
   cardIndex: number,
   selectedCardIndices: number[],

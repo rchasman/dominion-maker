@@ -469,7 +469,7 @@ export function handleSkipDecision(
   if (state.pendingDecision.player !== player) {
     return { ok: false, error: "Not your decision" };
   }
-  if (!state.pendingDecision.canSkip) {
+  if ((state.pendingDecision.min ?? 1) !== 0) {
     return { ok: false, error: "Cannot skip this decision" };
   }
 

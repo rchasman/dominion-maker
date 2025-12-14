@@ -60,7 +60,8 @@ export function useDecisionHandlers(params: DecisionHandlersParams) {
       gameState,
       getStateAtEvent,
     );
-    if (!displayState?.pendingDecision?.canSkip) return;
+    const canSkip = (displayState?.pendingDecision?.min ?? 1) === 0;
+    if (!canSkip) return;
 
     const result = submitDecision({ selectedCards: [] });
     if (result.ok) setSelectedCardIndices(() => []);

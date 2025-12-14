@@ -5,6 +5,7 @@ import { Card } from "./Card";
 import { Pile } from "./Pile";
 import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
+import { canSkipDecision } from "./Board/helpers";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -75,7 +76,7 @@ function getEndPhaseButtonBackground(
   pendingDecision: DecisionRequest | null | undefined,
   phase: string,
 ): string {
-  if (pendingDecision && pendingDecision.canSkip) {
+  if (pendingDecision && canSkipDecision(pendingDecision)) {
     return "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)";
   }
   if (phase === "action") {
@@ -174,7 +175,7 @@ function PlayTreasuresButton({
   onPlayAllTreasures: () => void;
   pendingDecision: DecisionRequest | null | undefined;
 }) {
-  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
 
   return (
     <button
@@ -210,7 +211,7 @@ function EndPhaseButton({
   phase: string;
   isTurnComplete: boolean;
 }) {
-  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
 
   return (
     <button

@@ -4,6 +4,7 @@ import {
   DEPLETED_RESOURCE_OPACITY,
   DISABLED_BUTTON_OPACITY,
 } from "./constants";
+import { canSkipDecision } from "./helpers";
 
 interface ActionBarProps {
   state: GameState;
@@ -48,7 +49,7 @@ function getEndPhaseButtonBackground(
   pendingDecision: DecisionRequest | null | undefined,
   phase: string,
 ): string {
-  if (pendingDecision && pendingDecision.canSkip) {
+  if (pendingDecision && canSkipDecision(pendingDecision)) {
     return "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)";
   }
   if (phase === "action") {
@@ -63,7 +64,7 @@ function getEndPhaseButtonBorder(
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
-  if (pendingDecision && pendingDecision.canSkip) return "1px solid #fbbf24";
+  if (pendingDecision && canSkipDecision(pendingDecision)) return "1px solid #fbbf24";
   if (phase === "action") return "1px solid var(--color-victory)";
   return "1px solid #666";
 }
@@ -72,7 +73,7 @@ function getEndPhaseButtonText(
   pendingDecision: DecisionRequest | null | undefined,
   phase: string,
 ): string {
-  if (pendingDecision && pendingDecision.canSkip) return "Skip";
+  if (pendingDecision && canSkipDecision(pendingDecision)) return "Skip";
   if (phase === "action") return "Skip to Buy";
   return "End Turn";
 }
@@ -177,7 +178,7 @@ function PlayTreasuresButton({
   onPlayAllTreasures,
   pendingDecision,
 }: PlayTreasuresButtonProps) {
-  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
 
   return (
     <button
@@ -215,7 +216,7 @@ function EndPhaseButton({
   phase,
   isTurnComplete,
 }: EndPhaseButtonProps) {
-  const disabled = !!(pendingDecision && !pendingDecision.canSkip);
+  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
 
   return (
     <button

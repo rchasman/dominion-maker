@@ -38,7 +38,7 @@ export function DecisionPanel({
         >
           Confirm
         </button>
-        {pendingDecision.canSkip && (
+        {(pendingDecision.min ?? 1) === 0 && (
           <button onClick={onSkipDecision} style={styles.button}>
             Skip
           </button>
