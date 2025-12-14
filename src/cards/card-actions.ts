@@ -25,7 +25,7 @@ export const CARD_ACTIONS = {
     color: "#6366F1",
   },
   draw_card: {
-    id: "topdeck_card" as const,
+    id: "draw_card" as const,
     label: "Draw",
     color: "#10B981",
   },
