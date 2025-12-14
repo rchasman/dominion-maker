@@ -1,9 +1,8 @@
 import { defineConfig } from "vite";
-import preact from "@preact/preset-vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [preact({ babel: {} })],
+  plugins: [],
   oxc: {
     jsx: {
       runtime: "automatic",
@@ -31,8 +30,8 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
+            if (id.includes("preact")) {
+              return "preact-vendor";
             }
             return "vendor";
           }
