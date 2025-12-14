@@ -58,6 +58,11 @@ export type SubmitDecisionCommand = {
   choice: DecisionChoice;
 };
 
+export type SkipDecisionCommand = {
+  type: "SKIP_DECISION";
+  player: PlayerId;
+};
+
 // Undo system
 export type RequestUndoCommand = {
   type: "REQUEST_UNDO";
@@ -88,6 +93,7 @@ export type GameCommand =
   | BuyCardCommand
   | EndPhaseCommand
   | SubmitDecisionCommand
+  | SkipDecisionCommand
   | RequestUndoCommand
   | ApproveUndoCommand
   | DenyUndoCommand;

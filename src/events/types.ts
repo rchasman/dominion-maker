@@ -210,6 +210,13 @@ export type DecisionResolvedEvent = EventMetadata & {
   choice: DecisionChoice;
 };
 
+export type DecisionSkippedEvent = EventMetadata & {
+  type: "DECISION_SKIPPED";
+  player: PlayerId;
+  cardBeingPlayed?: CardName;
+  stage?: string;
+};
+
 // Game End
 export type GameEndedEvent = EventMetadata & {
   type: "GAME_ENDED";
@@ -280,6 +287,7 @@ export type GameEvent =
   // Decisions
   | DecisionRequiredEvent
   | DecisionResolvedEvent
+  | DecisionSkippedEvent
   // Game end
   | GameEndedEvent
   // Undo
