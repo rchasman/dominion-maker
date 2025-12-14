@@ -6,7 +6,6 @@ import type {
 } from "../types/game-state";
 import type { Action } from "../types/action";
 import { agentLogger } from "../lib/logger";
-import { run } from "../lib/run";
 
 /**
  * Helper functions for multi-round consensus decision reconstruction.
@@ -30,9 +29,15 @@ export function simulateCardSelection(
 
   if (!decision) return engine;
 
-  // Update card options to remove selected card
-  // This prevents AI from voting for the same card twice
-  const updatedOptions = decision.cardOptions.filter(c => c !== card);
+  // Remove only ONE instance of the card (not all duplicates)
+  const idx = decision.cardOptions.indexOf(card);
+  const updatedOptions =
+    idx === -1
+      ? decision.cardOptions
+      : [
+          ...decision.cardOptions.slice(0, idx),
+          ...decision.cardOptions.slice(idx + 1),
+        ];
 
   return {
     ...engine,
@@ -72,9 +77,9 @@ export function isMultiActionDecision(
  * Each atomic action specifies what to do with one card.
  *
  * Example: Sentry reveals [Copper, Estate]
- * - Round 1: AI votes "trash Copper" -> cardActions[0] = "trash"
- * - Round 2: AI votes "topdeck Estate" -> cardActions[1] = "topdeck"
- * - Result: { selectedCards: [], cardActions: {0: "trash", 1: "topdeck"}, cardOrder: [1] }
+ * - Round 1: AI votes "trash Copper" -> cardActions[0] = "trash_card"
+ * - Round 2: AI votes "topdeck Estate" -> cardActions[1] = "topdeck_card"
+ * - Result: { selectedCards: [], cardActions: {0: "trash_card", 1: "topdeck_card"}, cardOrder: [1] }
  */
 export async function reconstructMultiActionDecision(
   initialEngine: DominionEngine,
