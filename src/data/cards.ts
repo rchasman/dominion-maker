@@ -58,7 +58,6 @@ export type DecisionSpec = {
   cardOptions: CardName[] | ((ctx: DecisionContext) => CardName[]);
   min: number | ((ctx: DecisionContext) => number);
   max: number | ((ctx: DecisionContext) => number);
-  canSkip?: boolean;
   metadata?:
     | Record<string, unknown>
     | ((ctx: DecisionContext) => Record<string, unknown>);

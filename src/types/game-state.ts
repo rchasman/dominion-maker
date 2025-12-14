@@ -86,7 +86,6 @@ export type DecisionRequest = {
   min?: number;
   max?: number;
   stage?: string;
-  canSkip?: boolean;
 
   // Complex multi-action mode (when actions is provided)
   actions?: CardAction[]; // Available actions per card (trash, discard, topdeck, etc.)
