@@ -44,18 +44,24 @@ STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards
 DECISION FRAMEWORK:
 When buying, ask "what's the BEST card I can afford?" not "what can I afford?"
 - Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1). Higher always dominates lower when affordable.
-- Copper trap: You already have 7. Adding more dilutes your deck for minimal gain. Almost never buy Copper.
-- Skip the buy: If your only options are Copper/Curse/Estate, END THE PHASE. Buying junk makes your deck worse. Not buying > buying junk.
+- Copper trap: You START with 7 Copper. Check you.currentDeckComposition - buying more dilutes your deck for minimal gain. Almost never buy Copper.
+- Skip the buy: Determine affordable cards (supply where cost ≤ you.currentCoins). If only Copper/Curse/Estate are affordable, END THE PHASE. Buying junk makes your deck worse. Not buying > buying junk.
 - Victory timing: Estate/Duchy clog hands without helping you buy. Only buy VP when:
-  (a) You can afford Province ($8 for 6 VP) - the only efficient VP card
-  (b) Game ending soon (Provinces low or 2+ piles nearly empty)
+  (a) You can afford Province ($8 for 6 VP) - the only efficient VP card (or Province pile empty, then buy Duchy)
+  (b) Game ending soon (check supply - when 3+ piles at ≤2 cards, game ends)
 - Dilution math: A 10-card deck draws 5 cards/turn. Adding weak cards reduces your average hand quality.
 - Action cards: Evaluate by deck improvement. +Cards/+Actions compound. Terminals (no +Action) compete for your 1 action/turn.
 
 CARD DEFINITIONS:
 ${buildCardDefinitionsTable(supply)}
 
-Task: Given CURRENT STATE and strategic context, determine the single best action.
-CRITICAL: In buy phase, check you.currentTreasuresInHand first. If it contains cards, you MUST output {type: "play_treasure", card: <one from currentTreasuresInHand>}. Only when currentTreasuresInHand is empty or not present can you buy or end phase.
-Format: TOON (tab-delimited). If STRATEGY OVERRIDE present: follow it absolutely.`;
+Task: Given CURRENT STATE and strategic context, determine the single best action. Derive valid actions from turn phases, card types, and current resources.
+
+CRITICAL BUY PHASE RULE: Check you.currentTreasuresInHand first. If it contains cards, you MUST output {type: "play_treasure", card: <one from currentTreasuresInHand>}. Only when currentTreasuresInHand is empty can you buy or end phase.
+
+VALIDATION: Only reference cards that exist in your zones:
+- play_action/play_treasure: card must be in you.currentHand
+- buy_card: card must be in supply with cost ≤ you.currentCoins
+
+If STRATEGY OVERRIDE present: follow it absolutely.`;
 }
