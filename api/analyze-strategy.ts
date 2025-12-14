@@ -28,10 +28,24 @@ const VP_VALUES = {
   GARDENS_DIVISOR: 10,
 } as const;
 
-// Create devtools middleware once at module level (singleton pattern)
-const sharedDevToolsMiddleware = devToolsMiddleware();
+// Create devtools middleware per request for independent tracking
+function createDevToolsMiddleware() {
+  return devToolsMiddleware();
+}
 
-function buildStrategyAnalysisPrompt(supply: Record<CardName, number>): string {
+function buildStrategyAnalysisPrompt(
+  supply: Record<CardName, number>,
+  hasPreviousAnalysis: boolean,
+): string {
+  const previousAnalysisGuidance = hasPreviousAnalysis
+    ? `
+CONTINUITY:
+- You provided analysis last turn - reference your previous read if relevant
+- Celebrate when players make smart pivots or ignore your advice for something better
+- Admit when your recommendation was wrong or didn't account for something
+- Track whether strategies are working out as expected`
+    : "";
+
   return `Data is TOON-encoded (self-documenting, tab-delimited).
 
 You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
@@ -43,6 +57,7 @@ For each player, provide:
 1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
 2. **Read** (2-3 sentences): Paragraph analyzing their deck, execution, and position. Be specific about card synergies, buying patterns, and deck quality. Include their main weakness.
 3. **Recommendation** (1-2 sentences): What they should do next and why. Be decisive and actionable.
+${previousAnalysisGuidance}
 
 Write with confidence and personality. Be analytical but engaging. No fluff - every word should matter.`;
 }
@@ -134,14 +149,21 @@ function buildPlayerDeckInfo(
   });
 }
 
+interface PlayerAnalysis {
+  id: string;
+  gameplan: string;
+  read: string;
+  recommendation: string;
+}
+
 // Parse request body safely
 async function parseRequestBody(
   req: VercelRequest,
-): Promise<{ currentState: GameState }> {
+): Promise<{ currentState: GameState; previousAnalysis?: PlayerAnalysis[] }> {
   const rawBody = req.body || (req.text ? await req.text() : "{}");
   const parsed: unknown =
     typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-  return parsed as { currentState: GameState };
+  return parsed as { currentState: GameState; previousAnalysis?: PlayerAnalysis[] };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -161,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { currentState } = await parseRequestBody(req);
+    const { currentState, previousAnalysis } = await parseRequestBody(req);
 
     if (!currentState) {
       return res
@@ -190,25 +212,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const playerDecks = buildPlayerDeckInfo(playerIds, currentState);
 
+    const previousAnalysisSection = previousAnalysis
+      ? `\n\nPREVIOUS ANALYSIS (last turn):\n${encodeToon(previousAnalysis)}`
+      : "";
+
     const prompt = `${encodeToon(gameContext)}
 
 ${turnHistory}
 
 PLAYER DECKS:
-${encodeToon(playerDecks)}
+${encodeToon(playerDecks)}${previousAnalysisSection}
 
 Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
-    // Use Claude Opus for high-quality strategy analysis
+    // Use GPT-5.2 for high-quality strategy analysis
     const model = wrapLanguageModel({
-      model: gateway("claude-opus-4-5-20251101"),
-      middleware: sharedDevToolsMiddleware,
+      model: gateway("gpt-5.2"),
+      middleware: createDevToolsMiddleware(),
     });
 
     // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({
       model,
-      system: buildStrategyAnalysisPrompt(currentState.supply),
+      system: buildStrategyAnalysisPrompt(currentState.supply, !!previousAnalysis),
       prompt,
       schema: StrategyAnalysisSchema,
       maxRetries: 1,

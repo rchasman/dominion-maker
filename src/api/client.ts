@@ -23,6 +23,12 @@ interface GenerateActionResponse {
 
 interface AnalyzeStrategyRequest {
   currentState: unknown;
+  previousAnalysis?: Array<{
+    id: string;
+    gameplan: string;
+    read: string;
+    recommendation: string;
+  }>;
 }
 
 interface AnalyzeStrategyResponse {

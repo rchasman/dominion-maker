@@ -164,7 +164,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [strategy]);
 
   // Strategy analysis
-  useStrategyAnalysis(engineRef, strategy, setPlayerStrategies);
+  useStrategyAnalysis(engineRef, strategy, playerStrategies, setPlayerStrategies);
 
   // Derived state
   const hasPlayableActionsValue = useMemo(

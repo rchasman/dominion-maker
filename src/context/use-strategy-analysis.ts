@@ -18,11 +18,13 @@ import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 function fetchStrategyAnalysis(
   state: GameState,
   strategy: GameStrategy,
+  currentStrategies: PlayerStrategyData,
   setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
   api.api["analyze-strategy"]
     .post({
       currentState: state,
+      previousAnalysis: currentStrategies.length > 0 ? currentStrategies : undefined,
     })
     .then(({ data, error }) => {
       if (error) {
@@ -49,6 +51,7 @@ function fetchStrategyAnalysis(
 export function useStrategyAnalysis(
   engineRef: MutableRefObject<DominionEngine | null>,
   strategy: GameStrategy,
+  currentStrategies: PlayerStrategyData,
   setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
   useEffect(() => {
@@ -62,10 +65,10 @@ export function useStrategyAnalysis(
       const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
 
       if (hasTurnEnded && state.turn >= MIN_TURN_FOR_STRATEGY) {
-        fetchStrategyAnalysis(state, strategy, setPlayerStrategies);
+        fetchStrategyAnalysis(state, strategy, currentStrategies, setPlayerStrategies);
       }
     });
 
     return unsubscribe;
-  }, [engineRef, strategy, setPlayerStrategies]);
+  }, [engineRef, strategy, currentStrategies, setPlayerStrategies]);
 }
