@@ -26,7 +26,6 @@ export function decomposeDecisionForAI(
   ) {
     const result: Action[] = [];
 
-    // Check metadata for already-made decisions
     const roundIndex = (decision.metadata?.currentRoundIndex as number) || 0;
 
     if (roundIndex >= cardOptions.length) {
