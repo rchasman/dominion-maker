@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/compat";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/types";
 import type { LLMLogEntry } from "./types";

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from "preact/compat";
 import type { CardName, GameState } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { DecisionChoice } from "../../events/types";

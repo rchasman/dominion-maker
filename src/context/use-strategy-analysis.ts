@@ -3,7 +3,7 @@
  * Fetches and stores strategy analysis after turns
  */
 
-import { useEffect, type MutableRefObject } from "react";
+import { useEffect, type MutableRefObject } from "preact/compat";
 import type { DominionEngine } from "../engine";
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState } from "../types/game-state";

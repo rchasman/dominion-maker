@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from "preact/compat";
 import { uiLogger } from "../../lib/logger";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { getDisplayState } from "./game-board-helpers";

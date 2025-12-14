@@ -3,7 +3,7 @@
  * Handles game initialization and state reset
  */
 
-import { useCallback } from "react";
+import { useCallback } from "preact/compat";
 import { DominionEngine } from "../engine";
 import { getPlayersForMode } from "../types/game-mode";
 import type { GameMode } from "../types/game-mode";

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from "preact/compat";
 import type { GameEvent } from "../../events/types";
 
 interface ScrubberDeps {

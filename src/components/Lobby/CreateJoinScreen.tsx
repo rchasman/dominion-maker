@@ -4,7 +4,7 @@ import { uiLogger } from "../../lib/logger";
  *
  * Initial screen for multiplayer - create a new room or join existing.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "preact/compat";
 import { useMultiplayer } from "../../context/multiplayer-hooks";
 
 interface CreateJoinScreenProps {

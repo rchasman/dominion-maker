@@ -1,7 +1,7 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
-import { createPortal as createReactPortal } from "react-dom";
-import type { ReactPortal } from "react";
+import { createPortal as createReactPortal } from "preact/compat";
+import type { ReactPortal } from "preact/compat";
 import { run } from "../lib/run";
 
 const MAX_TOOLTIP_HEIGHT = 500;

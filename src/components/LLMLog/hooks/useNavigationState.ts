@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef } from "preact/compat";
 import type { Turn } from "../types";
 
 export interface NavigationState {

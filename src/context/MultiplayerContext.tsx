@@ -4,7 +4,7 @@
  * Host runs DominionEngine, broadcasts events to clients.
  * Clients receive events and derive state locally.
  */
-import { createContext, useState, useRef, type ReactNode } from "react";
+import { createContext, useState, useRef, type ReactNode } from "preact/compat";
 import type { RoomState } from "../multiplayer/p2p-room";
 import { DominionEngine } from "../engine";
 import { P2PRoom } from "../multiplayer/p2p-room";

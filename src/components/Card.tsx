@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
 import { CardTooltip } from "./CardTooltip";

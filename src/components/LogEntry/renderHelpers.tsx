@@ -4,7 +4,7 @@ import type {
 } from "../../types/game-state";
 import { CardNameSpan, PlayerName } from "../LogFormatters";
 import { getCardColor } from "../../lib/card-colors";
-import type { ReactNode } from "react";
+import type { ReactNode } from "preact/compat";
 
 // Helper to convert card array to count map using reduce
 export function getCardCounts(cards: CardName[]): Map<string, number> {

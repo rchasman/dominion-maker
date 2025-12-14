@@ -10,7 +10,7 @@ import {
 } from "./LogFormatters";
 import { getCardColor } from "../lib/card-colors";
 import { CARDS } from "../data/cards";
-import type { ReactNode } from "react";
+import type { ReactNode } from "preact/compat";
 import type { GameMode } from "../types/game-mode";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 import {

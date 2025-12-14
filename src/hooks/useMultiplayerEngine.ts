@@ -6,8 +6,8 @@
  * - Client: Receives events, applies them locally
  */
 
-import { useCallback, useRef, useEffect, useState } from "react";
-import type { RefObject } from "react";
+import { useCallback, useRef, useEffect, useState } from "preact/compat";
+import type { RefObject } from "preact/compat";
 import { DominionEngine } from "../engine";
 import type { GameState, CardName, Player } from "../types/game-state";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";

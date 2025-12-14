@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "preact/compat";
 import type { GameEvent } from "../../events/types";
 
 const PLAYBACK_INTERVAL_MS = 500;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from "preact/compat";
 import { uiLogger } from "../../lib/logger";
 import { getDisplayState } from "./game-board-helpers";
 import { useCardHandlers } from "./useCardHandlers";

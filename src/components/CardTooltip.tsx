@@ -1,7 +1,7 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
-import { createPortal } from "react-dom";
-import type { ReactPortal } from "react";
+import { createPortal } from "preact/compat";
+import type { ReactPortal } from "preact/compat";
 import { run } from "../lib/run";
 
 interface CardTooltipProps {

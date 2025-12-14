@@ -1,4 +1,4 @@
-import type { MutableRefObject } from "react";
+import type { MutableRefObject } from "preact/compat";
 import type { P2PRoom } from "../p2p-room";
 import type { DominionEngine } from "../../engine";
 import type { Player, CardName } from "../../types/game-state";

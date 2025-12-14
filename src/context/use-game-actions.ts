@@ -3,7 +3,7 @@
  * Manages all game command dispatching
  */
 
-import { useCallback, type MutableRefObject } from "react";
+import { useCallback, type MutableRefObject } from "preact/compat";
 import type { DominionEngine } from "../engine";
 import type { CardName, GameState } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";

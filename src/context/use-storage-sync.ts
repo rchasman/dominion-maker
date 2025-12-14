@@ -3,7 +3,7 @@
  * Consolidates all useSyncToLocalStorage calls
  */
 
-import { useEffect } from "react";
+import { useEffect } from "preact/compat";
 import { useSyncToLocalStorage } from "../hooks/useSyncToLocalStorage";
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";

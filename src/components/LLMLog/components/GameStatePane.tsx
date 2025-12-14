@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/compat";
 import type { CardName, TurnAction } from "../../../types/game-state";
 import type { GameStateSnapshot } from "../types";
 import { getCardColor } from "../utils/cardUtils";

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from "preact/compat";
 import {
   GRID_TEMPLATE_COLUMNS,
   PREVIEW_INDICATOR_TOP,

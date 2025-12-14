@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from "preact/compat";
 import type { PaneType } from "../components/PaneTabSwitcher";
 
 export function useActivePane() {

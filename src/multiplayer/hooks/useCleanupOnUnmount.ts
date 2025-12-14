@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from "react";
+import { useEffect, type MutableRefObject } from "preact/compat";
 import type { P2PRoom } from "../p2p-room";
 import type { DominionEngine } from "../../engine";
 

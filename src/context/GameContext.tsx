@@ -13,7 +13,7 @@ import {
   useMemo,
   type ReactNode,
   type MutableRefObject,
-} from "react";
+} from "preact/compat";
 import type { GameState, CardName } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { GameEvent, DecisionChoice } from "../events/types";

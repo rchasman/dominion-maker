@@ -8,7 +8,7 @@ import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "preact/compat";
 
 function CyclingSquare() {
   const glyphs = ["▤", "▥", "▦"];

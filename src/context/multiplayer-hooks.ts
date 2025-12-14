@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext } from "preact/compat";
 import { MultiplayerContext } from "./MultiplayerContext";
 
 export function useMultiplayer() {

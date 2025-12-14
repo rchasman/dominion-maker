@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from "preact/compat";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import type { GameState, Player } from "../../types/game-state";
 import type { PlayerInfo } from "../../multiplayer/p2p-room";

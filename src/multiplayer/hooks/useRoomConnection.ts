@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, type MutableRefObject } from "react";
+import { useState, useCallback, useMemo, type MutableRefObject } from "preact/compat";
 import { P2PRoom, generateRoomCode, type PlayerInfo } from "../p2p-room";
 import { multiplayerLogger } from "../../lib/logger";
 import { saveSession, clearSession } from "../storage";

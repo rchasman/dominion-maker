@@ -1,4 +1,4 @@
-import { useCallback, type MutableRefObject } from "react";
+import { useCallback, type MutableRefObject } from "preact/compat";
 import type { P2PRoom, PlayerInfo } from "../p2p-room";
 import type { DominionEngine } from "../../engine";
 import type { Player } from "../../types/game-state";

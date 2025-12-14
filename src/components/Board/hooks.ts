@@ -3,7 +3,7 @@ import {
   useCallback,
   type Dispatch,
   type SetStateAction,
-} from "react";
+} from "preact/compat";
 import { useGame } from "../../context/hooks";
 import { useBuyCardLogic } from "../../hooks/useBuyCardLogic";
 import type { CardName, GameState } from "../../types/game-state";

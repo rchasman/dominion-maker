@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "preact/compat";
 import { useSyncToLocalStorage } from "../../hooks/useSyncToLocalStorage";
 import {
   DEFAULT_LOG_HEIGHT_PERCENT,
