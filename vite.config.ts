@@ -2,7 +2,7 @@ import { createLogger, defineConfig } from "vite";
 import { analyzer } from "vite-bundle-analyzer";
 
 const logger = createLogger();
-const originalWarn = logger.warn;
+const originalWarn = logger.warn.bind(logger);
 logger.warn = (msg, options) => {
   if (msg.includes("PLUGIN_TIMINGS")) return;
   originalWarn(msg, options);
