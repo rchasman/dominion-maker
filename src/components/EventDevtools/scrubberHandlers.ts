@@ -1,3 +1,4 @@
+import type { MutableRef, StateUpdater } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 
@@ -6,19 +7,19 @@ interface ScrubberDeps {
   rootEvents: GameEvent[];
   scrubberIndex: number | null;
   isPlaying: boolean;
-  playIntervalRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  playIntervalRef: MutableRef<NodeJS.Timeout | null>;
   onScrub: ((eventId: string | null) => void) | undefined;
 }
 
 interface ScrubberActions {
-  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  setSelectedEventId: React.Dispatch<React.SetStateAction<string | null>>;
-  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  setScrubberIndex: StateUpdater<number | null>;
+  setSelectedEventId: StateUpdater<string | null>;
+  setIsPlaying: StateUpdater<boolean>;
 }
 
 function stopPlayback(
-  playIntervalRef: React.MutableRefObject<NodeJS.Timeout | null>,
-  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
+  playIntervalRef: MutableRef<NodeJS.Timeout | null>,
+  setIsPlaying: StateUpdater<boolean>,
 ) {
   setIsPlaying(false);
   if (playIntervalRef.current) {
@@ -31,10 +32,10 @@ function useHandleScrubberChange(
   rootEvents: GameEvent[],
   events: GameEvent[],
   onScrub: ((eventId: string | null) => void) | undefined,
-  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>,
+  setScrubberIndex: StateUpdater<number | null>,
 ) {
   return useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: Event) => {
       const target = e.target as HTMLInputElement;
       const rootIndex = parseInt(target.value, 10);
       const rootEvent = rootEvents[rootIndex];
@@ -55,7 +56,7 @@ function useHandleRewindToBeginning(
   rootEvents: GameEvent[],
   events: GameEvent[],
   onScrub: ((eventId: string | null) => void) | undefined,
-  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>,
+  setScrubberIndex: StateUpdater<number | null>,
 ) {
   return useCallback(() => {
     if (rootEvents.length > 0) {
@@ -143,7 +144,7 @@ export function useScrubberHandlers(
   ]);
 
   const handleScrubberChangeWithPause = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: Event) => {
       if (isPlaying) {
         stopPlayback(playIntervalRef, setIsPlaying);
       }

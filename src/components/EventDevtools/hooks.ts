@@ -1,3 +1,4 @@
+import type { StateUpdater, MutableRef } from "preact/hooks";
 import { useEffect, useRef, useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 
@@ -11,8 +12,8 @@ interface PlaybackConfig {
 }
 
 interface PlaybackActions {
-  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  setScrubberIndex: StateUpdater<number | null>;
+  setIsPlaying: StateUpdater<boolean>;
 }
 
 export function useListScroll(scrubberIndex: number | null) {
@@ -35,7 +36,7 @@ export function useAutoScroll(
   scrubberIndex: number | null,
   eventsLength: number,
   isOpen: boolean,
-  listRefInternalRef: React.MutableRefObject<HTMLDivElement | null>,
+  listRefInternalRef: MutableRef<HTMLDivElement | null>,
 ) {
   useEffect(() => {
     if (scrubberIndex === null && isOpen) {
@@ -51,7 +52,7 @@ export function useAutoScroll(
 
 export function useScrubberScroll(
   scrubberIndex: number | null,
-  listRefInternalRef: React.MutableRefObject<HTMLDivElement | null>,
+  listRefInternalRef: MutableRef<HTMLDivElement | null>,
 ) {
   useEffect(() => {
     if (scrubberIndex !== null && listRefInternalRef.current) {

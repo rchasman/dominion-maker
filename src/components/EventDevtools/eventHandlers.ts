@@ -1,3 +1,4 @@
+import type { MutableRef, StateUpdater } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import { useScrubberHandlers } from "./scrubberHandlers";
@@ -8,15 +9,15 @@ interface HandlerDeps {
   selectedEventId: string | null;
   scrubberIndex: number | null;
   isPlaying: boolean;
-  playIntervalRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  playIntervalRef: MutableRef<NodeJS.Timeout | null>;
   onScrub: ((eventId: string | null) => void) | undefined;
   onBranchFrom: ((eventId: string) => void) | undefined;
 }
 
 interface HandlerActions {
-  setScrubberIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  setSelectedEventId: React.Dispatch<React.SetStateAction<string | null>>;
-  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  setScrubberIndex: StateUpdater<number | null>;
+  setSelectedEventId: StateUpdater<string | null>;
+  setIsPlaying: StateUpdater<boolean>;
 }
 
 export function useEventHandlers(deps: HandlerDeps, actions: HandlerActions) {

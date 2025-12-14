@@ -8,7 +8,7 @@ interface TimelineScrubberProps {
   isPlaying: boolean;
   onRewindToBeginning: () => void;
   onPlayPause: () => void;
-  onScrubberChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onScrubberChange: (e: Event) => void;
   onResetScrubber: () => void;
 }
 
