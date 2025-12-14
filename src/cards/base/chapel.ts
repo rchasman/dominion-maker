@@ -4,7 +4,6 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isInitialCall } from "../effect-types";
-import { removeCards } from "../../lib/card-array-utils";
 
 const CHAPEL_MAX_TRASH = 4;
 
@@ -34,7 +33,6 @@ export const chapel: CardEffect = ({
         max: CHAPEL_MAX_TRASH,
         cardBeingPlayed: "Chapel",
         stage: "trash",
-        metadata: { trashedCount: 0 },
       },
     };
   }

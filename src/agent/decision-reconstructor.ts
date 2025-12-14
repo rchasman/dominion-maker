@@ -3,70 +3,16 @@ import type {
   DecisionChoice,
   CardName,
   DecisionRequest,
-  GameState,
 } from "../types/game-state";
 import type { Action } from "../types/action";
 import { agentLogger } from "../lib/logger";
-import { removeCards } from "../lib/card-array-utils";
+import { run } from "../lib/run";
 
 /**
- * Accumulate AI atomic actions via multi-round consensus voting.
- * Used when batch decisions (max > 1) are decomposed for MAKER voting.
- *
- * This runs consensus MULTIPLE times (up to max), with each round voting on
- * the next atomic action. The simulated state is updated between rounds so
- * AI sees the context of previous selections.
- *
- * @param runSingleConsensus - Function that runs one round of consensus voting
- * @param initialEngine - Engine state at decision start
- * @returns Full batch of selected cards to submit
+ * Helper functions for multi-round consensus decision reconstruction.
+ * Batch reconstruction (Chapel/Cellar) is implemented inline in game-agent.ts.
+ * Multi-action reconstruction (Sentry/Library) uses reconstructMultiActionDecision.
  */
-export async function reconstructBatchDecision(
-  runSingleConsensus: (engine: DominionEngine) => Promise<Action>,
-  initialEngine: DominionEngine,
-): Promise<DecisionChoice> {
-  const decision = initialEngine.state.pendingDecision;
-  if (!decision) throw new Error("No pending decision for reconstruction");
-
-  const { max } = decision;
-  const selectedCards: CardName[] = [];
-  let simulatedEngine = initialEngine;
-
-  agentLogger.info(
-    `Starting multi-round consensus for batch decision: max=${max}`,
-  );
-
-  // Run consensus up to max times
-  for (let round = 0; round < max; round++) {
-    agentLogger.debug(`Consensus round ${round + 1}/${max}`);
-
-    // Run one round of consensus voting on decomposed actions
-    const action = await runSingleConsensus(simulatedEngine);
-
-    // Stop if AI votes to skip
-    if (action.type === "skip_decision") {
-      agentLogger.info(`AI voted to skip after ${selectedCards.length} selections`);
-      break;
-    }
-
-    // Extract card from atomic action
-    const card = action.card;
-    if (!card) {
-      agentLogger.warn("Action missing card, stopping reconstruction");
-      break;
-    }
-
-    selectedCards.push(card);
-    agentLogger.debug(`Round ${round + 1} selected: ${card}`);
-
-    // Simulate card removal for next round of voting
-    // This ensures AI sees updated context: "I already selected Copper"
-    simulatedEngine = simulateCardSelection(simulatedEngine, card);
-  }
-
-  agentLogger.info(`Batch reconstructed: ${selectedCards.length} cards selected`);
-  return { selectedCards };
-}
 
 /**
  * Simulate a card selection without emitting events.
