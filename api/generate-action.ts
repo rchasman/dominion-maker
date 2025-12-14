@@ -131,7 +131,12 @@ setInterval(cleanupOldMiddleware, CACHE_CLEANUP_INTERVAL);
 
 function getDevToolsMiddleware(
   actionId?: string,
-): ReturnType<typeof devToolsMiddleware> {
+): ReturnType<typeof devToolsMiddleware> | undefined {
+  // Only use devtools in development
+  if (process.env.NODE_ENV === "production") {
+    return undefined;
+  }
+
   if (!actionId) {
     // No grouping - create fresh middleware
     return devToolsMiddleware();
@@ -457,10 +462,13 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
-  const model = wrapLanguageModel({
-    model: gateway(modelName),
-    middleware: getDevToolsMiddleware(actionId),
-  });
+  const middleware = getDevToolsMiddleware(actionId);
+  const model = middleware
+    ? wrapLanguageModel({
+        model: gateway(modelName),
+        middleware,
+      })
+    : gateway(modelName);
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
   const recentTurnsStr = formatTurnHistoryForAnalysis(currentState, format);

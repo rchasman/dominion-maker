@@ -29,8 +29,12 @@ const VP_VALUES = {
   GARDENS_DIVISOR: 10,
 } as const;
 
-// Create devtools middleware per request for independent tracking
+// Create devtools middleware per request for independent tracking (development only)
 function createDevToolsMiddleware() {
+  // Only use devtools in development
+  if (process.env.NODE_ENV === "production") {
+    return undefined;
+  }
   return devToolsMiddleware();
 }
 
@@ -234,10 +238,13 @@ ${encodeToon(playerDecks)}${previousAnalysisSection}
 Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
 
     // Use GPT-5.2 for high-quality strategy analysis
-    const model = wrapLanguageModel({
-      model: gateway("gpt-5.2"),
-      middleware: createDevToolsMiddleware(),
-    });
+    const middleware = createDevToolsMiddleware();
+    const model = middleware
+      ? wrapLanguageModel({
+          model: gateway("gpt-5.2"),
+          middleware,
+        })
+      : gateway("gpt-5.2");
 
     // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({
