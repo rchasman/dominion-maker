@@ -3,7 +3,10 @@ import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
-import { buildStrategicContext, formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
+import {
+  buildStrategicContext,
+  formatTurnHistoryForAnalysis,
+} from "../src/agent/strategic-context";
 import { CARDS } from "../src/data/cards";
 import { apiLogger } from "../src/lib/logger";
 import { z } from "zod";
@@ -115,7 +118,9 @@ function cleanupOldMiddleware(): void {
 // Run cleanup periodically
 setInterval(cleanupOldMiddleware, CACHE_CLEANUP_INTERVAL);
 
-function getDevToolsMiddleware(actionId?: string): ReturnType<typeof devToolsMiddleware> {
+function getDevToolsMiddleware(
+  actionId?: string,
+): ReturnType<typeof devToolsMiddleware> {
   if (!actionId) {
     // No grouping - create fresh middleware
     return devToolsMiddleware();
@@ -188,7 +193,6 @@ function parseRequestBody(req: VercelRequest): RequestBody {
   ) as RequestBody;
 }
 
-
 // Convert card array to counts for token efficiency
 function cardArrayToCounts(cards: string[]): Record<string, number> {
   return cards.reduce(
@@ -226,7 +230,11 @@ function optimizeStateForAI(state: GameState): unknown {
   // Calculate effective card costs (base cost - active reductions)
   const costReduction = state.activeEffects
     .filter(e => e.effectType === "cost_reduction")
-    .reduce((total, e) => total + ((e.parameters as { amount?: number })?.amount ?? 0), 0);
+    .reduce(
+      (total, e) =>
+        total + ((e.parameters as { amount?: number })?.amount ?? 0),
+      0,
+    );
 
   // Transform supply to array with counts and effective costs (effects now in system prompt)
   const supplyWithCounts = Object.entries(state.supply).map(([card, count]) => {
@@ -259,7 +267,9 @@ function optimizeStateForAI(state: GameState): unknown {
     trash: state.trash,
 
     // Decisions
-    ...(state.pendingDecision ? { pendingDecision: state.pendingDecision } : {}),
+    ...(state.pendingDecision
+      ? { pendingDecision: state.pendingDecision }
+      : {}),
 
     // Optional fields
     ...(state.subPhase ? { subPhase: state.subPhase } : {}),
@@ -294,15 +304,18 @@ function buildUserMessage(params: {
   // Optimize state by converting arrays to counts
   const optimizedState = optimizeStateForAI(currentState);
 
-  // Build structured prompt sections
-  const sections: string[] = [strategicContext];
+  // Build structured prompt sections: state → strategy → history → options → decision
+  const sections: string[] = [];
 
   // Current state
   const stateStr =
     format === "toon"
       ? encodeToon(optimizedState)
       : JSON.stringify(optimizedState, null, JSON_INDENT_SPACES);
-  sections.push(`Current state:\n${stateStr}`);
+  sections.push(`CURRENT STATE:\n${stateStr}`);
+
+  // Strategic context
+  sections.push(strategicContext);
 
   // Recent turn history (if available)
   if (recentTurnsStr) {
@@ -315,7 +328,7 @@ function buildUserMessage(params: {
       format === "toon"
         ? encodeToon(currentState.turnHistory)
         : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES);
-    sections.push(`ACTIONS TAKEN THIS TURN (so far):\n${turnHistoryContent}`);
+    sections.push(`ACTIONS TAKEN THIS TURN:\n${turnHistoryContent}`);
   }
 
   // Human choice (if applicable)
@@ -332,12 +345,12 @@ function buildUserMessage(params: {
     format === "toon"
       ? encodeToon(legalActions)
       : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
-  sections.push(`LEGAL ACTIONS (you MUST choose one of these):\n${legalActionsContent}`);
+  sections.push(`LEGAL ACTIONS:\n${legalActionsContent}`);
 
   // Question prompt
   const promptQuestion = currentState.pendingDecision
-    ? `${currentState.pendingDecision.player.toUpperCase()} must respond to: ${currentState.pendingDecision.prompt}\nWhat action should ${currentState.pendingDecision.player} take?`
-    : `What is the next atomic action for ${currentState.activePlayer}?`;
+    ? `${currentState.pendingDecision.player.toUpperCase()} must respond to: ${currentState.pendingDecision.prompt}\nChoose ONE action from LEGAL ACTIONS.`
+    : `Choose ONE action from LEGAL ACTIONS for ${currentState.activePlayer}.`;
   sections.push(promptQuestion);
 
   return sections.join("\n\n");
@@ -465,7 +478,9 @@ async function processGenerationRequest(
     apiLogger.error(`${provider} structured output failed: ${error.message}`);
 
     if (error.text) {
-      apiLogger.error(`${provider} raw response text: ${error.text.slice(0, 500)}`);
+      apiLogger.error(
+        `${provider} raw response text: ${error.text.slice(0, 500)}`,
+      );
     }
 
     return res.status(HTTP_INTERNAL_ERROR).json({

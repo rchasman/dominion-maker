@@ -2,7 +2,9 @@ import { CARDS } from "../data/cards";
 import { encodeToon } from "../lib/toon";
 import type { CardName } from "../types/game-state";
 
-export function buildCardDefinitionsTable(supply: Record<CardName, number>): string {
+export function buildCardDefinitionsTable(
+  supply: Record<CardName, number>,
+): string {
   // Only include cards that are in the current game's supply
   const cardsInSupply = Object.keys(supply) as CardName[];
 
@@ -22,11 +24,7 @@ export function buildCardDefinitionsTable(supply: Record<CardName, number>): str
 }
 
 export function buildSystemPrompt(supply: Record<CardName, number>): string {
-  return `Data is TOON-encoded (self-documenting, tab-delimited).
-
-You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
-
-Dominion: Deck-building game. Win: most VP when game ends (supply piles empty). Bought cards recur in future hands. Build engine first (more coins/actions per turn), score VP later. VP cards score but generate no resources - buying them early weakens your engine.
+  return `Dominion: Deck-building game. Win: most VP when game ends (supply piles empty). Bought cards recur in future hands. Build engine first (more coins/actions per turn), score VP later. VP cards score but generate no resources - buying them early weakens your engine.
 
 Turn phases: Action → Buy → Cleanup
 - Action: play action cards (costs 1 yourActions per card), then end_phase
@@ -34,14 +32,12 @@ Turn phases: Action → Buy → Cleanup
 - Cleanup: discard all, draw 5, reset to 1/1/0
 
 Resources reset each cleanup:
-- yourActions: play action cards (action phase only)
-- yourBuys: buy cards (buy phase only)
-- yourCoins: accumulated by playing treasures, spent buying cards (buy phase only)
+- yourActions: play action cards (action phase)
+- yourBuys: buy cards (buy phase)
+- yourCoins: accumulated by playing treasures, spent buying cards (buy phase)
 
-If STRATEGY OVERRIDE present: follow absolutely.
-
-CARD DEFINITIONS (static reference - includes coin values):
+CARD DEFINITIONS:
 ${buildCardDefinitionsTable(supply)}
 
-Current state shows effective costs after reductions.`;
+Format: TOON (tab-delimited). If STRATEGY OVERRIDE in context: follow it absolutely.`;
 }

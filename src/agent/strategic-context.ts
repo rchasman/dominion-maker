@@ -46,7 +46,7 @@ const SUMMARIES_PER_TURN = 2;
 export const DEFAULT_STRATEGY = {
   gameplan: "Adaptive - Evaluating Options",
   read: "Deck composition is probability. Each weak card reduces chance of drawing strong cards. Engine strength compounds each shuffle.",
-  recommendation: "Optimize for long-term deck quality. Temporary power matters more than immediate VP.",
+  recommendation: "Optimize for long-term deck quality over immediate gains.",
 };
 
 function extractRecentTurns(
