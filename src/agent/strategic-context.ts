@@ -45,8 +45,8 @@ const SUMMARIES_PER_TURN = 2;
  */
 export const DEFAULT_STRATEGY = {
   gameplan: "Adaptive - Evaluating Options",
-  read: "Deck cycles every ~4 turns (10 starting cards, draw 5 per turn). Each card added affects all future hands. Weak cards dilute probability of drawing strong cards.",
-  recommendation: "Cards bought now affect all future turns. Higher coin generation enables better purchases. More actions enable more action plays.",
+  read: "Deck composition is probability. Each weak card reduces chance of drawing strong cards. Engine strength compounds each shuffle.",
+  recommendation: "Optimize for long-term deck quality. Temporary power matters more than immediate VP.",
 };
 
 function extractRecentTurns(

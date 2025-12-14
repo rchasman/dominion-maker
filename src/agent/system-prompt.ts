@@ -26,6 +26,8 @@ export function buildSystemPrompt(supply: Record<CardName, number>): string {
 
 You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
 
+Dominion: Deck-building game. Win: most VP when game ends (supply piles empty). Bought cards recur in future hands. Build engine first (more coins/actions per turn), score VP later. VP cards score but generate no resources - buying them early weakens your engine.
+
 Turn phases: Action → Buy → Cleanup
 - Action: play action cards (costs 1 yourActions per card), then end_phase
 - Buy: play treasures FREE (adds coins to yourCoins), buy cards (costs yourBuys + yourCoins), then end_phase
