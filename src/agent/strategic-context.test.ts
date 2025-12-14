@@ -55,36 +55,33 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      // Core strategic insights only
-      expect(context).toContain("gameStage:");
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
+      // Only AI strategy, no game state (moved to main state object)
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiStrategyRead:");
+      expect(context).toContain("aiStrategyRecommendation:");
 
-      // All derivable stats removed
-      expect(context).not.toContain("currentTurnNumber:");
-      expect(context).not.toContain("yourTreasureCount:");
-      expect(context).not.toContain("yourDeckTotalCards:");
-      expect(context).not.toContain("yourDeckCycleTime:");
+      // Game state facts removed (now in you/opponent objects)
+      expect(context).not.toContain("gameStage:");
+      expect(context).not.toContain("yourVictoryPoints:");
+      expect(context).not.toContain("yourDeckComposition:");
     });
 
-    it("should show correct VP scores", () => {
+    it("should use default strategy when none provided", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      // Each player has 1 Estate = 1 VP
-      expect(context).toContain("yourVictoryPoints: 1");
-      expect(context).toContain("opponentVictoryPoints: 1");
+      // Default strategy is included
+      expect(context).toContain("Build Economy");
+      expect(context).toContain("Silver > Copper");
     });
 
-    it("should focus on strategic data not redundant state", () => {
+    it("should be compact without game state duplication", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       const context = buildStrategicContext(state);
 
-      // Deck composition is strategic (counts across all zones)
-      expect(context).toContain("yourDeckComposition:");
-      // Hand is redundant with state.players[player].hand
+      // No zone details (hand, deck, discard - in main state)
       expect(context).not.toContain("handCards[");
+      expect(context).not.toContain("deckCards[");
     });
   });
 
@@ -93,44 +90,33 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai1", ["ai1", "ai2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
-      expect(context).toContain("gameStage:");
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiStrategyRead:");
+      expect(context).toContain("aiStrategyRecommendation:");
     });
 
     it("should build context for ai2 player", () => {
       const state = createMockGameState("ai2", ["ai1", "ai2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiStrategyRead:");
+      expect(context).toContain("aiStrategyRecommendation:");
     });
 
-    it("should show correct perspective for ai1", () => {
+    it("should not expose opponent's hand or private info", () => {
       const state = createMockGameState("ai1", ["ai1", "ai2"]);
-      state.players.ai1.hand = ["Gold", "Silver"];
+      state.players.ai1.hand = ["Witch", "Bandit"];
       state.players.ai2.hand = ["Copper", "Copper"];
 
       const context = buildStrategicContext(state);
 
-      // ai1's perspective - deck composition not hand
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("Gold");
+      // No hand details in strategic context (handled in main state)
       expect(context).not.toContain("handCards[");
-    });
-
-    it("should show correct perspective for ai2", () => {
-      const state = createMockGameState("ai2", ["ai1", "ai2"]);
-      state.players.ai1.hand = ["Gold", "Silver"];
-      state.players.ai2.hand = ["Copper", "Copper"];
-
-      const context = buildStrategicContext(state);
-
-      // ai2's perspective - deck composition not hand
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).not.toContain("handCards[");
+      expect(context).not.toContain("Witch");
+      expect(context).not.toContain("Bandit");
     });
   });
 
@@ -139,23 +125,21 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("player1", ["player1", "player2"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
     });
 
     it("should work with custom player IDs", () => {
       const state = createMockGameState("alice", ["alice", "bob"]);
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
     });
   });
 
   describe("deck composition", () => {
-    it("should show composition across all zones", () => {
+    it("should not contain deck composition (moved to main state)", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.players.ai.deck = ["Copper", "Copper", "Estate"];
       state.players.ai.hand = ["Silver"];
@@ -164,44 +148,43 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("Copper: 2");
-      expect(context).toContain("Estate: 1");
-      expect(context).toContain("Silver: 1");
-      expect(context).toContain("Gold: 1");
+      // Deck composition moved to main state (you.currentDeckComposition)
+      expect(context).not.toContain("yourDeckComposition:");
+      expect(context).not.toContain("Copper:");
+      expect(context).not.toContain("Estate:");
 
-      // All calculated stats removed
-      expect(context).not.toContain("yourDeckTotalCards:");
-      expect(context).not.toContain("yourTreasureCount:");
-      expect(context).not.toContain("yourTotalTreasureValue:");
+      // Only strategy remains
+      expect(context).toContain("aiStrategyGameplan:");
     });
 
-    it("should focus on deck composition not zone sizes", () => {
+    it("should focus only on AI strategy not state facts", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.players.ai.deck = ["Copper", "Copper", "Copper"];
       state.players.ai.discard = ["Silver", "Gold"];
 
       const context = buildStrategicContext(state);
 
-      expect(context).toContain("yourDeckComposition:");
-      // Draw/discard pile sizes are redundant with state
+      // No deck data
+      expect(context).not.toContain("yourDeckComposition:");
       expect(context).not.toContain("yourDrawPileCount:");
       expect(context).not.toContain("yourDiscardPileCount:");
     });
   });
 
   describe("supply status", () => {
-    it("should not duplicate supply (already in state)", () => {
+    it("should not duplicate supply or game stage (in main state)", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.supply.Province = 5;
       state.supply.Duchy = 3;
 
       const context = buildStrategicContext(state);
 
-      // Supply is redundant with state.supply
+      // Supply and game stage in main state
       expect(context).not.toContain("supplyPiles:");
-      // But strategic insights remain
-      expect(context).toContain("gameStage:");
+      expect(context).not.toContain("gameStage:");
+
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
     });
   });
 
@@ -238,10 +221,12 @@ describe("buildStrategicContext", () => {
 
       // Default strategy is always included
       expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("Adaptive");
-      expect(context).toContain("probability");
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
+      expect(context).toContain("Build Economy");
+      expect(context).toContain("Silver > Copper");
+
+      // No game state facts
+      expect(context).not.toContain("yourVictoryPoints:");
+      expect(context).not.toContain("yourDeckComposition:");
     });
   });
 
@@ -303,7 +288,7 @@ describe("buildStrategicContext", () => {
   });
 
   describe("minimal strategic context", () => {
-    it("should only include non-derivable strategic insights", () => {
+    it("should only include AI strategy not game state", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.phase = "buy";
       state.coins = 5;
@@ -313,20 +298,16 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      // Core strategic insights only
-      expect(context).toContain("gameStage:");
-      expect(context).toContain("yourVictoryPoints:");
-      expect(context).toContain("opponentVictoryPoints:");
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("opponentDeckComposition:");
+      // Only AI strategy
+      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiStrategyRead:");
+      expect(context).toContain("aiStrategyRecommendation:");
 
-      // All derivable/redundant fields removed
+      // All game state moved to main state object
+      expect(context).not.toContain("gameStage:");
+      expect(context).not.toContain("yourVictoryPoints:");
+      expect(context).not.toContain("yourDeckComposition:");
       expect(context).not.toContain("currentTurnNumber:");
-      expect(context).not.toContain("yourDeckTotalCards:");
-      expect(context).not.toContain("yourTreasureCount:");
-      expect(context).not.toContain("yourAvgTreasureValue:");
-      expect(context).not.toContain("yourDeckCycleTime:");
-      expect(context).not.toContain("opponentTotalTreasureValue:");
       expect(context).not.toContain("handCards:");
       expect(context).not.toContain("supplyPiles:");
     });
@@ -339,11 +320,12 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state);
 
-      // Core insights only
-      expect(context).toContain("yourDeckComposition:");
-      expect(context).toContain("gameStage:");
+      // Only strategy
+      expect(context).toContain("aiStrategyGameplan:");
 
-      // Everything else removed
+      // No state facts
+      expect(context).not.toContain("yourDeckComposition:");
+      expect(context).not.toContain("gameStage:");
       expect(context).not.toContain("yourActionCount:");
       expect(context).not.toContain("buyableWithCurrentCoins:");
     });
