@@ -1,4 +1,4 @@
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import type { GameState, Player } from "../../types/game-state";
 import type { PlayerInfo } from "../../multiplayer/p2p-room";
@@ -65,7 +65,7 @@ export function GameOverModal({
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, JSX.CSSProperties> = {
   modal: {
     position: "fixed",
     inset: 0,

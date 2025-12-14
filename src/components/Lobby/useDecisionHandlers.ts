@@ -1,4 +1,4 @@
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import { uiLogger } from "../../lib/logger";
 import { getDisplayState } from "./game-board-helpers";
 import type { GameState } from "../../types/game-state";

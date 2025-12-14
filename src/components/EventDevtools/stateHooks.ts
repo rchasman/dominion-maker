@@ -1,4 +1,4 @@
-import { useMemo } from "preact/compat";
+import { useMemo } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import type { EventCategory } from "./constants";
 import { projectState } from "../../events/project";

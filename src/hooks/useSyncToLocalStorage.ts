@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "preact/compat";
-
+import { useEffect, useRef } from "preact/hooks";
 /**
  * Options for syncing to localStorage
  */

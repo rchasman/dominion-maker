@@ -1,4 +1,4 @@
-import { useMemo } from "preact/compat";
+import { useMemo } from "preact/hooks";
 import type { Action } from "../../../types/action";
 import type { LLMLogEntry, Turn, PendingData } from "../types";
 

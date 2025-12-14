@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/compat";
+import { useState, useEffect } from "preact/hooks";
 import { getModelColor } from "../../../config/models";
 import type { TimingData, ModelStatus } from "../types";
 import { run } from "../../../lib/run";

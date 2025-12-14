@@ -1,4 +1,4 @@
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import type { CardName, TurnAction } from "../../../types/game-state";
 import type { GameStateSnapshot } from "../types";
 import { getCardColor } from "../utils/cardUtils";

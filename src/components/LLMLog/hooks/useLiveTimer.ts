@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/compat";
+import { useState, useEffect } from "preact/hooks";
 import type { LLMLogEntry } from "../types";
 
 const TIMER_INTERVAL_MS = 50;

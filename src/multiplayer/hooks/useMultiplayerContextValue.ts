@@ -1,4 +1,4 @@
-import { useMemo } from "preact/compat";
+import { useMemo } from "preact/hooks";
 import type { MultiplayerContextValue } from "../types";
 
 interface ConnectionData {

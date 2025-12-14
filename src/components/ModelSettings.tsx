@@ -1,4 +1,4 @@
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import type { ModelSettings } from "../agent/game-agent";
 import { ModelPicker } from "./ModelPicker";
 

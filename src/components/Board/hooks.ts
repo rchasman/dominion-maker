@@ -1,9 +1,4 @@
-import {
-  useState,
-  useCallback,
-  type Dispatch,
-  type SetStateAction,
-} from "preact/compat";
+import { useState, useCallback, type StateUpdater } from "preact/hooks";
 import { useGame } from "../../context/hooks";
 import { useBuyCardLogic } from "../../hooks/useBuyCardLogic";
 import type { CardName, GameState } from "../../types/game-state";
@@ -70,7 +65,7 @@ interface CardSelectionHook {
   toggleCardSelection: (index: number) => void;
   addCardSelection: (index: number) => void;
   clearSelection: () => void;
-  setSelectedCardIndices: Dispatch<SetStateAction<number[]>>;
+  setSelectedCardIndices: StateUpdater<number[]>;
 }
 
 export function useCardSelection(): CardSelectionHook {

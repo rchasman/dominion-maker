@@ -1,7 +1,7 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
-import { createPortal as createReactPortal } from "preact/compat";
 import { run } from "../lib/run";
+import { createPortal } from "preact/compat";
 
 const MAX_TOOLTIP_HEIGHT = 500;
 const CARD_HEIGHT_ESTIMATE = 80;
@@ -283,7 +283,7 @@ export function PileTooltip({
   const borderColor = getBorderColor(pileType);
   const titleText = getTitleText(pileType);
 
-  const element = (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -318,13 +318,7 @@ export function PileTooltip({
           titleText={titleText}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
-
-  const container = document.body;
-  if (!container) {
-    throw new Error("document.body is null");
-  }
-
-  return createReactPortal(element, container);
 }

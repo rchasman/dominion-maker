@@ -4,7 +4,7 @@
  * Full game board for multiplayer games using the event-driven engine.
  * Provides card interactions, action bar, and game state display.
  */
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import { useMultiplayer } from "../../context/multiplayer-hooks";
 import { getDisplayState } from "./game-board-helpers";
 import { useGameBoardHandlers } from "./useGameBoardHandlers";
@@ -103,7 +103,7 @@ export function MultiplayerGameBoard({
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, JSX.CSSProperties> = {
   loading: {
     display: "flex",
     alignItems: "center",

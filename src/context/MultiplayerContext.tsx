@@ -4,7 +4,8 @@
  * Host runs DominionEngine, broadcasts events to clients.
  * Clients receive events and derive state locally.
  */
-import { createContext, useState, useRef, type ReactNode } from "preact/compat";
+import { useState, useRef } from "preact/hooks";
+import { createContext, type ComponentChildren } from "preact";
 import type { RoomState } from "../multiplayer/p2p-room";
 import { DominionEngine } from "../engine";
 import { P2PRoom } from "../multiplayer/p2p-room";
@@ -33,7 +34,11 @@ const INITIAL_ROOM_STATE: RoomState = {
   isStarted: false,
 };
 
-export function MultiplayerProvider({ children }: { children: ReactNode }) {
+export function MultiplayerProvider({
+  children,
+}: {
+  children: ComponentChildren;
+}) {
   const roomRef = useRef<P2PRoom | null>(null);
   const engineRef = useRef<DominionEngine | null>(null);
 

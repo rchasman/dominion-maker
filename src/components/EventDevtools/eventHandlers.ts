@@ -1,4 +1,4 @@
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import { useScrubberHandlers } from "./scrubberHandlers";
 

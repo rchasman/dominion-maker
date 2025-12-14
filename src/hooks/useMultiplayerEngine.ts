@@ -6,8 +6,7 @@
  * - Client: Receives events, applies them locally
  */
 
-import { useCallback, useRef, useEffect, useState } from "preact/compat";
-import type { RefObject } from "preact/compat";
+import { useCallback, useRef, useEffect, useState } from "preact/hooks";
 import { DominionEngine } from "../engine";
 import type { GameState, CardName, Player } from "../types/game-state";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
@@ -131,7 +130,7 @@ function createCommandExecutor(
 
 // Helper: Create basic action callbacks
 function useBasicActions(
-  engineRef: RefObject<DominionEngine | null>,
+  engineRef: { readonly current: DominionEngine | null },
   myPlayerId: Player | null,
 ): {
   playAction: (card: CardName) => CommandResult;
@@ -173,7 +172,7 @@ function useBasicActions(
 
 // Helper: Create buy and phase actions
 function useBuyAndPhaseActions(
-  engineRef: RefObject<DominionEngine | null>,
+  engineRef: { readonly current: DominionEngine | null },
   myPlayerId: Player | null,
 ): {
   buyCard: (card: CardName) => CommandResult;
@@ -203,7 +202,7 @@ function useBuyAndPhaseActions(
 
 // Helper: Create decision action
 function useDecisionAction(
-  engineRef: RefObject<DominionEngine | null>,
+  engineRef: { readonly current: DominionEngine | null },
   myPlayerId: Player | null,
 ): {
   submitDecision: (choice: DecisionChoice) => CommandResult;
@@ -228,7 +227,7 @@ function useDecisionAction(
 
 // Helper: Create engine management hooks
 function useEngineManagement(
-  engineRef: RefObject<DominionEngine | null>,
+  engineRef: { readonly current: DominionEngine | null },
   myPlayerId: Player | null,
   events: GameEvent[],
   isHost: boolean,

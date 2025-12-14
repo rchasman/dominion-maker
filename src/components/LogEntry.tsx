@@ -10,7 +10,7 @@ import {
 } from "./LogFormatters";
 import { getCardColor } from "../lib/card-colors";
 import { CARDS } from "../data/cards";
-import type { ReactNode } from "preact/compat";
+import type { ComponentChildren } from "preact";
 import type { GameMode } from "../types/game-mode";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 import {
@@ -327,7 +327,7 @@ function renderText(entry: Extract<LogEntryType, { type: "text" }>) {
   return <span>{entry.message}</span>;
 }
 
-function renderResourceChange(verb: string, component: ReactNode) {
+function renderResourceChange(verb: string, component: ComponentChildren) {
   return (
     <span>
       <Verb>{verb}</Verb> {component}

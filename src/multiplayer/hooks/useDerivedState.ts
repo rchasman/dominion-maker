@@ -1,4 +1,4 @@
-import { useMemo } from "preact/compat";
+import { useMemo } from "preact/hooks";
 import type { RoomState } from "../p2p-room";
 import type { Player } from "../../types/game-state";
 import { getPlayerIdByIndex } from "../utils";

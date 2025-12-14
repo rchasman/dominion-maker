@@ -1,5 +1,3 @@
-import type React from "preact/compat";
-
 type EventCategory = "all" | "turns" | "cards" | "resources" | "decisions";
 
 export type { EventCategory };
@@ -95,7 +93,7 @@ const CONTAINER_LEFT = 16;
 
 const SLIDER_HEIGHT = 4;
 
-export const styles: Record<string, React.CSSProperties> = {
+export const styles: Record<string, JSX.CSSProperties> = {
   container: {
     position: "fixed",
     bottom: `${CONTAINER_BOTTOM}px`,

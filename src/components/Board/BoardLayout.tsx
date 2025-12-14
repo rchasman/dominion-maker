@@ -1,4 +1,4 @@
-import type { ReactNode } from "preact/compat";
+import type { ComponentChildren } from "preact";
 import {
   GRID_TEMPLATE_COLUMNS,
   PREVIEW_INDICATOR_TOP,
@@ -16,7 +16,7 @@ import {
 
 interface BoardLayoutProps {
   isPreviewMode: boolean;
-  children: ReactNode;
+  children: ComponentChildren;
 }
 
 export function BoardLayout({ isPreviewMode, children }: BoardLayoutProps) {
@@ -59,7 +59,7 @@ export function BoardLayout({ isPreviewMode, children }: BoardLayoutProps) {
 
 interface GameAreaLayoutProps {
   isPreviewMode: boolean;
-  children: ReactNode;
+  children: ComponentChildren;
 }
 
 export function GameAreaLayout({

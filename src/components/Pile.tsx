@@ -1,4 +1,4 @@
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import type { CardName } from "../types/game-state";
 import { Card } from "./Card";
 import { PileTooltip } from "./PileTooltip";

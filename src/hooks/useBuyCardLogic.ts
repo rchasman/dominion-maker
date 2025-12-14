@@ -9,7 +9,7 @@
  * (single-player) modes to prevent divergence.
  */
 
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import type { CardName } from "../types/game-state";
 import type { CommandResult } from "../commands/types";
 import type { DecisionRequest } from "../events/types";

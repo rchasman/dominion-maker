@@ -1,4 +1,4 @@
-import { useContext } from "preact/compat";
+import { useContext } from "preact/hooks";
 import { MultiplayerContext } from "./MultiplayerContext";
 
 export function useMultiplayer() {

@@ -1,4 +1,4 @@
-import { useContext } from "preact/compat";
+import { useContext } from "preact/hooks";
 import { GameContext, LLMLogsContext } from "./GameContext";
 
 export function useGame() {

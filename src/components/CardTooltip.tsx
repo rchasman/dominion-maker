@@ -1,8 +1,7 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl } from "../data/cards";
-import { createPortal } from "preact/compat";
-import type { ReactPortal } from "preact/compat";
 import { run } from "../lib/run";
+import { createPortal } from "preact/compat";
 
 interface CardTooltipProps {
   cardName: CardName;
@@ -16,7 +15,7 @@ export function CardTooltip({
   mouseX,
   mouseY,
   showBack,
-}: CardTooltipProps): ReactPortal {
+}: CardTooltipProps) {
   const imageUrl = showBack
     ? "/cards/Card_back.jpg"
     : getCardImageUrl(cardName);
@@ -53,7 +52,7 @@ export function CardTooltip({
     return rawTop;
   });
 
-  const element = (
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -94,13 +93,7 @@ export function CardTooltip({
           }}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
-
-  const container = document.body;
-  if (!container) {
-    throw new Error("document.body is null");
-  }
-
-  return createPortal(element, container);
 }

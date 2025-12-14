@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "preact/compat";
+import { useEffect, useMemo } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import type { GameState } from "../../types/game-state";
 import type { PlayerInfo } from "../p2p-room";

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "preact/compat";
+import { useState, useCallback } from "preact/hooks";
 import type { CardName, CardAction } from "../types/game-state";
 import { Card } from "./Card";
 import {

@@ -9,7 +9,7 @@
  * - Diff view showing what changed
  * - Filter events by type
  */
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import type { EventCategory } from "./constants";
 import { styles } from "./constants";

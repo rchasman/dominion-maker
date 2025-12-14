@@ -4,7 +4,7 @@ import { uiLogger } from "../../lib/logger";
  *
  * Shows options when there's a saved multiplayer session.
  */
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import { useMultiplayer } from "../../context/multiplayer-hooks";
 
 interface ReconnectScreenProps {

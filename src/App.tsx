@@ -1,4 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from "preact/compat";
+import { useState, useEffect } from "preact/hooks";
+import { lazy, Suspense } from "preact/compat";
 import { GameProvider } from "./context/GameContext";
 import { useGame } from "./context/hooks";
 import { MultiplayerProvider } from "./context/MultiplayerContext";

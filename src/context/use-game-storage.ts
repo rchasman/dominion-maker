@@ -3,7 +3,7 @@
  * Handles localStorage persistence and restoration
  */
 
-import { useState } from "preact/compat";
+import { useState } from "preact/hooks";
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelSettings } from "../agent/game-agent";
