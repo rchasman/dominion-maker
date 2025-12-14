@@ -3,6 +3,7 @@
  */
 
 import { createOpponentIteratorEffect } from "../effect-types";
+import { STAGES } from "../stages";
 
 const MILITIA_HAND_LIMIT = 3;
 const MILITIA_COIN_BONUS = 2;
@@ -39,7 +40,7 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
       min: data.discardCount,
       max: data.discardCount,
       cardBeingPlayed: "Militia",
-      stage: "opponent_discard",
+      stage: STAGES.OPPONENT_DISCARD,
       metadata: {
         remainingOpponents,
         attackingPlayer,
@@ -52,7 +53,7 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
         card,
         from: "hand" as const,
       })),
-    stage: "opponent_discard",
+    stage: STAGES.OPPONENT_DISCARD,
   },
   [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }],
 );

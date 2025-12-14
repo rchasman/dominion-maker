@@ -5,6 +5,7 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { peekDraw, isActionCard } from "../effect-types";
 import type { GameEvent } from "../../events/types";
+import { STAGES } from "../stages";
 
 export const vassal: CardEffect = ({
   state,
@@ -46,7 +47,7 @@ export const vassal: CardEffect = ({
           min: 0,
           max: 1,
           cardBeingPlayed: "Vassal",
-          stage: "play_action",
+          stage: STAGES.PLAY_ACTION,
           metadata: { discardedCard: topCard },
         },
       };
@@ -56,7 +57,7 @@ export const vassal: CardEffect = ({
   }
 
   // Play the action from discard
-  if (stage === "play_action") {
+  if (stage === STAGES.PLAY_ACTION) {
     // Coins already emitted in initial stage
     if (decision.selectedCards.length > 0) {
       const cardToPlay = decision.selectedCards[0];

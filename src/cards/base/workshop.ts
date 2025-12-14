@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { getGainableCards } from "../effect-types";
+import { STAGES } from "../stages";
 
 const MAX_GAIN_COST = 4;
 
@@ -28,7 +29,7 @@ export const workshop: CardEffect = ({
         min: 1,
         max: 1,
         cardBeingPlayed: "Workshop",
-        stage: "gain",
+        stage: STAGES.GAIN,
       },
     };
   }

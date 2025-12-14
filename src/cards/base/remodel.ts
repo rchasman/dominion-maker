@@ -4,6 +4,7 @@
 
 import { createMultiStageCard, getGainableCards } from "../effect-types";
 import { CARDS } from "../../data/cards";
+import { STAGES } from "../stages";
 
 const COST_BONUS = 2;
 
@@ -23,7 +24,7 @@ export const remodel = createMultiStageCard({
         min: 1,
         max: 1,
         cardBeingPlayed: "Remodel",
-        stage: "trash",
+        stage: STAGES.TRASH,
       },
     };
   },
@@ -59,7 +60,7 @@ export const remodel = createMultiStageCard({
         min: 1,
         max: 1,
         cardBeingPlayed: "Remodel",
-        stage: "gain",
+        stage: STAGES.GAIN,
         metadata: { trashedCard: toTrash, maxCost },
       },
     };

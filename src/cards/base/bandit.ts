@@ -7,6 +7,7 @@ import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameState } from "../../types/game-state";
 import { CARDS } from "../../data/cards";
 import type { CardName } from "../../types/game-state";
+import { STAGES } from "../stages";
 
 const BANDIT_REVEAL_COUNT = 2;
 
@@ -107,7 +108,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
       min: 1,
       max: 1,
       cardBeingPlayed: "Bandit",
-      stage: "victim_trash_choice",
+      stage: STAGES.VICTIM_TRASH_CHOICE,
       metadata: {
         revealed: data.revealed,
         remainingOpponents,
@@ -135,7 +136,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
 
       return [trashEvent, ...discardEvents];
     },
-    stage: "victim_trash_choice",
+    stage: STAGES.VICTIM_TRASH_CHOICE,
   },
   (state, player) => {
     // Initial events: Gain Gold + auto-process all opponents without choices

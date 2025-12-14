@@ -7,6 +7,7 @@ import {
   generateDecisionFromSpec,
 } from "../effect-types";
 import { CARDS } from "../../data/cards";
+import { STAGES } from "../stages";
 
 export const mine = createMultiStageCard({
   initial: ({ state, player }) => {
@@ -29,7 +30,7 @@ export const mine = createMultiStageCard({
         card: "Mine",
         player,
         state,
-        stage: "trash",
+        stage: STAGES.TRASH,
       }),
     };
   },
@@ -68,7 +69,7 @@ export const mine = createMultiStageCard({
       card: "Mine",
       player,
       state: stateWithMetadata,
-      stage: "gain",
+      stage: STAGES.GAIN,
     });
 
     // Check if there are any options

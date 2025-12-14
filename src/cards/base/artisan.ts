@@ -3,6 +3,7 @@
  */
 
 import { createMultiStageCard, getGainableCards } from "../effect-types";
+import { STAGES } from "../stages";
 
 const MAX_GAIN_COST = 5;
 
@@ -22,7 +23,7 @@ export const artisan = createMultiStageCard({
         min: 1,
         max: 1,
         cardBeingPlayed: "Artisan",
-        stage: "gain",
+        stage: STAGES.GAIN,
       },
     };
   },
@@ -46,7 +47,7 @@ export const artisan = createMultiStageCard({
         min: 1,
         max: 1,
         cardBeingPlayed: "Artisan",
-        stage: "topdeck",
+        stage: STAGES.TOPDECK,
       },
     };
   },

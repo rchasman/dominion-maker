@@ -3,6 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
+import { STAGES } from "../stages";
 
 export const moneylender: CardEffect = ({
   state,
@@ -27,7 +28,7 @@ export const moneylender: CardEffect = ({
         min: 0,
         max: 1,
         cardBeingPlayed: "Moneylender",
-        stage: "trash",
+        stage: STAGES.TRASH,
       },
     };
   }

@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isActionCard } from "../effect-types";
+import { STAGES } from "../stages";
 
 export const throneRoom: CardEffect = ({
   state,
@@ -32,13 +33,13 @@ export const throneRoom: CardEffect = ({
         min: 1,
         max: 1,
         cardBeingPlayed: "Throne Room",
-        stage: "choose_action",
+        stage: STAGES.CHOOSE_ACTION,
       },
     };
   }
 
   // Store chosen card for engine to execute twice
-  if (stage === "choose_action") {
+  if (stage === STAGES.CHOOSE_ACTION) {
     const cardToPlay = decision.selectedCards[0];
 
     // Don't emit CARD_PLAYED here - instead create a special decision
@@ -54,7 +55,7 @@ export const throneRoom: CardEffect = ({
         min: 0,
         max: 0,
         cardBeingPlayed: "Throne Room",
-        stage: "execute_throned_card",
+        stage: STAGES.EXECUTE_THRONED_CARD,
         metadata: {
           throneRoomTarget: cardToPlay,
           throneRoomExecutionsRemaining: 2,

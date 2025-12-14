@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { isInitialCall } from "../effect-types";
+import { STAGES } from "../stages";
 
 const CHAPEL_MAX_TRASH = 4;
 
@@ -32,13 +33,13 @@ export const chapel: CardEffect = ({
         min: 0,
         max: CHAPEL_MAX_TRASH,
         cardBeingPlayed: "Chapel",
-        stage: "trash",
+        stage: STAGES.TRASH,
       },
     };
   }
 
   // Process trash decision
-  if (stage === "trash" && decision) {
+  if (stage === STAGES.TRASH && decision) {
     const toTrash = decision.selectedCards;
 
     if (toTrash.length === 0) {

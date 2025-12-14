@@ -5,6 +5,7 @@
 import { createOpponentIteratorEffect } from "../effect-types";
 import { CARDS } from "../../data/cards";
 import type { CardName } from "../../types/game-state";
+import { STAGES } from "../stages";
 
 type BureaucratData = {
   victoryCards: CardName[];
@@ -40,7 +41,7 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
       min: 1,
       max: 1,
       cardBeingPlayed: "Bureaucrat",
-      stage: "opponent_topdeck",
+      stage: STAGES.OPPONENT_TOPDECK,
       metadata: {
         remainingOpponents,
         attackingPlayer,
@@ -59,7 +60,7 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
         },
       ];
     },
-    stage: "opponent_topdeck",
+    stage: STAGES.OPPONENT_TOPDECK,
   },
   (state, player) => [
     {

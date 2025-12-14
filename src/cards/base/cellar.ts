@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents, isInitialCall } from "../effect-types";
+import { STAGES } from "../stages";
 
 export const cellar: CardEffect = ({
   state,
@@ -32,13 +33,13 @@ export const cellar: CardEffect = ({
         min: 0,
         max: playerState.hand.length,
         cardBeingPlayed: "Cellar",
-        stage: "discard",
+        stage: STAGES.DISCARD,
       },
     };
   }
 
   // Process discard decision
-  if (stage === "discard" && decision) {
+  if (stage === STAGES.DISCARD && decision) {
     const toDiscard = decision.selectedCards;
 
     if (toDiscard.length === 0) {

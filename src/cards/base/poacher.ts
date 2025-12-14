@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
+import { STAGES } from "../stages";
 
 export const poacher: CardEffect = ({
   state,
@@ -42,13 +43,13 @@ export const poacher: CardEffect = ({
         min: discardCount,
         max: discardCount,
         cardBeingPlayed: "Poacher",
-        stage: "discard",
+        stage: STAGES.DISCARD,
       },
     };
   }
 
   // Discard (atomic events)
-  if (stage === "discard") {
+  if (stage === STAGES.DISCARD) {
     const discardEvents = decision.selectedCards.map(card => ({
       type: "CARD_DISCARDED" as const,
       player,

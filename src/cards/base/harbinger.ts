@@ -4,6 +4,7 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
+import { STAGES } from "../stages";
 
 export const harbinger: CardEffect = ({
   state,
@@ -36,13 +37,13 @@ export const harbinger: CardEffect = ({
         min: 0,
         max: 1,
         cardBeingPlayed: "Harbinger",
-        stage: "topdeck",
+        stage: STAGES.TOPDECK,
       },
     };
   }
 
   // Put card on deck
-  if (stage === "topdeck") {
+  if (stage === STAGES.TOPDECK) {
     const events =
       decision.selectedCards.length > 0
         ? [
