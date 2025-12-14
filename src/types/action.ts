@@ -19,10 +19,11 @@ export type Action = {
 
 /**
  * Strip reasoning field from an action to get its core signature.
- * Useful for comparing actions or creating action signatures.
+ * Also normalizes card field (removes if null/undefined) so equivalent
+ * actions produce identical signatures.
  */
 export function stripReasoning(action: Action): Omit<Action, "reasoning"> {
-  const { reasoning, ...actionCore } = action;
+  const { reasoning, card, ...rest } = action;
   void reasoning;
-  return actionCore;
+  return card != null ? { ...rest, card } : rest;
 }
