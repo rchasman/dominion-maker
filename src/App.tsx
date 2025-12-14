@@ -1,28 +1,34 @@
 import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
-import { GameProvider } from "./context/GameContext";
-import { useGame } from "./context/hooks";
+import type { GameMode } from "./types/game-mode";
 import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { StartScreen } from "./components/StartScreen";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
+import { STORAGE_KEYS } from "./context/storage-utils";
 import { uiLogger } from "./lib/logger";
 
-const Board = lazy(() =>
-  import("./components/Board/index").then(m => ({ default: m.Board })),
-);
-const MultiplayerScreen = lazy(() =>
-  import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen })),
-);
+// Lazy load game modules
+const singlePlayerImport = () =>
+  import("./SinglePlayerApp").then(m => ({ default: m.SinglePlayerApp }));
+const multiplayerImport = () =>
+  import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen }));
+
+const SinglePlayerApp = lazy(singlePlayerImport);
+const MultiplayerScreen = lazy(multiplayerImport);
+
+// Preload game modules after menu renders (best of both worlds)
+const preloadSinglePlayer = () => void singlePlayerImport();
+const preloadMultiplayer = () => void multiplayerImport();
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
-const STORAGE_MODE_KEY = "dominion-maker-app-mode";
+const STORAGE_APP_MODE_KEY = "dominion-maker-app-mode";
 
 function App() {
-  // Check for saved app mode on mount
+  // App navigation mode (menu vs singleplayer vs multiplayer)
   const [mode, setMode] = useState<AppMode>(() => {
     try {
-      const savedMode = localStorage.getItem(STORAGE_MODE_KEY);
+      const savedMode = localStorage.getItem(STORAGE_APP_MODE_KEY);
       if (savedMode === "multiplayer" || savedMode === "singleplayer") {
         uiLogger.debug("Restoring saved mode", { savedMode });
         return savedMode;
@@ -33,35 +39,66 @@ function App() {
     return "menu";
   });
 
-  // Save mode to localStorage whenever it changes
+  // Game mode selection (engine/hybrid/full) - synced to localStorage
+  const [gameMode, setGameMode] = useState<GameMode>(() => {
+    try {
+      const savedMode = localStorage.getItem(STORAGE_KEYS.MODE);
+      if (savedMode) {
+        const parsed = JSON.parse(savedMode) as string;
+        if (["engine", "hybrid", "full"].includes(parsed)) {
+          return parsed as GameMode;
+        }
+      }
+    } catch {
+      // Invalid JSON, use default
+    }
+    return "engine";
+  });
+
+  // Sync app mode to localStorage
   useEffect(() => {
     if (mode !== "menu") {
-      localStorage.setItem(STORAGE_MODE_KEY, mode);
+      localStorage.setItem(STORAGE_APP_MODE_KEY, mode);
     } else {
-      localStorage.removeItem(STORAGE_MODE_KEY);
+      localStorage.removeItem(STORAGE_APP_MODE_KEY);
     }
   }, [mode]);
 
-  // Main menu / Single player start screen
+  // Sync game mode to localStorage (GameProvider will read this on mount)
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify(gameMode));
+    } catch {
+      // Storage unavailable
+    }
+  }, [gameMode]);
+
+  // Preload game modules when on menu (loads in background while user reads)
+  useEffect(() => {
+    if (mode === "menu") {
+      preloadSinglePlayer();
+      preloadMultiplayer();
+    }
+  }, [mode]);
+
+  // Main menu - no GameProvider needed!
   if (mode === "menu") {
     return (
-      <GameProvider>
-        <StartScreen
-          onStartSinglePlayer={() => setMode("singleplayer")}
-          onStartMultiplayer={() => setMode("multiplayer")}
-        />
-      </GameProvider>
+      <StartScreen
+        gameMode={gameMode}
+        onGameModeChange={setGameMode}
+        onStartSinglePlayer={() => setMode("singleplayer")}
+        onStartMultiplayer={() => setMode("multiplayer")}
+      />
     );
   }
 
-  // Single player game
+  // Single player game - GameProvider loaded lazily with SinglePlayerApp
   if (mode === "singleplayer") {
     return (
-      <GameProvider>
-        <Suspense fallback={<LoadingScreen />}>
-          <SinglePlayerGame onBackToHome={() => setMode("menu")} />
-        </Suspense>
-      </GameProvider>
+      <Suspense fallback={<LoadingScreen />}>
+        <SinglePlayerApp onBackToHome={() => setMode("menu")} />
+      </Suspense>
     );
   }
 
@@ -81,23 +118,6 @@ function App() {
 
 function LoadingScreen() {
   return <BoardSkeleton />;
-}
-
-function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
-  const { gameState, isLoading, startGame } = useGame();
-
-  // Wait for loading to complete
-  if (isLoading) {
-    return <BoardSkeleton />;
-  }
-
-  // Auto-start game only if no saved game exists
-  if (!gameState) {
-    startGame();
-    return null;
-  }
-
-  return <Board onBackToHome={onBackToHome} />;
 }
 
 export default App;
