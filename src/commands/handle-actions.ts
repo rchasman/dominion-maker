@@ -114,6 +114,10 @@ export function handlePlayAction(
             decision: {
               ...result.pendingDecision,
               cardBeingPlayed: card,
+              metadata: {
+                ...result.pendingDecision.metadata,
+                originalCause: rootEventId,
+              },
             },
             id: generateEventId(),
             causedBy: rootEventId,
