@@ -56,16 +56,13 @@ export function getAggregatedCount(entry: {
     : 1;
 }
 
-// Helper to render player name at depth 0
-export function renderPlayerPrefix(
-  player: string,
-  depth: number,
-): ComponentChildren {
-  return depth === 0 ? (
+// Helper to render player name prefix (always shown for clarity on attacks)
+export function renderPlayerPrefix(player: string): ComponentChildren {
+  return (
     <>
       <PlayerName player={player} />{" "}
     </>
-  ) : null;
+  );
 }
 
 // Helper to render reasoning section

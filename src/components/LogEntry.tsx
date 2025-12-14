@@ -119,11 +119,10 @@ function renderBuyCard(entry: Extract<LogEntryType, { type: "buy-card" }>) {
 
 function renderDrawCards(
   entry: Extract<LogEntryType, { type: "draw-cards" }>,
-  depth: number,
   viewer: string,
 ) {
   const isOpponent = entry.player !== viewer;
-  const playerPrefix = renderPlayerPrefix(entry.player, depth);
+  const playerPrefix = renderPlayerPrefix(entry.player);
 
   if (isOpponent) {
     return (
@@ -160,13 +159,10 @@ function renderDrawCards(
   );
 }
 
-function renderGainCard(
-  entry: Extract<LogEntryType, { type: "gain-card" }>,
-  depth: number,
-) {
+function renderGainCard(entry: Extract<LogEntryType, { type: "gain-card" }>) {
   const count = getAggregatedCount(entry);
   const suffix = count > 1 ? ` x${count}` : "";
-  const playerPrefix = renderPlayerPrefix(entry.player, depth);
+  const playerPrefix = renderPlayerPrefix(entry.player);
 
   const cardDef = CARDS[entry.card];
   const isVictory =
@@ -200,9 +196,8 @@ function renderGainCard(
 
 function renderDiscardCards(
   entry: Extract<LogEntryType, { type: "discard-cards" }>,
-  depth: number,
 ) {
-  const playerPrefix = renderPlayerPrefix(entry.player, depth);
+  const playerPrefix = renderPlayerPrefix(entry.player);
 
   if (entry.cards) {
     const aggregated = entry as typeof entry & {
@@ -230,11 +225,8 @@ function renderDiscardCards(
   );
 }
 
-function renderTrashCard(
-  entry: Extract<LogEntryType, { type: "trash-card" }>,
-  depth: number,
-) {
-  const playerPrefix = renderPlayerPrefix(entry.player, depth);
+function renderTrashCard(entry: Extract<LogEntryType, { type: "trash-card" }>) {
+  const playerPrefix = renderPlayerPrefix(entry.player);
 
   if (entry.cards) {
     const cardCounts = getCardCounts(entry.cards);
@@ -267,13 +259,11 @@ function renderTrashCard(
 
 function renderShuffleDeck(
   entry: Extract<LogEntryType, { type: "shuffle-deck" }>,
-  depth: number,
 ) {
-  const playerPrefix = renderPlayerPrefix(entry.player, depth);
   return (
     <span>
-      {playerPrefix}
-      <Verb>shuffles</Verb> {depth > 0 ? "deck" : "their deck"}
+      {renderPlayerPrefix(entry.player)}
+      <Verb>shuffles</Verb> deck
     </span>
   );
 }
@@ -393,32 +383,21 @@ const ENTRY_RENDERERS = {
     renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
   "buy-card": (entry: LogEntryType) =>
     renderBuyCard(entry as Extract<LogEntryType, { type: "buy-card" }>),
-  "draw-cards": (entry: LogEntryType, ctx: { depth: number; viewer: string }) =>
+  "draw-cards": (entry: LogEntryType, ctx: { viewer: string }) =>
     renderDrawCards(
       entry as Extract<LogEntryType, { type: "draw-cards" }>,
-      ctx.depth,
       ctx.viewer,
     ),
-  "gain-card": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderGainCard(
-      entry as Extract<LogEntryType, { type: "gain-card" }>,
-      ctx.depth,
-    ),
-  "discard-cards": (entry: LogEntryType, ctx: { depth: number }) =>
+  "gain-card": (entry: LogEntryType) =>
+    renderGainCard(entry as Extract<LogEntryType, { type: "gain-card" }>),
+  "discard-cards": (entry: LogEntryType) =>
     renderDiscardCards(
       entry as Extract<LogEntryType, { type: "discard-cards" }>,
-      ctx.depth,
     ),
-  "trash-card": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderTrashCard(
-      entry as Extract<LogEntryType, { type: "trash-card" }>,
-      ctx.depth,
-    ),
-  "shuffle-deck": (entry: LogEntryType, ctx: { depth: number }) =>
-    renderShuffleDeck(
-      entry as Extract<LogEntryType, { type: "shuffle-deck" }>,
-      ctx.depth,
-    ),
+  "trash-card": (entry: LogEntryType) =>
+    renderTrashCard(entry as Extract<LogEntryType, { type: "trash-card" }>),
+  "shuffle-deck": (entry: LogEntryType) =>
+    renderShuffleDeck(entry as Extract<LogEntryType, { type: "shuffle-deck" }>),
   "end-turn": (entry: LogEntryType) =>
     renderEndTurn(entry as Extract<LogEntryType, { type: "end-turn" }>),
   "game-over": (entry: LogEntryType) =>
