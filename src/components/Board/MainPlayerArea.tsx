@@ -14,16 +14,9 @@ interface MainPlayerAreaProps {
   selectedCardIndices: number[];
   isPreviewMode: boolean;
   displayState: GameState;
-  hint: string;
-  hasTreasuresInHand: boolean;
-  complexDecisionData: ComplexDecisionData | null;
   playerStrategy: PlayerStrategyData[number] | undefined;
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName) => void;
-  onPlayAllTreasures?: () => void;
-  onEndPhase?: () => void;
-  onConfirmDecision?: (data: ComplexDecisionData | null) => void;
-  onSkipDecision?: () => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
   formatPlayerName: (playerId: PlayerId, isAI: boolean) => string;
 }
@@ -37,16 +30,9 @@ export function MainPlayerArea({
   selectedCardIndices,
   isPreviewMode,
   displayState,
-  hint,
-  hasTreasuresInHand,
-  complexDecisionData,
   playerStrategy,
   onCardClick,
   onInPlayClick,
-  onPlayAllTreasures,
-  onEndPhase,
-  onConfirmDecision,
-  onSkipDecision,
   onComplexDecisionChange,
   formatPlayerName,
 }: MainPlayerAreaProps) {

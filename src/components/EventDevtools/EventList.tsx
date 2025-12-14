@@ -1,4 +1,4 @@
-import { useCallback } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import { isRootCauseEvent } from "../../events/types";
 import { EVENT_COLORS, styles } from "./constants";
@@ -21,8 +21,6 @@ interface EventListProps {
 const BRANCH_BUTTON = "⎌";
 const PLAYHEAD = "▶";
 const CAUSAL_ARROW = "└";
-const PADDING_LEFT_NESTED = 32;
-const PADDING_LEFT_BASE = 12;
 const BORDER_RIGHT_WIDTH = 3;
 
 interface EventRightButtonProps {

@@ -2,7 +2,10 @@ import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { z } from "zod";
 import type { GameState, CardName } from "../src/types/game-state";
-import { formatTurnHistoryForAnalysis, STRATEGY_ANALYSIS_TURNS } from "../src/agent/strategic-context";
+import {
+  formatTurnHistoryForAnalysis,
+  STRATEGY_ANALYSIS_TURNS,
+} from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { run } from "../src/lib/run";
 import { encodeToon } from "../src/lib/toon";
@@ -18,8 +21,6 @@ const HTTP_STATUS = {
 } as const;
 
 // Game constants
-const INITIAL_PROVINCE_COUNT = 8;
-const INITIAL_DUCHY_COUNT = 8;
 const VP_VALUES = {
   ESTATE: 1,
   DUCHY: 3,
@@ -163,7 +164,10 @@ async function parseRequestBody(
   const rawBody = req.body || (req.text ? await req.text() : "{}");
   const parsed: unknown =
     typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-  return parsed as { currentState: GameState; previousAnalysis?: PlayerAnalysis[] };
+  return parsed as {
+    currentState: GameState;
+    previousAnalysis?: PlayerAnalysis[];
+  };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -192,7 +196,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Extract turn history (use longer window for strategy - runs once per turn)
-    const turnHistory = formatTurnHistoryForAnalysis(currentState, "toon", STRATEGY_ANALYSIS_TURNS);
+    const turnHistory = formatTurnHistoryForAnalysis(
+      currentState,
+      "toon",
+      STRATEGY_ANALYSIS_TURNS,
+    );
 
     // If no turn history yet, return empty array
     if (!turnHistory) {
@@ -234,7 +242,10 @@ Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
     // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({
       model,
-      system: buildStrategyAnalysisPrompt(currentState.supply, !!previousAnalysis),
+      system: buildStrategyAnalysisPrompt(
+        currentState.supply,
+        !!previousAnalysis,
+      ),
       prompt,
       schema: StrategyAnalysisSchema,
       maxRetries: 1,

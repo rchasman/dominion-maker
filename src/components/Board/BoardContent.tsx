@@ -125,7 +125,6 @@ export function BoardContent({
     mainPlayer,
     mainPlayerVP,
     opponentVP,
-    hint,
     isOpponentAI,
     isMainPlayerAI,
   } = boardState;
@@ -175,18 +174,11 @@ export function BoardContent({
           selectedCardIndices={selectedCardIndices}
           isPreviewMode={isPreviewMode}
           displayState={displayState}
-          hint={hint}
-          hasTreasuresInHand={game.hasTreasuresInHand}
-          complexDecisionData={complexDecisionData}
           playerStrategy={game.playerStrategies.find(
             s => s.id === mainPlayerId,
           )}
           onCardClick={onCardClick}
           onInPlayClick={onInPlayClick}
-          onPlayAllTreasures={onPlayAllTreasures}
-          onEndPhase={onEndPhase}
-          onConfirmDecision={onConfirmDecision}
-          onSkipDecision={onSkipDecision}
           onComplexDecisionChange={onComplexDecisionChange}
           formatPlayerName={formatPlayerName}
         />
