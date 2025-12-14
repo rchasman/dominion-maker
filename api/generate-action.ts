@@ -1,4 +1,4 @@
-import { generateObject, generateText, gateway, wrapLanguageModel } from "ai";
+import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
@@ -6,7 +6,6 @@ import { MODEL_MAP, MODELS } from "../src/config/models";
 import { buildStrategicContext, formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { CARDS } from "../src/data/cards";
 import { apiLogger } from "../src/lib/logger";
-import { parse as parseBestEffort } from "best-effort-json-parser";
 import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
@@ -20,7 +19,6 @@ const HTTP_INTERNAL_ERROR = 500;
 
 // Formatting Constants
 const JSON_INDENT_SPACES = 2;
-const MAX_EXTRA_TEXT_LENGTH = 100;
 
 // Zod schemas for runtime validation (server-side only)
 const CardNameSchema = z.enum([
@@ -90,10 +88,54 @@ if (!process.env.AI_GATEWAY_API_KEY) {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
-// Create devtools middleware once at module level (singleton pattern)
-// Each call to devToolsMiddleware() creates a new run ID, so we create it once
-// and reuse it across all requests to maintain shared database state
-const sharedDevToolsMiddleware = devToolsMiddleware();
+// Cache devtools middleware instances by actionId for consensus vote grouping
+// All votes for same action share one middleware = one devtools thread
+const middlewareCache = new Map<
+  string,
+  { middleware: ReturnType<typeof devToolsMiddleware>; lastUsed: number }
+>();
+
+const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+// Cleanup old middleware instances periodically
+function cleanupOldMiddleware(): void {
+  const now = Date.now();
+  const toDelete: string[] = [];
+
+  middlewareCache.forEach((value, key) => {
+    if (now - value.lastUsed > CACHE_TTL) {
+      toDelete.push(key);
+    }
+  });
+
+  toDelete.forEach(key => middlewareCache.delete(key));
+}
+
+// Run cleanup periodically
+setInterval(cleanupOldMiddleware, CACHE_CLEANUP_INTERVAL);
+
+function getDevToolsMiddleware(actionId?: string): ReturnType<typeof devToolsMiddleware> {
+  if (!actionId) {
+    // No grouping - create fresh middleware
+    return devToolsMiddleware();
+  }
+
+  // Get or create middleware for this action
+  // actionId includes gameId, so different games get different middleware
+  if (!middlewareCache.has(actionId)) {
+    middlewareCache.set(actionId, {
+      middleware: devToolsMiddleware(),
+      lastUsed: Date.now(),
+    });
+  } else {
+    // Update last used timestamp
+    const cached = middlewareCache.get(actionId)!;
+    cached.lastUsed = Date.now();
+  }
+
+  return middlewareCache.get(actionId)!.middleware;
+}
 
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
@@ -135,13 +177,8 @@ interface RequestBody {
   strategySummary?: string;
   customStrategy?: string;
   format?: "json" | "toon";
+  actionId?: string; // For grouping consensus votes in devtools
 }
-
-type OnExtraTokenHandler = (
-  text: string,
-  data: unknown,
-  reminding: string,
-) => void;
 
 // Parse and validate request body
 function parseRequestBody(req: VercelRequest): RequestBody {
@@ -306,141 +343,6 @@ function buildUserMessage(params: {
   return sections.join("\n\n");
 }
 
-// Check if provider needs text fallback
-function needsTextFallback(provider: string): boolean {
-  return (
-    provider.includes("ministral") ||
-    provider.includes("cerebras") ||
-    provider.includes("groq")
-  );
-}
-
-// Extract JSON from markdown code blocks
-function stripMarkdownCodeBlocks(text: string): string {
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-  return codeBlockMatch ? codeBlockMatch[1].trim() : text;
-}
-
-// Parse text response with best-effort JSON parser (output is always JSON)
-function parseTextResponse(text: string, provider: string): unknown {
-  const stripped = stripMarkdownCodeBlocks(text.trim());
-
-  const originalOnExtraToken = parseBestEffort.onExtraToken as
-    | OnExtraTokenHandler
-    | undefined;
-  parseBestEffort.onExtraToken = (
-    text: string,
-    data: unknown,
-    reminding: string,
-  ) => {
-    apiLogger.debug(`${provider} JSON with extra tokens`, {
-      extracted: data,
-      extraText: reminding.slice(0, MAX_EXTRA_TEXT_LENGTH),
-    });
-  };
-
-  const parsed = parseBestEffort(stripped) as unknown;
-  if (originalOnExtraToken) {
-    parseBestEffort.onExtraToken = originalOnExtraToken;
-  }
-
-  return parsed;
-}
-
-// Try to recover action from error response text
-function tryRecoverActionFromText(
-  text: string,
-): z.infer<typeof ActionSchema> | undefined {
-  const chunks = text.split(/\n\n+/);
-
-  const validAction = chunks
-    .slice()
-    .reverse()
-    .map(chunk => chunk.trim())
-    .filter(chunk => chunk.startsWith("{") && chunk.endsWith("}"))
-    .reduce<{ validated?: z.infer<typeof ActionSchema> }>((result, chunk) => {
-      if (result.validated) return result;
-
-      try {
-        const parsed: unknown = JSON.parse(chunk);
-
-        // Type guard: check if this is a record-like object
-        if (typeof parsed !== "object" || parsed === null) {
-          return result;
-        }
-
-        const record = parsed as Record<string, unknown>;
-
-        // Skip schema objects
-        if (record.properties || (record.description && record.required)) {
-          return result;
-        }
-
-        // Check if this is an action object
-        if (
-          record.type &&
-          typeof record.type === "string" &&
-          record.type !== "object"
-        ) {
-          const validated = ActionSchema.parse(parsed);
-          return { validated };
-        }
-      } catch {
-        // Continue to next chunk
-      }
-
-      return result;
-    }, {});
-
-  return validAction.validated;
-}
-
-// Text fallback no longer needs format instructions (now in system prompt)
-function buildTextFallbackPrompt(userMessage: string): string {
-  return userMessage;
-}
-
-// Generate action using text fallback (for models without JSON schema support)
-async function generateActionWithTextFallback(params: {
-  model: ReturnType<typeof gateway>;
-  userMessage: string;
-  provider: string;
-  res: VercelResponse;
-  strategySummary: string | undefined;
-  format: "json" | "toon";
-  currentState: GameState;
-}): Promise<VercelResponse> {
-  const { model, userMessage, provider, res, strategySummary, format, currentState } = params;
-
-  const prompt = buildTextFallbackPrompt(userMessage);
-
-  const result = await generateText({
-    model,
-    system: buildSystemPrompt(currentState.supply, { textFallback: true }),
-    prompt,
-    maxRetries: 0,
-    ...getProviderOptions(provider),
-  });
-
-  const parsed = parseTextResponse(result.text, provider);
-
-  try {
-    const action = ActionSchema.parse(parsed);
-    return res.status(HTTP_OK).json({ action, strategySummary, format });
-  } catch (parseErr) {
-    const errorMessage =
-      parseErr instanceof Error ? parseErr.message : String(parseErr);
-    apiLogger.error(`${provider} parse failed: ${errorMessage}`);
-    apiLogger.error(`${provider} raw text output: ${result.text}`);
-    apiLogger.error(`${provider} extracted data: ${JSON.stringify(parsed)}`);
-
-    return res.status(HTTP_INTERNAL_ERROR).json({
-      error: HTTP_INTERNAL_ERROR,
-      message: `Failed to parse model response: ${errorMessage}`,
-    });
-  }
-}
-
 // Try to recover from model generation errors
 function tryRecoverFromError(
   err: unknown,
@@ -505,6 +407,7 @@ async function processGenerationRequest(
     strategySummary,
     customStrategy,
     format = "toon",
+    actionId,
   } = body;
   const provider = bodyProvider;
 
@@ -521,7 +424,7 @@ async function processGenerationRequest(
 
   const model = wrapLanguageModel({
     model: gateway(modelName),
-    middleware: sharedDevToolsMiddleware,
+    middleware: getDevToolsMiddleware(actionId),
   });
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
@@ -543,32 +446,35 @@ async function processGenerationRequest(
     format,
   });
 
-  // Some models don't support json_schema response format - use generateText with explicit JSON instructions
-  if (needsTextFallback(provider)) {
-    return await generateActionWithTextFallback({
+  // Use generateObject with structured output for all models
+  try {
+    const result = await generateObject({
       model,
-      userMessage,
+      schema: ActionSchema,
+      system: buildSystemPrompt(currentState.supply),
+      prompt: userMessage,
+      maxRetries: 0,
+      ...getProviderOptions(provider),
+    });
+
+    return res
+      .status(HTTP_OK)
+      .json({ action: result.object, strategySummary, format });
+  } catch (err) {
+    const error = err as Error & { text?: string; response?: unknown };
+    apiLogger.error(`${provider} structured output failed: ${error.message}`);
+
+    if (error.text) {
+      apiLogger.error(`${provider} raw response text: ${error.text.slice(0, 500)}`);
+    }
+
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: "Structured output generation failed",
       provider,
-      res,
-      strategySummary,
-      format,
-      currentState,
+      message: error.message,
+      rawText: error.text?.slice(0, 200),
     });
   }
-
-  // Use generateObject for other models
-  const result = await generateObject({
-    model,
-    schema: ActionSchema,
-    system: buildSystemPrompt(currentState.supply),
-    prompt: userMessage,
-    maxRetries: 0,
-    ...getProviderOptions(provider),
-  });
-
-  return res
-    .status(HTTP_OK)
-    .json({ action: result.object, strategySummary, format });
 }
 
 export default async function handler(
