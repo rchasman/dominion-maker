@@ -42,16 +42,16 @@ export function useSyncToLocalStorage<T>(
 ): void {
   const { serialize = JSON.stringify, shouldSync = true } = options;
 
-  const isHydrating = useRef(true);
+  const isHydratingRef = useRef(true);
 
   // Mark hydration complete after first render
   useEffect(() => {
-    isHydrating.current = false;
+    isHydratingRef.current = false;
   }, []);
 
   // Sync to localStorage (skip during hydration)
   useEffect(() => {
-    if (!shouldSync || isHydrating.current) return;
+    if (!shouldSync || isHydratingRef.current) return;
 
     try {
       localStorage.setItem(key, serialize(value));

@@ -52,15 +52,15 @@ export function EventDevtools({
   const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const { listRef, listRefInternal } = useListScroll(scrubberIndex);
+  const { listRef, listRefInternalRef } = useListScroll(scrubberIndex);
   const rootEvents = useRootEvents(events);
   const filteredEvents = useFilteredEvents(events, filter);
   const displayIndex = getDisplayIndex(scrubberIndex, selectedEventId, events);
   const selectedState = useSelectedState(events, displayIndex);
   const prevState = usePrevState(events, displayIndex);
 
-  useAutoScroll(scrubberIndex, events.length, isOpen, listRefInternal);
-  useScrubberScroll(scrubberIndex, listRefInternal);
+  useAutoScroll(scrubberIndex, events.length, isOpen, listRefInternalRef);
+  useScrubberScroll(scrubberIndex, listRefInternalRef);
 
   const playIntervalRef = usePlayback(
     { isPlaying, rootEvents, events, onScrub },

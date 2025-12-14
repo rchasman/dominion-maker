@@ -16,47 +16,47 @@ interface PlaybackActions {
 }
 
 export function useListScroll(scrubberIndex: number | null) {
-  const listRefInternal = useRef<HTMLDivElement | null>(null);
+  const listRefInternalRef = useRef<HTMLDivElement | null>(null);
 
   const listRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (node && !scrubberIndex) {
         node.scrollTop = node.scrollHeight;
       }
-      listRefInternal.current = node;
+      listRefInternalRef.current = node;
     },
     [scrubberIndex],
   );
 
-  return { listRef, listRefInternal };
+  return { listRef, listRefInternalRef };
 }
 
 export function useAutoScroll(
   scrubberIndex: number | null,
   eventsLength: number,
   isOpen: boolean,
-  listRefInternal: React.MutableRefObject<HTMLDivElement | null>,
+  listRefInternalRef: React.MutableRefObject<HTMLDivElement | null>,
 ) {
   useEffect(() => {
     if (scrubberIndex === null && isOpen) {
-      const node = listRefInternal.current;
+      const node = listRefInternalRef.current;
       if (node) {
         requestAnimationFrame(() => {
           node.scrollTop = node.scrollHeight;
         });
       }
     }
-  }, [eventsLength, scrubberIndex, isOpen, listRefInternal]);
+  }, [eventsLength, scrubberIndex, isOpen, listRefInternalRef]);
 }
 
 export function useScrubberScroll(
   scrubberIndex: number | null,
-  listRefInternal: React.MutableRefObject<HTMLDivElement | null>,
+  listRefInternalRef: React.MutableRefObject<HTMLDivElement | null>,
 ) {
   useEffect(() => {
-    if (scrubberIndex !== null && listRefInternal.current) {
+    if (scrubberIndex !== null && listRefInternalRef.current) {
       const eventElements =
-        listRefInternal.current.querySelectorAll("[data-event-index]");
+        listRefInternalRef.current.querySelectorAll("[data-event-index]");
       const targetElement = Array.from(eventElements).find(
         el => el.getAttribute("data-event-index") === String(scrubberIndex),
       ) as HTMLElement | undefined;
@@ -65,7 +65,7 @@ export function useScrubberScroll(
         targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
-  }, [scrubberIndex, listRefInternal]);
+  }, [scrubberIndex, listRefInternalRef]);
 }
 
 export function usePlayback(config: PlaybackConfig, actions: PlaybackActions) {
