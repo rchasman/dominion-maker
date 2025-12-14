@@ -13,10 +13,10 @@ export const vassal: CardEffect = ({
   stage,
 }): CardEffectResult => {
   const playerState = state.players[player];
-  const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
 
   // Initial: +$2, reveal and discard top card
   if (!decision || stage === undefined) {
+    const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
     const { cards: revealed } = peekDraw(playerState, 1);
 
     if (revealed.length === 0) {
@@ -57,16 +57,14 @@ export const vassal: CardEffect = ({
 
   // Play the action from discard
   if (stage === "play_action") {
-    // Note: The actual playing of the action card is handled by the engine
-    // This just signals the intent
+    // Coins already emitted in initial stage
     if (decision.selectedCards.length > 0) {
       const cardToPlay = decision.selectedCards[0];
-      const playEvents: GameEvent[] = [
-        { type: "CARD_PLAYED", player, card: cardToPlay },
-      ];
-      return { events: [...coinEvents, ...playEvents] };
+      return {
+        events: [{ type: "CARD_PLAYED", player, card: cardToPlay }],
+      };
     }
-    return { events: coinEvents };
+    return { events: [] };
   }
 
   return { events: [] };
