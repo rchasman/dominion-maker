@@ -1,7 +1,7 @@
 import { generateObject, generateText, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
-import { DOMINION_SYSTEM_PROMPT } from "../src/agent/system-prompt";
+import { buildSystemPrompt } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
 import { buildStrategicContext, formatTurnHistoryForAnalysis } from "../src/agent/strategic-context";
 import { CARDS } from "../src/data/cards";
@@ -191,24 +191,16 @@ function optimizeStateForAI(state: GameState): unknown {
     .filter(e => e.effectType === "cost_reduction")
     .reduce((total, e) => total + ((e.parameters as { amount?: number })?.amount ?? 0), 0);
 
-  // Transform supply to array with costs and full effects
-  const supplyWithCosts = Object.entries(state.supply).map(([card, count]) => {
+  // Transform supply to array with counts and effective costs (effects now in system prompt)
+  const supplyWithCounts = Object.entries(state.supply).map(([card, count]) => {
     const cardData = CARDS[card as CardName];
     const baseCost = cardData?.cost ?? 0;
     const effectiveCost = Math.max(0, baseCost - costReduction);
-
-    // Show full effect description
-    const effect = run(() => {
-      if (cardData?.coins) return `+$${cardData.coins}`;
-      if (cardData?.vp) return `${cardData.vp} VP`;
-      return cardData?.description || "";
-    });
 
     return {
       card,
       count,
       cost: effectiveCost,
-      effect,
     };
   });
 
@@ -226,7 +218,7 @@ function optimizeStateForAI(state: GameState): unknown {
     players: optimizedPlayers,
 
     // Board state (costs pre-calculated with active effects)
-    supply: supplyWithCosts,
+    supply: supplyWithCounts,
     trash: state.trash,
 
     // Decisions
@@ -424,14 +416,15 @@ async function generateActionWithTextFallback(params: {
   res: VercelResponse;
   strategySummary: string | undefined;
   format: "json" | "toon";
+  currentState: GameState;
 }): Promise<VercelResponse> {
-  const { model, userMessage, provider, res, strategySummary, format } = params;
+  const { model, userMessage, provider, res, strategySummary, format, currentState } = params;
 
   const prompt = buildTextFallbackPrompt(userMessage);
 
   const result = await generateText({
     model,
-    system: DOMINION_SYSTEM_PROMPT,
+    system: buildSystemPrompt(currentState.supply),
     prompt,
     maxRetries: 0,
     ...getProviderOptions(provider),
@@ -567,6 +560,7 @@ async function processGenerationRequest(
       res,
       strategySummary,
       format,
+      currentState,
     });
   }
 
@@ -574,7 +568,7 @@ async function processGenerationRequest(
   const result = await generateObject({
     model,
     schema: ActionSchema,
-    system: DOMINION_SYSTEM_PROMPT,
+    system: buildSystemPrompt(currentState.supply),
     prompt: userMessage,
     maxRetries: 0,
     ...getProviderOptions(provider),

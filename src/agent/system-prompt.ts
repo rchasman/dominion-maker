@@ -1,4 +1,28 @@
-export const DOMINION_SYSTEM_PROMPT = `Data is TOON-encoded (self-documenting, tab-delimited).
+import { CARDS } from "../data/cards";
+import { encodeToon } from "../lib/toon";
+import type { CardName } from "../types/game-state";
+
+export function buildCardDefinitionsTable(supply: Record<CardName, number>): string {
+  // Only include cards that are in the current game's supply
+  const cardsInSupply = Object.keys(supply) as CardName[];
+
+  const cardData = cardsInSupply.map(cardName => {
+    const card = CARDS[cardName];
+    return {
+      name: card.name,
+      cost: card.cost,
+      types: card.types.join("|"),
+      effect: card.description,
+      coins: card.coins ?? null,
+      vp: card.vp ?? null,
+    };
+  });
+
+  return encodeToon(cardData);
+}
+
+export function buildSystemPrompt(supply: Record<CardName, number>): string {
+  return `Data is TOON-encoded (self-documenting, tab-delimited).
 
 You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
 
@@ -14,4 +38,14 @@ Resources (yourActions/yourBuys/yourCoins) reset each turn.
 
 If STRATEGY OVERRIDE present: follow absolutely.
 
-Include reasoning.`;
+CARD DEFINITIONS (static reference):
+${buildCardDefinitionsTable(supply)}
+
+Note: Current state shows supply counts and effective costs (after reductions).`;
+}
+
+// Keep the old export for backwards compatibility during migration
+export const DOMINION_SYSTEM_PROMPT = buildSystemPrompt({
+  Copper: 0, Silver: 0, Gold: 0,
+  Estate: 0, Duchy: 0, Province: 0, Curse: 0,
+});

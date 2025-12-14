@@ -1,11 +1,12 @@
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { z } from "zod";
-import type { GameState } from "../src/types/game-state";
+import type { GameState, CardName } from "../src/types/game-state";
 import { formatTurnHistoryForAnalysis, STRATEGY_ANALYSIS_TURNS } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { run } from "../src/lib/run";
 import { encodeToon } from "../src/lib/toon";
+import { buildCardDefinitionsTable } from "../src/agent/system-prompt";
 
 // HTTP status codes
 const HTTP_STATUS = {
@@ -30,9 +31,13 @@ const VP_VALUES = {
 // Create devtools middleware once at module level (singleton pattern)
 const sharedDevToolsMiddleware = devToolsMiddleware();
 
-const STRATEGY_ANALYSIS_PROMPT = `Data is TOON-encoded (self-documenting, tab-delimited).
+function buildStrategyAnalysisPrompt(supply: Record<CardName, number>): string {
+  return `Data is TOON-encoded (self-documenting, tab-delimited).
 
 You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
+
+CARD DEFINITIONS (static reference):
+${buildCardDefinitionsTable(supply)}
 
 For each player, provide:
 1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
@@ -40,6 +45,7 @@ For each player, provide:
 3. **Recommendation** (1-2 sentences): What they should do next and why. Be decisive and actionable.
 
 Write with confidence and personality. Be analytical but engaging. No fluff - every word should matter.`;
+}
 
 const PlayerAnalysisSchema = z.object({
   id: z.string().describe("Player ID (e.g., 'human', 'ai')"),
@@ -202,7 +208,7 @@ Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
     // Use generateObject with array schema (avoids z.record gateway bug)
     const result = await generateObject({
       model,
-      system: STRATEGY_ANALYSIS_PROMPT,
+      system: buildStrategyAnalysisPrompt(currentState.supply),
       prompt,
       schema: StrategyAnalysisSchema,
       maxRetries: 1,
