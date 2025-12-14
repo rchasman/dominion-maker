@@ -15,9 +15,9 @@ const SENTRY_ACTIONS = [
   { id: "discard", label: "Discard", color: "#9CA3AF" },
 ] as const;
 
-function createRevealEvents(player: PlayerId, cards: CardName[]): GameEvent[] {
+function createPeekEvents(player: PlayerId, cards: CardName[]): GameEvent[] {
   return cards.map(card => ({
-    type: "CARD_REVEALED" as const,
+    type: "CARD_PEEKED" as const,
     player,
     card,
     from: "deck" as const,
@@ -92,7 +92,7 @@ export const sentry: CardEffect = ({
       events: [
         ...drawEvents,
         { type: "ACTIONS_MODIFIED", delta: 1 },
-        ...createRevealEvents(player, revealed),
+        ...createPeekEvents(player, revealed),
       ],
       pendingDecision: {
         type: "card_decision",
