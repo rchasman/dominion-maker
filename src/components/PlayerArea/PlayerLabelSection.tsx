@@ -7,6 +7,21 @@ import {
   shift,
 } from "@floating-ui/dom";
 import { getPlayerColor } from "../../lib/board-utils";
+import type { ComponentChildren } from "preact";
+
+/**
+ * Parse **bold** markdown into JSX
+ */
+function renderMarkdown(text: string): ComponentChildren {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    ),
+  );
+}
 
 interface PlayerLabelSectionProps {
   label: string;
@@ -49,7 +64,7 @@ function renderStrategySection(playerStrategy: {
         >
           Gameplan
         </div>
-        <div>{playerStrategy.gameplan}</div>
+        <div>{renderMarkdown(playerStrategy.gameplan)}</div>
       </div>
       <div>
         <div
@@ -62,7 +77,9 @@ function renderStrategySection(playerStrategy: {
         >
           Read
         </div>
-        <div style={{ lineHeight: "1.6" }}>{playerStrategy.read}</div>
+        <div style={{ lineHeight: "1.6" }}>
+          {renderMarkdown(playerStrategy.read)}
+        </div>
       </div>
       <div>
         <div
@@ -75,7 +92,9 @@ function renderStrategySection(playerStrategy: {
         >
           Recommendation
         </div>
-        <div style={{ lineHeight: "1.6" }}>{playerStrategy.recommendation}</div>
+        <div style={{ lineHeight: "1.6" }}>
+          {renderMarkdown(playerStrategy.recommendation)}
+        </div>
       </div>
     </div>
   );
