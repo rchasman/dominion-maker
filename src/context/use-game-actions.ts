@@ -9,6 +9,10 @@ import type { CardName, GameState } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { LLMLogEntry } from "../components/LLMLog";
+import type { GameStrategy } from "../types/game-mode";
+import type { PlayerStrategyData } from "../types/player-strategy";
+import { fetchStrategyAnalysis } from "./use-strategy-analysis";
+import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 import {
   executePlayAction,
   executePlayTreasure,
@@ -60,9 +64,19 @@ export function useGameActions(
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
     setLLMLogs: (setter: (prev: LLMLogEntry[]) => LLMLogEntry[]) => void;
+    strategy: GameStrategy;
+    playerStrategies: PlayerStrategyData;
+    setPlayerStrategies: (strategies: PlayerStrategyData) => void;
   },
 ): GameActions {
-  const { setEvents, setGameState, setLLMLogs } = actions;
+  const {
+    setEvents,
+    setGameState,
+    setLLMLogs,
+    strategy,
+    playerStrategies,
+    setPlayerStrategies,
+  } = actions;
   const playAction = useCallback(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
@@ -183,12 +197,31 @@ export function useGameActions(
 
       executeUndo(engine, toEventId);
       const eventsAfterUndo = engine.eventLog.length;
+      const stateAfterUndo = engine.state;
       setEvents([...engine.eventLog]);
-      setGameState(engine.state);
+      setGameState(stateAfterUndo);
 
       setLLMLogs(prev => filterLogsAfterUndo(prev, eventsAfterUndo));
+
+      // Refetch strategy analysis for the new game state after undo
+      if (stateAfterUndo.turn >= MIN_TURN_FOR_STRATEGY) {
+        fetchStrategyAnalysis(
+          stateAfterUndo,
+          strategy,
+          playerStrategies,
+          setPlayerStrategies,
+        );
+      }
     },
-    [engineRef, setEvents, setGameState, setLLMLogs],
+    [
+      engineRef,
+      setEvents,
+      setGameState,
+      setLLMLogs,
+      strategy,
+      playerStrategies,
+      setPlayerStrategies,
+    ],
   );
 
   const getStateAtEvent = useCallback(

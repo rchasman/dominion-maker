@@ -15,7 +15,7 @@ import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 /**
  * Fetch strategy analysis from API
  */
-function fetchStrategyAnalysis(
+export function fetchStrategyAnalysis(
   state: GameState,
   strategy: GameStrategy,
   currentStrategies: PlayerStrategyData,

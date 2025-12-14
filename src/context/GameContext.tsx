@@ -199,6 +199,9 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     setEvents,
     setGameState,
     setLLMLogs,
+    strategy,
+    playerStrategies,
+    setPlayerStrategies,
   });
 
   // AI Automation
