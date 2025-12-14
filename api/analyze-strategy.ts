@@ -33,7 +33,7 @@ const VP_VALUES = {
 function createDevToolsMiddleware() {
   // Only use devtools in development
   if (process.env.NODE_ENV === "production") {
-    return undefined;
+    return;
   }
   return devToolsMiddleware();
 }

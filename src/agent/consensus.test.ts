@@ -110,11 +110,13 @@ describe("Consensus System", () => {
 
         const responses = [
           // Round 1: trash Copper
-          { type: "trash_card" as const, card: "Copper" as const },
+          { type: "trash_card", card: "Copper" },
           // Round 2: trash Estate
-          { type: "trash_card" as const, card: "Estate" as const },
-          // Round 3+: skip remaining
-          { type: "skip_decision" as const },
+          { type: "trash_card", card: "Estate" },
+          // Round 3: trash another Copper
+          { type: "trash_card", card: "Copper" },
+          // Round 4+: trash Duchy
+          { type: "trash_card", card: "Duchy" },
         ];
 
         const action = responses[Math.min(roundCount - 1, responses.length - 1)];
