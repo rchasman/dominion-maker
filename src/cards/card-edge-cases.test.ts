@@ -406,7 +406,7 @@ describe("Edge Cases - Opponent Interactions", () => {
 describe("Edge Cases - Decision Cancellation", () => {
   beforeEach(() => resetEventCounter());
 
-  it("Chapel selecting 0 cards trashes nothing", () => {
+  it("Chapel skip handler trashes nothing", () => {
     const state = createTestState(["Copper", "Estate"]);
 
     const effect = getCardEffect("Chapel");
@@ -417,20 +417,23 @@ describe("Edge Cases - Decision Cancellation", () => {
 
     // Get decision
     expect(result.pendingDecision).toBeDefined();
+    if (result.pendingDecision) {
+      state.pendingDecision = result.pendingDecision;
+    }
 
-    // Submit empty selection
+    // Skip using on_skip stage
     result = effect({
       state,
       player: "human",
       card: "Chapel",
       decision: { selectedCards: [] },
-      stage: "trash",
+      stage: "on_skip",
     });
 
     expect(result.events.length).toBe(0);
   });
 
-  it("Cellar selecting 0 cards draws nothing", () => {
+  it("Cellar skip handler with 0 discarded draws nothing", () => {
     const state = createTestState(["Copper"], ["Silver"]);
 
     const effect = getCardEffect("Cellar");
@@ -445,12 +448,17 @@ describe("Edge Cases - Decision Cancellation", () => {
       stage: undefined,
     });
 
+    if (result.pendingDecision) {
+      state.pendingDecision = result.pendingDecision;
+    }
+
+    // Skip immediately using on_skip stage
     result = effect({
       state: applyEvents(state, result.events),
       player: "human",
       card: "Cellar",
       decision: { selectedCards: [] },
-      stage: "discard",
+      stage: "on_skip",
     });
 
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");

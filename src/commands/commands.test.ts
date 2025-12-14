@@ -1060,31 +1060,41 @@ describe("Command System - Cellar Causality", () => {
     const rootEventId = cardPlayedEvent.id;
 
     // Apply events to get updated state
-    const midState = applyEvents(state, playResult.events);
+    let midState = applyEvents(state, playResult.events);
     expect(midState.pendingDecision).toBeDefined();
 
-    // Resolve decision - discard Estate and Copper
-    const decisionResult = handleCommand(midState, {
+    // First discard: Estate
+    const decision1Result = handleCommand(midState, {
       type: "SUBMIT_DECISION",
       player: "human",
       choice: {
-        selectedCards: ["Estate", "Copper"],
+        selectedCards: ["Estate"],
       },
     });
 
-    expect(decisionResult.ok).toBe(true);
-    if (!decisionResult.events) throw new Error("Expected events");
+    expect(decision1Result.ok).toBe(true);
+    if (!decision1Result.events) throw new Error("Expected events");
 
-    // Find discard and draw events
-    const discardEvents = decisionResult.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    const drawEvents = decisionResult.events.filter(
-      e => e.type === "CARD_DRAWN",
-    );
+    // Apply first discard
+    midState = applyEvents(midState, decision1Result.events);
+    expect(midState.pendingDecision).toBeDefined();
 
-    expect(discardEvents.length).toBe(2);
-    expect(drawEvents.length).toBe(2);
+    // Skip to finish and draw (only discarded 1 card) - use SKIP_DECISION
+    const decision2Result = handleCommand(midState, {
+      type: "SKIP_DECISION",
+      player: "human",
+    });
+
+    expect(decision2Result.ok).toBe(true);
+    if (!decision2Result.events) throw new Error("Expected events");
+
+    // Collect all discard and draw events from all decisions
+    const allEvents = [...decision1Result.events, ...decision2Result.events];
+    const discardEvents = allEvents.filter(e => e.type === "CARD_DISCARDED");
+    const drawEvents = allEvents.filter(e => e.type === "CARD_DRAWN");
+
+    expect(discardEvents.length).toBe(1);
+    expect(drawEvents.length).toBe(1);
 
     // Verify all discard/draw events are linked to the original CARD_PLAYED event
     for (const event of [...discardEvents, ...drawEvents]) {

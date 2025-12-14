@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { cellar } from "./cellar";
 import type { GameState } from "../../types/game-state";
 import { resetEventCounter } from "../../events/id-generator";
+import { applyEvents } from "../../events/apply";
 
 function createTestState(): GameState {
   return {
@@ -31,6 +32,14 @@ function createTestState(): GameState {
     supply: {},
     trash: [],
     log: [],
+    turnHistory: [],
+    kingdomCards: [],
+    pendingDecision: null,
+    pendingDecisionEventId: null,
+    subPhase: null,
+    gameOver: false,
+    winner: null,
+    activeEffects: [],
   };
 }
 
@@ -39,7 +48,7 @@ describe("Cellar - duplicate card handling", () => {
     resetEventCounter();
   });
 
-  it("should only discard selected copies, not all copies", () => {
+  it("should discard cards one at a time and draw at the end", () => {
     const state = createTestState();
     // Player has 3 Estates, wants to discard 2
     state.players.human.hand = [
@@ -59,8 +68,11 @@ describe("Cellar - duplicate card handling", () => {
     });
 
     expect(result1.pendingDecision).toBeDefined();
+    expect(result1.pendingDecision?.min).toBe(0);
+    expect(result1.pendingDecision?.max).toBe(1);
+    expect(result1.pendingDecision?.canSkip).toBe(true);
 
-    // Simulate player discarding 2 Estates
+    // First discard: Estate
     if (result1.pendingDecision) {
       state.pendingDecision = result1.pendingDecision;
     }
@@ -68,25 +80,49 @@ describe("Cellar - duplicate card handling", () => {
       state,
       player: "human",
       card: "Cellar",
-      decision: { selectedCards: ["Estate", "Estate"] },
+      decision: { selectedCards: ["Estate"] },
       stage: "discard",
     });
 
-    // Should create 2 discard events + 2 draw events
-    const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED",
+    expect(result2.events.filter(e => e.type === "CARD_DISCARDED").length).toBe(
+      1,
     );
-    const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
+    expect(result2.pendingDecision).toBeDefined(); // Should continue
 
-    expect(discardEvents.length).toBe(2);
-    expect(drawEvents.length).toBe(2);
+    // Second discard: Estate
+    if (result2.pendingDecision) {
+      state.pendingDecision = result2.pendingDecision;
+    }
+    const result3 = cellar({
+      state,
+      player: "human",
+      card: "Cellar",
+      decision: { selectedCards: ["Estate"] },
+      stage: "discard",
+    });
 
-    // Verify the simulated state used for drawing
-    // Should have kept 1 Estate (not removed all 3)
-    expect(discardEvents.every(e => e.card === "Estate")).toBe(true);
+    expect(result3.events.filter(e => e.type === "CARD_DISCARDED").length).toBe(
+      1,
+    );
+    expect(result3.pendingDecision).toBeDefined(); // Should continue
+
+    // Skip to finish - use on_skip stage
+    if (result3.pendingDecision) {
+      state.pendingDecision = result3.pendingDecision;
+    }
+    const result4 = cellar({
+      state,
+      player: "human",
+      card: "Cellar",
+      decision: { selectedCards: [] },
+      stage: "on_skip",
+    });
+
+    const drawEvents = result4.events.filter(e => e.type === "CARD_DRAWN");
+    expect(drawEvents.length).toBe(2); // Drew 2 because discarded 2
   });
 
-  it("should handle discarding all copies correctly", () => {
+  it("should handle skipping immediately (discard zero)", () => {
     const state = createTestState();
     state.players.human.hand = ["Estate", "Estate", "Copper"];
     state.players.human.deck = ["Gold", "Gold"];
@@ -100,25 +136,24 @@ describe("Cellar - duplicate card handling", () => {
     if (result1.pendingDecision) {
       state.pendingDecision = result1.pendingDecision;
     }
+
+    // Skip immediately without discarding - use on_skip stage
     const result2 = cellar({
       state,
       player: "human",
       card: "Cellar",
-      decision: { selectedCards: ["Estate", "Estate"] },
-      stage: "discard",
+      decision: { selectedCards: [] },
+      stage: "on_skip",
     });
 
-    const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    expect(discardEvents.length).toBe(2);
-    expect(discardEvents.every(e => e.card === "Estate")).toBe(true);
+    // Should have no events (no discards, no draws)
+    expect(result2.events.length).toBe(0);
   });
 
-  it("should handle discarding mixed cards", () => {
-    const state = createTestState();
-    state.players.human.hand = ["Estate", "Copper", "Copper", "Silver"];
-    state.players.human.deck = ["Gold", "Gold", "Gold"];
+  it("should handle discarding until hand is empty", () => {
+    let state = createTestState();
+    state.players.human.hand = ["Estate", "Copper"];
+    state.players.human.deck = ["Gold", "Gold"];
 
     const result1 = cellar({
       state,
@@ -126,24 +161,45 @@ describe("Cellar - duplicate card handling", () => {
       card: "Cellar",
     });
 
+    // Apply initial events and update state
+    state = applyEvents(state, result1.events);
     if (result1.pendingDecision) {
       state.pendingDecision = result1.pendingDecision;
     }
+
+    // First discard: Estate
     const result2 = cellar({
       state,
       player: "human",
       card: "Cellar",
-      decision: { selectedCards: ["Estate", "Copper", "Copper"] },
+      decision: { selectedCards: ["Estate"] },
       stage: "discard",
     });
 
-    const discardEvents = result2.events.filter(
+    expect(result2.pendingDecision).toBeDefined();
+
+    // Apply discard event and update state
+    state = applyEvents(state, result2.events);
+    if (result2.pendingDecision) {
+      state.pendingDecision = result2.pendingDecision;
+    }
+
+    // Second discard: Copper (last card in hand)
+    const result3 = cellar({
+      state,
+      player: "human",
+      card: "Cellar",
+      decision: { selectedCards: ["Copper"] },
+      stage: "discard",
+    });
+
+    // Should auto-draw when hand is empty (no more decisions)
+    expect(result3.pendingDecision).toBeUndefined();
+    const discardEvents = result3.events.filter(
       e => e.type === "CARD_DISCARDED",
     );
-    expect(discardEvents.length).toBe(3);
-
-    const discardedCards = discardEvents.map(e => e.card);
-    expect(discardedCards.filter(c => c === "Estate").length).toBe(1);
-    expect(discardedCards.filter(c => c === "Copper").length).toBe(2);
+    const drawEvents = result3.events.filter(e => e.type === "CARD_DRAWN");
+    expect(discardEvents.length).toBe(1); // Just this discard
+    expect(drawEvents.length).toBe(2); // Drew 2 (total discarded)
   });
 });

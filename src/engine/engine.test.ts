@@ -389,12 +389,10 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.pendingDecision).toBeDefined(); // Should ask again
     expect(engine.state.trash.length).toBe(2);
 
-    // Skip the rest
-    const skipDecision = engine.submitDecision("human", {
-      selectedCards: [],
-    });
+    // Skip the rest - use skipDecision method
+    const skipResult = engine.skipDecision("human");
 
-    expect(skipDecision.ok).toBe(true);
+    expect(skipResult.ok).toBe(true);
     expect(engine.state.pendingDecision).toBeNull(); // Done
     expect(engine.state.trash.length).toBe(2);
   });

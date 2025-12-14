@@ -284,7 +284,7 @@ describe("Multi-Stage Decision Cards", () => {
       expect(result.pendingDecision.stage).toBe("discard");
     });
 
-    it("should discard selected cards and draw same amount", () => {
+    it("should discard cards one at a time and draw at end", () => {
       const state = createTestState(
         ["Copper", "Estate", "Duchy"],
         ["Village", "Gold", "Silver"],
@@ -293,14 +293,34 @@ describe("Multi-Stage Decision Cards", () => {
       // Execute initial call
       let newState = executeCard("Cellar", state);
 
-      // Execute with decision to discard 2 cards
+      // First discard: Copper
       newState = executeCard(
         "Cellar",
         newState,
         {
-          selectedCards: ["Copper", "Estate"],
+          selectedCards: ["Copper"],
         },
         "discard",
+      );
+
+      // Second discard: Estate
+      newState = executeCard(
+        "Cellar",
+        newState,
+        {
+          selectedCards: ["Estate"],
+        },
+        "discard",
+      );
+
+      // Skip to finish and draw - use on_skip stage
+      newState = executeCard(
+        "Cellar",
+        newState,
+        {
+          selectedCards: [],
+        },
+        "on_skip",
       );
 
       const player = newState.players.human;
@@ -378,12 +398,12 @@ describe("Multi-Stage Decision Cards", () => {
       expect(newState.trash.length).toBe(3);
       expect(newState.pendingDecision).toBeDefined(); // Should ask again (not at limit yet)
 
-      // Skip the rest
+      // Skip the rest - use on_skip stage
       newState = executeCard(
         "Chapel",
         newState,
         { selectedCards: [] },
-        "trash",
+        "on_skip",
       );
       expect(newState.pendingDecision).toBeNull(); // Done
       expect(newState.trash.length).toBe(3);
