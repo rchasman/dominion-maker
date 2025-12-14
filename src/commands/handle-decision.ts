@@ -481,59 +481,7 @@ export function handleSkipDecision(
   } = state.pendingDecision;
   const originalCause = metadata?.originalCause as string | undefined;
 
-  // If there's a card being played, invoke its "on_skip" handler first
-  // (before applying DECISION_SKIPPED, so card can still read state.pendingDecision.metadata)
-  if (cardBeingPlayed) {
-    const effect = getCardEffect(cardBeingPlayed);
-    if (!effect) {
-      // No effect - just emit DECISION_SKIPPED
-      const builder = new EventBuilder();
-      builder.add(
-        {
-          type: "DECISION_SKIPPED",
-          player,
-          cardBeingPlayed,
-          stage,
-        },
-        state.pendingDecisionEventId || undefined,
-      );
-      return { ok: true, events: builder.build() };
-    }
-
-    // Call card effect with original state (still has pendingDecision)
-    const result = effect({
-      state,
-      player: decisionPlayer,
-      card: cardBeingPlayed,
-      decision: { selectedCards: [] },
-      stage: "on_skip",
-    });
-
-    // Should not create another decision on skip
-    if (result.pendingDecision) {
-      return { ok: false, error: "Cannot create decision from skip handler" };
-    }
-
-    // Build events: DECISION_SKIPPED first, then effect events
-    const builder = new EventBuilder();
-    builder.add(
-      {
-        type: "DECISION_SKIPPED",
-        player,
-        cardBeingPlayed,
-        stage,
-      },
-      state.pendingDecisionEventId || undefined,
-    );
-    const rootEventId = builder.getRootId();
-
-    // Link effect events to originalCause (the CARD_PLAYED event)
-    const effectEvents = linkEvents(result.events, originalCause || rootEventId);
-
-    return { ok: true, events: [...builder.build(), ...effectEvents] };
-  }
-
-  // No card being played - just emit DECISION_SKIPPED
+  // Build DECISION_SKIPPED event (always emit this)
   const builder = new EventBuilder();
   builder.add(
     {
@@ -544,5 +492,34 @@ export function handleSkipDecision(
     },
     state.pendingDecisionEventId || undefined,
   );
-  return { ok: true, events: builder.build() };
+  const rootEventId = builder.getRootId();
+  const skipEvent = builder.build();
+
+  // If there's a card being played, invoke its "on_skip" handler
+  if (!cardBeingPlayed) {
+    return { ok: true, events: skipEvent };
+  }
+
+  const effect = getCardEffect(cardBeingPlayed);
+  if (!effect) {
+    return { ok: true, events: skipEvent };
+  }
+
+  // Call card effect with original state (still has pendingDecision)
+  const result = effect({
+    state,
+    player: decisionPlayer,
+    card: cardBeingPlayed,
+    decision: { selectedCards: [] },
+    stage: "on_skip",
+  });
+
+  if (result.pendingDecision) {
+    return { ok: false, error: "Cannot create decision from skip handler" };
+  }
+
+  // Link effect events to originalCause (the CARD_PLAYED event)
+  const effectEvents = linkEvents(result.events, originalCause || rootEventId);
+
+  return { ok: true, events: [...skipEvent, ...effectEvents] };
 }
