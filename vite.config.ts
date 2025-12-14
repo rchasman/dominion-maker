@@ -44,6 +44,13 @@ export default defineConfig({
             if (id.includes("preact")) {
               return "preact-vendor";
             }
+            // Split vendor by usage pattern
+            if (id.includes("trystero")) {
+              return "multiplayer-vendor";
+            }
+            if (id.includes("@floating-ui")) {
+              return "ui-vendor";
+            }
             return "vendor";
           }
           if (
