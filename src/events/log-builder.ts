@@ -66,16 +66,19 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
 
       if (event.causedBy) {
         // Find nearest visible ancestor (skip over filtered events like DECISION_RESOLVED)
-        let parentId = event.causedBy;
-        let parent = acc.logMap.get(parentId);
+        const findVisibleParent = (
+          startParentId: string,
+        ): LogEntry | undefined => {
+          const checkParent = acc.logMap.get(startParentId);
+          if (checkParent) return checkParent;
 
-        // Traverse up causality chain to find visible parent
-        while (!parent && parentId) {
-          const parentEvent = events.find(e => e.id === parentId);
-          if (!parentEvent || !parentEvent.causedBy) break;
-          parentId = parentEvent.causedBy;
-          parent = acc.logMap.get(parentId);
-        }
+          const parentEvent = events.find(e => e.id === startParentId);
+          if (!parentEvent || !parentEvent.causedBy) return undefined;
+
+          return findVisibleParent(parentEvent.causedBy);
+        };
+
+        const parent = findVisibleParent(event.causedBy);
 
         if (parent) {
           parent.children = [...(parent.children || []), logEntry];

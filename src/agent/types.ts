@@ -63,47 +63,61 @@ export function buildModelsFromSettings({
     return config?.maxInstances === undefined;
   });
 
-  // Build array respecting maxInstances
-  const models: ModelProvider[] = [];
-  const instanceCounts = new Map<ModelProvider, number>();
-
   // Fill array by cycling through all enabled models
-  for (let i = 0; i < consensusCount; i++) {
-    const modelId = enabled[i % enabled.length];
-    const config = MODELS.find(m => m.id === modelId);
-    const currentCount = instanceCounts.get(modelId) ?? 0;
+  const { models } = Array.from(
+    { length: consensusCount },
+    (_, i) => i,
+  ).reduce<{
+    models: ModelProvider[];
+    instanceCounts: Map<ModelProvider, number>;
+  }>(
+    (acc, i) => {
+      const modelId = enabled[i % enabled.length];
+      const config = MODELS.find(m => m.id === modelId);
+      const currentCount = acc.instanceCounts.get(modelId) ?? 0;
 
-    // Check if model has reached its limit
-    if (config?.maxInstances && currentCount >= config.maxInstances) {
-      // Try to find another model that hasn't reached its limit
-      const availableModel = enabled.find(id => {
-        const cfg = MODELS.find(m => m.id === id);
-        const count = instanceCounts.get(id) ?? 0;
-        return !cfg?.maxInstances || count < cfg.maxInstances;
-      });
+      // Check if model has reached its limit
+      if (config?.maxInstances && currentCount >= config.maxInstances) {
+        // Try to find another model that hasn't reached its limit
+        const availableModel = enabled.find(id => {
+          const cfg = MODELS.find(m => m.id === id);
+          const count = acc.instanceCounts.get(id) ?? 0;
+          return !cfg?.maxInstances || count < cfg.maxInstances;
+        });
 
-      if (availableModel) {
-        models.push(availableModel);
-        instanceCounts.set(
-          availableModel,
-          (instanceCounts.get(availableModel) ?? 0) + 1,
-        );
-      } else {
+        if (availableModel) {
+          return {
+            models: [...acc.models, availableModel],
+            instanceCounts: new Map(acc.instanceCounts).set(
+              availableModel,
+              (acc.instanceCounts.get(availableModel) ?? 0) + 1,
+            ),
+          };
+        }
+
         // All models at limit, fall back to cycling through unlimited models
         const fallbackModel =
           modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ??
           enabled[0];
-        models.push(fallbackModel);
-        instanceCounts.set(
-          fallbackModel,
-          (instanceCounts.get(fallbackModel) ?? 0) + 1,
-        );
+        return {
+          models: [...acc.models, fallbackModel],
+          instanceCounts: new Map(acc.instanceCounts).set(
+            fallbackModel,
+            (acc.instanceCounts.get(fallbackModel) ?? 0) + 1,
+          ),
+        };
       }
-    } else {
-      models.push(modelId);
-      instanceCounts.set(modelId, currentCount + 1);
-    }
-  }
+
+      return {
+        models: [...acc.models, modelId],
+        instanceCounts: new Map(acc.instanceCounts).set(
+          modelId,
+          currentCount + 1,
+        ),
+      };
+    },
+    { models: [], instanceCounts: new Map<ModelProvider, number>() },
+  );
 
   // Shuffle for randomness
   return models
