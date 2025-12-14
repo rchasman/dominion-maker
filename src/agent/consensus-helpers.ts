@@ -400,6 +400,12 @@ export const logVotingResults = (params: VotingResultsParams): void => {
         inPlay,
         handCounts,
         turnHistory: currentState.turnHistory,
+        legalActions: legalActions.map(a => {
+          if (a.type === "end_phase") return "end_phase";
+          if (a.type === "choose_from_options")
+            return `choose[${a.optionIndex}]`;
+          return `${a.type}(${a.card})`;
+        }),
       },
     },
   });
