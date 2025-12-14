@@ -195,9 +195,8 @@ export function executeActionWithEngine(
     case "skip_decision":
       return engine.dispatch(
         {
-          type: "SUBMIT_DECISION",
+          type: "SKIP_DECISION",
           player: playerId,
-          choice: { selectedCards: [] },
         },
         playerId,
       ).ok;

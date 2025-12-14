@@ -153,6 +153,13 @@ export class DominionEngine {
   }
 
   /**
+   * Skip the current decision.
+   */
+  skipDecision(player: PlayerId): CommandResult {
+    return this.dispatch({ type: "SKIP_DECISION", player }, player);
+  }
+
+  /**
    * Request to undo to a specific event ID (causal root).
    */
   requestUndo(
