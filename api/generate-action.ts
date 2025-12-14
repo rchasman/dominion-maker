@@ -395,17 +395,9 @@ function tryRecoverActionFromText(
   return validAction.validated;
 }
 
-// Build output format prompt for text fallback (always JSON output)
+// Text fallback no longer needs format instructions (now in system prompt)
 function buildTextFallbackPrompt(userMessage: string): string {
-  return `${userMessage}\n\nRespond with ONLY a JSON object matching one of these formats (no schema, no explanation):
-{ "type": "play_action", "card": "CardName", "reasoning": "..." }
-{ "type": "play_treasure", "card": "CardName", "reasoning": "..." }
-{ "type": "buy_card", "card": "CardName", "reasoning": "..." }
-{ "type": "gain_card", "card": "CardName", "reasoning": "..." }
-{ "type": "discard_card", "card": "CardName", "reasoning": "..." }
-{ "type": "trash_card", "card": "CardName", "reasoning": "..." }
-{ "type": "skip_decision", "reasoning": "..." }
-{ "type": "end_phase", "reasoning": "..." }`;
+  return userMessage;
 }
 
 // Generate action using text fallback (for models without JSON schema support)
@@ -424,7 +416,7 @@ async function generateActionWithTextFallback(params: {
 
   const result = await generateText({
     model,
-    system: buildSystemPrompt(currentState.supply),
+    system: buildSystemPrompt(currentState.supply, { textFallback: true }),
     prompt,
     maxRetries: 0,
     ...getProviderOptions(provider),

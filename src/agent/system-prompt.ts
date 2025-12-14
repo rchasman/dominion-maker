@@ -21,8 +21,11 @@ export function buildCardDefinitionsTable(supply: Record<CardName, number>): str
   return encodeToon(cardData);
 }
 
-export function buildSystemPrompt(supply: Record<CardName, number>): string {
-  return `Data is TOON-encoded (self-documenting, tab-delimited).
+export function buildSystemPrompt(
+  supply: Record<CardName, number>,
+  options?: { textFallback?: boolean }
+): string {
+  const basePrompt = `Data is TOON-encoded (self-documenting, tab-delimited).
 
 You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
 
@@ -42,10 +45,21 @@ CARD DEFINITIONS (static reference):
 ${buildCardDefinitionsTable(supply)}
 
 Note: Current state shows supply counts and effective costs (after reductions).`;
-}
 
-// Keep the old export for backwards compatibility during migration
-export const DOMINION_SYSTEM_PROMPT = buildSystemPrompt({
-  Copper: 0, Silver: 0, Gold: 0,
-  Estate: 0, Duchy: 0, Province: 0, Curse: 0,
-});
+  if (options?.textFallback) {
+    return `${basePrompt}
+
+OUTPUT FORMAT:
+Respond with ONLY a JSON object matching one of these formats (no schema, no explanation):
+{ "type": "play_action", "card": "CardName", "reasoning": "..." }
+{ "type": "play_treasure", "card": "CardName", "reasoning": "..." }
+{ "type": "buy_card", "card": "CardName", "reasoning": "..." }
+{ "type": "gain_card", "card": "CardName", "reasoning": "..." }
+{ "type": "discard_card", "card": "CardName", "reasoning": "..." }
+{ "type": "trash_card", "card": "CardName", "reasoning": "..." }
+{ "type": "skip_decision", "reasoning": "..." }
+{ "type": "end_phase", "reasoning": "..." }`;
+  }
+
+  return basePrompt;
+}
