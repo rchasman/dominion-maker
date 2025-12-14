@@ -1,5 +1,5 @@
 /**
- * Chapel - Trash up to 4 cards from your hand (one at a time)
+ * Chapel - Trash up to 4 cards from your hand
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
@@ -16,7 +16,7 @@ export const chapel: CardEffect = ({
 }): CardEffectResult => {
   const playerState = state.players[player];
 
-  // Initial call: start trashing loop
+  // Initial call: request batch selection
   if (isInitialCall(decision, stage)) {
     if (playerState.hand.length === 0) {
       return { events: [] };
@@ -28,69 +28,63 @@ export const chapel: CardEffect = ({
         type: "card_decision",
         player,
         from: "hand",
-        prompt: "Chapel: Trash a card from your hand (or skip)",
+        prompt: "Chapel: Trash up to 4 cards from your hand",
         cardOptions: [...playerState.hand],
         min: 0,
-        max: 1,
-        canSkip: true,
+        max: CHAPEL_MAX_TRASH,
         cardBeingPlayed: "Chapel",
         stage: "trash",
-        metadata: { trashedCount: 0 },
       },
     };
-  }
-
-  // Handle skip: done trashing
-  if (stage === "on_skip") {
-    return { events: [] };
   }
 
   // Process trash decision
   if (stage === "trash" && decision) {
-    const toTrash = decision.selectedCards[0];
-    if (!toTrash) {
-      throw new Error("Chapel trash requires card - use SKIP_DECISION to skip");
+    const toTrash = decision.selectedCards;
+
+    if (toTrash.length === 0) {
+      return { events: [] };
     }
 
-    const trashedCount =
-      (state.pendingDecision?.metadata?.trashedCount as number) || 0;
-
-    const trashEvent = {
+    // Emit one event per card (preserves atomicity)
+    const events = toTrash.map(card => ({
       type: "CARD_TRASHED" as const,
       player,
-      card: toTrash,
+      card,
       from: "hand" as const,
-    };
+    }));
 
-    const newTrashedCount = trashedCount + 1;
+    // Check if we should continue asking (for atomic AI submissions)
+    // If only 1 card selected and still under max, offer another decision
+    const trashedCount = toTrash.length;
+    const updatedHand = toTrash.reduce(
+      (hand, card) => removeCards(hand, [card]),
+      playerState.hand,
+    );
 
-    // Check if we should continue (not at limit and still have cards)
-    // Use removeCards to remove only ONE instance (not all copies)
-    const updatedHand = removeCards(playerState.hand, [toTrash]);
     const shouldContinue =
-      newTrashedCount < CHAPEL_MAX_TRASH && updatedHand.length > 0;
+      trashedCount === 1 &&
+      trashedCount < CHAPEL_MAX_TRASH &&
+      updatedHand.length > 0;
 
-    if (!shouldContinue) {
-      return { events: [trashEvent] };
+    if (shouldContinue) {
+      return {
+        events,
+        pendingDecision: {
+          type: "card_decision",
+          player,
+          from: "hand",
+          prompt: `Chapel: Trash up to ${CHAPEL_MAX_TRASH - trashedCount} more cards`,
+          cardOptions: updatedHand,
+          min: 0,
+          max: CHAPEL_MAX_TRASH - trashedCount,
+          cardBeingPlayed: "Chapel",
+          stage: "trash",
+        },
+      };
     }
 
-    // Continue trashing - create next decision
-    return {
-      events: [trashEvent],
-      pendingDecision: {
-        type: "card_decision",
-        player,
-        from: "hand",
-        prompt: `Chapel: Trash another card (${newTrashedCount}/${CHAPEL_MAX_TRASH} trashed, or skip)`,
-        cardOptions: updatedHand,
-        min: 0,
-        max: 1,
-        canSkip: true,
-        cardBeingPlayed: "Chapel",
-        stage: "trash",
-        metadata: { trashedCount: newTrashedCount },
-      },
-    };
+    return { events };
   }
 
   return { events: [] };
