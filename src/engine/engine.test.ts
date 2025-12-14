@@ -343,8 +343,7 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.activePlayer).not.toBe(initialPlayer);
   });
 
-  it.todo("should handle batch card decision through engine", () => {
-    // TODO: Fix batch event projection - currently not handling all cards correctly
+  it("should handle batch card decision through engine", () => {
     const engine = new DominionEngine();
     engine.startGame(["human", "ai"]);
 
@@ -391,10 +390,7 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(remainingHand).toEqual(["Copper", "Copper"]);
   });
 
-  it.todo("should handle duplicate cards in batch selection", () => {
-    // TODO: Fix duplicate card handling in batch selections
-    // Currently selecting ["Copper", "Copper"] may only remove one Copper
-    // Need to investigate event projection for duplicate card removals
+  it("should handle duplicate cards in batch selection", () => {
     const engine = new DominionEngine();
     engine.startGame(["human", "ai"]);
 
@@ -417,8 +413,16 @@ describe("DominionEngine - Full Game Flow", () => {
     });
 
     expect(batchTrash.ok).toBe(true);
-    expect(engine.state.trash.length).toBe(2);
-    expect(engine.state.players.human.hand).not.toContain("Copper");
+
+    // Both Coppers should be in trash
+    const trashPile = engine.state.trash;
+    const copperCount = trashPile.filter(c => c === "Copper").length;
+    expect(copperCount).toBe(2);
+
+    // No Coppers should remain in hand
+    const hand = engine.state.players.human.hand;
+    const coppersInHand = hand.filter(c => c === "Copper").length;
+    expect(coppersInHand).toBe(0);
   });
 });
 

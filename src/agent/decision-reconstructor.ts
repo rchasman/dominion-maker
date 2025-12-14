@@ -10,16 +10,20 @@ import { agentLogger } from "../lib/logger";
 import { removeCards } from "../lib/card-array-utils";
 
 /**
- * Accumulate AI atomic actions voted on by consensus into a batch decision.
+ * Accumulate AI atomic actions via multi-round consensus voting.
  * Used when batch decisions (max > 1) are decomposed for MAKER voting.
  *
- * This function is called by the consensus loop - after each atomic action is
- * selected by consensus, we accumulate it and update the simulated state for
- * the next voting round.
+ * This runs consensus MULTIPLE times (up to max), with each round voting on
+ * the next atomic action. The simulated state is updated between rounds so
+ * AI sees the context of previous selections.
+ *
+ * @param runSingleConsensus - Function that runs one round of consensus voting
+ * @param initialEngine - Engine state at decision start
+ * @returns Full batch of selected cards to submit
  */
 export async function reconstructBatchDecision(
+  runSingleConsensus: (engine: DominionEngine) => Promise<Action>,
   initialEngine: DominionEngine,
-  atomicActions: Action[],
 ): Promise<DecisionChoice> {
   const decision = initialEngine.state.pendingDecision;
   if (!decision) throw new Error("No pending decision for reconstruction");
@@ -29,14 +33,19 @@ export async function reconstructBatchDecision(
   let simulatedEngine = initialEngine;
 
   agentLogger.info(
-    `Reconstructing batch decision: max=${max}, actions=${atomicActions.length}`,
+    `Starting multi-round consensus for batch decision: max=${max}`,
   );
 
-  // Accumulate actions up to max
-  for (const action of atomicActions.slice(0, max)) {
+  // Run consensus up to max times
+  for (let round = 0; round < max; round++) {
+    agentLogger.debug(`Consensus round ${round + 1}/${max}`);
+
+    // Run one round of consensus voting on decomposed actions
+    const action = await runSingleConsensus(simulatedEngine);
+
     // Stop if AI votes to skip
     if (action.type === "skip_decision") {
-      agentLogger.debug(`AI voted to skip after ${selectedCards.length} selections`);
+      agentLogger.info(`AI voted to skip after ${selectedCards.length} selections`);
       break;
     }
 
@@ -48,8 +57,10 @@ export async function reconstructBatchDecision(
     }
 
     selectedCards.push(card);
+    agentLogger.debug(`Round ${round + 1} selected: ${card}`);
 
     // Simulate card removal for next round of voting
+    // This ensures AI sees updated context: "I already selected Copper"
     simulatedEngine = simulateCardSelection(simulatedEngine, card);
   }
 
@@ -94,4 +105,86 @@ export function simulateCardSelection(
  */
 export function isBatchDecision(decision: DecisionRequest | null | undefined): boolean {
   return !!decision && decision.type === "card_decision" && decision.max > 1;
+}
+
+/**
+ * Check if a decision has custom actions per card (like Sentry).
+ * These require multi-round consensus where AI votes on each card individually.
+ */
+export function isMultiActionDecision(
+  decision: DecisionRequest | null | undefined,
+): boolean {
+  return !!(
+    decision?.actions &&
+    decision.actions.length > 0 &&
+    !decision.actions.every(a => a.id === "select" || a.id === "skip")
+  );
+}
+
+/**
+ * Reconstruct a multi-action decision (like Sentry) from atomic actions.
+ * Each atomic action specifies what to do with one card.
+ *
+ * Example: Sentry reveals [Copper, Estate]
+ * - Round 1: AI votes "trash Copper" -> cardActions[0] = "trash"
+ * - Round 2: AI votes "topdeck Estate" -> cardActions[1] = "topdeck"
+ * - Result: { selectedCards: [], cardActions: {0: "trash", 1: "topdeck"}, cardOrder: [1] }
+ */
+export async function reconstructMultiActionDecision(
+  initialEngine: DominionEngine,
+  atomicActions: Action[],
+): Promise<DecisionChoice> {
+  const decision = initialEngine.state.pendingDecision;
+  if (!decision) throw new Error("No pending decision for reconstruction");
+
+  const cardActions: Record<number, string> = {};
+  const numCards = decision.cardOptions.length;
+
+  agentLogger.info(
+    `Reconstructing multi-action decision: ${numCards} cards, ${atomicActions.length} actions`,
+  );
+
+  // Process one action per card
+  for (let i = 0; i < Math.min(atomicActions.length, numCards); i++) {
+    const action = atomicActions[i];
+
+    // Stop if AI votes to skip (done making decisions)
+    if (action.type === "skip_decision") {
+      agentLogger.debug(
+        `AI voted to skip after ${i} decisions, defaulting rest to topdeck`,
+      );
+      // Default remaining cards to topdeck
+      for (let j = i; j < numCards; j++) {
+        if (!(j in cardActions)) {
+          cardActions[j] = "topdeck";
+        }
+      }
+      break;
+    }
+
+    // Map action type to action id
+    const actionId =
+      action.type === "trash_card"
+        ? "trash"
+        : action.type === "discard_card"
+          ? "discard"
+          : action.type === "topdeck_card"
+            ? "topdeck"
+            : "topdeck"; // default
+
+    cardActions[i] = actionId;
+
+    agentLogger.debug(`Card ${i} (${decision.cardOptions[i]}): ${actionId}`);
+  }
+
+  // Build cardOrder: topdecked cards in the order they appear
+  const cardOrder = Object.entries(cardActions)
+    .filter(([, actionId]) => actionId === "topdeck")
+    .map(([index]) => parseInt(index));
+
+  agentLogger.info(
+    `Multi-action reconstructed: ${Object.keys(cardActions).length} actions, ${cardOrder.length} topdecked`,
+  );
+
+  return { selectedCards: [], cardActions, cardOrder };
 }

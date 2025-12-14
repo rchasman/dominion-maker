@@ -9,6 +9,7 @@ export type Action = {
     | "gain_card"
     | "discard_card"
     | "trash_card"
+    | "topdeck_card"
     | "skip_decision"
     | "end_phase";
   /** The card to act on (not needed for end_phase or skip_decision) */

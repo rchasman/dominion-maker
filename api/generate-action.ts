@@ -80,6 +80,7 @@ const ActionSchema = z
         "gain_card",
         "discard_card",
         "trash_card",
+        "topdeck_card",
         "skip_decision",
         "end_phase",
       ])

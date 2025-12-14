@@ -34,6 +34,17 @@ export function getLegalActions(state: GameState): Action[] {
     const options = decision.cardOptions || [];
     const canSkip = decision.min === 0;
 
+    // Check if this is a decision with custom actions (like Sentry)
+    if (
+      decision.actions &&
+      decision.actions.length > 0 &&
+      !decision.actions.every(a => a.id === "select" || a.id === "skip")
+    ) {
+      // For decisions with custom actions, create one action per (card, action) combo
+      // This allows AI to vote on specific card-action pairs
+      return decomposeDecisionForAI(decision, state);
+    }
+
     // Check if this is a batch decision that needs decomposition for AI
     if (decision.max > 1) {
       return decomposeDecisionForAI(decision, state);
@@ -210,8 +221,10 @@ export function executeActionWithEngine(
         .ok;
     case "discard_card":
     case "trash_card":
+    case "topdeck_card":
     case "gain_card":
-      // All decision responses are single cards (atomic)
+      // Multi-action decisions are handled by multi-round consensus
+      // This path is only for simple single-card decisions
       if (!action.card) throw new Error(`${action.type} requires card`);
       return engine.dispatch(
         {

@@ -285,19 +285,186 @@ export async function advanceGameStateWithConsensus(
 
   agentLogger.info(`Starting consensus with ${providers.length} models`);
 
-  // Check for batch decision (max > 1) - requires multi-round consensus
+  // Check for special decision types requiring multi-round consensus
   const decision = currentState.pendingDecision;
-  if (decision?.type === "card_decision" && decision.max > 1) {
+  const {
+    isMultiActionDecision,
+    isBatchDecision,
+    reconstructMultiActionDecision,
+  } = await import("./decision-reconstructor");
+
+  // Check for batch decision (like Chapel: max > 1) - requires multi-round consensus
+  if (isBatchDecision(decision) && !isMultiActionDecision(decision)) {
     agentLogger.info(
       `Batch decision detected: max=${decision.max}, running multi-round consensus`,
     );
 
-    const { isBatchDecision } = await import("./decision-reconstructor");
-    if (isBatchDecision(decision)) {
-      // TODO: Implement multi-round consensus loop
-      // For now, fall through to single-action consensus
-      agentLogger.warn("Multi-round batch consensus not implemented yet - using single action");
+    const selectedCards: CardName[] = [];
+    let simulatedEngine = engine;
+    const { max } = decision;
+
+    // Run consensus up to max times
+    for (let round = 0; round < max; round++) {
+      const legalActions = getLegalActions(simulatedEngine.state);
+
+      agentLogger.info(
+        `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`,
+      );
+
+      const aheadByK = Math.max(
+        CONSENSUS_AHEAD_BY_K_MIN,
+        Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR),
+      );
+
+      const { results, earlyConsensus, voteGroups } = await runModelsInParallel({
+        providers,
+        currentState: simulatedEngine.state,
+        humanChoice,
+        strategySummary,
+        customStrategy,
+        logger,
+        aheadByK,
+        dataFormat,
+        actionId: `${actionId}-r${round}`,
+      });
+
+      const { winner } = selectConsensusWinner(
+        voteGroups,
+        results,
+        earlyConsensus,
+        legalActions,
+      );
+
+      // Stop if AI votes to skip
+      if (winner.action.type === "skip_decision") {
+        agentLogger.info(`AI voted to skip after ${selectedCards.length} selections`);
+        break;
+      }
+
+      // Extract card from atomic action
+      const card = winner.action.card;
+      if (!card) {
+        agentLogger.warn("Action missing card, stopping batch reconstruction");
+        break;
+      }
+
+      selectedCards.push(card);
+      agentLogger.info(
+        `Batch round ${round + 1} winner: ${winner.action.type}(${card}) - ${winner.count} votes`,
+      );
+
+      // Simulate card removal for next round
+      const { simulateCardSelection } = await import("./decision-reconstructor");
+      simulatedEngine = simulateCardSelection(simulatedEngine, card);
     }
+
+    // Submit accumulated batch
+    const success = engine.dispatch(
+      {
+        type: "SUBMIT_DECISION",
+        player: playerId,
+        choice: { selectedCards },
+      },
+      playerId,
+    ).ok;
+
+    if (!success) {
+      agentLogger.error("Failed to submit batch decision");
+    }
+
+    const overallDuration = performance.now() - overallStart;
+    agentLogger.info(
+      `Batch decision complete: ${selectedCards.length} cards (${overallDuration.toFixed(0)}ms)`,
+    );
+    return;
+  }
+
+  if (isMultiActionDecision(decision)) {
+    agentLogger.info(
+      `Multi-action decision detected: ${decision.cardOptions.length} cards, running multi-round consensus`,
+    );
+
+    const atomicActions: Action[] = [];
+    const numCards = decision.cardOptions.length;
+
+    // Run consensus for each card
+    for (let roundIndex = 0; roundIndex < numCards; roundIndex++) {
+      // Create modified state with current round index in metadata
+      const roundState: GameState = {
+        ...engine.state,
+        pendingDecision: engine.state.pendingDecision
+          ? {
+              ...engine.state.pendingDecision,
+              prompt: `${engine.state.pendingDecision.prompt} (Card ${roundIndex + 1}/${numCards}: ${engine.state.pendingDecision.cardOptions[roundIndex]})`,
+              metadata: {
+                ...engine.state.pendingDecision.metadata,
+                currentRoundIndex: roundIndex,
+              },
+            }
+          : null,
+      };
+
+      const legalActions = getLegalActions(roundState);
+
+      agentLogger.info(
+        `Round ${roundIndex + 1}/${numCards}: Voting on ${decision.cardOptions[roundIndex]}`,
+      );
+
+      const aheadByK = Math.max(
+        CONSENSUS_AHEAD_BY_K_MIN,
+        Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR),
+      );
+
+      const { results, earlyConsensus, voteGroups } = await runModelsInParallel({
+        providers,
+        currentState: roundState,
+        humanChoice,
+        strategySummary,
+        customStrategy,
+        logger,
+        aheadByK,
+        dataFormat,
+        actionId: `${actionId}-r${roundIndex}`,
+      });
+
+      const { winner } = selectConsensusWinner(
+        voteGroups,
+        results,
+        earlyConsensus,
+        legalActions,
+      );
+
+      atomicActions.push(winner.action);
+
+      // If AI voted to skip, stop early
+      if (winner.action.type === "skip_decision") {
+        agentLogger.info("AI voted to skip, stopping multi-round consensus");
+        break;
+      }
+    }
+
+    // Reconstruct full decision from atomic actions
+    const finalChoice = await reconstructMultiActionDecision(engine, atomicActions);
+
+    // Execute the full decision
+    const success = engine.dispatch(
+      {
+        type: "SUBMIT_DECISION",
+        player: playerId,
+        choice: finalChoice,
+      },
+      playerId,
+    ).ok;
+
+    if (!success) {
+      agentLogger.error("Failed to submit multi-action decision");
+    }
+
+    const overallDuration = performance.now() - overallStart;
+    agentLogger.info(
+      `Multi-action decision complete: ${atomicActions.length} actions (${overallDuration.toFixed(0)}ms)`,
+    );
+    return;
   }
 
   const legalActions = getLegalActions(currentState);

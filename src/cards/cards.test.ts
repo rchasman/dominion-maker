@@ -383,7 +383,7 @@ describe("Multi-Stage Decision Cards", () => {
       expect(newState.players["human"].hand).toEqual(["Duchy"]);
     });
 
-    it("should track total trashed count correctly for AI atomic submissions", () => {
+    it("should handle AI reconstructed batch submission", () => {
       const state = createTestState([
         "Copper",
         "Copper",
@@ -392,53 +392,30 @@ describe("Multi-Stage Decision Cards", () => {
         "Duchy",
       ]);
 
-      // First get the decision
+      // Get initial decision
       let newState = executeCard("Chapel", state);
       expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision?.max).toBe(4); // Initial max: 4
+      expect(newState.pendingDecision?.max).toBe(4);
 
-      // AI trashes first card atomically
+      // AI consensus runs multi-round voting, accumulates 3 cards
+      // Then submits all at once (handled by strategy layer)
       newState = executeCard(
         "Chapel",
         newState,
-        { selectedCards: ["Copper"] },
+        { selectedCards: ["Copper", "Estate", "Copper"] },
         "trash",
       );
-      expect(newState.trash.length).toBe(1);
-      expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision?.max).toBe(3); // Should be 3 remaining
 
-      // AI trashes second card atomically
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: ["Estate"] },
-        "trash",
-      );
-      expect(newState.trash.length).toBe(2);
-      expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision?.max).toBe(2); // Should be 2 remaining
-
-      // AI trashes third card atomically
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: ["Copper"] },
-        "trash",
-      );
+      // All 3 cards trashed in one submission
       expect(newState.trash.length).toBe(3);
-      expect(newState.pendingDecision).toBeDefined();
-      expect(newState.pendingDecision?.max).toBe(1); // Should be 1 remaining
+      expect(newState.trash).toContain("Copper");
+      expect(newState.trash).toContain("Estate");
 
-      // AI trashes fourth card atomically
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: ["Estate"] },
-        "trash",
-      );
-      expect(newState.trash.length).toBe(4);
-      expect(newState.pendingDecision).toBeNull(); // Done - reached max
+      // No loop decision - Chapel is done
+      expect(newState.pendingDecision).toBeNull();
+
+      // Hand has remaining cards
+      expect(newState.players["human"].hand).toEqual(["Estate", "Duchy"]);
     });
   });
 

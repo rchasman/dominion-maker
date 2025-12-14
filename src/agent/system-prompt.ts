@@ -62,6 +62,9 @@ CRITICAL BUY PHASE RULE: Check you.currentTreasuresInHand first. If it contains 
 VALIDATION: Only reference cards that exist in your zones:
 - play_action/play_treasure: card must be in you.currentHand
 - buy_card: card must be in supply with cost ≤ you.currentCoins
+- discard_card/trash_card/gain_card/topdeck_card: card must be in pendingDecision.cardOptions
+
+Note: topdeck_card returns card to top of deck (draw it next hand). Trash removes forever.
 
 If STRATEGY OVERRIDE present: follow it absolutely.`;
 }
