@@ -40,16 +40,20 @@ export const chapel: CardEffect = ({
     };
   }
 
+  // Handle skip: done trashing
+  if (stage === "on_skip") {
+    return { events: [] };
+  }
+
   // Process trash decision
   if (stage === "trash" && decision) {
     const toTrash = decision.selectedCards[0];
+    if (!toTrash) {
+      throw new Error("Chapel trash requires card - use SKIP_DECISION to skip");
+    }
+
     const trashedCount =
       (state.pendingDecision?.metadata?.trashedCount as number) || 0;
-
-    // Player skipped - done
-    if (!toTrash) {
-      return { events: [] };
-    }
 
     const trashEvent = {
       type: "CARD_TRASHED" as const,

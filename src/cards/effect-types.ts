@@ -266,6 +266,7 @@ export function createCardSelectionDecision(params: {
   max: number;
   cardBeingPlayed: CardName;
   stage: string;
+  canSkip?: boolean;
   metadata?: Record<string, unknown>;
 }): DecisionRequest {
   return {
@@ -278,6 +279,7 @@ export function createCardSelectionDecision(params: {
     max: params.max,
     cardBeingPlayed: params.cardBeingPlayed,
     stage: params.stage,
+    canSkip: params.canSkip,
     metadata: params.metadata,
   };
 }
