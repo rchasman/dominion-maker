@@ -380,6 +380,10 @@ function handleCardEffectContinuation(
         decision: {
           ...result.pendingDecision,
           cardBeingPlayed: ctx.cardBeingPlayed,
+          metadata: {
+            ...result.pendingDecision.metadata,
+            originalCause: ctx.originalCause || ctx.rootEventId,
+          },
         },
         id: generateEventId(),
         causedBy: ctx.rootEventId,
