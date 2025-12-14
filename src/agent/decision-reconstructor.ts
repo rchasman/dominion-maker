@@ -8,7 +8,6 @@ import type {
 import type { Action } from "../types/action";
 import { agentLogger } from "../lib/logger";
 import { removeCards } from "../lib/card-array-utils";
-import { run } from "../lib/run";
 
 /**
  * Accumulate AI atomic actions via multi-round consensus voting.
@@ -149,14 +148,12 @@ export async function reconstructMultiActionDecision(
   for (let i = 0; i < Math.min(atomicActions.length, numCards); i++) {
     const action = atomicActions[i];
 
-    // Stop if AI votes to skip (done making decisions)
     if (action.type === "skip_decision") {
       agentLogger.debug(
         `AI voted to skip after ${i} decisions, applying defaults`,
       );
-      // Default remaining cards to the default action
       const defaultAction = decision.actions?.find(a => a.isDefault);
-      const defaultId = defaultAction?.id || "topdeck";
+      const defaultId = defaultAction?.id || "topdeck_card";
 
       for (let j = i; j < numCards; j++) {
         if (!(j in cardActions)) {
@@ -166,33 +163,16 @@ export async function reconstructMultiActionDecision(
       break;
     }
 
-    // Map action type back to original action id
-    // This preserves the semantic meaning from the card's decision
-    const actionId = run(() => {
-      if (action.type === "trash_card") return "trash";
-      if (action.type === "discard_card") {
-        // Check if this is Library's "set_aside" disguised as discard
-        const actions = decision.actions || [];
-        if (actions.some(a => a.id === "set_aside")) return "set_aside";
-        return "discard";
-      }
-      if (action.type === "topdeck_card") {
-        // Check if this is Library's "draw" disguised as topdeck
-        const actions = decision.actions || [];
-        if (actions.some(a => a.id === "draw")) return "draw";
-        return "topdeck";
-      }
-      return "topdeck"; // default
-    });
+    cardActions[i] = action.type;
 
-    cardActions[i] = actionId;
-
-    agentLogger.debug(`Card ${i} (${decision.cardOptions[i]}): ${actionId}`);
+    agentLogger.debug(
+      `Card ${i} (${decision.cardOptions[i]}): ${action.type}`,
+    );
   }
 
   // Build cardOrder: topdecked cards in the order they appear
   const cardOrder = Object.entries(cardActions)
-    .filter(([, actionId]) => actionId === "topdeck")
+    .filter(([, actionId]) => actionId === "topdeck_card")
     .map(([index]) => parseInt(index));
 
   agentLogger.info(

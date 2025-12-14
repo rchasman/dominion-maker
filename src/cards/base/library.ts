@@ -5,6 +5,7 @@
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
 import type { CardName } from "../../types/game-state";
+import { CARD_ACTIONS } from "../card-actions";
 
 const TARGET_HAND_SIZE = 7;
 
@@ -55,20 +56,11 @@ export const library: CardEffect = ({
       pendingDecision: {
         type: "card_decision",
         player,
-        prompt: "Library: Choose which Actions to set aside",
+        prompt: "Library: Choose which Actions to skip",
         cardOptions: actionsInDraw,
         actions: [
-          {
-            id: "draw",
-            label: "Draw",
-            color: "#10B981",
-            isDefault: true,
-          },
-          {
-            id: "set_aside",
-            label: "Set Aside",
-            color: "#9CA3AF",
-          },
+          { ...CARD_ACTIONS.draw_card, isDefault: true },
+          CARD_ACTIONS.discard_card,
         ],
         cardBeingPlayed: "Library",
         metadata: { cardsNeeded, peekedCards: peeked },
@@ -83,20 +75,18 @@ export const library: CardEffect = ({
   );
   const cardActions = decision.cardActions || {};
 
-  // Draw cards marked "draw" by index
   const drawEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
-    .filter(({ index, action }) => action === "draw" && peeked[index])
+    .filter(({ index, action }) => action === "topdeck_card" && peeked[index])
     .map(({ index }) => ({
       type: "CARD_DRAWN" as const,
       player,
       card: peeked[index],
     }));
 
-  // Discard cards marked "set_aside" by index
   const discardEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
-    .filter(({ index, action }) => action === "set_aside" && peeked[index])
+    .filter(({ index, action }) => action === "discard_card" && peeked[index])
     .map(({ index }) => ({
       type: "CARD_DISCARDED" as const,
       player,

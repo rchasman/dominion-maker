@@ -5,8 +5,8 @@ import type { Action } from "../types/action";
  * Decompose batch decisions into atomic actions for AI consensus voting.
  * Only used for AI - humans work with batch decisions directly.
  *
- * This allows MAKER consensus to vote on each individual card selection
- * while preserving the card's true semantic intent (e.g., "trash up to 4").
+ * Action IDs in decisions now match action types directly (e.g., "topdeck_card"),
+ * eliminating the need for mapping layers.
  *
  * For multi-action decisions (like Sentry), this returns actions for the NEXT card
  * to be decided on, based on already-made decisions in metadata.
@@ -34,23 +34,10 @@ export function decomposeDecisionForAI(
       return [{ type: "skip_decision" as const }];
     }
 
-    // Create actions for the current card
     const currentCard = cardOptions[roundIndex];
 
     availableActions.forEach(action => {
-      if (action.id === "trash") {
-        result.push({ type: "trash_card" as const, card: currentCard });
-      } else if (action.id === "discard") {
-        result.push({ type: "discard_card" as const, card: currentCard });
-      } else if (action.id === "topdeck") {
-        result.push({ type: "topdeck_card" as const, card: currentCard });
-      } else if (action.id === "set_aside") {
-        // Library: set aside action cards
-        result.push({ type: "discard_card" as const, card: currentCard });
-      } else if (action.id === "draw") {
-        // Library: draw (keep) the card - use topdeck to represent "keep"
-        result.push({ type: "topdeck_card" as const, card: currentCard });
-      }
+      result.push({ type: action.id as Action["type"], card: currentCard });
     });
 
     // Can always skip to accept defaults for remaining cards

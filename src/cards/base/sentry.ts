@@ -6,14 +6,15 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents, peekDraw } from "../effect-types";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { CardName } from "../../types/game-state";
+import { CARD_ACTIONS } from "../card-actions";
 
 const SENTRY_PEEK_COUNT = 2;
 
 const SENTRY_ACTIONS = [
-  { id: "topdeck", label: "Topdeck", color: "#10B981", isDefault: true },
-  { id: "trash", label: "Trash", color: "#EF4444" },
-  { id: "discard", label: "Discard", color: "#9CA3AF" },
-] as const;
+  { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+  CARD_ACTIONS.trash_card,
+  CARD_ACTIONS.discard_card,
+];
 
 function createPeekEvents(player: PlayerId, cards: CardName[]): GameEvent[] {
   return cards.map(card => ({
@@ -56,7 +57,7 @@ function createTopdeckEvents(
     cardOrder.length > 0
       ? cardOrder
       : Object.entries(cardActions)
-          .filter(([, action]) => action === "topdeck")
+          .filter(([, action]) => action === "topdeck_card")
           .map(([indexStr]) => parseInt(indexStr));
 
   return [...topdeckIndices]
@@ -120,14 +121,14 @@ export const sentry: CardEffect = ({
       player,
       revealed,
       cardActions,
-      actionType: "trash",
+      actionType: "trash_card",
       eventType: "CARD_TRASHED",
     }),
     ...createActionEvents({
       player,
       revealed,
       cardActions,
-      actionType: "discard",
+      actionType: "discard_card",
       eventType: "CARD_DISCARDED",
     }),
     ...createTopdeckEvents(player, revealed, cardActions, cardOrder),
