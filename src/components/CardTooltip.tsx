@@ -84,9 +84,11 @@ export function CardTooltip({
             display: "block",
             borderRadius: "4px",
           }}
-          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-            const img = e.currentTarget;
-            if (img.src !== fallbackUrl) {
+          onError={() => {
+            const img = document.querySelector(
+              `img[alt="${showBack ? "Card back" : cardName}"]`,
+            );
+            if (img instanceof HTMLImageElement && img.src !== fallbackUrl) {
               img.src = fallbackUrl;
             }
           }}

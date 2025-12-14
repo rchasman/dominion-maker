@@ -141,7 +141,10 @@ function RoomCodeInput({ value, onChange }: RoomCodeInputProps) {
       <input
         type="text"
         value={value}
-        onChange={e => onChange(e.target.value.toUpperCase())}
+        onChange={e => {
+          const target = e.target as HTMLInputElement;
+          onChange(target.value.toUpperCase());
+        }}
         placeholder="ABCDEF"
         maxLength={MIN_ROOM_CODE_LENGTH}
         style={{

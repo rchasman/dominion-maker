@@ -116,10 +116,9 @@ function useCardDecisionState(
   );
 
   const handleDragStart = useCallback((i: number) => setDraggedIndex(i), []);
-  const handleDragOver = useCallback(
-    (e: React.DragEvent) => e.preventDefault(),
-    [],
-  );
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }, []);
 
   const handleDrop = useCallback(
     (target: number) => {

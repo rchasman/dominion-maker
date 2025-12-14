@@ -35,7 +35,8 @@ function useHandleScrubberChange(
 ) {
   return useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rootIndex = parseInt(e.target.value, 10);
+      const target = e.target as HTMLInputElement;
+      const rootIndex = parseInt(target.value, 10);
       const rootEvent = rootEvents[rootIndex];
       if (!rootEvent) return;
 

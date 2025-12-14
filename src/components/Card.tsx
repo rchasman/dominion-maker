@@ -25,7 +25,7 @@ interface CardProps {
 function getBorderStyle(
   selected: boolean | undefined,
   highlightMode: "trash" | "discard" | "gain" | undefined,
-): React.CSSProperties {
+): JSX.CSSProperties {
   if (selected) {
     return {
       border: "0.125rem solid var(--color-victory)",
@@ -177,7 +177,7 @@ export function Card({
     setTooltipActive(false);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     setMousePosition({ x: e.clientX, y: e.clientY });
   };
 
