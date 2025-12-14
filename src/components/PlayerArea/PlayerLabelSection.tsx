@@ -100,6 +100,19 @@ function renderStrategySection(playerStrategy: {
   );
 }
 
+function formatStrategyForClipboard(
+  label: string,
+  strategy: { gameplan: string; read: string; recommendation: string },
+): string {
+  return `Strategy - ${label}
+
+Gameplan: ${strategy.gameplan}
+
+Read: ${strategy.read}
+
+Recommendation: ${strategy.recommendation}`;
+}
+
 function renderStrategyTooltip(params: {
   floatingStyles: { position: string; top: string; left: string };
   playerColor: string;
@@ -300,14 +313,25 @@ function getPhaseStyles(isActive: boolean | undefined, phase: string) {
 function PlayerLabel({
   label,
   labelColor,
-  hasStrategy,
+  playerStrategy,
   setReference,
 }: {
   label: string;
   labelColor: string;
-  hasStrategy: boolean;
+  playerStrategy?: { gameplan: string; read: string; recommendation: string };
   setReference: (node: HTMLElement | null) => void;
 }) {
+  const hasStrategy = hasStrategyContent(playerStrategy);
+
+  const handleIconClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (playerStrategy) {
+      navigator.clipboard.writeText(
+        formatStrategyForClipboard(label, playerStrategy),
+      );
+    }
+  };
+
   return (
     <strong
       ref={setReference}
@@ -323,11 +347,14 @@ function PlayerLabel({
       {label}
       {hasStrategy && (
         <span
+          onClick={handleIconClick}
+          title="Click to copy strategy"
           style={{
             fontSize: "0.875rem",
             opacity: 0.7,
             color: "var(--color-info)",
             fontWeight: "normal",
+            cursor: "help",
           }}
         >
           ⓘ
@@ -485,7 +512,7 @@ export function PlayerLabelSection({
       <PlayerLabel
         label={label}
         labelColor={labelColor}
-        hasStrategy={hasStrategy}
+        playerStrategy={playerStrategy}
         setReference={setReference}
       />
       {isOpen &&
