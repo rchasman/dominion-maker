@@ -1,10 +1,12 @@
-import { useGame } from "../context/hooks";
+import type { GameMode } from "../types/game-mode";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 
 const FONT_WEIGHT_ACTIVE = 700;
 const FONT_WEIGHT_INACTIVE = 400;
 
 interface StartScreenProps {
+  gameMode: GameMode;
+  onGameModeChange: (mode: GameMode) => void;
   onStartSinglePlayer?: () => void;
   onStartMultiplayer?: () => void;
 }
@@ -40,13 +42,13 @@ function renderModeButtons(
 }
 
 function renderActionButtons(
-  handleStartGame: () => void,
+  onStartSinglePlayer?: () => void,
   onStartMultiplayer?: () => void,
 ) {
   return (
     <div style={{ display: "flex", gap: "var(--space-4)" }}>
       <button
-        onClick={handleStartGame}
+        onClick={onStartSinglePlayer}
         style={{
           padding: "var(--space-6) var(--space-10)",
           fontSize: "0.875rem",
@@ -90,15 +92,11 @@ function renderActionButtons(
 }
 
 export function StartScreen({
+  gameMode,
+  onGameModeChange,
   onStartSinglePlayer,
   onStartMultiplayer,
 }: StartScreenProps) {
-  const { gameMode, setGameMode, startGame } = useGame();
-
-  const handleStartGame = () => {
-    startGame();
-    onStartSinglePlayer?.();
-  };
 
   return (
     <div
@@ -136,7 +134,7 @@ export function StartScreen({
         Base Game
       </p>
 
-      {renderModeButtons(gameMode, setGameMode)}
+      {renderModeButtons(gameMode, onGameModeChange)}
 
       <p
         style={{
@@ -151,7 +149,7 @@ export function StartScreen({
         {getModeDescription(gameMode)}
       </p>
 
-      {renderActionButtons(handleStartGame, onStartMultiplayer)}
+      {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
     </div>
   );
 }
