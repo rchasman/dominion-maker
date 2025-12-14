@@ -18,6 +18,7 @@ interface PaneContentProps {
   gameStateData?: GameStateSnapshot;
   totalModels?: number;
   now?: number;
+  legalActions?: string[];
 }
 
 export function PaneContent({
@@ -28,6 +29,7 @@ export function PaneContent({
   gameStateData,
   totalModels,
   now,
+  legalActions,
 }: PaneContentProps) {
   switch (activePane) {
     case "voting":
@@ -36,6 +38,7 @@ export function PaneContent({
           data={votingData}
           liveStatuses={modelStatuses}
           totalModels={totalModels}
+          legalActions={legalActions}
         />
       );
     case "performance":

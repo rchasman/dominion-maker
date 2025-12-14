@@ -53,6 +53,7 @@ export function PendingAction({
         gameStateData={currentTurn.pendingData?.gameState}
         totalModels={currentTurn.pendingData?.totalModels}
         now={now}
+        legalActions={currentTurn.pendingData?.gameState?.legalActions}
       />
     </>
   );

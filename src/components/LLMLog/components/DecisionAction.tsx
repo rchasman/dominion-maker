@@ -79,6 +79,13 @@ export function DecisionAction({
           ) || 0
         }
         now={now}
+        legalActions={
+          (
+            currentDecision.votingEntry.data?.gameState as
+              | GameStateSnapshot
+              | undefined
+          )?.legalActions
+        }
       />
     </>
   );

@@ -10,10 +10,29 @@ interface VotingPaneProps {
   data: ConsensusVotingData | null | undefined;
   liveStatuses?: Map<number, ModelStatus>;
   totalModels?: number;
+  legalActions?: string[];
 }
 
 // Constants for layout calculations
 const PIXELS_PER_CHAR_VOTE: number = 7;
+
+// Format action to match legalActions string format
+function formatActionForValidation(action: Action): string {
+  if (action.type === "end_phase") return "end_phase";
+  if (action.type === "choose_from_options") {
+    return `choose[${(action as { optionIndex?: number }).optionIndex}]`;
+  }
+  return `${action.type}(${action.card})`;
+}
+
+// Check if action is in legalActions list
+function isActionValidFromStrings(
+  action: Action,
+  legalActions: string[] | undefined,
+): boolean {
+  if (!legalActions) return true; // No validation data available
+  return legalActions.includes(formatActionForValidation(action));
+}
 const PIXELS_PER_CHAR_PERCENTAGE: number = 7.5;
 const PIXELS_PER_VOTER_CIRCLE: number = 11;
 const TOTAL_BAR_CONTAINER_WIDTH: number = 290;
@@ -23,7 +42,10 @@ const OPACITY_HALF: number = 0.5;
 const FONT_WEIGHT_BOLD: number = 700;
 
 // Build vote groups from successful statuses using reduce
-function buildVoteGroups(successfulStatuses: ModelStatus[]) {
+function buildVoteGroups(
+  successfulStatuses: ModelStatus[],
+  legalActions: string[] | undefined,
+) {
   return successfulStatuses.reduce((voteGroups, status) => {
     if (!status.action) return voteGroups;
     // Exclude reasoning from signature so actions with different reasoning group together
@@ -38,8 +60,9 @@ function buildVoteGroups(successfulStatuses: ModelStatus[]) {
     return new Map(voteGroups).set(signature, {
       action: status.action,
       voters: [status.provider],
+      valid: isActionValidFromStrings(status.action, legalActions),
     });
-  }, new Map<string, { action: Action; voters: string[] }>());
+  }, new Map<string, { action: Action; voters: string[]; valid?: boolean }>());
 }
 
 // Collect all unique models from results
@@ -125,6 +148,7 @@ export function VotingPane({
   data,
   liveStatuses,
   totalModels,
+  legalActions,
 }: VotingPaneProps) {
   const { allResults, maxVotes } = run(() => {
     if (liveStatuses && liveStatuses.size > 0) {
@@ -132,14 +156,14 @@ export function VotingPane({
         s => s.completed && s.success !== false && s.action,
       );
 
-      const voteGroups = buildVoteGroups(successfulStatuses);
+      const voteGroups = buildVoteGroups(successfulStatuses, legalActions);
 
       const results = Array.from(voteGroups.values())
         .map(g => ({
           action: g.action,
           votes: g.voters.length,
           voters: g.voters,
-          valid: true,
+          valid: g.valid ?? true,
         }))
         .sort((a, b) => b.votes - a.votes);
 
