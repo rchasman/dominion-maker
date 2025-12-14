@@ -1,3 +1,4 @@
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useCallback, useMemo } from "preact/hooks";
 import type { P2PRoom, PendingUndoRequest } from "../p2p-room";
 import type { DominionEngine } from "../../engine";

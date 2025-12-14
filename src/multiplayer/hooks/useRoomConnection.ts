@@ -1,3 +1,4 @@
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useState, useCallback, useMemo } from "preact/hooks";
 import { P2PRoom, generateRoomCode, type PlayerInfo } from "../p2p-room";
 import { multiplayerLogger } from "../../lib/logger";

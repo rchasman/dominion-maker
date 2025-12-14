@@ -3,6 +3,7 @@
  * Handles automatic AI turns and decision resolution
  */
 
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useEffect } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { GameState } from "../types/game-state";

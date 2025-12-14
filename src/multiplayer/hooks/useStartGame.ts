@@ -1,3 +1,4 @@
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { P2PRoom, PlayerInfo } from "../p2p-room";
 import type { DominionEngine } from "../../engine";

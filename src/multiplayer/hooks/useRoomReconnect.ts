@@ -1,3 +1,4 @@
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useState, useCallback } from "preact/hooks";
 import { P2PRoom } from "../p2p-room";
 import type { RoomState, PlayerInfo } from "../p2p-room";

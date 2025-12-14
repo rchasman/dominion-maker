@@ -3,6 +3,7 @@
  * Manages all game command dispatching
  */
 
+import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { CardName, GameState } from "../types/game-state";
