@@ -1,7 +1,7 @@
 import type { GameState } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
 import type { PlayerId } from "../events/types";
-import { handleSubmitDecision } from "./handle-decision";
+import { handleSubmitDecision, handleSkipDecision } from "./handle-decision";
 import {
   handlePlayAction,
   handlePlayTreasure,
@@ -59,6 +59,9 @@ export function handleCommand(
     case "SUBMIT_DECISION":
       return handleSubmitDecision(state, command.player, command.choice);
 
+    case "SKIP_DECISION":
+      return handleSkipDecision(state, command.player);
+
     case "REQUEST_UNDO":
       return handleRequestUndo(
         state,
@@ -89,7 +92,7 @@ function isValidPlayer(
   fromPlayer: PlayerId,
 ): boolean {
   // Decision responses can come from the decision's player
-  if (command.type === "SUBMIT_DECISION") {
+  if (command.type === "SUBMIT_DECISION" || command.type === "SKIP_DECISION") {
     return state.pendingDecision?.player === fromPlayer;
   }
 

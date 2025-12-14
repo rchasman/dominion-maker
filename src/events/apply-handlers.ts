@@ -269,6 +269,15 @@ export function applyDecisionEvent(
     };
   }
 
+  if (event.type === "DECISION_SKIPPED") {
+    return {
+      ...state,
+      pendingDecision: null,
+      pendingDecisionEventId: null,
+      subPhase: null,
+    };
+  }
+
   return null;
 }
 
