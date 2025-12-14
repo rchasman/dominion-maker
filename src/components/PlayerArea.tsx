@@ -50,10 +50,10 @@ function getBorderStyle(
 
   return {
     border: borderStyle,
-    boxShadow: isActive && gameState ? `0 0 var(--space-5) ${borderColor}66` : "none",
+    boxShadow:
+      isActive && gameState ? `0 0 var(--space-5) ${borderColor}66` : "none",
   };
 }
-
 
 function LoadingAnimation({ show }: { show: boolean }) {
   if (!show) return null;

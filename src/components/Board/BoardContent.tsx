@@ -146,7 +146,9 @@ export function BoardContent({
           actions={displayState.actions}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
-          playerStrategy={game.playerStrategies.find(s => s.id === opponentPlayerId)}
+          playerStrategy={game.playerStrategies.find(
+            s => s.id === opponentPlayerId,
+          )}
           gameState={displayState}
         />
 
@@ -176,7 +178,9 @@ export function BoardContent({
           hint={hint}
           hasTreasuresInHand={game.hasTreasuresInHand}
           complexDecisionData={complexDecisionData}
-          playerStrategy={game.playerStrategies.find(s => s.id === mainPlayerId)}
+          playerStrategy={game.playerStrategies.find(
+            s => s.id === mainPlayerId,
+          )}
           onCardClick={onCardClick}
           onInPlayClick={onInPlayClick}
           onPlayAllTreasures={onPlayAllTreasures}

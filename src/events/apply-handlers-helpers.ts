@@ -119,7 +119,8 @@ export function applyCardDiscarded(
 
   // Track discard decisions from hand (Cellar, Militia response, etc)
   // Don't track end-of-turn cleanup discards
-  const shouldTrack = event.from === "hand" && event.player === state.activePlayer;
+  const shouldTrack =
+    event.from === "hand" && event.player === state.activePlayer;
   const turnHistoryEntry = shouldTrack
     ? { type: "discard_card" as const, card: event.card }
     : null;
@@ -244,9 +245,16 @@ export function applyCardGained(
   // - Card effect gains (Workshop, Artisan, etc) -> "gain_card"
   const isBuy = state.phase === "buy" && event.to === "discard";
   const newTurnHistory = run(() => {
-    if (isBuy) return [...state.turnHistory, { type: "buy_card" as const, card: event.card }];
+    if (isBuy)
+      return [
+        ...state.turnHistory,
+        { type: "buy_card" as const, card: event.card },
+      ];
     // Track all other gains (Workshop to discard, Artisan to hand, etc)
-    return [...state.turnHistory, { type: "gain_card" as const, card: event.card }];
+    return [
+      ...state.turnHistory,
+      { type: "gain_card" as const, card: event.card },
+    ];
   });
 
   return {

@@ -1,4 +1,7 @@
-import type { LogEntry as LogEntryType, CardName } from "../../types/game-state";
+import type {
+  LogEntry as LogEntryType,
+  CardName,
+} from "../../types/game-state";
 import { CardNameSpan, PlayerName } from "../LogFormatters";
 import { getCardColor } from "../../lib/card-colors";
 import type { ReactNode } from "react";
@@ -12,9 +15,7 @@ export function getCardCounts(cards: CardName[]): Map<string, number> {
 }
 
 // Helper to render card counts as React nodes
-export function renderCardCounts(
-  cardCounts: Map<string, number>,
-): ReactNode[] {
+export function renderCardCounts(cardCounts: Map<string, number>): ReactNode[] {
   return Array.from(cardCounts.entries()).flatMap(([card, count], idx) => {
     const cardNode =
       count > 1 ? (

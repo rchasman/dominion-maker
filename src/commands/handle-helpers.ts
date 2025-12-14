@@ -37,7 +37,6 @@ export const GAME_CONSTANTS = {
   UUID_SLICE: 2,
 } as const;
 
-
 export function selectRandomKingdomCards(): CardName[] {
   const allKingdom: CardName[] = [
     "Cellar",
@@ -97,14 +96,17 @@ export function calculateSupply(
   // Kingdom cards: 8 for 2 players, 10 for 3+ players
   // Victory-type kingdom cards (e.g., Gardens) use victory card counts
   const kingdomCardCount = getKingdomCardCount(playerCount);
-  const kingdomSupply = kingdomCards.reduce((acc, card) => {
-    const cardDef = CARDS[card];
-    const isVictoryKingdom = cardDef?.types.includes("victory");
-    const count = isVictoryKingdom
-      ? getVictoryCardCount(playerCount, "Estate")
-      : kingdomCardCount;
-    return { ...acc, [card]: count };
-  }, {} as Record<string, number>);
+  const kingdomSupply = kingdomCards.reduce(
+    (acc, card) => {
+      const cardDef = CARDS[card];
+      const isVictoryKingdom = cardDef?.types.includes("victory");
+      const count = isVictoryKingdom
+        ? getVictoryCardCount(playerCount, "Estate")
+        : kingdomCardCount;
+      return { ...acc, [card]: count };
+    },
+    {} as Record<string, number>,
+  );
 
   return { ...supply, ...kingdomSupply };
 }
