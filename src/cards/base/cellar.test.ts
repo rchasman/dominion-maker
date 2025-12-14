@@ -70,7 +70,6 @@ describe("Cellar - duplicate card handling", () => {
     expect(result1.pendingDecision).toBeDefined();
     expect(result1.pendingDecision?.min).toBe(0);
     expect(result1.pendingDecision?.max).toBe(1);
-    expect(result1.pendingDecision?.canSkip).toBe(true);
 
     // First discard: Estate
     if (result1.pendingDecision) {

@@ -336,7 +336,7 @@ describe("Multi-Stage Decision Cards", () => {
   });
 
   describe("Chapel", () => {
-    it("should request trash decision one card at a time", () => {
+    it("should request batch trash decision for up to 4 cards", () => {
       const state = createTestState([
         "Copper",
         "Copper",
@@ -357,58 +357,30 @@ describe("Multi-Stage Decision Cards", () => {
       if (!result.pendingDecision) throw new Error("No pending decision");
       expect(result.pendingDecision.type).toBe("card_decision");
       expect(result.pendingDecision.min).toBe(0);
-      expect(result.pendingDecision.max).toBe(1);
-      expect(result.pendingDecision.canSkip).toBe(true);
+      expect(result.pendingDecision.max).toBe(4);
     });
 
-    it("should trash selected cards iteratively", () => {
+    it("should trash all selected cards in batch", () => {
       const state = createTestState(["Copper", "Copper", "Estate", "Duchy"]);
 
       // First get the decision
       let newState = executeCard("Chapel", state);
       expect(newState.pendingDecision).toBeDefined();
 
-      // Trash first Copper
+      // Trash 3 cards in one batch submission
       newState = executeCard(
         "Chapel",
         newState,
-        { selectedCards: ["Copper"] },
-        "trash",
-      );
-      expect(newState.trash.length).toBe(1);
-      expect(newState.pendingDecision).toBeDefined(); // Should ask again
-
-      // Trash second Copper
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: ["Copper"] },
-        "trash",
-      );
-      expect(newState.trash.length).toBe(2);
-      expect(newState.pendingDecision).toBeDefined(); // Should ask again
-
-      // Trash Estate
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: ["Estate"] },
+        { selectedCards: ["Copper", "Copper", "Estate"] },
         "trash",
       );
       expect(newState.trash.length).toBe(3);
-      expect(newState.pendingDecision).toBeDefined(); // Should ask again (not at limit yet)
-
-      // Skip the rest - use on_skip stage
-      newState = executeCard(
-        "Chapel",
-        newState,
-        { selectedCards: [] },
-        "on_skip",
-      );
-      expect(newState.pendingDecision).toBeNull(); // Done
-      expect(newState.trash.length).toBe(3);
+      expect(newState.pendingDecision).toBeNull(); // Done after batch
       expect(newState.trash).toContain("Copper");
       expect(newState.trash).toContain("Estate");
+
+      // Hand should have remaining card
+      expect(newState.players["human"].hand).toEqual(["Duchy"]);
     });
   });
 
