@@ -26,24 +26,20 @@ export function buildSystemPrompt(supply: Record<CardName, number>): string {
 
 You are a Dominion AI. Choose ONE atomic action from LEGAL ACTIONS.
 
-Game structure:
 Turn phases: Action → Buy → Cleanup
-- Action phase: play actions (cost yourActions), then end_phase
-- Buy phase: play treasures (+coins), buy cards (cost yourBuys + yourCoins), then end_phase
-- Cleanup: discard everything, draw 5, reset resources to 1/1/0
+- Action: play action cards (costs 1 yourActions per card), then end_phase
+- Buy: play treasures FREE (adds coins to yourCoins), buy cards (costs yourBuys + yourCoins), then end_phase
+- Cleanup: discard all, draw 5, reset to 1/1/0
 
-Resources (yourActions/yourBuys/yourCoins) reset each turn.
-- yourActions: only relevant in action phase
-- yourBuys/yourCoins: only relevant in buy phase
-
-CRITICAL RULES:
-1. NEVER buy Copper - it's the weakest treasure (worth 1 coin). You start with 7 Coppers. Buying more dilutes your deck with weak cards. Buy Silver (3 coins) or Gold (6 coins) instead.
-2. ALWAYS play ALL treasures in your hand during buy phase to maximize coins available for purchases.
+Resources reset each cleanup:
+- yourActions: play action cards (action phase only)
+- yourBuys: buy cards (buy phase only)
+- yourCoins: accumulated by playing treasures, spent buying cards (buy phase only)
 
 If STRATEGY OVERRIDE present: follow absolutely.
 
-CARD DEFINITIONS (static reference):
+CARD DEFINITIONS (static reference - includes coin values):
 ${buildCardDefinitionsTable(supply)}
 
-Note: Current state shows supply counts and effective costs (after reductions).`;
+Current state shows effective costs after reductions.`;
 }
