@@ -124,7 +124,11 @@ export async function generateActionViaBackend(
     format,
     actionId,
   } = params;
-  const legalActions = getLegalActions(currentState);
+
+  // SPIKE: AI derives legal actions from rules instead of receiving a list
+  const legalActions: Action[] = [];
+  // Uncomment to send legal actions (constrains AI to valid moves):
+  // const legalActions = getLegalActions(currentState);
 
   const { data, error } = await api.api["generate-action"].post(
     {

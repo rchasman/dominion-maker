@@ -1,23 +1,9 @@
-import type { GameState, CardName, LogEntry } from "../types/game-state";
-import {
-  CARDS,
-  isActionCard,
-  isTreasureCard,
-  isVictoryCard,
-} from "../data/cards";
-import { countVP as countVPFromCards } from "../lib/board-utils";
+import type { GameState, LogEntry, CardName } from "../types/game-state";
 import { run } from "../lib/run";
 import { encodeToon } from "../lib/toon";
 
 type StrategicFacts = {
-  // Core strategic insights (not derivable from raw state)
-  gameStage: "Early" | "Mid" | "Late";
-  yourVictoryPoints: number;
-  opponentVictoryPoints: number;
-  yourDeckComposition: Record<string, number>;
-  opponentDeckComposition: Record<string, number>;
-
-  // Optional AI memory
+  // AI strategy (gameplan, situational read, recommendation)
   aiStrategyGameplan?: string;
   aiStrategyRead?: string;
   aiStrategyRecommendation?: string;
@@ -41,12 +27,12 @@ const SUMMARIES_PER_TURN = 2;
 
 /**
  * Default strategy used before first analysis completes
- * Provides essential strategic context without prescribing specific moves
+ * Provides reasoning primitives, not conclusions - let the AI derive good moves
  */
 export const DEFAULT_STRATEGY = {
-  gameplan: "Adaptive - Evaluating Options",
-  read: "Deck composition is probability. Each weak card reduces chance of drawing strong cards. Engine strength compounds each shuffle.",
-  recommendation: "Optimize for long-term deck quality over immediate gains.",
+  gameplan: "Build Economy → Add Draw/Actions → Score VP",
+  read: "Early game: Silver/Gold improve average hand. Action cards that draw (+Cards) or give +Actions let you play more per turn. Weak cards (Copper, early Estates) dilute deck and reduce hand quality.",
+  recommendation: "Each buy: ask 'does this make my average hand stronger?' Silver > Copper always. Province > Duchy > Estate. Skip VP until you can hit $8 consistently or game is ending.",
 };
 
 function extractRecentTurns(
@@ -101,7 +87,7 @@ function extractRecentTurns(
       if (field && entry.card) {
         const newSummary = {
           ...summary,
-          [field]: [...summary[field], entry.card],
+          [field]: [...(summary[field]), entry.card],
         };
         const newTurnMap = new Map(state.turnMap);
         newTurnMap.set(key, newSummary);
@@ -142,10 +128,11 @@ export function formatTurnHistoryForAnalysis(
     return "";
   }
 
-  // Convert to compact format for TOON encoding
+  // Convert player IDs to "you" and "opponent" for consistency
+  const activePlayerId = state.activePlayer;
   const compactTurns = recentTurns.map(turn => ({
     turn: turn.turn,
-    player: turn.player,
+    player: turn.player === activePlayerId ? "you" : "opponent",
     actions: turn.actionsPlayed.length > 0 ? turn.actionsPlayed : null,
     bought: turn.cardsBought.length > 0 ? turn.cardsBought : null,
   }));
@@ -164,19 +151,7 @@ interface PlayerStrategyAnalysis {
   recommendation: string;
 }
 
-const EARLY_GAME_TURN_THRESHOLD = 5;
-const LATE_GAME_PROVINCES_THRESHOLD = 4;
-const DEFAULT_PROVINCE_COUNT = 8;
 const JSON_INDENT_SPACES = 2;
-
-const getAllCards = (player: GameState["players"][string]) => [
-  ...player.deck,
-  ...player.hand,
-  ...player.discard,
-  ...player.inPlay,
-];
-
-const calculateVP = (cards: CardName[]) => countVPFromCards(cards);
 
 /**
  * Builds structured game facts encoded based on format
@@ -188,36 +163,8 @@ export function buildStrategicContext(
   customStrategy?: string,
   format: "json" | "toon" = "toon",
 ): string {
-  const currentPlayer = state.players[state.activePlayer];
-  const opponentId = Object.keys(state.players).find(
-    id => id !== state.activePlayer,
-  ) as keyof typeof state.players;
-  const opponent = state.players[opponentId];
-
-  const currentAllCards = getAllCards(currentPlayer);
-  const opponentAllCards = getAllCards(opponent);
-
-  const currentVP = calculateVP(currentAllCards);
-  const opponentVP = calculateVP(opponentAllCards);
-
-  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
-  const gameStage: "Early" | "Mid" | "Late" = run(() => {
-    if (state.turn <= EARLY_GAME_TURN_THRESHOLD) return "Early";
-    if (provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD) return "Late";
-    return "Mid";
-  });
-
-  const yourAnalysis = analyzeDeck(currentAllCards);
-  const opponentAnalysis = analyzeDeck(opponentAllCards);
-
-  // Strategic insights only - no derivable stats or duplicates
-  const facts: StrategicFacts = {
-    gameStage,
-    yourVictoryPoints: currentVP,
-    opponentVictoryPoints: opponentVP,
-    yourDeckComposition: yourAnalysis.counts,
-    opponentDeckComposition: opponentAnalysis.counts,
-  };
+  // Strategic insights only - AI strategy analysis
+  const facts: StrategicFacts = {};
 
   // Add AI's own strategy analysis (not opponent's - no cheating)
   // Use provided strategy or default neutral strategy
@@ -242,83 +189,7 @@ export function buildStrategicContext(
     facts.strategyOverride = customStrategy.trim();
   }
 
-  // No buy phase calculations - legal actions already shows buyable cards
-
   return format === "toon"
     ? encodeToon(facts)
     : JSON.stringify(facts, null, JSON_INDENT_SPACES);
-}
-
-interface DeckAnalysis {
-  treasures: number;
-  actions: number;
-  victory: number;
-  breakdown: string;
-  totalTreasureValue: number;
-  avgTreasureValue: number;
-  terminals: number;
-  villages: number;
-  counts: Record<string, number>;
-}
-
-interface DeckAccumulator {
-  counts: Record<string, number>;
-  treasureValue: number;
-  treasureCount: number;
-  terminals: number;
-  villages: number;
-}
-
-function analyzeDeck(cards: CardName[]): DeckAnalysis {
-  const initial: DeckAccumulator = {
-    counts: {},
-    treasureValue: 0,
-    treasureCount: 0,
-    terminals: 0,
-    villages: 0,
-  };
-  const { counts, treasureValue, treasureCount, terminals, villages } =
-    cards.reduce((acc, card) => {
-      const { coins, description } = CARDS[card];
-      const newCounts = { ...acc.counts, [card]: (acc.counts[card] || 0) + 1 };
-      const hasTreasure = coins
-        ? {
-            treasureValue: acc.treasureValue + coins,
-            treasureCount: acc.treasureCount + 1,
-          }
-        : {};
-
-      const actionUpdate = run(() => {
-        if (!isActionCard(card)) return {};
-        if (description.includes("+2 Actions"))
-          return { villages: acc.villages + 1 };
-        if (!description.includes("+1 Action"))
-          return { terminals: acc.terminals + 1 };
-        return {};
-      });
-
-      return {
-        ...acc,
-        ...hasTreasure,
-        ...actionUpdate,
-        counts: newCounts,
-      };
-    }, initial);
-
-  const breakdown = Object.entries(counts)
-    .sort(([, a], [, b]) => b - a)
-    .map(([card, count]) => `${count} ${card}`)
-    .join(", ");
-
-  return {
-    treasures: cards.filter(isTreasureCard).length,
-    actions: cards.filter(isActionCard).length,
-    victory: cards.filter(isVictoryCard).length,
-    breakdown,
-    totalTreasureValue: treasureValue,
-    avgTreasureValue: treasureCount > 0 ? treasureValue / treasureCount : 0,
-    terminals,
-    villages,
-    counts,
-  };
 }

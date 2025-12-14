@@ -7,7 +7,8 @@ import {
   buildStrategicContext,
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
-import { CARDS } from "../src/data/cards";
+import { CARDS, isTreasureCard } from "../src/data/cards";
+import { countVP } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
 import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
@@ -26,6 +27,11 @@ const JSON_INDENT_SPACES = 2;
 // Error message display limits
 const ERROR_TEXT_PREVIEW_LONG = 500;
 const ERROR_TEXT_PREVIEW_SHORT = 200;
+
+// Game stage constants
+const DEFAULT_PROVINCE_COUNT = 8;
+const EARLY_GAME_TURN_THRESHOLD = 5;
+const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
 // Zod schemas for runtime validation (server-side only)
 const CardNameSchema = z.enum([
@@ -216,27 +222,14 @@ function cardArrayToCounts(cards: string[]): Record<string, number> {
 }
 
 // Transform game state to use counts instead of arrays for AI consumption
-// Removes redundant data already present in strategic context or irrelevant to decisions
+// Nests all "your" state together for clearer AI reasoning
 function optimizeStateForAI(state: GameState): unknown {
-  const optimizedPlayers = Object.fromEntries(
-    Object.entries(state.players).map(([playerId, player]) => {
-      const isActivePlayer = playerId === state.activePlayer;
-
-      const optimizedPlayer: Record<string, unknown> = {
-        // Only show active player's hand (opponent's hand is hidden information)
-        ...(isActivePlayer ? { hand: cardArrayToCounts(player.hand) } : {}),
-        deck: player.deck.length, // Always just count (hidden info for both)
-        discard: cardArrayToCounts(player.discard), // Public info
-        inPlay: cardArrayToCounts(player.inPlay), // Public info
-        // Add revealed deck cards when applicable
-        ...(player.deckTopRevealed && player.deck.length > 0
-          ? { deckTopCards: player.deck }
-          : {}),
-      };
-
-      return [playerId, optimizedPlayer];
-    }),
+  const activePlayerId = state.activePlayer;
+  const activePlayer = state.players[activePlayerId];
+  const opponentId = Object.keys(state.players).find(
+    id => id !== activePlayerId,
   );
+  const opponent = opponentId ? state.players[opponentId] : null;
 
   // Calculate effective card costs (base cost - active reductions)
   const costReduction = state.activeEffects
@@ -247,50 +240,94 @@ function optimizeStateForAI(state: GameState): unknown {
       0,
     );
 
-  // Transform supply to array with counts and effective costs (effects now in system prompt)
+  // Transform supply to array with counts and effective costs
   const supplyWithCounts = Object.entries(state.supply).map(([card, count]) => {
     const cardData = CARDS[card as CardName];
     const baseCost = cardData?.cost ?? 0;
     const effectiveCost = Math.max(0, baseCost - costReduction);
-
-    return {
-      card,
-      count,
-      cost: effectiveCost,
-    };
+    return { card, count, cost: effectiveCost };
   });
 
+  // Calculate treasures still in hand
+  const treasuresInHand = activePlayer
+    ? activePlayer.hand.filter(isTreasureCard)
+    : [];
+
+  // Calculate current game stage
+  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
+  const currentGameStage = run(() => {
+    if (state.turn <= EARLY_GAME_TURN_THRESHOLD) return "Early";
+    if (provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD) return "Late";
+    return "Mid";
+  });
+
+  // Calculate VP and deck composition for both players
+  const getAllCards = (player: typeof activePlayer) =>
+    player
+      ? [...player.deck, ...player.hand, ...player.discard, ...player.inPlay]
+      : [];
+
+  const yourAllCards = getAllCards(activePlayer);
+  const opponentAllCards = getAllCards(opponent);
+
+  const yourVP = countVP(yourAllCards);
+  const opponentVP = countVP(opponentAllCards);
+
+  const yourDeckCounts = yourAllCards.reduce(
+    (acc, card) => {
+      acc[card] = (acc[card] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  const opponentDeckCounts = opponentAllCards.reduce(
+    (acc, card) => {
+      acc[card] = (acc[card] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  // Build "you" object with all your state nested together
+  const you: Record<string, unknown> = {
+    currentPhase: state.phase,
+    currentActions: state.actions,
+    currentBuys: state.buys,
+    currentCoins: state.coins,
+    currentVictoryPoints: yourVP,
+    currentDeckComposition: yourDeckCounts,
+    currentHand: activePlayer ? cardArrayToCounts(activePlayer.hand) : {},
+    currentDiscard: activePlayer ? cardArrayToCounts(activePlayer.discard) : {},
+    currentInPlay: activePlayer ? cardArrayToCounts(activePlayer.inPlay) : {},
+    // Add revealed deck cards when applicable
+    ...(activePlayer?.deckTopRevealed && activePlayer.deck.length > 0
+      ? { deckTopCards: activePlayer.deck }
+      : {}),
+    // Buy phase helper: treasures you can still play (always show in buy phase)
+    ...(state.phase === "buy"
+      ? { currentTreasuresInHand: cardArrayToCounts(treasuresInHand) }
+      : {}),
+  };
+
+  // Build "opponent" object (no hand - hidden information)
+  const opponentState: Record<string, unknown> | null = opponent
+    ? {
+        currentVictoryPoints: opponentVP,
+        currentDeckComposition: opponentDeckCounts,
+        currentDiscard: cardArrayToCounts(opponent.discard),
+        currentInPlay: cardArrayToCounts(opponent.inPlay),
+      }
+    : null;
+
   return {
-    // Current phase
-    phase: state.phase,
-
-    // YOUR resources (belong to active player)
-    you: state.activePlayer,
-    yourActions: state.actions,
-    yourBuys: state.buys,
-    yourCoins: state.coins,
-
-    // Player zones
-    players: optimizedPlayers,
-
-    // Board state (costs pre-calculated with active effects)
+    currentGameStage,
+    you,
+    ...(opponentState ? { opponent: opponentState } : {}),
     supply: supplyWithCounts,
     trash: state.trash,
-
-    // Decisions
-    ...(state.pendingDecision
-      ? { pendingDecision: state.pendingDecision }
-      : {}),
-
-    // Optional fields
+    ...(state.pendingDecision ? { pendingDecision: state.pendingDecision } : {}),
     ...(state.subPhase ? { subPhase: state.subPhase } : {}),
-
-    // Removed (redundant or unclear):
-    // - activePlayer (renamed to 'you')
-    // - actions/buys/coins (renamed with 'your' prefix for clarity)
-    // - activeEffects (only used for cost_reduction, baked into supply costs)
-    // - turn, log, turnHistory, decisionQueue, gameOver, winner, playerOrder
-    // - kingdomCards, inPlaySourceIndices, opponent's hand
   };
 }
 
@@ -339,13 +376,18 @@ function buildUserMessage(params: {
       ? encodeToon(legalActions)
       : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
 
+  const legalActionsSection =
+    legalActions.length > 0
+      ? [`LEGAL ACTIONS:\n${legalActionsContent}`]
+      : [];
+
   const sections = [
     `CURRENT STATE:\n${stateStr}`,
     strategicContext,
     ...(recentTurnsStr ? [recentTurnsStr] : []),
     ...turnHistorySection,
     ...humanChoiceSection,
-    `LEGAL ACTIONS:\n${legalActionsContent}`,
+    ...legalActionsSection,
   ];
 
   return sections.join("\n\n");
