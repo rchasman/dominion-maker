@@ -27,7 +27,6 @@
     "@floating-ui/dom": "^1.7.4",
     "@toon-format/toon": "^2.1.0",
     "ai": "6.0.0-beta.139",
-    "best-effort-json-parser": "^1.2.1",
     "preact": "^10.28.0",
     "trystero": "0.22.0",
     "tslog": "^4.10.2",
