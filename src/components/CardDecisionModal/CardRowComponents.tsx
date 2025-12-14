@@ -47,7 +47,7 @@ export function ActionIndicator({
       }}
     >
       {action?.label}
-      {(action?.id === "topdeck" || action?.id === "keep") &&
+      {action?.id === "topdeck_card" &&
         needsOrdering &&
         ` #${cardsToOrder.indexOf(cardIndex) + 1}`}
     </div>

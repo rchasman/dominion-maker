@@ -1,5 +1,5 @@
 import { useState, useCallback } from "preact/hooks";
-import type { CardName, CardAction } from "../types/game-state";
+import type { CardName, CardAction, CardActionId } from "../types/game-state";
 import { Card } from "./Card";
 import {
   ActionIndicator,
@@ -9,11 +9,11 @@ import {
 const OPACITY_DRAGGING = 0.5;
 
 function getHighlightMode(
-  actionId: string | undefined,
+  actionId: CardActionId | undefined,
 ): "trash" | "discard" | "gain" | undefined {
-  if (actionId === "trash") return "trash";
-  if (actionId === "discard") return "discard";
-  if (actionId === "topdeck" || actionId === "keep") return "gain";
+  if (actionId === "trash_card") return "trash";
+  if (actionId === "discard_card") return "discard";
+  if (actionId === "topdeck_card") return "gain";
   return undefined;
 }
 
@@ -22,7 +22,7 @@ interface CardDecisionModalProps {
   actions: CardAction[];
   requiresOrdering?: boolean;
   onDataChange: (data: {
-    cardActions: Record<number, string>;
+    cardActions: Record<number, CardActionId>;
     cardOrder?: number[];
   }) => void;
 }
@@ -46,7 +46,7 @@ interface CardRowProps {
 
 interface UseCardDecisionState {
   cardOrder: number[];
-  cardActions: Record<number, string>;
+  cardActions: Record<number, CardActionId>;
   draggedIndex: number | null;
   needsOrdering: boolean;
   cardsToOrder: number[];
@@ -61,24 +61,24 @@ interface UseCardDecisionState {
 function getInitialCardActions(
   cards: CardName[],
   actions: CardAction[],
-): Record<number, string> {
+): Record<number, CardActionId> {
   const defaultAction = actions.find(a => a.isDefault);
   return cards.reduce(
     (acc, _, index) => ({
       ...acc,
       [index]: defaultAction?.id || actions[0].id,
     }),
-    {} as Record<number, string>,
+    {} as Record<number, CardActionId>,
   );
 }
 
 function getCardsToOrder(
   cardOrder: number[],
-  cardActions: Record<number, string>,
+  cardActions: Record<number, CardActionId>,
 ): number[] {
   return cardOrder.filter(index => {
     const action = cardActions[index];
-    return action === "topdeck" || action === "keep";
+    return action === "topdeck_card";
   });
 }
 
@@ -87,7 +87,7 @@ function useCardDecisionState(
   actions: CardAction[],
   requiresOrdering: boolean,
   onDataChange: (data: {
-    cardActions: Record<number, string>;
+    cardActions: Record<number, CardActionId>;
     cardOrder?: number[];
   }) => void,
 ): UseCardDecisionState {
@@ -218,7 +218,7 @@ interface CardDecisionModalUIProps {
   cardOrder: number[];
   cards: CardName[];
   actions: CardAction[];
-  cardActions: Record<number, string>;
+  cardActions: Record<number, CardActionId>;
   draggedIndex: number | null;
   requiresOrdering: boolean;
   needsOrdering: boolean;
@@ -420,7 +420,7 @@ function CardRow({
 }: CardRowProps) {
   const shouldShowReorderButtons =
     requiresOrdering &&
-    (action?.id === "topdeck" || action?.id === "keep") &&
+    action?.id === "topdeck_card" &&
     needsOrdering &&
     cardsToOrder.includes(cardIndex);
 

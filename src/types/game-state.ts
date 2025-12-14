@@ -67,11 +67,17 @@ export type TurnSubPhase = "opponent_decision" | "waiting_for_reactions" | null;
 
 // Decision types (moved here to break circular dependency with events/types)
 
+export type CardActionId =
+  | "trash_card"
+  | "discard_card"
+  | "topdeck_card"
+  | "gain_card";
+
 export type CardAction = {
-  id: string; // e.g., "trash", "discard", "keep"
-  label: string; // e.g., "Trash", "Discard", "Keep"
-  color: string; // CSS color for highlighting
-  isDefault?: boolean; // True if this is the default action
+  id: CardActionId;
+  label: string;
+  color: string;
+  isDefault?: boolean;
 };
 
 export type DecisionRequest = {
