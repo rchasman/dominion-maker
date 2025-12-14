@@ -1,13 +1,17 @@
+import { lazy, Suspense } from "preact/compat";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import type { LLMLogEntry } from "../../context/llm-log-context";
-import { LLMLog } from "../LLMLog";
 import {
   FONT_WEIGHT_NORMAL,
   FONT_WEIGHT_BOLD,
   FULL_PERCENT,
 } from "./constants";
+
+const LLMLog = lazy(() =>
+  import("../LLMLog").then(m => ({ default: m.LLMLog })),
+);
 
 interface GameModeSwitcherProps {
   gameMode: GameMode;
@@ -169,6 +173,23 @@ interface LLMLogSectionProps {
   onModelSettingsChange?: (settings: ModelSettings) => void;
 }
 
+function LLMLogFallback() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        color: "var(--color-text-secondary)",
+        fontSize: "0.75rem",
+      }}
+    >
+      Loading...
+    </div>
+  );
+}
+
 export function LLMLogSection({
   llmLogs,
   gameMode,
@@ -187,18 +208,20 @@ export function LLMLogSection({
         overflow: "hidden",
       }}
     >
-      <LLMLog
-        entries={llmLogs}
-        gameMode={gameMode}
-        modelSettings={
-          modelSettings && onModelSettingsChange
-            ? {
-                settings: modelSettings,
-                onChange: onModelSettingsChange,
-              }
-            : undefined
-        }
-      />
+      <Suspense fallback={<LLMLogFallback />}>
+        <LLMLog
+          entries={llmLogs}
+          gameMode={gameMode}
+          modelSettings={
+            modelSettings && onModelSettingsChange
+              ? {
+                  settings: modelSettings,
+                  onChange: onModelSettingsChange,
+                }
+              : undefined
+          }
+        />
+      </Suspense>
     </div>
   );
 }
