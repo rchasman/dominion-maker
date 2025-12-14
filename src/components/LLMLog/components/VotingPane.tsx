@@ -158,14 +158,18 @@ export function VotingPane({
 
       const voteGroups = buildVoteGroups(successfulStatuses, legalActions);
 
+      // Sort by vote count descending, then by signature alphabetically for deterministic tie-breaking
       const results = Array.from(voteGroups.values())
         .map(g => ({
           action: g.action,
           votes: g.voters.length,
           voters: g.voters,
           valid: g.valid ?? true,
+          signature: JSON.stringify(stripReasoning(g.action)),
         }))
-        .sort((a, b) => b.votes - a.votes);
+        .sort(
+          (a, b) => b.votes - a.votes || a.signature.localeCompare(b.signature),
+        );
 
       const votes = totalModels ?? liveStatuses.size;
 

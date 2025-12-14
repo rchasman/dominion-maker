@@ -293,8 +293,9 @@ export const selectConsensusWinner = (
     throw new Error("All AI models failed - check connection");
   }
 
+  // Sort by vote count descending, then by signature alphabetically for deterministic tie-breaking
   const rankedGroups = Array.from(voteGroups.values()).sort(
-    (a, b) => b.count - a.count,
+    (a, b) => b.count - a.count || a.signature.localeCompare(b.signature),
   );
 
   const validRankedGroups = rankedGroups.filter(g =>
