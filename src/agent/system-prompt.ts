@@ -39,5 +39,6 @@ Resources reset each cleanup:
 CARD DEFINITIONS:
 ${buildCardDefinitionsTable(supply)}
 
-Format: TOON (tab-delimited). If STRATEGY OVERRIDE in context: follow it absolutely.`;
+Task: You will receive CURRENT STATE, strategic context, history, and LEGAL ACTIONS. Choose ONE action from LEGAL ACTIONS.
+Format: TOON (tab-delimited). If STRATEGY OVERRIDE present: follow it absolutely.`;
 }

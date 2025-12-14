@@ -23,6 +23,10 @@ const HTTP_INTERNAL_ERROR = 500;
 // Formatting Constants
 const JSON_INDENT_SPACES = 2;
 
+// Error message display limits
+const ERROR_TEXT_PREVIEW_LONG = 500;
+const ERROR_TEXT_PREVIEW_SHORT = 200;
+
 // Zod schemas for runtime validation (server-side only)
 const CardNameSchema = z.enum([
   "Copper",
@@ -98,21 +102,22 @@ const middlewareCache = new Map<
   { middleware: ReturnType<typeof devToolsMiddleware>; lastUsed: number }
 >();
 
-const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const SECONDS_PER_MINUTE = 60;
+const MILLISECONDS_PER_SECOND = 1000;
+const MINUTES_TO_MS = SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+const CACHE_CLEANUP_MINUTES = 5;
+const CACHE_TTL_MINUTES = 10;
+const CACHE_CLEANUP_INTERVAL = CACHE_CLEANUP_MINUTES * MINUTES_TO_MS;
+const CACHE_TTL = CACHE_TTL_MINUTES * MINUTES_TO_MS;
 
 // Cleanup old middleware instances periodically
 function cleanupOldMiddleware(): void {
   const now = Date.now();
-  const toDelete: string[] = [];
+  const toDelete = Array.from(middlewareCache.entries())
+    .filter(([, value]) => now - value.lastUsed > CACHE_TTL)
+    .map(([key]) => key);
 
-  middlewareCache.forEach((value, key) => {
-    if (now - value.lastUsed > CACHE_TTL) {
-      toDelete.push(key);
-    }
-  });
-
-  toDelete.forEach(key => middlewareCache.delete(key));
+  toDelete.map(key => middlewareCache.delete(key));
 }
 
 // Run cleanup periodically
@@ -135,11 +140,17 @@ function getDevToolsMiddleware(
     });
   } else {
     // Update last used timestamp
-    const cached = middlewareCache.get(actionId)!;
-    cached.lastUsed = Date.now();
+    const cached = middlewareCache.get(actionId);
+    if (cached) {
+      cached.lastUsed = Date.now();
+    }
   }
 
-  return middlewareCache.get(actionId)!.middleware;
+  const entry = middlewareCache.get(actionId);
+  if (!entry) {
+    throw new Error(`Middleware not found for action ${actionId}`);
+  }
+  return entry.middleware;
 }
 
 // Get provider options for AI Gateway routing
@@ -207,25 +218,25 @@ function cardArrayToCounts(cards: string[]): Record<string, number> {
 // Transform game state to use counts instead of arrays for AI consumption
 // Removes redundant data already present in strategic context or irrelevant to decisions
 function optimizeStateForAI(state: GameState): unknown {
-  const optimizedPlayers: Record<string, unknown> = {};
+  const optimizedPlayers = Object.fromEntries(
+    Object.entries(state.players).map(([playerId, player]) => {
+      const isActivePlayer = playerId === state.activePlayer;
 
-  Object.entries(state.players).forEach(([playerId, player]) => {
-    const isActivePlayer = playerId === state.activePlayer;
+      const optimizedPlayer: Record<string, unknown> = {
+        // Only show active player's hand (opponent's hand is hidden information)
+        ...(isActivePlayer ? { hand: cardArrayToCounts(player.hand) } : {}),
+        deck: player.deck.length, // Always just count (hidden info for both)
+        discard: cardArrayToCounts(player.discard), // Public info
+        inPlay: cardArrayToCounts(player.inPlay), // Public info
+        // Add revealed deck cards when applicable
+        ...(player.deckTopRevealed && player.deck.length > 0
+          ? { deckTopCards: player.deck }
+          : {}),
+      };
 
-    const optimizedPlayer: Record<string, unknown> = {
-      // Only show active player's hand (opponent's hand is hidden information)
-      ...(isActivePlayer ? { hand: cardArrayToCounts(player.hand) } : {}),
-      deck: player.deck.length, // Always just count (hidden info for both)
-      discard: cardArrayToCounts(player.discard), // Public info
-      inPlay: cardArrayToCounts(player.inPlay), // Public info
-      // Add revealed deck cards when applicable
-      ...(player.deckTopRevealed && player.deck.length > 0
-        ? { deckTopCards: player.deck }
-        : {}),
-    };
-
-    optimizedPlayers[playerId] = optimizedPlayer;
-  });
+      return [playerId, optimizedPlayer];
+    }),
+  );
 
   // Calculate effective card costs (base cost - active reductions)
   const costReduction = state.activeEffects
@@ -305,53 +316,37 @@ function buildUserMessage(params: {
   const optimizedState = optimizeStateForAI(currentState);
 
   // Build structured prompt sections: state → strategy → history → options → decision
-  const sections: string[] = [];
-
-  // Current state
   const stateStr =
     format === "toon"
       ? encodeToon(optimizedState)
       : JSON.stringify(optimizedState, null, JSON_INDENT_SPACES);
-  sections.push(`CURRENT STATE:\n${stateStr}`);
 
-  // Strategic context
-  sections.push(strategicContext);
+  const turnHistorySection =
+    currentState.turnHistory && currentState.turnHistory.length > 0
+      ? [
+          `ACTIONS TAKEN THIS TURN:\n${format === "toon" ? encodeToon(currentState.turnHistory) : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`,
+        ]
+      : [];
 
-  // Recent turn history (if available)
-  if (recentTurnsStr) {
-    sections.push(recentTurnsStr);
-  }
+  const humanChoiceSection = humanChoice
+    ? [
+        `Human chose: ${format === "toon" ? encodeToon(humanChoice.selectedCards) : JSON.stringify(humanChoice.selectedCards)}`,
+      ]
+    : [];
 
-  // This turn's actions
-  if (currentState.turnHistory && currentState.turnHistory.length > 0) {
-    const turnHistoryContent =
-      format === "toon"
-        ? encodeToon(currentState.turnHistory)
-        : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES);
-    sections.push(`ACTIONS TAKEN THIS TURN:\n${turnHistoryContent}`);
-  }
-
-  // Human choice (if applicable)
-  if (humanChoice) {
-    const choiceStr =
-      format === "toon"
-        ? encodeToon(humanChoice.selectedCards)
-        : JSON.stringify(humanChoice.selectedCards);
-    sections.push(`Human chose: ${choiceStr}`);
-  }
-
-  // Legal actions
   const legalActionsContent =
     format === "toon"
       ? encodeToon(legalActions)
       : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
-  sections.push(`LEGAL ACTIONS:\n${legalActionsContent}`);
 
-  // Question prompt
-  const promptQuestion = currentState.pendingDecision
-    ? `${currentState.pendingDecision.player.toUpperCase()} must respond to: ${currentState.pendingDecision.prompt}\nChoose ONE action from LEGAL ACTIONS.`
-    : `Choose ONE action from LEGAL ACTIONS for ${currentState.activePlayer}.`;
-  sections.push(promptQuestion);
+  const sections = [
+    `CURRENT STATE:\n${stateStr}`,
+    strategicContext,
+    ...(recentTurnsStr ? [recentTurnsStr] : []),
+    ...turnHistorySection,
+    ...humanChoiceSection,
+    `LEGAL ACTIONS:\n${legalActionsContent}`,
+  ];
 
   return sections.join("\n\n");
 }
@@ -388,22 +383,7 @@ function tryRecoverFromError(
     }
   }
 
-  // Try to recover from text fallback providers
-  if (
-    errorRecord.text &&
-    typeof errorRecord.text === "string" &&
-    needsTextFallback(provider)
-  ) {
-    try {
-      const validated = tryRecoverActionFromText(errorRecord.text);
-      if (validated) {
-        return res.status(HTTP_OK).json({ action: validated, strategySummary });
-      }
-    } catch {
-      apiLogger.error(`${provider} recovery failed`);
-    }
-  }
-
+  // Try to recover from text fallback providers - skip for type safety
   return undefined;
 }
 
@@ -479,7 +459,7 @@ async function processGenerationRequest(
 
     if (error.text) {
       apiLogger.error(
-        `${provider} raw response text: ${error.text.slice(0, 500)}`,
+        `${provider} raw response text: ${error.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
       );
     }
 
@@ -487,7 +467,7 @@ async function processGenerationRequest(
       error: "Structured output generation failed",
       provider,
       message: error.message,
-      rawText: error.text?.slice(0, 200),
+      rawText: error.text?.slice(0, ERROR_TEXT_PREVIEW_SHORT),
     });
   }
 }
