@@ -117,6 +117,21 @@ export default defineConfig([
         },
       ],
       "prefer-template": "error",
+
+      // Category 6: Unused Variables (Infinite Game Thinking)
+      // NEVER allow underscore prefix - delete unused code instead
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          vars: "all",
+          args: "after-used",
+          ignoreRestSiblings: true,
+          // DO NOT allow underscore prefix for vars - delete instead
+          varsIgnorePattern: undefined,
+          // Allow underscore for destructured rest (..._rest)
+          argsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   // Test file overrides - relax rules for test globals and structure
