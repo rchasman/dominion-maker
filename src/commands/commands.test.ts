@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { handleCommand } from "./handle";
 import { resetEventCounter } from "../events/id-generator";
 import { applyEvents } from "../events/apply";
-import type { GameState } from "../types/game-state";
+import type { GameState, CardName } from "../types/game-state";
 import type { GameCommand } from "./types";
 
 /**
@@ -1016,5 +1016,79 @@ describe("Command System - Player Validation", () => {
     const result = handleCommand(state, command, "human");
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("Command System - Cellar Causality", () => {
+  beforeEach(() => {
+    resetEventCounter();
+  });
+
+  it("should link Cellar discard/draw events to CARD_PLAYED event", () => {
+    const state: GameState = {
+      ...createEmptyState(),
+      players: {
+        human: {
+          deck: ["Gold", "Gold"],
+          hand: ["Cellar", "Estate", "Copper"],
+          discard: [],
+          inPlay: [],
+          inPlaySourceIndices: [],
+        },
+      },
+      activePlayer: "human",
+      phase: "action",
+      actions: 1,
+    };
+
+    // Play Cellar - should create CARD_PLAYED and DECISION_REQUIRED
+    const playResult = handleCommand(state, {
+      type: "PLAY_ACTION",
+      player: "human",
+      card: "Cellar",
+    });
+
+    expect(playResult.ok).toBe(true);
+    if (!playResult.events) throw new Error("Expected events");
+
+    const cardPlayedEvent = playResult.events.find(
+      e => e.type === "CARD_PLAYED",
+    );
+    expect(cardPlayedEvent).toBeDefined();
+    if (!cardPlayedEvent) throw new Error("Expected CARD_PLAYED event");
+
+    const rootEventId = cardPlayedEvent.id;
+
+    // Apply events to get updated state
+    const midState = applyEvents(state, playResult.events);
+    expect(midState.pendingDecision).toBeDefined();
+
+    // Resolve decision - discard Estate and Copper
+    const decisionResult = handleCommand(midState, {
+      type: "SUBMIT_DECISION",
+      player: "human",
+      choice: {
+        selectedCards: ["Estate", "Copper"],
+      },
+    });
+
+    expect(decisionResult.ok).toBe(true);
+    if (!decisionResult.events) throw new Error("Expected events");
+
+    // Find discard and draw events
+    const discardEvents = decisionResult.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
+    const drawEvents = decisionResult.events.filter(
+      e => e.type === "CARD_DRAWN",
+    );
+
+    expect(discardEvents.length).toBe(2);
+    expect(drawEvents.length).toBe(2);
+
+    // Verify all discard/draw events are linked to the original CARD_PLAYED event
+    for (const event of [...discardEvents, ...drawEvents]) {
+      expect(event.causedBy).toBe(rootEventId);
+    }
   });
 });
