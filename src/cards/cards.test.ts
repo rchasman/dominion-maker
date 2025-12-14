@@ -382,6 +382,64 @@ describe("Multi-Stage Decision Cards", () => {
       // Hand should have remaining card
       expect(newState.players["human"].hand).toEqual(["Duchy"]);
     });
+
+    it("should track total trashed count correctly for AI atomic submissions", () => {
+      const state = createTestState([
+        "Copper",
+        "Copper",
+        "Estate",
+        "Estate",
+        "Duchy",
+      ]);
+
+      // First get the decision
+      let newState = executeCard("Chapel", state);
+      expect(newState.pendingDecision).toBeDefined();
+      expect(newState.pendingDecision?.max).toBe(4); // Initial max: 4
+
+      // AI trashes first card atomically
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Copper"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(1);
+      expect(newState.pendingDecision).toBeDefined();
+      expect(newState.pendingDecision?.max).toBe(3); // Should be 3 remaining
+
+      // AI trashes second card atomically
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Estate"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(2);
+      expect(newState.pendingDecision).toBeDefined();
+      expect(newState.pendingDecision?.max).toBe(2); // Should be 2 remaining
+
+      // AI trashes third card atomically
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Copper"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(3);
+      expect(newState.pendingDecision).toBeDefined();
+      expect(newState.pendingDecision?.max).toBe(1); // Should be 1 remaining
+
+      // AI trashes fourth card atomically
+      newState = executeCard(
+        "Chapel",
+        newState,
+        { selectedCards: ["Estate"] },
+        "trash",
+      );
+      expect(newState.trash.length).toBe(4);
+      expect(newState.pendingDecision).toBeNull(); // Done - reached max
+    });
   });
 
   describe("Harbinger", () => {

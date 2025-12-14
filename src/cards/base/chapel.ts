@@ -34,6 +34,7 @@ export const chapel: CardEffect = ({
         max: CHAPEL_MAX_TRASH,
         cardBeingPlayed: "Chapel",
         stage: "trash",
+        metadata: { trashedCount: 0 },
       },
     };
   }
@@ -54,17 +55,21 @@ export const chapel: CardEffect = ({
       from: "hand" as const,
     }));
 
+    // Track total trashed across all submissions
+    const previousTotal =
+      (state.pendingDecision?.metadata?.trashedCount as number) || 0;
+    const totalTrashed = previousTotal + toTrash.length;
+
     // Check if we should continue asking (for atomic AI submissions)
     // If only 1 card selected and still under max, offer another decision
-    const trashedCount = toTrash.length;
     const updatedHand = toTrash.reduce(
       (hand, card) => removeCards(hand, [card]),
       playerState.hand,
     );
 
     const shouldContinue =
-      trashedCount === 1 &&
-      trashedCount < CHAPEL_MAX_TRASH &&
+      toTrash.length === 1 &&
+      totalTrashed < CHAPEL_MAX_TRASH &&
       updatedHand.length > 0;
 
     if (shouldContinue) {
@@ -74,12 +79,13 @@ export const chapel: CardEffect = ({
           type: "card_decision",
           player,
           from: "hand",
-          prompt: `Chapel: Trash up to ${CHAPEL_MAX_TRASH - trashedCount} more cards`,
+          prompt: `Chapel: Trash up to ${CHAPEL_MAX_TRASH - totalTrashed} more cards`,
           cardOptions: updatedHand,
           min: 0,
-          max: CHAPEL_MAX_TRASH - trashedCount,
+          max: CHAPEL_MAX_TRASH - totalTrashed,
           cardBeingPlayed: "Chapel",
           stage: "trash",
+          metadata: { trashedCount: totalTrashed },
         },
       };
     }
