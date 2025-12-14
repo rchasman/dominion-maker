@@ -45,8 +45,8 @@ const SUMMARIES_PER_TURN = 2;
  */
 export const DEFAULT_STRATEGY = {
   gameplan: "Adaptive - Evaluating Options",
-  read: "Early turns establish deck foundation. Victory cards (Estate/Duchy) dilute deck by reducing draws of treasure and action cards. Economy cards (Silver/Gold) and useful actions improve future buying power.",
-  recommendation: "Prioritize cards that improve future turns over immediate VP. Consider deck composition impact.",
+  read: "Early turns establish deck foundation. Victory cards (Estate/Duchy) dilute deck by reducing draws of treasure and action cards. Economy cards (Silver/Gold) and useful actions improve future buying power. Copper is the weakest treasure - never buy more.",
+  recommendation: "Prioritize cards that improve future turns over immediate VP. Consider deck composition impact. Play all treasures in buy phase.",
 };
 
 function extractRecentTurns(
