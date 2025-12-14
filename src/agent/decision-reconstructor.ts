@@ -8,6 +8,7 @@ import type {
 import type { Action } from "../types/action";
 import { agentLogger } from "../lib/logger";
 import { removeCards } from "../lib/card-array-utils";
+import { run } from "../lib/run";
 
 /**
  * Accumulate AI atomic actions via multi-round consensus voting.
@@ -151,26 +152,38 @@ export async function reconstructMultiActionDecision(
     // Stop if AI votes to skip (done making decisions)
     if (action.type === "skip_decision") {
       agentLogger.debug(
-        `AI voted to skip after ${i} decisions, defaulting rest to topdeck`,
+        `AI voted to skip after ${i} decisions, applying defaults`,
       );
-      // Default remaining cards to topdeck
+      // Default remaining cards to the default action
+      const defaultAction = decision.actions?.find(a => a.isDefault);
+      const defaultId = defaultAction?.id || "topdeck";
+
       for (let j = i; j < numCards; j++) {
         if (!(j in cardActions)) {
-          cardActions[j] = "topdeck";
+          cardActions[j] = defaultId;
         }
       }
       break;
     }
 
-    // Map action type to action id
-    const actionId =
-      action.type === "trash_card"
-        ? "trash"
-        : action.type === "discard_card"
-          ? "discard"
-          : action.type === "topdeck_card"
-            ? "topdeck"
-            : "topdeck"; // default
+    // Map action type back to original action id
+    // This preserves the semantic meaning from the card's decision
+    const actionId = run(() => {
+      if (action.type === "trash_card") return "trash";
+      if (action.type === "discard_card") {
+        // Check if this is Library's "set_aside" disguised as discard
+        const actions = decision.actions || [];
+        if (actions.some(a => a.id === "set_aside")) return "set_aside";
+        return "discard";
+      }
+      if (action.type === "topdeck_card") {
+        // Check if this is Library's "draw" disguised as topdeck
+        const actions = decision.actions || [];
+        if (actions.some(a => a.id === "draw")) return "draw";
+        return "topdeck";
+      }
+      return "topdeck"; // default
+    });
 
     cardActions[i] = actionId;
 

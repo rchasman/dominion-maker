@@ -44,6 +44,12 @@ export function decomposeDecisionForAI(
         result.push({ type: "discard_card" as const, card: currentCard });
       } else if (action.id === "topdeck") {
         result.push({ type: "topdeck_card" as const, card: currentCard });
+      } else if (action.id === "set_aside") {
+        // Library: set aside action cards
+        result.push({ type: "discard_card" as const, card: currentCard });
+      } else if (action.id === "draw") {
+        // Library: draw (keep) the card - use topdeck to represent "keep"
+        result.push({ type: "topdeck_card" as const, card: currentCard });
       }
     });
 
