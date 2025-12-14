@@ -5,15 +5,8 @@
  * Strategies (engine/llm/hybrid) work with the event system.
  */
 
-import {
-  createContext,
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  type ReactNode,
-  type MutableRefObject,
-} from "preact/compat";
+import { useState, useEffect, useRef, useMemo } from "preact/hooks";
+import { createContext, type ComponentChildren } from "preact";
 import type { GameState, CardName } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { GameEvent, DecisionChoice } from "../events/types";
@@ -92,7 +85,7 @@ function createLLMLogEntry(
   };
 }
 
-export function GameProvider({ children }: { children: ReactNode }) {
+export function GameProvider({ children }: { children: ComponentChildren }) {
   const storage = useGameStorage();
   const engineRef: MutableRefObject<DominionEngine | null> = useRef(null);
   const setEngine = (engine: DominionEngine | null) => {
@@ -164,7 +157,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [strategy]);
 
   // Strategy analysis
-  useStrategyAnalysis(engineRef, strategy, playerStrategies, setPlayerStrategies);
+  useStrategyAnalysis(
+    engineRef,
+    strategy,
+    playerStrategies,
+    setPlayerStrategies,
+  );
 
   // Derived state
   const hasPlayableActionsValue = useMemo(

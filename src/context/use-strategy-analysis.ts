@@ -3,7 +3,7 @@
  * Fetches and stores strategy analysis after turns
  */
 
-import { useEffect, type MutableRefObject } from "preact/compat";
+import { useEffect } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { GameStrategy } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
@@ -24,7 +24,8 @@ function fetchStrategyAnalysis(
   api.api["analyze-strategy"]
     .post({
       currentState: state,
-      previousAnalysis: currentStrategies.length > 0 ? currentStrategies : undefined,
+      previousAnalysis:
+        currentStrategies.length > 0 ? currentStrategies : undefined,
     })
     .then(({ data, error }) => {
       if (error) {
@@ -65,7 +66,12 @@ export function useStrategyAnalysis(
       const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
 
       if (hasTurnEnded && state.turn >= MIN_TURN_FOR_STRATEGY) {
-        fetchStrategyAnalysis(state, strategy, currentStrategies, setPlayerStrategies);
+        fetchStrategyAnalysis(
+          state,
+          strategy,
+          currentStrategies,
+          setPlayerStrategies,
+        );
       }
     });
 
