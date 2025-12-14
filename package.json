@@ -24,7 +24,7 @@
     "@ai-sdk/anthropic": "3.0.0-beta.80",
     "@ai-sdk/devtools": "^0.0.1-beta.1",
     "@ai-sdk/openai": "3.0.0-beta.89",
-    "@floating-ui/react": "^0.27.16",
+    "@floating-ui/dom": "^1.7.4",
     "@toon-format/toon": "^2.1.0",
     "ai": "6.0.0-beta.139",
     "best-effort-json-parser": "^1.2.1",

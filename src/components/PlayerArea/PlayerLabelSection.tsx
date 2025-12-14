@@ -1,17 +1,11 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 import {
-  useFloating,
+  computePosition,
   autoUpdate,
   offset,
   flip,
   shift,
-  useHover,
-  useFocus,
-  useDismiss,
-  useRole,
-  useInteractions,
-  useClientPoint,
-} from "@floating-ui/react";
+} from "@floating-ui/dom";
 import { getPlayerColor } from "../../lib/board-utils";
 
 interface PlayerLabelSectionProps {
@@ -88,25 +82,18 @@ function renderStrategySection(playerStrategy: {
 }
 
 function renderStrategyTooltip(params: {
-  floatingStyles: React.CSSProperties;
+  floatingStyles: { position: string; top: string; left: string };
   playerColor: string;
   label: string;
   playerStrategy: { gameplan: string; read: string; recommendation: string };
-  setFloating: (node: HTMLElement | null) => void;
-  getFloatingProps: () => Record<string, unknown>;
+  floatingRef: (node: HTMLElement | null) => void;
 }) {
-  const {
-    floatingStyles,
-    playerColor,
-    label,
-    playerStrategy,
-    setFloating,
-    getFloatingProps,
-  } = params;
+  const { floatingStyles, playerColor, label, playerStrategy, floatingRef } =
+    params;
 
   return (
     <div
-      ref={setFloating}
+      ref={floatingRef}
       style={{
         ...floatingStyles,
         background: "rgba(26, 26, 46, 0.75)",
@@ -118,7 +105,6 @@ function renderStrategyTooltip(params: {
         boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
         pointerEvents: "none",
       }}
-      {...getFloatingProps()}
     >
       <div
         style={{
@@ -147,45 +133,97 @@ function renderStrategyTooltip(params: {
   );
 }
 
-function useStrategyFloating(initialOpen = false) {
-  const [isStrategyOpen, setIsStrategyOpen] = useState(initialOpen);
-
-  const { refs, floatingStyles, context } = useFloating({
-    open: isStrategyOpen,
-    onOpenChange: setIsStrategyOpen,
-    placement: "top-end",
-    middleware: [
-      offset({ mainAxis: 8, crossAxis: 8 }),
-      flip(),
-      shift({ padding: 8 }),
-    ],
-    whileElementsMounted: autoUpdate,
+function useStrategyFloating() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [floatingStyles, setFloatingStyles] = useState({
+    position: "absolute" as const,
+    top: "0px",
+    left: "0px",
   });
+  const referenceRef = useRef<HTMLElement | null>(null);
+  const floatingRef = useRef<HTMLElement | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  const setReference = (node: HTMLElement | null) => refs.setReference(node);
-  const setFloating = (node: HTMLElement | null) => refs.setFloating(node);
+  const setReference = (node: HTMLElement | null) => {
+    referenceRef.current = node;
+  };
 
-  const hover = useHover(context);
-  const focus = useFocus(context);
-  const dismiss = useDismiss(context);
-  const role = useRole(context, { role: "tooltip" });
-  const clientPoint = useClientPoint(context);
+  const setFloating = (node: HTMLElement | null) => {
+    floatingRef.current = node;
+  };
 
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    hover,
-    focus,
-    dismiss,
-    role,
-    clientPoint,
-  ]);
+  // Update positioning when open
+  useEffect(() => {
+    const reference = referenceRef.current;
+    const floating = floatingRef.current;
+
+    if (!isOpen || !reference || !floating) {
+      return;
+    }
+
+    const updatePosition = () => {
+      computePosition(reference, floating, {
+        placement: "top-end",
+        middleware: [
+          offset({ mainAxis: 8, crossAxis: 8 }),
+          flip(),
+          shift({ padding: 8 }),
+        ],
+      })
+        .then(({ x, y }) => {
+          setFloatingStyles({
+            position: "absolute",
+            top: `${y}px`,
+            left: `${x}px`,
+          });
+        })
+        .catch(() => {
+          // Position calculation failed, tooltip stays hidden
+        });
+    };
+
+    // Initial position
+    updatePosition();
+
+    // Auto-update on scroll/resize
+    cleanupRef.current = autoUpdate(reference, floating, updatePosition);
+
+    return () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+    };
+  }, [isOpen]);
+
+  // Handle hover interactions
+  useEffect(() => {
+    const reference = referenceRef.current;
+    if (!reference) {
+      return;
+    }
+
+    const handleMouseEnter = () => setIsOpen(true);
+    const handleMouseLeave = () => setIsOpen(false);
+    const handleFocus = () => setIsOpen(true);
+    const handleBlur = () => setIsOpen(false);
+
+    reference.addEventListener("mouseenter", handleMouseEnter);
+    reference.addEventListener("mouseleave", handleMouseLeave);
+    reference.addEventListener("focus", handleFocus);
+    reference.addEventListener("blur", handleBlur);
+
+    return () => {
+      reference.removeEventListener("mouseenter", handleMouseEnter);
+      reference.removeEventListener("mouseleave", handleMouseLeave);
+      reference.removeEventListener("focus", handleFocus);
+      reference.removeEventListener("blur", handleBlur);
+    };
+  }, []);
 
   return {
-    isStrategyOpen,
+    isOpen,
     floatingStyles,
     setReference,
     setFloating,
-    getReferenceProps,
-    getFloatingProps,
   };
 }
 
@@ -245,18 +283,15 @@ function PlayerLabel({
   labelColor,
   hasStrategy,
   setReference,
-  getReferenceProps,
 }: {
   label: string;
   labelColor: string;
   hasStrategy: boolean;
   setReference: (node: HTMLElement | null) => void;
-  getReferenceProps: () => Record<string, unknown>;
 }) {
   return (
     <strong
       ref={setReference}
-      {...(hasStrategy ? getReferenceProps() : {})}
       style={{
         fontSize: "0.8125rem",
         color: labelColor,
@@ -389,14 +424,8 @@ export function PlayerLabelSection({
 }: PlayerLabelSectionProps) {
   const hasStrategy = hasStrategyContent(playerStrategy);
 
-  const {
-    isStrategyOpen,
-    floatingStyles,
-    setReference,
-    setFloating,
-    getReferenceProps,
-    getFloatingProps,
-  } = useStrategyFloating();
+  const { isOpen, floatingStyles, setReference, setFloating } =
+    useStrategyFloating();
 
   const playerColor = playerId ? getPlayerColor(playerId) : "rgb(205 133 63)";
   const labelColor = playerId
@@ -439,17 +468,15 @@ export function PlayerLabelSection({
         labelColor={labelColor}
         hasStrategy={hasStrategy}
         setReference={setReference}
-        getReferenceProps={getReferenceProps}
       />
-      {isStrategyOpen &&
+      {isOpen &&
         hasStrategy &&
         renderStrategyTooltip({
           floatingStyles,
           playerColor,
           label,
           playerStrategy,
-          setFloating,
-          getFloatingProps,
+          floatingRef: setFloating,
         })}
       {vpCount !== undefined && (
         <VictoryPoints vpCount={vpCount} playerId={playerId} />
