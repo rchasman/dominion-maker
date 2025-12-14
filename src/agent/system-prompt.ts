@@ -36,6 +36,10 @@ Resources (yourActions/yourBuys/yourCoins) reset each turn.
 - yourActions: only relevant in action phase
 - yourBuys/yourCoins: only relevant in buy phase
 
+CRITICAL RULES:
+1. NEVER buy Copper - it's the weakest treasure (worth 1 coin). You start with 7 Coppers. Buying more dilutes your deck with weak cards. Buy Silver (3 coins) or Gold (6 coins) instead.
+2. ALWAYS play ALL treasures in your hand during buy phase to maximize coins available for purchases.
+
 If STRATEGY OVERRIDE present: follow absolutely.
 
 CARD DEFINITIONS (static reference):
