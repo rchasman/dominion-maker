@@ -13,7 +13,6 @@ import type { LLMLogEntry } from "../components/LLMLog";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import { abortOngoingConsensus } from "../agent/game-agent";
 import { uiLogger } from "../lib/logger";
-import { resetPlayerColors } from "../lib/board-utils";
 import { clearGameStateStorage } from "./storage-utils";
 
 /**
@@ -41,7 +40,6 @@ export function useStartGame(
     clearGameStateStorage();
     setLLMLogs([]);
     setPlayerStrategies([]);
-    resetPlayerColors();
 
     const newEngine = new DominionEngine();
     setEngine(newEngine);

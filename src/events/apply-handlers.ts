@@ -1,7 +1,6 @@
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "./types";
 import {
-  removeCardFromInPlay,
   applyCardDrawn,
   applyCardPlayed,
   applyCardDiscarded,
@@ -10,9 +9,6 @@ import {
   applyRevealAndShuffle,
   applyCardReposition,
 } from "./apply-handlers-helpers";
-
-// Re-export for backwards compatibility
-export { removeCardFromInPlay };
 
 /**
  * Apply turn structure events

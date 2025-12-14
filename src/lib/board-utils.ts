@@ -52,14 +52,6 @@ export function getPlayerColor(playerId: string): string {
 }
 
 /**
- * Reset player color assignments (for testing)
- */
-export function resetPlayerColors(): void {
-  // No-op now that colors are deterministic
-  // Kept for backwards compatibility with tests
-}
-
-/**
  * Format player name for display with optional AI suffix
  */
 export function formatPlayerName(
