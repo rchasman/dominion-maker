@@ -25,7 +25,7 @@ interface CardProps {
 function getBorderStyle(
   selected: boolean | undefined,
   highlightMode: "trash" | "discard" | "gain" | undefined,
-): JSX.CSSProperties {
+): { border: string; boxShadow: string } {
   if (selected) {
     return {
       border: "0.125rem solid var(--color-victory)",
@@ -148,7 +148,6 @@ export function Card({
     : `https://robinzigmond.github.io/Dominion-app/images/card_images/${name.replace(/ /g, "_")}.jpg`;
 
   const cardWidth = getCardWidth(size);
-  const borderStyle = getBorderStyle(selected, highlightMode);
 
   const handleMouseEnter = () => {
     if (disableTooltip) return;
@@ -201,13 +200,14 @@ export function Card({
     return "pointer";
   });
 
-  const opacity = run(() => {
+  const opacity: number = run(() => {
     if (disabled) return OPACITY_DISABLED;
     if (dimmed) return OPACITY_DIMMED;
     return 1;
   });
 
   const transform = selected ? "translateY(calc(-1 * var(--space-2)))" : "none";
+  const borderStyle = getBorderStyle(selected, highlightMode);
 
   return (
     <>
@@ -223,7 +223,8 @@ export function Card({
           transform,
           transition:
             "transform var(--transition-fast), box-shadow var(--transition-fast)",
-          ...borderStyle,
+          border: borderStyle.border,
+          boxShadow: borderStyle.boxShadow,
           minInlineSize: 0,
           flexShrink: 1,
           userSelect: "none",

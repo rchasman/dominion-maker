@@ -77,7 +77,7 @@ export function usePlayback(config: PlaybackConfig, actions: PlaybackActions) {
   useEffect(() => {
     if (isPlaying && rootEvents.length > 0) {
       playIntervalRef.current = setInterval(() => {
-        setScrubberIndex(prev => {
+        setScrubberIndex((prev: number | null) => {
           const currentRootIndex =
             prev !== null
               ? rootEvents.findIndex(e => e.id === events[prev]?.id)

@@ -18,7 +18,9 @@ class SimpleLogger {
   constructor(private name: string) {}
 
   private log(level: LogLevel, ...args: unknown[]) {
-    const timestamp = new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
+    const TIMESTAMP_START = 11;
+    const TIMESTAMP_END = 23;
+    const timestamp = new Date().toISOString().slice(TIMESTAMP_START, TIMESTAMP_END); // HH:MM:SS.mmm
 
     const levelColor = {
       debug: colors.green,

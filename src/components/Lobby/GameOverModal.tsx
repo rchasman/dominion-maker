@@ -65,7 +65,7 @@ export function GameOverModal({
   );
 }
 
-const styles: Record<string, JSX.CSSProperties> = {
+const styles = {
   modal: {
     position: "fixed",
     inset: 0,

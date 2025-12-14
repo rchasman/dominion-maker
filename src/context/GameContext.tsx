@@ -87,7 +87,7 @@ function createLLMLogEntry(
 
 export function GameProvider({ children }: { children: ComponentChildren }) {
   const storage = useGameStorage();
-  const engineRef: MutableRefObject<DominionEngine | null> = useRef(null);
+  const engineRef = useRef<DominionEngine | null>(null);
   const setEngine = (engine: DominionEngine | null) => {
     engineRef.current = engine;
   };

@@ -12,11 +12,15 @@ import type { ComponentChildren } from "preact";
 /**
  * Parse **bold** markdown into JSX
  */
+const MARKDOWN_BOLD_MARKER_LENGTH = 2;
+
 function renderMarkdown(text: string): ComponentChildren {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) =>
     part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={i}>{part.slice(2, -2)}</strong>
+      <strong key={i}>
+        {part.slice(MARKDOWN_BOLD_MARKER_LENGTH, -MARKDOWN_BOLD_MARKER_LENGTH)}
+      </strong>
     ) : (
       part
     ),
@@ -326,7 +330,7 @@ function PlayerLabel({
   const handleIconClick = (e: MouseEvent) => {
     e.stopPropagation();
     if (playerStrategy) {
-      navigator.clipboard.writeText(
+      void navigator.clipboard.writeText(
         formatStrategyForClipboard(label, playerStrategy),
       );
     }

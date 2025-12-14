@@ -103,7 +103,7 @@ export function MultiplayerGameBoard({
   );
 }
 
-const styles: Record<string, JSX.CSSProperties> = {
+const styles = {
   loading: {
     display: "flex",
     alignItems: "center",

@@ -1049,7 +1049,7 @@ describe("Command System - Cellar Causality", () => {
     });
 
     expect(playResult.ok).toBe(true);
-    if (!playResult.events) throw new Error("Expected events");
+    if (!playResult.ok) throw new Error("Expected ok result");
 
     const cardPlayedEvent = playResult.events.find(
       e => e.type === "CARD_PLAYED",
@@ -1073,7 +1073,7 @@ describe("Command System - Cellar Causality", () => {
     });
 
     expect(decision1Result.ok).toBe(true);
-    if (!decision1Result.events) throw new Error("Expected events");
+    if (!decision1Result.ok) throw new Error("Expected ok result");
 
     // Apply first discard
     midState = applyEvents(midState, decision1Result.events);

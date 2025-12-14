@@ -93,7 +93,7 @@ const CONTAINER_LEFT = 16;
 
 const SLIDER_HEIGHT = 4;
 
-export const styles: Record<string, JSX.CSSProperties> = {
+export const styles = {
   container: {
     position: "fixed",
     bottom: `${CONTAINER_BOTTOM}px`,
