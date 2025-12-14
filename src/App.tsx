@@ -1,20 +1,19 @@
 import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { GameMode } from "./types/game-mode";
-import { MultiplayerProvider } from "./context/MultiplayerContext";
 import { StartScreen } from "./components/StartScreen";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { STORAGE_KEYS } from "./context/storage-utils";
 import { uiLogger } from "./lib/logger";
 
-// Lazy load game modules
+// Lazy load game modules (keeps trystero out of single-player bundle)
 const singlePlayerImport = () =>
   import("./SinglePlayerApp").then(m => ({ default: m.SinglePlayerApp }));
 const multiplayerImport = () =>
-  import("./components/Lobby").then(m => ({ default: m.MultiplayerScreen }));
+  import("./MultiplayerApp").then(m => ({ default: m.MultiplayerApp }));
 
 const SinglePlayerApp = lazy(singlePlayerImport);
-const MultiplayerScreen = lazy(multiplayerImport);
+const MultiplayerApp = lazy(multiplayerImport);
 
 // Preload game modules after menu renders (best of both worlds)
 const preloadSinglePlayer = () => void singlePlayerImport();
@@ -102,14 +101,12 @@ function App() {
     );
   }
 
-  // Multiplayer
+  // Multiplayer - MultiplayerProvider loaded lazily with MultiplayerApp
   if (mode === "multiplayer") {
     return (
-      <MultiplayerProvider>
-        <Suspense fallback={<LoadingScreen />}>
-          <MultiplayerScreen onBack={() => setMode("menu")} />
-        </Suspense>
-      </MultiplayerProvider>
+      <Suspense fallback={<LoadingScreen />}>
+        <MultiplayerApp onBack={() => setMode("menu")} />
+      </Suspense>
     );
   }
 
