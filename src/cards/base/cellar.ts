@@ -1,14 +1,9 @@
 /**
- * Cellar - +1 Action. Discard any number of cards (one at a time), then draw that many
+ * Cellar - +1 Action. Discard any number of cards, then draw that many
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import {
-  createDrawEvents,
-  isInitialCall,
-  createCardSelectionDecision,
-} from "../effect-types";
-import { removeCards } from "../../lib/card-array-utils";
+import { createDrawEvents, isInitialCall } from "../effect-types";
 
 export const cellar: CardEffect = ({
   state,
@@ -18,7 +13,7 @@ export const cellar: CardEffect = ({
 }): CardEffectResult => {
   const playerState = state.players[player];
 
-  // Initial call: +1 Action, then request discards
+  // Initial call: +1 Action, then request batch discard
   if (isInitialCall(decision, stage)) {
     const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
 
@@ -28,85 +23,56 @@ export const cellar: CardEffect = ({
 
     return {
       events: [actionEvent],
-      pendingDecision: createCardSelectionDecision({
+      pendingDecision: {
+        type: "card_decision",
         player,
         from: "hand",
-        prompt: "Cellar: Discard a card (or skip to draw)",
+        prompt: "Cellar: Discard any number of cards, then draw that many",
         cardOptions: [...playerState.hand],
         min: 0,
-        max: 1,
+        max: playerState.hand.length,
         cardBeingPlayed: "Cellar",
         stage: "discard",
-        metadata: { discardedCount: 0 },
-      }),
+      },
     };
-  }
-
-  // Handle skip: draw cards equal to number discarded
-  if (stage === "on_skip") {
-    const discardedCount =
-      (state.pendingDecision?.metadata?.discardedCount as number) || 0;
-
-    if (discardedCount === 0) {
-      return { events: [] };
-    }
-
-    const drawEvents = createDrawEvents(player, playerState, discardedCount);
-    return { events: drawEvents };
   }
 
   // Process discard decision
   if (stage === "discard" && decision) {
-    const toDiscard = decision.selectedCards[0];
-    if (!toDiscard) {
-      throw new Error("Cellar discard requires card - use SKIP_DECISION to skip");
+    const toDiscard = decision.selectedCards;
+
+    if (toDiscard.length === 0) {
+      return { events: [] };
     }
 
-    const discardedCount =
-      (state.pendingDecision?.metadata?.discardedCount as number) || 0;
-
-    const newDiscardedCount = discardedCount + 1;
-    const updatedHand = removeCards(playerState.hand, [toDiscard]);
-
-    // Player discarded a card
-    const discardEvent = {
+    // Emit one event per discarded card
+    const discardEvents = toDiscard.map(card => ({
       type: "CARD_DISCARDED" as const,
       player,
-      card: toDiscard,
+      card,
       from: "hand" as const,
-    };
+    }));
 
-    // Continue if still have cards in hand
-    if (updatedHand.length > 0) {
-      return {
-        events: [discardEvent],
-        pendingDecision: createCardSelectionDecision({
-          player,
-          from: "hand",
-          prompt: `Cellar: Discard another card (${newDiscardedCount} discarded, or skip to draw ${newDiscardedCount})`,
-          cardOptions: updatedHand,
-          min: 0,
-          max: 1,
-          cardBeingPlayed: "Cellar",
-          stage: "discard",
-          metadata: { discardedCount: newDiscardedCount },
-        }),
-      };
-    }
+    // Calculate updated hand for drawing
+    const updatedHand = toDiscard.reduce(
+      (hand, card) => {
+        const idx = hand.indexOf(card);
+        return idx === -1 ? hand : [...hand.slice(0, idx), ...hand.slice(idx + 1)];
+      },
+      playerState.hand,
+    );
 
-    // No more cards in hand - auto-draw
+    // Simulate discarded state for drawing
     const simulatedState = {
       ...playerState,
-      hand: removeCards(playerState.hand, [toDiscard]),
-      discard: [...playerState.discard, toDiscard],
+      hand: updatedHand,
+      discard: [...playerState.discard, ...toDiscard],
       deck: [...playerState.deck],
     };
-    const drawEvents = createDrawEvents(
-      player,
-      simulatedState,
-      newDiscardedCount,
-    );
-    return { events: [discardEvent, ...drawEvents] };
+
+    const drawEvents = createDrawEvents(player, simulatedState, toDiscard.length);
+
+    return { events: [...discardEvents, ...drawEvents] };
   }
 
   return { events: [] };

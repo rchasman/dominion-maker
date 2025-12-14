@@ -1063,7 +1063,7 @@ describe("Command System - Cellar Causality", () => {
     let midState = applyEvents(state, playResult.events);
     expect(midState.pendingDecision).toBeDefined();
 
-    // First discard: Estate
+    // Batch discard: Estate (just 1 card)
     const decision1Result = handleCommand(midState, {
       type: "SUBMIT_DECISION",
       player: "human",
@@ -1075,30 +1075,22 @@ describe("Command System - Cellar Causality", () => {
     expect(decision1Result.ok).toBe(true);
     if (!decision1Result.ok) throw new Error("Expected ok result");
 
-    // Apply first discard
-    midState = applyEvents(midState, decision1Result.events);
-    expect(midState.pendingDecision).toBeDefined();
+    // Cellar now processes batch and auto-draws in one decision
+    const discardEvents = decision1Result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
+    const drawEvents = decision1Result.events.filter(e => e.type === "CARD_DRAWN");
 
-    // Skip to finish and draw (only discarded 1 card) - use SKIP_DECISION
-    const decision2Result = handleCommand(midState, {
-      type: "SKIP_DECISION",
-      player: "human",
-    });
-
-    expect(decision2Result.ok).toBe(true);
-    if (!decision2Result.events) throw new Error("Expected events");
-
-    // Collect all discard and draw events from all decisions
-    const allEvents = [...decision1Result.events, ...decision2Result.events];
-    const discardEvents = allEvents.filter(e => e.type === "CARD_DISCARDED");
-    const drawEvents = allEvents.filter(e => e.type === "CARD_DRAWN");
-
-    expect(discardEvents.length).toBe(1);
-    expect(drawEvents.length).toBe(1);
+    expect(discardEvents.length).toBe(1); // Discarded 1
+    expect(drawEvents.length).toBe(1); // Drew 1
 
     // Verify all discard/draw events are linked to the original CARD_PLAYED event
     for (const event of [...discardEvents, ...drawEvents]) {
       expect(event.causedBy).toBe(rootEventId);
     }
+
+    // No pending decision after batch
+    midState = applyEvents(midState, decision1Result.events);
+    expect(midState.pendingDecision).toBeNull();
   });
 });
