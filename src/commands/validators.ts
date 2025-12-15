@@ -153,4 +153,13 @@ export const validators = {
         }
       : undefined;
   },
+
+  /**
+   * Validate that there is no pending decision
+   */
+  noPendingDecision: (state: GameState): ValidationResult => {
+    return state.pendingDecision
+      ? { ok: false, error: "Cannot act while a decision is pending" }
+      : undefined;
+  },
 };

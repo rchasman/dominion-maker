@@ -48,6 +48,7 @@ export function handlePlayAction(
   const validationError = validateCommand(
     () => validators.phase(state, "action"),
     () => validators.hasActions(state),
+    () => validators.noPendingDecision(state),
     () => validators.isAction(card),
     () => validators.playerExists(state, player),
     () => validators.cardInHand(state, player, card),
@@ -142,6 +143,7 @@ export function handlePlayTreasure(
   // Validate using middleware
   const validationError = validateCommand(
     () => validators.phase(state, "buy"),
+    () => validators.noPendingDecision(state),
     () => validators.isTreasure(card),
     () => validators.playerExists(state, player),
     () => validators.cardInHand(state, player, card),
@@ -342,6 +344,7 @@ export function handleBuyCard(
   // Validate using middleware
   const validationError = validateCommand(
     () => validators.phase(state, "buy"),
+    () => validators.noPendingDecision(state),
     () => validators.hasBuys(state),
     () => validators.cardExists(card),
   );

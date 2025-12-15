@@ -104,6 +104,11 @@ export function handleEndPhase(
   state: GameState,
   player: PlayerId,
 ): CommandResult {
+  // Cannot end phase while there's a pending decision
+  if (state.pendingDecision) {
+    return { ok: false, error: "Cannot end phase while a decision is pending" };
+  }
+
   if (state.phase === "action") {
     // Transition to buy phase
     const phaseEventId = generateEventId();
