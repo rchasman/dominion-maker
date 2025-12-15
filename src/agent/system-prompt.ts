@@ -41,17 +41,6 @@ Resources reset each cleanup (found in "you" object):
 
 STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards.
 
-DECISION FRAMEWORK:
-When buying, ask "what's the BEST card I can afford?" not "what can I afford?"
-- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1). Higher always dominates lower when affordable.
-- Copper trap: You START with 7 Copper. Check you.currentDeckComposition - buying more dilutes your deck for minimal gain. Almost never buy Copper.
-- Skip the buy: Determine affordable cards (supply where cost ≤ you.currentCoins). If only Copper/Curse/Estate are affordable, END THE PHASE. Buying junk makes your deck worse. Not buying > buying junk.
-- Victory timing: Estate/Duchy clog hands without helping you buy. Only buy VP when:
-  (a) You can afford Province ($8 for 6 VP) - the only efficient VP card (or Province pile empty, then buy Duchy)
-  (b) Game ending soon (check supply - when 3+ piles at ≤2 cards, game ends)
-- Dilution math: A 10-card deck draws 5 cards/turn. Adding weak cards reduces your average hand quality.
-- Action cards: Evaluate by deck improvement. +Cards/+Actions compound. Terminals (no +Action) compete for your 1 action/turn.
-
 CARD DEFINITIONS:
 ${buildCardDefinitionsTable(supply)}
 
@@ -66,5 +55,21 @@ VALIDATION: Only reference cards that exist in your zones:
 
 Note: topdeck_card returns card to top of deck (draw it next hand). Trash removes forever.
 
-If STRATEGY OVERRIDE present: follow it absolutely.`;
+🚨 STRATEGY OVERRIDE RULES 🚨
+IF strategyOverride is present in strategic context:
+  - IGNORE ALL default decision framework guidance below
+  - The strategyOverride is your ONLY strategic guidance
+  - Follow the override absolutely and literally
+  - Default rules (like "never buy Copper/Curse" or "skip bad buys") DO NOT APPLY
+
+DEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):
+When buying, ask "what's the BEST card I can afford?" not "what can I afford?"
+- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1). Higher always dominates lower when affordable.
+- Copper trap: You START with 7 Copper. Check you.currentDeckComposition - buying more dilutes your deck for minimal gain. Almost never buy Copper.
+- Skip the buy: Determine affordable cards (supply where cost ≤ you.currentCoins). If only Copper/Curse/Estate are affordable, END THE PHASE. Buying junk makes your deck worse. Not buying > buying junk.
+- Victory timing: Estate/Duchy clog hands without helping you buy. Only buy VP when:
+  (a) You can afford Province ($8 for 6 VP) - the only efficient VP card (or Province pile empty, then buy Duchy)
+  (b) Game ending soon (check supply - when 3+ piles at ≤2 cards, game ends)
+- Dilution math: A 10-card deck draws 5 cards/turn. Adding weak cards reduces your average hand quality.
+- Action cards: Evaluate by deck improvement. +Cards/+Actions compound. Terminals (no +Action) compete for your 1 action/turn.`;
 }
