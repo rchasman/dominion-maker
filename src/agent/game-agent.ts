@@ -317,27 +317,59 @@ export async function advanceGameStateWithConsensus(
         `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`,
       );
 
-      const { results, earlyConsensus, voteGroups } = await runModelsInParallel({
-        providers,
-        currentState: acc.engine.state,
-        humanChoice,
-        strategySummary,
-        customStrategy,
-        logger,
+      const { results, earlyConsensus, voteGroups, completedResults } =
+        await runModelsInParallel({
+          providers,
+          currentState: acc.engine.state,
+          humanChoice,
+          strategySummary,
+          customStrategy,
+          logger,
+          aheadByK,
+          dataFormat,
+          actionId: `${actionId}-r${round}`,
+        });
+
+      const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
+        selectConsensusWinner(
+          voteGroups,
+          results,
+          earlyConsensus,
+          legalActions,
+        );
+
+      // Compute player context for logging
+      const playerState = acc.engine.state.players[playerId];
+      const hand = playerState?.hand || [];
+      const inPlay = playerState?.inPlay || [];
+      const handCounts = {
+        treasures: hand.filter(isTreasureCard).length,
+        actions: hand.filter(isActionCard).length,
+        total: hand.length,
+      };
+
+      // Log voting results for this batch round
+      logVotingResults({
+        winner,
+        votesConsidered,
+        validEarlyConsensus,
+        rankedGroups,
         aheadByK,
-        dataFormat,
-        actionId: `${actionId}-r${round}`,
+        completedResults,
+        legalActions,
+        overallStart,
+        currentState: acc.engine.state,
+        playerState,
+        hand,
+        inPlay,
+        handCounts,
+        logger,
       });
 
-      const { winner } = selectConsensusWinner(
-        voteGroups,
-        results,
-        earlyConsensus,
-        legalActions,
-      );
-
       if (winner.action.type === "skip_decision") {
-        agentLogger.info(`AI voted to skip after ${acc.cards.length} selections`);
+        agentLogger.info(
+          `AI voted to skip after ${acc.cards.length} selections`,
+        );
         return acc;
       }
 
