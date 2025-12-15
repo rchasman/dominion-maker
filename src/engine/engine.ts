@@ -37,7 +37,7 @@ export type EventListener = (events: GameEvent[], state: GameState) => void;
  */
 export class DominionEngine {
   private events: GameEvent[] = [];
-  private _state: GameState | null = null;
+  private cachedState: GameState | null = null;
   private listeners: Set<EventListener> = new Set();
   private pendingUndo: PendingUndoRequest | null = null;
 
@@ -50,11 +50,11 @@ export class DominionEngine {
    * Get current game state (cached, invalidated on new events).
    */
   get state(): GameState {
-    if (!this._state) {
-      this._state =
+    if (!this.cachedState) {
+      this.cachedState =
         this.events.length > 0 ? projectState(this.events) : createEmptyState();
     }
-    return this._state;
+    return this.cachedState;
   }
 
   /**
@@ -99,7 +99,7 @@ export class DominionEngine {
   ): CommandResult {
     // Clear existing state
     this.events = [];
-    this._state = null;
+    this.cachedState = null;
     this.pendingUndo = null;
 
     return this.dispatch({
@@ -220,7 +220,7 @@ export class DominionEngine {
   undoToEvent(toEventId: string): void {
     engineLogger.info(`Undo to ${toEventId}`);
     this.events = removeEventChain(toEventId, this.events);
-    this._state = null; // Invalidate cached state
+    this.cachedState = null; // Invalidate cached state
     this.notifyListeners(this.events);
   }
 
@@ -241,7 +241,7 @@ export class DominionEngine {
   fork(): DominionEngine {
     const forked = new DominionEngine();
     forked.events = [...this.events];
-    forked._state = null; // Will be recomputed on access
+    forked.cachedState = null; // Will be recomputed on access
     return forked;
   }
 
@@ -288,7 +288,7 @@ export class DominionEngine {
   static deserialize(json: string): DominionEngine {
     const engine = new DominionEngine();
     engine.events = JSON.parse(json) as GameEvent[];
-    engine._state = null;
+    engine.cachedState = null;
     return engine;
   }
 
@@ -297,7 +297,7 @@ export class DominionEngine {
    */
   loadEvents(events: GameEvent[]): void {
     this.events = [...events];
-    this._state = null;
+    this.cachedState = null;
     this.notifyListeners(events);
   }
 
@@ -306,7 +306,7 @@ export class DominionEngine {
    */
   loadEventsSilently(events: GameEvent[]): void {
     this.events = [...events];
-    this._state = null;
+    this.cachedState = null;
   }
 
   /**
@@ -318,7 +318,7 @@ export class DominionEngine {
       event.id ? event : { ...event, id: generateEventId() },
     );
     this.events = [...this.events, ...eventsWithIds];
-    this._state = null;
+    this.cachedState = null;
     this.notifyListeners(eventsWithIds);
   }
 
@@ -340,7 +340,7 @@ export class DominionEngine {
       event.id ? event : { ...event, id: generateEventId() },
     );
     this.events = [...this.events, ...eventsWithIds];
-    this._state = null;
+    this.cachedState = null;
     this.notifyListeners(eventsWithIds);
   }
 
@@ -416,7 +416,7 @@ export class DominionEngine {
 
       // Remove the target event and all events caused by it (atomically)
       this.events = removeEventChain(toEventId, this.events);
-      this._state = null;
+      this.cachedState = null;
       this.pendingUndo = null;
 
       // Add the undo execution event to the log

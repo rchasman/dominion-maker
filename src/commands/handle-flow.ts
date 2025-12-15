@@ -17,11 +17,12 @@ import { createDrawEvents } from "../cards/effect-types";
 import { applyEvents } from "../events/apply";
 
 export function handleStartGame(
-  _state: GameState,
+  state: GameState,
   players: PlayerId[],
   kingdomCards?: CardName[],
   seed?: number,
 ): CommandResult {
+  void state;
   // Select kingdom cards if not provided
   const selectedKingdom = kingdomCards || selectRandomKingdomCards();
 
@@ -216,11 +217,12 @@ export function handleEndPhase(
 }
 
 export function handleRequestUndo(
-  _state: GameState,
+  state: GameState,
   player: PlayerId,
   toEventId: string,
   reason?: string,
 ): CommandResult {
+  void state;
   const requestId = `undo_${Date.now()}_${Math.random().toString(GAME_CONSTANTS.UUID_BASE).slice(GAME_CONSTANTS.UUID_SLICE)}`;
 
   const builder = new EventBuilder();

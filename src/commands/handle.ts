@@ -76,8 +76,8 @@ export function handleCommand(
       return { ok: false, error: "Undo approval handled by engine" };
 
     default: {
-      const _exhaustive: never = command;
-      void _exhaustive;
+      const exhaustive: never = command;
+      void exhaustive;
       return { ok: false, error: "Unknown command type" };
     }
   }

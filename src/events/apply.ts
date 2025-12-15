@@ -148,8 +148,8 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
   }
 
   // Exhaustiveness check
-  const _exhaustive: never = event;
-  void _exhaustive;
+  const exhaustive: never = event;
+  void exhaustive;
   return state;
 }
 
