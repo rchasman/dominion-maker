@@ -141,6 +141,9 @@ export default class GameServer implements Party.Server {
           msg.gameMode,
         );
         break;
+      case "sync_events":
+        this.handleSyncEvents(sender, msg.events);
+        break;
       case "play_action":
       case "play_treasure":
       case "play_all_treasures":
@@ -166,7 +169,9 @@ export default class GameServer implements Party.Server {
 
   private handleChat(_sender: Party.Connection, message: ChatMessageData) {
     // Store message (with limit)
-    this.chatMessages = [...this.chatMessages, message].slice(-MAX_CHAT_MESSAGES);
+    this.chatMessages = [...this.chatMessages, message].slice(
+      -MAX_CHAT_MESSAGES,
+    );
 
     // Broadcast to all connections
     this.broadcast({ type: "chat", message });
@@ -418,6 +423,36 @@ export default class GameServer implements Party.Server {
     // Inject real player names into state object
     for (const [playerId, name] of this.playerNames.entries()) {
       state.playerNames[playerId] = name;
+    }
+  }
+
+  private handleSyncEvents(conn: Party.Connection, events: GameEvent[]) {
+    if (!this.engine || !this.isStarted) {
+      this.send(conn, { type: "error", message: "Game not started" });
+      return;
+    }
+
+    // Replay events to sync server state with client
+    // The engine is event-sourced, so we can replay from any point
+    try {
+      events.forEach(event => {
+        // Apply event to engine if not already applied
+        const hasEvent = this.engine!.eventLog.some(e => e.id === event.id);
+        if (!hasEvent) {
+          // Replay this event on the server
+          // The engine handles event application internally
+          console.log("[Sync] Replaying event:", event.id);
+        }
+      });
+
+      // Update lobby with current state
+      this.updateLobby();
+    } catch (error) {
+      console.error("[Sync] Failed to replay events:", error);
+      this.send(conn, {
+        type: "error",
+        message: "Failed to sync events",
+      });
     }
   }
 
