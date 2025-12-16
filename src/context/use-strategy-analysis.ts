@@ -35,7 +35,10 @@ export function fetchStrategyAnalysis(
         return;
       }
 
-      if (!data?.strategySummary || Object.keys(data.strategySummary).length === 0) {
+      if (
+        !data?.strategySummary ||
+        Object.keys(data.strategySummary).length === 0
+      ) {
         return;
       }
 

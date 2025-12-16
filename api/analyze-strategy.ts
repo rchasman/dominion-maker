@@ -160,7 +160,10 @@ type PlayerAnalysisRecord = Record<string, PlayerAnalysis>;
 // Parse request body safely
 async function parseRequestBody(
   req: VercelRequest,
-): Promise<{ currentState: GameState; previousAnalysis?: PlayerAnalysisRecord }> {
+): Promise<{
+  currentState: GameState;
+  previousAnalysis?: PlayerAnalysisRecord;
+}> {
   const rawBody = req.body || (req.text ? await req.text() : "{}");
   const parsed: unknown =
     typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
