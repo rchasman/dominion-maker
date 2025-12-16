@@ -1,4 +1,4 @@
-import type { CardName, LogEntry } from "../types/game-state";
+import type { CardName, LogEntry, GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { run } from "./run";
 
@@ -57,14 +57,22 @@ export function getPlayerColor(playerId: string): string {
 export function formatPlayerName(
   playerId: string,
   isAI: boolean,
-  options?: { capitalize?: boolean },
+  options?: { capitalize?: boolean; gameState?: GameState },
 ): string {
-  const { capitalize = true } = options || {};
+  const { capitalize = true, gameState } = options || {};
 
+  // Use actual name from playerInfo if available
+  const playerInfo = gameState?.playerInfo?.[playerId];
+  if (playerInfo) {
+    return isAI ? `${playerInfo.name} (AI)` : playerInfo.name;
+  }
+
+  // Fallback for local-only single-player
   const baseName = run(() => {
     if (playerId === "human") return "You";
     if (playerId === "player") return capitalize ? "Player" : "player";
-    return playerId;
+    if (playerId === "ai") return "ai";
+    return playerId; // Show clientId as last resort
   });
 
   // Add AI suffix if needed (but not if already named "ai")

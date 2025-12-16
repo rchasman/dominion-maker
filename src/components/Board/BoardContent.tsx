@@ -138,7 +138,9 @@ export function BoardContent({
       <GameAreaLayout isPreviewMode={isPreviewMode}>
         <PlayerArea
           player={opponent}
-          label={formatPlayerName(opponentPlayerId, isOpponentAI)}
+          label={formatPlayerName(opponentPlayerId, isOpponentAI, {
+            gameState,
+          })}
           vpCount={opponentVP}
           isActive={!isMainPlayerTurn}
           showCards={true}
@@ -208,6 +210,7 @@ export function BoardContent({
           mainPlayerVP={mainPlayerVP}
           opponentVP={opponentVP}
           turnCount={displayState.turn}
+          gameState={displayState}
           onNewGame={onNewGame}
         />
       )}

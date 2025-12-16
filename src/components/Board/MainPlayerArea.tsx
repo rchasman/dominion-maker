@@ -1,5 +1,6 @@
 import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
+import { formatPlayerName } from "../../lib/board-utils";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
@@ -18,7 +19,6 @@ interface MainPlayerAreaProps {
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName) => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
-  formatPlayerName: (playerId: PlayerId, isAI: boolean) => string;
 }
 
 export function MainPlayerArea({
@@ -34,13 +34,12 @@ export function MainPlayerArea({
   onCardClick,
   onInPlayClick,
   onComplexDecisionChange,
-  formatPlayerName,
 }: MainPlayerAreaProps) {
   return (
     <div style={{ position: "relative" }}>
       <PlayerArea
         player={mainPlayer}
-        label={formatPlayerName(mainPlayerId, isMainPlayerAI)}
+        label={formatPlayerName(mainPlayerId, isMainPlayerAI, { gameState })}
         vpCount={mainPlayerVP}
         isActive={isMainPlayerTurn}
         showCards={true}

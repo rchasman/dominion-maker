@@ -1,5 +1,6 @@
 import { formatPlayerName } from "../../lib/board-utils";
 import { BaseModal } from "../Modal/BaseModal";
+import type { GameState } from "../../types/game-state";
 
 interface GameOverModalProps {
   winner: string | null;
@@ -10,6 +11,7 @@ interface GameOverModalProps {
   mainPlayerVP: number;
   opponentVP: number;
   turnCount: number;
+  gameState: GameState;
   onNewGame: () => void;
 }
 
@@ -22,12 +24,13 @@ export function GameOverModal({
   mainPlayerVP,
   opponentVP,
   turnCount,
+  gameState,
   onNewGame,
 }: GameOverModalProps) {
   const winnerName =
     winner === mainPlayerId
-      ? formatPlayerName(mainPlayerId, isMainPlayerAI)
-      : formatPlayerName(opponentPlayerId, isOpponentAI);
+      ? formatPlayerName(mainPlayerId, isMainPlayerAI, { gameState })
+      : formatPlayerName(opponentPlayerId, isOpponentAI, { gameState });
   return (
     <BaseModal>
       <h2
