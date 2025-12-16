@@ -2,7 +2,7 @@ import type { GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
-import { useLLMLogs } from "../../context/hooks";
+import { useLLMLogs, useGame } from "../../context/hooks";
 import { getPlayerColor } from "../../lib/board-utils";
 import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
@@ -166,6 +166,7 @@ export function GameSidebar({
   onRequestUndo,
 }: GameSidebarProps) {
   const { llmLogs } = useLLMLogs();
+  const { spectatorCount = 0 } = useGame();
 
   const isLocalPlayerTurn = state.activePlayer === localPlayer;
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
@@ -226,7 +227,7 @@ export function GameSidebar({
         />
       )}
 
-      {gameMode === "multiplayer" && <ChatAccordion />}
+      {(gameMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
 
       <GameControlsSection
         gameMode={gameMode}

@@ -20,6 +20,7 @@ import {
 import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
 import { api } from "../../api/client";
 import { MIN_TURN_FOR_STRATEGY } from "../../context/game-constants";
+import type { GameMode } from "../../types/game-mode";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
@@ -28,6 +29,9 @@ interface GameRoomProps {
   playerName: string;
   clientId: string;
   isSpectator: boolean;
+  isSinglePlayer?: boolean;
+  gameMode?: GameMode;
+  onGameModeChange?: (mode: GameMode) => void;
   onBack: () => void;
   onResign?: () => void;
 }
@@ -37,11 +41,21 @@ export function GameRoom({
   playerName,
   clientId,
   isSpectator,
+  isSinglePlayer = false,
+  gameMode = "engine",
+  onGameModeChange,
   onBack,
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
+  const game = usePartyGame({
+    roomId,
+    playerName,
+    clientId,
+    isSpectator,
+    isSinglePlayer,
+    gameMode,
+  });
   const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
     {},
   );
@@ -117,6 +131,7 @@ export function GameRoom({
       modelSettings: DEFAULT_MODEL_SETTINGS,
       playerStrategies,
       localPlayerId: game.playerId,
+      spectatorCount: game.spectatorCount,
       hasPlayableActions,
       hasTreasuresInHand,
       strategy: { getModeName: () => "multiplayer" } as never,
