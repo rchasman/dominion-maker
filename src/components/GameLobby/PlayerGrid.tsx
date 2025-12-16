@@ -12,11 +12,25 @@ import { getPlayerColor } from "../../lib/board-utils";
 
 type RequestState = "none" | "sent" | "received";
 
+// Lobby color palette - evenly distributed around the circle
+const LOBBY_COLORS = [
+  "#3b82f6", // Blue
+  "#ef4444", // Red
+  "#10b981", // Green
+  "#f59e0b", // Amber
+  "#8b5cf6", // Purple
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#f97316", // Orange
+] as const;
+
 interface PlayerGridProps {
   players: LobbyPlayer[];
   activeGames: ActiveGame[];
   myId: string | null;
+  myName: string;
   myLastGameRoomId: string | null;
+  isConnected: boolean;
   getRequestState: (playerId: string) => RequestState;
   getIncomingRequest: (playerId: string) => GameRequest | undefined;
   onRequestGame: (targetId: string) => void;
@@ -28,13 +42,18 @@ export function PlayerGrid({
   players,
   activeGames,
   myId,
+  myName,
   myLastGameRoomId,
+  isConnected,
   getRequestState,
   getIncomingRequest,
   onRequestGame,
   onAcceptRequest,
   onSpectateGame,
 }: PlayerGridProps) {
+  // Get my client ID from the players list
+  const myPlayer = players.find(p => p.id === myId);
+  const myClientId = myPlayer?.clientId || "";
   // Get all player names in active games
   const playersInGames = new Set(
     activeGames.flatMap(game => game.players.map(p => p.name)),
@@ -57,26 +76,76 @@ export function PlayerGrid({
     }
   };
 
-  if (players.length === 0 && activeGames.length === 0) {
-    return (
-      <div
-        style={{
-          padding: "var(--space-8)",
-          textAlign: "center",
-          color: "var(--color-text-tertiary)",
-        }}
-      >
-        <p style={{ margin: 0, fontSize: "0.875rem" }}>
-          Connecting to lobby...
-        </p>
-      </div>
-    );
-  }
-
-  // All players in lobby (including me)
-  const lobbyPlayers = players.filter(p => !playersInGames.has(p.name));
-  const totalPlayers = lobbyPlayers.length;
+  // Create fixed positions (32 slots around the circle)
+  const maxPositions = 32;
   const circleRadius = 200;
+
+  // Hash function for consistent mapping
+  const hashPlayerId = (id: string): number => {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash << 5) - hash + id.charCodeAt(i);
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  };
+
+  // Assign colors to ALL players (no duplicates)
+  const usedColors = new Set<string>();
+  const playerColors = new Map<string, string>();
+  players.forEach(player => {
+    // Use clientId for stable color across name changes
+    let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
+    // Find next available color if this one is taken
+    let attempts = 0;
+    while (usedColors.has(LOBBY_COLORS[colorIndex]) && attempts < LOBBY_COLORS.length) {
+      colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
+      attempts++;
+    }
+    const color = LOBBY_COLORS[colorIndex];
+    usedColors.add(color);
+    playerColors.set(player.id, color);
+  });
+
+  // Filter to only lobby players (not in games) for display
+  const lobbyPlayersRaw = players.filter(p => !playersInGames.has(p.name));
+  const lobbyMe = lobbyPlayersRaw.find(p => p.id === myId);
+  const lobbyOthers = lobbyPlayersRaw.filter(p => p.id !== myId);
+
+  // If connecting (no players yet), show a placeholder for "me"
+  const sortedPlayers = lobbyMe
+    ? [lobbyMe, ...lobbyOthers]
+    : players.length === 0
+      ? [{ id: "connecting", name: myName }]
+      : lobbyPlayersRaw;
+
+  // Assign stable positions based on hash, distributed evenly
+  const playerPositions = new Map<string, number>();
+
+  // Sort players by their hash value to get stable distribution
+  const playersWithHash = sortedPlayers.map(player => {
+    const isMe = player.id === myId || player.id === "connecting";
+    // Use clientId (or myClientId for connecting placeholder) for stable position
+    const hashKey = player.id === "connecting" ? myClientId : (player as LobbyPlayer).clientId;
+    return {
+      player,
+      hash: hashPlayerId(hashKey),
+      isMe,
+    };
+  });
+
+  // Sort by hash (except "me" who always goes first)
+  playersWithHash.sort((a, b) => {
+    if (a.isMe) return -1;
+    if (b.isMe) return 1;
+    return a.hash - b.hash;
+  });
+
+  // Assign evenly distributed positions
+  playersWithHash.forEach((item, index) => {
+    const position = Math.floor((index / playersWithHash.length) * maxPositions);
+    playerPositions.set(item.player.id, position);
+  });
 
   return (
     <div
@@ -87,45 +156,103 @@ export function PlayerGrid({
         gap: "var(--space-8)",
       }}
     >
-      {/* Players arranged in a circle */}
-      {totalPlayers > 0 && (
+      {/* Players arranged in a circle - always show circle */}
+      <div
+        style={{
+          position: "relative",
+          width: `${circleRadius * 2 + 200}px`,
+          height: `${circleRadius * 2 + 200}px`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* Background circle - always visible */}
         <div
           style={{
-            position: "relative",
-            width: `${circleRadius * 2 + 200}px`,
-            height: `${circleRadius * 2 + 200}px`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            position: "absolute",
+            width: `${circleRadius * 2}px`,
+            height: `${circleRadius * 2}px`,
+            borderRadius: "50%",
+            background: "var(--color-bg-tertiary)",
+            border: "2px solid var(--color-border-primary)",
           }}
-        >
-          {lobbyPlayers.map((player, i) => {
-            const angle = (i / totalPlayers) * 2 * Math.PI - Math.PI / 2;
-            const x = Math.cos(angle) * circleRadius;
-            const y = Math.sin(angle) * circleRadius;
-            const isMe = player.id === myId;
+        />
 
-            return (
-              <div
-                key={player.id}
-                style={{
-                  position: "absolute",
-                  transform: `translate(${x}px, ${y}px)`,
-                }}
-              >
-                <PlayerAvatar
-                  name={player.name}
-                  isMe={isMe}
-                  requestState={isMe ? "none" : getRequestState(player.id)}
-                  onClick={isMe ? () => {} : () => handleClick(player)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
+        {/* Connecting message in center */}
+        {!isConnected && (
+          <div
+            style={{
+              position: "absolute",
+              color: "var(--color-text-tertiary)",
+              fontSize: "0.875rem",
+              textAlign: "center",
+            }}
+          >
+            Connecting...
+          </div>
+        )}
 
-      {totalPlayers > 1 && (
+        {/* Active games inside the circle */}
+        {activeGames.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "var(--space-6)",
+              justifyContent: "center",
+              alignItems: "center",
+              maxWidth: `${circleRadius * 1.4}px`,
+            }}
+          >
+            {activeGames.map(game => (
+              <GameCircle
+                key={game.roomId}
+                game={game}
+                isMyGame={game.roomId === myLastGameRoomId}
+                onClick={() => onSpectateGame(game.roomId)}
+                playerColors={playerColors}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Players positioned around circle */}
+        {sortedPlayers.map(player => {
+          const positionIndex = playerPositions.get(player.id) ?? 0;
+          // Use fixed position slots so players don't move when others join/leave
+          const angle = (positionIndex / maxPositions) * 2 * Math.PI - Math.PI / 2;
+          const x = Math.cos(angle) * circleRadius;
+          const y = Math.sin(angle) * circleRadius;
+          const isMe = player.id === myId || player.id === "connecting";
+          const isConnecting = player.id === "connecting";
+          const assignedColor = isConnecting
+            ? "#4a4a5e" // Gray to match --color-border-primary
+            : playerColors.get(player.id);
+
+          return (
+            <div
+              key={player.id}
+              style={{
+                position: "absolute",
+                transform: `translate(${x}px, ${y}px)`,
+                transition: "transform 0.3s ease-out",
+              }}
+            >
+              <PlayerAvatar
+                name={player.name}
+                isMe={isMe}
+                requestState={isMe ? "none" : getRequestState(player.id)}
+                onClick={isMe ? () => {} : () => handleClick(player)}
+                color={assignedColor}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {sortedPlayers.length > 1 && (
         <p
           style={{
             margin: 0,
@@ -138,7 +265,7 @@ export function PlayerGrid({
         </p>
       )}
 
-      {totalPlayers === 1 && activeGames.length === 0 && (
+      {sortedPlayers.length === 1 && activeGames.length === 0 && (
         <p
           style={{
             margin: 0,
@@ -149,50 +276,6 @@ export function PlayerGrid({
           Waiting for other players to join...
         </p>
       )}
-
-      {/* Active games - shown as avatar circles */}
-      {activeGames.length > 0 && (
-        <>
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "400px",
-              height: "1px",
-              background: "var(--color-border-primary)",
-            }}
-          />
-
-          <div
-            style={{
-              color: "var(--color-text-secondary)",
-              fontSize: "0.75rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.1rem",
-            }}
-          >
-            Active Games
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: "var(--space-6)",
-              maxWidth: "600px",
-            }}
-          >
-            {activeGames.map(game => (
-              <GameCircle
-                key={game.roomId}
-                game={game}
-                isMyGame={game.roomId === myLastGameRoomId}
-                onClick={() => onSpectateGame(game.roomId)}
-              />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -201,9 +284,15 @@ interface GameCircleProps {
   game: ActiveGame;
   isMyGame: boolean;
   onClick: () => void;
+  playerColors: Map<string, string>;
 }
 
-function GameCircle({ game, isMyGame, onClick }: GameCircleProps) {
+function GameCircle({
+  game,
+  isMyGame,
+  onClick,
+  playerColors,
+}: GameCircleProps) {
   // Position avatars in a circle
   const avatarSize = 48;
   const circleRadius = 40;
@@ -246,7 +335,8 @@ function GameCircle({ game, isMyGame, onClick }: GameCircleProps) {
         const angle = (i / totalAvatars) * 2 * Math.PI - Math.PI / 2;
         const x = Math.cos(angle) * circleRadius;
         const y = Math.sin(angle) * circleRadius;
-        const playerColor = getPlayerColor(player.name);
+        const playerColor =
+          playerColors.get(player.id) ?? getPlayerColor(player.name);
 
         return (
           <img

@@ -1,62 +1,144 @@
 /**
- * Game Lobby - Browse and join multiplayer games
+ * Game Lobby - Person-centric multiplayer matchmaking
  *
- * Shows list of active games, allows creating new games,
- * and handles the pre-game waiting room.
+ * See who's online, click an avatar to request a game,
+ * they click back to accept and you're both in.
+ * Also shows active games that spectators can join.
  */
 import { useState, useEffect } from "preact/hooks";
 import { usePartyLobby } from "../../partykit/usePartyLobby";
-import { GameList } from "./GameList";
+import { PlayerGrid } from "./PlayerGrid";
 import { GameRoom } from "./GameRoom";
+import { generatePlayerName } from "../../lib/name-generator";
 
-type LobbyScreen = "browse" | "room";
+type Screen = "lobby" | "game";
 
 interface GameLobbyProps {
   onBack: () => void;
 }
 
+const STORAGE_KEYS = {
+  PLAYER_NAME: "dominion_player_name",
+  ACTIVE_GAME: "dominion_active_game",
+  CLIENT_ID: "dominion_client_id",
+};
+
 export function GameLobby({ onBack }: GameLobbyProps) {
-  const [screen, setScreen] = useState<LobbyScreen>("browse");
-  const [playerName, setPlayerName] = useState(
-    () => `Player${Math.floor(Math.random() * 9999)}`,
-  );
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [isSpectator, setIsSpectator] = useState(false);
+  const [screen, setScreen] = useState<Screen>("lobby");
 
-  const lobby = usePartyLobby();
+  // Persistent client ID for stable positioning/coloring
+  const clientId = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.CLIENT_ID);
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    localStorage.setItem(STORAGE_KEYS.CLIENT_ID, id);
+    return id;
+  })[0];
 
-  // When a game is created, navigate to the room
-  useEffect(() => {
-    if (lobby.createdRoomId) {
-      setRoomId(lobby.createdRoomId);
-      setIsSpectator(false);
-      setScreen("room");
+  const [playerName, setPlayerName] = useState(() => {
+    const activeGame = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    const hasActiveGame = activeGame !== null;
+
+    if (hasActiveGame) {
+      // Keep existing name if in a game
+      const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
+      if (stored) return stored;
     }
-  }, [lobby.createdRoomId]);
 
-  const handleCreateGame = () => {
-    lobby.createGame(playerName);
+    // Generate new name on fresh load or if no active game
+    const name = generatePlayerName();
+    localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
+    return name;
+  });
+  const [roomId, setRoomId] = useState<string | null>(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    return stored ? JSON.parse(stored).roomId : null;
+  });
+  const [isSpectator, setIsSpectator] = useState(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    return stored ? JSON.parse(stored).isSpectator : false;
+  });
+  const [myLastGameRoomId, setMyLastGameRoomId] = useState<string | null>(
+    () => {
+      const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+      return stored ? JSON.parse(stored).roomId : null;
+    },
+  );
+
+  // Auto-reconnect to active game on mount
+  const [hasAutoReconnected, setHasAutoReconnected] = useState(false);
+  useEffect(() => {
+    if (!hasAutoReconnected && roomId) {
+      setScreen("game");
+      setHasAutoReconnected(true);
+    }
+  }, [hasAutoReconnected, roomId]);
+
+  // Connect immediately with auto-generated name
+  const lobby = usePartyLobby(playerName, clientId);
+
+  // Navigate to game when matched (only trigger once per match)
+  useEffect(() => {
+    if (lobby.matchedGame && screen === "lobby") {
+      const roomId = lobby.matchedGame.roomId;
+      setRoomId(roomId);
+      setMyLastGameRoomId(roomId);
+      setIsSpectator(false);
+
+      // Persist to localStorage
+      localStorage.setItem(
+        STORAGE_KEYS.ACTIVE_GAME,
+        JSON.stringify({ roomId, isSpectator: false }),
+      );
+
+      setScreen("game");
+      lobby.clearMatchedGame();
+    }
+  }, [lobby, screen]);
+
+  // Persist active game state changes
+  useEffect(() => {
+    if (roomId && screen === "game") {
+      localStorage.setItem(
+        STORAGE_KEYS.ACTIVE_GAME,
+        JSON.stringify({ roomId, isSpectator }),
+      );
+    }
+  }, [roomId, isSpectator, screen]);
+
+  const handleLeaveRoom = () => {
+    // Clear from localStorage - this is a resignation
+    localStorage.removeItem(STORAGE_KEYS.ACTIVE_GAME);
+    setRoomId(null);
+    setIsSpectator(false);
+    setScreen("lobby");
   };
 
-  const handleJoinGame = (gameRoomId: string) => {
-    setRoomId(gameRoomId);
-    setIsSpectator(false);
-    setScreen("room");
+  const handleRerollName = () => {
+    const newName = generatePlayerName();
+    setPlayerName(newName);
+    localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, newName);
+    // usePartyLobby will automatically reconnect with new name
   };
 
   const handleSpectateGame = (gameRoomId: string) => {
+    // Check if this is the game you were just in
+    const wasMyGame = gameRoomId === myLastGameRoomId;
+
     setRoomId(gameRoomId);
-    setIsSpectator(true);
-    setScreen("room");
+    setIsSpectator(!wasMyGame);
+
+    // Persist
+    localStorage.setItem(
+      STORAGE_KEYS.ACTIVE_GAME,
+      JSON.stringify({ roomId: gameRoomId, isSpectator: !wasMyGame }),
+    );
+
+    setScreen("game");
   };
 
-  const handleLeaveRoom = () => {
-    setRoomId(null);
-    setIsSpectator(false);
-    setScreen("browse");
-  };
-
-  if (screen === "room" && roomId) {
+  // In game
+  if (screen === "game" && roomId) {
     return (
       <GameRoom
         roomId={roomId}
@@ -67,6 +149,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     );
   }
 
+  // Lobby view
   return (
     <div
       style={{
@@ -84,117 +167,100 @@ export function GameLobby({ onBack }: GameLobbyProps) {
       <h1
         style={{
           margin: 0,
-          fontSize: "2.5rem",
+          fontSize: "2rem",
           color: "var(--color-gold)",
           textShadow: "var(--shadow-glow-gold)",
           letterSpacing: "0.25rem",
         }}
       >
-        MULTIPLAYER
+        LOBBY
       </h1>
+
+      {lobby.error && (
+        <div
+          style={{
+            padding: "var(--space-3) var(--space-4)",
+            background: "rgba(220, 38, 38, 0.2)",
+            border: "1px solid rgba(220, 38, 38, 0.5)",
+            borderRadius: "4px",
+            color: "#fca5a5",
+            fontSize: "0.75rem",
+          }}
+        >
+          {lobby.error}
+        </div>
+      )}
+
+      <PlayerGrid
+        players={lobby.players}
+        activeGames={lobby.activeGames}
+        myId={lobby.myId}
+        myName={playerName}
+        myLastGameRoomId={myLastGameRoomId}
+        isConnected={lobby.isConnected}
+        getRequestState={lobby.getRequestState}
+        getIncomingRequest={lobby.getIncomingRequest}
+        onRequestGame={lobby.requestGame}
+        onAcceptRequest={lobby.acceptRequest}
+        onSpectateGame={handleSpectateGame}
+      />
 
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-3)",
           alignItems: "center",
-        }}
-      >
-        <label
-          style={{
-            color: "var(--color-text-secondary)",
-            fontSize: "0.75rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.1rem",
-          }}
-        >
-          Your Name
-        </label>
-        <input
-          type="text"
-          value={playerName}
-          onChange={e => setPlayerName((e.target as HTMLInputElement).value)}
-          style={{
-            padding: "var(--space-3) var(--space-4)",
-            fontSize: "1rem",
-            background: "var(--color-bg-secondary)",
-            border: "1px solid var(--color-border-primary)",
-            borderRadius: "4px",
-            color: "var(--color-text-primary)",
-            width: "200px",
-            textAlign: "center",
-            fontFamily: "inherit",
-          }}
-        />
-      </div>
-
-      <button
-        onClick={handleCreateGame}
-        disabled={!lobby.isConnected || !playerName.trim()}
-        style={{
-          padding: "var(--space-6) var(--space-10)",
-          fontSize: "0.875rem",
-          fontWeight: 600,
-          background:
-            lobby.isConnected && playerName.trim()
-              ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
-              : "var(--color-bg-tertiary)",
-          color:
-            lobby.isConnected && playerName.trim()
-              ? "#fff"
-              : "var(--color-text-tertiary)",
-          border:
-            lobby.isConnected && playerName.trim()
-              ? "2px solid var(--color-victory)"
-              : "2px solid var(--color-border-primary)",
-          cursor:
-            lobby.isConnected && playerName.trim() ? "pointer" : "not-allowed",
-          textTransform: "uppercase",
-          letterSpacing: "0.125rem",
-          fontFamily: "inherit",
-          boxShadow: "var(--shadow-lg)",
-          borderRadius: "4px",
-        }}
-      >
-        Create Game
-      </button>
-
-      <GameList
-        games={lobby.games}
-        isConnected={lobby.isConnected}
-        onJoin={handleJoinGame}
-        onSpectate={handleSpectateGame}
-      />
-
-      <button
-        onClick={onBack}
-        style={{
+          gap: "var(--space-3)",
           marginTop: "var(--space-4)",
-          padding: "var(--space-2) var(--space-4)",
-          fontSize: "0.75rem",
-          background: "transparent",
-          color: "var(--color-text-tertiary)",
-          border: "1px solid var(--color-border-primary)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          borderRadius: "4px",
         }}
       >
-        Back
-      </button>
+        {lobby.isConnected && (
+          <button
+            onClick={handleRerollName}
+            style={{
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: "0.75rem",
+              background: "transparent",
+              color: "var(--color-text-tertiary)",
+              border: "1px solid var(--color-border-primary)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "var(--color-gold)";
+              e.currentTarget.style.color = "var(--color-text-primary)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "var(--color-border-primary)";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title="Reroll name and avatar"
+          >
+            <span style={{ fontSize: "0.875rem" }}>⚄</span>
+            <span>Reroll</span>
+          </button>
+        )}
 
-      {!lobby.isConnected && (
-        <p
+        <button
+          onClick={onBack}
           style={{
-            color: "var(--color-text-tertiary)",
+            padding: "var(--space-2) var(--space-4)",
             fontSize: "0.75rem",
-            margin: 0,
+            background: "transparent",
+            color: "var(--color-text-tertiary)",
+            border: "1px solid var(--color-border-primary)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            borderRadius: "4px",
           }}
         >
-          Connecting to server...
-        </p>
-      )}
+          Back
+        </button>
+      </div>
     </div>
   );
 }

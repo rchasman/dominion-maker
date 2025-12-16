@@ -13,6 +13,7 @@ interface PlayerAvatarProps {
   isMe: boolean;
   requestState: RequestState;
   onClick: () => void;
+  color?: string;
 }
 
 export function PlayerAvatar({
@@ -20,11 +21,14 @@ export function PlayerAvatar({
   isMe,
   requestState,
   onClick,
+  color,
 }: PlayerAvatarProps) {
   const avatarUrl = `https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(name)}`;
-  const playerColor = getPlayerColor(name);
+  const playerColor = color ?? getPlayerColor(name);
 
   const isClickable = !isMe && requestState !== "sent";
+  const avatarSize = isMe ? 110 : 96;
+  const borderWidth = isMe ? "4px" : "2px";
 
   return (
     <button
@@ -42,7 +46,7 @@ export function PlayerAvatar({
         fontFamily: "inherit",
         transition: "all var(--transition-base)",
         position: "relative",
-        opacity: isMe ? 0.8 : 1,
+        opacity: isMe ? 1 : 0.9,
       }}
       onMouseEnter={e => {
         if (isClickable) {
@@ -57,8 +61,8 @@ export function PlayerAvatar({
       <div
         style={{
           position: "relative",
-          width: "96px",
-          height: "96px",
+          width: `${avatarSize}px`,
+          height: `${avatarSize}px`,
         }}
       >
         {/* Avatar image */}
@@ -66,16 +70,16 @@ export function PlayerAvatar({
           src={avatarUrl}
           alt={`${name}'s avatar`}
           style={{
-            width: "96px",
-            height: "96px",
+            width: `${avatarSize}px`,
+            height: `${avatarSize}px`,
             borderRadius: "50%",
             background: "var(--color-bg-surface)",
             border:
               requestState === "sent"
-                ? `4px solid var(--color-action)`
+                ? `${borderWidth} solid var(--color-action)`
                 : requestState === "received"
-                  ? `4px solid var(--color-victory)`
-                  : `4px solid ${playerColor}`,
+                  ? `${borderWidth} solid var(--color-victory)`
+                  : `${borderWidth} solid ${playerColor}`,
             animation: requestState === "sent" ? "pulse 2s infinite" : "none",
           }}
         />
@@ -144,7 +148,7 @@ export function PlayerAvatar({
       >
         <span
           style={{
-            color: isMe ? "var(--color-victory)" : "var(--color-text-primary)",
+            color: playerColor,
             fontSize: "0.875rem",
             fontWeight: isMe ? 600 : 500,
             textAlign: "center",

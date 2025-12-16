@@ -27,6 +27,7 @@ interface GameRoomProps {
   playerName: string;
   isSpectator: boolean;
   onBack: () => void;
+  onResign?: () => void;
 }
 
 export function GameRoom({
@@ -34,10 +35,13 @@ export function GameRoom({
   playerName,
   isSpectator,
   onBack,
+  onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
   const game = usePartyGame({ roomId, playerName, isSpectator });
-  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>({});
+  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
+    {},
+  );
   const lastEventCountRef = useRef(0);
 
   const hasPlayableActions = useMemo(
@@ -87,6 +91,18 @@ export function GameRoom({
     return { ok: false, error: "Unplay treasure not supported in multiplayer" };
   };
 
+  // Handle resignation
+  const handleResign = () => {
+    if (!isSpectator && game.playerId) {
+      game.resign();
+    }
+    if (onResign) {
+      onResign();
+    } else {
+      onBack();
+    }
+  };
+
   // Build GameContext value
   const contextValue = useMemo(
     () => ({
@@ -123,259 +139,92 @@ export function GameRoom({
       <GameContext.Provider value={contextValue}>
         <LLMLogsContext.Provider value={{ llmLogs: [] }}>
           <Suspense fallback={<BoardSkeleton />}>
-            <Board onBackToHome={onBack} />
+            <Board onBackToHome={handleResign} />
           </Suspense>
           {isSpectator && <SpectatorBadge />}
+          {game.error && (
+            <GameOverNotification
+              message={game.error}
+              onClose={() => {
+                localStorage.removeItem("dominion_active_game");
+                onBack();
+              }}
+            />
+          )}
         </LLMLogsContext.Provider>
       </GameContext.Provider>
     );
   }
 
-  // Show waiting room
-  return <WaitingRoom game={game} isSpectator={isSpectator} onBack={onBack} />;
-}
-
-interface WaitingRoomProps {
-  game: ReturnType<typeof usePartyGame>;
-  isSpectator: boolean;
-  onBack: () => void;
-}
-
-function WaitingRoom({ game, isSpectator, onBack }: WaitingRoomProps) {
-  const canStart = game.isHost && game.players.length >= 2;
-
+  // Show loading overlay over skeleton
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minBlockSize: "100dvh",
-        gap: "var(--space-6)",
-        background:
-          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          fontSize: "2rem",
-          color: "var(--color-gold)",
-          textShadow: "var(--shadow-glow-gold)",
-          letterSpacing: "0.25rem",
-        }}
-      >
-        {isSpectator ? "SPECTATING" : "WAITING ROOM"}
-      </h1>
-
-      {game.error && (
-        <div
-          style={{
-            padding: "var(--space-4)",
-            background: "rgba(220, 38, 38, 0.2)",
-            border: "1px solid rgba(220, 38, 38, 0.5)",
-            borderRadius: "4px",
-            color: "#fca5a5",
-            fontSize: "0.875rem",
-          }}
-        >
-          {game.error}
-        </div>
-      )}
-
-      <PlayerList
-        players={game.players}
-        myPlayerId={game.playerId}
-        spectatorCount={game.spectatorCount}
-      />
-
-      {!isSpectator && (
-        <>
-          {game.isHost ? (
-            <button
-              onClick={() => game.startGame()}
-              disabled={!canStart}
-              style={{
-                padding: "var(--space-6) var(--space-10)",
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                background: canStart
-                  ? "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)"
-                  : "var(--color-bg-tertiary)",
-                color: canStart ? "#fff" : "var(--color-text-tertiary)",
-                border: canStart
-                  ? "2px solid var(--color-victory)"
-                  : "2px solid var(--color-border-primary)",
-                cursor: canStart ? "pointer" : "not-allowed",
-                textTransform: "uppercase",
-                letterSpacing: "0.125rem",
-                fontFamily: "inherit",
-                boxShadow: canStart ? "var(--shadow-lg)" : "none",
-                borderRadius: "4px",
-              }}
-            >
-              Start Game
-            </button>
-          ) : (
-            <p
-              style={{
-                color: "var(--color-text-tertiary)",
-                fontSize: "0.875rem",
-                margin: 0,
-              }}
-            >
-              Waiting for host to start...
-            </p>
-          )}
-        </>
-      )}
-
-      {isSpectator && (
-        <p
-          style={{
-            color: "var(--color-text-tertiary)",
-            fontSize: "0.875rem",
-            margin: 0,
-          }}
-        >
-          Waiting for game to start...
-        </p>
-      )}
-
-      <button
-        onClick={onBack}
-        style={{
-          marginTop: "var(--space-4)",
-          padding: "var(--space-2) var(--space-4)",
-          fontSize: "0.75rem",
-          background: "transparent",
-          color: "var(--color-text-tertiary)",
-          border: "1px solid var(--color-border-primary)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          borderRadius: "4px",
-        }}
-      >
-        Leave Room
-      </button>
-    </div>
-  );
-}
-
-interface PlayerListProps {
-  players: Array<{ name: string; playerId: string }>;
-  myPlayerId: string | null;
-  spectatorCount: number;
-}
-
-function PlayerList({ players, myPlayerId, spectatorCount }: PlayerListProps) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-        padding: "var(--space-4)",
-        background: "var(--color-bg-secondary)",
-        border: "1px solid var(--color-border-primary)",
-        borderRadius: "8px",
-        minWidth: "300px",
-      }}
-    >
+    <div style={{ position: "relative" }}>
+      <BoardSkeleton />
       <div
         style={{
+          position: "fixed",
+          inset: 0,
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          paddingBottom: "var(--space-2)",
-          borderBottom: "1px solid var(--color-border-primary)",
+          justifyContent: "center",
+          background: "rgba(0, 0, 0, 0.8)",
+          zIndex: 1000,
         }}
       >
-        <span
-          style={{
-            color: "var(--color-text-secondary)",
-            fontSize: "0.75rem",
-            textTransform: "uppercase",
-            letterSpacing: "0.1rem",
-          }}
-        >
-          Players
-        </span>
-        <span
-          style={{
-            color: "var(--color-text-tertiary)",
-            fontSize: "0.75rem",
-          }}
-        >
-          {players.length}/4
-        </span>
-      </div>
-
-      {players.map((player, i) => (
         <div
-          key={player.playerId}
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: "var(--space-3)",
-            padding: "var(--space-2)",
-            background:
-              player.playerId === myPlayerId
-                ? "rgba(34, 197, 94, 0.1)"
-                : "var(--color-bg-tertiary)",
-            borderRadius: "4px",
-            border:
-              player.playerId === myPlayerId
-                ? "1px solid rgba(34, 197, 94, 0.3)"
-                : "1px solid transparent",
+            gap: "var(--space-4)",
+            padding: "var(--space-6)",
+            background: "var(--color-bg-secondary)",
+            border: "2px solid var(--color-border-primary)",
+            borderRadius: "8px",
           }}
         >
-          <span
+          <div
             style={{
-              width: "24px",
-              height: "24px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "var(--color-bg-primary)",
-              borderRadius: "50%",
+              fontSize: "1.25rem",
+              color: "var(--color-gold)",
+              textShadow: "var(--shadow-glow-gold)",
+              letterSpacing: "0.1rem",
+              textTransform: "uppercase",
+            }}
+          >
+            {isSpectator ? "Waiting for game..." : "Starting game..."}
+          </div>
+          {game.error && (
+            <div
+              style={{
+                padding: "var(--space-3)",
+                background: "rgba(220, 38, 38, 0.2)",
+                border: "1px solid rgba(220, 38, 38, 0.5)",
+                borderRadius: "4px",
+                color: "#fca5a5",
+                fontSize: "0.75rem",
+              }}
+            >
+              {game.error}
+            </div>
+          )}
+          <button
+            onClick={handleResign}
+            style={{
+              padding: "var(--space-2) var(--space-4)",
               fontSize: "0.75rem",
-              color: "var(--color-text-secondary)",
+              background: "transparent",
+              color: "var(--color-text-tertiary)",
+              border: "1px solid var(--color-border-primary)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              borderRadius: "4px",
             }}
           >
-            {i + 1}
-          </span>
-
-          <span
-            style={{
-              flex: 1,
-              color:
-                player.playerId === myPlayerId
-                  ? "var(--color-victory)"
-                  : "var(--color-text-primary)",
-              fontWeight: player.playerId === myPlayerId ? 600 : 400,
-            }}
-          >
-            {player.name}
-            {player.playerId === myPlayerId && " (you)"}
-            {i === 0 && " [Host]"}
-          </span>
+            Leave
+          </button>
         </div>
-      ))}
-
-      {spectatorCount > 0 && (
-        <div
-          style={{
-            paddingTop: "var(--space-2)",
-            borderTop: "1px solid var(--color-border-primary)",
-            color: "var(--color-text-tertiary)",
-            fontSize: "0.75rem",
-          }}
-        >
-          {spectatorCount} spectator{spectatorCount !== 1 ? "s" : ""} watching
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -399,6 +248,83 @@ function SpectatorBadge() {
       }}
     >
       Spectating
+    </div>
+  );
+}
+
+interface GameOverNotificationProps {
+  message: string;
+  onClose: () => void;
+}
+
+function GameOverNotification({ message, onClose }: GameOverNotificationProps) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0, 0, 0, 0.8)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2000,
+        animation: "fade-in 0.3s ease-out",
+      }}
+    >
+      <div
+        style={{
+          padding: "var(--space-8)",
+          background: "var(--color-bg-primary)",
+          border: "3px solid var(--color-victory)",
+          borderRadius: "12px",
+          boxShadow: "var(--shadow-lg)",
+          maxWidth: "400px",
+          textAlign: "center",
+          animation: "boing 0.5s ease-out",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            marginBottom: "var(--space-4)",
+            fontSize: "1.5rem",
+            color: "var(--color-victory)",
+            textTransform: "uppercase",
+            letterSpacing: "0.125rem",
+          }}
+        >
+          Victory!
+        </h2>
+        <p
+          style={{
+            margin: 0,
+            marginBottom: "var(--space-6)",
+            color: "var(--color-text-primary)",
+            fontSize: "1rem",
+          }}
+        >
+          {message}
+        </p>
+        <button
+          onClick={onClose}
+          style={{
+            padding: "var(--space-3) var(--space-6)",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            background:
+              "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+            color: "#fff",
+            border: "2px solid var(--color-victory)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.1rem",
+            fontFamily: "inherit",
+          }}
+        >
+          Return to Lobby
+        </button>
+      </div>
     </div>
   );
 }
