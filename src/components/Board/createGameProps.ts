@@ -22,7 +22,10 @@ export function createGameProps(gameContext: {
     events: gameContext.events,
     isProcessing: gameContext.isProcessing,
     gameMode: gameContext.gameMode,
-    setGameMode: gameContext.setGameMode,
+    setGameMode:
+      gameContext.gameMode === "multiplayer"
+        ? undefined
+        : gameContext.setGameMode,
     modelSettings: gameContext.modelSettings,
     setModelSettings: gameContext.setModelSettings,
     playerStrategies: gameContext.playerStrategies,

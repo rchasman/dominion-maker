@@ -24,7 +24,7 @@ interface BoardContentProps {
     events: GameEvent[];
     isProcessing: boolean;
     gameMode: GameMode;
-    setGameMode: (mode: GameMode) => void;
+    setGameMode?: (mode: GameMode) => void;
     modelSettings: ModelSettings;
     setModelSettings: (settings: ModelSettings) => void;
     playerStrategies: PlayerStrategyData;
