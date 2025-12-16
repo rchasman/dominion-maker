@@ -8,6 +8,7 @@ import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
+import { ChatAccordion } from "../LLMLog/components/ChatAccordion";
 import { useState, useEffect } from "preact/hooks";
 function CyclingSquare() {
   const glyphs = ["▤", "▥", "▦"];
@@ -224,6 +225,8 @@ export function GameSidebar({
           onModelSettingsChange={onModelSettingsChange}
         />
       )}
+
+      {gameMode === "multiplayer" && <ChatAccordion />}
 
       <GameControlsSection
         gameMode={gameMode}

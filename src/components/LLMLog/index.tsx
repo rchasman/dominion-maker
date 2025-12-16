@@ -9,7 +9,6 @@ import { useActivePane } from "./hooks/useActivePane";
 import { Header } from "./components/Header";
 import { ModelSettingsPanel } from "./components/ModelSettingsPanel";
 import { MainContent } from "./components/MainContent";
-import { ChatAccordion } from "./components/ChatAccordion";
 
 export type { LLMLogEntry } from "./types";
 
@@ -101,8 +100,6 @@ export function LLMLog({
           now={now}
         />
       </div>
-
-      <ChatAccordion />
     </div>
   );
 }
