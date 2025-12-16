@@ -204,6 +204,11 @@ export function GameRoom({
 
   // Show game board if game has started
   if (game.gameState) {
+    // Wait for playerId to be set before rendering Board
+    if (!isSpectator && !game.playerId) {
+      return <BoardSkeleton />;
+    }
+
     return (
       <GameContext.Provider value={contextValue}>
         <LLMLogsContext.Provider value={{ llmLogs: [] }}>
