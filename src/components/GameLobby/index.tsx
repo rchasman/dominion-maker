@@ -36,16 +36,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   })[0];
 
   const [playerName, setPlayerName] = useState(() => {
-    const activeGame = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    const hasActiveGame = activeGame !== null;
-
-    if (hasActiveGame) {
-      // Keep existing name if in a game
-      const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
-      if (stored) return stored;
-    }
-
-    // Generate new name on fresh load or if no active game
+    // Always generate new name on load - clientId handles reconnection
     const name = generatePlayerName();
     localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
     return name;
@@ -143,6 +134,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
       <GameRoom
         roomId={roomId}
         playerName={playerName}
+        clientId={clientId}
         isSpectator={isSpectator}
         onBack={handleLeaveRoom}
       />
