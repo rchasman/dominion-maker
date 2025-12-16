@@ -112,6 +112,16 @@ export function GameRoom({
     return { ok: false, error: "Unplay treasure not supported in multiplayer" };
   };
 
+  // Handle mode change
+  const handleGameModeChange = (mode: GameMode) => {
+    if (isSinglePlayer) {
+      game.changeGameMode(mode);
+    }
+    if (onGameModeChange) {
+      onGameModeChange(mode);
+    }
+  };
+
   // Handle resignation
   const handleResign = () => {
     if (!isSpectator && game.playerId) {
@@ -158,6 +168,7 @@ export function GameRoom({
       playerStrategies,
       localPlayerId: game.playerId,
       localPlayerName: playerName,
+      isSpectator,
       spectatorCount: game.spectatorCount,
       chatMessages: game.chatMessages,
       sendChat: game.sendChat,
@@ -166,7 +177,7 @@ export function GameRoom({
       strategy: {
         getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
       } as never,
-      setGameMode: onGameModeChange || (() => {}),
+      setGameMode: handleGameModeChange,
       setModelSettings: () => {},
       startGame: () => game.startGame(),
       playAction: game.playAction,
@@ -186,7 +197,9 @@ export function GameRoom({
       hasTreasuresInHand,
       isSinglePlayer,
       gameMode,
-      onGameModeChange,
+      handleGameModeChange,
+      isSpectator,
+      playerName,
     ],
   );
 
