@@ -49,6 +49,7 @@ interface PartyGameState {
 
 interface PartyGameActions {
   startGame: (kingdomCards?: CardName[]) => void;
+  changeGameMode: (gameMode: string) => void;
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
   playAllTreasures: () => CommandResult;
@@ -233,6 +234,13 @@ export function usePartyGame({
     [send, isSinglePlayer, gameMode],
   );
 
+  const changeGameMode = useCallback(
+    (newGameMode: string) => {
+      send({ type: "change_game_mode", gameMode: newGameMode });
+    },
+    [send],
+  );
+
   const playAction = useCallback(
     (card: CardName): CommandResult => {
       if (state.isSpectator) {
@@ -354,6 +362,7 @@ export function usePartyGame({
   return {
     ...state,
     startGame,
+    changeGameMode,
     playAction,
     playTreasure,
     playAllTreasures,

@@ -428,6 +428,35 @@ export default class GameServer implements Party.Server {
     this.updateLobby();
   }
 
+  private handleChangeGameMode(conn: Party.Connection, gameMode: string) {
+    // Only allow host to change mode
+    if (conn.id !== this.hostConnectionId) {
+      this.send(conn, { type: "error", message: "Only host can change mode" });
+      return;
+    }
+
+    // Only allow in single-player games
+    if (this.getPlayerCount() !== 2 || this.botPlayers.size === 0) {
+      this.send(conn, {
+        type: "error",
+        message: "Mode change only allowed in single-player",
+      });
+      return;
+    }
+
+    const isFullMode = gameMode === "full";
+
+    // Update player0 bot status based on mode
+    if (isFullMode) {
+      this.botPlayers.add("player0");
+    } else {
+      this.botPlayers.delete("player0");
+    }
+
+    // Notify lobby of the change
+    this.updateLobby();
+  }
+
   private injectPlayerNames() {
     // Update engine's state with real player names
     if (this.engine) {

@@ -93,6 +93,7 @@ export type GameClientMessage =
       kingdomCards?: CardName[];
       gameMode?: string;
     }
+  | { type: "change_game_mode"; gameMode: string }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }
   | { type: "play_all_treasures" }
