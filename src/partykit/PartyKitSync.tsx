@@ -111,8 +111,20 @@ export function PartyKitSync() {
       };
       socket.send(JSON.stringify(startMsg));
 
-      // Replay all events from the beginning
-      console.log("[PartyKit] Syncing initial state:", events.length, "events");
+      // Send all events to sync initial state
+      if (events.length > 0) {
+        const syncMsg: GameClientMessage = {
+          type: "sync_events",
+          events,
+        };
+        socket.send(JSON.stringify(syncMsg));
+        console.log(
+          "[PartyKit] Synced initial state:",
+          events.length,
+          "events",
+        );
+      }
+
       syncedEventCountRef.current = events.length;
     } catch (error) {
       console.warn("[PartyKit] Failed to start game on server", error);
@@ -121,7 +133,7 @@ export function PartyKitSync() {
 
   // Sync new events as they occur
   useEffect(() => {
-    if (!isJoined) return;
+    if (!isJoined || syncedEventCountRef.current === 0) return;
 
     const socket = socketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -130,9 +142,12 @@ export function PartyKitSync() {
     if (newEvents.length === 0) return;
 
     try {
-      // Events are automatically broadcast by the server when the engine runs
-      // We just need to ensure the server's engine stays in sync
-      console.log("[PartyKit] New events:", newEvents.length);
+      const syncMsg: GameClientMessage = {
+        type: "sync_events",
+        events: newEvents,
+      };
+      socket.send(JSON.stringify(syncMsg));
+      console.log("[PartyKit] Synced", newEvents.length, "new events");
       syncedEventCountRef.current = events.length;
     } catch (error) {
       console.warn("[PartyKit] Failed to sync events", error);
