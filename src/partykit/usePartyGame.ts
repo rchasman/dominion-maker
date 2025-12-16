@@ -19,7 +19,7 @@ import { projectState } from "../events/project";
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
-    : "dominion-maker.partykit.dev";
+    : "dominion-maker.rchasman.partykit.dev";
 
 interface UsePartyGameOptions {
   roomId: string;
@@ -39,6 +39,7 @@ interface PartyGameState {
   events: GameEvent[];
   error: string | null;
   isHost: boolean;
+  disconnectedPlayers: Map<PlayerId, string>;
 }
 
 interface PartyGameActions {
@@ -77,6 +78,7 @@ export function usePartyGame({
     events: [],
     error: null,
     isHost: false,
+    disconnectedPlayers: new Map(),
   });
 
   useEffect(() => {
@@ -162,6 +164,22 @@ export function usePartyGame({
           ...s,
           error: `${msg.playerName} resigned. You win!`,
         }));
+        break;
+
+      case "player_disconnected":
+        setState(s => {
+          const newDisconnected = new Map(s.disconnectedPlayers);
+          newDisconnected.set(msg.playerId, msg.playerName);
+          return { ...s, disconnectedPlayers: newDisconnected };
+        });
+        break;
+
+      case "player_reconnected":
+        setState(s => {
+          const newDisconnected = new Map(s.disconnectedPlayers);
+          newDisconnected.delete(msg.playerId);
+          return { ...s, disconnectedPlayers: newDisconnected };
+        });
         break;
 
       case "error":

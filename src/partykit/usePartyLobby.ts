@@ -16,7 +16,7 @@ import type {
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
-    : "dominion-maker.partykit.dev";
+    : "dominion-maker.rchasman.partykit.dev";
 
 type RequestState = "none" | "sent" | "received";
 
