@@ -39,6 +39,7 @@ export function Board({ onBackToHome }: BoardProps) {
     hasTreasuresInHand: game.hasTreasuresInHand,
     getStateAtEvent: game.getStateAtEvent,
     localPlayerId: game.localPlayerId,
+    isSpectator: game.isSpectator,
   });
 
   const mainPlayerId = boardState.mainPlayerId;
