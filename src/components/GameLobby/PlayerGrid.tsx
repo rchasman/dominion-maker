@@ -384,6 +384,17 @@ function GameCircle({
           playerColors.get(player.id) ?? getPlayerColor(player.name);
         const isBot = player.isBot ?? false;
 
+        // Detect single-player game (2 players, at least one bot)
+        const isSinglePlayer =
+          game.players.length === 2 && game.players.some(p => p.isBot);
+
+        // Avatar style: bottts for bots, rings for human in single-player, micah for multiplayer
+        const avatarStyle = isBot
+          ? "bottts"
+          : isSinglePlayer
+            ? "rings"
+            : "micah";
+
         return (
           <div
             key={i}
@@ -393,7 +404,7 @@ function GameCircle({
             }}
           >
             <img
-              src={`https://api.dicebear.com/9.x/${isBot ? "bottts" : "micah"}/svg?seed=${encodeURIComponent(player.name)}`}
+              src={`https://api.dicebear.com/9.x/${avatarStyle}/svg?seed=${encodeURIComponent(player.name)}`}
               alt={player.name}
               style={{
                 width: `${avatarSize}px`,
