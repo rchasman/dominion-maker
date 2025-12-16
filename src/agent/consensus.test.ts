@@ -119,8 +119,11 @@ describe("Consensus System", () => {
           { type: "trash_card", card: "Duchy" },
         ];
 
-        const action = responses[Math.min(roundCount - 1, responses.length - 1)];
-        votedActions.push(`${action.type}${action.card ? `(${action.card})` : ""}`);
+        const action =
+          responses[Math.min(roundCount - 1, responses.length - 1)];
+        votedActions.push(
+          `${action.type}${action.card ? `(${action.card})` : ""}`,
+        );
 
         return Promise.resolve({
           ok: true,
@@ -150,7 +153,9 @@ describe("Consensus System", () => {
       expect(engine.state.trash).toContain("Duchy");
 
       // Verify Copper appears twice in trash (had 2 in hand)
-      const coppersInTrash = engine.state.trash.filter(c => c === "Copper").length;
+      const coppersInTrash = engine.state.trash.filter(
+        c => c === "Copper",
+      ).length;
       expect(coppersInTrash).toBe(2);
 
       // Verify no pending decision (Chapel finished)

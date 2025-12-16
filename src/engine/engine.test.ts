@@ -342,7 +342,6 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.turn).toBe(initialTurn + 1);
     expect(engine.state.activePlayer).not.toBe(initialPlayer);
   });
-
 });
 
 describe("DominionEngine - State Consistency", () => {

@@ -48,7 +48,9 @@ export function simulateCardSelection(
 /**
  * Check if a decision is batch-capable (requires reconstruction).
  */
-export function isBatchDecision(decision: DecisionRequest | null | undefined): boolean {
+export function isBatchDecision(
+  decision: DecisionRequest | null | undefined,
+): boolean {
   return !!decision && decision.type === "card_decision" && decision.max > 1;
 }
 

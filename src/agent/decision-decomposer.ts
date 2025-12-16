@@ -52,7 +52,9 @@ export function decomposeDecisionForAI(decision: DecisionRequest): Action[] {
       throw new Error(`Unknown batch decision stage: ${stage}`);
     });
 
-    return min === 0 ? [...actions, { type: "skip_decision" as const }] : actions;
+    return min === 0
+      ? [...actions, { type: "skip_decision" as const }]
+      : actions;
   }
 
   return [];

@@ -55,13 +55,12 @@ export const cellar: CardEffect = ({
     }));
 
     // Calculate updated hand for drawing
-    const updatedHand = toDiscard.reduce(
-      (hand, card) => {
-        const idx = hand.indexOf(card);
-        return idx === -1 ? hand : [...hand.slice(0, idx), ...hand.slice(idx + 1)];
-      },
-      playerState.hand,
-    );
+    const updatedHand = toDiscard.reduce((hand, card) => {
+      const idx = hand.indexOf(card);
+      return idx === -1
+        ? hand
+        : [...hand.slice(0, idx), ...hand.slice(idx + 1)];
+    }, playerState.hand);
 
     // Simulate discarded state for drawing
     const simulatedState = {
@@ -71,7 +70,11 @@ export const cellar: CardEffect = ({
       deck: [...playerState.deck],
     };
 
-    const drawEvents = createDrawEvents(player, simulatedState, toDiscard.length);
+    const drawEvents = createDrawEvents(
+      player,
+      simulatedState,
+      toDiscard.length,
+    );
 
     return { events: [...discardEvents, ...drawEvents] };
   }

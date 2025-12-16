@@ -1079,7 +1079,9 @@ describe("Command System - Cellar Causality", () => {
     const discardEvents = decision1Result.events.filter(
       e => e.type === "CARD_DISCARDED",
     );
-    const drawEvents = decision1Result.events.filter(e => e.type === "CARD_DRAWN");
+    const drawEvents = decision1Result.events.filter(
+      e => e.type === "CARD_DRAWN",
+    );
 
     expect(discardEvents.length).toBe(1); // Discarded 1
     expect(drawEvents.length).toBe(1); // Drew 1

@@ -97,7 +97,6 @@ export function StartScreen({
   onStartSinglePlayer,
   onStartMultiplayer,
 }: StartScreenProps) {
-
   return (
     <div
       style={{

@@ -64,7 +64,8 @@ function getEndPhaseButtonBorder(
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
-  if (pendingDecision && canSkipDecision(pendingDecision)) return "1px solid #fbbf24";
+  if (pendingDecision && canSkipDecision(pendingDecision))
+    return "1px solid #fbbf24";
   if (phase === "action") return "1px solid var(--color-victory)";
   return "1px solid #666";
 }

@@ -332,7 +332,9 @@ function optimizeStateForAI(state: GameState): unknown {
     ...(opponentState ? { opponent: opponentState } : {}),
     supply: supplyWithCounts,
     trash: state.trash,
-    ...(state.pendingDecision ? { pendingDecision: state.pendingDecision } : {}),
+    ...(state.pendingDecision
+      ? { pendingDecision: state.pendingDecision }
+      : {}),
     ...(state.subPhase ? { subPhase: state.subPhase } : {}),
   };
 }
@@ -383,9 +385,7 @@ function buildUserMessage(params: {
       : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
 
   const legalActionsSection =
-    legalActions.length > 0
-      ? [`LEGAL ACTIONS:\n${legalActionsContent}`]
-      : [];
+    legalActions.length > 0 ? [`LEGAL ACTIONS:\n${legalActionsContent}`] : [];
 
   const sections = [
     `CURRENT STATE:\n${stateStr}`,

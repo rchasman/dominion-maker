@@ -20,7 +20,9 @@ class SimpleLogger {
   private log(level: LogLevel, ...args: unknown[]) {
     const TIMESTAMP_START = 11;
     const TIMESTAMP_END = 23;
-    const timestamp = new Date().toISOString().slice(TIMESTAMP_START, TIMESTAMP_END); // HH:MM:SS.mmm
+    const timestamp = new Date()
+      .toISOString()
+      .slice(TIMESTAMP_START, TIMESTAMP_END); // HH:MM:SS.mmm
 
     const levelColor = {
       debug: colors.green,

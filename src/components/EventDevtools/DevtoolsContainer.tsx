@@ -27,9 +27,7 @@ interface DevtoolsContainerProps {
   handlers: {
     handleRewindToBeginning: () => void;
     handlePlayPause: () => void;
-    handleScrubberChangeWithPause: (
-      e: Event,
-    ) => void;
+    handleScrubberChangeWithPause: (e: Event) => void;
     handleResetScrubber: () => void;
     handleEventClick: (
       event: GameEvent,

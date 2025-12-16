@@ -32,7 +32,8 @@ const SUMMARIES_PER_TURN = 2;
 export const DEFAULT_STRATEGY = {
   gameplan: "Build Economy → Add Draw/Actions → Score VP",
   read: "Early game: Silver/Gold improve average hand. Action cards that draw (+Cards) or give +Actions let you play more per turn. Weak cards (Copper, early Estates) dilute deck and reduce hand quality.",
-  recommendation: "Each buy: ask 'does this make my average hand stronger?' Silver > Copper always. Province > Duchy > Estate. Skip VP until you can hit $8 consistently or game is ending.",
+  recommendation:
+    "Each buy: ask 'does this make my average hand stronger?' Silver > Copper always. Province > Duchy > Estate. Skip VP until you can hit $8 consistently or game is ending.",
 };
 
 function extractRecentTurns(
@@ -87,7 +88,7 @@ function extractRecentTurns(
       if (field && entry.card) {
         const newSummary = {
           ...summary,
-          [field]: [...(summary[field]), entry.card],
+          [field]: [...summary[field], entry.card],
         };
         const newTurnMap = new Map(state.turnMap);
         newTurnMap.set(key, newSummary);

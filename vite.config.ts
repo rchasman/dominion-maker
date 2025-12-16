@@ -11,9 +11,7 @@ logger.warn = (msg, options) => {
 // https://vite.dev/config/
 export default defineConfig({
   customLogger: logger,
-  plugins: [
-    process.env.ANALYZE && analyzer(),
-  ],
+  plugins: [process.env.ANALYZE && analyzer()],
   oxc: {
     jsx: {
       runtime: "automatic",

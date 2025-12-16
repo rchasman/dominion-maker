@@ -83,7 +83,9 @@ describe("Cellar - duplicate card handling", () => {
       stage: "discard",
     });
 
-    const discardEvents = result2.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result2.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
 
     expect(discardEvents.length).toBe(2); // Discarded 2
