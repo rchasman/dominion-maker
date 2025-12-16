@@ -130,7 +130,7 @@ export function usePartyGame({
           isJoined: true,
           playerId: msg.playerId,
           isSpectator: msg.isSpectator,
-          isHost: msg.playerId === "player0",
+          isHost: msg.isHost,
         }));
         break;
 
