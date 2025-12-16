@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun server.ts & vite",
+    "dev:party": "npx partykit dev",
+    "dev:multi": "npx partykit dev & bun server.ts & vite",
     "build": "vite build",
     "build:analyze": "ANALYZE=true vite build",
     "type": "tsc --incremental --noEmit",
@@ -30,8 +32,9 @@
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",
     "ai": "6.0.0-beta.139",
+    "partykit": "^0.0.115",
+    "partysocket": "^1.1.6",
     "preact": "^10.28.0",
-    "trystero": "0.22.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
