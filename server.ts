@@ -2,6 +2,7 @@
 import generateActionHandler from "./api/generate-action";
 import analyzeStrategyHandler from "./api/analyze-strategy";
 import strategyReactHandler from "./api/strategy-react";
+import patrickChatHandler from "./api/patrick-chat";
 import { serverLogger } from "./src/lib/logger";
 import { run } from "./src/lib/run";
 
@@ -70,7 +71,8 @@ const server = Bun.serve({
     if (
       url.pathname === "/api/generate-action" ||
       url.pathname === "/api/analyze-strategy" ||
-      url.pathname === "/api/strategy-react"
+      url.pathname === "/api/strategy-react" ||
+      url.pathname === "/api/patrick-chat"
     ) {
       // Adapt Bun Request to Vercel-style request/response
       const body = await req.text();
@@ -133,6 +135,7 @@ const server = Bun.serve({
         if (url.pathname === "/api/generate-action")
           return generateActionHandler;
         if (url.pathname === "/api/strategy-react") return strategyReactHandler;
+        if (url.pathname === "/api/patrick-chat") return patrickChatHandler;
         return analyzeStrategyHandler;
       });
       await handler(vercelReq, vercelRes);
