@@ -236,75 +236,54 @@ export function GameRoom({
     );
   }
 
-  // Show loading overlay over skeleton
+  // Show loading modal over skeleton
   return (
     <div style={{ position: "relative" }}>
       <BoardSkeleton />
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "rgba(0, 0, 0, 0.8)",
-          zIndex: 1000,
-        }}
-      >
+      <BaseModal>
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "var(--space-4)",
-            padding: "var(--space-6)",
-            background: "var(--color-bg-secondary)",
-            border: "2px solid var(--color-border-primary)",
-            borderRadius: "8px",
+            fontSize: "1.25rem",
+            color: "var(--color-gold)",
+            textShadow: "var(--shadow-glow-gold)",
+            letterSpacing: "0.1rem",
+            textTransform: "uppercase",
+            marginBottom: "var(--space-4)",
           }}
         >
+          {isSpectator ? "Waiting for game..." : "Starting game..."}
+        </div>
+        {game.error && (
           <div
             style={{
-              fontSize: "1.25rem",
-              color: "var(--color-gold)",
-              textShadow: "var(--shadow-glow-gold)",
-              letterSpacing: "0.1rem",
-              textTransform: "uppercase",
-            }}
-          >
-            {isSpectator ? "Waiting for game..." : "Starting game..."}
-          </div>
-          {game.error && (
-            <div
-              style={{
-                padding: "var(--space-3)",
-                background: "rgba(220, 38, 38, 0.2)",
-                border: "1px solid rgba(220, 38, 38, 0.5)",
-                borderRadius: "4px",
-                color: "#fca5a5",
-                fontSize: "0.75rem",
-              }}
-            >
-              {game.error}
-            </div>
-          )}
-          <button
-            onClick={handleResign}
-            style={{
-              padding: "var(--space-2) var(--space-4)",
-              fontSize: "0.75rem",
-              background: "transparent",
-              color: "var(--color-text-tertiary)",
-              border: "1px solid var(--color-border-primary)",
-              cursor: "pointer",
-              fontFamily: "inherit",
+              padding: "var(--space-3)",
+              background: "rgba(220, 38, 38, 0.2)",
+              border: "1px solid rgba(220, 38, 38, 0.5)",
               borderRadius: "4px",
+              color: "#fca5a5",
+              fontSize: "0.75rem",
+              marginBottom: "var(--space-4)",
             }}
           >
-            Leave
-          </button>
-        </div>
-      </div>
+            {game.error}
+          </div>
+        )}
+        <button
+          onClick={handleResign}
+          style={{
+            padding: "var(--space-2) var(--space-4)",
+            fontSize: "0.75rem",
+            background: "transparent",
+            color: "var(--color-text-tertiary)",
+            border: "1px solid var(--color-border-primary)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            borderRadius: "4px",
+          }}
+        >
+          Leave
+        </button>
+      </BaseModal>
     </div>
   );
 }
