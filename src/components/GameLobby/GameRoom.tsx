@@ -5,17 +5,20 @@
  * Shows waiting room or game board based on game state.
  */
 import { lazy, Suspense } from "preact/compat";
-import { useMemo } from "preact/hooks";
+import { useMemo, useState, useEffect, useRef } from "preact/hooks";
 import { GameContext, LLMLogsContext } from "../../context/GameContext";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import type { CardName } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
+import type { PlayerStrategyData } from "../../types/player-strategy";
 import {
   hasPlayableActions as computeHasPlayableActions,
   hasTreasuresInHand as computeHasTreasuresInHand,
 } from "../../context/derived-state";
 import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
+import { api } from "../../api/client";
+import { MIN_TURN_FOR_STRATEGY } from "../../context/game-constants";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
@@ -34,6 +37,8 @@ export function GameRoom({
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
   const game = usePartyGame({ roomId, playerName, isSpectator });
+  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>({});
+  const lastEventCountRef = useRef(0);
 
   const hasPlayableActions = useMemo(
     () => computeHasPlayableActions(game.gameState),
@@ -44,6 +49,38 @@ export function GameRoom({
     () => computeHasTreasuresInHand(game.gameState),
     [game.gameState],
   );
+
+  // Fetch strategy analysis when turns end
+  useEffect(() => {
+    const { events, gameState } = game;
+    if (!gameState || events.length <= lastEventCountRef.current) return;
+
+    const newEvents = events.slice(lastEventCountRef.current);
+    lastEventCountRef.current = events.length;
+
+    const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
+    if (!hasTurnEnded || gameState.turn < MIN_TURN_FOR_STRATEGY) return;
+
+    api.api["analyze-strategy"]
+      .post({ currentState: gameState })
+      .then(({ data }) => {
+        if (data?.strategySummary?.length) {
+          const record = data.strategySummary.reduce<PlayerStrategyData>(
+            (acc, item) => {
+              acc[item.id] = {
+                gameplan: item.gameplan,
+                read: item.read,
+                recommendation: item.recommendation,
+              };
+              return acc;
+            },
+            {},
+          );
+          setPlayerStrategies(record);
+        }
+      })
+      .catch(() => {});
+  }, [game.events, game.gameState]);
 
   // No-op unplayTreasure for multiplayer
   const unplayTreasure = (_card: CardName): CommandResult => {
@@ -59,7 +96,8 @@ export function GameRoom({
       isProcessing: !game.isConnected,
       isLoading: !game.isJoined,
       modelSettings: DEFAULT_MODEL_SETTINGS,
-      playerStrategies: [],
+      playerStrategies,
+      localPlayerId: game.playerId,
       hasPlayableActions,
       hasTreasuresInHand,
       strategy: { getModeName: () => "multiplayer" } as never,
@@ -76,7 +114,7 @@ export function GameRoom({
       requestUndo: game.requestUndo,
       getStateAtEvent: game.getStateAtEvent,
     }),
-    [game, hasPlayableActions, hasTreasuresInHand],
+    [game, playerStrategies, hasPlayableActions, hasTreasuresInHand],
   );
 
   // Show game board if game has started

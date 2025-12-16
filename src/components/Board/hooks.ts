@@ -31,6 +31,7 @@ interface TypedGameContext {
   requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
   playerStrategies: PlayerStrategyData;
+  localPlayerId?: string | null;
 }
 
 export function useTypedGame(): TypedGameContext {
@@ -57,6 +58,7 @@ export function useTypedGame(): TypedGameContext {
     requestUndo: context.requestUndo,
     getStateAtEvent: context.getStateAtEvent,
     playerStrategies: context.playerStrategies,
+    localPlayerId: context.localPlayerId,
   };
 }
 

@@ -42,6 +42,7 @@ interface GameContextValue {
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   strategy: GameStrategy;
+  localPlayerId?: string | null; // For multiplayer: which player slot you're in
   setGameMode: (mode: GameMode) => void;
   setModelSettings: (settings: ModelSettings) => void;
   startGame: () => void;

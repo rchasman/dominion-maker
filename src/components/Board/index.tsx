@@ -38,6 +38,7 @@ export function Board({ onBackToHome }: BoardProps) {
     hasPlayableActions: game.hasPlayableActions,
     hasTreasuresInHand: game.hasTreasuresInHand,
     getStateAtEvent: game.getStateAtEvent,
+    localPlayerId: game.localPlayerId,
   });
 
   const mainPlayerId = boardState.mainPlayerId;

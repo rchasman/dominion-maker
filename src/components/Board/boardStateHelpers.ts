@@ -13,6 +13,7 @@ interface BoardStateParams {
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   getStateAtEvent: (eventId: string) => GameState;
+  localPlayerId?: string | null;
 }
 
 export interface BoardState {
@@ -40,10 +41,11 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     hasPlayableActions,
     hasTreasuresInHand,
     getStateAtEvent,
+    localPlayerId,
   } = params;
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
-  const playerIds = getPlayerIds(state, gameMode);
+  const playerIds = getPlayerIds(state, gameMode, localPlayerId);
   const mainPlayerId = playerIds[MAIN_PLAYER_INDEX];
   const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX];
 

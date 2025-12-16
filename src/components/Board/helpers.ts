@@ -7,11 +7,24 @@ import { DEFAULT_DECISION_MAX } from "./constants";
 export function getPlayerIds(
   state: GameState | null,
   gameMode: GameMode,
+  localPlayerId?: string | null,
 ): readonly string[] {
-  if (state) return Object.keys(state.players);
-  if (gameMode === "multiplayer") return ["human", "ai"] as const;
+  if (!state) {
+    if (gameMode === "multiplayer") return ["player0", "player1"] as const;
+    return getPlayersForMode(gameMode);
+  }
 
-  return getPlayersForMode(gameMode);
+  const playerIds = Object.keys(state.players);
+
+  // In multiplayer, reorder so local player is first (index 0)
+  if (gameMode === "multiplayer" && localPlayerId) {
+    const localIndex = playerIds.indexOf(localPlayerId);
+    if (localIndex > 0) {
+      return [localPlayerId, ...playerIds.filter(id => id !== localPlayerId)];
+    }
+  }
+
+  return playerIds;
 }
 
 export function canSkipDecision(
