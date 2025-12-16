@@ -106,6 +106,18 @@ export function PartyKitSync() {
     if (events.length < syncedEventCountRef.current) {
       console.log("[PartyKit] New game detected, resetting sync counter");
       syncedEventCountRef.current = 0;
+
+      // Clear old room and generate new one for fresh game
+      const newRoomId = generateRoomId();
+      roomIdRef.current = newRoomId;
+      localStorage.setItem(ROOM_STORAGE_KEY, newRoomId);
+
+      // Close old connection if it exists
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+        setIsJoined(false);
+      }
     }
   }, [events.length]);
 
@@ -165,6 +177,25 @@ export function PartyKitSync() {
       console.warn("[PartyKit] Failed to sync events", error);
     }
   }, [events, isJoined]);
+
+  // End game on server when local game ends
+  useEffect(() => {
+    if (!gameState?.gameOver || !isJoined) return;
+
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+    try {
+      const leaveMsg: GameClientMessage = { type: "leave" };
+      socket.send(JSON.stringify(leaveMsg));
+      console.log("[PartyKit] Game ended, cleaning up server");
+
+      // Clear room ID so a new room is created on next game
+      localStorage.removeItem(ROOM_STORAGE_KEY);
+    } catch (error) {
+      console.warn("[PartyKit] Failed to send leave message", error);
+    }
+  }, [gameState?.gameOver, isJoined]);
 
   return null;
 }

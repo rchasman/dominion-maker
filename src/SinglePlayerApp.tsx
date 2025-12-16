@@ -4,11 +4,13 @@
  * Runs game locally (instant start) and syncs to PartyKit in background for spectating.
  */
 
-import { lazy, Suspense } from "preact/compat";
+import { lazy, Suspense, useEffect } from "preact/compat";
 import { GameProvider } from "./context/GameContext";
 import { useGame } from "./context/hooks";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { PartyKitSync } from "./partykit/PartyKitSync";
+import { AnimationProvider } from "./animation";
+import { STORAGE_KEYS } from "./context/storage-utils";
 
 const Board = lazy(() =>
   import("./components/Board/index").then(m => ({ default: m.Board })),
@@ -19,10 +21,20 @@ interface SinglePlayerAppProps {
 }
 
 export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
+  // Clear game state when unmounting (going back to menu)
+  useEffect(() => {
+    return () => {
+      localStorage.removeItem(STORAGE_KEYS.EVENTS);
+      localStorage.removeItem(STORAGE_KEYS.GAME_STATE);
+    };
+  }, []);
+
   return (
-    <GameProvider>
-      <SinglePlayerGame onBackToHome={onBackToHome} />
-    </GameProvider>
+    <AnimationProvider>
+      <GameProvider>
+        <SinglePlayerGame onBackToHome={onBackToHome} />
+      </GameProvider>
+    </AnimationProvider>
   );
 }
 
