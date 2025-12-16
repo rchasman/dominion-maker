@@ -25,6 +25,14 @@ type ClientMessage =
   | { type: "join"; name: string; clientId?: string; isBot?: boolean }
   | { type: "spectate"; name: string; clientId?: string }
   | { type: "start_game"; kingdomCards?: CardName[]; botPlayerIds?: PlayerId[] }
+  | {
+      type: "start_singleplayer";
+      botName?: string;
+      kingdomCards?: CardName[];
+      gameMode?: string;
+    }
+  | { type: "change_game_mode"; gameMode: string }
+  | { type: "sync_events"; events: GameEvent[] }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }
   | { type: "play_all_treasures" }
@@ -34,6 +42,7 @@ type ClientMessage =
   | { type: "request_undo"; toEventId: string; reason?: string }
   | { type: "approve_undo"; requestId: string }
   | { type: "deny_undo"; requestId: string }
+  | { type: "resign" }
   | { type: "leave" }
   | { type: "chat"; message: ChatMessageData };
 
@@ -99,17 +108,23 @@ export default class GameServer implements Party.Server {
       this.updateLobby();
     }
 
-    // In single-player games, if the human player leaves, clean up bot connections
+    // In single-player games, only end if no humans remain (including spectators)
+    // Exception: full mode (AI vs AI) should continue even without humans
     if (this.isStarted && this.getPlayerCount() === 1) {
       const remainingPlayer = this.getPlayers()[0];
       if (
         remainingPlayer?.playerId &&
         this.botPlayers.has(remainingPlayer.playerId)
       ) {
-        // Only a bot remains - end the game
-        this.cleanupBotConnections();
-        this.broadcast({ type: "game_ended", reason: "Player left" });
-        this.updateLobby();
+        // Only a bot remains as player - check if this should end the game
+        const humanCount = this.getHumanConnectionCount();
+
+        // End game only if no humans remain AND not in full mode
+        if (humanCount === 0 && !this.isFullMode()) {
+          this.cleanupBotConnections();
+          this.broadcast({ type: "game_ended", reason: "Player left" });
+          this.updateLobby();
+        }
       }
     }
 
@@ -140,6 +155,9 @@ export default class GameServer implements Party.Server {
           msg.kingdomCards,
           msg.gameMode,
         );
+        break;
+      case "change_game_mode":
+        this.handleChangeGameMode(sender, msg.gameMode);
         break;
       case "sync_events":
         this.handleSyncEvents(sender, msg.events);
@@ -659,6 +677,21 @@ export default class GameServer implements Party.Server {
 
   private getSpectatorCount(): number {
     return [...this.connections.values()].filter(p => p.isSpectator).length;
+  }
+
+  private getHumanConnectionCount(): number {
+    return [...this.connections.values()].filter(conn => {
+      // Spectators are always human
+      if (conn.isSpectator) return true;
+      // Non-spectator players who are not bots are human
+      return conn.playerId && !this.botPlayers.has(conn.playerId);
+    }).length;
+  }
+
+  private isFullMode(): boolean {
+    // Full mode is when both player0 and player1 are marked as bots
+    // This indicates an AI vs AI game that should continue autonomously
+    return this.botPlayers.has("player0") && this.botPlayers.has("player1");
   }
 
   private broadcastPlayerList() {
