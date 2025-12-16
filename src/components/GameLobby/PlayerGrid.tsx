@@ -9,6 +9,7 @@ import type {
 } from "../../partykit/protocol";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor } from "../../lib/board-utils";
+import { run } from "../../lib/run";
 
 type RequestState = "none" | "sent" | "received";
 
@@ -307,6 +308,29 @@ function GameCircle({
   const circleRadius = 40;
   const totalAvatars = game.players.length + (game.spectatorCount > 0 ? 1 : 0);
 
+  // Create split border for 2-player games
+  const borderGradient = run(() => {
+    if (game.players.length !== 2) {
+      return;
+    }
+
+    const player1 = game.players[0];
+    const player2 = game.players[1];
+
+    const color1 =
+      player1.isConnected === false
+        ? "#6b7280" // gray for disconnected
+        : (playerColors.get(player1.id ?? "") ?? getPlayerColor(player1.name));
+
+    const color2 =
+      player2.isConnected === false
+        ? "#6b7280" // gray for disconnected
+        : (playerColors.get(player2.id ?? "") ?? getPlayerColor(player2.name));
+
+    // Split at 180deg: left half is player1, right half is player2
+    return `conic-gradient(from 270deg, ${color1} 0deg, ${color1} 180deg, ${color2} 180deg, ${color2} 360deg)`;
+  });
+
   return (
     <button
       onClick={onClick}
@@ -314,10 +338,18 @@ function GameCircle({
         position: "relative",
         width: "140px",
         height: "140px",
-        background: "var(--color-bg-tertiary)",
+        background: borderGradient
+          ? `${borderGradient}, var(--color-bg-tertiary)`
+          : "var(--color-bg-tertiary)",
+        backgroundOrigin: "border-box",
+        backgroundClip: borderGradient
+          ? "padding-box, border-box"
+          : "padding-box",
         border: isMyGame
-          ? "3px solid var(--color-victory)"
-          : "2px solid var(--color-border-primary)",
+          ? "3px solid transparent"
+          : borderGradient
+            ? "3px solid transparent"
+            : "2px solid var(--color-border-primary)",
         borderRadius: "50%",
         cursor: "pointer",
         fontFamily: "inherit",
@@ -327,15 +359,19 @@ function GameCircle({
         justifyContent: "center",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = isMyGame
-          ? "var(--color-victory)"
-          : "var(--color-gold)";
+        if (!borderGradient) {
+          e.currentTarget.style.borderColor = isMyGame
+            ? "var(--color-victory)"
+            : "var(--color-gold)";
+        }
         e.currentTarget.style.boxShadow = "var(--shadow-glow-gold)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = isMyGame
-          ? "var(--color-victory)"
-          : "var(--color-border-primary)";
+        if (!borderGradient) {
+          e.currentTarget.style.borderColor = isMyGame
+            ? "var(--color-victory)"
+            : "var(--color-border-primary)";
+        }
         e.currentTarget.style.boxShadow = "none";
       }}
     >
