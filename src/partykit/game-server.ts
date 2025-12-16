@@ -9,16 +9,14 @@ import { DominionEngine } from "../engine/engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameUpdateMessage, ChatMessageData } from "./protocol";
-
-type PlayerId = "player0" | "player1" | "player2" | "player3";
+import type { GameUpdateMessage, ChatMessageData, PlayerId } from "./protocol";
 
 interface PlayerConnection {
   id: string;
   name: string;
-  playerId: PlayerId | null;
+  clientId: string;
   isSpectator: boolean;
-  clientId?: string;
+  isBot?: boolean;
 }
 
 type ClientMessage =
@@ -47,7 +45,12 @@ type ClientMessage =
   | { type: "chat"; message: ChatMessageData };
 
 type ServerMessage =
-  | { type: "joined"; playerId: PlayerId | null; isSpectator: boolean }
+  | {
+      type: "joined";
+      playerId: PlayerId | null;
+      isSpectator: boolean;
+      isHost: boolean;
+    }
   | {
       type: "player_list";
       players: Array<{ name: string; playerId: PlayerId }>;
@@ -63,18 +66,16 @@ type ServerMessage =
   | { type: "chat"; message: ChatMessageData }
   | { type: "chat_history"; messages: ChatMessageData[] };
 
-const PLAYER_IDS: PlayerId[] = ["player0", "player1", "player2", "player3"];
-const MAX_PLAYERS = 4;
+const MAX_PLAYERS = 2;
 
 const MAX_CHAT_MESSAGES = 100;
 
 export default class GameServer implements Party.Server {
   private engine: DominionEngine | null = null;
   private connections: Map<string, PlayerConnection> = new Map();
-  private playerNames: Map<PlayerId, string> = new Map(); // Track player names
-  private playerClientIds: Map<PlayerId, string> = new Map(); // Track player clientIds
-  private botPlayers: Set<PlayerId> = new Set(); // Track which players are bots
+  private botPlayers: Set<PlayerId> = new Set(); // Track which players are bots (by clientId)
   private hostConnectionId: string | null = null;
+  private hostClientId: string | null = null;
   private isStarted = false;
   private chatMessages: ChatMessageData[] = []; // Chat history
 
@@ -84,7 +85,7 @@ export default class GameServer implements Party.Server {
     this.connections.set(conn.id, {
       id: conn.id,
       name: "",
-      playerId: null,
+      clientId: "",
       isSpectator: false,
     });
   }
@@ -93,13 +94,13 @@ export default class GameServer implements Party.Server {
     const player = this.connections.get(conn.id);
     this.connections.delete(conn.id);
 
-    if (player && !player.isSpectator && player.playerId) {
+    if (player && !player.isSpectator && player.clientId) {
       // If game is active, notify other players of disconnection
       if (this.isStarted && this.engine) {
         this.broadcast({
           type: "player_disconnected",
           playerName: player.name,
-          playerId: player.playerId,
+          playerId: player.clientId,
         });
       }
 
@@ -113,8 +114,8 @@ export default class GameServer implements Party.Server {
     if (this.isStarted && this.getPlayerCount() === 1) {
       const remainingPlayer = this.getPlayers()[0];
       if (
-        remainingPlayer?.playerId &&
-        this.botPlayers.has(remainingPlayer.playerId)
+        remainingPlayer?.clientId &&
+        this.botPlayers.has(remainingPlayer.clientId)
       ) {
         // Only a bot remains as player - check if this should end the game
         const humanCount = this.getHumanConnectionCount();
@@ -212,20 +213,19 @@ export default class GameServer implements Party.Server {
       if (existingPlayerId) {
         // Rejoin as existing player
         player.name = name;
-        player.playerId = existingPlayerId;
+        player.clientId = existingPlayerId; // ClientId is the playerId
         player.isSpectator = false;
-        player.clientId = clientId;
 
-        // Update tracked info
-        this.playerNames.set(existingPlayerId, name);
-        if (clientId) {
-          this.playerClientIds.set(existingPlayerId, clientId);
+        // Update name in playerInfo
+        if (this.engine.state.playerInfo?.[existingPlayerId]) {
+          this.engine.state.playerInfo[existingPlayerId].name = name;
         }
 
         this.send(conn, {
           type: "joined",
           playerId: existingPlayerId,
           isSpectator: false,
+          isHost: this.hostClientId === existingPlayerId,
         });
 
         this.send(conn, {
@@ -259,37 +259,42 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    // Require clientId for non-bot players
+    if (!clientId && !isBot) {
+      this.send(conn, { type: "error", message: "clientId required" });
+      return;
+    }
+
+    const actualClientId = clientId || crypto.randomUUID();
+
     const playerCount = this.getPlayerCount();
     if (playerCount >= MAX_PLAYERS) {
       this.send(conn, { type: "error", message: "Game is full" });
       return;
     }
 
-    const playerId = this.getNextPlayerId();
-    if (!playerId) {
-      this.send(conn, { type: "error", message: "No player slots available" });
-      return;
-    }
-
+    // Use clientId directly as playerId
     player.name = name;
-    player.playerId = playerId;
+    player.clientId = actualClientId;
     player.isSpectator = false;
-    player.clientId = clientId;
+    player.isBot = isBot;
 
-    // Track player info for rejoin
-    this.playerNames.set(playerId, name);
-    if (clientId) {
-      this.playerClientIds.set(playerId, clientId);
-    }
     if (isBot) {
-      this.botPlayers.add(playerId);
+      this.botPlayers.add(actualClientId);
     }
 
+    // Set host on first join
     if (!this.hostConnectionId) {
       this.hostConnectionId = conn.id;
+      this.hostClientId = actualClientId;
     }
 
-    this.send(conn, { type: "joined", playerId, isSpectator: false });
+    this.send(conn, {
+      type: "joined",
+      playerId: actualClientId,
+      isSpectator: false,
+      isHost: this.hostClientId === actualClientId,
+    });
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
     this.updateLobby();
@@ -301,32 +306,40 @@ export default class GameServer implements Party.Server {
   }
 
   private findPlayerIdByName(name: string): PlayerId | null {
-    for (const [playerId, playerName] of this.playerNames.entries()) {
-      if (playerName === name) {
-        return playerId;
-      }
+    if (!this.engine?.state.playerInfo) return null;
+    for (const [clientId, info] of Object.entries(
+      this.engine.state.playerInfo,
+    )) {
+      if (info.name === name) return clientId;
     }
     return null;
   }
 
   private findPlayerIdByClientId(clientId: string): PlayerId | null {
-    for (const [playerId, playerClientId] of this.playerClientIds.entries()) {
-      if (playerClientId === clientId) {
-        return playerId;
-      }
-    }
-    return null;
+    // ClientId IS the playerId now
+    return this.engine?.state.playerInfo?.[clientId] ? clientId : null;
   }
 
   private autoStartGame() {
     const players = this.getPlayers();
     if (players.length < 2) return;
 
-    const playerIds = players.map(p => p.playerId) as PlayerId[];
+    const playerIds = players.map(p => p.clientId);
 
     this.engine = new DominionEngine();
     this.engine.startGame(playerIds);
     this.isStarted = true;
+
+    // Populate playerInfo with real player data
+    this.engine.state.playerInfo = {};
+    for (const p of players) {
+      this.engine.state.playerInfo[p.clientId] = {
+        id: p.clientId,
+        name: p.name,
+        type: p.isBot ? "ai" : "human",
+        connected: true,
+      };
+    }
 
     this.engine.subscribe((events, state) => {
       this.broadcast({ type: "events", events, state });
@@ -371,62 +384,60 @@ export default class GameServer implements Party.Server {
 
     // In "full" mode, both players are bots
     const isFullMode = gameMode === "full";
+    const botPlayerName = botName || "AI Opponent";
 
-    // Generate bot name based on mode
-    let botPlayerName: string;
-    if (isFullMode) {
-      // Both are AI, use AI names
-      botPlayerName = botName || "AI Opponent";
-    } else {
-      // Human vs AI
-      botPlayerName = botName || "AI Opponent";
-    }
-
-    // Create a fake connection for the bot
-    const botConnectionId = `bot_${Date.now()}`;
-    const botPlayerId = "player1" as PlayerId;
+    // Create bot with real UUID
+    const botClientId = crypto.randomUUID();
+    const botConnectionId = `conn_${botClientId}`;
 
     // Add bot to connections (without actual socket)
     this.connections.set(botConnectionId, {
       id: botConnectionId,
       name: botPlayerName,
-      playerId: botPlayerId,
+      clientId: botClientId,
       isSpectator: false,
+      isBot: true,
     });
 
-    // Track bot info
-    this.playerNames.set(botPlayerId, botPlayerName);
-    this.botPlayers.add(botPlayerId);
+    this.botPlayers.add(botClientId);
 
-    // In full mode, mark player0 as bot too
+    // In full mode, mark human player as bot too
+    const humanPlayer = players[0];
     if (isFullMode) {
-      this.botPlayers.add("player0");
+      this.botPlayers.add(humanPlayer.clientId);
     }
 
-    const playerIds = ["player0", botPlayerId] as PlayerId[];
+    const playerIds = [humanPlayer.clientId, botClientId];
 
     this.engine = new DominionEngine();
     this.engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
-    // Inject real player names into game state
-    this.injectPlayerNames();
+    // Populate playerInfo with real player data
+    this.engine.state.playerInfo = {};
+    this.engine.state.playerInfo[humanPlayer.clientId] = {
+      id: humanPlayer.clientId,
+      name: humanPlayer.name,
+      type: isFullMode ? "ai" : "human",
+      connected: true,
+    };
+    this.engine.state.playerInfo[botClientId] = {
+      id: botClientId,
+      name: botPlayerName,
+      type: "ai",
+      connected: true,
+    };
 
     this.engine.subscribe((events, state) => {
-      // Update player names before broadcasting
-      this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
       if (state.gameOver) {
         this.updateLobby();
       }
     });
 
-    const initialState = { ...this.engine.state };
-    this.injectPlayerNamesIntoState(initialState);
-
     this.broadcast({
       type: "game_started",
-      state: initialState,
+      state: this.engine.state,
       events: [...this.engine.eventLog],
     });
 
@@ -452,31 +463,25 @@ export default class GameServer implements Party.Server {
 
     const isFullMode = gameMode === "full";
 
-    // Update player0 bot status based on mode
-    if (isFullMode) {
-      this.botPlayers.add("player0");
-    } else {
-      this.botPlayers.delete("player0");
+    // Update bot status based on mode
+    const players = this.getPlayers();
+    if (players.length === 2) {
+      const [player1, player2] = players;
+      if (isFullMode) {
+        // Mark both players as bots
+        this.botPlayers.add(player1.clientId);
+        this.botPlayers.add(player2.clientId);
+      } else {
+        // Only the bot opponent is marked as bot
+        const humanPlayer = players.find(p => !p.isBot);
+        const botPlayer = players.find(p => p.isBot);
+        if (humanPlayer) this.botPlayers.delete(humanPlayer.clientId);
+        if (botPlayer) this.botPlayers.add(botPlayer.clientId);
+      }
     }
 
     // Notify lobby of the change
     this.updateLobby();
-  }
-
-  private injectPlayerNames() {
-    // Update engine's state with real player names
-    if (this.engine) {
-      for (const [playerId, name] of this.playerNames.entries()) {
-        this.engine.state.playerNames[playerId] = name;
-      }
-    }
-  }
-
-  private injectPlayerNamesIntoState(state: GameState) {
-    // Inject real player names into state object
-    for (const [playerId, name] of this.playerNames.entries()) {
-      state.playerNames[playerId] = name;
-    }
   }
 
   private handleSyncEvents(conn: Party.Connection, events: GameEvent[]) {
@@ -516,11 +521,15 @@ export default class GameServer implements Party.Server {
     clientId?: string,
   ) {
     player.name = name;
-    player.playerId = null;
+    player.clientId = clientId || crypto.randomUUID();
     player.isSpectator = true;
-    player.clientId = clientId;
 
-    this.send(conn, { type: "joined", playerId: null, isSpectator: true });
+    this.send(conn, {
+      type: "joined",
+      playerId: null,
+      isSpectator: true,
+      isHost: false,
+    });
 
     if (this.engine) {
       this.send(conn, {
@@ -557,12 +566,12 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    const playerIds = players.map(p => p.playerId) as PlayerId[];
+    const playerIds = players.map(p => p.clientId);
 
     // Mark bot players
-    botPlayerIds?.forEach(playerId => {
-      if (playerIds.includes(playerId)) {
-        this.botPlayers.add(playerId);
+    botPlayerIds?.forEach(clientId => {
+      if (playerIds.includes(clientId)) {
+        this.botPlayers.add(clientId);
       }
     });
 
@@ -570,24 +579,27 @@ export default class GameServer implements Party.Server {
     this.engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
-    // Inject real player names into game state
-    this.injectPlayerNames();
+    // Populate playerInfo with real player data
+    this.engine.state.playerInfo = {};
+    for (const p of players) {
+      this.engine.state.playerInfo[p.clientId] = {
+        id: p.clientId,
+        name: p.name,
+        type: p.isBot ? "ai" : "human",
+        connected: true,
+      };
+    }
 
     this.engine.subscribe((events, state) => {
-      // Update player names before broadcasting
-      this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
       if (state.gameOver) {
         this.updateLobby();
       }
     });
 
-    const initialState = { ...this.engine.state };
-    this.injectPlayerNamesIntoState(initialState);
-
     this.broadcast({
       type: "game_started",
-      state: initialState,
+      state: this.engine.state,
       events: [...this.engine.eventLog],
     });
 
@@ -609,8 +621,8 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    const playerId = player.playerId;
-    if (!playerId) {
+    const playerId = player.clientId;
+    if (!playerId || player.isSpectator) {
       this.send(conn, { type: "error", message: "Not a player" });
       return;
     }
@@ -655,16 +667,17 @@ export default class GameServer implements Party.Server {
   }
 
   private handleResign(conn: Party.Connection, player: PlayerConnection) {
-    if (!player.playerId || player.isSpectator) {
+    if (!player.clientId || player.isSpectator) {
       this.send(conn, { type: "error", message: "Not a player" });
       return;
     }
 
     const playerName = player.name;
 
-    // Remove player from game
-    this.playerNames.delete(player.playerId);
-    player.playerId = null;
+    // Remove player from game (convert to spectator)
+    if (this.engine?.state.playerInfo?.[player.clientId]) {
+      delete this.engine.state.playerInfo[player.clientId];
+    }
     player.isSpectator = true;
 
     // Notify all players
@@ -677,8 +690,9 @@ export default class GameServer implements Party.Server {
     // If only one player left, end the game
     if (this.getPlayerCount() < 2 && this.isStarted) {
       // Clear all players to fully end the game
-      this.playerNames.clear();
-      this.playerClientIds.clear();
+      if (this.engine?.state.playerInfo) {
+        this.engine.state.playerInfo = {};
+      }
       this.botPlayers.clear();
 
       this.broadcast({
@@ -694,9 +708,9 @@ export default class GameServer implements Party.Server {
     const player = this.connections.get(conn.id);
     if (!player) return;
 
-    const wasPlayer = player.playerId && !player.isSpectator;
+    const wasPlayer = player.clientId && !player.isSpectator;
 
-    player.playerId = null;
+    // Keep clientId but mark as spectator
     player.isSpectator = true;
 
     this.broadcastPlayerList();
@@ -708,7 +722,7 @@ export default class GameServer implements Party.Server {
 
       // Check if only bots remain or it's a single-player game
       const onlyBotsRemain = remainingPlayers.every(
-        p => p.playerId && this.botPlayers.has(p.playerId),
+        p => p.clientId && this.botPlayers.has(p.clientId),
       );
 
       if (onlyBotsRemain && !this.isFullMode()) {
@@ -723,18 +737,9 @@ export default class GameServer implements Party.Server {
     this.updateLobby();
   }
 
-  private getNextPlayerId(): PlayerId | null {
-    const usedIds = new Set(
-      [...this.connections.values()]
-        .filter(p => p.playerId)
-        .map(p => p.playerId),
-    );
-    return PLAYER_IDS.find(id => !usedIds.has(id)) || null;
-  }
-
   private getPlayers(): PlayerConnection[] {
     return [...this.connections.values()].filter(
-      p => p.playerId && !p.isSpectator,
+      p => p.clientId && !p.isSpectator,
     );
   }
 
@@ -751,20 +756,23 @@ export default class GameServer implements Party.Server {
       // Spectators are always human
       if (conn.isSpectator) return true;
       // Non-spectator players who are not bots are human
-      return conn.playerId && !this.botPlayers.has(conn.playerId);
+      return conn.clientId && !this.botPlayers.has(conn.clientId);
     }).length;
   }
 
   private isFullMode(): boolean {
-    // Full mode is when both player0 and player1 are marked as bots
+    // Full mode is when all players are marked as bots
     // This indicates an AI vs AI game that should continue autonomously
-    return this.botPlayers.has("player0") && this.botPlayers.has("player1");
+    const players = this.getPlayers();
+    return (
+      players.length > 0 && players.every(p => this.botPlayers.has(p.clientId))
+    );
   }
 
   private broadcastPlayerList() {
     const players = this.getPlayers().map(p => ({
       name: p.name,
-      playerId: p.playerId!,
+      playerId: p.clientId,
     }));
     this.broadcast({ type: "player_list", players });
   }
@@ -788,18 +796,17 @@ export default class GameServer implements Party.Server {
     const lobby = this.room.context.parties.lobby;
     const lobbyRoom = lobby.get("main");
 
-    // Get all players that should be in the game (both connected and disconnected)
-    const players = Array.from(this.playerNames.entries()).map(
-      ([playerId, name]) => {
+    // Get all players from playerInfo
+    const players = Object.entries(this.engine?.state.playerInfo || {}).map(
+      ([clientId, info]) => {
         // Check if this player has an active connection
         const activeConnection = [...this.connections.values()].find(
-          conn => conn.playerId === playerId && !conn.isSpectator,
+          conn => conn.clientId === clientId && !conn.isSpectator,
         );
 
         return {
-          name,
-          id: playerId,
-          isBot: this.botPlayers.has(playerId),
+          name: info.name,
+          isBot: this.botPlayers.has(clientId),
           isConnected: !!activeConnection,
         };
       },
@@ -826,7 +833,7 @@ export default class GameServer implements Party.Server {
     // Remove all bot connections
     const botConnectionIds = [...this.connections.entries()]
       .filter(
-        ([_, conn]) => conn.playerId && this.botPlayers.has(conn.playerId),
+        ([_, conn]) => conn.clientId && this.botPlayers.has(conn.clientId),
       )
       .map(([id]) => id);
 
