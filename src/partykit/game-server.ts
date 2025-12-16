@@ -687,12 +687,34 @@ export default class GameServer implements Party.Server {
 
   private handleLeave(conn: Party.Connection) {
     const player = this.connections.get(conn.id);
-    if (player) {
-      player.playerId = null;
-      player.isSpectator = true;
-    }
+    if (!player) return;
+
+    const wasPlayer = player.playerId && !player.isSpectator;
+
+    player.playerId = null;
+    player.isSpectator = true;
+
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
+
+    // If a player left a single-player game, end it immediately
+    if (wasPlayer && this.isStarted) {
+      const remainingPlayers = this.getPlayers();
+
+      // Check if only bots remain or it's a single-player game
+      const onlyBotsRemain = remainingPlayers.every(
+        p => p.playerId && this.botPlayers.has(p.playerId),
+      );
+
+      if (onlyBotsRemain && !this.isFullMode()) {
+        // Single-player game abandoned - clean it up
+        this.cleanupBotConnections();
+        this.broadcast({ type: "game_ended", reason: "Player left" });
+        this.updateLobby();
+        return;
+      }
+    }
+
     this.updateLobby();
   }
 
@@ -783,10 +805,7 @@ export default class GameServer implements Party.Server {
       roomId: this.room.id,
       players,
       spectatorCount: this.getSpectatorCount(),
-      isActive:
-        this.isStarted &&
-        players.length >= 2 &&
-        !(this.engine?.state.gameOver ?? false),
+      isActive: this.isStarted && !(this.engine?.state.gameOver ?? false),
     };
 
     await lobbyRoom.fetch({
