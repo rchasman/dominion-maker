@@ -171,10 +171,11 @@ export function buildStrategicContext(
   // Use provided strategy or default neutral strategy
   const aiStrategy = run(() => {
     if (strategySummary) {
-      const strategies = JSON.parse(strategySummary) as Array<
-        PlayerStrategyAnalysis & { id: string }
+      const strategies = JSON.parse(strategySummary) as Record<
+        string,
+        PlayerStrategyAnalysis
       >;
-      return strategies.find(s => s.id === state.activePlayer);
+      return strategies[state.activePlayer];
     }
     return DEFAULT_STRATEGY;
   });

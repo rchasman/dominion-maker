@@ -191,22 +191,20 @@ describe("buildStrategicContext", () => {
   describe("strategy summary integration", () => {
     it("should include strategy summary when provided", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
-      const strategySummary = JSON.stringify([
-        {
-          id: "human",
+      const strategySummary = JSON.stringify({
+        human: {
           gameplan: "Big Money - Leading with 12 VP",
           read: "Playing textbook Big Money with disciplined Gold/Silver purchases. Deck is clean but lacks action synergy. Main weakness is vulnerability to engine strategies in long games.",
           recommendation:
             "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
         },
-        {
-          id: "ai",
+        ai: {
           gameplan: "Engine Building - Behind at 6 VP",
           read: "Building Villages and Smithies engine but execution is slow. Low buying power is the critical weakness. Needs 1-2 more engine pieces before competing.",
           recommendation:
             "Finish the engine before greening. Need at least one more Village.",
         },
-      ]);
+      });
 
       const context = buildStrategicContext(state, strategySummary);
 
