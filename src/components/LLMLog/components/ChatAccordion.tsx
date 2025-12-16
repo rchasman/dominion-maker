@@ -104,18 +104,6 @@ function ChatHistory({ messages }: { messages: ChatMessageData[] }) {
         paddingBottom: "var(--space-2)",
       }}
     >
-      {messages.length === 0 && (
-        <div
-          style={{
-            fontSize: "0.6875rem",
-            color: "var(--color-text-tertiary)",
-            fontStyle: "italic",
-            padding: "var(--space-2)",
-          }}
-        >
-          Say something to your fellow players...
-        </div>
-      )}
       {messages.map(entry => (
         <ChatMessage key={entry.id} message={entry} />
       ))}
@@ -149,52 +137,87 @@ function ChatInput({
   return (
     <div
       style={{
-        display: "flex",
-        gap: "var(--space-2)",
         paddingTop: "var(--space-2)",
         borderTop: "1px solid var(--color-border)",
       }}
     >
-      <textarea
-        value={value}
-        onInput={e => setValue((e.target as HTMLTextAreaElement).value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type a message..."
-        disabled={disabled}
+      <div
         style={{
-          flex: 1,
-          padding: "var(--space-2)",
-          fontSize: "0.8125rem",
-          fontFamily: "monospace",
+          position: "relative",
+          display: "flex",
+          alignItems: "flex-end",
           border: "1px solid var(--color-border)",
-          borderRadius: "4px",
+          borderRadius: "6px",
           background: "var(--color-bg)",
-          color: "var(--color-text-primary)",
-          resize: "none",
-          minHeight: "2.5rem",
-          maxHeight: "6rem",
-        }}
-        rows={1}
-      />
-      <button
-        onClick={handleSubmit}
-        disabled={disabled || !value.trim()}
-        style={{
-          padding: "var(--space-2) var(--space-3)",
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          background: "var(--color-bg)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "4px",
-          color:
-            disabled || !value.trim()
-              ? "var(--color-text-tertiary)"
-              : "var(--color-text-primary)",
-          cursor: disabled || !value.trim() ? "not-allowed" : "pointer",
+          transition: "border-color 0.2s",
         }}
       >
-        Send
-      </button>
+        <textarea
+          value={value}
+          onInput={e => setValue((e.target as HTMLTextAreaElement).value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message..."
+          disabled={disabled}
+          style={{
+            flex: 1,
+            padding: "var(--space-2)",
+            paddingRight: "calc(2.5rem + var(--space-2))",
+            fontSize: "0.8125rem",
+            fontFamily: "monospace",
+            border: "none",
+            borderRadius: "6px",
+            background: "transparent",
+            color: "var(--color-text-primary)",
+            resize: "none",
+            minHeight: "2.5rem",
+            maxHeight: "6rem",
+            outline: "none",
+          }}
+          rows={1}
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={disabled || !value.trim()}
+          title="Send message"
+          onMouseEnter={e => {
+            if (!disabled && value.trim()) {
+              (e.target as HTMLButtonElement).style.opacity = "0.7";
+            }
+          }}
+          onMouseLeave={e => {
+            if (!disabled && value.trim()) {
+              (e.target as HTMLButtonElement).style.opacity = "1";
+            }
+          }}
+          style={{
+            position: "absolute",
+            right: "var(--space-2)",
+            bottom: "var(--space-2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "1.75rem",
+            height: "1.75rem",
+            minWidth: "1.75rem",
+            minHeight: "1.75rem",
+            padding: 0,
+            fontSize: "0.75rem",
+            background: "transparent",
+            border: "none",
+            color:
+              disabled || !value.trim()
+                ? "var(--color-text-tertiary)"
+                : "var(--color-gold)",
+            cursor: disabled || !value.trim() ? "not-allowed" : "pointer",
+            transition: "opacity 0.2s",
+            opacity: disabled || !value.trim() ? 0.4 : 1,
+            outline: "none",
+            transform: "none",
+          }}
+        >
+          ▶
+        </button>
+      </div>
     </div>
   );
 }
