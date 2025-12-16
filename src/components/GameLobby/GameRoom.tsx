@@ -66,13 +66,13 @@ export function GameRoom({
   const lastEventCountRef = useRef(0);
 
   const hasPlayableActions = useMemo(
-    () => computeHasPlayableActions(game.gameState),
-    [game.gameState],
+    () => computeHasPlayableActions(game.gameState, game.playerId),
+    [game.gameState, game.playerId],
   );
 
   const hasTreasuresInHand = useMemo(
-    () => computeHasTreasuresInHand(game.gameState),
-    [game.gameState],
+    () => computeHasTreasuresInHand(game.gameState, game.playerId),
+    [game.gameState, game.playerId],
   );
 
   // Fetch strategy analysis when turns end
