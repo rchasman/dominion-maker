@@ -33,26 +33,30 @@ export function PartyKitSync() {
   const syncedEventCountRef = useRef(0);
 
   // Persistent room ID for this single-player session
-  const roomIdRef = useRef<string>(() => {
-    try {
-      const stored = localStorage.getItem(ROOM_STORAGE_KEY);
-      if (stored) return stored;
-    } catch {}
-    const newId = generateRoomId();
-    try {
-      localStorage.setItem(ROOM_STORAGE_KEY, newId);
-    } catch {}
-    return newId;
-  });
+  const roomIdRef = useRef<string>(
+    (() => {
+      try {
+        const stored = localStorage.getItem(ROOM_STORAGE_KEY);
+        if (stored) return stored;
+      } catch {}
+      const newId = generateRoomId();
+      try {
+        localStorage.setItem(ROOM_STORAGE_KEY, newId);
+      } catch {}
+      return newId;
+    })(),
+  );
 
   // Get player name
-  const playerNameRef = useRef<string>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
-      if (stored) return stored;
-    } catch {}
-    return generatePlayerName();
-  });
+  const playerNameRef = useRef<string>(
+    (() => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
+        if (stored) return stored;
+      } catch {}
+      return generatePlayerName();
+    })(),
+  );
 
   // Connect to PartyKit when game starts
   useEffect(() => {
