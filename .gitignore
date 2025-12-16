@@ -33,3 +33,4 @@ dist-ssr
 
 # AI SDK DevTools
 .devtools/
+.partykit/
