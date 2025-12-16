@@ -166,7 +166,7 @@ export function GameSidebar({
   onRequestUndo,
 }: GameSidebarProps) {
   const { llmLogs } = useLLMLogs();
-  const { spectatorCount = 0 } = useGame();
+  const { spectatorCount = 0, isSpectator = false } = useGame();
 
   const isLocalPlayerTurn = state.activePlayer === localPlayer;
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
@@ -235,6 +235,7 @@ export function GameSidebar({
         onNewGame={onNewGame}
         onEndGame={onEndGame}
         onBackToHome={onBackToHome}
+        isSpectator={isSpectator}
       />
     </div>
   );
