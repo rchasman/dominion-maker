@@ -330,6 +330,9 @@ export default class GameServer implements Party.Server {
 
     this.engine.subscribe((events, state) => {
       this.broadcast({ type: "events", events, state });
+      if (state.gameOver) {
+        this.updateLobby();
+      }
     });
 
     this.broadcast({
@@ -413,6 +416,9 @@ export default class GameServer implements Party.Server {
       // Update player names before broadcasting
       this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
+      if (state.gameOver) {
+        this.updateLobby();
+      }
     });
 
     const initialState = { ...this.engine.state };
@@ -571,6 +577,9 @@ export default class GameServer implements Party.Server {
       // Update player names before broadcasting
       this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
+      if (state.gameOver) {
+        this.updateLobby();
+      }
     });
 
     const initialState = { ...this.engine.state };
@@ -671,6 +680,8 @@ export default class GameServer implements Party.Server {
         type: "game_ended",
         reason: `${playerName} resigned. Game over.`,
       });
+      // Clear from lobby
+      this.updateLobby();
     }
   }
 
@@ -772,7 +783,10 @@ export default class GameServer implements Party.Server {
       roomId: this.room.id,
       players,
       spectatorCount: this.getSpectatorCount(),
-      isActive: this.isStarted && players.length > 0,
+      isActive:
+        this.isStarted &&
+        players.length >= 2 &&
+        !(this.engine?.state.gameOver ?? false),
     };
 
     await lobbyRoom.fetch({
