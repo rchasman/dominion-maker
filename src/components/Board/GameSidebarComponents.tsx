@@ -80,12 +80,14 @@ interface GameActionButtonsProps {
   onNewGame?: () => void;
   onEndGame?: () => void;
   onBackToHome?: () => void;
+  isSpectator?: boolean;
 }
 
 export function GameActionButtons({
   onNewGame,
   onEndGame,
   onBackToHome,
+  isSpectator = false,
 }: GameActionButtonsProps) {
   return (
     <div
@@ -155,10 +157,10 @@ export function GameActionButtons({
           onMouseLeave={e =>
             (e.currentTarget.style.color = "var(--color-text-secondary)")
           }
-          title="End Game"
+          title={isSpectator ? "Leave Game" : "End Game"}
         >
           <span style={{ fontSize: "0.875rem" }}>⊗</span>
-          <span>End Game</span>
+          <span>{isSpectator ? "Leave Game" : "End Game"}</span>
         </button>
       )}
     </div>
@@ -232,6 +234,7 @@ interface GameControlsSectionProps {
   onNewGame?: () => void;
   onEndGame?: () => void;
   onBackToHome?: () => void;
+  isSpectator?: boolean;
 }
 
 export function GameControlsSection({
@@ -240,6 +243,7 @@ export function GameControlsSection({
   onNewGame,
   onEndGame,
   onBackToHome,
+  isSpectator = false,
 }: GameControlsSectionProps) {
   return (
     <div
@@ -249,7 +253,7 @@ export function GameControlsSection({
         background: "var(--color-bg-surface)",
       }}
     >
-      {onGameModeChange && (
+      {!isSpectator && onGameModeChange && (
         <GameModeSwitcher
           gameMode={gameMode}
           onGameModeChange={onGameModeChange}
@@ -257,9 +261,10 @@ export function GameControlsSection({
       )}
 
       <GameActionButtons
-        onNewGame={onNewGame}
-        onEndGame={onEndGame}
+        onNewGame={isSpectator ? undefined : onNewGame}
+        onEndGame={isSpectator ? undefined : onEndGame}
         onBackToHome={onBackToHome}
+        isSpectator={isSpectator}
       />
     </div>
   );
