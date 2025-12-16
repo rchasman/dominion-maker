@@ -676,6 +676,11 @@ export default class GameServer implements Party.Server {
 
     // If only one player left, end the game
     if (this.getPlayerCount() < 2 && this.isStarted) {
+      // Clear all players to fully end the game
+      this.playerNames.clear();
+      this.playerClientIds.clear();
+      this.botPlayers.clear();
+
       this.broadcast({
         type: "game_ended",
         reason: `${playerName} resigned. Game over.`,
@@ -805,7 +810,10 @@ export default class GameServer implements Party.Server {
       roomId: this.room.id,
       players,
       spectatorCount: this.getSpectatorCount(),
-      isActive: this.isStarted && !(this.engine?.state.gameOver ?? false),
+      isActive:
+        this.isStarted &&
+        players.length > 0 &&
+        !(this.engine?.state.gameOver ?? false),
     };
 
     await lobbyRoom.fetch({
