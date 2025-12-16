@@ -101,6 +101,14 @@ export function PartyKitSync() {
     }
   }, [gameState]);
 
+  // Reset sync counter when new game starts (events array shrinks)
+  useEffect(() => {
+    if (events.length < syncedEventCountRef.current) {
+      console.log("[PartyKit] New game detected, resetting sync counter");
+      syncedEventCountRef.current = 0;
+    }
+  }, [events.length]);
+
   // Start game on server once joined
   useEffect(() => {
     if (!isJoined || !gameState || syncedEventCountRef.current > 0) return;
