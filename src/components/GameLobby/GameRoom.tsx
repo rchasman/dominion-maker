@@ -59,7 +59,7 @@ export function GameRoom({
       isProcessing: !game.isConnected,
       isLoading: !game.isJoined,
       modelSettings: DEFAULT_MODEL_SETTINGS,
-      playerStrategies: {},
+      playerStrategies: [],
       hasPlayableActions,
       hasTreasuresInHand,
       strategy: { getModeName: () => "multiplayer" } as never,
