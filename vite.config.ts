@@ -43,7 +43,7 @@ export default defineConfig({
               return "preact-vendor";
             }
             // Split vendor by usage pattern
-            if (id.includes("trystero")) {
+            if (id.includes("partysocket")) {
               return "multiplayer-vendor";
             }
             if (id.includes("@floating-ui")) {

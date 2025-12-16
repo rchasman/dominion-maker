@@ -6,18 +6,18 @@ import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { STORAGE_KEYS } from "./context/storage-utils";
 import { uiLogger } from "./lib/logger";
 
-// Lazy load game modules (keeps trystero out of single-player bundle)
+// Lazy load game modules (keeps partykit out of single-player bundle)
 const singlePlayerImport = () =>
   import("./SinglePlayerApp").then(m => ({ default: m.SinglePlayerApp }));
-const multiplayerImport = () =>
-  import("./MultiplayerApp").then(m => ({ default: m.MultiplayerApp }));
+const gameLobbyImport = () =>
+  import("./components/GameLobby").then(m => ({ default: m.GameLobby }));
 
 const SinglePlayerApp = lazy(singlePlayerImport);
-const MultiplayerApp = lazy(multiplayerImport);
+const GameLobby = lazy(gameLobbyImport);
 
 // Preload game modules after menu renders (best of both worlds)
 const preloadSinglePlayer = () => void singlePlayerImport();
-const preloadMultiplayer = () => void multiplayerImport();
+const preloadMultiplayer = () => void gameLobbyImport();
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -101,11 +101,11 @@ function App() {
     );
   }
 
-  // Multiplayer - MultiplayerProvider loaded lazily with MultiplayerApp
+  // Multiplayer - GameLobby loaded lazily
   if (mode === "multiplayer") {
     return (
       <Suspense fallback={<LoadingScreen />}>
-        <MultiplayerApp onBack={() => setMode("menu")} />
+        <GameLobby onBack={() => setMode("menu")} />
       </Suspense>
     );
   }
