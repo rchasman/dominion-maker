@@ -2,7 +2,11 @@
  * Bandit - Gain a Gold. Each other player reveals top 2 cards, trashes a non-Copper Treasure
  */
 
-import { createOpponentIteratorEffect, peekDraw, getOpponents } from "../effect-types";
+import {
+  createOpponentIteratorEffect,
+  peekDraw,
+  getOpponents,
+} from "../effect-types";
 import type { GameEvent, PlayerId } from "../../events/types";
 import type { GameState } from "../../types/game-state";
 import { CARDS } from "../../data/cards";
@@ -115,7 +119,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
         attackingPlayer,
       },
     }),
-    processChoice: (choice, { opponent, data }, state) => {
+    processChoice: (choice, { opponent, data }) => {
       const toTrash = choice.selectedCards[0];
       if (!toTrash) return [];
 
@@ -148,7 +152,9 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
     };
 
     const targets = getOpponents(state, player);
-    const autoProcessEvents = targets.flatMap(t => processOpponentAutoAttack(state, t));
+    const autoProcessEvents = targets.flatMap(t =>
+      processOpponentAutoAttack(state, t),
+    );
 
     return [gainGold, ...autoProcessEvents];
   },
