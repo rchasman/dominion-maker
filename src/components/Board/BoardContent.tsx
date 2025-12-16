@@ -139,7 +139,7 @@ export function BoardContent({
         <PlayerArea
           player={opponent}
           label={formatPlayerName(opponentPlayerId, isOpponentAI, {
-            gameState,
+            gameState: displayState,
           })}
           vpCount={opponentVP}
           isActive={!isMainPlayerTurn}

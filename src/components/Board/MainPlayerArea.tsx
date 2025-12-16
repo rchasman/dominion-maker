@@ -39,7 +39,9 @@ export function MainPlayerArea({
     <div style={{ position: "relative" }}>
       <PlayerArea
         player={mainPlayer}
-        label={formatPlayerName(mainPlayerId, isMainPlayerAI, { gameState })}
+        label={formatPlayerName(mainPlayerId, isMainPlayerAI, {
+          gameState: displayState,
+        })}
         vpCount={mainPlayerVP}
         isActive={isMainPlayerTurn}
         showCards={true}
