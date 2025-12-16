@@ -36,7 +36,13 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   })[0];
 
   const [playerName, setPlayerName] = useState(() => {
-    // Always generate new name on load - clientId handles reconnection
+    // If in active game, use stored name for stability
+    const activeGame = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    if (activeGame) {
+      const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
+      if (stored) return stored;
+    }
+    // Otherwise generate new name (allows shuffling in lobby)
     const name = generatePlayerName();
     localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
     return name;
