@@ -382,18 +382,13 @@ function GameCircle({
         const y = Math.sin(angle) * circleRadius;
         const playerColor =
           playerColors.get(player.id) ?? getPlayerColor(player.name);
-        const isBot = player.isBot ?? false;
 
         // Detect single-player game (2 players, at least one bot)
         const isSinglePlayer =
           game.players.length === 2 && game.players.some(p => p.isBot);
 
-        // Avatar style: bottts for bots, rings for human in single-player, micah for multiplayer
-        const avatarStyle = isBot
-          ? "bottts"
-          : isSinglePlayer
-            ? "rings"
-            : "micah";
+        // Avatar style: bottts for single-player, micah for multiplayer
+        const avatarStyle = isSinglePlayer ? "bottts" : "micah";
 
         return (
           <div
