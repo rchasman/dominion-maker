@@ -9,6 +9,7 @@ import { useMemo, useState, useEffect, useRef } from "preact/hooks";
 import { GameContext, LLMLogsContext } from "../../context/GameContext";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
+import { DisconnectModal } from "./DisconnectModal";
 import type { CardName } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { PlayerStrategyData } from "../../types/player-strategy";
@@ -135,6 +136,18 @@ export function GameRoom({
     [game, playerStrategies, hasPlayableActions, hasTreasuresInHand],
   );
 
+  // Get disconnected opponent (if any)
+  const disconnectedOpponent = useMemo(() => {
+    if (isSpectator || !game.playerId) return null;
+
+    for (const [playerId, playerName] of game.disconnectedPlayers.entries()) {
+      if (playerId !== game.playerId) {
+        return { playerId, playerName };
+      }
+    }
+    return null;
+  }, [game.disconnectedPlayers, game.playerId, isSpectator]);
+
   // Show game board if game has started
   if (game.gameState) {
     return (
@@ -144,6 +157,12 @@ export function GameRoom({
             <Board onBackToHome={handleResign} />
           </Suspense>
           {isSpectator && <SpectatorBadge />}
+          {disconnectedOpponent && (
+            <DisconnectModal
+              playerName={disconnectedOpponent.playerName}
+              onLeave={handleResign}
+            />
+          )}
           {game.error && (
             <GameOverNotification
               message={game.error}
