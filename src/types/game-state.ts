@@ -43,13 +43,7 @@ export type Phase = "action" | "buy" | "cleanup";
 // Player identifiers
 // For single-player: "human" vs "ai"
 // For multiplayer: "player0", "player1", etc.
-export type Player =
-  | "human"
-  | "ai"
-  | "player0"
-  | "player1"
-  | "player2"
-  | "player3";
+export type Player = string; // ClientId strings
 
 // Player type (human or AI-controlled)
 export type PlayerType = "human" | "ai";

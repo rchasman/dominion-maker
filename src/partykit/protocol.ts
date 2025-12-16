@@ -6,7 +6,7 @@
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 
-export type PlayerId = "player0" | "player1" | "player2" | "player3";
+export type PlayerId = string; // ClientId strings
 
 export interface PlayerInfo {
   name: string;
@@ -109,7 +109,12 @@ export type GameClientMessage =
 
 // Game Server -> Client
 export type GameServerMessage =
-  | { type: "joined"; playerId: PlayerId | null; isSpectator: boolean }
+  | {
+      type: "joined";
+      playerId: PlayerId | null;
+      isSpectator: boolean;
+      isHost: boolean;
+    }
   | { type: "player_list"; players: PlayerInfo[] }
   | { type: "spectator_count"; count: number }
   | { type: "game_started"; state: GameState; events: GameEvent[] }
