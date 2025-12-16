@@ -1,0 +1,9 @@
+{
+  "name": "dominion-maker",
+  "main": "src/partykit/game-server.ts",
+  "parties": {
+    "lobby": "src/partykit/lobby-server.ts"
+  },
+  "compatibilityDate": "2024-12-01",
+  "port": 1999
+}
