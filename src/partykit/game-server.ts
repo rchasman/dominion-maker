@@ -78,6 +78,10 @@ export default class GameServer implements Party.Server {
   private hostClientId: string | null = null;
   private isStarted = false;
   private chatMessages: ChatMessageData[] = []; // Chat history
+  private playerInfo: Record<
+    PlayerId,
+    { id: PlayerId; name: string; type: "human" | "ai"; connected: boolean }
+  > = {}; // Track player info separately from engine state
 
   constructor(readonly room: Party.Room) {}
 
@@ -123,8 +127,7 @@ export default class GameServer implements Party.Server {
         // End game only if no humans remain AND not in full mode
         if (humanCount === 0 && !this.isFullMode()) {
           this.cleanupBotConnections();
-          this.broadcast({ type: "game_ended", reason: "Player left" });
-          this.updateLobby();
+          this.endGame("Player left");
         }
       }
     }
@@ -205,10 +208,17 @@ export default class GameServer implements Party.Server {
   ) {
     // If game started, check if this player can rejoin
     if (this.isStarted && this.engine) {
+      console.log(
+        `[Rejoin] Attempt by ${name} (${clientId}), playerInfo keys:`,
+        Object.keys(this.playerInfo),
+      );
+
       // Try to find by clientId first (more stable), then fall back to name
       const existingPlayerId = clientId
         ? this.findPlayerIdByClientId(clientId)
         : this.findPlayerIdByName(name);
+
+      console.log(`[Rejoin] Found existingPlayerId:`, existingPlayerId);
 
       if (existingPlayerId) {
         // Rejoin as existing player
@@ -217,8 +227,9 @@ export default class GameServer implements Party.Server {
         player.isSpectator = false;
 
         // Update name in playerInfo
-        if (this.engine.state.playerInfo?.[existingPlayerId]) {
-          this.engine.state.playerInfo[existingPlayerId].name = name;
+        if (this.playerInfo[existingPlayerId]) {
+          this.playerInfo[existingPlayerId].name = name;
+          this.playerInfo[existingPlayerId].connected = true;
         }
 
         this.send(conn, {
@@ -228,9 +239,14 @@ export default class GameServer implements Party.Server {
           isHost: this.hostClientId === existingPlayerId,
         });
 
+        // Send full state with playerInfo included
+        const stateWithPlayerInfo = {
+          ...this.engine.state,
+          playerInfo: this.playerInfo,
+        };
         this.send(conn, {
           type: "full_state",
-          state: this.engine.state,
+          state: stateWithPlayerInfo,
           events: [...this.engine.eventLog],
         });
 
@@ -306,10 +322,7 @@ export default class GameServer implements Party.Server {
   }
 
   private findPlayerIdByName(name: string): PlayerId | null {
-    if (!this.engine?.state.playerInfo) return null;
-    for (const [clientId, info] of Object.entries(
-      this.engine.state.playerInfo,
-    )) {
+    for (const [clientId, info] of Object.entries(this.playerInfo)) {
       if (info.name === name) return clientId;
     }
     return null;
@@ -317,12 +330,17 @@ export default class GameServer implements Party.Server {
 
   private findPlayerIdByClientId(clientId: string): PlayerId | null {
     // ClientId IS the playerId now
-    return this.engine?.state.playerInfo?.[clientId] ? clientId : null;
+    return this.playerInfo[clientId] ? clientId : null;
   }
 
   private autoStartGame() {
     const players = this.getPlayers();
     if (players.length < 2) return;
+
+    console.log(
+      "[AutoStart] Players:",
+      players.map(p => `${p.name} (${p.clientId})`),
+    );
 
     const playerIds = players.map(p => p.clientId);
 
@@ -331,26 +349,40 @@ export default class GameServer implements Party.Server {
     this.isStarted = true;
 
     // Populate playerInfo with real player data
-    this.engine.state.playerInfo = {};
+    this.playerInfo = {};
     for (const p of players) {
-      this.engine.state.playerInfo[p.clientId] = {
+      this.playerInfo[p.clientId] = {
         id: p.clientId,
         name: p.name,
         type: p.isBot ? "ai" : "human",
         connected: true,
       };
+      console.log(`[AutoStart] playerInfo[${p.clientId}].name = "${p.name}"`);
     }
 
+    console.log(
+      "[AutoStart] Broadcasting state with playerInfo:",
+      Object.keys(this.playerInfo),
+    );
+
     this.engine.subscribe((events, state) => {
-      this.broadcast({ type: "events", events, state });
+      const stateWithPlayerInfo = {
+        ...state,
+        playerInfo: this.playerInfo,
+      };
+      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
       if (state.gameOver) {
         this.updateLobby();
       }
     });
 
+    const stateWithPlayerInfo = {
+      ...this.engine.state,
+      playerInfo: this.playerInfo,
+    };
     this.broadcast({
       type: "game_started",
-      state: this.engine.state,
+      state: stateWithPlayerInfo,
       events: [...this.engine.eventLog],
     });
 
@@ -414,14 +446,14 @@ export default class GameServer implements Party.Server {
     this.isStarted = true;
 
     // Populate playerInfo with real player data
-    this.engine.state.playerInfo = {};
-    this.engine.state.playerInfo[humanPlayer.clientId] = {
+    this.playerInfo = {};
+    this.playerInfo[humanPlayer.clientId] = {
       id: humanPlayer.clientId,
       name: humanPlayer.name,
       type: isFullMode ? "ai" : "human",
       connected: true,
     };
-    this.engine.state.playerInfo[botClientId] = {
+    this.playerInfo[botClientId] = {
       id: botClientId,
       name: botPlayerName,
       type: "ai",
@@ -429,15 +461,23 @@ export default class GameServer implements Party.Server {
     };
 
     this.engine.subscribe((events, state) => {
-      this.broadcast({ type: "events", events, state });
+      const stateWithPlayerInfo = {
+        ...state,
+        playerInfo: this.playerInfo,
+      };
+      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
       if (state.gameOver) {
         this.updateLobby();
       }
     });
 
+    const stateWithPlayerInfo = {
+      ...this.engine.state,
+      playerInfo: this.playerInfo,
+    };
     this.broadcast({
       type: "game_started",
-      state: this.engine.state,
+      state: stateWithPlayerInfo,
       events: [...this.engine.eventLog],
     });
 
@@ -580,9 +620,9 @@ export default class GameServer implements Party.Server {
     this.isStarted = true;
 
     // Populate playerInfo with real player data
-    this.engine.state.playerInfo = {};
+    this.playerInfo = {};
     for (const p of players) {
-      this.engine.state.playerInfo[p.clientId] = {
+      this.playerInfo[p.clientId] = {
         id: p.clientId,
         name: p.name,
         type: p.isBot ? "ai" : "human",
@@ -591,15 +631,23 @@ export default class GameServer implements Party.Server {
     }
 
     this.engine.subscribe((events, state) => {
-      this.broadcast({ type: "events", events, state });
+      const stateWithPlayerInfo = {
+        ...state,
+        playerInfo: this.playerInfo,
+      };
+      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
       if (state.gameOver) {
         this.updateLobby();
       }
     });
 
+    const stateWithPlayerInfo = {
+      ...this.engine.state,
+      playerInfo: this.playerInfo,
+    };
     this.broadcast({
       type: "game_started",
-      state: this.engine.state,
+      state: stateWithPlayerInfo,
       events: [...this.engine.eventLog],
     });
 
@@ -675,8 +723,8 @@ export default class GameServer implements Party.Server {
     const playerName = player.name;
 
     // Remove player from game (convert to spectator)
-    if (this.engine?.state.playerInfo?.[player.clientId]) {
-      delete this.engine.state.playerInfo[player.clientId];
+    if (this.playerInfo[player.clientId]) {
+      delete this.playerInfo[player.clientId];
     }
     player.isSpectator = true;
 
@@ -689,19 +737,19 @@ export default class GameServer implements Party.Server {
 
     // If only one player left, end the game
     if (this.getPlayerCount() < 2 && this.isStarted) {
-      // Clear all players to fully end the game
-      if (this.engine?.state.playerInfo) {
-        this.engine.state.playerInfo = {};
-      }
-      this.botPlayers.clear();
-
-      this.broadcast({
-        type: "game_ended",
-        reason: `${playerName} resigned. Game over.`,
-      });
-      // Clear from lobby
-      this.updateLobby();
+      this.endGame(`${playerName} resigned. Game over.`);
     }
+  }
+
+  private endGame(reason: string) {
+    this.isStarted = false;
+    this.engine = null;
+    this.playerInfo = {};
+    this.botPlayers.clear();
+    this.hostConnectionId = null;
+    this.hostClientId = null;
+    this.broadcast({ type: "game_ended", reason });
+    this.updateLobby();
   }
 
   private handleLeave(conn: Party.Connection) {
@@ -728,8 +776,7 @@ export default class GameServer implements Party.Server {
       if (onlyBotsRemain && !this.isFullMode()) {
         // Single-player game abandoned - clean it up
         this.cleanupBotConnections();
-        this.broadcast({ type: "game_ended", reason: "Player left" });
-        this.updateLobby();
+        this.endGame("Player left");
         return;
       }
     }
@@ -797,7 +844,7 @@ export default class GameServer implements Party.Server {
     const lobbyRoom = lobby.get("main");
 
     // Get all players from playerInfo
-    const players = Object.entries(this.engine?.state.playerInfo || {}).map(
+    const players = Object.entries(this.playerInfo).map(
       ([clientId, info]) => {
         // Check if this player has an active connection
         const activeConnection = [...this.connections.values()].find(
