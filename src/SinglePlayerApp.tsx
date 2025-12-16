@@ -1,11 +1,11 @@
 /**
  * SinglePlayerApp - Lazy-loaded wrapper for single player mode
  *
- * Single-player games now use PartyKit rooms so they can be spectated.
- * The AI opponent is marked as a bot player.
+ * Single-player games use PartyKit rooms when available for spectating.
+ * Falls back to local-only mode if PartyKit is unavailable.
  */
 
-import { lazy, Suspense, useState } from "preact/compat";
+import { lazy, Suspense, useState, useEffect } from "preact/compat";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { generatePlayerName } from "./lib/name-generator";
 import type { GameMode } from "./types/game-mode";
@@ -15,6 +15,14 @@ const GameRoom = lazy(() =>
   import("./components/GameLobby/GameRoom").then(m => ({
     default: m.GameRoom,
   })),
+);
+
+const Board = lazy(() =>
+  import("./components/Board/index").then(m => ({ default: m.Board })),
+);
+
+const GameProvider = lazy(() =>
+  import("./context/GameContext").then(m => ({ default: m.GameProvider })),
 );
 
 interface SinglePlayerAppProps {
@@ -37,6 +45,46 @@ function generateClientId(): string {
 }
 
 export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
+  const [useMultiplayer, setUseMultiplayer] = useState(true);
+  const [lobbyAvailable, setLobbyAvailable] = useState<boolean | null>(null);
+
+  // Check if lobby is available
+  useEffect(() => {
+    const checkLobby = async () => {
+      try {
+        const host =
+          window.location.hostname === "localhost"
+            ? "localhost:1999"
+            : "dominion-maker.rchasman.partykit.dev";
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebSocket(`${protocol}//${host}/parties/lobby/main`);
+
+        const timeout = setTimeout(() => {
+          ws.close();
+          setLobbyAvailable(false);
+          setUseMultiplayer(false);
+        }, 3000);
+
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          ws.close();
+          setLobbyAvailable(true);
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timeout);
+          setLobbyAvailable(false);
+          setUseMultiplayer(false);
+        };
+      } catch {
+        setLobbyAvailable(false);
+        setUseMultiplayer(false);
+      }
+    };
+
+    checkLobby();
+  }, []);
+
   // Get game mode from localStorage
   const [gameMode, setGameModeInternal] = useState<GameMode>(() => {
     try {
@@ -103,18 +151,57 @@ export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
     onBackToHome();
   };
 
+  // Show loading while checking lobby availability
+  if (lobbyAvailable === null) {
+    return <BoardSkeleton />;
+  }
+
+  // Use multiplayer mode if lobby is available
+  if (useMultiplayer && lobbyAvailable) {
+    return (
+      <Suspense fallback={<BoardSkeleton />}>
+        <GameRoom
+          roomId={roomId}
+          playerName={playerName}
+          clientId={clientId}
+          isSpectator={false}
+          isSinglePlayer={true}
+          gameMode={gameMode}
+          onGameModeChange={setGameMode}
+          onBack={handleBack}
+        />
+      </Suspense>
+    );
+  }
+
+  // Fallback to local-only mode
   return (
     <Suspense fallback={<BoardSkeleton />}>
-      <GameRoom
-        roomId={roomId}
-        playerName={playerName}
-        clientId={clientId}
-        isSpectator={false}
-        isSinglePlayer={true}
-        gameMode={gameMode}
-        onGameModeChange={setGameMode}
-        onBack={handleBack}
-      />
+      <GameProvider>
+        <LocalSinglePlayerGame onBackToHome={handleBack} />
+      </GameProvider>
+    </Suspense>
+  );
+}
+
+interface LocalSinglePlayerGameProps {
+  onBackToHome: () => void;
+}
+
+function LocalSinglePlayerGame({ onBackToHome }: LocalSinglePlayerGameProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <BoardSkeleton />;
+  }
+
+  return (
+    <Suspense fallback={<BoardSkeleton />}>
+      <Board onBackToHome={onBackToHome} />
     </Suspense>
   );
 }
