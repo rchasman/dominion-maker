@@ -10,6 +10,7 @@ import { GameContext, LLMLogsContext } from "../../context/GameContext";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
+import { BaseModal } from "../Modal/BaseModal";
 import type { CardName } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { PlayerStrategyData } from "../../types/player-strategy";
@@ -125,17 +126,20 @@ export function GameRoom({
     () => ({
       gameState: game.gameState,
       events: game.events,
-      gameMode: "multiplayer" as const,
+      gameMode: isSinglePlayer ? gameMode : ("multiplayer" as const),
       isProcessing: !game.isConnected,
       isLoading: !game.isJoined,
       modelSettings: DEFAULT_MODEL_SETTINGS,
       playerStrategies,
       localPlayerId: game.playerId,
+      localPlayerName: playerName,
       spectatorCount: game.spectatorCount,
       hasPlayableActions,
       hasTreasuresInHand,
-      strategy: { getModeName: () => "multiplayer" } as never,
-      setGameMode: () => {},
+      strategy: {
+        getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
+      } as never,
+      setGameMode: onGameModeChange || (() => {}),
       setModelSettings: () => {},
       startGame: () => game.startGame(),
       playAction: game.playAction,
@@ -148,7 +152,15 @@ export function GameRoom({
       requestUndo: game.requestUndo,
       getStateAtEvent: game.getStateAtEvent,
     }),
-    [game, playerStrategies, hasPlayableActions, hasTreasuresInHand],
+    [
+      game,
+      playerStrategies,
+      hasPlayableActions,
+      hasTreasuresInHand,
+      isSinglePlayer,
+      gameMode,
+      onGameModeChange,
+    ],
   );
 
   // Get disconnected opponent (if any)
@@ -178,7 +190,7 @@ export function GameRoom({
               onLeave={handleResign}
             />
           )}
-          {game.error && (
+          {game.error && !isSinglePlayer && (
             <GameOverNotification
               message={game.error}
               onClose={() => {
@@ -295,72 +307,48 @@ interface GameOverNotificationProps {
 
 function GameOverNotification({ message, onClose }: GameOverNotificationProps) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0, 0, 0, 0.8)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2000,
-        animation: "fade-in 0.3s ease-out",
-      }}
-    >
-      <div
+    <BaseModal zIndex={2000}>
+      <h2
         style={{
-          padding: "var(--space-8)",
-          background: "var(--color-bg-primary)",
-          border: "3px solid var(--color-victory)",
-          borderRadius: "12px",
-          boxShadow: "var(--shadow-lg)",
-          maxWidth: "400px",
-          textAlign: "center",
-          animation: "boing 0.5s ease-out",
+          margin: 0,
+          marginBottom: "var(--space-4)",
+          fontSize: "1.5rem",
+          color: "var(--color-victory)",
+          textTransform: "uppercase",
+          letterSpacing: "0.125rem",
         }}
       >
-        <h2
-          style={{
-            margin: 0,
-            marginBottom: "var(--space-4)",
-            fontSize: "1.5rem",
-            color: "var(--color-victory)",
-            textTransform: "uppercase",
-            letterSpacing: "0.125rem",
-          }}
-        >
-          Victory!
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            marginBottom: "var(--space-6)",
-            color: "var(--color-text-primary)",
-            fontSize: "1rem",
-          }}
-        >
-          {message}
-        </p>
-        <button
-          onClick={onClose}
-          style={{
-            padding: "var(--space-3) var(--space-6)",
-            fontSize: "0.875rem",
-            fontWeight: 600,
-            background:
-              "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-            color: "#fff",
-            border: "2px solid var(--color-victory)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            textTransform: "uppercase",
-            letterSpacing: "0.1rem",
-            fontFamily: "inherit",
-          }}
-        >
-          Return to Lobby
-        </button>
-      </div>
-    </div>
+        Victory!
+      </h2>
+      <p
+        style={{
+          margin: 0,
+          marginBottom: "var(--space-6)",
+          color: "var(--color-text-primary)",
+          fontSize: "1rem",
+        }}
+      >
+        {message}
+      </p>
+      <button
+        onClick={onClose}
+        style={{
+          padding: "var(--space-3) var(--space-6)",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+          background:
+            "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+          color: "#fff",
+          border: "2px solid var(--color-victory)",
+          cursor: "pointer",
+          textTransform: "uppercase",
+          letterSpacing: "0.1rem",
+          fontFamily: "inherit",
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
+        Return to Lobby
+      </button>
+    </BaseModal>
   );
 }
