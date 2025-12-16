@@ -403,27 +403,6 @@ function GameCircle({
                 border: `3px solid ${playerColor}`,
               }}
             />
-            {isBot && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "-2px",
-                  right: "-2px",
-                  width: "16px",
-                  height: "16px",
-                  borderRadius: "50%",
-                  background: "#8b5cf6",
-                  border: "2px solid var(--color-bg-surface)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "10px",
-                }}
-                title="Bot player"
-              >
-                🤖
-              </div>
-            )}
           </div>
         );
       })}
