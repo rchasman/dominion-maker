@@ -24,6 +24,7 @@ const PARTYKIT_HOST =
 interface UsePartyGameOptions {
   roomId: string;
   playerName: string;
+  clientId: string;
   isSpectator?: boolean;
 }
 
@@ -59,6 +60,7 @@ interface PartyGameActions {
 export function usePartyGame({
   roomId,
   playerName,
+  clientId,
   isSpectator = false,
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
@@ -88,8 +90,8 @@ export function usePartyGame({
     socket.addEventListener("open", () => {
       setState(s => ({ ...s, isConnected: true }));
       const msg: GameClientMessage = isSpectator
-        ? { type: "spectate", name: playerName }
-        : { type: "join", name: playerName };
+        ? { type: "spectate", name: playerName, clientId }
+        : { type: "join", name: playerName, clientId };
       socket.send(JSON.stringify(msg));
     });
 
@@ -106,7 +108,7 @@ export function usePartyGame({
       socket.close();
       socketRef.current = null;
     };
-  }, [roomId, playerName, isSpectator]);
+  }, [roomId, playerName, clientId, isSpectator]);
 
   const handleMessage = useCallback((msg: GameServerMessage) => {
     switch (msg.type) {

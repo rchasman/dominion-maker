@@ -25,6 +25,7 @@ const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 interface GameRoomProps {
   roomId: string;
   playerName: string;
+  clientId: string;
   isSpectator: boolean;
   onBack: () => void;
   onResign?: () => void;
@@ -33,12 +34,13 @@ interface GameRoomProps {
 export function GameRoom({
   roomId,
   playerName,
+  clientId,
   isSpectator,
   onBack,
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({ roomId, playerName, isSpectator });
+  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
   const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
     {},
   );
