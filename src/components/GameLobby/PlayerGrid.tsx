@@ -397,13 +397,14 @@ function GameCircle({
 
         return (
           <div
-            key={i}
+            key={player.id ?? player.name ?? i}
             style={{
               position: "absolute",
               transform: `translate(${x}px, ${y}px)`,
             }}
           >
             <img
+              key={avatarStyle}
               src={`https://api.dicebear.com/9.x/${avatarStyle}/svg?seed=${encodeURIComponent(player.name)}`}
               alt={player.name}
               style={{
