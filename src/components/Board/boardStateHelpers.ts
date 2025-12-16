@@ -14,6 +14,7 @@ interface BoardStateParams {
   hasTreasuresInHand: boolean;
   getStateAtEvent: (eventId: string) => GameState;
   localPlayerId?: string | null;
+  isSpectator?: boolean;
 }
 
 export interface BoardState {
@@ -42,6 +43,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     hasTreasuresInHand,
     getStateAtEvent,
     localPlayerId,
+    isSpectator = false,
   } = params;
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
@@ -49,7 +51,8 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   const mainPlayerId = playerIds[MAIN_PLAYER_INDEX];
   const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX];
 
-  const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
+  const isMainPlayerTurn =
+    !isSpectator && displayState.activePlayer === mainPlayerId;
 
   const canBuy = canBuyCards(
     isMainPlayerTurn,
