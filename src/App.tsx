@@ -2,7 +2,6 @@ import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { GameMode } from "./types/game-mode";
 import { StartScreen } from "./components/StartScreen";
-import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { STORAGE_KEYS } from "./context/storage-utils";
 import { uiLogger } from "./lib/logger";
 
@@ -114,7 +113,18 @@ function App() {
 }
 
 function LoadingScreen() {
-  return <BoardSkeleton />;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minBlockSize: "100dvh",
+        background:
+          "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+      }}
+    />
+  );
 }
 
 export default App;
