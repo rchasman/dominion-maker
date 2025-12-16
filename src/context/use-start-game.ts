@@ -38,8 +38,12 @@ export function useStartGame(
   return useCallback(() => {
     abortOngoingConsensus();
     clearGameStateStorage();
+
+    // Clear React state immediately after clearing storage
     setLLMLogs([]);
     setPlayerStrategies([]);
+    setEvents([]);
+    setGameState(null);
 
     const newEngine = new DominionEngine();
     setEngine(newEngine);
