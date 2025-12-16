@@ -38,7 +38,7 @@ export default class LobbyServer implements Party.Server {
     const player = this.players.get(conn.id);
     if (!player) return;
 
-    // Delay removal by 1 second to allow reconnection (e.g., during refresh)
+    // Delay removal by 50ms to allow reconnection (e.g., during refresh)
     const timeout = setTimeout(() => {
       this.players.delete(conn.id);
       this.disconnectTimeouts.delete(conn.id);
@@ -54,7 +54,7 @@ export default class LobbyServer implements Party.Server {
 
       this.broadcastPlayers();
       this.broadcastRequests();
-    }, 1000);
+    }, 50);
 
     this.disconnectTimeouts.set(conn.id, timeout);
   }
