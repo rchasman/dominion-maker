@@ -25,7 +25,8 @@ export default class LobbyServer implements Party.Server {
   private players: Map<string, ConnectedPlayer> = new Map();
   private requests: Map<string, GameRequest> = new Map();
   private activeGames: Map<string, ActiveGame> = new Map();
-  private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> =
+    new Map();
 
   constructor(readonly room: Party.Room) {}
 
@@ -99,14 +100,18 @@ export default class LobbyServer implements Party.Server {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  private handleJoinLobby(conn: Party.Connection, name: string, clientId: string) {
+  private handleJoinLobby(
+    conn: Party.Connection,
+    name: string,
+    clientId: string,
+  ) {
     // Check if this clientId is already connected (deduplication)
     const existingPlayer = [...this.players.entries()].find(
-      ([_, p]) => p.clientId === clientId
+      ([_, p]) => p.clientId === clientId,
     );
 
     if (existingPlayer) {
-      const [oldConnId, oldPlayer] = existingPlayer;
+      const [oldConnId, _oldPlayer] = existingPlayer;
       // Remove old connection entry
       this.players.delete(oldConnId);
       // Cancel any pending disconnect timeout for the old connection
