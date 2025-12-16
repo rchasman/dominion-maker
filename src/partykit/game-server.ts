@@ -18,11 +18,12 @@ interface PlayerConnection {
   name: string;
   playerId: PlayerId | null;
   isSpectator: boolean;
+  clientId?: string;
 }
 
 type ClientMessage =
-  | { type: "join"; name: string }
-  | { type: "spectate"; name: string }
+  | { type: "join"; name: string; clientId?: string }
+  | { type: "spectate"; name: string; clientId?: string }
   | { type: "start_game"; kingdomCards?: CardName[] }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }
@@ -55,6 +56,7 @@ export default class GameServer implements Party.Server {
   private engine: DominionEngine | null = null;
   private connections: Map<string, PlayerConnection> = new Map();
   private playerNames: Map<PlayerId, string> = new Map(); // Track player names
+  private playerClientIds: Map<PlayerId, string> = new Map(); // Track player clientIds
   private hostConnectionId: string | null = null;
   private isStarted = false;
 
@@ -91,10 +93,10 @@ export default class GameServer implements Party.Server {
 
     switch (msg.type) {
       case "join":
-        this.handleJoin(sender, conn, msg.name);
+        this.handleJoin(sender, conn, msg.name, msg.clientId);
         break;
       case "spectate":
-        this.handleSpectate(sender, conn, msg.name);
+        this.handleSpectate(sender, conn, msg.name, msg.clientId);
         break;
       case "start_game":
         this.handleStartGame(sender, msg.kingdomCards);
@@ -123,13 +125,19 @@ export default class GameServer implements Party.Server {
     conn: Party.Connection,
     player: PlayerConnection,
     name: string,
+    clientId?: string,
   ) {
     // If game started, check if this player can rejoin
     if (this.isStarted && this.engine) {
       console.log(`[handleJoin] Game started, checking rejoin for ${name}`, {
         playerNames: [...this.playerNames.entries()],
+        clientId,
       });
-      const existingPlayerId = this.findPlayerIdByName(name);
+
+      // Try to find by clientId first (more stable), then fall back to name
+      const existingPlayerId = clientId
+        ? this.findPlayerIdByClientId(clientId)
+        : this.findPlayerIdByName(name);
       console.log(`[handleJoin] Found existingPlayerId:`, existingPlayerId);
 
       if (existingPlayerId) {
@@ -140,9 +148,13 @@ export default class GameServer implements Party.Server {
         player.name = name;
         player.playerId = existingPlayerId;
         player.isSpectator = false;
+        player.clientId = clientId;
 
-        // Ensure name is tracked (in case it wasn't)
+        // Update tracked info
         this.playerNames.set(existingPlayerId, name);
+        if (clientId) {
+          this.playerClientIds.set(existingPlayerId, clientId);
+        }
 
         console.log(`[handleJoin] Sending joined message to ${conn.id}`);
         this.send(conn, {
@@ -189,9 +201,13 @@ export default class GameServer implements Party.Server {
     player.name = name;
     player.playerId = playerId;
     player.isSpectator = false;
+    player.clientId = clientId;
 
-    // Track player name for rejoin
+    // Track player info for rejoin
     this.playerNames.set(playerId, name);
+    if (clientId) {
+      this.playerClientIds.set(playerId, clientId);
+    }
 
     if (!this.hostConnectionId) {
       this.hostConnectionId = conn.id;
@@ -211,6 +227,15 @@ export default class GameServer implements Party.Server {
   private findPlayerIdByName(name: string): PlayerId | null {
     for (const [playerId, playerName] of this.playerNames.entries()) {
       if (playerName === name) {
+        return playerId;
+      }
+    }
+    return null;
+  }
+
+  private findPlayerIdByClientId(clientId: string): PlayerId | null {
+    for (const [playerId, playerClientId] of this.playerClientIds.entries()) {
+      if (playerClientId === clientId) {
         return playerId;
       }
     }
@@ -244,10 +269,12 @@ export default class GameServer implements Party.Server {
     conn: Party.Connection,
     player: PlayerConnection,
     name: string,
+    clientId?: string,
   ) {
     player.name = name;
     player.playerId = null;
     player.isSpectator = true;
+    player.clientId = clientId;
 
     this.send(conn, { type: "joined", playerId: null, isSpectator: true });
 
