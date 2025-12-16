@@ -202,11 +202,7 @@ function ChatInput({
 const EXPANDED_KEY = "dominion-chat-expanded";
 
 export function ChatAccordion() {
-  const {
-    localPlayerName = "You",
-    chatMessages = [],
-    sendChat,
-  } = useGame();
+  const { localPlayerName = "You", chatMessages = [], sendChat } = useGame();
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem(EXPANDED_KEY);
