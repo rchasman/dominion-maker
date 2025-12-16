@@ -31,7 +31,12 @@ export interface GameRequest {
 
 export interface ActiveGame {
   roomId: string;
-  players: Array<{ name: string; isBot?: boolean }>;
+  players: Array<{
+    name: string;
+    isBot?: boolean;
+    id?: string;
+    isConnected?: boolean;
+  }>;
   spectatorCount: number;
 }
 
@@ -55,7 +60,12 @@ export type LobbyServerMessage =
 export interface GameUpdateMessage {
   type: "game_update";
   roomId: string;
-  players: Array<{ name: string; isBot?: boolean }>;
+  players: Array<{
+    name: string;
+    isBot?: boolean;
+    id?: string;
+    isConnected?: boolean;
+  }>;
   spectatorCount: number;
   isActive: boolean;
 }
