@@ -20,6 +20,8 @@ import {
   renderPlayerPrefix,
   renderReasoning,
 } from "./LogEntry/renderHelpers";
+import { useGame } from "../context/hooks";
+import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 
 interface LogEntryProps {
   entry: LogEntryType;
@@ -28,6 +30,16 @@ interface LogEntryProps {
   parentPrefix?: string;
   viewer?: "human" | "ai";
   gameMode?: GameMode;
+}
+
+function getInitials(name: string): string {
+  // Extract capital letters from camelCase or PascalCase names
+  const capitals = name.match(/[A-Z]/g);
+  if (capitals && capitals.length >= 2) {
+    return capitals.slice(0, 2).join("");
+  }
+  // Fallback: first two characters
+  return name.slice(0, 2).toUpperCase();
 }
 
 function renderTurnStart(
@@ -50,8 +62,39 @@ function renderTurnStart(
         Turn {entry.turn}
       </span>
       {" - "}
-      <PlayerName player={entry.player} isAI={isAI} />
+      <TurnHeaderPlayerName player={entry.player} isAI={isAI} />
     </div>
+  );
+}
+
+function TurnHeaderPlayerName({
+  player,
+  isAI,
+}: {
+  player: string;
+  isAI?: boolean;
+}) {
+  const { gameState, players, gameMode } = useGame();
+  const playerName = players?.find(p => p.playerId === player)?.name;
+  const displayName = playerName
+    ? isAI
+      ? `${playerName} (AI)`
+      : playerName
+    : formatPlayerName(player, isAI || false, { gameState });
+
+  // Only use initials in multiplayer mode
+  const isMultiplayer = gameMode === "multiplayer";
+  const initials = getInitials(displayName.replace(" (AI)", ""));
+  const finalDisplay = isMultiplayer
+    ? isAI
+      ? `${initials} (AI)`
+      : initials
+    : displayName;
+
+  return (
+    <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
+      {finalDisplay}
+    </span>
   );
 }
 
