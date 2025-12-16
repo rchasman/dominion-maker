@@ -44,6 +44,7 @@ interface GameContextValue {
   strategy: GameStrategy;
   localPlayerId?: string | null; // For multiplayer: which player slot you're in
   localPlayerName?: string; // Display name of the local player
+  isSpectator?: boolean; // Whether the current user is spectating (not playing)
   spectatorCount?: number; // Number of spectators watching the game
   chatMessages?: Array<{
     id: string;
