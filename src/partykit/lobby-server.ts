@@ -25,6 +25,7 @@ export default class LobbyServer implements Party.Server {
   private players: Map<string, ConnectedPlayer> = new Map();
   private requests: Map<string, GameRequest> = new Map();
   private activeGames: Map<string, ActiveGame> = new Map();
+  private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor(readonly room: Party.Room) {}
 
@@ -36,19 +37,25 @@ export default class LobbyServer implements Party.Server {
     const player = this.players.get(conn.id);
     if (!player) return;
 
-    this.players.delete(conn.id);
+    // Delay removal by 1 second to allow reconnection (e.g., during refresh)
+    const timeout = setTimeout(() => {
+      this.players.delete(conn.id);
+      this.disconnectTimeouts.delete(conn.id);
 
-    // Cancel any requests involving this player
-    const requestsToRemove: string[] = [];
-    this.requests.forEach((req, id) => {
-      if (req.fromId === conn.id || req.toId === conn.id) {
-        requestsToRemove.push(id);
-      }
-    });
-    requestsToRemove.forEach(id => this.requests.delete(id));
+      // Cancel any requests involving this player
+      const requestsToRemove: string[] = [];
+      this.requests.forEach((req, id) => {
+        if (req.fromId === conn.id || req.toId === conn.id) {
+          requestsToRemove.push(id);
+        }
+      });
+      requestsToRemove.forEach(id => this.requests.delete(id));
 
-    this.broadcastPlayers();
-    this.broadcastRequests();
+      this.broadcastPlayers();
+      this.broadcastRequests();
+    }, 1000);
+
+    this.disconnectTimeouts.set(conn.id, timeout);
   }
 
   onMessage(message: string, sender: Party.Connection) {
@@ -93,6 +100,30 @@ export default class LobbyServer implements Party.Server {
   }
 
   private handleJoinLobby(conn: Party.Connection, name: string, clientId: string) {
+    // Check if this clientId is already connected (deduplication)
+    const existingPlayer = [...this.players.entries()].find(
+      ([_, p]) => p.clientId === clientId
+    );
+
+    if (existingPlayer) {
+      const [oldConnId, oldPlayer] = existingPlayer;
+      // Remove old connection entry
+      this.players.delete(oldConnId);
+      // Cancel any pending disconnect timeout for the old connection
+      const oldTimeout = this.disconnectTimeouts.get(oldConnId);
+      if (oldTimeout) {
+        clearTimeout(oldTimeout);
+        this.disconnectTimeouts.delete(oldConnId);
+      }
+    }
+
+    // Cancel disconnect timeout for this connection if it exists
+    const existingTimeout = this.disconnectTimeouts.get(conn.id);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.disconnectTimeouts.delete(conn.id);
+    }
+
     const player: ConnectedPlayer = {
       id: conn.id,
       name: name.trim() || `Player${conn.id.slice(0, 4)}`,
