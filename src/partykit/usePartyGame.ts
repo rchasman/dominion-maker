@@ -15,6 +15,7 @@ import type {
   GameServerMessage,
 } from "./protocol";
 import { projectState } from "../events/project";
+import type { GameMode } from "../types/game-mode";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -26,6 +27,8 @@ interface UsePartyGameOptions {
   playerName: string;
   clientId: string;
   isSpectator?: boolean;
+  isSinglePlayer?: boolean;
+  gameMode?: GameMode;
 }
 
 interface PartyGameState {
@@ -63,6 +66,8 @@ export function usePartyGame({
   playerName,
   clientId,
   isSpectator = false,
+  isSinglePlayer = false,
+  gameMode = "engine",
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
   const eventsRef = useRef<GameEvent[]>([]);
@@ -201,9 +206,13 @@ export function usePartyGame({
 
   const startGame = useCallback(
     (kingdomCards?: CardName[]) => {
-      send({ type: "start_game", kingdomCards });
+      if (isSinglePlayer) {
+        send({ type: "start_singleplayer", kingdomCards, gameMode });
+      } else {
+        send({ type: "start_game", kingdomCards });
+      }
     },
-    [send],
+    [send, isSinglePlayer, gameMode],
   );
 
   const playAction = useCallback(
@@ -303,6 +312,19 @@ export function usePartyGame({
     }
     return projectState(events.slice(0, eventIndex + 1));
   }, []);
+
+  // Auto-start single-player games
+  useEffect(() => {
+    if (isSinglePlayer && state.isJoined && state.isHost && !state.gameState) {
+      startGame();
+    }
+  }, [
+    isSinglePlayer,
+    state.isJoined,
+    state.isHost,
+    state.gameState,
+    startGame,
+  ]);
 
   return {
     ...state,

@@ -124,10 +124,21 @@ export function formatPlayerLabel(
   playerId: Player,
   gameMode: GameMode,
   isAIPlayer: boolean,
+  playerName?: string,
+  localPlayerName?: string,
 ): string {
   if (gameMode === "multiplayer") {
-    return playerId === "human" ? "You" : "Opponent";
+    // In multiplayer, use actual names if available
+    if (playerId === "player0" && localPlayerName) {
+      return localPlayerName;
+    }
+    return playerName || (playerId === "human" ? "You" : "Opponent");
   }
 
-  return isAIPlayer ? `AI (${playerId})` : `You (${playerId})`;
+  // In single-player, use actual names
+  if (isAIPlayer) {
+    return playerName || `AI (${playerId})`;
+  }
+
+  return localPlayerName || playerName || `You (${playerId})`;
 }

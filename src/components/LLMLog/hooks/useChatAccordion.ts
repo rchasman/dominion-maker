@@ -5,6 +5,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  senderName: string;
 }
 
 const EXPANDED_KEY = "dominion-chat-expanded";
@@ -62,12 +63,13 @@ export function useChatAccordion() {
   }, [messages]);
 
   const addMessage = useCallback(
-    (role: "user" | "assistant", content: string) => {
+    (role: "user" | "assistant", content: string, senderName: string) => {
       const newMessage: ChatMessage = {
         id: generateId(),
         role,
         content,
         timestamp: Date.now(),
+        senderName,
       };
       setMessages(prev => [...prev.slice(-(MAX_MESSAGES - 1)), newMessage]);
     },
@@ -75,11 +77,11 @@ export function useChatAccordion() {
   );
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, senderName: string) => {
       const trimmed = content.trim();
       if (!trimmed) return;
 
-      addMessage("user", trimmed);
+      addMessage("user", trimmed, senderName);
 
       if (mentionsPatrick(trimmed)) {
         setIsLoading(true);
@@ -100,7 +102,7 @@ export function useChatAccordion() {
 
           if (response.ok) {
             const data = (await response.json()) as { response: string };
-            addMessage("assistant", data.response);
+            addMessage("assistant", data.response, "Patrick");
           }
         } catch (error) {
           console.error("Chat request failed:", error);

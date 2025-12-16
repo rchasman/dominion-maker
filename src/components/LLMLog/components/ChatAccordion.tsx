@@ -1,5 +1,76 @@
 import { useState, useRef, useEffect } from "preact/hooks";
 import { useChatAccordion, type ChatMessage } from "../hooks/useChatAccordion";
+import { useGame } from "../../../context/hooks";
+import { getPlayerColor } from "../../../lib/board-utils";
+
+const MINUTE_PAD_LENGTH = 2;
+const NOON_HOUR = 12;
+
+function formatTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(MINUTE_PAD_LENGTH, "0");
+  const ampm = hours >= NOON_HOUR ? "pm" : "am";
+  const displayHours = hours % NOON_HOUR || NOON_HOUR;
+  return `${displayHours}:${minutes}${ampm}`;
+}
+
+function ChatMessage({ message }: { message: ChatMessage }) {
+  const color = getPlayerColor(message.senderName);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-1)",
+        padding: "var(--space-2)",
+        borderRadius: "4px",
+        background:
+          message.role === "assistant"
+            ? "var(--color-bg)"
+            : "rgba(255, 255, 255, 0.02)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-2)",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.6875rem",
+            fontWeight: 600,
+            color,
+          }}
+        >
+          {message.senderName}
+        </span>
+        <span
+          style={{
+            fontSize: "0.5625rem",
+            color: "var(--color-text-tertiary)",
+          }}
+        >
+          {formatTimestamp(message.timestamp)}
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "var(--color-text-primary)",
+          lineHeight: 1.4,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+        }}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}
 
 function ChatHistory({
   messages,
@@ -27,7 +98,7 @@ function ChatHistory({
         overflowY: "auto",
         display: "flex",
         flexDirection: "column",
-        gap: "var(--space-2)",
+        gap: "var(--space-1)",
         paddingBottom: "var(--space-2)",
       }}
     >
@@ -44,25 +115,7 @@ function ChatHistory({
         </div>
       )}
       {messages.map(entry => (
-        <div
-          key={entry.id}
-          style={{
-            fontSize: "0.75rem",
-            padding: "var(--space-2)",
-            borderRadius: "3px",
-            background:
-              entry.role === "assistant" ? "var(--color-bg)" : "transparent",
-            color:
-              entry.role === "assistant"
-                ? "var(--color-text-primary)"
-                : "var(--color-text-secondary)",
-            fontStyle: entry.role === "user" ? "italic" : "normal",
-            borderLeft:
-              entry.role === "assistant" ? "2px solid #f59e0b" : "none",
-          }}
-        >
-          {entry.content}
-        </div>
+        <ChatMessage key={entry.id} message={entry} />
       ))}
       {isLoading && (
         <div
@@ -73,7 +126,7 @@ function ChatHistory({
             padding: "var(--space-2)",
           }}
         >
-          Thinking...
+          Patrick is typing...
         </div>
       )}
       {messages.length > 0 && (
@@ -175,6 +228,7 @@ function ChatInput({
 }
 
 export function ChatAccordion() {
+  const { localPlayerName = "You" } = useGame();
   const {
     isExpanded,
     setIsExpanded,
@@ -183,6 +237,10 @@ export function ChatAccordion() {
     sendMessage,
     clearMessages,
   } = useChatAccordion();
+
+  const handleSend = (content: string) => {
+    void sendMessage(content, localPlayerName);
+  };
 
   return (
     <div
@@ -234,7 +292,7 @@ export function ChatAccordion() {
             isLoading={isLoading}
             onClear={clearMessages}
           />
-          <ChatInput onSend={sendMessage} disabled={isLoading} />
+          <ChatInput onSend={handleSend} disabled={isLoading} />
         </div>
       )}
     </div>

@@ -44,7 +44,10 @@ interface UsePartyLobbyReturn {
   disconnect: () => void;
 }
 
-export function usePartyLobby(playerName: string, clientId: string): UsePartyLobbyReturn {
+export function usePartyLobby(
+  playerName: string,
+  clientId: string,
+): UsePartyLobbyReturn {
   const socketRef = useRef<PartySocket | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
@@ -71,7 +74,11 @@ export function usePartyLobby(playerName: string, clientId: string): UsePartyLob
 
     socket.addEventListener("open", () => {
       setIsConnected(true);
-      const msg: LobbyClientMessage = { type: "join_lobby", name: playerName, clientId };
+      const msg: LobbyClientMessage = {
+        type: "join_lobby",
+        name: playerName,
+        clientId,
+      };
       socket.send(JSON.stringify(msg));
     });
 

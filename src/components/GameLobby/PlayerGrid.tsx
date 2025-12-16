@@ -98,7 +98,10 @@ export function PlayerGrid({
     let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
     // Find next available color if this one is taken
     let attempts = 0;
-    while (usedColors.has(LOBBY_COLORS[colorIndex]) && attempts < LOBBY_COLORS.length) {
+    while (
+      usedColors.has(LOBBY_COLORS[colorIndex]) &&
+      attempts < LOBBY_COLORS.length
+    ) {
       colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
       attempts++;
     }
@@ -126,7 +129,10 @@ export function PlayerGrid({
   const playersWithHash = sortedPlayers.map(player => {
     const isMe = player.id === myId || player.id === "connecting";
     // Use clientId (or myClientId for connecting placeholder) for stable position
-    const hashKey = player.id === "connecting" ? myClientId : (player as LobbyPlayer).clientId;
+    const hashKey =
+      player.id === "connecting"
+        ? myClientId
+        : (player as LobbyPlayer).clientId;
     return {
       player,
       hash: hashPlayerId(hashKey),
@@ -143,7 +149,9 @@ export function PlayerGrid({
 
   // Assign evenly distributed positions
   playersWithHash.forEach((item, index) => {
-    const position = Math.floor((index / playersWithHash.length) * maxPositions);
+    const position = Math.floor(
+      (index / playersWithHash.length) * maxPositions,
+    );
     playerPositions.set(item.player.id, position);
   });
 
@@ -222,7 +230,8 @@ export function PlayerGrid({
         {sortedPlayers.map(player => {
           const positionIndex = playerPositions.get(player.id) ?? 0;
           // Use fixed position slots so players don't move when others join/leave
-          const angle = (positionIndex / maxPositions) * 2 * Math.PI - Math.PI / 2;
+          const angle =
+            (positionIndex / maxPositions) * 2 * Math.PI - Math.PI / 2;
           const x = Math.cos(angle) * circleRadius;
           const y = Math.sin(angle) * circleRadius;
           const isMe = player.id === myId || player.id === "connecting";
@@ -337,22 +346,49 @@ function GameCircle({
         const y = Math.sin(angle) * circleRadius;
         const playerColor =
           playerColors.get(player.id) ?? getPlayerColor(player.name);
+        const isBot = player.isBot ?? false;
 
         return (
-          <img
+          <div
             key={i}
-            src={`https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(player.name)}`}
-            alt={player.name}
             style={{
               position: "absolute",
-              width: `${avatarSize}px`,
-              height: `${avatarSize}px`,
-              borderRadius: "50%",
-              background: "var(--color-bg-surface)",
-              border: `3px solid ${playerColor}`,
               transform: `translate(${x}px, ${y}px)`,
             }}
-          />
+          >
+            <img
+              src={`https://api.dicebear.com/9.x/${isBot ? "bottts" : "micah"}/svg?seed=${encodeURIComponent(player.name)}`}
+              alt={player.name}
+              style={{
+                width: `${avatarSize}px`,
+                height: `${avatarSize}px`,
+                borderRadius: "50%",
+                background: "var(--color-bg-surface)",
+                border: `3px solid ${playerColor}`,
+              }}
+            />
+            {isBot && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "-2px",
+                  right: "-2px",
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "50%",
+                  background: "#8b5cf6",
+                  border: "2px solid var(--color-bg-surface)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "10px",
+                }}
+                title="Bot player"
+              >
+                🤖
+              </div>
+            )}
+          </div>
         );
       })}
 

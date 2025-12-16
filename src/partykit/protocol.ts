@@ -31,7 +31,7 @@ export interface GameRequest {
 
 export interface ActiveGame {
   roomId: string;
-  players: Array<{ name: string }>;
+  players: Array<{ name: string; isBot?: boolean }>;
   spectatorCount: number;
 }
 
@@ -55,7 +55,7 @@ export type LobbyServerMessage =
 export interface GameUpdateMessage {
   type: "game_update";
   roomId: string;
-  players: Array<{ name: string }>;
+  players: Array<{ name: string; isBot?: boolean }>;
   spectatorCount: number;
   isActive: boolean;
 }
@@ -64,11 +64,25 @@ export interface GameUpdateMessage {
 // Game Protocol
 // ============================================
 
+// Chat message structure
+export interface ChatMessageData {
+  id: string;
+  senderName: string;
+  content: string;
+  timestamp: number;
+}
+
 // Client -> Game Server
 export type GameClientMessage =
   | { type: "join"; name: string; clientId?: string; isBot?: boolean }
   | { type: "spectate"; name: string; clientId?: string }
   | { type: "start_game"; kingdomCards?: CardName[]; botPlayerIds?: PlayerId[] }
+  | {
+      type: "start_singleplayer";
+      botName?: string;
+      kingdomCards?: CardName[];
+      gameMode?: string;
+    }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }
   | { type: "play_all_treasures" }
@@ -79,7 +93,8 @@ export type GameClientMessage =
   | { type: "approve_undo"; requestId: string }
   | { type: "deny_undo"; requestId: string }
   | { type: "resign" }
-  | { type: "leave" };
+  | { type: "leave" }
+  | { type: "chat"; message: ChatMessageData };
 
 // Game Server -> Client
 export type GameServerMessage =
@@ -93,4 +108,6 @@ export type GameServerMessage =
   | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
   | { type: "player_reconnected"; playerName: string; playerId: PlayerId }
   | { type: "error"; message: string }
-  | { type: "game_ended"; reason: string };
+  | { type: "game_ended"; reason: string }
+  | { type: "chat"; message: ChatMessageData }
+  | { type: "chat_history"; messages: ChatMessageData[] };

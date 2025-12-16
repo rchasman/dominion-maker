@@ -9,7 +9,7 @@ import { DominionEngine } from "../engine/engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameUpdateMessage } from "./protocol";
+import type { GameUpdateMessage, ChatMessageData } from "./protocol";
 
 type PlayerId = "player0" | "player1" | "player2" | "player3";
 
@@ -93,6 +93,20 @@ export default class GameServer implements Party.Server {
       this.updateLobby();
     }
 
+    // In single-player games, if the human player leaves, clean up bot connections
+    if (this.isStarted && this.getPlayerCount() === 1) {
+      const remainingPlayer = this.getPlayers()[0];
+      if (
+        remainingPlayer?.playerId &&
+        this.botPlayers.has(remainingPlayer.playerId)
+      ) {
+        // Only a bot remains - end the game
+        this.cleanupBotConnections();
+        this.broadcast({ type: "game_ended", reason: "Player left" });
+        this.updateLobby();
+      }
+    }
+
     if (conn.id === this.hostConnectionId && !this.isStarted) {
       this.broadcast({ type: "game_ended", reason: "Host left" });
     }
@@ -112,6 +126,14 @@ export default class GameServer implements Party.Server {
         break;
       case "start_game":
         this.handleStartGame(sender, msg.kingdomCards, msg.botPlayerIds);
+        break;
+      case "start_singleplayer":
+        this.handleStartSinglePlayer(
+          sender,
+          msg.botName,
+          msg.kingdomCards,
+          msg.gameMode,
+        );
         break;
       case "play_action":
       case "play_treasure":
@@ -268,6 +290,85 @@ export default class GameServer implements Party.Server {
       events: [...this.engine.eventLog],
     });
 
+    this.updateLobby();
+  }
+
+  private handleStartSinglePlayer(
+    conn: Party.Connection,
+    botName?: string,
+    kingdomCards?: CardName[],
+    gameMode?: string,
+  ) {
+    if (conn.id !== this.hostConnectionId) {
+      this.send(conn, { type: "error", message: "Only host can start" });
+      return;
+    }
+
+    if (this.isStarted) {
+      this.send(conn, { type: "error", message: "Game already started" });
+      return;
+    }
+
+    const players = this.getPlayers();
+    if (players.length !== 1) {
+      this.send(conn, {
+        type: "error",
+        message: "Single-player requires exactly 1 human player",
+      });
+      return;
+    }
+
+    // In "full" mode, both players are bots
+    const isFullMode = gameMode === "full";
+
+    // Generate bot name based on mode
+    let botPlayerName: string;
+    if (isFullMode) {
+      // Both are AI, use AI names
+      botPlayerName = botName || "AI Opponent";
+    } else {
+      // Human vs AI
+      botPlayerName = botName || "AI Opponent";
+    }
+
+    // Create a fake connection for the bot
+    const botConnectionId = `bot_${Date.now()}`;
+    const botPlayerId = "player1" as PlayerId;
+
+    // Add bot to connections (without actual socket)
+    this.connections.set(botConnectionId, {
+      id: botConnectionId,
+      name: botPlayerName,
+      playerId: botPlayerId,
+      isSpectator: false,
+    });
+
+    // Track bot info
+    this.playerNames.set(botPlayerId, botPlayerName);
+    this.botPlayers.add(botPlayerId);
+
+    // In full mode, mark player0 as bot too
+    if (isFullMode) {
+      this.botPlayers.add("player0");
+    }
+
+    const playerIds = ["player0", botPlayerId] as PlayerId[];
+
+    this.engine = new DominionEngine();
+    this.engine.startGame(playerIds, kingdomCards);
+    this.isStarted = true;
+
+    this.engine.subscribe((events, state) => {
+      this.broadcast({ type: "events", events, state });
+    });
+
+    this.broadcast({
+      type: "game_started",
+      state: this.engine.state,
+      events: [...this.engine.eventLog],
+    });
+
+    this.broadcastPlayerList();
     this.updateLobby();
   }
 
@@ -503,6 +604,19 @@ export default class GameServer implements Party.Server {
     await lobbyRoom.fetch({
       method: "POST",
       body: JSON.stringify(update),
+    });
+  }
+
+  private cleanupBotConnections() {
+    // Remove all bot connections
+    const botConnectionIds = [...this.connections.entries()]
+      .filter(
+        ([_, conn]) => conn.playerId && this.botPlayers.has(conn.playerId),
+      )
+      .map(([id]) => id);
+
+    botConnectionIds.forEach(id => {
+      this.connections.delete(id);
     });
   }
 }

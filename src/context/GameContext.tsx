@@ -43,6 +43,7 @@ interface GameContextValue {
   hasTreasuresInHand: boolean;
   strategy: GameStrategy;
   localPlayerId?: string | null; // For multiplayer: which player slot you're in
+  localPlayerName?: string; // Display name of the local player
   spectatorCount?: number; // Number of spectators watching the game
   setGameMode: (mode: GameMode) => void;
   setModelSettings: (settings: ModelSettings) => void;
