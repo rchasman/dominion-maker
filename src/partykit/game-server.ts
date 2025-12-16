@@ -9,6 +9,7 @@ import { DominionEngine } from "../engine/engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
+import type { GameUpdateMessage } from "./protocol";
 
 type PlayerId = "player0" | "player1" | "player2" | "player3";
 
@@ -17,14 +18,6 @@ interface PlayerConnection {
   name: string;
   playerId: PlayerId | null;
   isSpectator: boolean;
-}
-
-interface GameInfo {
-  hostName: string;
-  playerCount: number;
-  maxPlayers: number;
-  isStarted: boolean;
-  roomId: string;
 }
 
 type ClientMessage =
@@ -61,6 +54,7 @@ const MAX_PLAYERS = 4;
 export default class GameServer implements Party.Server {
   private engine: DominionEngine | null = null;
   private connections: Map<string, PlayerConnection> = new Map();
+  private playerNames: Map<PlayerId, string> = new Map(); // Track player names
   private hostConnectionId: string | null = null;
   private isStarted = false;
 
@@ -116,6 +110,9 @@ export default class GameServer implements Party.Server {
       case "deny_undo":
         this.handleGameCommand(sender, conn, msg);
         break;
+      case "resign":
+        this.handleResign(sender, conn);
+        break;
       case "leave":
         this.handleLeave(sender);
         break;
@@ -127,7 +124,52 @@ export default class GameServer implements Party.Server {
     player: PlayerConnection,
     name: string,
   ) {
-    if (this.isStarted) {
+    // If game started, check if this player can rejoin
+    if (this.isStarted && this.engine) {
+      console.log(`[handleJoin] Game started, checking rejoin for ${name}`, {
+        playerNames: [...this.playerNames.entries()],
+      });
+      const existingPlayerId = this.findPlayerIdByName(name);
+      console.log(`[handleJoin] Found existingPlayerId:`, existingPlayerId);
+
+      if (existingPlayerId) {
+        // Rejoin as existing player
+        console.log(
+          `[handleJoin] Rejoining player ${name} as ${existingPlayerId}`,
+        );
+        player.name = name;
+        player.playerId = existingPlayerId;
+        player.isSpectator = false;
+
+        // Ensure name is tracked (in case it wasn't)
+        this.playerNames.set(existingPlayerId, name);
+
+        console.log(`[handleJoin] Sending joined message to ${conn.id}`);
+        this.send(conn, {
+          type: "joined",
+          playerId: existingPlayerId,
+          isSpectator: false,
+        });
+
+        console.log(
+          `[handleJoin] Sending full_state with ${this.engine.eventLog.length} events`,
+        );
+        this.send(conn, {
+          type: "full_state",
+          state: this.engine.state,
+          events: [...this.engine.eventLog],
+        });
+
+        console.log(`[handleJoin] Broadcasting player list`);
+        this.broadcastPlayerList();
+
+        console.log(
+          `[handleJoin] Rejoin complete, active connections: ${this.connections.size}`,
+        );
+        return;
+      }
+
+      // Can't join as new player once started
       this.send(conn, { type: "error", message: "Game already started" });
       return;
     }
@@ -148,6 +190,9 @@ export default class GameServer implements Party.Server {
     player.playerId = playerId;
     player.isSpectator = false;
 
+    // Track player name for rejoin
+    this.playerNames.set(playerId, name);
+
     if (!this.hostConnectionId) {
       this.hostConnectionId = conn.id;
     }
@@ -155,6 +200,43 @@ export default class GameServer implements Party.Server {
     this.send(conn, { type: "joined", playerId, isSpectator: false });
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
+    this.updateLobby();
+
+    // Auto-start when 2 players join (from lobby matchmaking)
+    if (this.getPlayerCount() === 2 && !this.isStarted) {
+      this.autoStartGame();
+    }
+  }
+
+  private findPlayerIdByName(name: string): PlayerId | null {
+    for (const [playerId, playerName] of this.playerNames.entries()) {
+      if (playerName === name) {
+        return playerId;
+      }
+    }
+    return null;
+  }
+
+  private autoStartGame() {
+    const players = this.getPlayers();
+    if (players.length < 2) return;
+
+    const playerIds = players.map(p => p.playerId) as PlayerId[];
+
+    this.engine = new DominionEngine();
+    this.engine.startGame(playerIds);
+    this.isStarted = true;
+
+    this.engine.subscribe((events, state) => {
+      this.broadcast({ type: "events", events, state });
+    });
+
+    this.broadcast({
+      type: "game_started",
+      state: this.engine.state,
+      events: [...this.engine.eventLog],
+    });
+
     this.updateLobby();
   }
 
@@ -271,6 +353,35 @@ export default class GameServer implements Party.Server {
     }
   }
 
+  private handleResign(conn: Party.Connection, player: PlayerConnection) {
+    if (!player.playerId || player.isSpectator) {
+      this.send(conn, { type: "error", message: "Not a player" });
+      return;
+    }
+
+    const playerName = player.name;
+
+    // Remove player from game
+    this.playerNames.delete(player.playerId);
+    player.playerId = null;
+    player.isSpectator = true;
+
+    // Notify all players
+    this.broadcast({ type: "player_resigned", playerName });
+
+    this.broadcastPlayerList();
+    this.broadcastSpectatorCount();
+    this.updateLobby();
+
+    // If only one player left, end the game
+    if (this.getPlayerCount() < 2 && this.isStarted) {
+      this.broadcast({
+        type: "game_ended",
+        reason: `${playerName} resigned. Game over.`,
+      });
+    }
+  }
+
   private handleLeave(conn: Party.Connection) {
     const player = this.connections.get(conn.id);
     if (player) {
@@ -332,23 +443,19 @@ export default class GameServer implements Party.Server {
     const lobby = this.room.context.parties.lobby;
     const lobbyRoom = lobby.get("main");
 
-    const info: GameInfo = {
-      hostName: this.getHostName(),
-      playerCount: this.getPlayerCount(),
-      maxPlayers: MAX_PLAYERS,
-      isStarted: this.isStarted,
+    const players = this.getPlayers().map(p => ({ name: p.name }));
+
+    const update: GameUpdateMessage = {
+      type: "game_update",
       roomId: this.room.id,
+      players,
+      spectatorCount: this.getSpectatorCount(),
+      isActive: this.isStarted && players.length > 0,
     };
 
     await lobbyRoom.fetch({
       method: "POST",
-      body: JSON.stringify({ type: "update_game", game: info }),
+      body: JSON.stringify(update),
     });
-  }
-
-  private getHostName(): string {
-    if (!this.hostConnectionId) return "Unknown";
-    const host = this.connections.get(this.hostConnectionId);
-    return host?.name || "Unknown";
   }
 }

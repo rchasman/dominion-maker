@@ -51,6 +51,7 @@ interface PartyGameActions {
   requestUndo: (toEventId: string, reason?: string) => void;
   approveUndo: (requestId: string) => void;
   denyUndo: (requestId: string) => void;
+  resign: () => void;
   leave: () => void;
   getStateAtEvent: (eventId: string) => GameState;
 }
@@ -151,6 +152,13 @@ export function usePartyGame({
           ...s,
           gameState: msg.state,
           events: msg.events,
+        }));
+        break;
+
+      case "player_resigned":
+        setState(s => ({
+          ...s,
+          error: `${msg.playerName} resigned. You win!`,
         }));
         break;
 
@@ -259,6 +267,10 @@ export function usePartyGame({
     [send],
   );
 
+  const resign = useCallback(() => {
+    send({ type: "resign" });
+  }, [send]);
+
   const leave = useCallback(() => {
     send({ type: "leave" });
   }, [send]);
@@ -284,6 +296,7 @@ export function usePartyGame({
     requestUndo,
     approveUndo,
     denyUndo,
+    resign,
     leave,
     getStateAtEvent,
   };
