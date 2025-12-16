@@ -22,11 +22,12 @@ export function fetchStrategyAnalysis(
   currentStrategies: PlayerStrategyData,
   setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
+  const hasStrategies = Object.keys(currentStrategies).length > 0;
+
   api.api["analyze-strategy"]
     .post({
       currentState: state,
-      previousAnalysis:
-        currentStrategies.length > 0 ? currentStrategies : undefined,
+      previousAnalysis: hasStrategies ? currentStrategies : undefined,
     })
     .then(({ data, error }) => {
       if (error) {
@@ -34,7 +35,7 @@ export function fetchStrategyAnalysis(
         return;
       }
 
-      if (!data?.strategySummary || data.strategySummary.length === 0) {
+      if (!data?.strategySummary || Object.keys(data.strategySummary).length === 0) {
         return;
       }
 

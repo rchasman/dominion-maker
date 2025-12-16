@@ -68,7 +68,6 @@ Write with confidence and personality. Be analytical but engaging. No fluff - ev
 }
 
 const PlayerAnalysisSchema = z.object({
-  id: z.string().describe("Player ID (e.g., 'human', 'ai')"),
   gameplan: z
     .string()
     .describe("One-line summary of strategy and current standing"),
@@ -80,10 +79,6 @@ const PlayerAnalysisSchema = z.object({
   recommendation: z
     .string()
     .describe("1-2 sentences on what to do next and why - be decisive"),
-});
-
-const StrategyAnalysisSchema = z.object({
-  players: z.array(PlayerAnalysisSchema),
 });
 
 interface VercelRequest {
@@ -155,22 +150,23 @@ function buildPlayerDeckInfo(
 }
 
 interface PlayerAnalysis {
-  id: string;
   gameplan: string;
   read: string;
   recommendation: string;
 }
 
+type PlayerAnalysisRecord = Record<string, PlayerAnalysis>;
+
 // Parse request body safely
 async function parseRequestBody(
   req: VercelRequest,
-): Promise<{ currentState: GameState; previousAnalysis?: PlayerAnalysis[] }> {
+): Promise<{ currentState: GameState; previousAnalysis?: PlayerAnalysisRecord }> {
   const rawBody = req.body || (req.text ? await req.text() : "{}");
   const parsed: unknown =
     typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
   return parsed as {
     currentState: GameState;
-    previousAnalysis?: PlayerAnalysis[];
+    previousAnalysis?: PlayerAnalysisRecord;
   };
 }
 
@@ -224,19 +220,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const playerDecks = buildPlayerDeckInfo(playerIds, currentState);
 
-    const previousAnalysisSection = previousAnalysis
-      ? `\n\nPREVIOUS ANALYSIS (last turn):\n${encodeToon(previousAnalysis)}`
-      : "";
-
-    const prompt = `${encodeToon(gameContext)}
-
-${turnHistory}
-
-PLAYER DECKS:
-${encodeToon(playerDecks)}${previousAnalysisSection}
-
-Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
-
     // Use GPT-5.2 for high-quality strategy analysis
     const middleware = createDevToolsMiddleware();
     const model = middleware
@@ -246,29 +229,50 @@ Provide a strategic analysis for each player: ${playerIds.join(", ")}.`;
         })
       : gateway("gpt-5.2");
 
-    // Use generateObject with array schema (avoids z.record gateway bug)
-    const result = await generateObject({
-      model,
-      system: buildStrategyAnalysisPrompt(
-        currentState.supply,
-        !!previousAnalysis,
-      ),
-      prompt,
-      schema: StrategyAnalysisSchema,
-      maxRetries: 1,
-      providerOptions: {
-        anthropic: {
-          headers: {
-            "anthropic-beta": "structured-outputs-2025-11-13",
+    // Generate analysis one player at a time, build record
+    const strategySummary: PlayerAnalysisRecord = {};
+
+    for (const playerId of playerIds) {
+      const playerDeck = playerDecks.find(p => p.id === playerId);
+      const previousPlayerAnalysis = previousAnalysis?.[playerId];
+
+      const previousAnalysisSection = previousPlayerAnalysis
+        ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(previousPlayerAnalysis)}`
+        : "";
+
+      const prompt = `${encodeToon(gameContext)}
+
+${turnHistory}
+
+PLAYER DECK (${playerId}):
+${encodeToon(playerDeck)}${previousAnalysisSection}
+
+Provide strategic analysis for player: ${playerId}.`;
+
+      const result = await generateObject({
+        model,
+        system: buildStrategyAnalysisPrompt(
+          currentState.supply,
+          !!previousPlayerAnalysis,
+        ),
+        prompt,
+        schema: PlayerAnalysisSchema,
+        maxRetries: 1,
+        providerOptions: {
+          anthropic: {
+            headers: {
+              "anthropic-beta": "structured-outputs-2025-11-13",
+            },
           },
         },
-      },
-    });
+      });
 
-    apiLogger.info("Strategy analysis completed");
+      strategySummary[playerId] = result.object;
+      apiLogger.info(`Strategy analysis completed for ${playerId}`);
+    }
 
     return res.status(HTTP_STATUS.OK).json({
-      strategySummary: result.object.players,
+      strategySummary,
     });
   } catch (err) {
     const error = err as Error;

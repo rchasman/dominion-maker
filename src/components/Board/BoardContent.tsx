@@ -149,9 +149,7 @@ export function BoardContent({
           actions={displayState.actions}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
-          playerStrategy={game.playerStrategies.find(
-            s => s.id === opponentPlayerId,
-          )}
+          playerStrategy={game.playerStrategies[opponentPlayerId]}
           gameState={displayState}
         />
 
@@ -178,9 +176,7 @@ export function BoardContent({
           selectedCardIndices={selectedCardIndices}
           isPreviewMode={isPreviewMode}
           displayState={displayState}
-          playerStrategy={game.playerStrategies.find(
-            s => s.id === mainPlayerId,
-          )}
+          playerStrategy={game.playerStrategies[mainPlayerId]}
           onCardClick={onCardClick}
           onInPlayClick={onInPlayClick}
           onComplexDecisionChange={onComplexDecisionChange}

@@ -1,6 +1,7 @@
-export type PlayerStrategyData = Array<{
-  id: string;
+export interface PlayerStrategy {
   gameplan: string;
   read: string;
   recommendation: string;
-}>;
+}
+
+export type PlayerStrategyData = Record<string, PlayerStrategy>;
