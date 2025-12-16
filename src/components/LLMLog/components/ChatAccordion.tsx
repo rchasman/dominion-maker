@@ -1,10 +1,23 @@
-import { useState, useRef, useEffect } from "preact/hooks";
-import { useChatAccordion, type ChatMessage } from "../hooks/useChatAccordion";
+import { useState, useRef, useEffect, useCallback } from "preact/hooks";
 import { useGame } from "../../../context/hooks";
 import { getPlayerColor } from "../../../lib/board-utils";
 
 const MINUTE_PAD_LENGTH = 2;
 const NOON_HOUR = 12;
+
+interface ChatMessageData {
+  id: string;
+  senderName: string;
+  content: string;
+  timestamp: number;
+}
+
+function generateId(): string {
+  const ID_RADIX = 36;
+  const ID_SLICE_START = 2;
+  const ID_SLICE_END = 9;
+  return `${Date.now()}-${Math.random().toString(ID_RADIX).slice(ID_SLICE_START, ID_SLICE_END)}`;
+}
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
@@ -15,7 +28,7 @@ function formatTimestamp(timestamp: number): string {
   return `${displayHours}:${minutes}${ampm}`;
 }
 
-function ChatMessage({ message }: { message: ChatMessage }) {
+function ChatMessage({ message }: { message: ChatMessageData }) {
   const color = getPlayerColor(message.senderName);
 
   return (
@@ -26,10 +39,7 @@ function ChatMessage({ message }: { message: ChatMessage }) {
         gap: "var(--space-1)",
         padding: "var(--space-2)",
         borderRadius: "4px",
-        background:
-          message.role === "assistant"
-            ? "var(--color-bg)"
-            : "rgba(255, 255, 255, 0.02)",
+        background: "rgba(255, 255, 255, 0.02)",
       }}
     >
       <div
@@ -72,15 +82,7 @@ function ChatMessage({ message }: { message: ChatMessage }) {
   );
 }
 
-function ChatHistory({
-  messages,
-  isLoading,
-  onClear,
-}: {
-  messages: ChatMessage[];
-  isLoading: boolean;
-  onClear: () => void;
-}) {
+function ChatHistory({ messages }: { messages: ChatMessageData[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,42 +113,12 @@ function ChatHistory({
             padding: "var(--space-2)",
           }}
         >
-          Type a message. Address &quot;Patrick&quot; to get a response.
+          Say something to your fellow players...
         </div>
       )}
       {messages.map(entry => (
         <ChatMessage key={entry.id} message={entry} />
       ))}
-      {isLoading && (
-        <div
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--color-text-tertiary)",
-            fontStyle: "italic",
-            padding: "var(--space-2)",
-          }}
-        >
-          Patrick is typing...
-        </div>
-      )}
-      {messages.length > 0 && (
-        <button
-          onClick={onClear}
-          style={{
-            alignSelf: "flex-start",
-            padding: "2px 8px",
-            fontSize: "0.625rem",
-            background: "transparent",
-            border: "1px solid var(--color-border)",
-            borderRadius: "3px",
-            color: "var(--color-text-tertiary)",
-            cursor: "pointer",
-            marginTop: "var(--space-1)",
-          }}
-        >
-          Clear
-        </button>
-      )}
     </div>
   );
 }
@@ -227,20 +199,41 @@ function ChatInput({
   );
 }
 
-export function ChatAccordion() {
-  const { localPlayerName = "You" } = useGame();
-  const {
-    isExpanded,
-    setIsExpanded,
-    messages,
-    isLoading,
-    sendMessage,
-    clearMessages,
-  } = useChatAccordion();
+const EXPANDED_KEY = "dominion-chat-expanded";
 
-  const handleSend = (content: string) => {
-    void sendMessage(content, localPlayerName);
-  };
+export function ChatAccordion() {
+  const {
+    localPlayerName = "You",
+    chatMessages = [],
+    sendChat,
+  } = useGame();
+
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const stored = localStorage.getItem(EXPANDED_KEY);
+    return stored === "true";
+  });
+
+  // Persist expanded state
+  useEffect(() => {
+    localStorage.setItem(EXPANDED_KEY, String(isExpanded));
+  }, [isExpanded]);
+
+  const handleSend = useCallback(
+    (content: string) => {
+      if (!sendChat) return;
+      const message: ChatMessageData = {
+        id: generateId(),
+        senderName: localPlayerName,
+        content: content.trim(),
+        timestamp: Date.now(),
+      };
+      sendChat(message);
+    },
+    [sendChat, localPlayerName],
+  );
+
+  // Don't render if no sendChat (not in multiplayer context)
+  if (!sendChat) return null;
 
   return (
     <div
@@ -287,12 +280,8 @@ export function ChatAccordion() {
             maxHeight: "300px",
           }}
         >
-          <ChatHistory
-            messages={messages}
-            isLoading={isLoading}
-            onClear={clearMessages}
-          />
-          <ChatInput onSend={handleSend} disabled={isLoading} />
+          <ChatHistory messages={chatMessages} />
+          <ChatInput onSend={handleSend} disabled={false} />
         </div>
       )}
     </div>

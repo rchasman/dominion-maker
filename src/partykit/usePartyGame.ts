@@ -13,6 +13,7 @@ import type {
   PlayerInfo,
   GameClientMessage,
   GameServerMessage,
+  ChatMessageData,
 } from "./protocol";
 import { projectState } from "../events/project";
 import type { GameMode } from "../types/game-mode";
@@ -43,6 +44,7 @@ interface PartyGameState {
   error: string | null;
   isHost: boolean;
   disconnectedPlayers: Map<PlayerId, string>;
+  chatMessages: ChatMessageData[];
 }
 
 interface PartyGameActions {
@@ -59,6 +61,7 @@ interface PartyGameActions {
   resign: () => void;
   leave: () => void;
   getStateAtEvent: (eventId: string) => GameState;
+  sendChat: (message: ChatMessageData) => void;
 }
 
 export function usePartyGame({
@@ -84,6 +87,7 @@ export function usePartyGame({
     error: null,
     isHost: false,
     disconnectedPlayers: new Map(),
+    chatMessages: [],
   });
 
   useEffect(() => {
@@ -197,6 +201,20 @@ export function usePartyGame({
           error: msg.reason,
         }));
         break;
+
+      case "chat":
+        setState(s => ({
+          ...s,
+          chatMessages: [...s.chatMessages, msg.message],
+        }));
+        break;
+
+      case "chat_history":
+        setState(s => ({
+          ...s,
+          chatMessages: msg.messages,
+        }));
+        break;
     }
   }, []);
 
@@ -304,6 +322,13 @@ export function usePartyGame({
     send({ type: "leave" });
   }, [send]);
 
+  const sendChat = useCallback(
+    (message: ChatMessageData) => {
+      send({ type: "chat", message });
+    },
+    [send],
+  );
+
   const getStateAtEvent = useCallback((eventId: string): GameState => {
     const events = eventsRef.current;
     const eventIndex = events.findIndex(e => e.id === eventId);
@@ -341,5 +366,6 @@ export function usePartyGame({
     resign,
     leave,
     getStateAtEvent,
+    sendChat,
   };
 }

@@ -34,7 +34,8 @@ type ClientMessage =
   | { type: "request_undo"; toEventId: string; reason?: string }
   | { type: "approve_undo"; requestId: string }
   | { type: "deny_undo"; requestId: string }
-  | { type: "leave" };
+  | { type: "leave" }
+  | { type: "chat"; message: ChatMessageData };
 
 type ServerMessage =
   | { type: "joined"; playerId: PlayerId | null; isSpectator: boolean }
@@ -49,10 +50,14 @@ type ServerMessage =
   | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
   | { type: "player_reconnected"; playerName: string; playerId: PlayerId }
   | { type: "error"; message: string }
-  | { type: "game_ended"; reason: string };
+  | { type: "game_ended"; reason: string }
+  | { type: "chat"; message: ChatMessageData }
+  | { type: "chat_history"; messages: ChatMessageData[] };
 
 const PLAYER_IDS: PlayerId[] = ["player0", "player1", "player2", "player3"];
 const MAX_PLAYERS = 4;
+
+const MAX_CHAT_MESSAGES = 100;
 
 export default class GameServer implements Party.Server {
   private engine: DominionEngine | null = null;
@@ -62,6 +67,7 @@ export default class GameServer implements Party.Server {
   private botPlayers: Set<PlayerId> = new Set(); // Track which players are bots
   private hostConnectionId: string | null = null;
   private isStarted = false;
+  private chatMessages: ChatMessageData[] = []; // Chat history
 
   constructor(readonly room: Party.Room) {}
 
@@ -152,7 +158,18 @@ export default class GameServer implements Party.Server {
       case "leave":
         this.handleLeave(sender);
         break;
+      case "chat":
+        this.handleChat(sender, msg.message);
+        break;
     }
+  }
+
+  private handleChat(_sender: Party.Connection, message: ChatMessageData) {
+    // Store message (with limit)
+    this.chatMessages = [...this.chatMessages, message].slice(-MAX_CHAT_MESSAGES);
+
+    // Broadcast to all connections
+    this.broadcast({ type: "chat", message });
   }
 
   private handleJoin(
@@ -193,6 +210,14 @@ export default class GameServer implements Party.Server {
           state: this.engine.state,
           events: [...this.engine.eventLog],
         });
+
+        // Send chat history
+        if (this.chatMessages.length > 0) {
+          this.send(conn, {
+            type: "chat_history",
+            messages: this.chatMessages,
+          });
+        }
 
         this.broadcastPlayerList();
 
@@ -358,18 +383,42 @@ export default class GameServer implements Party.Server {
     this.engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
+    // Inject real player names into game state
+    this.injectPlayerNames();
+
     this.engine.subscribe((events, state) => {
+      // Update player names before broadcasting
+      this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
     });
 
+    const initialState = { ...this.engine.state };
+    this.injectPlayerNamesIntoState(initialState);
+
     this.broadcast({
       type: "game_started",
-      state: this.engine.state,
+      state: initialState,
       events: [...this.engine.eventLog],
     });
 
     this.broadcastPlayerList();
     this.updateLobby();
+  }
+
+  private injectPlayerNames() {
+    // Update engine's state with real player names
+    if (this.engine) {
+      for (const [playerId, name] of this.playerNames.entries()) {
+        this.engine.state.playerNames[playerId] = name;
+      }
+    }
+  }
+
+  private injectPlayerNamesIntoState(state: GameState) {
+    // Inject real player names into state object
+    for (const [playerId, name] of this.playerNames.entries()) {
+      state.playerNames[playerId] = name;
+    }
   }
 
   private handleSpectate(
@@ -390,6 +439,14 @@ export default class GameServer implements Party.Server {
         type: "full_state",
         state: this.engine.state,
         events: [...this.engine.eventLog],
+      });
+    }
+
+    // Send chat history
+    if (this.chatMessages.length > 0) {
+      this.send(conn, {
+        type: "chat_history",
+        messages: this.chatMessages,
       });
     }
 
@@ -425,13 +482,21 @@ export default class GameServer implements Party.Server {
     this.engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
+    // Inject real player names into game state
+    this.injectPlayerNames();
+
     this.engine.subscribe((events, state) => {
+      // Update player names before broadcasting
+      this.injectPlayerNamesIntoState(state);
       this.broadcast({ type: "events", events, state });
     });
 
+    const initialState = { ...this.engine.state };
+    this.injectPlayerNamesIntoState(initialState);
+
     this.broadcast({
       type: "game_started",
-      state: this.engine.state,
+      state: initialState,
       events: [...this.engine.eventLog],
     });
 

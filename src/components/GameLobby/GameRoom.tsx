@@ -134,6 +134,8 @@ export function GameRoom({
       localPlayerId: game.playerId,
       localPlayerName: playerName,
       spectatorCount: game.spectatorCount,
+      chatMessages: game.chatMessages,
+      sendChat: game.sendChat,
       hasPlayableActions,
       hasTreasuresInHand,
       strategy: {
