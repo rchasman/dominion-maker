@@ -35,6 +35,7 @@ interface GameRoomProps {
   onGameModeChange?: (mode: GameMode) => void;
   onBack: () => void;
   onResign?: () => void;
+  onConnectionError?: () => void;
 }
 
 export function GameRoom({
@@ -47,6 +48,7 @@ export function GameRoom({
   onGameModeChange,
   onBack,
   onResign,
+  onConnectionError,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
   const game = usePartyGame({
@@ -56,6 +58,7 @@ export function GameRoom({
     isSpectator,
     isSinglePlayer,
     gameMode,
+    onConnectionError,
   });
   const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
     {},
@@ -120,6 +123,28 @@ export function GameRoom({
       onBack();
     }
   };
+
+  // Auto-skip action phase when no playable actions
+  useEffect(() => {
+    if (!game.gameState || game.isProcessing || isSpectator) return;
+
+    const state = game.gameState;
+    const isMyTurn = state.activePlayer === game.playerId;
+    const shouldAutoSkip =
+      state.phase === "action" &&
+      isMyTurn &&
+      !state.pendingDecision &&
+      !state.gameOver &&
+      !hasPlayableActions;
+
+    if (shouldAutoSkip) {
+      const timer = setTimeout(() => {
+        game.endPhase();
+      }, 800); // Short delay before auto-advancing
+
+      return () => clearTimeout(timer);
+    }
+  }, [game, hasPlayableActions, isSpectator]);
 
   // Build GameContext value
   const contextValue = useMemo(
