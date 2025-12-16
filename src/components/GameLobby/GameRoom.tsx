@@ -148,11 +148,7 @@ export function GameRoom({
       !hasPlayableActions;
 
     if (shouldAutoSkip) {
-      const timer = setTimeout(() => {
-        game.endPhase();
-      }, 800); // Short delay before auto-advancing
-
-      return () => clearTimeout(timer);
+      game.endPhase();
     }
   }, [game, hasPlayableActions, isSpectator]);
 
