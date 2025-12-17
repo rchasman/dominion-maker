@@ -4,6 +4,7 @@ import type { CommandResult } from "../../commands/types";
 import type { DecisionChoice } from "../../events/types";
 import { shouldSelectCard, canPlayCard } from "./helpers";
 import type { ComplexDecisionData } from "./hooks";
+import { useAnimationSafe } from "../../animation";
 
 interface BoardHandlersParams {
   gameState: GameState | null;
@@ -58,6 +59,8 @@ export function useBoardHandlers(params: BoardHandlersParams) {
     submitDecision,
   } = params;
 
+  const animation = useAnimationSafe();
+
   const handleCardClick = useCallback(
     (card: CardName, index: number, mainPlayerId: string) => {
       if (!gameState?.activePlayer || gameState.activePlayer !== mainPlayerId) {
@@ -86,10 +89,34 @@ export function useBoardHandlers(params: BoardHandlersParams) {
         gameState.activePlayer === mainPlayerId,
       );
 
+      // Capture card position before playing
+      const cardElement = document.querySelector(
+        `[data-card-id="hand-${index}-${card}"]`,
+      );
+      const fromRect = cardElement?.getBoundingClientRect();
+
       if (canPlay.canPlayAction) {
         handlePlayAction(card);
+        // Queue animation after action
+        if (animation && fromRect) {
+          animation.queueAnimation({
+            cardName: card,
+            fromRect,
+            toZone: "inPlay",
+            duration: 250,
+          });
+        }
       } else if (canPlay.canPlayTreasure) {
         handlePlayTreasure(card);
+        // Queue animation after treasure play
+        if (animation && fromRect) {
+          animation.queueAnimation({
+            cardName: card,
+            fromRect,
+            toZone: "inPlay",
+            duration: 200,
+          });
+        }
       }
     },
     [
@@ -99,6 +126,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
       addCardSelection,
       handlePlayAction,
       handlePlayTreasure,
+      animation,
     ],
   );
 
@@ -112,9 +140,25 @@ export function useBoardHandlers(params: BoardHandlersParams) {
         return;
       }
 
+      // Find the card element in inPlay
+      const cardElement = document.querySelector(
+        `[data-card-id^="inPlay-"][data-card-id$="-${card}"]`,
+      );
+      const fromRect = cardElement?.getBoundingClientRect();
+
       handleUnplayTreasure(card);
+
+      // Queue animation to hand
+      if (animation && fromRect) {
+        animation.queueAnimation({
+          cardName: card,
+          fromRect,
+          toZone: "hand",
+          duration: 200,
+        });
+      }
     },
-    [gameState, handleUnplayTreasure],
+    [gameState, handleUnplayTreasure, animation],
   );
 
   const handleConfirmDecision = useCallback(

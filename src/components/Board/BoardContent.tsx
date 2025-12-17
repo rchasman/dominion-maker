@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "preact/compat";
+import { useCallback } from "preact/hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { formatPlayerName } from "../../lib/board-utils";
@@ -14,6 +15,7 @@ import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
 import type { ComplexDecisionData } from "./hooks";
+import { useAnimationSafe } from "../../animation";
 
 const EventDevtools = lazy(() =>
   import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
@@ -135,6 +137,7 @@ export function BoardContent({
   } = boardState;
 
   const { players } = useGame();
+  const animation = useAnimationSafe();
 
   // Try to get opponent name from players list (multiplayer)
   const opponentPlayerName = players?.find(
@@ -147,6 +150,75 @@ export function BoardContent({
     : formatPlayerName(opponentPlayerId, isOpponentAI, {
         gameState: displayState,
       });
+
+  // Wrap buyCard to add flying animation from supply to discard
+  const animatedBuyCard = useCallback(
+    (card: CardName) => {
+      // Find the supply card element
+      const cardElement = document.querySelector(
+        `[data-card-id="supply-${card}"]`,
+      );
+      const fromRect = cardElement?.getBoundingClientRect();
+
+      // Execute the buy
+      game.buyCard(card);
+
+      // Queue animation
+      if (animation && fromRect) {
+        animation.queueAnimation({
+          cardName: card,
+          fromRect,
+          toZone: "discard",
+          duration: 300,
+        });
+      }
+    },
+    [game, animation],
+  );
+
+  // Wrap playAllTreasures to animate all treasures flying to inPlay
+  const animatedPlayAllTreasures = useCallback(() => {
+    if (!onPlayAllTreasures) return;
+
+    // Find all treasure cards in main player's hand (not opponent's)
+    // Main player cards: hand-{index}-{card}, Opponent cards: hand-opponent-{index}-{card}
+    const treasureElements = document.querySelectorAll(
+      '[data-card-id^="hand-"]:not([data-card-id^="hand-opponent"])',
+    );
+    const filteredElements = Array.from(treasureElements).filter(el => {
+      const cardId = el.getAttribute("data-card-id") ?? "";
+      return (
+        cardId.includes("Copper") ||
+        cardId.includes("Silver") ||
+        cardId.includes("Gold")
+      );
+    });
+
+    const cardRects: Array<{ card: CardName; rect: DOMRect }> = [];
+    filteredElements.forEach(el => {
+      const cardId = el.getAttribute("data-card-id");
+      if (cardId) {
+        // Format is hand-{index}-{cardName}, so skip first two parts
+        const card = cardId.split("-").slice(2).join("-") as CardName;
+        cardRects.push({ card, rect: el.getBoundingClientRect() });
+      }
+    });
+
+    // Execute the action
+    onPlayAllTreasures();
+
+    // Queue animations all at once (no stagger to avoid flash)
+    if (animation) {
+      cardRects.forEach(({ card, rect }) => {
+        animation.queueAnimation({
+          cardName: card,
+          fromRect: rect,
+          toZone: "inPlay",
+          duration: 200,
+        });
+      });
+    }
+  }, [onPlayAllTreasures, animation]);
 
   return (
     <BoardLayout isPreviewMode={isPreviewMode}>
@@ -170,11 +242,11 @@ export function BoardContent({
 
         <SupplyArea
           displayState={displayState}
-          onBuyCard={isPreviewMode ? undefined : game.buyCard}
+          onBuyCard={isPreviewMode ? undefined : animatedBuyCard}
           canBuy={isPreviewMode ? false : canBuy}
           isPlayerActive={isMainPlayerTurn}
           hasTreasuresInHand={game.hasTreasuresInHand}
-          onPlayAllTreasures={onPlayAllTreasures}
+          onPlayAllTreasures={animatedPlayAllTreasures}
           onEndPhase={onEndPhase}
           selectedCardIndices={selectedCardIndices}
           onConfirmDecision={onConfirmDecision}
