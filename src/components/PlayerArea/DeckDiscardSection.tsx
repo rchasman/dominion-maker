@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "preact/hooks";
 import type { CardName } from "../../types/game-state";
 import type { DecisionRequest } from "../../events/types";
 import { Card } from "../Card";
 import { Pile } from "../Pile";
+import { useAnimationSafe } from "../../animation";
 
 function EmptyPileContent() {
   return (
@@ -43,27 +45,7 @@ interface DeckDiscardSectionProps {
   pendingDecision?: DecisionRequest | null;
   isInteractive: boolean;
   onCardClick?: (card: CardName, index: number) => void;
-}
-
-function getDeckContent(
-  deck: CardName[],
-  deckTopRevealed: boolean,
-  knownDeckCards: CardName[],
-  loading: boolean,
-) {
-  if (loading) return <LoadingCardContent />;
-  if (deck.length > 0) {
-    return (
-      <Pile
-        cards={deck}
-        knownCards={knownDeckCards}
-        pileType="deck"
-        size="medium"
-        showBack={!deckTopRevealed}
-      />
-    );
-  }
-  return <EmptyPileContent />;
+  inverted?: boolean;
 }
 
 function renderDiscardSelection(
@@ -123,45 +105,6 @@ function getDiscardContent(
   return <Pile cards={discard} pileType="discard" size="medium" />;
 }
 
-function renderDeckSection(
-  deck: CardName[],
-  deckTopRevealed: boolean,
-  loading: boolean,
-) {
-  const knownDeckCards: CardName[] =
-    deckTopRevealed && deck.length > 0 ? [deck[deck.length - 1]] : [];
-
-  const deckContent = getDeckContent(
-    deck,
-    deckTopRevealed,
-    knownDeckCards,
-    loading,
-  );
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "0.5625rem",
-          color: "rgb(205 133 63)",
-          marginBlockEnd: "var(--space-2)",
-          fontWeight: 600,
-          textTransform: "uppercase",
-        }}
-      >
-        Deck
-      </div>
-      {deckContent}
-    </div>
-  );
-}
-
 export function DeckDiscardSection({
   deck,
   discard,
@@ -170,7 +113,29 @@ export function DeckDiscardSection({
   pendingDecision,
   isInteractive,
   onCardClick,
+  inverted = false,
 }: DeckDiscardSectionProps) {
+  const animation = useAnimationSafe();
+  const deckRef = useRef<HTMLDivElement>(null);
+  const discardRef = useRef<HTMLDivElement>(null);
+
+  // Register with player-specific zone names
+  useEffect(() => {
+    if (animation) {
+      const suffix = inverted ? "-opponent" : "";
+      if (deckRef.current) {
+        animation.registerZoneRef(`deck${suffix}`, deckRef.current);
+      }
+      if (discardRef.current) {
+        animation.registerZoneRef(`discard${suffix}`, discardRef.current);
+      }
+      return () => {
+        animation.registerZoneRef(`deck${suffix}`, null);
+        animation.registerZoneRef(`discard${suffix}`, null);
+      };
+    }
+  }, [animation, inverted]);
+
   const shouldShowDiscardSelection =
     pendingDecision && pendingDecision.from === "discard" && isInteractive;
 
@@ -183,6 +148,9 @@ export function DeckDiscardSection({
       onCardClick,
     },
   );
+
+  const knownDeckCards: CardName[] =
+    deckTopRevealed && deck.length > 0 ? [deck[deck.length - 1]] : [];
 
   return (
     <div
@@ -197,13 +165,48 @@ export function DeckDiscardSection({
       }}
     >
       <div className="deck-discard-wrapper" style={{ width: "100%" }}>
-        {renderDeckSection(deck, deckTopRevealed, loading)}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            minInlineSize: 0,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.5625rem",
+              color: "rgb(205 133 63)",
+              marginBlockEnd: "var(--space-2)",
+              fontWeight: 600,
+              textTransform: "uppercase",
+            }}
+          >
+            Deck
+          </div>
+          <div ref={deckRef} style={{ inlineSize: "100%" }}>
+            {loading ? (
+              <LoadingCardContent />
+            ) : deck.length > 0 ? (
+              <Pile
+                cards={deck}
+                knownCards={knownDeckCards}
+                pileType="deck"
+                size="medium"
+                showBack={!deckTopRevealed}
+              />
+            ) : (
+              <EmptyPileContent />
+            )}
+          </div>
+        </div>
 
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            minInlineSize: 0,
           }}
         >
           <div
@@ -217,7 +220,9 @@ export function DeckDiscardSection({
           >
             Discard
           </div>
-          {discardContent}
+          <div ref={discardRef} style={{ inlineSize: "100%" }}>
+            {discardContent}
+          </div>
         </div>
       </div>
     </div>

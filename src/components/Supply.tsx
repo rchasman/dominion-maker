@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "preact/hooks";
 import type { CardName, GameState } from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
 import { CARDS } from "../data/cards";
@@ -6,6 +7,7 @@ import { Pile } from "./Pile";
 import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
 import { canSkipDecision } from "./Board/helpers";
+import { useAnimationSafe } from "../animation";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -263,6 +265,7 @@ function renderSupplyColumn(params: {
           key={card}
           name={card}
           size={size}
+          cardId={`supply-${card}`}
           count={state.supply[card]}
           onClick={() => onBuyCard?.(card)}
           disabled={
@@ -275,46 +278,53 @@ function renderSupplyColumn(params: {
   );
 }
 
-function renderSupplyGrid(params: {
-  state: GameState;
-  onBuyCard: ((card: CardName) => void) | undefined;
-  canBuyParams: { canBuy: boolean; availableCoins: number };
-  pendingDecision: DecisionRequest | undefined | null;
-  treasures: CardName[];
-  victory: CardName[];
-  sortedKingdom: CardName[];
-  isPlayerActive: boolean;
-  hasTreasuresInHand: boolean;
-  onPlayAllTreasures?: () => void;
-  onEndPhase?: () => void;
-  selectedCardIndices: number[];
-  onConfirmDecision?: (complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  }) => void;
-  onSkipDecision?: () => void;
-  complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  } | null;
-}) {
-  const {
-    state,
-    onBuyCard,
-    canBuyParams,
-    pendingDecision,
-    treasures,
-    victory,
-    sortedKingdom,
-    isPlayerActive,
-    hasTreasuresInHand,
-    onPlayAllTreasures,
-    onEndPhase,
-    selectedCardIndices,
-    onConfirmDecision,
-    onSkipDecision,
-    complexDecisionData,
-  } = params;
+export function Supply({
+  state,
+  onBuyCard,
+  canBuy,
+  availableCoins,
+  pendingDecision,
+  isPlayerActive = false,
+  hasTreasuresInHand = false,
+  onPlayAllTreasures,
+  onEndPhase,
+  selectedCardIndices = [],
+  onConfirmDecision,
+  onSkipDecision,
+  complexDecisionData,
+}: SupplyProps) {
+  const animation = useAnimationSafe();
+  const supplyRef = useRef<HTMLDivElement>(null);
+  const trashRef = useRef<HTMLDivElement>(null);
+
+  // Register supply and trash as animation zones
+  useEffect(() => {
+    if (animation) {
+      if (supplyRef.current) {
+        animation.registerZoneRef("supply", supplyRef.current);
+      }
+      if (trashRef.current) {
+        animation.registerZoneRef("trash", trashRef.current);
+      }
+      return () => {
+        animation.registerZoneRef("supply", null);
+        animation.registerZoneRef("trash", null);
+      };
+    }
+  }, [animation]);
+
+  const treasures: CardName[] = ["Copper", "Silver", "Gold"];
+  const victory: CardName[] = ["Estate", "Duchy", "Province"];
+
+  // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
+  const sorted = [...state.kingdomCards].sort(
+    (a, b) => CARDS[a].cost - CARDS[b].cost,
+  );
+  const sortedKingdom = [
+    ...sorted.slice(KINGDOM_GRID_COLUMNS),
+    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
+  ];
+  const canBuyParams = { canBuy, availableCoins };
 
   const isTurnComplete =
     !state.pendingDecision &&
@@ -326,6 +336,7 @@ function renderSupplyGrid(params: {
 
   return (
     <div
+      ref={supplyRef}
       style={{
         position: "relative",
         display: "grid",
@@ -417,6 +428,7 @@ function renderSupplyGrid(params: {
               key={card}
               name={card}
               size="large"
+              cardId={`supply-${card}`}
               count={state.supply[card]}
               onClick={() => onBuyCard?.(card)}
               disabled={
@@ -429,7 +441,10 @@ function renderSupplyGrid(params: {
       </div>
 
       {/* Trash pile */}
-      <div style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}>
+      <div
+        ref={trashRef}
+        style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}
+      >
         <div
           style={{
             fontSize: "0.625rem",
@@ -481,6 +496,7 @@ function renderSupplyGrid(params: {
           <Card
             name="Curse"
             size="small"
+            cardId="supply-Curse"
             count={state.supply["Curse"]}
             onClick={() => onBuyCard?.("Curse")}
             disabled={
@@ -551,51 +567,4 @@ function renderSupplyGrid(params: {
       )}
     </div>
   );
-}
-
-export function Supply({
-  state,
-  onBuyCard,
-  canBuy,
-  availableCoins,
-  pendingDecision,
-  isPlayerActive = false,
-  hasTreasuresInHand = false,
-  onPlayAllTreasures,
-  onEndPhase,
-  selectedCardIndices = [],
-  onConfirmDecision,
-  onSkipDecision,
-  complexDecisionData,
-}: SupplyProps) {
-  const treasures: CardName[] = ["Copper", "Silver", "Gold"];
-  const victory: CardName[] = ["Estate", "Duchy", "Province"];
-
-  // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
-  const sorted = [...state.kingdomCards].sort(
-    (a, b) => CARDS[a].cost - CARDS[b].cost,
-  );
-  const sortedKingdom = [
-    ...sorted.slice(KINGDOM_GRID_COLUMNS),
-    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
-  ];
-  const canBuyParams = { canBuy, availableCoins };
-
-  return renderSupplyGrid({
-    state,
-    onBuyCard,
-    canBuyParams,
-    pendingDecision,
-    treasures,
-    victory,
-    sortedKingdom,
-    isPlayerActive,
-    hasTreasuresInHand,
-    onPlayAllTreasures,
-    onEndPhase,
-    selectedCardIndices,
-    onConfirmDecision,
-    onSkipDecision,
-    complexDecisionData,
-  });
 }

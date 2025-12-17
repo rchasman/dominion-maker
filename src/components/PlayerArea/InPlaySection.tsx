@@ -1,6 +1,8 @@
+import { useEffect, useRef } from "preact/hooks";
 import type { CardName } from "../../types/game-state";
 import { Card } from "../Card";
 import { CARDS } from "../../data/cards";
+import { useAnimationSafe } from "../../animation";
 
 interface InPlaySectionProps {
   inPlay: CardName[];
@@ -17,8 +19,21 @@ export function InPlaySection({
   onInPlayClick,
   inverted = false,
 }: InPlaySectionProps) {
+  const animation = useAnimationSafe();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Register with player-specific zone name
+  useEffect(() => {
+    if (animation && containerRef.current) {
+      const zoneName = inverted ? "inPlay-opponent" : "inPlay";
+      animation.registerZoneRef(zoneName, containerRef.current);
+      return () => animation.registerZoneRef(zoneName, null);
+    }
+  }, [animation, inverted]);
+
   return (
     <div
+      ref={containerRef}
       style={{
         position: "relative",
         padding: "var(--space-2)",
@@ -64,11 +79,13 @@ export function InPlaySection({
         {!loading &&
           inPlay.map((card, i) => {
             const isTreasure = CARDS[card]?.types.includes("treasure");
+            const suffix = inverted ? "-opponent" : "";
             return (
               <Card
                 key={`${card}-${i}`}
                 name={card}
                 size="small"
+                cardId={`inPlay${suffix}-${i}-${card}`}
                 onClick={
                   onInPlayClick ? () => onInPlayClick(card, i) : undefined
                 }

@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "preact/hooks";
 import type { CardName, Phase } from "../../types/game-state";
 import type { DecisionRequest } from "../../events/types";
 import { Card } from "../Card";
 import { CARDS } from "../../data/cards";
+import { useAnimationSafe } from "../../animation";
 
 const PLACEHOLDER_HAND_SIZE = 5;
 
@@ -17,6 +19,7 @@ interface HandSectionProps {
   phase: Phase;
   actions?: number;
   onCardClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
 }
 
 function getHandCardHighlightMode(
@@ -119,6 +122,7 @@ function HandCardRenderer({
   phase,
   actions,
   onCardClick,
+  inverted,
 }: {
   card: CardName;
   index: number;
@@ -130,6 +134,7 @@ function HandCardRenderer({
   phase: Phase;
   actions: number | undefined;
   onCardClick?: (card: CardName, index: number) => void;
+  inverted: boolean;
 }) {
   const isSelected =
     (!pendingDecision ||
@@ -137,12 +142,15 @@ function HandCardRenderer({
       pendingDecision.from === "discard") &&
     selectedCardIndices.includes(index);
 
+  const cardIdPrefix = inverted ? "hand-opponent" : "hand";
+
   return (
     <div key={`${card}-${index}-wrapper`}>
       <Card
         key={`${card}-${index}`}
         name={card}
         size="large"
+        cardId={`${cardIdPrefix}-${index}-${card}`}
         onClick={() => onCardClick?.(card, index)}
         selected={isSelected}
         highlightMode={getHandCardHighlightMode(
@@ -177,13 +185,27 @@ export function HandSection({
   phase,
   actions,
   onCardClick,
+  inverted = false,
 }: HandSectionProps) {
+  const animation = useAnimationSafe();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Register with player-specific zone name
+  useEffect(() => {
+    if (animation && containerRef.current) {
+      const zoneName = inverted ? "hand-opponent" : "hand";
+      animation.registerZoneRef(zoneName, containerRef.current);
+      return () => animation.registerZoneRef(zoneName, null);
+    }
+  }, [animation, inverted]);
+
   if (!showCards) {
     return <HandCountDisplay handLength={hand.length} />;
   }
 
   return (
     <div
+      ref={containerRef}
       className="hand-container"
       style={{
         position: "relative",
@@ -237,6 +259,7 @@ export function HandSection({
                 phase={phase}
                 actions={actions}
                 onCardClick={onCardClick}
+                inverted={inverted}
               />
             ))}
       </div>

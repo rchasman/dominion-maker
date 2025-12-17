@@ -80,6 +80,7 @@ function HandAndDeckGrid({
   phase,
   actions,
   onCardClick,
+  inverted = false,
 }: {
   player: PlayerState;
   showCards: boolean;
@@ -92,6 +93,7 @@ function HandAndDeckGrid({
   phase: Phase;
   actions: number | undefined;
   onCardClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
 }) {
   return (
     <div
@@ -114,6 +116,7 @@ function HandAndDeckGrid({
         phase={phase}
         actions={actions}
         onCardClick={onCardClick}
+        inverted={inverted}
       />
 
       {showCards && (
@@ -125,6 +128,7 @@ function HandAndDeckGrid({
           pendingDecision={pendingDecision}
           isInteractive={isInteractive}
           onCardClick={onCardClick}
+          inverted={inverted}
         />
       )}
     </div>
@@ -184,6 +188,7 @@ function PlayerAreaContent({
             phase={phase}
             actions={actions}
             onCardClick={onCardClick}
+            inverted={inverted}
           />
 
           <InPlaySection
