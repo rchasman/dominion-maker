@@ -270,7 +270,7 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   // Calculate VP and deck composition for both players
-  const getAllCards = (player: typeof activePlayer) =>
+  const getAllCards = (player: PlayerState | null) =>
     player
       ? [...player.deck, ...player.hand, ...player.discard, ...player.inPlay]
       : [];

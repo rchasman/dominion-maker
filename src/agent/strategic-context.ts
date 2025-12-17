@@ -85,7 +85,7 @@ function extractRecentTurns(
       } as const;
 
       const field = fieldMap[entry.type as keyof typeof fieldMap];
-      if (field && entry.card) {
+      if (field && "card" in entry) {
         const newSummary = {
           ...summary,
           [field]: [...summary[field], entry.card],

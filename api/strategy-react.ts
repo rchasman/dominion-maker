@@ -75,7 +75,7 @@ export default async function handler(
     const result = await generateText({
       model: gateway("mistral/ministral-3b"),
       messages,
-      maxTokens: 150,
+      maxOutputTokens: 150,
       temperature: 0.9,
     });
 
