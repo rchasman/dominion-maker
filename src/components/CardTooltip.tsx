@@ -1,7 +1,8 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
+import { getOptimizedImageUrl, generateSrcSet } from "../lib/image-optimization";
 
 interface CardTooltipProps {
   cardName: CardName;
@@ -17,12 +18,11 @@ export function CardTooltip({
   showBack,
 }: CardTooltipProps) {
   const imageUrl = showBack
-    ? "/cards/Card_back.jpg"
+    ? "/cards/Card_back.webp"
     : getCardImageUrl(cardName);
-
   const fallbackUrl = showBack
-    ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
-    : `https://robinzigmond.github.io/Dominion-app/images/card_images/${cardName.replace(/ /g, "_")}.jpg`;
+    ? "/cards/Card_back.jpg"
+    : getCardImageFallbackUrl(cardName);
 
   const tooltipWidth = 216;
   const tooltipHeight = 336;
@@ -74,24 +74,28 @@ export function CardTooltip({
           WebkitBackdropFilter: "blur(10px)",
         }}
       >
-        <img
-          src={imageUrl}
-          alt={showBack ? "Card back" : cardName}
-          style={{
-            width: "216px",
-            height: "auto",
-            display: "block",
-            borderRadius: "4px",
-          }}
-          onError={() => {
-            const img = document.querySelector(
-              `img[alt="${showBack ? "Card back" : cardName}"]`,
-            );
-            if (img instanceof HTMLImageElement && img.src !== fallbackUrl) {
-              img.src = fallbackUrl;
-            }
-          }}
-        />
+        <picture>
+          <source
+            type="image/webp"
+            srcSet={generateSrcSet(imageUrl, [216, 300, 432])}
+            sizes="216px"
+          />
+          <source
+            type="image/jpeg"
+            srcSet={generateSrcSet(fallbackUrl, [216, 300, 432])}
+            sizes="216px"
+          />
+          <img
+            src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
+            alt={showBack ? "Card back" : cardName}
+            style={{
+              width: "216px",
+              height: "auto",
+              display: "block",
+              borderRadius: "4px",
+            }}
+          />
+        </picture>
       </div>
     </div>,
     document.body,

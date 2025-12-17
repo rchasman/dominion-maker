@@ -1,9 +1,14 @@
 import { useState, useRef } from "preact/hooks";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import { CardTooltip } from "./CardTooltip";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 import { run } from "../lib/run";
+import {
+  getOptimizedImageUrl,
+  generateSrcSet,
+  CARD_WIDTHS,
+} from "../lib/image-optimization";
 
 const TOOLTIP_DELAY_MS = 500;
 const OPACITY_DISABLED = 0.4;
@@ -21,6 +26,7 @@ interface CardProps {
   highlightMode?: "trash" | "discard" | "gain";
   disableTooltip?: boolean;
   cardId?: string;
+  priority?: boolean;
 }
 
 function getBorderStyle(
@@ -73,29 +79,44 @@ function renderCardImage(params: {
   showBack: boolean;
   name: string;
   cardWidth: string;
+  size: "small" | "medium" | "large";
+  priority?: boolean;
 }) {
-  const { imageUrl, fallbackUrl, showBack, name, cardWidth } = params;
+  const { imageUrl, fallbackUrl, showBack, name, cardWidth, size, priority } =
+    params;
+
+  // Generate responsive srcset with Vercel optimization
+  const widths = CARD_WIDTHS[size];
+  const webpSrcSet = generateSrcSet(imageUrl, widths);
+  const jpgSrcSet = generateSrcSet(fallbackUrl, widths);
+  const optimizedSrc = getOptimizedImageUrl({
+    url: imageUrl,
+    width: widths[1], // Use middle width as default
+  });
+  const fallbackSrc = getOptimizedImageUrl({
+    url: fallbackUrl,
+    width: widths[1],
+  });
 
   return (
-    <img
-      src={imageUrl}
-      alt={showBack ? "Card back" : name}
-      style={{
-        maxInlineSize: cardWidth,
-        inlineSize: "100%",
-        blockSize: "auto",
-        display: "block",
-        objectFit: "contain",
-      }}
-      onError={e => {
-        const img = e.target as HTMLImageElement;
-        if (img.src !== fallbackUrl) {
-          img.src = fallbackUrl;
-        } else {
-          img.style.display = "none";
-        }
-      }}
-    />
+    <picture>
+      <source type="image/webp" srcSet={webpSrcSet} sizes={cardWidth} />
+      <source type="image/jpeg" srcSet={jpgSrcSet} sizes={cardWidth} />
+      <img
+        src={optimizedSrc}
+        alt={showBack ? "Card back" : name}
+        loading={priority ? "eager" : "lazy"}
+        decoding={priority ? "sync" : "async"}
+        fetchpriority={priority ? "high" : undefined}
+        style={{
+          maxInlineSize: cardWidth,
+          inlineSize: "100%",
+          blockSize: "auto",
+          display: "block",
+          objectFit: "contain",
+        }}
+      />
+    </picture>
   );
 }
 
@@ -139,16 +160,15 @@ export function Card({
   highlightMode,
   disableTooltip = false,
   cardId,
+  priority = false,
 }: CardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const imageUrl = showBack ? "/cards/Card_back.jpg" : getCardImageUrl(name);
-
+  const imageUrl = showBack ? "/cards/Card_back.webp" : getCardImageUrl(name);
   const fallbackUrl = showBack
-    ? "https://wiki.dominionstrategy.com/images/c/ca/Card_back.jpg"
-    : `https://robinzigmond.github.io/Dominion-app/images/card_images/${name.replace(/ /g, "_")}.jpg`;
-
+    ? "/cards/Card_back.jpg"
+    : getCardImageFallbackUrl(name);
   const cardWidth = getCardWidth(size);
 
   const handleMouseEnter = () => {
@@ -233,7 +253,15 @@ export function Card({
           userSelect: "none",
         }}
       >
-        {renderCardImage({ imageUrl, fallbackUrl, showBack, name, cardWidth })}
+        {renderCardImage({
+          imageUrl,
+          fallbackUrl,
+          showBack,
+          name,
+          cardWidth,
+          size,
+          priority,
+        })}
         {renderCardCount(count)}
       </div>
       {showTooltip && (

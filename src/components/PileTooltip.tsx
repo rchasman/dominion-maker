@@ -1,7 +1,8 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
+import { getOptimizedImageUrl, generateSrcSet } from "../lib/image-optimization";
 
 const MAX_TOOLTIP_HEIGHT = 500;
 const CARD_HEIGHT_ESTIMATE = 80;
@@ -72,6 +73,9 @@ function CardImage({
   card: CardName;
   count: number;
 }): JSX.Element {
+  const imageUrl = getCardImageUrl(card);
+  const fallbackUrl = getCardImageFallbackUrl(card);
+
   return (
     <div
       key={card}
@@ -81,22 +85,27 @@ function CardImage({
         gap: "0.5rem",
       }}
     >
-      <img
-        src={getCardImageUrl(card)}
-        alt={card}
-        style={{
-          width: "var(--card-width-medium)",
-          height: "auto",
-          border: "1px solid var(--color-border)",
-        }}
-        onError={e => {
-          const img = e.target as HTMLImageElement;
-          const fallbackUrl = `https://robinzigmond.github.io/Dominion-app/images/card_images/${card.replace(/ /g, "_")}.jpg`;
-          if (img.src !== fallbackUrl) {
-            img.src = fallbackUrl;
-          }
-        }}
-      />
+      <picture>
+        <source
+          type="image/webp"
+          srcSet={generateSrcSet(imageUrl, [200, 300, 400])}
+          sizes="var(--card-width-medium)"
+        />
+        <source
+          type="image/jpeg"
+          srcSet={generateSrcSet(fallbackUrl, [200, 300, 400])}
+          sizes="var(--card-width-medium)"
+        />
+        <img
+          src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
+          alt={card}
+          style={{
+            width: "var(--card-width-medium)",
+            height: "auto",
+            border: "1px solid var(--color-border)",
+          }}
+        />
+      </picture>
       <span
         style={{
           fontSize: "0.875rem",

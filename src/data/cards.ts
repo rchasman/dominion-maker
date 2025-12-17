@@ -481,6 +481,11 @@ export const FIRST_GAME_KINGDOM: CardName[] = [
 export function getCardImageUrl(cardName: CardName): string {
   // Handle spaces in card names
   const urlName = cardName.replace(/ /g, "_");
+  return `/cards/${urlName}.webp`;
+}
+
+export function getCardImageFallbackUrl(cardName: CardName): string {
+  const urlName = cardName.replace(/ /g, "_");
   return `/cards/${urlName}.jpg`;
 }
 

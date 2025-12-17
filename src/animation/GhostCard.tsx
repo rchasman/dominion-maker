@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import type { Zone } from "./types";
+import { getOptimizedImageUrl, generateSrcSet } from "../lib/image-optimization";
 
 interface GhostCardProps {
   cardName: CardName;
@@ -87,6 +88,7 @@ export function GhostCard({
   if (phase === "done") return null;
 
   const imageUrl = getCardImageUrl(cardName);
+  const fallbackUrl = getCardImageFallbackUrl(cardName);
 
   return (
     <div
@@ -102,17 +104,29 @@ export function GhostCard({
         willChange: "transform, opacity",
       }}
     >
-      <img
-        src={imageUrl}
-        alt={cardName}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          borderRadius: "4px",
-          boxShadow: "0 6px 25px rgba(0, 0, 0, 0.5)",
-        }}
-      />
+      <picture>
+        <source
+          type="image/webp"
+          srcSet={generateSrcSet(imageUrl, [200, 300, 400, 600])}
+          sizes={`${fromRect.width}px`}
+        />
+        <source
+          type="image/jpeg"
+          srcSet={generateSrcSet(fallbackUrl, [200, 300, 400, 600])}
+          sizes={`${fromRect.width}px`}
+        />
+        <img
+          src={getOptimizedImageUrl({ url: imageUrl, width: 400 })}
+          alt={cardName}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            borderRadius: "4px",
+            boxShadow: "0 6px 25px rgba(0, 0, 0, 0.5)",
+          }}
+        />
+      </picture>
     </div>
   );
 }
