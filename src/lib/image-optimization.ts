@@ -19,13 +19,9 @@ export function getOptimizedImageUrl({
   }
 
   // In production, use Vercel Image Optimization for CDN caching
-  // Must use absolute URL for Vercel to find the image
-  const absoluteUrl = url.startsWith("http")
-    ? url
-    : `${window.location.origin}${url}`;
-
+  // Use relative URLs for same-origin images (Vercel static files)
   const params = new URLSearchParams({
-    url: absoluteUrl,
+    url, // Relative URL like /cards/Gold.webp
     w: width.toString(),
     q: quality.toString(),
   });
