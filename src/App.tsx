@@ -4,6 +4,7 @@ import type { GameMode } from "./types/game-mode";
 import { StartScreen } from "./components/StartScreen";
 import { STORAGE_KEYS } from "./context/storage-utils";
 import { uiLogger } from "./lib/logger";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Lazy load game modules (keeps partykit out of single-player bundle)
 const singlePlayerImport = () =>
@@ -94,18 +95,96 @@ function App() {
   // Single player game - GameProvider loaded lazily with SinglePlayerApp
   if (mode === "singleplayer") {
     return (
-      <Suspense fallback={<LoadingScreen />}>
-        <SinglePlayerApp onBackToHome={() => setMode("menu")} />
-      </Suspense>
+      <ErrorBoundary
+        fallback={(_error, _retry) => (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minBlockSize: "100dvh",
+              gap: "var(--space-6)",
+              background:
+                "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+            }}
+          >
+            <h2 style={{ color: "var(--color-attack)" }}>
+              Failed to load game
+            </h2>
+            <button
+              onClick={() => setMode("menu")}
+              style={{
+                padding: "var(--space-5) var(--space-7)",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                background:
+                  "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+                color: "#fff",
+                border: "2px solid var(--color-victory)",
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.125rem",
+                fontFamily: "inherit",
+              }}
+            >
+              Back to Menu
+            </button>
+          </div>
+        )}
+      >
+        <Suspense fallback={<LoadingScreen />}>
+          <SinglePlayerApp onBackToHome={() => setMode("menu")} />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
   // Multiplayer - GameLobby loaded lazily
   if (mode === "multiplayer") {
     return (
-      <Suspense fallback={<LoadingScreen />}>
-        <GameLobby onBack={() => setMode("menu")} />
-      </Suspense>
+      <ErrorBoundary
+        fallback={(_error, _retry) => (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minBlockSize: "100dvh",
+              gap: "var(--space-6)",
+              background:
+                "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
+            }}
+          >
+            <h2 style={{ color: "var(--color-attack)" }}>
+              Failed to load multiplayer
+            </h2>
+            <button
+              onClick={() => setMode("menu")}
+              style={{
+                padding: "var(--space-5) var(--space-7)",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                background:
+                  "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
+                color: "#fff",
+                border: "2px solid var(--color-victory)",
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.125rem",
+                fontFamily: "inherit",
+              }}
+            >
+              Back to Menu
+            </button>
+          </div>
+        )}
+      >
+        <Suspense fallback={<LoadingScreen />}>
+          <GameLobby onBack={() => setMode("menu")} />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
