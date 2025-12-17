@@ -34,6 +34,16 @@ export function getLegalActions(state: GameState): Action[] {
     const options = decision.cardOptions || [];
     const canSkip = decision.min === 0;
 
+    // Handle reaction decisions specially (e.g., revealing Moat against Witch)
+    if (decision.stage?.startsWith("__auto_reaction__")) {
+      // For reactions: AI can skip (decline) or select a reaction card to reveal
+      // Convert to gain_card actions as a proxy for "reveal this reaction"
+      return [
+        ...options.map(card => ({ type: "gain_card" as const, card })),
+        { type: "skip_decision" as const },
+      ];
+    }
+
     // Check if this is a decision with custom actions (like Sentry)
     if (
       decision.actions &&
@@ -205,6 +215,17 @@ export function executeActionWithEngine(
         playerId,
       ).ok;
     case "skip_decision":
+      // Handle reaction decisions: skip means "decline to reveal"
+      if (engine.state.pendingDecision?.stage?.startsWith("__auto_reaction__")) {
+        return engine.dispatch(
+          {
+            type: "SUBMIT_DECISION",
+            player: playerId,
+            choice: { selectedCards: [], cardActions: { "0": "decline" } },
+          },
+          playerId,
+        ).ok;
+      }
       return engine.dispatch(
         {
           type: "SKIP_DECISION",
@@ -218,10 +239,32 @@ export function executeActionWithEngine(
     case "discard_card":
     case "trash_card":
     case "topdeck_card":
-    case "gain_card":
       // Multi-action decisions are handled by multi-round consensus
       // This path is only for simple single-card decisions
       if (!action.card) throw new Error(`${action.type} requires card`);
+      return engine.dispatch(
+        {
+          type: "SUBMIT_DECISION",
+          player: playerId,
+          choice: { selectedCards: [action.card] },
+        },
+        playerId,
+      ).ok;
+    case "gain_card":
+      // For reaction decisions, "gain_card" is used as a proxy for "reveal reaction"
+      if (engine.state.pendingDecision?.stage?.startsWith("__auto_reaction__")) {
+        if (!action.card) throw new Error("gain_card requires card for reactions");
+        return engine.dispatch(
+          {
+            type: "SUBMIT_DECISION",
+            player: playerId,
+            choice: { selectedCards: [action.card], cardActions: { "0": "reveal" } },
+          },
+          playerId,
+        ).ok;
+      }
+      // Regular gain decisions
+      if (!action.card) throw new Error("gain_card requires card");
       return engine.dispatch(
         {
           type: "SUBMIT_DECISION",
