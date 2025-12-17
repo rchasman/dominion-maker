@@ -4,7 +4,7 @@
  */
 
 import type { MutableRef as MutableRefObject } from "preact/hooks";
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { GameState } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
@@ -48,6 +48,10 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
 
   const animation = useAnimationSafe();
 
+  // Use a stable abort ref that only manages AI turns
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastAITurnRef = useRef<string | null>(null);
+
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
@@ -59,16 +63,41 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
 
     if (!isAITurn) {
+      // Not an AI turn - abort any ongoing automation and clear state
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+        lastAITurnRef.current = null;
+      }
       return;
     }
 
+    // It IS an AI turn - check if we need a new abort controller
+    const currentAITurnId = `${gameState.activePlayer}-${gameState.turn}-${gameMode}`;
+
+    if (currentAITurnId !== lastAITurnRef.current) {
+      // New AI turn, create new abort controller
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+      lastAITurnRef.current = currentAITurnId;
+    }
+
+    const signal = abortControllerRef.current?.signal;
+    if (!signal) return;
+
     const timer = setTimeout(() => {
       void (async () => {
+        // Check if aborted before starting
+        if (signal.aborted) return;
+
         setIsProcessing(true);
         try {
           let lastEventCount = engine.eventLog.length;
 
           await strategy.runAITurn(engine, async state => {
+            // Check if aborted before each state update
+            if (signal.aborted) return;
+
             if (!animation) {
               // No animations, just update state immediately
               setEvents([...engine.eventLog]);
@@ -85,6 +114,9 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
 
             if (shouldAnimate) {
               for (const event of newEvents) {
+                // Check if aborted during animation loop
+                if (signal.aborted) return;
+
                 let cardElement: Element | null = null;
                 let toZone: Zone | null = null;
                 let duration = 200;
@@ -129,16 +161,26 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
               }
             }
 
+            // Check if aborted before final state update
+            if (signal.aborted) return;
+
             // Update state AFTER all animations complete
             setEvents([...engine.eventLog]);
             setGameState(state);
           });
+
+          // Check if aborted before final state update
+          if (signal.aborted) return;
+
           setEvents([...engine.eventLog]);
           setGameState(engine.state);
         } catch (error: unknown) {
           uiLogger.error("AI turn error", { error });
         } finally {
-          setIsProcessing(false);
+          // Only reset processing if not aborted
+          if (!signal.aborted) {
+            setIsProcessing(false);
+          }
         }
       })();
     }, TIMING.AI_TURN_DELAY);
@@ -174,6 +216,10 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     setGameState,
   } = params;
 
+  // Use a stable abort controller that only manages AI decisions
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastAIDecisionRef = useRef<string | null>(null);
+
   useEffect(() => {
     const engine = engineRef.current;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
@@ -190,20 +236,49 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
 
     if (!isAIDecision) {
+      // Not an AI decision - abort any ongoing automation and clear state
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+        lastAIDecisionRef.current = null;
+      }
       return;
     }
 
+    // It IS an AI decision - check if we need a new abort controller
+    const currentAIDecisionId = `${gameState.pendingDecision.player}-${gameState.pendingDecision.type}-${gameState.turn}-${gameMode}`;
+
+    if (currentAIDecisionId !== lastAIDecisionRef.current) {
+      // New AI decision, create new abort controller
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+      lastAIDecisionRef.current = currentAIDecisionId;
+    }
+
+    const signal = abortControllerRef.current?.signal;
+    if (!signal) return;
+
     const timer = setTimeout(() => {
       void (async () => {
+        // Check if aborted before starting
+        if (signal.aborted) return;
+
         setIsProcessing(true);
         try {
           await strategy.resolveAIPendingDecision(engine);
+
+          // Check if aborted before state update
+          if (signal.aborted) return;
+
           setEvents([...engine.eventLog]);
           setGameState(engine.state);
         } catch (error: unknown) {
           uiLogger.error("AI pending decision error", { error });
         } finally {
-          setIsProcessing(false);
+          // Only reset processing if not aborted
+          if (!signal.aborted) {
+            setIsProcessing(false);
+          }
         }
       })();
     }, TIMING.AI_DECISION_DELAY);
