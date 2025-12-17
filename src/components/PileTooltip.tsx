@@ -102,6 +102,8 @@ function CardImage({
         <img
           src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
           alt={card}
+          width="200"
+          height="320"
           style={{
             width: "var(--card-width-medium)",
             height: "auto",

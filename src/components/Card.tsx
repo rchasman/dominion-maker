@@ -106,6 +106,8 @@ function renderCardImage(params: {
       <img
         src={optimizedSrc}
         alt={showBack ? "Card back" : name}
+        width="200"
+        height="320"
         loading={priority ? "eager" : "lazy"}
         decoding={priority ? "sync" : "async"}
         fetchpriority={priority ? "high" : undefined}

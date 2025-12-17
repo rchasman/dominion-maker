@@ -121,6 +121,8 @@ export function GhostCard({
         <img
           src={getOptimizedImageUrl({ url: imageUrl, width: 400 })}
           alt={cardName}
+          width="200"
+          height="320"
           style={{
             width: "100%",
             height: "100%",

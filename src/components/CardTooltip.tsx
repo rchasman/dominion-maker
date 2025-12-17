@@ -91,6 +91,8 @@ export function CardTooltip({
           <img
             src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
             alt={showBack ? "Card back" : cardName}
+            width="216"
+            height="346"
             style={{
               width: "216px",
               height: "auto",
