@@ -232,9 +232,9 @@ export function GameRoom({
               onLeave={handleResign}
             />
           )}
-          {game.error && !isSinglePlayer && (
+          {game.gameEndReason && !isSinglePlayer && (
             <GameOverNotification
-              message={game.error}
+              message={game.gameEndReason}
               onClose={() => {
                 localStorage.removeItem("dominion_active_game");
                 onBack();

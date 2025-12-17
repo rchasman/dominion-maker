@@ -42,6 +42,7 @@ interface PartyGameState {
   gameState: GameState | null;
   events: GameEvent[];
   error: string | null;
+  gameEndReason: string | null; // Set only when game permanently ends
   isHost: boolean;
   disconnectedPlayers: Map<PlayerId, string>;
   chatMessages: ChatMessageData[];
@@ -86,6 +87,7 @@ export function usePartyGame({
     gameState: null,
     events: [],
     error: null,
+    gameEndReason: null,
     isHost: false,
     disconnectedPlayers: new Map(),
     chatMessages: [],
@@ -172,7 +174,7 @@ export function usePartyGame({
       case "player_resigned":
         setState(s => ({
           ...s,
-          error: `${msg.playerName} resigned. You win!`,
+          gameEndReason: `${msg.playerName} resigned. You win!`,
         }));
         break;
 
@@ -193,13 +195,15 @@ export function usePartyGame({
         break;
 
       case "error":
+        // Transient errors - log but don't show game over modal
+        console.warn("[Game] Command error:", msg.message);
         setState(s => ({ ...s, error: msg.message }));
         break;
 
       case "game_ended":
         setState(s => ({
           ...s,
-          error: msg.reason,
+          gameEndReason: msg.reason,
         }));
         break;
 
