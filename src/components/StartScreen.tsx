@@ -45,10 +45,16 @@ function renderActionButtons(
   onStartSinglePlayer?: () => void,
   onStartMultiplayer?: () => void,
 ) {
+  // Prefetch modules on hover for instant perceived load
+  const prefetchSinglePlayer = () => void import("../SinglePlayerApp");
+  const prefetchMultiplayer = () => void import("./GameLobby");
+
   return (
     <div style={{ display: "flex", gap: "var(--space-4)" }}>
       <button
         onClick={onStartSinglePlayer}
+        onMouseEnter={prefetchSinglePlayer}
+        onFocus={prefetchSinglePlayer}
         style={{
           padding: "var(--space-6) var(--space-10)",
           fontSize: "0.875rem",
@@ -70,6 +76,8 @@ function renderActionButtons(
       {onStartMultiplayer && (
         <button
           onClick={onStartMultiplayer}
+          onMouseEnter={prefetchMultiplayer}
+          onFocus={prefetchMultiplayer}
           style={{
             padding: "var(--space-6) var(--space-10)",
             fontSize: "0.875rem",
