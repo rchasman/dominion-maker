@@ -142,7 +142,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
     },
     stage: STAGES.VICTIM_TRASH_CHOICE,
   },
-  (state, player) => {
+  (state, player, attackTargets) => {
     // Initial events: Gain Gold + auto-process all opponents without choices
     const gainGold: GameEvent = {
       type: "CARD_GAINED",
@@ -151,7 +151,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
       to: "discard",
     };
 
-    const targets = getOpponents(state, player);
+    const targets = attackTargets ?? getOpponents(state, player);
     const autoProcessEvents = targets.flatMap(t =>
       processOpponentAutoAttack(state, t),
     );

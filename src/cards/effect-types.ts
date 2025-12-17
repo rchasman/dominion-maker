@@ -480,7 +480,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
   config: OpponentIteratorConfig<T>,
   initialEvents:
     | GameEvent[]
-    | ((state: GameState, player: string) => GameEvent[]) = [],
+    | ((state: GameState, player: string, attackTargets?: string[]) => GameEvent[]) = [],
 ): CardEffect {
   return ({
     state,
@@ -491,7 +491,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
   }): CardEffectResult => {
     const events =
       typeof initialEvents === "function"
-        ? initialEvents(state, player)
+        ? initialEvents(state, player, attackTargets)
         : [...initialEvents];
 
     // Initial call: find first opponent needing decision
