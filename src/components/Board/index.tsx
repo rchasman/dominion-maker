@@ -43,6 +43,7 @@ export function Board({ onBackToHome }: BoardProps) {
   });
 
   const mainPlayerId = boardState.mainPlayerId;
+
   const callbacks = createBoardCallbacks({
     isPreviewMode,
     isMainPlayerTurn: boardState.isMainPlayerTurn,

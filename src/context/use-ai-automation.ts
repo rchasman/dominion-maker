@@ -12,6 +12,7 @@ import type { GameEvent } from "../events/types";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
+import { useAnimationSafe } from "../animation";
 
 interface AIAutomationParams {
   gameState: GameState | null;
@@ -22,6 +23,12 @@ interface AIAutomationParams {
   setIsProcessing: (value: boolean) => void;
   setEvents: (events: GameEvent[]) => void;
   setGameState: (state: GameState) => void;
+}
+
+function getOpponentZone(
+  base: "hand" | "inPlay" | "deck" | "discard",
+): "hand-opponent" | "inPlay-opponent" | "deck-opponent" | "discard-opponent" {
+  return `${base}-opponent`;
 }
 
 /**
@@ -38,6 +45,8 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     setEvents,
     setGameState,
   } = params;
+
+  const animation = useAnimationSafe();
 
   useEffect(() => {
     const engine = engineRef.current;
@@ -57,7 +66,71 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       void (async () => {
         setIsProcessing(true);
         try {
-          await strategy.runAITurn(engine, state => {
+          let lastEventCount = engine.eventLog.length;
+
+          await strategy.runAITurn(engine, async state => {
+            if (!animation) {
+              // No animations, just update state immediately
+              setEvents([...engine.eventLog]);
+              setGameState(state);
+              return;
+            }
+
+            // Get new events since last update
+            const newEvents = engine.eventLog.slice(lastEventCount);
+            lastEventCount = engine.eventLog.length;
+
+            // Trigger blocking animations for non-engine modes
+            const shouldAnimate = gameMode !== "engine";
+
+            if (shouldAnimate) {
+              for (const event of newEvents) {
+                let cardElement: Element | null = null;
+                let toZone: Zone | null = null;
+                let duration = 200;
+
+                if (
+                  event.type === "CARD_PLAYED" &&
+                  event.sourceIndex !== undefined
+                ) {
+                  cardElement = document.querySelector(
+                    `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`,
+                  );
+                  toZone = getOpponentZone("inPlay");
+                } else if (event.type === "CARD_GAINED") {
+                  cardElement = document.querySelector(
+                    `[data-card-id="supply-${event.card}"]`,
+                  );
+                  toZone = getOpponentZone(event.to);
+                  duration = 300;
+                } else if (event.type === "CARD_TRASHED") {
+                  const zonePrefix = getOpponentZone(event.from);
+                  cardElement = document.querySelector(
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
+                  );
+                  toZone = "trash";
+                  duration = 250;
+                } else if (event.type === "CARD_RETURNED_TO_HAND") {
+                  const zonePrefix = getOpponentZone(event.from);
+                  cardElement = document.querySelector(
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
+                  );
+                  toZone = getOpponentZone("hand");
+                }
+
+                if (cardElement && toZone) {
+                  await animation.queueAnimationAsync({
+                    cardName: event.card,
+                    fromRect: cardElement.getBoundingClientRect(),
+                    toZone,
+                    duration,
+                  });
+                }
+              }
+            }
+
+            // Update state AFTER all animations complete
+            setEvents([...engine.eventLog]);
             setGameState(state);
           });
           setEvents([...engine.eventLog]);
@@ -82,6 +155,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     setIsProcessing,
     setEvents,
     setGameState,
+    animation,
   ]);
 }
 
