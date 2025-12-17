@@ -59,11 +59,15 @@ export function handlePlayAction(
 
   // Root cause event - playing the card
   const rootEventId = generateEventId();
+  const playerState = state.players[player];
+  const sourceIndex = playerState.hand.indexOf(card);
+
   const baseEvents = [
     {
       type: "CARD_PLAYED" as const,
       player: player,
       card,
+      sourceIndex,
       id: rootEventId,
     },
     ...createResourceEvents(
@@ -153,6 +157,7 @@ export function handlePlayTreasure(
   }
 
   const playerState = state.players[player];
+  const sourceIndex = playerState.hand.indexOf(card);
 
   // Root cause event - playing the treasure
   const rootEventId = generateEventId();
@@ -161,6 +166,7 @@ export function handlePlayTreasure(
       type: "CARD_PLAYED" as const,
       player: player,
       card,
+      sourceIndex,
       id: rootEventId,
     },
   ];

@@ -20,6 +20,7 @@ interface CardProps {
   size?: "small" | "medium" | "large";
   highlightMode?: "trash" | "discard" | "gain";
   disableTooltip?: boolean;
+  cardId?: string;
 }
 
 function getBorderStyle(
@@ -137,6 +138,7 @@ export function Card({
   size = "medium",
   highlightMode,
   disableTooltip = false,
+  cardId,
 }: CardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -212,6 +214,7 @@ export function Card({
   return (
     <>
       <div
+        data-card-id={cardId}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

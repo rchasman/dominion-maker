@@ -78,6 +78,7 @@ export type CardPlayedEvent = EventMetadata & {
   type: "CARD_PLAYED";
   player: PlayerId;
   card: CardName;
+  sourceIndex: number; // Index in hand before playing
 };
 
 export type CardDiscardedEvent = EventMetadata & {
