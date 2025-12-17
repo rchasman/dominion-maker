@@ -40,10 +40,11 @@ export function generateSrcSet(url: string, widths: number[]): string {
 }
 
 /**
- * Card width breakpoints matching CSS variables
+ * Card width breakpoints optimized for actual display sizes
+ * Accounts for 1x and 2x pixel density displays
  */
 export const CARD_WIDTHS = {
-  small: [150, 200, 300],
-  medium: [200, 300, 400],
-  large: [300, 400, 600],
+  small: [128, 256], // ~56px display = 128px for 2x DPI
+  medium: [160, 320], // ~68px display = 160px for 2x DPI
+  large: [200, 400], // ~90px display = 200px for 2x DPI
 } as const;

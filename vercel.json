@@ -5,7 +5,7 @@
   "outputDirectory": "dist",
   "installCommand": "bun install",
   "images": {
-    "sizes": [200, 300, 400, 600, 800],
+    "sizes": [128, 160, 200, 256, 320, 400],
     "domains": [],
     "remotePatterns": [],
     "minimumCacheTTL": 31536000,
