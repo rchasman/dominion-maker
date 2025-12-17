@@ -4,6 +4,13 @@
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
   "installCommand": "bun install",
+  "images": {
+    "sizes": [200, 300, 400, 600, 800],
+    "domains": [],
+    "remotePatterns": [],
+    "minimumCacheTTL": 31536000,
+    "formats": ["image/avif", "image/webp"]
+  },
   "headers": [
     {
       "source": "/cards/(.*)",
