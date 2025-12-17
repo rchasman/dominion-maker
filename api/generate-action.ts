@@ -1,6 +1,6 @@
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
-import type { GameState, CardName } from "../src/types/game-state";
+import type { GameState, CardName, PlayerState } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
 import {
