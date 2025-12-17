@@ -80,12 +80,12 @@ export function CardTooltip({
         <picture>
           <source
             type="image/webp"
-            srcSet={generateSrcSet(imageUrl, [216, 300, 432])}
+            srcSet={generateSrcSet(imageUrl, [200, 320, 400])}
             sizes="216px"
           />
           <source
             type="image/jpeg"
-            srcSet={generateSrcSet(fallbackUrl, [216, 300, 432])}
+            srcSet={generateSrcSet(fallbackUrl, [200, 320, 400])}
             sizes="216px"
           />
           <img
