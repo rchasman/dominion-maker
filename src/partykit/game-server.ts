@@ -370,7 +370,19 @@ export default class GameServer implements Party.Server {
         ...state,
         playerInfo: this.playerInfo,
       };
-      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+
+      // If undo was executed, send full state to sync all clients
+      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
+      if (hasUndoExecuted) {
+        this.broadcast({
+          type: "full_state",
+          state: stateWithPlayerInfo,
+          events: [...this.engine.eventLog],
+        });
+      } else {
+        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+      }
+
       if (state.gameOver) {
         this.updateLobby();
       }
@@ -465,7 +477,19 @@ export default class GameServer implements Party.Server {
         ...state,
         playerInfo: this.playerInfo,
       };
-      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+
+      // If undo was executed, send full state to sync all clients
+      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
+      if (hasUndoExecuted) {
+        this.broadcast({
+          type: "full_state",
+          state: stateWithPlayerInfo,
+          events: [...this.engine.eventLog],
+        });
+      } else {
+        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+      }
+
       if (state.gameOver) {
         this.updateLobby();
       }
@@ -635,7 +659,19 @@ export default class GameServer implements Party.Server {
         ...state,
         playerInfo: this.playerInfo,
       };
-      this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+
+      // If undo was executed, send full state to sync all clients
+      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
+      if (hasUndoExecuted) {
+        this.broadcast({
+          type: "full_state",
+          state: stateWithPlayerInfo,
+          events: [...this.engine.eventLog],
+        });
+      } else {
+        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
+      }
+
       if (state.gameOver) {
         this.updateLobby();
       }
