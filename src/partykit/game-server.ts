@@ -844,20 +844,18 @@ export default class GameServer implements Party.Server {
     const lobbyRoom = lobby.get("main");
 
     // Get all players from playerInfo
-    const players = Object.entries(this.playerInfo).map(
-      ([clientId, info]) => {
-        // Check if this player has an active connection
-        const activeConnection = [...this.connections.values()].find(
-          conn => conn.clientId === clientId && !conn.isSpectator,
-        );
+    const players = Object.entries(this.playerInfo).map(([clientId, info]) => {
+      // Check if this player has an active connection
+      const activeConnection = [...this.connections.values()].find(
+        conn => conn.clientId === clientId && !conn.isSpectator,
+      );
 
-        return {
-          name: info.name,
-          isBot: this.botPlayers.has(clientId),
-          isConnected: !!activeConnection,
-        };
-      },
-    );
+      return {
+        name: info.name,
+        isBot: this.botPlayers.has(clientId),
+        isConnected: !!activeConnection,
+      };
+    });
 
     const update: GameUpdateMessage = {
       type: "game_update",
