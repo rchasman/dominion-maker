@@ -177,10 +177,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
         } catch (error: unknown) {
           uiLogger.error("AI turn error", { error });
         } finally {
-          // Only reset processing if not aborted
-          if (!signal.aborted) {
-            setIsProcessing(false);
-          }
+          setIsProcessing(false);
         }
       })();
     }, TIMING.AI_TURN_DELAY);
@@ -275,10 +272,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
         } catch (error: unknown) {
           uiLogger.error("AI pending decision error", { error });
         } finally {
-          // Only reset processing if not aborted
-          if (!signal.aborted) {
-            setIsProcessing(false);
-          }
+          setIsProcessing(false);
         }
       })();
     }, TIMING.AI_DECISION_DELAY);
