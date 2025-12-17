@@ -71,6 +71,7 @@ export function MainPlayerArea({
 
       {displayState.pendingDecision &&
         displayState.pendingDecision.actions &&
+        displayState.pendingDecision.player === mainPlayerId &&
         !isPreviewMode && (
           <CardDecisionModal
             cards={displayState.pendingDecision.cardOptions}
