@@ -1,5 +1,6 @@
 import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
+import { ReactionModal } from "../ReactionModal";
 import { formatPlayerName } from "../../lib/board-utils";
 import { useGame } from "../../context/hooks";
 import type { GameState, CardName } from "../../types/game-state";
@@ -20,6 +21,8 @@ interface MainPlayerAreaProps {
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName) => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
+  onRevealReaction?: (card: CardName) => void;
+  onDeclineReaction?: () => void;
 }
 
 export function MainPlayerArea({
@@ -35,6 +38,8 @@ export function MainPlayerArea({
   onCardClick,
   onInPlayClick,
   onComplexDecisionChange,
+  onRevealReaction,
+  onDeclineReaction,
 }: MainPlayerAreaProps) {
   const { players } = useGame();
 
@@ -78,6 +83,18 @@ export function MainPlayerArea({
             actions={displayState.pendingDecision.actions}
             requiresOrdering={displayState.pendingDecision.requiresOrdering}
             onDataChange={onComplexDecisionChange}
+          />
+        )}
+
+      {displayState.pendingReaction &&
+        displayState.pendingReaction.defender === mainPlayerId &&
+        !isPreviewMode && (
+          <ReactionModal
+            reactions={displayState.pendingReaction.availableReactions}
+            attackCard={displayState.pendingReaction.attackCard}
+            attacker={displayState.pendingReaction.attacker}
+            onReveal={onRevealReaction || (() => {})}
+            onDecline={onDeclineReaction || (() => {})}
           />
         )}
     </div>

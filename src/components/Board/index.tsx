@@ -25,6 +25,8 @@ export function Board({ onBackToHome }: BoardProps) {
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleRevealReaction,
+    handleDeclineReaction,
     handleBuyCard,
   } = useBoardSetup();
 
@@ -91,6 +93,8 @@ export function Board({ onBackToHome }: BoardProps) {
       onEndPhase={callbacks.onEndPhase}
       onConfirmDecision={callbacks.onConfirmDecision}
       onSkipDecision={callbacks.onSkipDecision}
+      onRevealReaction={handleRevealReaction}
+      onDeclineReaction={handleDeclineReaction}
       onComplexDecisionChange={updateComplexDecision}
     />
   );

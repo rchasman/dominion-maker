@@ -20,6 +20,8 @@ interface TypedGameContext {
   endPhase: () => CommandResult;
   playAllTreasures: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
+  revealReaction: (card: CardName) => CommandResult;
+  declineReaction: () => CommandResult;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   gameMode: GameMode;
@@ -47,6 +49,8 @@ export function useTypedGame(): TypedGameContext {
     endPhase: context.endPhase,
     playAllTreasures: context.playAllTreasures,
     submitDecision: context.submitDecision,
+    revealReaction: context.revealReaction,
+    declineReaction: context.declineReaction,
     hasPlayableActions: context.hasPlayableActions,
     hasTreasuresInHand: context.hasTreasuresInHand,
     gameMode: context.gameMode,

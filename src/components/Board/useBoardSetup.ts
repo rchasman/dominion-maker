@@ -49,6 +49,8 @@ export function useBoardSetup() {
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleRevealReaction,
+    handleDeclineReaction,
   } = useBoardHandlers({
     gameState: game.gameState,
     selectedCardIndices,
@@ -60,6 +62,8 @@ export function useBoardSetup() {
     handlePlayTreasure,
     handleUnplayTreasure,
     submitDecision: game.submitDecision,
+    revealReaction: game.revealReaction,
+    declineReaction: game.declineReaction,
   });
 
   // Preload kingdom cards when game starts
@@ -92,6 +96,8 @@ export function useBoardSetup() {
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleRevealReaction,
+    handleDeclineReaction,
     handleBuyCard,
   };
 }

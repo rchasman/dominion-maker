@@ -223,17 +223,22 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       return;
     }
 
-    if (gameState.subPhase !== "opponent_decision") {
-      return;
-    }
+    // Check for AI reaction (awaiting_reaction subPhase)
+    const isAIReaction =
+      gameMode !== "multiplayer" &&
+      gameState.subPhase === "awaiting_reaction" &&
+      gameState.pendingReaction?.defender &&
+      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingReaction.defender);
 
+    // Check for AI decision (opponent_decision subPhase)
     const isAIDecision =
       gameMode !== "multiplayer" &&
+      gameState.subPhase === "opponent_decision" &&
       gameState.pendingDecision?.player &&
       GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
 
-    if (!isAIDecision) {
-      // Not an AI decision - abort any ongoing automation and clear state
+    if (!isAIReaction && !isAIDecision) {
+      // Not an AI action - abort any ongoing automation and clear state
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
@@ -242,8 +247,10 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       return;
     }
 
-    // It IS an AI decision - check if we need a new abort controller
-    const currentAIDecisionId = `${gameState.pendingDecision.player}-${gameState.pendingDecision.type}-${gameState.turn}-${gameMode}`;
+    // It IS an AI action - check if we need a new abort controller
+    const currentAIDecisionId = isAIReaction
+      ? `reaction-${gameState.pendingReaction!.defender}-${gameState.turn}-${gameMode}`
+      : `decision-${gameState.pendingDecision!.player}-${gameState.pendingDecision!.type}-${gameState.turn}-${gameMode}`;
 
     if (currentAIDecisionId !== lastAIDecisionRef.current) {
       // New AI decision, create new abort controller

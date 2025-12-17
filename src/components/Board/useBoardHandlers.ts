@@ -17,6 +17,8 @@ interface BoardHandlersParams {
   handlePlayTreasure: (card: CardName) => CommandResult;
   handleUnplayTreasure: (card: CardName) => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
+  revealReaction: (card: CardName) => CommandResult;
+  declineReaction: () => CommandResult;
 }
 
 function submitComplexDecision(
@@ -57,6 +59,8 @@ export function useBoardHandlers(params: BoardHandlersParams) {
     handlePlayTreasure,
     handleUnplayTreasure,
     submitDecision,
+    revealReaction,
+    declineReaction,
   } = params;
 
   const animation = useAnimationSafe();
@@ -195,10 +199,29 @@ export function useBoardHandlers(params: BoardHandlersParams) {
     }
   }, [submitDecision, clearSelection]);
 
+  const handleRevealReaction = useCallback(
+    (card: CardName) => {
+      const result = revealReaction(card);
+      if (result.ok) {
+        clearSelection();
+      }
+    },
+    [revealReaction, clearSelection],
+  );
+
+  const handleDeclineReaction = useCallback(() => {
+    const result = declineReaction();
+    if (result.ok) {
+      clearSelection();
+    }
+  }, [declineReaction, clearSelection]);
+
   return {
     handleCardClick,
     handleInPlayClick,
     handleConfirmDecision,
     handleSkipDecision,
+    handleRevealReaction,
+    handleDeclineReaction,
   };
 }

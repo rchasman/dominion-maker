@@ -78,6 +78,15 @@ export function getHintText({
   hasPlayableActions,
   hasTreasuresInHand,
 }: GetHintTextParams): string {
+  // Check for pending reaction first
+  if (
+    displayState.pendingReaction &&
+    displayState.pendingReaction.defender === mainPlayerId
+  ) {
+    const { attackCard, attacker } = displayState.pendingReaction;
+    return `${attacker} played ${attackCard}. Reveal a reaction?`;
+  }
+
   if (
     displayState.pendingDecision &&
     displayState.pendingDecision.player === mainPlayerId

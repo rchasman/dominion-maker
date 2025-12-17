@@ -50,6 +50,8 @@ interface GameActions {
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
+  revealReaction: (card: CardName) => CommandResult;
+  declineReaction: () => CommandResult;
   requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
 }
@@ -238,6 +240,55 @@ export function useGameActions(
     [engineRef, gameState],
   );
 
+  const revealReaction = useCallback(
+    (card: CardName): CommandResult => {
+      const engine = engineRef.current;
+      if (!engine || !gameState) {
+        return { ok: false, error: "No engine" };
+      }
+
+      const defender = gameState.pendingReaction?.defender;
+      if (!defender) {
+        return { ok: false, error: "No pending reaction" };
+      }
+
+      const result = engine.dispatch(
+        { type: "REVEAL_REACTION", player: defender, card },
+        defender,
+      );
+
+      if (result.ok) {
+        setEvents([...engine.eventLog]);
+        setGameState(engine.state);
+      }
+      return result;
+    },
+    [engineRef, gameState, setEvents, setGameState],
+  );
+
+  const declineReaction = useCallback((): CommandResult => {
+    const engine = engineRef.current;
+    if (!engine || !gameState) {
+      return { ok: false, error: "No engine" };
+    }
+
+    const defender = gameState.pendingReaction?.defender;
+    if (!defender) {
+      return { ok: false, error: "No pending reaction" };
+    }
+
+    const result = engine.dispatch(
+      { type: "DECLINE_REACTION", player: defender },
+      defender,
+    );
+
+    if (result.ok) {
+      setEvents([...engine.eventLog]);
+      setGameState(engine.state);
+    }
+    return result;
+  }, [engineRef, gameState, setEvents, setGameState]);
+
   return {
     playAction,
     playTreasure,
@@ -246,6 +297,8 @@ export function useGameActions(
     buyCard,
     endPhase,
     submitDecision,
+    revealReaction,
+    declineReaction,
     requestUndo,
     getStateAtEvent,
   };

@@ -53,6 +53,8 @@ interface BoardContentProps {
   onEndPhase?: () => void;
   onConfirmDecision?: (data: ComplexDecisionData | null) => void;
   onSkipDecision?: () => void;
+  onRevealReaction?: (card: CardName) => void;
+  onDeclineReaction?: () => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
 }
 
@@ -120,6 +122,8 @@ export function BoardContent({
   onEndPhase,
   onConfirmDecision,
   onSkipDecision,
+  onRevealReaction,
+  onDeclineReaction,
   onComplexDecisionChange,
 }: BoardContentProps) {
   const {
@@ -267,6 +271,8 @@ export function BoardContent({
           onCardClick={onCardClick}
           onInPlayClick={onInPlayClick}
           onComplexDecisionChange={onComplexDecisionChange}
+          onRevealReaction={onRevealReaction}
+          onDeclineReaction={onDeclineReaction}
           formatPlayerName={formatPlayerName}
         />
       </GameAreaLayout>

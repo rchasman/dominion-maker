@@ -69,6 +69,8 @@ interface GameContextValue {
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
+  revealReaction: (card: CardName) => CommandResult;
+  declineReaction: () => CommandResult;
   requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
 }
@@ -210,6 +212,8 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     buyCard,
     endPhase,
     submitDecision,
+    revealReaction,
+    declineReaction,
     requestUndo,
     getStateAtEvent,
   } = useGameActions(engineRef, gameState, {
@@ -272,6 +276,8 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
         buyCard,
         endPhase,
         submitDecision,
+        revealReaction,
+        declineReaction,
         requestUndo,
         getStateAtEvent,
       }}
