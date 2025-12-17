@@ -64,4 +64,3 @@ function preloadImage(url: string, width: number): void {
 
   document.head.appendChild(link);
 }
-

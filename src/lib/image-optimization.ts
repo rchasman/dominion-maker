@@ -5,35 +5,23 @@ interface ImageParams {
 }
 
 /**
- * Generate Vercel-optimized image URL for production, original URL for development
+ * Generate optimized image URL (serves WebP directly, already optimized at quality 85)
+ * Vercel automatically compresses static assets with Brotli/Gzip
  */
-export function getOptimizedImageUrl({
-  url,
-  width,
-  quality = 75,
-}: ImageParams): string {
-  // In development, serve images directly
-  if (import.meta.env.DEV) {
-    return url;
-  }
-
-  // In production on Vercel, use Image Optimization API
-  const params = new URLSearchParams({
-    url,
-    w: width.toString(),
-    q: quality.toString(),
-  });
-
-  return `/_vercel/image?${params.toString()}`;
+export function getOptimizedImageUrl({ url }: ImageParams): string {
+  // Serve WebP files directly - they're already optimized
+  // No need for Vercel Image Optimization with static files
+  return url;
 }
 
 /**
  * Generate srcset for responsive images with multiple widths
+ * Browser picks the best size based on viewport and pixel density
  */
 export function generateSrcSet(url: string, widths: number[]): string {
-  return widths
-    .map(w => `${getOptimizedImageUrl({ url, width: w })} ${w}w`)
-    .join(", ");
+  // Serve same WebP file for all sizes (already optimized at 85 quality)
+  // Browser handles resizing efficiently
+  return widths.map(w => `${url} ${w}w`).join(", ");
 }
 
 /**

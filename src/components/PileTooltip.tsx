@@ -2,7 +2,10 @@ import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
-import { getOptimizedImageUrl, generateSrcSet } from "../lib/image-optimization";
+import {
+  getOptimizedImageUrl,
+  generateSrcSet,
+} from "../lib/image-optimization";
 
 const MAX_TOOLTIP_HEIGHT = 500;
 const CARD_HEIGHT_ESTIMATE = 80;

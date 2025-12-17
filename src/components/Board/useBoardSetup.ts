@@ -72,9 +72,15 @@ export function useBoardSetup() {
 
     const kingdomCards = Object.keys(game.gameState.supply).filter(
       card =>
-        !["Copper", "Silver", "Gold", "Estate", "Duchy", "Province", "Curse"].includes(
-          card,
-        ),
+        ![
+          "Copper",
+          "Silver",
+          "Gold",
+          "Estate",
+          "Duchy",
+          "Province",
+          "Curse",
+        ].includes(card),
     ) as CardName[];
 
     preloadKingdomCards(kingdomCards);

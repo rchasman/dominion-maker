@@ -7,9 +7,23 @@
     <title>Dominion</title>
 
     <!-- Critical card back preload (WebP) -->
-    <link rel="preload" as="image" href="/cards/Card_back.webp" type="image/webp" imagesrcset="/_vercel/image?url=/cards/Card_back.webp&w=200&q=75 200w, /_vercel/image?url=/cards/Card_back.webp&w=300&q=75 300w" imagesizes="300px" />
+    <link
+      rel="preload"
+      as="image"
+      href="/cards/Card_back.webp"
+      type="image/webp"
+      imagesrcset="/cards/Card_back.webp 200w, /cards/Card_back.webp 300w"
+      imagesizes="300px"
+    />
     <!-- Fallback for browsers without WebP support -->
-    <link rel="preload" as="image" href="/cards/Card_back.jpg" type="image/jpeg" imagesrcset="/_vercel/image?url=/cards/Card_back.jpg&w=200&q=75 200w, /_vercel/image?url=/cards/Card_back.jpg&w=300&q=75 300w" imagesizes="300px" />
+    <link
+      rel="preload"
+      as="image"
+      href="/cards/Card_back.jpg"
+      type="image/jpeg"
+      imagesrcset="/cards/Card_back.jpg 200w, /cards/Card_back.jpg 300w"
+      imagesizes="300px"
+    />
 
     <style>
       /* Critical CSS inlined for instant first paint */

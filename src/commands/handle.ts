@@ -104,7 +104,10 @@ function isValidPlayer(
   }
 
   // Reaction responses can come from the defender (even during opponent's turn)
-  if (command.type === "REVEAL_REACTION" || command.type === "DECLINE_REACTION") {
+  if (
+    command.type === "REVEAL_REACTION" ||
+    command.type === "DECLINE_REACTION"
+  ) {
     return state.pendingReaction?.defender === fromPlayer;
   }
 

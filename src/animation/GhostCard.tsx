@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import type { Zone } from "./types";
-import { getOptimizedImageUrl, generateSrcSet } from "../lib/image-optimization";
+import {
+  getOptimizedImageUrl,
+  generateSrcSet,
+} from "../lib/image-optimization";
 
 interface GhostCardProps {
   cardName: CardName;

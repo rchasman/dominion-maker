@@ -18,12 +18,12 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
-      .then((registration) => {
+      .then(registration => {
         uiLogger.info("Service worker registered", {
           scope: registration.scope,
         });
       })
-      .catch((error) => {
+      .catch(error => {
         uiLogger.error("Service worker registration failed", { error });
       });
   });

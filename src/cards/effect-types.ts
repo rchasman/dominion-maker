@@ -480,7 +480,11 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
   config: OpponentIteratorConfig<T>,
   initialEvents:
     | GameEvent[]
-    | ((state: GameState, player: string, attackTargets?: string[]) => GameEvent[]) = [],
+    | ((
+        state: GameState,
+        player: string,
+        attackTargets?: string[],
+      ) => GameEvent[]) = [],
 ): CardEffect {
   return ({
     state,
