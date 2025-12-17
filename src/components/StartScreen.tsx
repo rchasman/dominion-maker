@@ -106,7 +106,7 @@ export function StartScreen({
   onStartMultiplayer,
 }: StartScreenProps) {
   return (
-    <div
+    <main
       style={{
         display: "flex",
         flexDirection: "column",
@@ -157,7 +157,7 @@ export function StartScreen({
       </p>
 
       {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
-    </div>
+    </main>
   );
 }
 
