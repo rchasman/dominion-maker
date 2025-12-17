@@ -1,6 +1,7 @@
 import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
 import { formatPlayerName } from "../../lib/board-utils";
+import { useGame } from "../../context/hooks";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
@@ -35,13 +36,23 @@ export function MainPlayerArea({
   onInPlayClick,
   onComplexDecisionChange,
 }: MainPlayerAreaProps) {
+  const { players } = useGame();
+
+  // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
+  const playerName = players?.find(p => p.playerId === mainPlayerId)?.name;
+  const displayName = playerName
+    ? isMainPlayerAI
+      ? `${playerName} (AI)`
+      : playerName
+    : formatPlayerName(mainPlayerId, isMainPlayerAI, {
+        gameState: displayState,
+      });
+
   return (
     <div style={{ position: "relative" }}>
       <PlayerArea
         player={mainPlayer}
-        label={formatPlayerName(mainPlayerId, isMainPlayerAI, {
-          gameState: displayState,
-        })}
+        label={displayName}
         vpCount={mainPlayerVP}
         isActive={isMainPlayerTurn}
         showCards={true}

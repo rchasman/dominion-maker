@@ -46,6 +46,7 @@ interface GameContextValue {
   localPlayerName?: string; // Display name of the local player
   isSpectator?: boolean; // Whether the current user is spectating (not playing)
   spectatorCount?: number; // Number of spectators watching the game
+  players?: Array<{ name: string; playerId: string }>; // All players in the game (for multiplayer)
   chatMessages?: Array<{
     id: string;
     senderName: string;

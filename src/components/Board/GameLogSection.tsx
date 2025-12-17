@@ -139,12 +139,11 @@ export function GameLogSection({
         <div
           style={{
             fontWeight: 600,
-            textTransform: "uppercase",
             fontSize: "0.625rem",
             color: "var(--color-gold)",
           }}
         >
-          Game Log
+          Game log
         </div>
       </div>
       <div

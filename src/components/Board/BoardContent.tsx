@@ -2,6 +2,7 @@ import { lazy, Suspense } from "preact/compat";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { formatPlayerName } from "../../lib/board-utils";
+import { useGame } from "../../context/hooks";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
 import type { CardName, GameState } from "../../types/game-state";
@@ -133,14 +134,26 @@ export function BoardContent({
     isMainPlayerAI,
   } = boardState;
 
+  const { players } = useGame();
+
+  // Try to get opponent name from players list (multiplayer)
+  const opponentPlayerName = players?.find(
+    p => p.playerId === opponentPlayerId,
+  )?.name;
+  const opponentDisplayName = opponentPlayerName
+    ? isOpponentAI
+      ? `${opponentPlayerName} (AI)`
+      : opponentPlayerName
+    : formatPlayerName(opponentPlayerId, isOpponentAI, {
+        gameState: displayState,
+      });
+
   return (
     <BoardLayout isPreviewMode={isPreviewMode}>
       <GameAreaLayout isPreviewMode={isPreviewMode}>
         <PlayerArea
           player={opponent}
-          label={formatPlayerName(opponentPlayerId, isOpponentAI, {
-            gameState: displayState,
-          })}
+          label={opponentDisplayName}
           vpCount={opponentVP}
           isActive={!isMainPlayerTurn}
           showCards={true}

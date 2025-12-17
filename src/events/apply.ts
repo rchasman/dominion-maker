@@ -41,6 +41,7 @@ function applyGameSetupEvent(
       supply: event.supply,
       kingdomCards: event.kingdomCards,
       playerOrder: event.players,
+      playerInfo: state.playerInfo || {},
       turn: 0,
       phase: "action",
       activePlayer: event.players[0],

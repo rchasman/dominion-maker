@@ -166,6 +166,7 @@ export function GameRoom({
       localPlayerName: playerName,
       isSpectator,
       spectatorCount: game.spectatorCount,
+      players: game.players,
       chatMessages: game.chatMessages,
       sendChat: game.sendChat,
       hasPlayableActions,
