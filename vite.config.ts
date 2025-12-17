@@ -51,6 +51,20 @@ export default defineConfig({
             }
             return "vendor";
           }
+
+          // Extract image optimization to shared chunk (used everywhere)
+          if (
+            id.includes("/lib/image-optimization") ||
+            id.includes("/lib/image-preload")
+          ) {
+            return "image-utils";
+          }
+
+          // Tooltips as separate chunks (lazy-loaded on hover)
+          if (id.includes("CardTooltip") || id.includes("PileTooltip")) {
+            return "tooltips";
+          }
+
           if (
             id.includes("/engine/") ||
             id.includes("/commands/") ||

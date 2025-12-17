@@ -1,7 +1,12 @@
 import { useState } from "preact/hooks";
+import { lazy } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { Card } from "./Card";
-import { PileTooltip } from "./PileTooltip";
+
+// Lazy load tooltip - only shown on hover
+const PileTooltip = lazy(() =>
+  import("./PileTooltip").then(m => ({ default: m.PileTooltip })),
+);
 
 interface PileProps {
   cards: CardName[];

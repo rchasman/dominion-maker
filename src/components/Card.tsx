@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
+import { lazy } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
-import { CardTooltip } from "./CardTooltip";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 import { run } from "../lib/run";
 import {
@@ -9,6 +9,11 @@ import {
   generateSrcSet,
   CARD_WIDTHS,
 } from "../lib/image-optimization";
+
+// Lazy load tooltip - only shown on hover
+const CardTooltip = lazy(() =>
+  import("./CardTooltip").then(m => ({ default: m.CardTooltip })),
+);
 
 const TOOLTIP_DELAY_MS = 500;
 const OPACITY_DISABLED = 0.4;
