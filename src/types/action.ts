@@ -11,8 +11,10 @@ export type Action = {
     | "trash_card"
     | "topdeck_card"
     | "skip_decision"
-    | "end_phase";
-  /** The card to act on (not needed for end_phase or skip_decision) */
+    | "end_phase"
+    | "reveal_reaction"
+    | "decline_reaction";
+  /** The card to act on (not needed for end_phase, skip_decision, or decline_reaction) */
   card?: CardName | null;
   /** Explanation for why this action was chosen */
   reasoning?: string;

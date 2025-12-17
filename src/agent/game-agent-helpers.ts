@@ -23,6 +23,18 @@ function withSkipOption<T extends Action>(
 }
 
 export function getLegalActions(state: GameState): Action[] {
+  // NEW: Handle reactions first (separate from decisions)
+  if (state.pendingReaction) {
+    const reaction = state.pendingReaction;
+    return [
+      ...reaction.availableReactions.map(card => ({
+        type: "reveal_reaction" as const,
+        card,
+      })),
+      { type: "decline_reaction" as const },
+    ];
+  }
+
   // Pending decision actions - use decision.player, not activePlayer!
   // (e.g., Militia makes opponent discard while human is still active)
   if (state.pendingDecision) {
@@ -33,16 +45,6 @@ export function getLegalActions(state: GameState): Action[] {
 
     const options = decision.cardOptions || [];
     const canSkip = decision.min === 0;
-
-    // Handle reaction decisions specially (e.g., revealing Moat against Witch)
-    if (decision.stage?.startsWith("__auto_reaction__")) {
-      // For reactions: AI can skip (decline) or select a reaction card to reveal
-      // Convert to gain_card actions as a proxy for "reveal this reaction"
-      return [
-        ...options.map(card => ({ type: "gain_card" as const, card })),
-        { type: "skip_decision" as const },
-      ];
-    }
 
     // Check if this is a decision with custom actions (like Sentry)
     if (
@@ -214,23 +216,20 @@ export function executeActionWithEngine(
         { type: "BUY_CARD", player: playerId, card: action.card },
         playerId,
       ).ok;
-    case "skip_decision":
-      // Handle reaction decisions: skip means "decline to reveal"
-      if (engine.state.pendingDecision?.stage?.startsWith("__auto_reaction__")) {
-        return engine.dispatch(
-          {
-            type: "SUBMIT_DECISION",
-            player: playerId,
-            choice: { selectedCards: [], cardActions: { "0": "decline" } },
-          },
-          playerId,
-        ).ok;
-      }
+    case "reveal_reaction":
+      if (!action.card) throw new Error("reveal_reaction requires card");
       return engine.dispatch(
-        {
-          type: "SKIP_DECISION",
-          player: playerId,
-        },
+        { type: "REVEAL_REACTION", player: playerId, card: action.card },
+        playerId,
+      ).ok;
+    case "decline_reaction":
+      return engine.dispatch(
+        { type: "DECLINE_REACTION", player: playerId },
+        playerId,
+      ).ok;
+    case "skip_decision":
+      return engine.dispatch(
+        { type: "SKIP_DECISION", player: playerId },
         playerId,
       ).ok;
     case "end_phase":
@@ -239,32 +238,10 @@ export function executeActionWithEngine(
     case "discard_card":
     case "trash_card":
     case "topdeck_card":
+    case "gain_card":
       // Multi-action decisions are handled by multi-round consensus
       // This path is only for simple single-card decisions
       if (!action.card) throw new Error(`${action.type} requires card`);
-      return engine.dispatch(
-        {
-          type: "SUBMIT_DECISION",
-          player: playerId,
-          choice: { selectedCards: [action.card] },
-        },
-        playerId,
-      ).ok;
-    case "gain_card":
-      // For reaction decisions, "gain_card" is used as a proxy for "reveal reaction"
-      if (engine.state.pendingDecision?.stage?.startsWith("__auto_reaction__")) {
-        if (!action.card) throw new Error("gain_card requires card for reactions");
-        return engine.dispatch(
-          {
-            type: "SUBMIT_DECISION",
-            player: playerId,
-            choice: { selectedCards: [action.card], cardActions: { "0": "reveal" } },
-          },
-          playerId,
-        ).ok;
-      }
-      // Regular gain decisions
-      if (!action.card) throw new Error("gain_card requires card");
       return engine.dispatch(
         {
           type: "SUBMIT_DECISION",

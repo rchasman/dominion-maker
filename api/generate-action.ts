@@ -83,6 +83,8 @@ const ActionSchema = z
         "topdeck_card",
         "skip_decision",
         "end_phase",
+        "reveal_reaction",
+        "decline_reaction",
       ])
       .describe("The type of action to perform"),
     card: CardNameSchema.nullish().describe(
