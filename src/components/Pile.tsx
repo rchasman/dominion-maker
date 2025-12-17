@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { lazy } from "preact/compat";
+import { lazy, Suspense } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { Card } from "./Card";
 
@@ -97,13 +97,15 @@ export function Pile({
       </div>
 
       {tooltipPosition && (
-        <PileTooltip
-          cards={cards}
-          knownCards={knownCards}
-          mouseX={tooltipPosition.x}
-          mouseY={tooltipPosition.y}
-          pileType={pileType}
-        />
+        <Suspense fallback={null}>
+          <PileTooltip
+            cards={cards}
+            knownCards={knownCards}
+            mouseX={tooltipPosition.x}
+            mouseY={tooltipPosition.y}
+            pileType={pileType}
+          />
+        </Suspense>
       )}
     </>
   );

@@ -1,5 +1,5 @@
 import { useState, useRef } from "preact/hooks";
-import { lazy } from "preact/compat";
+import { lazy, Suspense } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
@@ -268,12 +268,14 @@ export function Card({
         {renderCardCount(count)}
       </div>
       {showTooltip && (
-        <CardTooltip
-          cardName={name}
-          mouseX={mousePosition.x}
-          mouseY={mousePosition.y}
-          showBack={showBack}
-        />
+        <Suspense fallback={null}>
+          <CardTooltip
+            cardName={name}
+            mouseX={mousePosition.x}
+            mouseY={mousePosition.y}
+            showBack={showBack}
+          />
+        </Suspense>
       )}
     </>
   );

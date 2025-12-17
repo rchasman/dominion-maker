@@ -21,12 +21,12 @@ const CRITICAL_CARDS: CardName[] = [
  */
 export function preloadCriticalImages(): void {
   // Preload card back (always visible)
-  preloadImage("/cards/Card_back.jpg", 300);
+  preloadImage("/cards/Card_back.jpg", 128);
 
   // Preload basic cards (in every game)
   CRITICAL_CARDS.forEach(card => {
     const url = getCardImageUrl(card);
-    preloadImage(url, 300);
+    preloadImage(url, 128); // Match small card width (supply piles)
   });
 }
 
@@ -36,7 +36,7 @@ export function preloadCriticalImages(): void {
 export function preloadKingdomCards(kingdomCards: CardName[]): void {
   kingdomCards.forEach(card => {
     const url = getCardImageUrl(card);
-    preloadImage(url, 300);
+    preloadImage(url, 160); // Match medium card width
   });
 }
 
@@ -59,8 +59,8 @@ function preloadImage(url: string, width: number): void {
   link.rel = "preload";
   link.as = "image";
   link.href = optimizedUrl;
-  link.imageSrcset = `${getOptimizedImageUrl({ url, width: 200 })} 200w, ${getOptimizedImageUrl({ url, width: 300 })} 300w, ${getOptimizedImageUrl({ url, width: 400 })} 400w`;
-  link.imageSizes = "300px";
+  // Only preload single size to avoid unused preloads
+  // Browser will fetch other sizes on-demand
 
   document.head.appendChild(link);
 }
