@@ -199,6 +199,34 @@ export type ReactionPlayedEvent = EventMetadata & {
   triggerEventId: string;
 };
 
+// New reaction events (first-class)
+export type ReactionOpportunityEvent = EventMetadata & {
+  type: "REACTION_OPPORTUNITY";
+  defender: PlayerId;
+  attacker: PlayerId;
+  attackCard: CardName;
+  availableReactions: CardName[];
+  metadata: {
+    allTargets: PlayerId[];
+    currentTargetIndex: number;
+    blockedTargets: PlayerId[];
+    originalCause: string;
+  };
+};
+
+export type ReactionRevealedEvent = EventMetadata & {
+  type: "REACTION_REVEALED";
+  defender: PlayerId;
+  card: CardName;
+  attackCard: CardName;
+};
+
+export type ReactionDeclinedEvent = EventMetadata & {
+  type: "REACTION_DECLINED";
+  defender: PlayerId;
+  attackCard: CardName;
+};
+
 // Decisions (DecisionRequest and DecisionChoice moved to types/game-state to break circular dep)
 export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
@@ -285,6 +313,9 @@ export type GameEvent =
   | AttackDeclaredEvent
   | AttackResolvedEvent
   | ReactionPlayedEvent
+  | ReactionOpportunityEvent
+  | ReactionRevealedEvent
+  | ReactionDeclinedEvent
   // Decisions
   | DecisionRequiredEvent
   | DecisionResolvedEvent

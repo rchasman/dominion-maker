@@ -5,6 +5,7 @@ import {
   applyCardMovementEvent,
   applyResourceEvent,
   applyAttackAndReactionEvent,
+  applyReactionEvent,
   applyDecisionEvent,
   applyGameEndEvent,
 } from "./apply-handlers";
@@ -52,6 +53,8 @@ function applyGameSetupEvent(
       winner: null,
       pendingDecision: null,
       pendingDecisionEventId: null,
+      pendingReaction: null,
+      pendingReactionEventId: null,
       subPhase: null,
       trash: [],
       log: [],
@@ -129,6 +132,10 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
   // Try attack and reaction events
   const attackResult = applyAttackAndReactionEvent(state, event);
   if (attackResult) return attackResult;
+
+  // Try reaction events (first-class)
+  const reactionResult = applyReactionEvent(state, event);
+  if (reactionResult) return reactionResult;
 
   // Try decision events
   const decisionResult = applyDecisionEvent(state, event);

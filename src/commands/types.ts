@@ -63,6 +63,18 @@ export type SkipDecisionCommand = {
   player: PlayerId;
 };
 
+// Reaction responses (first-class)
+export type RevealReactionCommand = {
+  type: "REVEAL_REACTION";
+  player: PlayerId;
+  card: CardName;
+};
+
+export type DeclineReactionCommand = {
+  type: "DECLINE_REACTION";
+  player: PlayerId;
+};
+
 // Undo system
 export type RequestUndoCommand = {
   type: "REQUEST_UNDO";
@@ -94,6 +106,8 @@ export type GameCommand =
   | EndPhaseCommand
   | SubmitDecisionCommand
   | SkipDecisionCommand
+  | RevealReactionCommand
+  | DeclineReactionCommand
   | RequestUndoCommand
   | ApproveUndoCommand
   | DenyUndoCommand;

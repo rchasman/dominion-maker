@@ -57,7 +57,7 @@ export type PlayerInfo = {
 };
 
 // Turn sub-phases for handling interruptions (attacks, reactions, etc.)
-export type TurnSubPhase = "opponent_decision" | "waiting_for_reactions" | null;
+export type TurnSubPhase = "opponent_decision" | "awaiting_reaction" | null;
 
 // Decision types (moved here to break circular dependency with events/types)
 
@@ -268,6 +268,20 @@ export type LogEntry =
       children?: LogEntry[];
     };
 
+// Reaction Request (first-class, separate from decisions)
+export type ReactionRequest = {
+  defender: string;
+  attacker: string;
+  attackCard: CardName;
+  availableReactions: CardName[];
+  metadata: {
+    allTargets: string[];
+    currentTargetIndex: number;
+    blockedTargets: string[];
+    originalCause: string;
+  };
+};
+
 export type PlayerState = {
   deck: CardName[];
   hand: CardName[];
@@ -311,6 +325,9 @@ export type GameState = {
 
   pendingDecision: DecisionRequest | null;
   pendingDecisionEventId: string | null; // Event ID that created pendingDecision (for causality)
+
+  pendingReaction: ReactionRequest | null;
+  pendingReactionEventId: string | null; // Event ID that created pendingReaction (for causality)
 
   gameOver: boolean;
   winner: string | null;

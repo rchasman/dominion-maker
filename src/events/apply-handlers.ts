@@ -239,6 +239,67 @@ export function applyAttackAndReactionEvent(
 }
 
 /**
+ * Apply reaction events (first-class)
+ */
+export function applyReactionEvent(
+  state: GameState,
+  event: GameEvent,
+): GameState | null {
+  if (event.type === "REACTION_OPPORTUNITY") {
+    return {
+      ...state,
+      subPhase: "awaiting_reaction",
+      pendingReaction: {
+        defender: event.defender,
+        attacker: event.attacker,
+        attackCard: event.attackCard,
+        availableReactions: event.availableReactions,
+        metadata: event.metadata,
+      },
+      pendingReactionEventId: event.id || null,
+    };
+  }
+
+  if (event.type === "REACTION_REVEALED") {
+    return {
+      ...state,
+      pendingReaction: null,
+      pendingReactionEventId: null,
+      subPhase: null,
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          player: event.defender,
+          message: `${event.defender} reveals ${event.card} to block ${event.attackCard}`,
+          eventId: event.id,
+        },
+      ],
+    };
+  }
+
+  if (event.type === "REACTION_DECLINED") {
+    return {
+      ...state,
+      pendingReaction: null,
+      pendingReactionEventId: null,
+      subPhase: null,
+      log: [
+        ...state.log,
+        {
+          type: "text",
+          player: event.defender,
+          message: `${event.defender} declines to reveal a reaction to ${event.attackCard}`,
+          eventId: event.id,
+        },
+      ],
+    };
+  }
+
+  return null;
+}
+
+/**
  * Apply decision events
  */
 export function applyDecisionEvent(
