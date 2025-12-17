@@ -13,6 +13,18 @@ describe("Consensus System", () => {
     const engine = new DominionEngine();
     engine.startGame(["player1", "player2"]);
 
+    // Set up game state with multiple action cards to trigger consensus
+    engine.state.players.player1.hand = [
+      "Smithy",
+      "Village",
+      "Market",
+      "Copper",
+      "Copper",
+    ];
+    engine.state.activePlayer = "player1";
+    engine.state.phase = "action";
+    engine.state.actions = 1;
+
     const logEntries: LLMLogEntry[] = [];
 
     const logger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
@@ -31,7 +43,11 @@ describe("Consensus System", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              action: { type: "end_phase", reasoning: "Test reasoning" },
+              action: {
+                type: "play_action",
+                card: "Smithy",
+                reasoning: "Test reasoning",
+              },
               format: "json",
             }),
         });

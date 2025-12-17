@@ -538,7 +538,9 @@ export async function advanceGameStateWithConsensus(
   if (legalActions.length === 1) {
     const action = legalActions[0];
     const actionDesc = formatActionDescription(action);
-    agentLogger.info(`Only one legal action: ${actionDesc} (skipping consensus)`);
+    agentLogger.info(
+      `Only one legal action: ${actionDesc} (skipping consensus)`,
+    );
 
     logger?.({
       type: "consensus-skipped",
