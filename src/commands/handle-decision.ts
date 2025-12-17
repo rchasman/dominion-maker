@@ -334,10 +334,7 @@ function handleCardEffectContinuation(
   baseEvents: GameEvent[],
   choice: DecisionChoice,
 ): GameEvent[] {
-  // Check for auto-reaction first
-  const reactionResult = handleAutoReaction(ctx, baseEvents, choice);
-  if (reactionResult) return reactionResult;
-
+  // Reactions are now handled by handle-reaction.ts, not here
   if (!ctx.cardBeingPlayed) return baseEvents;
 
   const effect = getCardEffect(ctx.cardBeingPlayed);
