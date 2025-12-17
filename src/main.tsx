@@ -4,6 +4,7 @@ import { injectSpeedInsights } from "@vercel/speed-insights";
 import App from "./App.tsx";
 import "./index.css";
 import { preloadCriticalImages } from "./lib/image-preload";
+import { uiLogger } from "./lib/logger";
 
 // Initialize Vercel Analytics and Speed Insights
 inject();
@@ -18,10 +19,12 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register("/sw.js")
       .then((registration) => {
-        console.log("[SW] Registered:", registration);
+        uiLogger.info("Service worker registered", {
+          scope: registration.scope,
+        });
       })
       .catch((error) => {
-        console.error("[SW] Registration failed:", error);
+        uiLogger.error("Service worker registration failed", { error });
       });
   });
 }
@@ -30,4 +33,12 @@ const root = document.getElementById("root");
 if (!root) {
   throw new Error("Root element not found");
 }
-render(<App />, root);
+
+import { ErrorBoundary } from "./components/ErrorBoundary";
+
+render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+  root,
+);

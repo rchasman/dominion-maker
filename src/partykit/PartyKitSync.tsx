@@ -11,6 +11,7 @@ import PartySocket from "partysocket";
 import type { GameClientMessage } from "./protocol";
 import { generatePlayerName } from "../lib/name-generator";
 import { STORAGE_KEYS } from "../context/storage-utils";
+import { multiplayerLogger } from "../lib/logger";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -71,7 +72,9 @@ export function PartyKitSync() {
       socketRef.current = socket;
 
       socket.addEventListener("open", () => {
-        console.log("[PartyKit] Connected for spectating:", roomIdRef.current);
+        multiplayerLogger.info("Connected for spectating", {
+          room: roomIdRef.current,
+        });
 
         // Join as the human player
         const joinMsg: GameClientMessage = {
@@ -83,7 +86,7 @@ export function PartyKitSync() {
       });
 
       socket.addEventListener("error", () => {
-        console.warn("[PartyKit] Connection failed - continuing locally");
+        multiplayerLogger.warn("Connection failed - continuing locally");
         socketRef.current = null;
       });
 
@@ -97,14 +100,14 @@ export function PartyKitSync() {
         setIsJoined(false);
       };
     } catch (error) {
-      console.warn("[PartyKit] Setup failed - continuing locally", error);
+      multiplayerLogger.warn("Setup failed - continuing locally", { error });
     }
   }, [gameState]);
 
   // Reset sync counter when new game starts (events array shrinks)
   useEffect(() => {
     if (events.length < syncedEventCountRef.current) {
-      console.log("[PartyKit] New game detected, resetting sync counter");
+      multiplayerLogger.info("New game detected, resetting sync counter");
       syncedEventCountRef.current = 0;
 
       // Clear old room and generate new one for fresh game
@@ -142,16 +145,14 @@ export function PartyKitSync() {
           events,
         };
         socket.send(JSON.stringify(syncMsg));
-        console.log(
-          "[PartyKit] Synced initial state:",
-          events.length,
-          "events",
-        );
+        multiplayerLogger.info("Synced initial state", {
+          eventCount: events.length,
+        });
       }
 
       syncedEventCountRef.current = events.length;
     } catch (error) {
-      console.warn("[PartyKit] Failed to start game on server", error);
+      multiplayerLogger.warn("Failed to start game on server", { error });
     }
   }, [isJoined, gameState, events, gameMode]);
 
@@ -171,10 +172,12 @@ export function PartyKitSync() {
         events: newEvents,
       };
       socket.send(JSON.stringify(syncMsg));
-      console.log("[PartyKit] Synced", newEvents.length, "new events");
+      multiplayerLogger.info("Synced new events", {
+        eventCount: newEvents.length,
+      });
       syncedEventCountRef.current = events.length;
     } catch (error) {
-      console.warn("[PartyKit] Failed to sync events", error);
+      multiplayerLogger.warn("Failed to sync events", { error });
     }
   }, [events, isJoined]);
 
@@ -188,12 +191,12 @@ export function PartyKitSync() {
     try {
       const leaveMsg: GameClientMessage = { type: "leave" };
       socket.send(JSON.stringify(leaveMsg));
-      console.log("[PartyKit] Game ended, cleaning up server");
+      multiplayerLogger.info("Game ended, cleaning up server");
 
       // Clear room ID so a new room is created on next game
       localStorage.removeItem(ROOM_STORAGE_KEY);
     } catch (error) {
-      console.warn("[PartyKit] Failed to send leave message", error);
+      multiplayerLogger.warn("Failed to send leave message", { error });
     }
   }, [gameState?.gameOver, isJoined]);
 

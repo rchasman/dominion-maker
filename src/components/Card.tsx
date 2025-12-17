@@ -93,10 +93,6 @@ function renderCardImage(params: {
     url: imageUrl,
     width: widths[1], // Use middle width as default
   });
-  const fallbackSrc = getOptimizedImageUrl({
-    url: fallbackUrl,
-    width: widths[1],
-  });
 
   return (
     <picture>

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
+import { uiLogger } from "../lib/logger";
 /**
  * Options for syncing to localStorage
  */
@@ -55,19 +56,19 @@ export function useSyncToLocalStorage<T>(
     try {
       localStorage.setItem(key, serialize(value));
     } catch (error) {
-      console.error(`Failed to save ${key} to localStorage:`, error);
+      uiLogger.error("Failed to save to localStorage", { key, error });
 
       // If quota exceeded, clear this specific key and retry once
       if (
         error instanceof DOMException &&
         error.name === "QuotaExceededError"
       ) {
-        console.warn(`Quota exceeded for ${key}, clearing and retrying...`);
+        uiLogger.warn("Quota exceeded, clearing and retrying", { key });
         try {
           localStorage.removeItem(key);
           localStorage.setItem(key, serialize(value));
         } catch (retryError) {
-          console.error(`Retry failed for ${key}:`, retryError);
+          uiLogger.error("Retry failed", { key, error: retryError });
         }
       }
     }
