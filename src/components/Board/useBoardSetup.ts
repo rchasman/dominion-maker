@@ -1,4 +1,4 @@
-import { useState, useCallback } from "preact/hooks";
+import { useState, useCallback, useEffect } from "preact/hooks";
 import {
   useTypedGame,
   useCardSelection,
@@ -8,6 +8,8 @@ import {
   useBuyCardHandler,
 } from "./hooks";
 import { useBoardHandlers } from "./useBoardHandlers";
+import { preloadKingdomCards } from "../../lib/image-preload";
+import type { CardName } from "../../types/game-state";
 
 export function useBoardSetup() {
   const game = useTypedGame();
@@ -59,6 +61,20 @@ export function useBoardSetup() {
     handleUnplayTreasure,
     submitDecision: game.submitDecision,
   });
+
+  // Preload kingdom cards when game starts
+  useEffect(() => {
+    if (!game.gameState?.supply) return;
+
+    const kingdomCards = Object.keys(game.gameState.supply).filter(
+      card =>
+        !["Copper", "Silver", "Gold", "Estate", "Duchy", "Province", "Curse"].includes(
+          card,
+        ),
+    ) as CardName[];
+
+    preloadKingdomCards(kingdomCards);
+  }, [game.gameState?.supply]);
 
   return {
     game,

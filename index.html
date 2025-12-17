@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dominion</title>
+
+    <!-- Critical card back preload (WebP) -->
+    <link rel="preload" as="image" href="/cards/Card_back.webp" type="image/webp" imagesrcset="/_vercel/image?url=/cards/Card_back.webp&w=200&q=75 200w, /_vercel/image?url=/cards/Card_back.webp&w=300&q=75 300w" imagesizes="300px" />
+    <!-- Fallback for browsers without WebP support -->
+    <link rel="preload" as="image" href="/cards/Card_back.jpg" type="image/jpeg" imagesrcset="/_vercel/image?url=/cards/Card_back.jpg&w=200&q=75 200w, /_vercel/image?url=/cards/Card_back.jpg&w=300&q=75 300w" imagesizes="300px" />
+
     <style>
       body {
         margin: 0;
