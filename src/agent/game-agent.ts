@@ -534,6 +534,25 @@ export async function advanceGameStateWithConsensus(
 
   const legalActions = getLegalActions(currentState);
 
+  // Shortcut: if only one legal action, execute it directly without consensus
+  if (legalActions.length === 1) {
+    const action = legalActions[0];
+    const actionDesc = formatActionDescription(action);
+    agentLogger.info(`Only one legal action: ${actionDesc} (skipping consensus)`);
+
+    logger?.({
+      type: "consensus-skipped",
+      message: `Only one legal action available`,
+      data: { action: actionDesc, turn: currentState.turn },
+    });
+
+    const success = executeActionWithEngine(engine, action, playerId);
+    if (!success) {
+      agentLogger.error(`Failed to execute: ${actionDesc}`);
+    }
+    return;
+  }
+
   // Log legal actions for debugging
   const actionSummaries = legalActions.map(a => {
     if (a.type === "end_phase") return "end_phase";
