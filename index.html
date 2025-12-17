@@ -6,24 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dominion</title>
 
-    <!-- Critical card back preload (WebP) -->
-    <link
-      rel="preload"
-      as="image"
-      href="/cards/Card_back.webp"
-      type="image/webp"
-      imagesrcset="/cards/Card_back.webp 200w, /cards/Card_back.webp 300w"
-      imagesizes="300px"
-    />
-    <!-- Fallback for browsers without WebP support -->
-    <link
-      rel="preload"
-      as="image"
-      href="/cards/Card_back.jpg"
-      type="image/jpeg"
-      imagesrcset="/cards/Card_back.jpg 200w, /cards/Card_back.jpg 300w"
-      imagesizes="300px"
-    />
+    <!-- Critical card back preload -->
+    <!-- Note: URLs are dynamically generated with absolute URLs in production -->
+    <link rel="preload" as="image" href="/cards/Card_back.webp" />
 
     <style>
       /* Critical CSS inlined for instant first paint */
