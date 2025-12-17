@@ -269,13 +269,14 @@ export const isActionValid = (
       action.type === "buy_card" ||
       action.type === "gain_card" ||
       action.type === "discard_card" ||
-      action.type === "trash_card"
+      action.type === "trash_card" ||
+      action.type === "topdeck_card"
     ) {
       return "card" in legal && legal.card === action.card;
     }
 
-    // end_phase has no card
-    return action.type === "end_phase";
+    // Actions without card field
+    return action.type === "end_phase" || action.type === "skip_decision";
   });
 };
 
