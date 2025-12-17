@@ -79,6 +79,7 @@
 
   /* Typography */
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-display: swap;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;

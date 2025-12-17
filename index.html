@@ -12,6 +12,83 @@
     <link rel="preload" as="image" href="/cards/Card_back.jpg" type="image/jpeg" imagesrcset="/_vercel/image?url=/cards/Card_back.jpg&w=200&q=75 200w, /_vercel/image?url=/cards/Card_back.jpg&w=300&q=75 300w" imagesizes="300px" />
 
     <style>
+      /* Critical CSS inlined for instant first paint */
+      :root {
+        /* Color Tokens */
+        --color-bg-primary: #1a1a2e;
+        --color-bg-secondary: #0f0f1a;
+        --color-bg-tertiary: #252538;
+        --color-bg-surface: #2d2d44;
+        --color-bg-surface-alt: #1f1f32;
+        --color-bg-supply: #2a3a2a;
+        --color-bg-supply-alt: #1e2e1e;
+        --color-text-primary: #e8e4d9;
+        --color-text-secondary: #a0a0b0;
+        --color-text-tertiary: #f5f2ea;
+        --color-text-muted: #666;
+        --color-gold: #c9a227;
+        --color-gold-bright: #ffd700;
+        --color-gold-dark: #b8860b;
+        --color-gold-darker: #d4a437;
+        --color-treasure: #ffa500;
+        --color-victory: #7cb342;
+        --color-victory-dark: #3d6b29;
+        --color-victory-darker: #5a8f3e;
+        --color-curse: #ba68c8;
+        --color-action: #64b5f6;
+        --color-attack: #e57373;
+        --color-reaction: #4db6ac;
+        --color-border: #4a4a6a;
+        --color-border-secondary: rgb(255 255 255 / 15%);
+        --color-border-supply: #3d5c3d;
+        --color-border-highlight: #64b5f6;
+        --color-ai: #64b5f6;
+        --color-human: #7cb342;
+        --color-player-3: #e57373;
+        --color-player-4: #ba68c8;
+        --color-player-5: #4db6ac;
+        --color-action-phase: #9d6bb3;
+        --color-buy-phase: #2e7d32;
+        /* Spacing Scale */
+        --space-1: 0.25rem;
+        --space-2: 0.375rem;
+        --space-3: 0.5rem;
+        --space-4: 0.625rem;
+        --space-5: 0.75rem;
+        --space-6: 1rem;
+        --space-7: 1.25rem;
+        --space-8: 1.5rem;
+        --space-10: 2.5rem;
+        /* Card Sizes */
+        --card-width-small: 3.5rem;
+        --card-width-medium: 4.275rem;
+        --card-width-large: 5.6rem;
+        --card-height-small: 4.5125rem;
+        --card-height-medium: 6.6797rem;
+        --card-height-large: 8.9063rem;
+        /* Border Radius */
+        --radius-sm: 0.125rem;
+        --radius-md: 0.25rem;
+        --radius-lg: 0.5rem;
+        /* Shadows */
+        --shadow-sm: 0 2px 8px rgb(0 0 0 / 30%);
+        --shadow-md: 0 4px 12px rgb(124 179 66 / 40%);
+        --shadow-lg: 0 4px 20px rgb(124 179 66 / 30%);
+        --shadow-glow-gold: 0 2px 20px rgb(201 162 39 / 40%);
+        --shadow-game-over: 0 0 40px rgb(201 162 39 / 30%);
+        /* Transitions */
+        --transition-fast: 0.1s;
+        --transition-base: 0.25s;
+        /* Typography */
+        font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+        font-display: swap;
+        line-height: 1.5;
+        font-weight: 400;
+        font-synthesis: none;
+        text-rendering: optimizelegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
       body {
         margin: 0;
         background-color: #1a1a2e;
