@@ -14,6 +14,7 @@ import {
   handleEndPhase,
   handleRequestUndo,
 } from "./handle-flow";
+import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
 
 /**
  * Handle a command and return the resulting events.
@@ -62,6 +63,12 @@ export function handleCommand(
     case "SKIP_DECISION":
       return handleSkipDecision(state, command.player);
 
+    case "REVEAL_REACTION":
+      return handleRevealReaction(state, command.player, command.card);
+
+    case "DECLINE_REACTION":
+      return handleDeclineReaction(state, command.player);
+
     case "REQUEST_UNDO":
       return handleRequestUndo(
         state,
@@ -94,6 +101,11 @@ function isValidPlayer(
   // Decision responses can come from the decision's player
   if (command.type === "SUBMIT_DECISION" || command.type === "SKIP_DECISION") {
     return state.pendingDecision?.player === fromPlayer;
+  }
+
+  // Reaction responses can come from the defender (even during opponent's turn)
+  if (command.type === "REVEAL_REACTION" || command.type === "DECLINE_REACTION") {
+    return state.pendingReaction?.defender === fromPlayer;
   }
 
   // Undo requests can come from any player

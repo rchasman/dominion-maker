@@ -54,44 +54,23 @@ export function orchestrateAttack(
         );
 
         if (reactions.length > 0) {
-          // Ask first target for reaction - continuation handled by handleAutoReaction
-          const decisionEvent: GameEvent = {
-            type: "DECISION_REQUIRED",
-            decision: {
-              type: "card_decision",
-              player: firstTarget,
-              from: "hand",
-              prompt: `${attacker} played ${attackCard}. Reveal a reaction?`,
-              cardOptions: reactions,
-              actions: [
-                {
-                  id: "reveal",
-                  label: "Reveal",
-                  color: "#10B981",
-                  isDefault: false,
-                },
-                {
-                  id: "decline",
-                  label: "Don't Reveal",
-                  color: "#9CA3AF",
-                  isDefault: true,
-                },
-              ],
-              cardBeingPlayed: attackCard,
-              stage: "__auto_reaction__",
-              metadata: {
-                attackCard,
-                attacker,
-                allTargets: opponents,
-                currentTargetIndex: 0,
-                blockedTargets: [],
-                originalCause: rootEventId,
-              },
+          // Ask first target for reaction - continuation handled by handle-reaction
+          const reactionEvent: GameEvent = {
+            type: "REACTION_OPPORTUNITY",
+            defender: firstTarget,
+            attacker,
+            attackCard,
+            availableReactions: reactions,
+            metadata: {
+              allTargets: opponents,
+              currentTargetIndex: 0,
+              blockedTargets: [],
+              originalCause: rootEventId,
             },
             id: generateEventId(),
             causedBy: rootEventId,
           };
-          return [decisionEvent];
+          return [reactionEvent];
         }
 
         // No reactions for first target, auto-resolve
@@ -121,8 +100,8 @@ export function orchestrateAttack(
 
   const eventsWithReactions = [...events, ...reactionEvents];
 
-  // If any reaction events include DECISION_REQUIRED, return early
-  if (reactionEvents.some(e => e.type === "DECISION_REQUIRED")) {
+  // If any reaction events include REACTION_OPPORTUNITY, return early
+  if (reactionEvents.some(e => e.type === "REACTION_OPPORTUNITY")) {
     return eventsWithReactions;
   }
 
@@ -203,37 +182,16 @@ function resolveRemainingTargets(
     // Ask next target for reaction
     return [
       {
-        type: "DECISION_REQUIRED",
-        decision: {
-          type: "card_decision",
-          player: nextTarget,
-          from: "hand",
-          prompt: `${attacker} played ${attackCard}. Reveal a reaction?`,
-          cardOptions: reactions,
-          actions: [
-            {
-              id: "reveal",
-              label: "Reveal",
-              color: "#10B981",
-              isDefault: false,
-            },
-            {
-              id: "decline",
-              label: "Don't Reveal",
-              color: "#9CA3AF",
-              isDefault: true,
-            },
-          ],
-          cardBeingPlayed: attackCard,
-          stage: "__auto_reaction__",
-          metadata: {
-            attackCard,
-            attacker,
-            allTargets: [nextTarget, ...rest],
-            currentTargetIndex: 0,
-            blockedTargets,
-            originalCause: rootEventId,
-          },
+        type: "REACTION_OPPORTUNITY",
+        defender: nextTarget,
+        attacker,
+        attackCard,
+        availableReactions: reactions,
+        metadata: {
+          allTargets: [nextTarget, ...rest],
+          currentTargetIndex: 0,
+          blockedTargets,
+          originalCause: rootEventId,
         },
         id: generateEventId(),
         causedBy: rootEventId,
