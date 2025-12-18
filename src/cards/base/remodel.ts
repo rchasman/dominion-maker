@@ -9,15 +9,15 @@ import { STAGES } from "../stages";
 const COST_BONUS = 2;
 
 export const remodel = createMultiStageCard({
-  initial: ({ state, player }) => {
-    const playerState = state.players[player];
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
     if (playerState.hand.length === 0) return { events: [] };
 
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: "Remodel: Choose a card to trash",
         cardOptions: [...playerState.hand],
@@ -29,7 +29,7 @@ export const remodel = createMultiStageCard({
     };
   },
 
-  trash: ({ state, player, decision }) => {
+  trash: ({ state, playerId, decision }) => {
     if (!decision) return { events: [] };
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
@@ -41,7 +41,7 @@ export const remodel = createMultiStageCard({
     const events = [
       {
         type: "CARD_TRASHED" as const,
-        player,
+        playerId,
         card: toTrash,
         from: "hand" as const,
       },
@@ -51,9 +51,9 @@ export const remodel = createMultiStageCard({
 
     return {
       events,
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "supply",
         prompt: `Remodel: Gain a card costing up to $${maxCost}`,
         cardOptions: gainOptions,
@@ -66,13 +66,13 @@ export const remodel = createMultiStageCard({
     };
   },
 
-  gain: ({ player, decision }) => {
+  gain: ({ playerId, decision }) => {
     if (!decision) return { events: [] };
     const gained = decision.selectedCards[0];
     if (!gained) return { events: [] };
 
     return {
-      events: [{ type: "CARD_GAINED", player, card: gained, to: "discard" }],
+      events: [{ type: "CARD_GAINED", playerId, card: gained, to: "discard" }],
     };
   },
 });

@@ -61,8 +61,8 @@ function createBasicState(): GameState {
     coins: 0,
     gameOver: false,
     winner: null,
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
     trash: [],
     log: [],
     turnHistory: [],
@@ -485,7 +485,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human.deck = ["Copper", "Silver", "Gold"];
 
     const effect = createSimpleCardEffect({ cards: 3 });
-    const result = effect({ state, player: "human", card: "Smithy" });
+    const result = effect({ state, playerId: "human", card: "Smithy" });
 
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
     expect(drawEvents.length).toBe(3);
@@ -495,7 +495,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ actions: 2 });
-    const result = effect({ state, player: "human", card: "Village" });
+    const result = effect({ state, playerId: "human", card: "Village" });
 
     const actionsEvent = result.events.find(e => e.type === "ACTIONS_MODIFIED");
     expect(actionsEvent).toBeDefined();
@@ -508,7 +508,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ buys: 1 });
-    const result = effect({ state, player: "human", card: "Festival" });
+    const result = effect({ state, playerId: "human", card: "Festival" });
 
     const buysEvent = result.events.find(e => e.type === "BUYS_MODIFIED");
     expect(buysEvent).toBeDefined();
@@ -521,7 +521,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ coins: 2 });
-    const result = effect({ state, player: "human", card: "Festival" });
+    const result = effect({ state, playerId: "human", card: "Festival" });
 
     const coinsEvent = result.events.find(e => e.type === "COINS_MODIFIED");
     expect(coinsEvent).toBeDefined();
@@ -540,11 +540,11 @@ describe("createSimpleCardEffect - Factory Function", () => {
       buys: 1,
       coins: 1,
     });
-    const result = effect({ state, player: "human", card: "Market" });
+    const result = effect({ state, playerId: "human", card: "Market" });
 
     expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1,
+      1
     );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(1);
@@ -554,7 +554,11 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({});
-    const result = effect({ state, player: "human", card: "Test" as CardName });
+    const result = effect({
+      state,
+      playerId: "human",
+      card: "Test" as CardName,
+    });
 
     expect(result.events.length).toBe(0);
   });
@@ -564,10 +568,10 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human.deck = ["Copper", "Silver", "Gold"];
 
     const smithyFactory = createSimpleCardEffect({ cards: 3 });
-    const result = smithyFactory({ state, player: "human", card: "Smithy" });
+    const result = smithyFactory({ state, playerId: "human", card: "Smithy" });
 
     expect(result.events.filter(e => e.type === "CARD_DRAWN").length).toBe(3);
-    expect(result.pendingDecision).toBeUndefined();
+    expect(result.pendingChoice).toBeUndefined();
   });
 
   it("should exactly match Village behavior (+1 card, +2 actions)", () => {
@@ -575,11 +579,15 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human.deck = ["Copper"];
 
     const villageFactory = createSimpleCardEffect({ cards: 1, actions: 2 });
-    const result = villageFactory({ state, player: "human", card: "Village" });
+    const result = villageFactory({
+      state,
+      playerId: "human",
+      card: "Village",
+    });
 
     expect(result.events.filter(e => e.type === "CARD_DRAWN").length).toBe(1);
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2,
+      2
     );
   });
 
@@ -593,12 +601,12 @@ describe("createSimpleCardEffect - Factory Function", () => {
     });
     const result = festivalFactory({
       state,
-      player: "human",
+      playerId: "human",
       card: "Festival",
     });
 
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2,
+      2
     );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);
@@ -620,7 +628,7 @@ describe("Decision Helper Functions", () => {
 
   it("createCardSelectionDecision should create valid decision", () => {
     const decision = createCardSelectionDecision({
-      player: "human",
+      playerId: "human",
       from: "hand",
       prompt: "Choose cards",
       cardOptions: ["Copper", "Silver"],
@@ -630,8 +638,8 @@ describe("Decision Helper Functions", () => {
       stage: "trash",
     });
 
-    expect(decision.type).toBe("card_decision");
-    expect(decision.player).toBe("human");
+    expect(decision.choiceType).toBe("decision");
+    expect(decision.playerId).toBe("human");
     expect(decision.from).toBe("hand");
     expect(decision.prompt).toBe("Choose cards");
     expect(decision.cardOptions).toEqual(["Copper", "Silver"]);
@@ -643,7 +651,7 @@ describe("Decision Helper Functions", () => {
 
   it("createCardSelectionDecision should handle metadata", () => {
     const decision = createCardSelectionDecision({
-      player: "human",
+      playerId: "human",
       from: "hand",
       prompt: "Test",
       cardOptions: [],
@@ -663,7 +671,7 @@ describe("Decision Helper Functions", () => {
 
   it("createCardSelectionDecision should work without metadata", () => {
     const decision = createCardSelectionDecision({
-      player: "human",
+      playerId: "human",
       from: "hand",
       prompt: "Test",
       cardOptions: [],
@@ -716,7 +724,7 @@ describe("Helper Function Integration", () => {
     state.players.human.discard = [];
 
     const smithy = createSimpleCardEffect({ cards: 3 });
-    const result = smithy({ state, player: "human", card: "Smithy" });
+    const result = smithy({ state, playerId: "human", card: "Smithy" });
 
     // Should not crash, just return empty events
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");

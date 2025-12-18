@@ -8,20 +8,20 @@ import { STAGES } from "../stages";
 
 export const poacher: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Count empty supply piles
   const emptyPiles = Object.values(state.supply).filter(
-    count => count === 0,
+    count => count === 0
   ).length;
 
   // Initial: +1 Card, +1 Action, +$1
   if (!decision || stage === undefined) {
-    const drawEvents = createDrawEvents(player, playerState, 1);
+    const drawEvents = createDrawEvents(playerId, playerState, 1);
     const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
     const coinEvent = { type: "COINS_MODIFIED" as const, delta: 1 };
     const initialEvents = [...drawEvents, actionEvent, coinEvent];
@@ -34,9 +34,9 @@ export const poacher: CardEffect = ({
 
     return {
       events: initialEvents,
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: `Poacher: Discard ${discardCount} card(s) (${emptyPiles} empty pile(s))`,
         cardOptions: [...playerState.hand],
@@ -52,7 +52,7 @@ export const poacher: CardEffect = ({
   if (stage === STAGES.DISCARD) {
     const discardEvents = decision.selectedCards.map(card => ({
       type: "CARD_DISCARDED" as const,
-      player,
+      playerId,
       card,
       from: "hand" as const,
     }));

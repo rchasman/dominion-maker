@@ -9,11 +9,11 @@ import { STAGES } from "../stages";
 
 export const vassal: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial: +$2, reveal and discard top card
   if (!decision || stage === undefined) {
@@ -28,7 +28,7 @@ export const vassal: CardEffect = ({
     const discardEvents: GameEvent[] = [
       {
         type: "CARD_DISCARDED",
-        player,
+        playerId,
         card: topCard,
         from: "deck",
       },
@@ -38,9 +38,9 @@ export const vassal: CardEffect = ({
     if (isActionCard(topCard)) {
       return {
         events: [...coinEvents, ...discardEvents],
-        pendingDecision: {
-          type: "card_decision",
-          player,
+        pendingChoice: {
+          choiceType: "decision",
+          playerId,
           from: "options",
           prompt: `Vassal: Play ${topCard} from discard?`,
           cardOptions: [topCard],
@@ -62,7 +62,7 @@ export const vassal: CardEffect = ({
     if (decision.selectedCards.length > 0) {
       const cardToPlay = decision.selectedCards[0];
       return {
-        events: [{ type: "CARD_PLAYED", player, card: cardToPlay }],
+        events: [{ type: "CARD_PLAYED", playerId, card: cardToPlay }],
       };
     }
     return { events: [] };

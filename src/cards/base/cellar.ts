@@ -8,11 +8,11 @@ import { STAGES } from "../stages";
 
 export const cellar: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial call: +1 Action, then request batch discard
   if (isInitialCall(decision, stage)) {
@@ -24,9 +24,9 @@ export const cellar: CardEffect = ({
 
     return {
       events: [actionEvent],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: "Cellar: Discard any number of cards, then draw that many",
         cardOptions: [...playerState.hand],
@@ -49,7 +49,7 @@ export const cellar: CardEffect = ({
     // Emit one event per discarded card
     const discardEvents = toDiscard.map(card => ({
       type: "CARD_DISCARDED" as const,
-      player,
+      playerId,
       card,
       from: "hand" as const,
     }));
@@ -71,7 +71,7 @@ export const cellar: CardEffect = ({
     };
 
     const drawEvents = createDrawEvents(
-      player,
+      playerId,
       simulatedState,
       toDiscard.length,
     );

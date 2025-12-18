@@ -17,17 +17,17 @@ const SENTRY_ACTIONS = [
   CARD_ACTIONS.discard_card,
 ];
 
-function createPeekEvents(player: PlayerId, cards: CardName[]): GameEvent[] {
+function createPeekEvents(playerId: PlayerId, cards: CardName[]): GameEvent[] {
   return cards.map(card => ({
     type: "CARD_PEEKED" as const,
-    player,
+    playerId,
     card,
     from: "deck" as const,
   }));
 }
 
 type ActionEventParams = {
-  player: PlayerId;
+  playerId: PlayerId;
   revealed: CardName[];
   cardActions: Record<string, string>;
   actionType: string;
@@ -35,24 +35,24 @@ type ActionEventParams = {
 };
 
 function createActionEvents(params: ActionEventParams): GameEvent[] {
-  const { player, revealed, cardActions, actionType, eventType } = params;
+  const { playerId, revealed, cardActions, actionType, eventType } = params;
   return Object.entries(cardActions)
     .filter(([, action]) => action === actionType)
     .map(([indexStr]) => parseInt(indexStr))
     .filter(index => revealed[index])
     .map(index => ({
       type: eventType,
-      player,
+      playerId,
       card: revealed[index],
       from: "deck" as const,
     }));
 }
 
 function createTopdeckEvents(
-  player: PlayerId,
+  playerId: PlayerId,
   revealed: CardName[],
   cardActions: Record<string, string>,
-  cardOrder: number[],
+  cardOrder: number[]
 ): GameEvent[] {
   const topdeckIndices =
     cardOrder.length > 0
@@ -66,7 +66,7 @@ function createTopdeckEvents(
     .filter(index => revealed[index])
     .map(index => ({
       type: "CARD_PUT_ON_DECK" as const,
-      player,
+      playerId,
       card: revealed[index],
       from: "hand" as const,
     }));
@@ -74,14 +74,14 @@ function createTopdeckEvents(
 
 export const sentry: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial: +1 Card, +1 Action, look at top 2
   if (!decision) {
-    const drawEvents = createDrawEvents(player, playerState, 1);
+    const drawEvents = createDrawEvents(playerId, playerState, 1);
     const { cards: revealed } = peekDraw(playerState, SENTRY_PEEK_COUNT);
 
     if (revealed.length === 0) {
@@ -94,11 +94,11 @@ export const sentry: CardEffect = ({
       events: [
         ...drawEvents,
         { type: "ACTIONS_MODIFIED", delta: 1 },
-        ...createPeekEvents(player, revealed),
+        ...createPeekEvents(playerId, revealed),
       ],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         prompt: "Sentry: Choose what to do with each card",
         cardOptions: revealed,
         actions: [...SENTRY_ACTIONS],
@@ -113,28 +113,28 @@ export const sentry: CardEffect = ({
 
   // Process the decision
   const revealed = getCardNamesFromMetadata(
-    state.pendingDecision?.metadata,
-    "revealedCards",
+    state.pendingChoice?.metadata,
+    "revealedCards"
   );
   const cardActions = decision.cardActions || {};
   const cardOrder = (decision.cardOrder || []) as number[];
 
   const events = [
     ...createActionEvents({
-      player,
+      playerId,
       revealed,
       cardActions,
       actionType: "trash_card",
       eventType: "CARD_TRASHED",
     }),
     ...createActionEvents({
-      player,
+      playerId,
       revealed,
       cardActions,
       actionType: "discard_card",
       eventType: "CARD_DISCARDED",
     }),
-    ...createTopdeckEvents(player, revealed, cardActions, cardOrder),
+    ...createTopdeckEvents(playerId, revealed, cardActions, cardOrder),
   ];
 
   return { events };

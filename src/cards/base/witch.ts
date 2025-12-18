@@ -10,21 +10,21 @@ const CARDS_TO_DRAW = 2;
 
 export const witch: CardEffect = ({
   state,
-  player,
+  playerId,
   attackTargets,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   const events: GameEvent[] = createDrawEvents(
-    player,
+    playerId,
     playerState,
-    CARDS_TO_DRAW,
+    CARDS_TO_DRAW
   );
 
-  const targets = attackTargets ?? getOpponents(state, player);
+  const targets = attackTargets ?? getOpponents(state, playerId);
 
   const curseEvents: GameEvent[] = targets.map(target => ({
     type: "CARD_GAINED" as const,
-    player: target,
+    playerId: target,
     card: "Curse" as const,
     to: "discard" as const,
   }));

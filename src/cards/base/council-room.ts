@@ -10,18 +10,18 @@ const CARDS_TO_DRAW = 4;
 
 export const councilRoom: CardEffect = ({
   state,
-  player,
+  playerId,
 }): CardEffectResult => {
   const drawEvents = createDrawEvents(
-    player,
-    state.players[player],
+    playerId,
+    state.players[playerId],
     CARDS_TO_DRAW,
   );
 
   const buyEvent: GameEvent = { type: "BUYS_MODIFIED", delta: 1 };
 
   // Each opponent draws a card
-  const opponents = getOpponents(state, player);
+  const opponents = getOpponents(state, playerId);
   const opponentDrawEvents = opponents.flatMap(opponent =>
     createDrawEvents(opponent, state.players[opponent], 1),
   );

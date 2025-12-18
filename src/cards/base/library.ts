@@ -11,11 +11,11 @@ const TARGET_HAND_SIZE = 7;
 
 export const library: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Library peek strategy:
   // Peeks ahead to see which cards would be drawn. If shuffle occurs during
@@ -36,7 +36,7 @@ export const library: CardEffect = ({
 
     if (actionsInDraw.length === 0) {
       // No actions, just draw all
-      const drawEvents = createDrawEvents(player, playerState, cardsNeeded);
+      const drawEvents = createDrawEvents(playerId, playerState, cardsNeeded);
       return { events: drawEvents };
     }
 
@@ -44,9 +44,9 @@ export const library: CardEffect = ({
     // Use multi-action decision to handle duplicates properly
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         prompt: "Library: Choose which Actions to skip",
         cardOptions: actionsInDraw,
         actions: [
@@ -61,8 +61,8 @@ export const library: CardEffect = ({
 
   // Process decision with indices
   const peeked = getCardNamesFromMetadata(
-    state.pendingDecision?.metadata,
-    "peekedCards",
+    state.pendingChoice?.metadata,
+    "peekedCards"
   );
   const cardActions = decision.cardActions || {};
 
@@ -71,7 +71,7 @@ export const library: CardEffect = ({
     .filter(({ index, action }) => action === "draw_card" && peeked[index])
     .map(({ index }) => ({
       type: "CARD_DRAWN" as const,
-      player,
+      playerId,
       card: peeked[index],
     }));
 
@@ -80,7 +80,7 @@ export const library: CardEffect = ({
     .filter(({ index, action }) => action === "discard_card" && peeked[index])
     .map(({ index }) => ({
       type: "CARD_DISCARDED" as const,
-      player,
+      playerId,
       card: peeked[index],
       from: "deck" as const,
     }));

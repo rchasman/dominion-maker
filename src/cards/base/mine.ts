@@ -10,8 +10,8 @@ import { CARDS } from "../../data/cards";
 import { STAGES } from "../stages";
 
 export const mine = createMultiStageCard({
-  initial: ({ state, player }) => {
-    const playerState = state.players[player];
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
     const cardDef = CARDS.Mine;
     const trashSpec = cardDef.decisions?.trash;
 
@@ -19,23 +19,23 @@ export const mine = createMultiStageCard({
 
     // Check if player has treasures
     const treasures = playerState.hand.filter(c =>
-      CARDS[c].types.includes("treasure"),
+      CARDS[c].types.includes("treasure")
     );
     if (treasures.length === 0) return { events: [] };
 
     return {
       events: [],
-      pendingDecision: generateDecisionFromSpec({
+      pendingChoice: generateDecisionFromSpec({
         spec: trashSpec,
         card: "Mine",
-        player,
+        playerId,
         state,
         stage: STAGES.TRASH,
       }),
     };
   },
 
-  trash: ({ state, player, decision }) => {
+  trash: ({ state, playerId, decision }) => {
     if (!decision) return { events: [] };
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
@@ -43,7 +43,7 @@ export const mine = createMultiStageCard({
     const events = [
       {
         type: "CARD_TRASHED" as const,
-        player,
+        playerId,
         card: toTrash,
         from: "hand" as const,
       },
@@ -54,12 +54,12 @@ export const mine = createMultiStageCard({
     if (!gainSpec) return { events };
 
     // Store the trashed card in a temporary state for gain decision
-    if (!state.pendingDecision) return { events };
+    if (!state.pendingChoice) return { events };
 
     const stateWithMetadata = {
       ...state,
-      pendingDecision: {
-        ...state.pendingDecision,
+      pendingChoice: {
+        ...state.pendingChoice,
         metadata: { trashedCard: toTrash },
       },
     };
@@ -67,7 +67,7 @@ export const mine = createMultiStageCard({
     const gainDecision = generateDecisionFromSpec({
       spec: gainSpec,
       card: "Mine",
-      player,
+      playerId,
       state: stateWithMetadata,
       stage: STAGES.GAIN,
     });
@@ -77,17 +77,17 @@ export const mine = createMultiStageCard({
 
     return {
       events,
-      pendingDecision: gainDecision,
+      pendingChoice: gainDecision,
     };
   },
 
-  gain: ({ player, decision }) => {
+  gain: ({ playerId, decision }) => {
     if (!decision) return { events: [] };
     const gained = decision.selectedCards[0];
     if (!gained) return { events: [] };
 
     return {
-      events: [{ type: "CARD_GAINED", player, card: gained, to: "hand" }],
+      events: [{ type: "CARD_GAINED", playerId, card: gained, to: "hand" }],
     };
   },
 });

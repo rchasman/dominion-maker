@@ -34,8 +34,8 @@ function createTestState(): GameState {
     log: [],
     turnHistory: [],
     kingdomCards: [],
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
     gameOver: false,
     winner: null,
     activeEffects: [],
@@ -62,34 +62,34 @@ describe("Cellar - duplicate card handling", () => {
     // Initial call - get decision
     const result1 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
     });
 
-    expect(result1.pendingDecision).toBeDefined();
-    expect(result1.pendingDecision?.min).toBe(0);
-    expect(result1.pendingDecision?.max).toBe(5); // Can discard all
+    expect(result1.pendingChoice).toBeDefined();
+    expect(result1.pendingChoice?.min).toBe(0);
+    expect(result1.pendingChoice?.max).toBe(5); // Can discard all
 
     // Discard 2 Estates in batch
-    if (result1.pendingDecision) {
-      state.pendingDecision = result1.pendingDecision;
+    if (result1.pendingChoice) {
+      state.pendingChoice = result1.pendingChoice;
     }
     const result2 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
       decision: { selectedCards: ["Estate", "Estate"] },
       stage: "discard",
     });
 
     const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED",
+      e => e.type === "CARD_DISCARDED"
     );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
 
     expect(discardEvents.length).toBe(2); // Discarded 2
     expect(drawEvents.length).toBe(2); // Drew 2
-    expect(result2.pendingDecision).toBeUndefined(); // Done after batch
+    expect(result2.pendingChoice).toBeUndefined(); // Done after batch
   });
 
   it("should handle skipping immediately (discard zero)", () => {
@@ -99,18 +99,18 @@ describe("Cellar - duplicate card handling", () => {
 
     const result1 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
     });
 
-    if (result1.pendingDecision) {
-      state.pendingDecision = result1.pendingDecision;
+    if (result1.pendingChoice) {
+      state.pendingChoice = result1.pendingChoice;
     }
 
     // Skip immediately by submitting empty array
     const result2 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
       decision: { selectedCards: [] },
       stage: "discard",
@@ -127,20 +127,20 @@ describe("Cellar - duplicate card handling", () => {
 
     const result1 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
     });
 
     // Apply initial events and update state
     state = applyEvents(state, result1.events);
-    if (result1.pendingDecision) {
-      state.pendingDecision = result1.pendingDecision;
+    if (result1.pendingChoice) {
+      state.pendingChoice = result1.pendingChoice;
     }
 
     // Discard entire hand in batch
     const result2 = cellar({
       state,
-      player: "human",
+      playerId: "human",
       card: "Cellar",
       decision: { selectedCards: ["Estate", "Copper"] },
       stage: "discard",
@@ -148,11 +148,11 @@ describe("Cellar - duplicate card handling", () => {
 
     // Should discard both and draw 2
     const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED",
+      e => e.type === "CARD_DISCARDED"
     );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
     expect(discardEvents.length).toBe(2); // Discarded both
     expect(drawEvents.length).toBe(2); // Drew 2
-    expect(result2.pendingDecision).toBeUndefined(); // Done
+    expect(result2.pendingChoice).toBeUndefined(); // Done
   });
 });

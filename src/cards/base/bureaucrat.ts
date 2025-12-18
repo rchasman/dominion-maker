@@ -31,10 +31,10 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
     createDecision: (
       { opponent, data },
       remainingOpponents,
-      attackingPlayer,
+      attackingPlayer
     ) => ({
-      type: "card_decision",
-      player: opponent,
+      choiceType: "decision",
+      playerId: opponent,
       from: "hand",
       prompt: "Bureaucrat: Put a Victory card on your deck",
       cardOptions: data.victoryCards,
@@ -54,7 +54,7 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
       return [
         {
           type: "CARD_PUT_ON_DECK" as const,
-          player: opponent,
+          playerId: opponent,
           card: toPutOnDeck,
           from: "hand" as const,
         },
@@ -62,12 +62,12 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
     },
     stage: STAGES.OPPONENT_TOPDECK,
   },
-  (state, player) => [
+  (state, playerId) => [
     {
       type: "CARD_GAINED" as const,
-      player,
+      playerId,
       card: "Silver" as const,
       to: "deck" as const,
     },
-  ],
+  ]
 );

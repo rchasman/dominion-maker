@@ -30,10 +30,10 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
     createDecision: (
       { opponent, data },
       remainingOpponents,
-      attackingPlayer,
+      attackingPlayer
     ) => ({
-      type: "card_decision",
-      player: opponent,
+      choiceType: "decision",
+      playerId: opponent,
       from: "hand",
       prompt: `Militia: Discard down to 3 cards (discard ${data.discardCount})`,
       cardOptions: [...data.hand],
@@ -49,11 +49,11 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
     processChoice: (choice, { opponent }) =>
       (choice.selectedCards || []).map(card => ({
         type: "CARD_DISCARDED" as const,
-        player: opponent,
+        playerId: opponent,
         card,
         from: "hand" as const,
       })),
     stage: STAGES.OPPONENT_DISCARD,
   },
-  [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }],
+  [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }]
 );

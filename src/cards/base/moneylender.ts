@@ -7,10 +7,10 @@ import { STAGES } from "../stages";
 
 export const moneylender: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   const hasCopperInHand = playerState.hand.includes("Copper");
 
   if (!hasCopperInHand) return { events: [] };
@@ -19,9 +19,9 @@ export const moneylender: CardEffect = ({
   if (!decision) {
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: "Moneylender: Trash a Copper for +$3?",
         cardOptions: ["Copper"],
@@ -37,7 +37,7 @@ export const moneylender: CardEffect = ({
   if (decision.selectedCards.includes("Copper")) {
     return {
       events: [
-        { type: "CARD_TRASHED", player, card: "Copper", from: "hand" },
+        { type: "CARD_TRASHED", playerId, card: "Copper", from: "hand" },
         { type: "COINS_MODIFIED", delta: 3 },
       ],
     };

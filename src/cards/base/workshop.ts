@@ -10,7 +10,7 @@ const MAX_GAIN_COST = 4;
 
 export const workshop: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
 }): CardEffectResult => {
   // Stage 1: Request gain choice
@@ -20,9 +20,9 @@ export const workshop: CardEffect = ({
 
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "supply",
         prompt: "Workshop: Gain a card costing up to $4",
         cardOptions: gainOptions,
@@ -39,6 +39,6 @@ export const workshop: CardEffect = ({
   if (!gained) return { events: [] };
 
   return {
-    events: [{ type: "CARD_GAINED", player, card: gained, to: "discard" }],
+    events: [{ type: "CARD_GAINED", playerId, card: gained, to: "discard" }],
   };
 };

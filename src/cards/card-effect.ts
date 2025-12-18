@@ -1,13 +1,13 @@
 import type {
   GameState,
   LogEntry,
-  Player,
+  PlayerId,
   CardName,
 } from "../types/game-state";
 
 export interface CardEffectContext {
   state: GameState;
-  player: Player;
+  playerId: PlayerId;
   children: LogEntry[];
   // For multi-stage card effects that require human decisions
   decision?: {

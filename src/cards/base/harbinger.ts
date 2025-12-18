@@ -8,15 +8,15 @@ import { STAGES } from "../stages";
 
 export const harbinger: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial: +1 Card, +1 Action
   if (!decision || stage === undefined) {
-    const drawEvents = createDrawEvents(player, playerState, 1);
+    const drawEvents = createDrawEvents(playerId, playerState, 1);
     const actionEvents = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
     const events = [...drawEvents, ...actionEvents];
 
@@ -27,9 +27,9 @@ export const harbinger: CardEffect = ({
 
     return {
       events,
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "discard",
         prompt:
           "Harbinger: Put a card from your discard onto your deck (or skip)",
@@ -49,7 +49,7 @@ export const harbinger: CardEffect = ({
         ? [
             {
               type: "CARD_PUT_ON_DECK" as const,
-              player,
+              playerId,
               card: decision.selectedCards[0],
               from: "discard" as const,
             },

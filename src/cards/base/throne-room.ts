@@ -8,11 +8,11 @@ import { STAGES } from "../stages";
 
 export const throneRoom: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial: Choose an action to play twice
   if (!decision || stage === undefined) {
@@ -24,9 +24,9 @@ export const throneRoom: CardEffect = ({
 
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: "Throne Room: Choose an Action to play twice",
         cardOptions: actions,
@@ -46,9 +46,9 @@ export const throneRoom: CardEffect = ({
     // that tells the engine to execute this card twice
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "options",
         prompt: "",
         cardOptions: [],

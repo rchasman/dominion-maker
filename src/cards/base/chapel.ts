@@ -10,11 +10,11 @@ const CHAPEL_MAX_TRASH = 4;
 
 export const chapel: CardEffect = ({
   state,
-  player,
+  playerId,
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
 
   // Initial call: request batch selection
   if (isInitialCall(decision, stage)) {
@@ -24,9 +24,9 @@ export const chapel: CardEffect = ({
 
     return {
       events: [],
-      pendingDecision: {
-        type: "card_decision",
-        player,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
         from: "hand",
         prompt: "Chapel: Trash up to 4 cards from your hand",
         cardOptions: [...playerState.hand],
@@ -49,7 +49,7 @@ export const chapel: CardEffect = ({
     // Emit one event per card (preserves atomicity)
     const events = toTrash.map(card => ({
       type: "CARD_TRASHED" as const,
-      player,
+      playerId,
       card,
       from: "hand" as const,
     }));

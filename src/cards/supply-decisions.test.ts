@@ -35,13 +35,13 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Workshop");
 
       // Should create pending decision from supply
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.type).toBe("card_decision");
-      expect(engine.state.pendingDecision?.from).toBe("supply");
-      expect(engine.state.pendingDecision?.player).toBe("human");
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Silver");
-      expect(engine.state.pendingDecision?.min).toBe(1);
-      expect(engine.state.pendingDecision?.max).toBe(1);
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.choiceType).toBe("decision");
+      expect(engine.state.pendingChoice?.from).toBe("supply");
+      expect(engine.state.pendingChoice?.playerId).toBe("human");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Silver");
+      expect(engine.state.pendingChoice?.min).toBe(1);
+      expect(engine.state.pendingChoice?.max).toBe(1);
     });
 
     it("gains card to discard when decision submitted", () => {
@@ -57,7 +57,7 @@ describe("Supply Decision E2E Tests", () => {
       });
 
       expect(result.ok).toBe(true);
-      expect(engine.state.pendingDecision).toBeNull();
+      expect(engine.state.pendingChoice).toBeNull();
       expect(engine.state.players.human.discard.length).toBe(
         initialDiscardSize + 1,
       );
@@ -84,13 +84,13 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Workshop");
 
       // Silver costs $3 - should be in options
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Silver");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Silver");
 
       // Gold costs $6 - should NOT be in options
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Gold");
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Gold");
 
       // Duchy costs $5 - should NOT be in options
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Duchy");
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Duchy");
     });
   });
 
@@ -101,9 +101,9 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Artisan");
 
       // Stage 1: Gain card to hand
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("supply");
-      expect(engine.state.pendingDecision?.stage).toBe("gain");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("supply");
+      expect(engine.state.pendingChoice?.stage).toBe("gain");
     });
 
     it("gains card to hand, then topdecks", () => {
@@ -122,9 +122,9 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.players.human.hand.length).toBe(initialHandSize + 1);
 
       // Stage 3: Topdeck a card from hand
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("hand");
-      expect(engine.state.pendingDecision?.stage).toBe("topdeck");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("hand");
+      expect(engine.state.pendingChoice?.stage).toBe("topdeck");
 
       engine.submitDecision("human", { selectedCards: ["Copper"] });
 
@@ -138,13 +138,13 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Artisan");
 
       // Silver costs $3 - should be in options
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Silver");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Silver");
 
       // Duchy costs $5 - should be in options
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Duchy");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Duchy");
 
       // Gold costs $6 - should NOT be in options
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Gold");
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Gold");
     });
   });
 
@@ -155,9 +155,9 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Remodel");
 
       // Stage 1: Trash from hand
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("hand");
-      expect(engine.state.pendingDecision?.stage).toBe("trash");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("hand");
+      expect(engine.state.pendingChoice?.stage).toBe("trash");
 
       const initialTrashSize = engine.state.trash.length;
 
@@ -168,9 +168,9 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.trash).toContain("Copper");
 
       // Stage 2: Gain from supply (costing up to $2 more than trashed card)
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("supply");
-      expect(engine.state.pendingDecision?.stage).toBe("gain");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("supply");
+      expect(engine.state.pendingChoice?.stage).toBe("gain");
     });
 
     it("allows gaining card costing up to $2 more than trashed card", () => {
@@ -183,8 +183,8 @@ describe("Supply Decision E2E Tests", () => {
       engine.submitDecision("human", { selectedCards: ["Silver"] });
 
       // Should be able to gain cards costing up to $5 ($3 + $2)
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Duchy"); // $5
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Gold"); // $6
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Duchy"); // $5
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Gold"); // $6
     });
   });
 
@@ -195,14 +195,14 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Mine");
 
       // Stage 1: Trash treasure from hand
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("hand");
-      expect(engine.state.pendingDecision?.stage).toBe("trash");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("hand");
+      expect(engine.state.pendingChoice?.stage).toBe("trash");
 
       // Options should only include treasures
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Copper");
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Silver");
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Mine");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Copper");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Silver");
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Mine");
     });
 
     it("gains treasure to hand costing up to $3 more", () => {
@@ -214,12 +214,12 @@ describe("Supply Decision E2E Tests", () => {
       engine.submitDecision("human", { selectedCards: ["Copper"] });
 
       // Stage 2: Gain treasure to hand (up to $3)
-      expect(engine.state.pendingDecision?.from).toBe("supply");
-      expect(engine.state.pendingDecision?.stage).toBe("gain");
+      expect(engine.state.pendingChoice?.from).toBe("supply");
+      expect(engine.state.pendingChoice?.stage).toBe("gain");
 
       // Should be able to gain Silver ($3) but not Gold ($6)
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Silver");
-      expect(engine.state.pendingDecision?.cardOptions).not.toContain("Gold");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Silver");
+      expect(engine.state.pendingChoice?.cardOptions).not.toContain("Gold");
 
       // Gain Silver to hand
       engine.submitDecision("human", { selectedCards: ["Silver"] });
@@ -238,7 +238,7 @@ describe("Supply Decision E2E Tests", () => {
       engine.submitDecision("human", { selectedCards: ["Silver"] });
 
       // Should be able to gain Gold ($6 = $3 + $3)
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Gold");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Gold");
 
       // Gain Gold
       engine.submitDecision("human", { selectedCards: ["Gold"] });
@@ -255,10 +255,10 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Throne Room");
 
       // Stage 1: Choose action from hand
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.from).toBe("hand");
-      expect(engine.state.pendingDecision?.stage).toBe("choose_action");
-      expect(engine.state.pendingDecision?.cardOptions).toContain("Workshop");
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.from).toBe("hand");
+      expect(engine.state.pendingChoice?.stage).toBe("choose_action");
+      expect(engine.state.pendingChoice?.cardOptions).toContain("Workshop");
     });
 
     it("prepares to execute chosen action twice", () => {
@@ -273,12 +273,12 @@ describe("Supply Decision E2E Tests", () => {
 
       // Should create a special "execute_throned_card" decision
       expect(result.ok).toBe(true);
-      expect(engine.state.pendingDecision?.stage).toBe("execute_throned_card");
-      expect(engine.state.pendingDecision?.metadata?.throneRoomTarget).toBe(
+      expect(engine.state.pendingChoice?.stage).toBe("execute_throned_card");
+      expect(engine.state.pendingChoice?.metadata?.throneRoomTarget).toBe(
         "Workshop",
       );
       expect(
-        engine.state.pendingDecision?.metadata?.throneRoomExecutionsRemaining,
+        engine.state.pendingChoice?.metadata?.throneRoomExecutionsRemaining,
       ).toBe(2);
     });
   });
@@ -296,8 +296,8 @@ describe("Supply Decision E2E Tests", () => {
 
       // Decision should still be created with remaining cards
       // (e.g., Curse at $0, or kingdom cards like Workshop itself)
-      expect(engine.state.pendingDecision).toBeDefined();
-      expect(engine.state.pendingDecision?.cardOptions.length).toBeGreaterThan(
+      expect(engine.state.pendingChoice).toBeDefined();
+      expect(engine.state.pendingChoice?.cardOptions.length).toBeGreaterThan(
         0,
       );
     });
@@ -313,7 +313,7 @@ describe("Supply Decision E2E Tests", () => {
       engine.playAction("human", "Workshop");
 
       // No decision should be created if truly no cards can be gained
-      expect(engine.state.pendingDecision).toBeNull();
+      expect(engine.state.pendingChoice).toBeNull();
     });
 
     it("Submitting invalid card selection is handled gracefully", () => {
