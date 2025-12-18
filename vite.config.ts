@@ -65,13 +65,19 @@ export default defineConfig({
             return "tooltips";
           }
 
+          // Game runtime: entire game system (engine + AI + state)
+          // Includes engine, commands, cards, strategies, consensus, GameContext
           if (
             id.includes("/engine/") ||
             id.includes("/commands/") ||
             id.includes("/cards/") ||
-            id.includes("/data/cards")
+            id.includes("/data/cards") ||
+            id.includes("/agent/") ||
+            id.includes("/strategies/") ||
+            id.includes("use-ai-automation") ||
+            id.includes("GameContext")
           ) {
-            return "game";
+            return "game-runtime";
           }
           return;
         },
