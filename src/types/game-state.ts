@@ -307,7 +307,6 @@ export type TurnAction = {
 export type GameState = {
   turn: number;
   phase: Phase;
-  subPhase: TurnSubPhase;
   activePlayer: string;
 
   // Single-player mode: { human, ai }

@@ -11,7 +11,6 @@ export function createEmptyState(): GameState {
   return {
     turn: 0,
     phase: "action",
-    subPhase: null,
     activePlayer: "human",
     players: {},
     supply: {},

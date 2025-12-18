@@ -63,7 +63,6 @@ function createBasicState(): GameState {
     winner: null,
     pendingDecision: null,
     pendingDecisionEventId: null,
-    subPhase: null,
     trash: [],
     log: [],
     turnHistory: [],

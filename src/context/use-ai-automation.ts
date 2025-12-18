@@ -11,6 +11,7 @@ import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { GameEvent } from "../events/types";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 import { isAIControlled } from "../lib/game-mode-utils";
+import { getSubPhase } from "../lib/state-helpers";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
 import { useAnimationSafe } from "../animation";
@@ -223,16 +224,15 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
       return;
     }
 
-    // Check for AI reaction (awaiting_reaction subPhase)
+    // Check for AI reaction
     const isAIReaction =
-      gameState.subPhase === "awaiting_reaction" &&
       gameState.pendingReaction?.defender &&
       isAIControlled(gameMode, gameState.pendingReaction.defender);
 
-    // Check for AI decision (opponent_decision subPhase)
+    // Check for AI decision (opponent making decision during active player's turn)
     const isAIDecision =
-      gameState.subPhase === "opponent_decision" &&
       gameState.pendingDecision?.player &&
+      gameState.pendingDecision.player !== gameState.activePlayer &&
       isAIControlled(gameMode, gameState.pendingDecision.player);
 
     if (!isAIReaction && !isAIDecision) {

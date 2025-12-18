@@ -248,7 +248,6 @@ export function applyReactionEvent(
   if (event.type === "REACTION_OPPORTUNITY") {
     return {
       ...state,
-      subPhase: "awaiting_reaction",
       pendingReaction: {
         defender: event.defender,
         attacker: event.attacker,
@@ -265,7 +264,6 @@ export function applyReactionEvent(
       ...state,
       pendingReaction: null,
       pendingReactionEventId: null,
-      subPhase: null,
       log: [
         ...state.log,
         {
@@ -283,7 +281,6 @@ export function applyReactionEvent(
       ...state,
       pendingReaction: null,
       pendingReactionEventId: null,
-      subPhase: null,
       log: [
         ...state.log,
         {
@@ -310,8 +307,6 @@ export function applyDecisionEvent(
     const decision = event.decision;
     return {
       ...state,
-      subPhase:
-        decision.player !== state.activePlayer ? "opponent_decision" : null,
       pendingDecision: decision,
       pendingDecisionEventId: event.id || null, // Track which event created this decision
     };
@@ -322,7 +317,6 @@ export function applyDecisionEvent(
       ...state,
       pendingDecision: null,
       pendingDecisionEventId: null,
-      subPhase: null,
     };
   }
 
@@ -331,7 +325,6 @@ export function applyDecisionEvent(
       ...state,
       pendingDecision: null,
       pendingDecisionEventId: null,
-      subPhase: null,
     };
   }
 

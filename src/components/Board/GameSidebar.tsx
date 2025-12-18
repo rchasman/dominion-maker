@@ -4,6 +4,7 @@ import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
 import { useLLMLogs, useGame } from "../../context/hooks";
 import { getPlayerColor } from "../../lib/board-utils";
+import { getSubPhase } from "../../lib/state-helpers";
 import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
 import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
@@ -195,7 +196,7 @@ export function GameSidebar({
           <TurnStatusIndicator
             isProcessing={isProcessing}
             isLocalPlayerTurn={isLocalPlayerTurn}
-            subPhase={state.subPhase}
+            subPhase={getSubPhase(state)}
             activePlayer={state.activePlayer}
           />
         }

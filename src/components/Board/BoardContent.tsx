@@ -239,7 +239,6 @@ export function BoardContent({
           selectedCardIndices={[]}
           inverted={true}
           phase={displayState.phase}
-          subPhase={displayState.subPhase}
           actions={displayState.actions}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}

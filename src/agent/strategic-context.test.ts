@@ -26,7 +26,6 @@ function createMockGameState(
     activePlayer,
     turn: 1,
     phase: "action",
-    subPhase: null,
     actions: 1,
     buys: 1,
     coins: 0,

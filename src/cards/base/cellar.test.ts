@@ -36,7 +36,6 @@ function createTestState(): GameState {
     kingdomCards: [],
     pendingDecision: null,
     pendingDecisionEventId: null,
-    subPhase: null,
     gameOver: false,
     winner: null,
     activeEffects: [],

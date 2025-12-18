@@ -55,7 +55,6 @@ function applyGameSetupEvent(
       pendingDecisionEventId: null,
       pendingReaction: null,
       pendingReactionEventId: null,
-      subPhase: null,
       trash: [],
       log: [],
       turnHistory: [],

@@ -66,7 +66,6 @@ export function MainPlayerArea({
         onInPlayClick={onInPlayClick}
         pendingDecision={displayState.pendingDecision}
         phase={displayState.phase}
-        subPhase={displayState.subPhase}
         actions={displayState.actions}
         playerId={localPlayerId}
         turnHistory={displayState.turnHistory}

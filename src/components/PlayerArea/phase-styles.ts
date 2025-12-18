@@ -8,7 +8,7 @@ export function getPhaseBorderColor(
   if (!isActive) return "var(--color-border)";
 
   if (
-    subPhase === "waiting_for_reactions" ||
+    subPhase === "awaiting_reaction" ||
     subPhase === "opponent_decision"
   ) {
     return "var(--color-reaction)";
@@ -30,7 +30,7 @@ export function getPhaseBackground(
   }
 
   if (
-    subPhase === "waiting_for_reactions" ||
+    subPhase === "awaiting_reaction" ||
     subPhase === "opponent_decision"
   ) {
     return "linear-gradient(180deg, #253837 0%, #1a2628 100%)";

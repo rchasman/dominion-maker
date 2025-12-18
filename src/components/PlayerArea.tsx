@@ -2,10 +2,10 @@ import type {
   CardName,
   PlayerState,
   Phase,
-  TurnSubPhase,
   GameState,
 } from "../types/game-state";
 import type { DecisionRequest } from "../events/types";
+import { getSubPhase } from "../lib/state-helpers";
 import { PlayerLabelSection } from "./PlayerArea/PlayerLabelSection";
 import { InPlaySection } from "./PlayerArea/InPlaySection";
 import { DeckDiscardSection } from "./PlayerArea/DeckDiscardSection";
@@ -27,7 +27,6 @@ interface PlayerAreaProps {
   inverted?: boolean; // If true, in-play appears at bottom (for top player)
   pendingDecision?: DecisionRequest | null;
   phase: Phase;
-  subPhase: TurnSubPhase;
   actions?: number;
   loading?: boolean;
   playerId?: string;
@@ -268,7 +267,6 @@ export function PlayerArea({
   pendingDecision,
   playerId,
   phase,
-  subPhase,
   actions,
   loading = false,
   turnHistory = [],
@@ -276,6 +274,7 @@ export function PlayerArea({
   gameState,
 }: PlayerAreaProps) {
   const isInteractive = !!onCardClick;
+  const subPhase = gameState ? getSubPhase(gameState) : null;
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
   const hasMadePurchases = turnHistory.some(

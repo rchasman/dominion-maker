@@ -3,6 +3,7 @@ import { applyEvent, applyEvents } from "./apply";
 import { resetEventCounter } from "./id-generator";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent } from "./types";
+import { getSubPhase } from "../lib/state-helpers";
 
 /**
  * Comprehensive event application tests
@@ -25,7 +26,6 @@ function createEmptyState(): GameState {
     winner: null,
     pendingDecision: null,
     pendingDecisionEventId: null,
-    subPhase: null,
     trash: [],
     log: [],
     turnHistory: [],
@@ -632,7 +632,7 @@ describe("Event Application - Decisions", () => {
     const newState = applyEvent(state, event);
 
     expect(newState.pendingDecision).toEqual(decision);
-    expect(newState.subPhase).toBeNull();
+    expect(getSubPhase(newState)).toBeNull();
   });
 
   it("should apply DECISION_REQUIRED for opponent (sets subPhase)", () => {
@@ -659,7 +659,7 @@ describe("Event Application - Decisions", () => {
     const newState = applyEvent(state, event);
 
     expect(newState.pendingDecision).toEqual(decision);
-    expect(newState.subPhase).toBe("opponent_decision");
+    expect(getSubPhase(newState)).toBe("opponent_decision");
   });
 
   it("should apply DECISION_RESOLVED", () => {
@@ -675,7 +675,6 @@ describe("Event Application - Decisions", () => {
       cardBeingPlayed: "Chapel",
       stage: "trash",
     };
-    state.subPhase = "opponent_decision";
 
     const event: GameEvent = {
       type: "DECISION_RESOLVED",
@@ -684,7 +683,7 @@ describe("Event Application - Decisions", () => {
     const newState = applyEvent(state, event);
 
     expect(newState.pendingDecision).toBeNull();
-    expect(newState.subPhase).toBeNull();
+    expect(getSubPhase(newState)).toBeNull();
   });
 });
 
