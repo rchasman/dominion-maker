@@ -85,7 +85,7 @@ describe("Cellar - duplicate card handling", () => {
     const discardEvents = result2.events.filter(
       e => e.type === "CARD_DISCARDED",
     );
-    const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
+    const drawEvents = result2.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
 
     expect(discardEvents.length).toBe(2); // Discarded 2
     expect(drawEvents.length).toBe(2); // Drew 2
@@ -150,7 +150,7 @@ describe("Cellar - duplicate card handling", () => {
     const discardEvents = result2.events.filter(
       e => e.type === "CARD_DISCARDED",
     );
-    const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
+    const drawEvents = result2.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
     expect(discardEvents.length).toBe(2); // Discarded both
     expect(drawEvents.length).toBe(2); // Drew 2
     expect(result2.pendingChoice).toBeUndefined(); // Done

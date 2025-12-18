@@ -34,7 +34,7 @@ describe("Undo System - Immediate Undo", () => {
     expect(eventsAfter).toBeGreaterThan(eventsBefore);
 
     // Get the turn start event to undo to
-    const turnStartEvent = engine.eventLog.find(e => e.type === "TURN_STARTED");
+    const turnStartEvent = engine.eventLog.find((e: GameEvent) => e.type === "TURN_STARTED");
     expect(turnStartEvent).toBeDefined();
 
     // Undo to turn start (removes all actions)
@@ -62,7 +62,7 @@ describe("Undo System - Immediate Undo", () => {
     // Market generates CARD_PLAYED + effects (ACTIONS_MODIFIED, CARD_DRAWN, etc.)
     const marketEvent = [...engine.eventLog]
       .reverse()
-      .find(e => e.type === "CARD_PLAYED" && e.card === "Market");
+      .find((e: GameEvent) => e.type === "CARD_PLAYED" && e.card === "Market");
     expect(marketEvent).toBeDefined();
 
     // Count effects caused by Market
@@ -114,7 +114,7 @@ describe("Undo System - Immediate Undo", () => {
     expect(coinsAfter).toBeGreaterThan(coinsBefore);
 
     // Get turn start to undo to
-    const turnStart = engine.eventLog.find(e => e.type === "TURN_STARTED");
+    const turnStart = engine.eventLog.find((e: GameEvent) => e.type === "TURN_STARTED");
 
     if (turnStart && turnStart.id) {
       engine.undoToEvent(turnStart.id);
@@ -305,7 +305,7 @@ describe("Undo System - getStateAtEvent", () => {
     });
 
     // Get state at turn start
-    const turnStart = engine.eventLog.find(e => e.type === "TURN_STARTED");
+    const turnStart = engine.eventLog.find((e: GameEvent) => e.type === "TURN_STARTED");
 
     if (turnStart && turnStart.id) {
       const stateAtTurnStart = engine.getStateAtEvent(turnStart.id);

@@ -26,7 +26,7 @@ describe("Shuffle Mechanics", () => {
     engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
 
     // Should have shuffled
-    const shuffleEvent = engine.eventLog.find(e => e.type === "DECK_SHUFFLED");
+    const shuffleEvent = engine.eventLog.find((e: GameEvent) => e.type === "DECK_SHUFFLED");
     expect(shuffleEvent).toBeDefined();
 
     // Should have drawn cards
@@ -50,7 +50,7 @@ describe("Shuffle Mechanics", () => {
 
     engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
 
-    const shuffleEvent = engine.eventLog.find(e => e.type === "DECK_SHUFFLED");
+    const shuffleEvent = engine.eventLog.find((e: GameEvent) => e.type === "DECK_SHUFFLED");
     expect(shuffleEvent).toBeDefined();
     if (shuffleEvent) {
       expect(shuffleEvent.newDeckOrder).toBeDefined();

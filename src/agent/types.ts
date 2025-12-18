@@ -120,7 +120,7 @@ export function buildModelsFromSettings({
   );
 
   // Shuffle for randomness using functional Fisher-Yates algorithm
-  return models.reduce<ModelProvider[]>((shuffled, _, currentIndex) => {
+  return models.reduce<ModelProvider[]>((shuffled: ModelProvider[], _: ModelProvider, currentIndex: number) => {
     if (currentIndex === 0) return [models[0]];
 
     const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
