@@ -296,9 +296,9 @@ export function BoardContent({
         onRequestUndo={onRequestUndo}
       />
 
-      {game.gameOver && game.winner && (
+      {game.gameOver && game.winnerId && (
         <GameOverModal
-          winner={game.winner}
+          winnerId={game.winnerId}
           localPlayerId={localPlayerId}
           opponentPlayerId={opponentPlayerId}
           isLocalPlayerAI={isLocalPlayerAI}

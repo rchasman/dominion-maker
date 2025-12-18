@@ -16,7 +16,7 @@ interface GameOverModalProps {
 }
 
 export function GameOverModal({
-  winner,
+  winnerId,
   localPlayerId,
   opponentPlayerId,
   isLocalPlayerAI,
@@ -28,7 +28,7 @@ export function GameOverModal({
   onNewGame,
 }: GameOverModalProps) {
   const winnerName =
-    winner === localPlayerId
+    winnerId === localPlayerId
       ? formatPlayerName(localPlayerId, isLocalPlayerAI, { gameState })
       : formatPlayerName(opponentPlayerId, isOpponentAI, { gameState });
   return (
@@ -46,7 +46,7 @@ export function GameOverModal({
         style={{
           fontSize: "1.375rem",
           margin: 0,
-          color: winner === localPlayerId ? "var(--color-victory)" : "#ef5350",
+          color: winnerId === localPlayerId ? "var(--color-victory)" : "#ef5350",
         }}
       >
         {winnerName} {winnerName === "You" ? "win" : "wins"}!
