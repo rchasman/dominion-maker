@@ -450,16 +450,30 @@ function tryRecoverFromError(
     }
   }
 
-  // Handle models that wrap response in "answer" field (e.g., glm-4.6)
+  // Handle models that wrap response in "answer" or "action" field (e.g., glm-4.6)
   if (errorRecord.text && typeof errorRecord.text === "string") {
     try {
       const parsed = JSON.parse(errorRecord.text);
 
-      // Check for {"answer": "{...JSON...}"} pattern
+      // Check for {"answer": "{...JSON...}"} pattern (string wrapper)
       if (parsed.answer && typeof parsed.answer === "string") {
         const innerParsed = JSON.parse(parsed.answer);
         const validated = ActionSchema.parse(innerParsed);
-        apiLogger.info(`${provider} recovered from answer wrapper`);
+        apiLogger.info(`${provider} recovered from answer string wrapper`);
+        return res.status(HTTP_OK).json({ action: validated, strategySummary });
+      }
+
+      // Check for {"answer": {...}} pattern (object wrapper)
+      if (parsed.answer && typeof parsed.answer === "object") {
+        const validated = ActionSchema.parse(parsed.answer);
+        apiLogger.info(`${provider} recovered from answer object wrapper`);
+        return res.status(HTTP_OK).json({ action: validated, strategySummary });
+      }
+
+      // Check for {"action": {...}} pattern (action wrapper)
+      if (parsed.action && typeof parsed.action === "object") {
+        const validated = ActionSchema.parse(parsed.action);
+        apiLogger.info(`${provider} recovered from action object wrapper`);
         return res.status(HTTP_OK).json({ action: validated, strategySummary });
       }
 
@@ -600,10 +614,23 @@ async function processGenerationRequest(
             return null; // Cannot repair - model fundamentally broken
           }
 
-          // Unwrap glm-4.6 style {"answer": "{...JSON...}"} wrapper
+          // Unwrap glm-4.6 style wrappers (answer or action field)
+          // Case 1: {"answer": "{...JSON...}"} - string wrapper
           if (parsed.answer && typeof parsed.answer === "string") {
-            apiLogger.info(`${provider} unwrapping answer field`);
+            apiLogger.info(`${provider} unwrapping answer string`);
             return parsed.answer;
+          }
+
+          // Case 2: {"answer": {...}} - object wrapper
+          if (parsed.answer && typeof parsed.answer === "object") {
+            apiLogger.info(`${provider} unwrapping answer object`);
+            return JSON.stringify(parsed.answer);
+          }
+
+          // Case 3: {"action": {...}} - action wrapper
+          if (parsed.action && typeof parsed.action === "object") {
+            apiLogger.info(`${provider} unwrapping action object`);
+            return JSON.stringify(parsed.action);
           }
 
           return text; // Try as-is
