@@ -10,6 +10,7 @@ import {
 import { CARDS, isTreasureCard } from "../src/data/cards";
 import { countVP } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
+import { getSubPhase } from "../src/lib/state-helpers";
 import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
@@ -328,16 +329,18 @@ function optimizeStateForAI(state: GameState): unknown {
       }
     : null;
 
+  const subPhase = getSubPhase(state);
+
   return {
     currentGameStage,
     you,
     ...(opponentState ? { opponent: opponentState } : {}),
     supply: supplyWithCounts,
     trash: state.trash,
-    ...(state.pendingDecision
-      ? { pendingDecision: state.pendingDecision }
+    ...(state.pendingChoice
+      ? { pendingChoice: state.pendingChoice }
       : {}),
-    ...(state.subPhase ? { subPhase: state.subPhase } : {}),
+    ...(subPhase ? { subPhase } : {}),
   };
 }
 

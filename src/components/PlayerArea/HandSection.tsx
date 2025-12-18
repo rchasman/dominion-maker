@@ -32,7 +32,7 @@ function getHandCardHighlightMode(
   playerId: PlayerId | undefined,
 ): "trash" | "discard" | "gain" | undefined {
   if (!pendingChoice || !isInteractive) return undefined;
-  if (pendingChoice.player !== playerId) return undefined;
+  if (pendingChoice.playerId !== playerId) return undefined;
   if (pendingChoice.from !== "hand") return undefined;
 
   const isSelectable = pendingChoice.cardOptions?.includes(card) ?? true;
@@ -73,7 +73,7 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
 
   if (
     pendingChoice &&
-    pendingChoice.player === playerId &&
+    pendingChoice.playerId === playerId &&
     pendingChoice.from === "hand"
   ) {
     const cardOptions = pendingChoice.cardOptions ?? [];

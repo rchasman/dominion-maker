@@ -225,13 +225,13 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     // Check for AI reaction
     const isAIReaction =
       gameState.pendingChoice?.player &&
-      isAIControlled(gameMode, gameState.pendingChoice.player);
+      isAIControlled(gameMode, gameState.pendingChoice.playerId);
 
     // Check for AI decision (opponent making decision during active player's turn)
     const isAIDecision =
       gameState.pendingChoice?.player &&
-      gameState.pendingChoice.player !== gameState.activePlayer &&
-      isAIControlled(gameMode, gameState.pendingChoice.player);
+      gameState.pendingChoice.playerId !== gameState.activePlayer &&
+      isAIControlled(gameMode, gameState.pendingChoice.playerId);
 
     if (!isAIReaction && !isAIDecision) {
       // Not an AI action - abort any ongoing automation and clear state

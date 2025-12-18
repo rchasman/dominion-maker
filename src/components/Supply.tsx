@@ -365,7 +365,7 @@ export function Supply({
       (state.phase === "buy" && state.buys === 0 && !hasTreasuresInHand));
 
   const hasPendingDecision =
-    state.pendingChoice && state.pendingChoice.player === localPlayerId;
+    state.pendingChoice && state.pendingChoice.playerId === localPlayerId;
 
   return (
     <div

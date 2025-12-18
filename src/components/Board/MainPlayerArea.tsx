@@ -82,7 +82,7 @@ export function MainPlayerArea({
 
       {displayState.pendingChoice &&
         displayState.pendingChoice.actions &&
-        displayState.pendingChoice.player === localPlayerId &&
+        displayState.pendingChoice.playerId === localPlayerId &&
         !isPreviewMode && (
           <CardDecisionModal
             cards={displayState.pendingChoice.cardOptions}
@@ -93,7 +93,7 @@ export function MainPlayerArea({
         )}
 
       {displayState.pendingChoice &&
-        displayState.pendingChoice.player === localPlayerId &&
+        displayState.pendingChoice.playerId === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal
             reactions={displayState.pendingChoice.availableReactions}

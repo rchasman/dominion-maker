@@ -72,7 +72,7 @@ export function StateView({ state }: StateViewProps) {
           </div>
           <div style={styles.stateRow}>
             <span>playerId:</span>{" "}
-            <span style={styles.stateValue}>{state.pendingChoice.player}</span>
+            <span style={styles.stateValue}>{state.pendingChoice.playerId}</span>
           </div>
           <div style={styles.stateRow}>
             <span>Prompt:</span>{" "}
