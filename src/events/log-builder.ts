@@ -51,17 +51,17 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
   const { rootLogs } = aggregatedEvents.reduce<{
     logMap: Map<string, LogEntry>;
     rootLogs: LogEntry[];
-    currentPlayer: string;
+    currentPlayerId: string;
   }>(
     (acc, event) => {
       // Track current player from TURN_STARTED events
-      const currentPlayer =
-        event.type === "TURN_STARTED" ? event.playerId : acc.currentPlayer;
+      const currentPlayerId =
+        event.type === "TURN_STARTED" ? event.playerId : acc.currentPlayerId;
 
-      const logEntry = eventToLogEntry(event, currentPlayer);
+      const logEntry = eventToLogEntry(event, currentPlayerId);
       const eventId = event.id;
       if (!logEntry || !eventId)
-        return { ...acc, currentPlayer: currentPlayer };
+        return { ...acc, currentPlayerId: currentPlayerId };
 
       const newLogMap = new Map(acc.logMap).set(eventId, logEntry);
 
@@ -86,23 +86,23 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
           return {
             logMap: newLogMap,
             rootLogs: acc.rootLogs,
-            currentPlayer: currentPlayer,
+            currentPlayerId: currentPlayerId,
           };
         }
         return {
           logMap: newLogMap,
           rootLogs: [...acc.rootLogs, logEntry],
-          currentPlayer: currentPlayer,
+          currentPlayerId: currentPlayerId,
         };
       }
 
       return {
         logMap: newLogMap,
         rootLogs: [...acc.rootLogs, logEntry],
-        currentPlayer: currentPlayer,
+        currentPlayerId: currentPlayerId,
       };
     },
-    { logMap: new Map(), rootLogs: [], currentPlayer: "human" },
+    { logMap: new Map(), rootLogs: [], currentPlayerId: "human" },
   );
 
   return rootLogs;
@@ -382,7 +382,7 @@ function cardReturnedToHandToLogEntry(
  */
 function resourceModifiedToLogEntry(
   event: ActionsModifiedEvent | BuysModifiedEvent | CoinsModifiedEvent,
-  currentPlayer: string,
+  currentPlayerId: string,
 ): LogEntry | null {
   const typeMap = {
     ACTIONS_MODIFIED: {
@@ -402,7 +402,7 @@ function resourceModifiedToLogEntry(
   if (event.delta > 0) {
     return {
       type: typeMap[event.type].positive,
-      playerId: currentPlayer,
+      playerId: currentPlayerId,
       count: event.delta,
       eventId: event.id,
     };
@@ -411,7 +411,7 @@ function resourceModifiedToLogEntry(
   if (event.delta < 0) {
     return {
       type: typeMap[event.type].negative,
-      playerId: currentPlayer,
+      playerId: currentPlayerId,
       count: -event.delta,
       eventId: event.id,
     };
@@ -453,7 +453,7 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
  */
 function gameFlowEventToLogEntry(
   event: MaybeAggregatedEvent,
-  currentPlayer: string,
+  currentPlayerId: string,
 ): LogEntry | null {
   switch (event.type) {
     case "TURN_STARTED":
@@ -466,7 +466,7 @@ function gameFlowEventToLogEntry(
     case "PHASE_CHANGED":
       return {
         type: "phase-change",
-        playerId: currentPlayer,
+        playerId: currentPlayerId,
         phase: event.phase,
         eventId: event.id,
       };
@@ -474,7 +474,7 @@ function gameFlowEventToLogEntry(
       return {
         type: "game-over",
         scores: event.scores,
-        winnerId: event.winnerId || currentPlayer,
+        winnerId: event.winnerId || currentPlayerId,
         eventId: event.id,
       };
     case "TURN_ENDED":
@@ -489,14 +489,14 @@ function gameFlowEventToLogEntry(
  */
 function eventToLogEntry(
   event: MaybeAggregatedEvent,
-  currentPlayer: string,
+  currentPlayerId: string,
 ): LogEntry | null {
   // Try card events
   const cardLog = cardEventToLogEntry(event);
   if (cardLog) return cardLog;
 
   // Try game flow events
-  const flowLog = gameFlowEventToLogEntry(event, currentPlayer);
+  const flowLog = gameFlowEventToLogEntry(event, currentPlayerId);
   if (flowLog) return flowLog;
 
   // Try resource events
@@ -505,7 +505,7 @@ function eventToLogEntry(
     event.type === "BUYS_MODIFIED" ||
     event.type === "COINS_MODIFIED"
   ) {
-    return resourceModifiedToLogEntry(event, currentPlayer);
+    return resourceModifiedToLogEntry(event, currentPlayerId);
   }
 
   // All other events don't show in log

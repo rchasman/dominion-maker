@@ -110,8 +110,11 @@ export function calculateSupply(
   return { ...supply, ...kingdomSupply };
 }
 
-export function getNextPlayer(state: GameState, currentPlayer: string): string {
-  const currentIdx = state.playerOrder.indexOf(currentPlayer);
+export function getNextPlayer(
+  state: GameState,
+  currentPlayerId: string,
+): string {
+  const currentIdx = state.playerOrder.indexOf(currentPlayerId);
   const nextIdx = (currentIdx + 1) % state.playerOrder.length;
   return state.playerOrder[nextIdx];
 }

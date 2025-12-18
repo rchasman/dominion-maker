@@ -48,19 +48,19 @@ function extractRecentTurns(
   interface TurnState {
     turnMap: Map<string, TurnSummary>;
     currentTurn: number;
-    currentPlayer: string;
+    trackedPlayerId: string;
   }
 
   const { turnMap } = log.reduce<TurnState>(
     (state, entry) => {
       if (entry.type === "turn-start") {
         const newTurn = entry.turn;
-        const newPlayer = entry.playerId;
-        const key = `${newPlayer}-${newTurn}`;
+        const newPlayerId = entry.playerId;
+        const key = `${newPlayerId}-${newTurn}`;
         if (!state.turnMap.has(key)) {
           const newTurnMap = new Map(state.turnMap);
           newTurnMap.set(key, {
-            playerId: newPlayer,
+            playerId: newPlayerId,
             turn: newTurn,
             actionsPlayed: [],
             treasuresPlayed: [],
@@ -70,16 +70,17 @@ function extractRecentTurns(
             ...state,
             turnMap: newTurnMap,
             currentTurn: newTurn,
-            currentPlayer: newPlayer,
+            trackedPlayerId: newPlayerId,
           };
         }
-        return { ...state, currentTurn: newTurn, currentPlayer: newPlayer };
+        return { ...state, currentTurn: newTurn, trackedPlayerId: newPlayerId };
       }
 
       if (state.currentTurn === 0) return state;
 
-      const player = "playerId" in entry ? entry.playerId : state.currentPlayer;
-      const key = `${player}-${state.currentTurn}`;
+      const playerId =
+        "playerId" in entry ? entry.playerId : state.trackedPlayerId;
+      const key = `${playerId}-${state.currentTurn}`;
       const summary = state.turnMap.get(key);
       if (!summary) return state;
 
@@ -105,7 +106,7 @@ function extractRecentTurns(
     {
       turnMap: new Map<string, TurnSummary>(),
       currentTurn: 0,
-      currentPlayer: "",
+      trackedPlayerId: "",
     },
   );
 
