@@ -24,9 +24,9 @@ export function preloadCriticalImages(): void {
   preloadImage("/cards/Card_back.webp", 128);
 
   // Preload basic cards (in every game)
-  CRITICAL_CARDS.forEach(card => {
+  CRITICAL_CARDS.map(card => {
     const url = getCardImageUrl(card);
-    preloadImage(url, 128); // Match small card width (supply piles)
+    return preloadImage(url, 128); // Match small card width (supply piles)
   });
 }
 
@@ -34,9 +34,9 @@ export function preloadCriticalImages(): void {
  * Preload kingdom cards for the current game
  */
 export function preloadKingdomCards(kingdomCards: CardName[]): void {
-  kingdomCards.forEach(card => {
+  kingdomCards.map(card => {
     const url = getCardImageUrl(card);
-    preloadImage(url, 160); // Match medium card width
+    return preloadImage(url, 160); // Match medium card width
   });
 }
 

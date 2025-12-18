@@ -218,10 +218,13 @@ const aggregateGroup = (
     );
 
     // Create card counts for grouped display (e.g., "Estate x2, Copper x3")
-    const cardCounts: Record<string, number> = {};
-    allCards.forEach(card => {
-      cardCounts[card] = (cardCounts[card] || 0) + 1;
-    });
+    const cardCounts = allCards.reduce<Record<string, number>>(
+      (acc, card) => ({
+        ...acc,
+        [card]: (acc[card] || 0) + 1,
+      }),
+      {},
+    );
 
     const cards = allCards.length > 0 ? allCards : undefined;
     const finalCardCounts =

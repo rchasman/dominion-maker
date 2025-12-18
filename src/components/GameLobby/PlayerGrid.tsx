@@ -93,24 +93,30 @@ export function PlayerGrid({
   };
 
   // Assign colors to ALL players (no duplicates)
-  const usedColors = new Set<string>();
-  const playerColors = new Map<string, string>();
-  players.forEach(player => {
-    // Use clientId for stable color across name changes
-    let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
-    // Find next available color if this one is taken
-    let attempts = 0;
-    while (
-      usedColors.has(LOBBY_COLORS[colorIndex]) &&
-      attempts < LOBBY_COLORS.length
-    ) {
-      colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
-      attempts++;
-    }
-    const color = LOBBY_COLORS[colorIndex];
-    usedColors.add(color);
-    playerColors.set(player.id, color);
-  });
+  const { playerColors } = players.reduce<{
+    usedColors: Set<string>;
+    playerColors: Map<string, string>;
+  }>(
+    (acc, player) => {
+      // Use clientId for stable color across name changes
+      let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
+      // Find next available color if this one is taken
+      let attempts = 0;
+      while (
+        acc.usedColors.has(LOBBY_COLORS[colorIndex]) &&
+        attempts < LOBBY_COLORS.length
+      ) {
+        colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
+        attempts++;
+      }
+      const color = LOBBY_COLORS[colorIndex];
+      return {
+        usedColors: new Set([...acc.usedColors, color]),
+        playerColors: new Map([...acc.playerColors, [player.id, color]]),
+      };
+    },
+    { usedColors: new Set(), playerColors: new Map() },
+  );
 
   // Filter to only lobby players (not in games) for display
   const lobbyPlayersRaw = players.filter(p => !playersInGames.has(p.name));
@@ -150,12 +156,14 @@ export function PlayerGrid({
   });
 
   // Assign evenly distributed positions
-  playersWithHash.forEach((item, index) => {
-    const position = Math.floor(
-      (index / playersWithHash.length) * maxPositions,
-    );
-    playerPositions.set(item.playerId, position);
-  });
+  const playerPositions = new Map(
+    playersWithHash.map((item, index) => {
+      const position = Math.floor(
+        (index / playersWithHash.length) * maxPositions,
+      );
+      return [item.playerId, position] as const;
+    }),
+  );
 
   return (
     <div

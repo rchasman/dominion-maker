@@ -198,29 +198,31 @@ export function BoardContent({
       );
     });
 
-    const cardRects: Array<{ card: CardName; rect: DOMRect }> = [];
-    filteredElements.forEach(el => {
-      const cardId = el.getAttribute("data-card-id");
-      if (cardId) {
+    const cardRects = filteredElements
+      .map(el => {
+        const cardId = el.getAttribute("data-card-id");
+        if (!cardId) return null;
         // Format is hand-{index}-{cardName}, so skip first two parts
         const card = cardId.split("-").slice(2).join("-") as CardName;
-        cardRects.push({ card, rect: el.getBoundingClientRect() });
-      }
-    });
+        return { card, rect: el.getBoundingClientRect() };
+      })
+      .filter(
+        (item): item is { card: CardName; rect: DOMRect } => item !== null,
+      );
 
     // Execute the action
     onPlayAllTreasures();
 
     // Queue animations all at once (no stagger to avoid flash)
     if (animation) {
-      cardRects.forEach(({ card, rect }) => {
+      cardRects.map(({ card, rect }) =>
         animation.queueAnimation({
           cardName: card,
           fromRect: rect,
           toZone: "inPlay",
           duration: 200,
-        });
-      });
+        }),
+      );
     }
   }, [onPlayAllTreasures, animation]);
 

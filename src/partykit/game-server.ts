@@ -557,7 +557,7 @@ export default class GameServer implements Party.Server {
     // Replay events to sync server state with client
     // The engine is event-sourced, so we can replay from any point
     try {
-      events.forEach(event => {
+      events.map(event => {
         // Apply event to engine if not already applied
         const hasEvent = this.engine!.eventLog.some(e => e.id === event.id);
         if (!hasEvent) {
@@ -565,6 +565,7 @@ export default class GameServer implements Party.Server {
           // The engine handles event application internally
           console.log("[Sync] Replaying event:", event.id);
         }
+        return hasEvent;
       });
 
       // Update lobby with current state
@@ -633,11 +634,9 @@ export default class GameServer implements Party.Server {
     const playerIds = players.map(p => p.clientId);
 
     // Mark bot players
-    botPlayerIds?.forEach(clientId => {
-      if (playerIds.includes(clientId)) {
-        this.botPlayers.add(clientId);
-      }
-    });
+    botPlayerIds
+      ?.filter(clientId => playerIds.includes(clientId))
+      .map(clientId => this.botPlayers.add(clientId));
 
     this.engine = new DominionEngine();
     this.engine.startGame(playerIds, kingdomCards);
@@ -918,8 +917,6 @@ export default class GameServer implements Party.Server {
       )
       .map(([id]) => id);
 
-    botConnectionIds.forEach(id => {
-      this.connections.delete(id);
-    });
+    botConnectionIds.map(id => this.connections.delete(id));
   }
 }

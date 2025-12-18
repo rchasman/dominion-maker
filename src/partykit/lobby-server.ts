@@ -46,13 +46,10 @@ export default class LobbyServer implements Party.Server {
       this.disconnectTimeouts.delete(conn.id);
 
       // Cancel any requests involving this player
-      const requestsToRemove: string[] = [];
-      this.requests.forEach((req, id) => {
-        if (req.fromId === conn.id || req.toId === conn.id) {
-          requestsToRemove.push(id);
-        }
-      });
-      requestsToRemove.forEach(id => this.requests.delete(id));
+      const requestsToRemove = Array.from(this.requests.entries())
+        .filter(([_, req]) => req.fromId === conn.id || req.toId === conn.id)
+        .map(([id]) => id);
+      requestsToRemove.map(id => this.requests.delete(id));
 
       this.broadcastPlayers();
       this.broadcastRequests();
@@ -244,18 +241,16 @@ export default class LobbyServer implements Party.Server {
     this.requests.delete(request.id);
 
     // Cancel any other requests involving these players
-    const requestsToRemove: string[] = [];
-    this.requests.forEach((req, id) => {
-      if (
-        req.fromId === player1.id ||
-        req.toId === player1.id ||
-        req.fromId === player2.id ||
-        req.toId === player2.id
-      ) {
-        requestsToRemove.push(id);
-      }
-    });
-    requestsToRemove.forEach(id => this.requests.delete(id));
+    const requestsToRemove = Array.from(this.requests.entries())
+      .filter(
+        ([_, req]) =>
+          req.fromId === player1.id ||
+          req.toId === player1.id ||
+          req.fromId === player2.id ||
+          req.toId === player2.id,
+      )
+      .map(([id]) => id);
+    requestsToRemove.map(id => this.requests.delete(id));
 
     // Notify both players
     const conn1 = this.room.getConnection(player1.id);
