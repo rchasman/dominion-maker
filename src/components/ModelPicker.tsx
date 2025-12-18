@@ -178,6 +178,7 @@ const ModelCheckbox = ({
     }}
   >
     <input
+      id={`model-${model}`}
       type="checkbox"
       checked={isEnabled}
       onChange={() => onToggle(model)}

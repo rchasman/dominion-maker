@@ -43,6 +43,7 @@ function ConsensusCountSlider({
         Consensus Count: {value}
       </label>
       <input
+        id="consensus-count"
         type="range"
         min="1"
         max="50"
@@ -388,6 +389,7 @@ export function ModelSettingsPanel({
           )}
         </label>
         <textarea
+          id="custom-strategy"
           value={settings.customStrategy || ""}
           onChange={e => {
             const target = e.target as HTMLTextAreaElement;

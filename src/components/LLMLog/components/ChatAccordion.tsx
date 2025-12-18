@@ -153,6 +153,7 @@ function ChatInput({
         }}
       >
         <textarea
+          id="chat-input"
           value={value}
           onInput={e => setValue((e.target as HTMLTextAreaElement).value)}
           onKeyDown={handleKeyDown}

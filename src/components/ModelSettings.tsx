@@ -40,6 +40,7 @@ function renderConsensusControl(
         Consensus Count: {consensusCount}
       </label>
       <input
+        id="model-settings-consensus-count"
         type="range"
         min="1"
         max={MAX_CONSENSUS_COUNT}

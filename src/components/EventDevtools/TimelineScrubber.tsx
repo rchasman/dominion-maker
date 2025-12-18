@@ -85,6 +85,7 @@ export function TimelineScrubber({
         </button>
         <div style={styles.scrubberSliderContainer}>
           <input
+            id="timeline-scrubber"
             type="range"
             min="0"
             max={rootEvents.length - 1}
