@@ -10,6 +10,7 @@ import { useGame } from "../context/hooks";
 import PartySocket from "partysocket";
 import type { GameClientMessage } from "./protocol";
 import { generatePlayerName } from "../lib/name-generator";
+import { generateRoomId } from "../lib/room-id";
 import { STORAGE_KEYS } from "../context/storage-utils";
 import { multiplayerLogger } from "../lib/logger";
 
@@ -17,13 +18,6 @@ const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
     : "dominion-maker.rchasman.partykit.dev";
-
-function generateRoomId(): string {
-  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-  return Array.from({ length: 8 }, () =>
-    chars.charAt(Math.floor(Math.random() * chars.length)),
-  ).join("");
-}
 
 const ROOM_STORAGE_KEY = "dominion_singleplayer_sync_room";
 

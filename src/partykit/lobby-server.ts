@@ -14,6 +14,7 @@ import type {
   LobbyServerMessage,
   GameUpdateMessage,
 } from "./protocol";
+import { generateRoomId } from "../lib/room-id";
 
 interface ConnectedPlayer {
   id: string;
@@ -236,7 +237,7 @@ export default class LobbyServer implements Party.Server {
     player2: ConnectedPlayer,
   ) {
     // Generate room ID
-    const roomId = this.generateRoomId();
+    const roomId = generateRoomId();
 
     // Remove the request
     this.requests.delete(request.id);
@@ -287,13 +288,6 @@ export default class LobbyServer implements Party.Server {
       }
     }
     return undefined;
-  }
-
-  private generateRoomId(): string {
-    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-    return Array.from({ length: 8 }, () =>
-      chars.charAt(Math.floor(Math.random() * chars.length)),
-    ).join("");
   }
 
   private getPlayerList(): LobbyPlayer[] {

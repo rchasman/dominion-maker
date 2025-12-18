@@ -344,8 +344,8 @@ export type GameState = {
     parameters: { amount: number };
   }>;
 
-  // Multiplayer extensions (optional for single-player)
-  playerOrder?: string[]; // Turn order for N-player games
+  // Player tracking
+  playerOrder: string[]; // Turn order for N-player games (always set by GAME_INITIALIZED)
   playerInfo?: Record<string, PlayerInfo>; // Player names, types, connection status
   isMultiplayer?: boolean; // Flag to indicate multiplayer mode
 };

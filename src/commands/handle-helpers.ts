@@ -112,10 +112,9 @@ export function calculateSupply(
 }
 
 export function getNextPlayer(state: GameState, currentPlayer: string): string {
-  const playerOrder = state.playerOrder || ["human", "ai"];
-  const currentIdx = playerOrder.indexOf(currentPlayer);
-  const nextIdx = (currentIdx + 1) % playerOrder.length;
-  return playerOrder[nextIdx];
+  const currentIdx = state.playerOrder.indexOf(currentPlayer);
+  const nextIdx = (currentIdx + 1) % state.playerOrder.length;
+  return state.playerOrder[nextIdx];
 }
 
 export function checkGameOver(state: GameState): GameEvent | null {

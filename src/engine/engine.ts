@@ -182,8 +182,7 @@ export class DominionEngine {
       const requestEvent = result.events.find(e => e.type === "UNDO_REQUESTED");
       if (requestEvent && requestEvent.type === "UNDO_REQUESTED") {
         // Set up pending undo request
-        const playerOrder = this.state.playerOrder || ["human", "ai"];
-        const opponents = playerOrder.filter(p => p !== player);
+        const opponents = this.state.playerOrder.filter(p => p !== player);
 
         this.pendingUndo = {
           requestId: requestEvent.requestId,
