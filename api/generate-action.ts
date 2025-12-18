@@ -570,9 +570,24 @@ async function processGenerationRequest(
       });
 
       apiLogger.info(`${provider} calling generateText with tools`);
+
+      // Enhanced system prompt for tool calling models
+      const systemPrompt = `${buildSystemPrompt(currentState.supply)}
+
+TOOL CALLING INSTRUCTIONS:
+You MUST call the submitAction tool with the action parameters filled in.
+The tool expects an object with these fields:
+- type: one of the valid action types (play_action, play_treasure, buy_card, etc.)
+- card: the card name (if applicable)
+- reasoning: brief explanation of why you chose this action
+
+Example: {type: "play_action", card: "Smithy", reasoning: "Draw more cards"}
+
+Call the submitAction tool NOW with the complete action object.`;
+
       const result = await generateText({
         model,
-        system: buildSystemPrompt(currentState.supply),
+        system: systemPrompt,
         prompt: userMessage,
         tools: { submitAction },
         toolChoice: "required",
