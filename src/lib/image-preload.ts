@@ -41,26 +41,26 @@ export function preloadKingdomCards(kingdomCards: CardName[]): void {
 }
 
 /**
- * Preload a single image using <link rel="preload">
+ * Prefetch a single image for future use (loads during idle time)
  */
 function preloadImage(url: string, width: number): void {
   const optimizedUrl = getOptimizedImageUrl({ url, width });
 
-  // Check if already preloaded
+  // Check if already prefetched
   if (
     document.querySelector(
-      `link[rel="preload"][href="${optimizedUrl}"], link[rel="preload"][imagesrcset*="${url}"]`,
+      `link[rel="prefetch"][href="${optimizedUrl}"], link[rel="prefetch"][imagesrcset*="${url}"]`,
     )
   ) {
     return;
   }
 
   const link = document.createElement("link");
-  link.rel = "preload";
+  link.rel = "prefetch";
   link.as = "image";
   link.href = optimizedUrl;
-  // Only preload single size to avoid unused preloads
-  // Browser will fetch other sizes on-demand
+  // Prefetch single size - browser fetches during idle time
+  // No warnings if unused, cached for when game starts
 
   document.head.appendChild(link);
 }
