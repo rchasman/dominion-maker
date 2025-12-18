@@ -131,8 +131,6 @@ export function PlayerGrid({
       : lobbyPlayersRaw;
 
   // Assign stable positions based on hash, distributed evenly
-  const playerPositions = new Map<string, number>();
-
   // Sort players by their hash value to get stable distribution
   const playersWithHash = sortedPlayers.map(player => {
     const isMe = player.id === myId || player.id === "connecting";
