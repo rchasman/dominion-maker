@@ -49,6 +49,8 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Groq Llama 3.3 70B (347 tok/s)";
     case "groq-llama-4-scout":
       return "Groq Llama 4 Scout (412 tok/s)";
+    case "glm-4.6":
+      return "GLM-4.6";
     default: {
       const _exhaustive: never = model;
       return String(_exhaustive);
@@ -66,6 +68,7 @@ const providerDisplayNames: Record<string, string> = {
   google: "Google",
   mistral: "Mistral",
   xai: "xAI",
+  zai: "Z.AI",
 };
 
 const providerOrder = [
@@ -76,6 +79,7 @@ const providerOrder = [
   "google",
   "mistral",
   "xai",
+  "zai",
   "anthropic",
   "openai",
 ];
