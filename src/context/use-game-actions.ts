@@ -31,7 +31,7 @@ import {
  */
 function filterLogsAfterUndo(
   logs: LLMLogEntry[],
-  eventsAfterUndo: number,
+  eventsAfterUndo: number
 ): LLMLogEntry[] {
   return logs.filter(log => {
     const logEventCount = log.data?.eventCount;
@@ -70,7 +70,7 @@ export function useGameActions(
     strategy: GameStrategy;
     playerStrategies: PlayerStrategyData;
     setPlayerStrategies: (strategies: PlayerStrategyData) => void;
-  },
+  }
 ): GameActions {
   const {
     setEvents,
@@ -94,7 +94,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef, setEvents, setGameState]
   );
 
   const playTreasure = useCallback(
@@ -111,7 +111,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef, setEvents, setGameState]
   );
 
   const unplayTreasure = useCallback(
@@ -128,7 +128,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef, setEvents, setGameState]
   );
 
   const playAllTreasures = useCallback((): CommandResult => {
@@ -157,7 +157,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef, setEvents, setGameState]
   );
 
   const endPhase = useCallback((): CommandResult => {
@@ -188,7 +188,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef, setEvents, setGameState]
   );
 
   const requestUndo = useCallback(
@@ -212,7 +212,7 @@ export function useGameActions(
           stateAfterUndo,
           strategy,
           playerStrategies,
-          setPlayerStrategies,
+          setPlayerStrategies
         );
       }
     },
@@ -224,7 +224,7 @@ export function useGameActions(
       strategy,
       playerStrategies,
       setPlayerStrategies,
-    ],
+    ]
   );
 
   const getStateAtEvent = useCallback(
@@ -237,7 +237,7 @@ export function useGameActions(
 
       return getStateAtEventUtil(engine, eventId, gameState);
     },
-    [engineRef, gameState],
+    [engineRef, gameState]
   );
 
   const revealReaction = useCallback(
@@ -247,14 +247,14 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const defender = gameState.pendingReaction?.player;
+      const defender = gameState.pendingChoice?.player;
       if (!defender) {
         return { ok: false, error: "No pending reaction" };
       }
 
       const result = engine.dispatch(
-        { type: "REVEAL_REACTION", player: defender, card },
-        defender,
+        { type: "REVEAL_REACTION", playerId: defender, card },
+        defender
       );
 
       if (result.ok) {
@@ -263,7 +263,7 @@ export function useGameActions(
       }
       return result;
     },
-    [engineRef, gameState, setEvents, setGameState],
+    [engineRef, gameState, setEvents, setGameState]
   );
 
   const declineReaction = useCallback((): CommandResult => {
@@ -272,14 +272,14 @@ export function useGameActions(
       return { ok: false, error: "No engine" };
     }
 
-    const defender = gameState.pendingReaction?.player;
+    const defender = gameState.pendingChoice?.player;
     if (!defender) {
       return { ok: false, error: "No pending reaction" };
     }
 
     const result = engine.dispatch(
-      { type: "DECLINE_REACTION", player: defender },
-      defender,
+      { type: "DECLINE_REACTION", playerId: defender },
+      defender
     );
 
     if (result.ok) {

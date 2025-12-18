@@ -105,7 +105,7 @@ describe("Mode switching preserves game state", () => {
 
     // Events should still reference original player IDs
     const playerEvents = eventsBefore.filter(
-      e => "player" in e && (e.player === "human" || e.player === "ai"),
+      e => "playerId" in e && (e.playerId === "human" || e.playerId === "ai"),
     );
     expect(playerEvents.length).toBeGreaterThan(0);
   });

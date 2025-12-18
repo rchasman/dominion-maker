@@ -12,13 +12,13 @@
 import { useCallback } from "preact/hooks";
 import type { CardName } from "../types/game-state";
 import type { CommandResult } from "../commands/types";
-import type { DecisionRequest } from "../events/types";
+import type { PendingChoice } from "../events/types";
 import { uiLogger } from "../lib/logger";
 
 interface BuyCardLogicParams {
   buyCard: (card: CardName) => CommandResult;
   submitDecision: (choice: { selectedCards: CardName[] }) => CommandResult;
-  pendingDecision?: DecisionRequest | null;
+  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
 }
 
 /**
@@ -27,12 +27,12 @@ interface BuyCardLogicParams {
 export function useBuyCardLogic({
   buyCard,
   submitDecision,
-  pendingDecision,
+  pendingChoice,
 }: BuyCardLogicParams): (card: CardName) => CommandResult {
   return useCallback(
     (card: CardName): CommandResult => {
       // If there's a pending decision from supply, submit the decision
-      if (pendingDecision?.from === "supply") {
+      if (pendingChoice?.from === "supply") {
         const result = submitDecision({ selectedCards: [card] });
         if (!result.ok) {
           uiLogger.error("Failed to submit decision:", result.error);
@@ -47,6 +47,6 @@ export function useBuyCardLogic({
       }
       return result;
     },
-    [buyCard, submitDecision, pendingDecision],
+    [buyCard, submitDecision, pendingChoice],
   );
 }

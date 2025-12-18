@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from "preact/hooks";
 import type { GameContextValue } from "./GameContext";
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
@@ -23,12 +23,12 @@ import { useAutoPhaseAdvanceMultiplayer } from "./use-ai-automation";
 interface MultiplayerGameState {
   gameState: GameState | null;
   events: GameEvent[];
-  playerId: string | null;
+  playerId: PlayerId | null;
   isProcessing: boolean;
   isConnected: boolean;
   isJoined: boolean;
   spectatorCount: number;
-  players: Array<{ name: string; playerId: string }>;
+  players: Array<{ name: string; playerId: PlayerId }>;
   chatMessages: Array<{
     id: string;
     senderName: string;

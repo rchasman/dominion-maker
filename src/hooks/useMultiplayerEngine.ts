@@ -8,17 +8,17 @@
 
 import { useCallback, useRef, useEffect, useState } from "preact/hooks";
 import { DominionEngine } from "../engine";
-import type { GameState, CardName, Player } from "../types/game-state";
-import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
+import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { projectState } from "../events/project";
 
 // Constants
-const PLAYER_IDS: Player[] = ["player0", "player1", "player2", "player3"];
+const PLAYER_IDS: PlayerId[] = ["player0", "player1", "player2", "player3"];
 const EVENT_OFFSET = 1;
 
 // Player ID mapping - ensures type safety when converting index to Player
-function getPlayerIdByIndex(index: number): Player | null {
+function getPlayerIdByIndex(index: number): PlayerId | null {
   return PLAYER_IDS[index] ?? null;
 }
 
@@ -44,7 +44,7 @@ interface UseMultiplayerEngineReturn {
   isMyTurn: boolean;
 
   /** My player ID (player0, player1, etc.) */
-  myPlayerId: Player | null;
+  myPlayerId: PlayerId | null;
 
   // Game actions (these validate locally, then broadcast if host, or send command if client)
   playAction: (card: CardName) => CommandResult;
@@ -99,12 +99,12 @@ function setupEngine(params: {
 // Helper: Check if it's the player's turn
 function checkIsMyTurn(
   gameState: GameState | null,
-  myPlayerId: Player | null,
+  myPlayerId: PlayerId | null
 ): boolean {
   if (!gameState || !myPlayerId) {
     return false;
   }
-  return gameState.activePlayer === myPlayerId && !gameState.pendingDecision;
+  return gameState.activePlayer === myPlayerId && !gameState.pendingChoice;
 }
 
 // Helper: Find event index by ID
@@ -114,24 +114,24 @@ function findEventIndex(events: GameEvent[], eventId: string): number {
 
 // Helper: Execute command with player validation
 type CommandExecutor = (
-  commandFn: (player: PlayerId) => CommandResult,
+  commandFn: (playerId: PlayerId) => CommandResult
 ) => CommandResult;
 
 function createCommandExecutor(
   engine: DominionEngine | null,
-  playerId: Player | null,
+  playerId: PlayerId | null
 ): CommandResult | CommandExecutor {
   if (!engine || !playerId) {
     return { ok: false, error: "Not initialized" };
   }
-  return (commandFn: (player: PlayerId) => CommandResult): CommandResult =>
+  return (commandFn: (playerId: PlayerId) => CommandResult): CommandResult =>
     commandFn(playerId);
 }
 
 // Helper: Create basic action callbacks
 function useBasicActions(
   engineRef: { readonly current: DominionEngine | null },
-  myPlayerId: Player | null,
+  myPlayerId: PlayerId | null
 ): {
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
@@ -143,9 +143,11 @@ function useBasicActions(
       const executor = createCommandExecutor(engine, myPlayerId);
       if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
-      return executor((player: PlayerId) => engine.playAction(player, card));
+      return executor((playerId: PlayerId) =>
+        engine.playAction(playerId, card)
+      );
     },
-    [engineRef, myPlayerId],
+    [engineRef, myPlayerId]
   );
 
   const playTreasure = useCallback(
@@ -154,9 +156,11 @@ function useBasicActions(
       const executor = createCommandExecutor(engine, myPlayerId);
       if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
-      return executor((player: PlayerId) => engine.playTreasure(player, card));
+      return executor((playerId: PlayerId) =>
+        engine.playTreasure(playerId, card)
+      );
     },
-    [engineRef, myPlayerId],
+    [engineRef, myPlayerId]
   );
 
   const playAllTreasures = useCallback((): CommandResult => {
@@ -164,7 +168,7 @@ function useBasicActions(
     const executor = createCommandExecutor(engine, myPlayerId);
     if ("ok" in executor) return executor;
     if (!engine) return { ok: false, error: "Engine not initialized" };
-    return executor((player: PlayerId) => engine.playAllTreasures(player));
+    return executor((playerId: PlayerId) => engine.playAllTreasures(player));
   }, [engineRef, myPlayerId]);
 
   return { playAction, playTreasure, playAllTreasures };
@@ -173,7 +177,7 @@ function useBasicActions(
 // Helper: Create buy and phase actions
 function useBuyAndPhaseActions(
   engineRef: { readonly current: DominionEngine | null },
-  myPlayerId: Player | null,
+  myPlayerId: PlayerId | null
 ): {
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
@@ -184,9 +188,9 @@ function useBuyAndPhaseActions(
       const executor = createCommandExecutor(engine, myPlayerId);
       if ("ok" in executor) return executor;
       if (!engine) return { ok: false, error: "Engine not initialized" };
-      return executor((player: PlayerId) => engine.buyCard(player, card));
+      return executor((playerId: PlayerId) => engine.buyCard(playerId, card));
     },
-    [engineRef, myPlayerId],
+    [engineRef, myPlayerId]
   );
 
   const endPhase = useCallback((): CommandResult => {
@@ -194,7 +198,7 @@ function useBuyAndPhaseActions(
     const executor = createCommandExecutor(engine, myPlayerId);
     if ("ok" in executor) return executor;
     if (!engine) return { ok: false, error: "Engine not initialized" };
-    return executor((player: PlayerId) => engine.endPhase(player));
+    return executor((playerId: PlayerId) => engine.endPhase(playerId));
   }, [engineRef, myPlayerId]);
 
   return { buyCard, endPhase };
@@ -203,7 +207,7 @@ function useBuyAndPhaseActions(
 // Helper: Create decision action
 function useDecisionAction(
   engineRef: { readonly current: DominionEngine | null },
-  myPlayerId: Player | null,
+  myPlayerId: PlayerId | null
 ): {
   submitDecision: (choice: DecisionChoice) => CommandResult;
 } {
@@ -213,13 +217,13 @@ function useDecisionAction(
       if (!engine || !myPlayerId) {
         return { ok: false, error: "Not initialized" };
       }
-      const decisionPlayer = engine.state.pendingDecision?.player;
-      if (decisionPlayer) {
-        return engine.submitDecision(decisionPlayer, choice);
+      const decisionPlayerId = engine.state.pendingChoice?.playerId;
+      if (decisionPlayerId) {
+        return engine.submitDecision(decisionplayerId, choice);
       }
       return { ok: false, error: "No pending decision" };
     },
-    [myPlayerId, engineRef],
+    [myPlayerId, engineRef]
   );
 
   return { submitDecision };
@@ -228,9 +232,9 @@ function useDecisionAction(
 // Helper: Create engine management hooks
 function useEngineManagement(
   engineRef: { readonly current: DominionEngine | null },
-  myPlayerId: Player | null,
+  myPlayerId: PlayerId | null,
   events: GameEvent[],
-  isHost: boolean,
+  isHost: boolean
 ): {
   startGame: (players: PlayerId[], kingdomCards?: CardName[]) => void;
   applyExternalEvents: (events: GameEvent[]) => void;
@@ -244,7 +248,7 @@ function useEngineManagement(
       if (!engine) return;
       engine.startGame(players, kingdomCards);
     },
-    [engineRef],
+    [engineRef]
   );
 
   const applyExternalEvents = useCallback(
@@ -253,7 +257,7 @@ function useEngineManagement(
       if (!engine || isHost) return;
       engine.applyExternalEvents(newEvents);
     },
-    [isHost, engineRef],
+    [isHost, engineRef]
   );
 
   const resetToEvents = useCallback(
@@ -262,7 +266,7 @@ function useEngineManagement(
       if (!engine) return;
       engine.loadEvents(newEvents);
     },
-    [engineRef],
+    [engineRef]
   );
 
   const requestUndo = useCallback(
@@ -271,7 +275,7 @@ function useEngineManagement(
       if (!engine || !myPlayerId) return;
       engine.requestUndo(myPlayerId, toEventId, reason);
     },
-    [myPlayerId, engineRef],
+    [myPlayerId, engineRef]
   );
 
   const getStateAtEvent = useCallback(
@@ -282,7 +286,7 @@ function useEngineManagement(
       }
       return projectState(events.slice(0, eventIndex + EVENT_OFFSET));
     },
-    [events],
+    [events]
   );
 
   return {
@@ -304,7 +308,7 @@ export function useMultiplayerEngine({
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
 
-  const myPlayerId: Player | null =
+  const myPlayerId: PlayerId | null =
     myPlayerIndex !== null ? getPlayerIdByIndex(myPlayerIndex) : null;
 
   const isMyTurn = checkIsMyTurn(gameState, myPlayerId);

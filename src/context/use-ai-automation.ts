@@ -6,7 +6,7 @@
 import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useEffect, useRef } from "preact/hooks";
 import type { DominionEngine } from "../engine";
-import type { GameState } from "../types/game-state";
+import type { GameState, PlayerId } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { GameEvent } from "../events/types";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
@@ -29,7 +29,7 @@ interface AIAutomationParams {
 }
 
 function getOpponentZone(
-  base: "hand" | "inPlay" | "deck" | "discard",
+  base: "hand" | "inPlay" | "deck" | "discard"
 ): "hand-opponent" | "inPlay-opponent" | "deck-opponent" | "discard-opponent" {
   return `${base}-opponent`;
 }
@@ -127,26 +127,26 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                   event.sourceIndex !== undefined
                 ) {
                   cardElement = document.querySelector(
-                    `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`,
+                    `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`
                   );
                   toZone = getOpponentZone("inPlay");
                 } else if (event.type === "CARD_GAINED") {
                   cardElement = document.querySelector(
-                    `[data-card-id="supply-${event.card}"]`,
+                    `[data-card-id="supply-${event.card}"]`
                   );
                   toZone = getOpponentZone(event.to);
                   duration = 300;
                 } else if (event.type === "CARD_TRASHED") {
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
-                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`
                   );
                   toZone = "trash";
                   duration = 250;
                 } else if (event.type === "CARD_RETURNED_TO_HAND") {
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
-                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`
                   );
                   toZone = getOpponentZone("hand");
                 }
@@ -226,14 +226,14 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 
     // Check for AI reaction
     const isAIReaction =
-      gameState.pendingReaction?.player &&
-      isAIControlled(gameMode, gameState.pendingReaction.player);
+      gameState.pendingChoice?.player &&
+      isAIControlled(gameMode, gameState.pendingChoice.player);
 
     // Check for AI decision (opponent making decision during active player's turn)
     const isAIDecision =
-      gameState.pendingDecision?.player &&
-      gameState.pendingDecision.player !== gameState.activePlayer &&
-      isAIControlled(gameMode, gameState.pendingDecision.player);
+      gameState.pendingChoice?.player &&
+      gameState.pendingChoice.player !== gameState.activePlayer &&
+      isAIControlled(gameMode, gameState.pendingChoice.player);
 
     if (!isAIReaction && !isAIDecision) {
       // Not an AI action - abort any ongoing automation and clear state
@@ -247,8 +247,12 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 
     // It IS an AI action - check if we need a new abort controller
     const currentAIDecisionId = isAIReaction
-      ? `reaction-${gameState.pendingReaction!.defender}-${gameState.turn}-${gameMode}`
-      : `decision-${gameState.pendingDecision!.player}-${gameState.pendingDecision!.type}-${gameState.turn}-${gameMode}`;
+      ? `reaction-${gameState.pendingChoice!.defender}-${
+          gameState.turn
+        }-${gameMode}`
+      : `decision-${gameState.pendingChoice!.player}-${
+          gameState.pendingChoice!.type
+        }-${gameState.turn}-${gameMode}`;
 
     if (currentAIDecisionId !== lastAIDecisionRef.current) {
       // New AI decision, create new abort controller
@@ -307,7 +311,7 @@ export function useAutoPhaseAdvance(
   actions: {
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
-  },
+  }
 ): void {
   const { setEvents, setGameState } = actions;
   useEffect(() => {
@@ -319,7 +323,7 @@ export function useAutoPhaseAdvance(
     if (engine.shouldAutoAdvancePhase("human")) {
       const timer = setTimeout(() => {
         uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
-        engine.dispatch({ type: "END_PHASE", player: "human" }, "human");
+        engine.dispatch({ type: "END_PHASE", playerId: "human" }, "human");
         setEvents([...engine.eventLog]);
         setGameState(engine.state);
       }, TIMING.AUTO_ADVANCE_DELAY);
@@ -338,10 +342,10 @@ export function useAutoPhaseAdvance(
  */
 export function useAutoPhaseAdvanceMultiplayer(
   gameState: GameState | null,
-  playerId: string | null,
+  playerId: PlayerId | null,
   isProcessing: boolean,
   isSpectator: boolean,
-  endPhase: () => void,
+  endPhase: () => void
 ): void {
   useEffect(() => {
     if (!gameState || isProcessing || isSpectator || !playerId) {
@@ -351,13 +355,13 @@ export function useAutoPhaseAdvanceMultiplayer(
     const isMyTurn = gameState.activePlayer === playerId;
     const currentHasPlayableActions = computeHasPlayableActions(
       gameState,
-      playerId,
+      playerId
     );
 
     const shouldAutoSkip =
       gameState.phase === "action" &&
       isMyTurn &&
-      !gameState.pendingDecision &&
+      !gameState.pendingChoice &&
       !gameState.gameOver &&
       !currentHasPlayableActions;
 
