@@ -234,7 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Generate analysis one player at a time, build record
     const strategySummary = Object.fromEntries(
       await Promise.all(
-        playerIds.map(async (playerId) => {
+        playerIds.map(async playerId => {
           const playerDeck = playerDecks.find(p => p.id === playerId);
           const previousPlayerAnalysis = previousAnalysis?.[playerId];
 

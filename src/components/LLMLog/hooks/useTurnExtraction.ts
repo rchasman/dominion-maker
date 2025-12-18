@@ -195,7 +195,9 @@ function handleConsensusVoting(
       votingEntry: entry,
       ...(timingEntry !== undefined && { timingEntry }),
       stepNumber: state.stepNumber,
-      ...(modelStatusesSnapshot !== undefined && { modelStatuses: modelStatusesSnapshot }),
+      ...(modelStatusesSnapshot !== undefined && {
+        modelStatuses: modelStatusesSnapshot,
+      }),
     },
   ];
 }

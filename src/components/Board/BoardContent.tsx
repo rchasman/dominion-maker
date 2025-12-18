@@ -283,7 +283,9 @@ export function BoardContent({
         events={game.events}
         isProcessing={game.isProcessing}
         gameMode={game.gameMode}
-        {...(game.setGameMode !== undefined && { onGameModeChange: game.setGameMode })}
+        {...(game.setGameMode !== undefined && {
+          onGameModeChange: game.setGameMode,
+        })}
         localPlayer={localPlayerId}
         modelSettings={game.modelSettings}
         onModelSettingsChange={game.setModelSettings}

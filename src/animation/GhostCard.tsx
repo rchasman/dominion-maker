@@ -144,7 +144,10 @@ export function GhostCard({
           sizes={`${fromRect.width}px`}
         />
         <img
-          src={getOptimizedImageUrl({ url: imageUrl, width: DEFAULT_IMAGE_WIDTH })}
+          src={getOptimizedImageUrl({
+            url: imageUrl,
+            width: DEFAULT_IMAGE_WIDTH,
+          })}
           alt={cardName}
           width={CARD_IMAGE_WIDTH}
           height={CARD_IMAGE_HEIGHT}

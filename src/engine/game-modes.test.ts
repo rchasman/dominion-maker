@@ -201,7 +201,9 @@ describe("Game initialization with different modes", () => {
         engine.startGame(["ai1", "ai2"]);
 
         expect(engine.state.activePlayerId).toBeTruthy();
-        expect(engine.state.players).toHaveProperty(engine.state.activePlayerId);
+        expect(engine.state.players).toHaveProperty(
+          engine.state.activePlayerId,
+        );
       });
     });
 

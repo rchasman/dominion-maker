@@ -26,7 +26,7 @@ export function getPlayerPerspective(
     playerIds =
       gameMode === "multiplayer"
         ? ["player0", "player1"]
-        : (getPlayersForMode(gameMode));
+        : getPlayersForMode(gameMode);
   } else {
     playerIds = Object.keys(state.players);
   }

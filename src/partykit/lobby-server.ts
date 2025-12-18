@@ -82,7 +82,7 @@ export default class LobbyServer implements Party.Server {
 
   async onRequest(req: Party.Request): Promise<Response> {
     if (req.method === "POST") {
-      const body = (await req.json());
+      const body = await req.json();
 
       if (body.type === "game_update") {
         if (body.isActive) {

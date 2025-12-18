@@ -224,7 +224,8 @@ const aggregateGroup = (
     });
 
     const cards = allCards.length > 0 ? allCards : undefined;
-    const finalCardCounts = Object.keys(cardCounts).length > 0 ? cardCounts : undefined;
+    const finalCardCounts =
+      Object.keys(cardCounts).length > 0 ? cardCounts : undefined;
     return {
       ...first,
       count: totalCount,

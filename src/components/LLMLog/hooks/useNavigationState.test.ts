@@ -176,7 +176,8 @@ describe("useNavigationState reducer", () => {
       const hasPrevTurn = state.currentTurnIndex > 0;
       const hasNextTurn = state.currentTurnIndex < turns.length - 1;
       const hasPrevAction = state.currentActionIndex > 0;
-      const maxActionIndex = turns[state.currentTurnIndex]!.decisions.length - 1;
+      const maxActionIndex =
+        turns[state.currentTurnIndex]!.decisions.length - 1;
       const hasNextAction = state.currentActionIndex < maxActionIndex;
 
       expect(hasPrevTurn).toBe(true);

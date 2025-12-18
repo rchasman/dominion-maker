@@ -224,7 +224,9 @@ export function GameSidebar({
           gameMode={gameMode}
           gameLogHeight={gameLogHeight}
           {...(modelSettings !== undefined && { modelSettings })}
-          {...(onModelSettingsChange !== undefined && { onModelSettingsChange })}
+          {...(onModelSettingsChange !== undefined && {
+            onModelSettingsChange,
+          })}
         />
       )}
 

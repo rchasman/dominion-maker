@@ -120,10 +120,10 @@ export function GameRoom({
               onClose={() => {
                 localStorage.removeItem("dominion_active_game");
                 onBack();
-            }}
-          />
-        )}
-      </BoardWithProviders>
+              }}
+            />
+          )}
+        </BoardWithProviders>
       </AnimationProvider>
     );
   }

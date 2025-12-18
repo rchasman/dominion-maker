@@ -48,10 +48,7 @@ function LogEntryWithUndo({
       }}
     >
       <div style={{ flex: 1 }}>
-        <LogEntry
-          entry={entry}
-          {...(gameMode !== undefined && { gameMode })}
-        />
+        <LogEntry entry={entry} {...(gameMode !== undefined && { gameMode })} />
       </div>
       {hasUndo && (
         <button

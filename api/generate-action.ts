@@ -338,9 +338,7 @@ function optimizeStateForAI(state: GameState): unknown {
     ...(opponentState ? { opponent: opponentState } : {}),
     supply: supplyWithCounts,
     trash: state.trash,
-    ...(state.pendingChoice
-      ? { pendingChoice: state.pendingChoice }
-      : {}),
+    ...(state.pendingChoice ? { pendingChoice: state.pendingChoice } : {}),
     ...(subPhase ? { subPhase } : {}),
   };
 }

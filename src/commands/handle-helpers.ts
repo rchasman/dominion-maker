@@ -156,7 +156,11 @@ function createGameOverEvent(
       const newScores = { ...acc.scores, [playerId]: score };
       const newWinnerId = score > acc.maxScore ? playerId : acc.winnerId;
       const newMaxScore = Math.max(acc.maxScore, score);
-      return { scores: newScores, winnerId: newWinnerId, maxScore: newMaxScore };
+      return {
+        scores: newScores,
+        winnerId: newWinnerId,
+        maxScore: newMaxScore,
+      };
     }, initialAcc);
 
   return {

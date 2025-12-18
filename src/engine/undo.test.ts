@@ -312,7 +312,9 @@ describe("Undo System - getStateAtEvent", () => {
 
       // Should match original state after start
       expect(stateAtTurnStart.turn).toBe(stateAfterStart.turn);
-      expect(stateAtTurnStart.activePlayerId).toBe(stateAfterStart.activePlayerId);
+      expect(stateAtTurnStart.activePlayerId).toBe(
+        stateAfterStart.activePlayerId,
+      );
 
       // Current state should still be after Festival
       expect(engine.state.coins).toBeGreaterThan(stateAtTurnStart.coins);
