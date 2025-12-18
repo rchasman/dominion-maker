@@ -5,6 +5,7 @@ import { resetEventCounter } from "../events/id-generator";
 import { handleCommand } from "../commands/handle";
 import type { GameState, CardName } from "../types/game-state";
 import type { CardEffectContext } from "./effect-types";
+import { isDecisionChoice } from "../types/pending-choice";
 
 /**
  * Comprehensive card effect tests
@@ -378,7 +379,10 @@ describe("Multi-Stage Decision Cards", () => {
       // Get initial decision
       let newState = executeCard("Chapel", state);
       expect(newState.pendingChoice).toBeDefined();
-      expect(newState.pendingChoice?.max).toBe(4);
+      expect(isDecisionChoice(newState.pendingChoice)).toBe(true);
+      if (isDecisionChoice(newState.pendingChoice)) {
+        expect(newState.pendingChoice.max).toBe(4);
+      }
 
       // AI consensus runs multi-round voting, accumulates 3 cards
       // Then submits all at once (handled by strategy layer)
@@ -474,8 +478,11 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should create decision with min: 0 (can skip)
       expect(newState.pendingChoice).toBeDefined();
-      expect(newState.pendingChoice?.min).toBe(0);
-      expect(newState.pendingChoice?.max).toBe(1);
+      expect(isDecisionChoice(newState.pendingChoice)).toBe(true);
+      if (isDecisionChoice(newState.pendingChoice)) {
+        expect(newState.pendingChoice.min).toBe(0);
+        expect(newState.pendingChoice.max).toBe(1);
+      }
 
       // Discard should still have the cards until decision is resolved
       expect(newState.players.human.discard).toEqual(["Copper", "Estate"]);
@@ -562,7 +569,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer cards up to cost 4 (2+2)
       expect(newState.pendingChoice).toBeDefined();
-      if (!newState.pendingChoice) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
       expect(newState.pendingChoice.cardOptions).toContain("Silver");
 
       // Gain Silver
@@ -600,7 +607,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer treasures up to cost 3 (0+3)
       expect(newState.pendingChoice).toBeDefined();
-      if (!newState.pendingChoice) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
       expect(newState.pendingChoice.cardOptions).toContain("Silver");
       expect(newState.pendingChoice.cardOptions).not.toContain("Gold");
 
@@ -638,7 +645,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Topdeck card from hand
       expect(newState.pendingChoice).toBeDefined();
-      if (!newState.pendingChoice) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
       expect(newState.pendingChoice.from).toBe("hand");
 
       newState = executeCard(
@@ -969,7 +976,7 @@ describe("Complex Card Interactions", () => {
       const newState = executeCard("Library", state);
 
       // Should request which actions to skip
-      if (newState.pendingChoice) {
+      if (isDecisionChoice(newState.pendingChoice)) {
         expect(newState.pendingChoice.cardOptions).toContain("Village");
         expect(newState.pendingChoice.cardOptions).toContain("Smithy");
       }

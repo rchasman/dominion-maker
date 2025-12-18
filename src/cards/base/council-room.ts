@@ -14,7 +14,7 @@ export const councilRoom: CardEffect = ({
 }): CardEffectResult => {
   const drawEvents = createDrawEvents(
     playerId,
-    state.players[playerId],
+    state.players[playerId]!,
     CARDS_TO_DRAW,
   );
 
@@ -23,7 +23,7 @@ export const councilRoom: CardEffect = ({
   // Each opponent draws a card
   const opponents = getOpponents(state, playerId);
   const opponentDrawEvents = opponents.flatMap(opponent =>
-    createDrawEvents(opponent, state.players[opponent], 1),
+    createDrawEvents(opponent, state.players[opponent]!, 1),
   );
 
   return { events: [...drawEvents, buyEvent, ...opponentDrawEvents] };

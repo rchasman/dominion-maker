@@ -56,7 +56,7 @@ function processOpponentAutoAttack(
   }
 
   if (trashable.length === 1) {
-    const toTrash = trashable[0];
+    const toTrash = trashable[0]!;
     const trashEvent: GameEvent = {
       type: "CARD_TRASHED",
       playerId: target,

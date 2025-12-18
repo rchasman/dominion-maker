@@ -36,7 +36,7 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
       playerId: opponent,
       from: "hand",
       prompt: `Militia: Discard down to 3 cards (discard ${data.discardCount})`,
-      cardOptions: [...data.hand],
+      cardOptions: [...data.hand] as CardName[],
       min: data.discardCount,
       max: data.discardCount,
       cardBeingPlayed: "Militia",
