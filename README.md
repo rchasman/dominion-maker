@@ -52,7 +52,7 @@ Preact, TypeScript, Bun, Vite 8 beta, Vercel AI SDK v6 beta
 
 - **Build**: 58ms build, 81ms types, 73ms tests (497), ~15s deploy
 - **Bundle**: 134 KB gzipped (72% compression), smart preloading, AVIF/WebP images
-- **Multiplayer**: P2P via trystero (WebRTC)
+- **Multiplayer**: Real-time via PartyKit (WebSocket + edge)
 - **Dev tools**: Event scrubber for time-travel debugging
 
 ## License
