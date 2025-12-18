@@ -65,6 +65,7 @@ export function GameRoom({
     {},
   );
   const lastEventCountRef = useRef(0);
+  const previousGameStateRef = useRef<GameState | null>(null);
 
   const hasPlayableActions = useMemo(
     () => computeHasPlayableActions(game.gameState, game.playerId),
@@ -140,6 +141,14 @@ export function GameRoom({
     if (!game.gameState || game.isProcessing || isSpectator) return;
 
     const state = game.gameState;
+
+    // Don't auto-skip immediately after gameState changes (reconnection or initial load)
+    // This prevents race conditions where hasPlayableActions hasn't been recalculated yet
+    if (previousGameStateRef.current !== state) {
+      previousGameStateRef.current = state;
+      return;
+    }
+
     const isMyTurn = state.activePlayer === game.playerId;
     const shouldAutoSkip =
       state.phase === "action" &&
