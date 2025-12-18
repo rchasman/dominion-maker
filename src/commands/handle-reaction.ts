@@ -95,6 +95,19 @@ export function handleRevealReaction(
       reaction.metadata!.originalCause,
     );
     events.push(...nextEvents);
+
+    // If there's another REACTION_OPPORTUNITY, don't apply attack yet (waiting for next reaction)
+    const hasMoreReactions = nextEvents.some(e => e.type === "REACTION_OPPORTUNITY");
+    if (!hasMoreReactions) {
+      // All reactions resolved, apply attack to unblocked targets
+      const midState = applyEvents(state, events);
+      const attackEvents = applyAttackToUnblockedTargets(
+        midState,
+        updatedMetadata,
+        reaction.metadata!.originalCause,
+      );
+      events.push(...attackEvents);
+    }
   } else {
     // All reactions resolved - apply attack to unblocked targets
     const midState = applyEvents(state, events);
@@ -161,6 +174,19 @@ export function handleDeclineReaction(
       reaction.metadata!.originalCause,
     );
     events.push(...nextEvents);
+
+    // If there's another REACTION_OPPORTUNITY, don't apply attack yet (waiting for next reaction)
+    const hasMoreReactions = nextEvents.some(e => e.type === "REACTION_OPPORTUNITY");
+    if (!hasMoreReactions) {
+      // All reactions resolved, apply attack to unblocked targets
+      const midState = applyEvents(state, events);
+      const attackEvents = applyAttackToUnblockedTargets(
+        midState,
+        reaction.metadata!,
+        reaction.metadata!.originalCause,
+      );
+      events.push(...attackEvents);
+    }
   } else {
     // All reactions resolved - apply attack to unblocked targets
     const midState = applyEvents(state, events);
@@ -265,9 +291,30 @@ function applyAttackToUnblockedTargets(
   });
 
   // Link all events to root cause
-  return result.events.map(e => ({
+  const linkedEvents = result.events.map(e => ({
     ...e,
     id: e.id || generateEventId(),
     causedBy: e.causedBy || rootEventId,
   }));
+
+  // Handle pending choice from attack effect (e.g., Militia requiring discards)
+  const pendingChoiceEvent: GameEvent[] = result.pendingChoice
+    ? [
+        {
+          type: "DECISION_REQUIRED",
+          decision: {
+            ...result.pendingChoice,
+            cardBeingPlayed: metadata.attackCard,
+            metadata: {
+              ...result.pendingChoice.metadata,
+              originalCause: rootEventId,
+            },
+          },
+          id: generateEventId(),
+          causedBy: rootEventId,
+        },
+      ]
+    : [];
+
+  return [...linkedEvents, ...pendingChoiceEvent];
 }

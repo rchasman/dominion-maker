@@ -9,6 +9,7 @@ import type { GameState, CardName } from "../types/game-state";
 import { handleCommand } from "../commands/handle";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameEvent } from "../events/types";
+import { applyEvents } from "../events/apply";
 
 function createTestState(): GameState {
   return {
@@ -53,6 +54,8 @@ function createTestState(): GameState {
     playerOrder: ["human", "ai1", "ai2"],
     turnNumber: 1,
     trash: [],
+    turnHistory: [],
+    log: [],
   };
 }
 
@@ -104,7 +107,6 @@ describe("Militia with Reaction Flow", () => {
     if (!playResult.ok) throw new Error(`Play failed: ${playResult.error}`);
 
     // Apply events to get new state
-    const { applyEvents } = await import("../events/apply");
     const midState = applyEvents(state, playResult.events);
 
     // Now ai1 reveals Moat
@@ -164,7 +166,6 @@ describe("Militia with Reaction Flow", () => {
     if (!playResult.ok) throw new Error(`Play failed: ${playResult.error}`);
 
     // Apply events to get new state
-    const { applyEvents } = await import("../events/apply");
     const midState = applyEvents(state, playResult.events);
 
     // Now ai1 declines to reveal Moat
