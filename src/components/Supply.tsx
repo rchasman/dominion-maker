@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import type { CardName, GameState } from "../types/game-state";
-import type { DecisionRequest } from "../events/types";
+import type { PendingChoice } from "../events/types";
 import { CARDS } from "../data/cards";
 import { Card } from "./Card";
 import { Pile } from "./Pile";
@@ -18,7 +18,7 @@ interface SupplyProps {
   onBuyCard?: (card: CardName) => void;
   canBuy: boolean;
   availableCoins: number;
-  pendingDecision?: DecisionRequest | null;
+  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
   // Action button props
   isPlayerActive?: boolean;
   hasTreasuresInHand?: boolean;
@@ -40,11 +40,11 @@ function canInteractWithCard(
   card: CardName,
   canBuyCard: { canBuy: boolean; availableCoins: number },
   state: GameState,
-  pendingDecision: DecisionRequest | undefined | null,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
 ): boolean {
   // If there's a gain decision from supply, only enable cards in the options
-  if (pendingDecision && pendingDecision.from === "supply") {
-    const options = pendingDecision.cardOptions || [];
+  if (pendingChoice && pendingChoice.from === "supply") {
+    const options = pendingChoice.cardOptions || [];
     return options.includes(card) && state.supply[card] > 0;
   }
 
@@ -58,12 +58,12 @@ function canInteractWithCard(
 
 function getSupplyCardHighlightMode(
   card: CardName,
-  pendingDecision: DecisionRequest | undefined | null,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
 ): "trash" | "discard" | "gain" | undefined {
-  if (!pendingDecision || pendingDecision.from !== "supply") return undefined;
+  if (!pendingChoice || pendingChoice.from !== "supply") return undefined;
 
   // Check if this card is in the gain options
-  const options = pendingDecision.cardOptions || [];
+  const options = pendingChoice.cardOptions || [];
   const isGainable = options.includes(card);
   return isGainable ? "gain" : undefined;
 }
@@ -77,10 +77,10 @@ function getButtonCursor(disabled: boolean): string {
 }
 
 function getEndPhaseButtonBackground(
-  pendingDecision: DecisionRequest | null | undefined,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
   phase: string,
 ): string {
-  if (pendingDecision && canSkipDecision(pendingDecision)) {
+  if (pendingChoice && canSkipDecision(pendingChoice)) {
     return "linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)";
   }
   if (phase === "action") {
@@ -91,20 +91,20 @@ function getEndPhaseButtonBackground(
 
 function getEndPhaseButtonBorder(
   isTurnComplete: boolean,
-  pendingDecision: DecisionRequest | null | undefined,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
-  if (pendingDecision && pendingDecision.canSkip) return "1px solid #fbbf24";
+  if (pendingChoice && pendingChoice.canSkip) return "1px solid #fbbf24";
   if (phase === "action") return "1px solid var(--color-victory)";
   return "1px solid #666";
 }
 
 function getEndPhaseButtonText(
-  pendingDecision: DecisionRequest | null | undefined,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
   phase: string,
 ): string {
-  if (pendingDecision && pendingDecision.canSkip) return "Skip";
+  if (pendingChoice && pendingChoice.canSkip) return "Skip";
   if (phase === "action") return "Skip to Buy";
   return "End Turn";
 }
@@ -174,12 +174,12 @@ function SkipButton({ onSkipDecision }: { onSkipDecision: () => void }) {
 
 function PlayTreasuresButton({
   onPlayAllTreasures,
-  pendingDecision,
+  pendingChoice,
 }: {
   onPlayAllTreasures: () => void;
-  pendingDecision: DecisionRequest | null | undefined;
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
 }) {
-  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
+  const disabled = !!(pendingChoice && !canSkipDecision(pendingChoice));
 
   return (
     <button
@@ -206,16 +206,16 @@ function PlayTreasuresButton({
 
 function EndPhaseButton({
   onEndPhase,
-  pendingDecision,
+  pendingChoice,
   phase,
   isTurnComplete,
 }: {
   onEndPhase: () => void;
-  pendingDecision: DecisionRequest | null | undefined;
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
   phase: string;
   isTurnComplete: boolean;
 }) {
-  const disabled = !!(pendingDecision && !canSkipDecision(pendingDecision));
+  const disabled = !!(pendingChoice && !canSkipDecision(pendingChoice));
 
   return (
     <button
@@ -223,9 +223,9 @@ function EndPhaseButton({
       disabled={disabled}
       style={{
         padding: "var(--space-2) var(--space-4)",
-        background: getEndPhaseButtonBackground(pendingDecision, phase),
+        background: getEndPhaseButtonBackground(pendingChoice, phase),
         color: isTurnComplete ? "#a89968" : "#fff",
-        border: getEndPhaseButtonBorder(isTurnComplete, pendingDecision, phase),
+        border: getEndPhaseButtonBorder(isTurnComplete, pendingChoice, phase),
         cursor: getButtonCursor(disabled),
         opacity: getButtonOpacity(disabled),
         fontSize: "0.6875rem",
@@ -235,7 +235,7 @@ function EndPhaseButton({
         animation: isTurnComplete ? "glow 2s ease-in-out infinite" : "none",
       }}
     >
-      {getEndPhaseButtonText(pendingDecision, phase)}
+      {getEndPhaseButtonText(pendingChoice, phase)}
     </button>
   );
 }
@@ -245,10 +245,10 @@ function renderSupplyColumn(params: {
   size: "small" | "large";
   state: GameState;
   canBuyParams: { canBuy: boolean; availableCoins: number };
-  pendingDecision: DecisionRequest | undefined | null;
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null;
   onBuyCard: ((card: CardName) => void) | undefined;
 }) {
-  const { cards, size, state, canBuyParams, pendingDecision, onBuyCard } =
+  const { cards, size, state, canBuyParams, pendingChoice, onBuyCard } =
     params;
 
   return (
@@ -271,9 +271,9 @@ function renderSupplyColumn(params: {
           count={state.supply[card]}
           onClick={() => onBuyCard?.(card)}
           disabled={
-            !canInteractWithCard(card, canBuyParams, state, pendingDecision)
+            !canInteractWithCard(card, canBuyParams, state, pendingChoice)
           }
-          highlightMode={getSupplyCardHighlightMode(card, pendingDecision)}
+          highlightMode={getSupplyCardHighlightMode(card, pendingChoice)}
         />
       ))}
     </div>
@@ -285,7 +285,7 @@ export function Supply({
   onBuyCard,
   canBuy,
   availableCoins,
-  pendingDecision,
+  pendingChoice,
   isPlayerActive = false,
   hasTreasuresInHand = false,
   onPlayAllTreasures,
@@ -333,12 +333,12 @@ export function Supply({
   const canBuyParams = { canBuy, availableCoins };
 
   const isTurnComplete =
-    !state.pendingDecision &&
+    !state.pendingChoice &&
     ((state.phase === "action" && state.actions === 0) ||
       (state.phase === "buy" && state.buys === 0 && !hasTreasuresInHand));
 
   const hasPendingDecision =
-    state.pendingDecision && state.pendingDecision.player === localPlayerId;
+    state.pendingChoice && state.pendingChoice.player === localPlayerId;
 
   return (
     <div
@@ -378,7 +378,7 @@ export function Supply({
           size: "small",
           state,
           canBuyParams,
-          pendingDecision,
+          pendingChoice,
           onBuyCard,
         })}
       </div>
@@ -401,7 +401,7 @@ export function Supply({
           size: "small",
           state,
           canBuyParams,
-          pendingDecision,
+          pendingChoice,
           onBuyCard,
         })}
       </div>
@@ -438,9 +438,9 @@ export function Supply({
               count={state.supply[card]}
               onClick={() => onBuyCard?.(card)}
               disabled={
-                !canInteractWithCard(card, canBuyParams, state, pendingDecision)
+                !canInteractWithCard(card, canBuyParams, state, pendingChoice)
               }
-              highlightMode={getSupplyCardHighlightMode(card, pendingDecision)}
+              highlightMode={getSupplyCardHighlightMode(card, pendingChoice)}
             />
           ))}
         </div>
@@ -510,10 +510,10 @@ export function Supply({
                 "Curse",
                 canBuyParams,
                 state,
-                pendingDecision,
+                pendingChoice,
               )
             }
-            highlightMode={getSupplyCardHighlightMode("Curse", pendingDecision)}
+            highlightMode={getSupplyCardHighlightMode("Curse", pendingChoice)}
           />
         </div>
       </div>
@@ -532,7 +532,7 @@ export function Supply({
         >
           {run(() => {
             if (onConfirmDecision && hasPendingDecision) {
-              const minRequired = state.pendingDecision?.min ?? 0;
+              const minRequired = state.pendingChoice?.min ?? 0;
               return (
                 <>
                   <ConfirmButton
@@ -555,13 +555,13 @@ export function Supply({
                   hasTreasuresInHand && (
                     <PlayTreasuresButton
                       onPlayAllTreasures={onPlayAllTreasures}
-                      pendingDecision={state.pendingDecision}
+                      pendingChoice={state.pendingChoice}
                     />
                   )}
                 {onEndPhase && (
                   <EndPhaseButton
                     onEndPhase={onEndPhase}
-                    pendingDecision={state.pendingDecision}
+                    pendingChoice={state.pendingChoice}
                     phase={state.phase}
                     isTurnComplete={isTurnComplete}
                   />

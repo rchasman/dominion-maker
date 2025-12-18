@@ -1,6 +1,7 @@
 import type {
   LogEntry as LogEntryType,
   CardName,
+  PlayerId,
 } from "../../types/game-state";
 import { CardNameSpan, PlayerName } from "../LogFormatters";
 import { getCardColor } from "../../lib/card-colors";
@@ -57,7 +58,7 @@ export function getAggregatedCount(entry: {
 }
 
 // Helper to render player name prefix (always shown for clarity on attacks)
-export function renderPlayerPrefix(playerId: string): ComponentChildren {
+export function renderPlayerPrefix(playerId: PlayerId): ComponentChildren {
   return (
     <>
       <PlayerName playerId={playerId} />{" "}

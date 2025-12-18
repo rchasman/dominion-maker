@@ -6,6 +6,7 @@ import type {
   LobbyPlayer,
   GameRequest,
   ActiveGame,
+  PlayerId,
 } from "../../partykit/protocol";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor } from "../../lib/board-utils";
@@ -32,8 +33,8 @@ interface PlayerGridProps {
   myName: string;
   myLastGameRoomId: string | null;
   isConnected: boolean;
-  getRequestState: (playerId: string) => RequestState;
-  getIncomingRequest: (playerId: string) => GameRequest | undefined;
+  getRequestState: (playerId: PlayerId) => RequestState;
+  getIncomingRequest: (playerId: PlayerId) => GameRequest | undefined;
   onRequestGame: (targetId: string) => void;
   onAcceptRequest: (requestId: string) => void;
   onSpectateGame: (roomId: string) => void;
@@ -57,10 +58,10 @@ export function PlayerGrid({
   const myClientId = myPlayer?.clientId || "";
   // Get all player names in active games
   const playersInGames = new Set(
-    activeGames.flatMap(game => game.players.map(p => p.name)),
+    activeGames.flatMap(game => game.players.map(p => p.name))
   );
 
-  const handleClick = (player: LobbyPlayer) => {
+  const handleClick = (playerId: LobbyPlayer) => {
     if (player.id === myId) return;
 
     const requestState = getRequestState(player.id);
@@ -120,8 +121,8 @@ export function PlayerGrid({
   const sortedPlayers = lobbyMe
     ? [lobbyMe, ...lobbyOthers]
     : players.length === 0
-      ? [{ id: "connecting", name: myName }]
-      : lobbyPlayersRaw;
+    ? [{ id: "connecting", name: myName }]
+    : lobbyPlayersRaw;
 
   // Assign stable positions based on hash, distributed evenly
   const playerPositions = new Map<string, number>();
@@ -135,7 +136,7 @@ export function PlayerGrid({
         ? myClientId
         : (player as LobbyPlayer).clientId;
     return {
-      player,
+      playerId,
       hash: hashPlayerId(hashKey),
       isMe,
     };
@@ -151,7 +152,7 @@ export function PlayerGrid({
   // Assign evenly distributed positions
   playersWithHash.forEach((item, index) => {
     const position = Math.floor(
-      (index / playersWithHash.length) * maxPositions,
+      (index / playersWithHash.length) * maxPositions
     );
     playerPositions.set(item.player.id, position);
   });
@@ -320,12 +321,12 @@ function GameCircle({
     const color1 =
       player1.isConnected === false
         ? "#6b7280" // gray for disconnected
-        : (playerColors.get(player1.id ?? "") ?? getPlayerColor(player1.name));
+        : playerColors.get(player1.id ?? "") ?? getPlayerColor(player1.name);
 
     const color2 =
       player2.isConnected === false
         ? "#6b7280" // gray for disconnected
-        : (playerColors.get(player2.id ?? "") ?? getPlayerColor(player2.name));
+        : playerColors.get(player2.id ?? "") ?? getPlayerColor(player2.name);
 
     // Split at 180deg: left half is player1, right half is player2
     return `conic-gradient(from 270deg, ${color1} 0deg, ${color1} 180deg, ${color2} 180deg, ${color2} 360deg)`;
@@ -348,8 +349,8 @@ function GameCircle({
         border: isMyGame
           ? "3px solid transparent"
           : borderGradient
-            ? "3px solid transparent"
-            : "2px solid var(--color-border-primary)",
+          ? "3px solid transparent"
+          : "2px solid var(--color-border-primary)",
         borderRadius: "50%",
         cursor: "pointer",
         fontFamily: "inherit",
@@ -376,7 +377,7 @@ function GameCircle({
       }}
     >
       {/* Player avatars arranged in circle */}
-      {game.players.map((player, i) => {
+      {game.players.map((playerId, i) => {
         const angle = (i / totalAvatars) * 2 * Math.PI - Math.PI / 2;
         const x = Math.cos(angle) * circleRadius;
         const y = Math.sin(angle) * circleRadius;
@@ -387,7 +388,7 @@ function GameCircle({
         const isSinglePlayer =
           game.players.length === 2 && game.players.some(p => p.isBot);
 
-        // Avatar style: bottts for single-player, micah for multiplayer
+        // Avatar style: bottts for single-playerId, micah for multiplayer
         const avatarStyle = isSinglePlayer ? "bottts" : "micah";
 
         return (
@@ -400,7 +401,9 @@ function GameCircle({
           >
             <img
               key={avatarStyle}
-              src={`https://api.dicebear.com/9.x/${avatarStyle}/svg?seed=${encodeURIComponent(player.name)}`}
+              src={`https://api.dicebear.com/9.x/${avatarStyle}/svg?seed=${encodeURIComponent(
+                player.name
+              )}`}
               alt={player.name}
               style={{
                 width: `${avatarSize}px`,

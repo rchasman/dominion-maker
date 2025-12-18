@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
-import type { CardName, Phase } from "../../types/game-state";
-import type { DecisionRequest } from "../../events/types";
+import type { CardName, Phase, PlayerId } from "../../types/game-state";
+import type { PendingChoice } from "../../events/types";
 import { Card } from "../Card";
 import { CARDS } from "../../data/cards";
 import { useAnimationSafe } from "../../animation";
@@ -12,10 +12,10 @@ interface HandSectionProps {
   showCards: boolean;
   loading: boolean;
   selectedCardIndices: number[];
-  pendingDecision?: DecisionRequest | null;
+  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
   isInteractive: boolean;
   isActive: boolean;
-  playerId?: string;
+  playerId?: PlayerId;
   phase: Phase;
   actions?: number;
   onCardClick?: (card: CardName, index: number) => void;
@@ -24,19 +24,19 @@ interface HandSectionProps {
 
 function getHandCardHighlightMode(
   card: CardName,
-  pendingDecision: DecisionRequest | null | undefined,
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
   isInteractive: boolean,
-  playerId: string | undefined,
+  playerId: PlayerId | undefined,
 ): "trash" | "discard" | "gain" | undefined {
-  if (!pendingDecision || !isInteractive) return undefined;
-  if (pendingDecision.player !== playerId) return undefined;
-  if (pendingDecision.from !== "hand") return undefined;
+  if (!pendingChoice || !isInteractive) return undefined;
+  if (pendingChoice.player !== playerId) return undefined;
+  if (pendingChoice.from !== "hand") return undefined;
 
-  const isSelectable = pendingDecision.cardOptions?.includes(card) ?? true;
+  const isSelectable = pendingChoice.cardOptions?.includes(card) ?? true;
   if (!isSelectable) return undefined;
 
-  if (pendingDecision.stage === "trash") return "trash";
-  if (pendingDecision.stage === "discard") return "discard";
+  if (pendingChoice.stage === "trash") return "trash";
+  if (pendingChoice.stage === "discard") return "discard";
 
   return undefined;
 }
@@ -45,8 +45,8 @@ interface CardDisabledContext {
   card: CardName;
   isInteractive: boolean;
   isActive: boolean;
-  pendingDecision: DecisionRequest | null | undefined;
-  playerId: string | undefined;
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
+  playerId: PlayerId | undefined;
   phase: Phase;
   actions: number | undefined;
 }
@@ -56,7 +56,7 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
     card,
     isInteractive,
     isActive,
-    pendingDecision,
+    pendingChoice,
     playerId,
     phase,
     actions,
@@ -66,11 +66,11 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
   if (!isActive) return true;
 
   if (
-    pendingDecision &&
-    pendingDecision.player === playerId &&
-    pendingDecision.from === "hand"
+    pendingChoice &&
+    pendingChoice.player === playerId &&
+    pendingChoice.from === "hand"
   ) {
-    const cardOptions = pendingDecision.cardOptions ?? [];
+    const cardOptions = pendingChoice.cardOptions ?? [];
     return cardOptions.length > 0 && !cardOptions.includes(card);
   }
 
@@ -115,7 +115,7 @@ function HandCardRenderer({
   card,
   index,
   selectedCardIndices,
-  pendingDecision,
+  pendingChoice,
   isInteractive,
   isActive,
   playerId,
@@ -127,7 +127,7 @@ function HandCardRenderer({
   card: CardName;
   index: number;
   selectedCardIndices: number[];
-  pendingDecision: DecisionRequest | null | undefined;
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
   isInteractive: boolean;
   isActive: boolean;
   playerId: string | undefined;
@@ -137,9 +137,9 @@ function HandCardRenderer({
   inverted: boolean;
 }) {
   const isSelected =
-    (!pendingDecision ||
-      pendingDecision.from === "hand" ||
-      pendingDecision.from === "discard") &&
+    (!pendingChoice ||
+      pendingChoice.from === "hand" ||
+      pendingChoice.from === "discard") &&
     selectedCardIndices.includes(index);
 
   const cardIdPrefix = inverted ? "hand-opponent" : "hand";
@@ -155,7 +155,7 @@ function HandCardRenderer({
         selected={isSelected}
         highlightMode={getHandCardHighlightMode(
           card,
-          pendingDecision,
+          pendingChoice,
           isInteractive,
           playerId,
         )}
@@ -163,7 +163,7 @@ function HandCardRenderer({
           card,
           isInteractive,
           isActive,
-          pendingDecision,
+          pendingChoice,
           playerId,
           phase,
           actions,
@@ -178,7 +178,7 @@ export function HandSection({
   showCards,
   loading,
   selectedCardIndices,
-  pendingDecision,
+  pendingChoice,
   isInteractive,
   isActive,
   playerId,
@@ -252,7 +252,7 @@ export function HandSection({
                 card={card}
                 index={i}
                 selectedCardIndices={selectedCardIndices}
-                pendingDecision={pendingDecision}
+                pendingChoice={pendingChoice}
                 isInteractive={isInteractive}
                 isActive={isActive}
                 playerId={playerId}

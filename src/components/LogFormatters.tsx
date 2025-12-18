@@ -1,4 +1,4 @@
-import type { CardName } from "../types/game-state";
+import type { CardName, PlayerId } from "../types/game-state";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { getCardColor } from "../lib/card-colors";
 import { useGame } from "../context/hooks";
@@ -7,7 +7,7 @@ export function PlayerName({
   playerId,
   isAI,
 }: {
-  playerId: string;
+  playerId: PlayerId;
   isAI?: boolean;
 }) {
   const { gameState, players } = useGame();

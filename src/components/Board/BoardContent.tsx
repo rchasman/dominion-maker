@@ -91,7 +91,7 @@ function SupplyArea({
       onBuyCard={onBuyCard}
       canBuy={canBuy}
       availableCoins={displayState.coins}
-      pendingDecision={displayState.pendingDecision}
+      pendingChoice={displayState.pendingChoice}
       isPlayerActive={isPlayerActive}
       hasTreasuresInHand={hasTreasuresInHand}
       onPlayAllTreasures={onPlayAllTreasures}

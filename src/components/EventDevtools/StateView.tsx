@@ -65,22 +65,18 @@ export function StateView({ state }: StateViewProps) {
 
       {(state.playerOrder || []).map(renderPlayerSection)}
 
-      {state.pendingDecision && (
+      {state.pendingChoice && (
         <div style={styles.stateSection}>
           <div style={{ ...styles.stateSectionTitle, color: "#f97316" }}>
             Pending Decision
           </div>
           <div style={styles.stateRow}>
-            <span>Player:</span>{" "}
-            <span style={styles.stateValue}>
-              {state.pendingDecision.player}
-            </span>
+            <span>playerId:</span>{" "}
+            <span style={styles.stateValue}>{state.pendingChoice.player}</span>
           </div>
           <div style={styles.stateRow}>
             <span>Prompt:</span>{" "}
-            <span style={styles.stateValue}>
-              {state.pendingDecision.prompt}
-            </span>
+            <span style={styles.stateValue}>{state.pendingChoice.prompt}</span>
           </div>
         </div>
       )}

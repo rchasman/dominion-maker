@@ -21,7 +21,7 @@ function getModeDescription(gameMode: string): string {
 
 function renderModeButtons(
   gameMode: string,
-  setGameMode: (mode: "engine" | "hybrid" | "full") => void,
+  setGameMode: (mode: "engine" | "hybrid" | "full") => void
 ) {
   return (
     <div
@@ -43,7 +43,7 @@ function renderModeButtons(
 
 function renderActionButtons(
   onStartSinglePlayer?: () => void,
-  onStartMultiplayer?: () => void,
+  onStartMultiplayer?: () => void
 ) {
   // Prefetch modules on hover for instant perceived load
   const prefetchSinglePlayer = () => void import("../SinglePlayerApp");
@@ -103,7 +103,7 @@ export function StartScreen({
   gameMode,
   onGameModeChange,
   onStartSinglePlayer,
-  onStartMultiplayer,
+  onStartMultiplayerId,
 }: StartScreenProps) {
   return (
     <div
@@ -156,7 +156,7 @@ export function StartScreen({
         {getModeDescription(gameMode)}
       </p>
 
-      {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
+      {renderActionButtons(onStartSingleplayerId, onStartMultiplayer)}
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function MainPlayerArea({
         selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
         onCardClick={onCardClick}
         onInPlayClick={onInPlayClick}
-        pendingDecision={displayState.pendingDecision}
+        pendingChoice={displayState.pendingChoice}
         phase={displayState.phase}
         actions={displayState.actions}
         playerId={localPlayerId}
@@ -72,25 +72,25 @@ export function MainPlayerArea({
         gameState={displayState}
       />
 
-      {displayState.pendingDecision &&
-        displayState.pendingDecision.actions &&
-        displayState.pendingDecision.player === localPlayerId &&
+      {displayState.pendingChoice &&
+        displayState.pendingChoice.actions &&
+        displayState.pendingChoice.player === localPlayerId &&
         !isPreviewMode && (
           <CardDecisionModal
-            cards={displayState.pendingDecision.cardOptions}
-            actions={displayState.pendingDecision.actions}
-            requiresOrdering={displayState.pendingDecision.requiresOrdering}
+            cards={displayState.pendingChoice.cardOptions}
+            actions={displayState.pendingChoice.actions}
+            requiresOrdering={displayState.pendingChoice.requiresOrdering}
             onDataChange={onComplexDecisionChange}
           />
         )}
 
-      {displayState.pendingReaction &&
-        displayState.pendingReaction.player === localPlayerId &&
+      {displayState.pendingChoice &&
+        displayState.pendingChoice.player === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal
-            reactions={displayState.pendingReaction.availableReactions}
-            attackCard={displayState.pendingReaction.attackCard}
-            attacker={displayState.pendingReaction.attacker}
+            reactions={displayState.pendingChoice.availableReactions}
+            attackCard={displayState.pendingChoice.attackCard}
+            attacker={displayState.pendingChoice.attacker}
             onReveal={onRevealReaction || (() => {})}
             onDecline={onDeclineReaction || (() => {})}
           />

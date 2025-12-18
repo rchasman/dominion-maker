@@ -1,11 +1,11 @@
-import type { CardName } from "../types/game-state";
+import type { CardName, PlayerId } from "../types/game-state";
 import { BaseModal } from "./Modal/BaseModal";
 import { Card } from "./Card";
 
 interface ReactionModalProps {
   reactions: CardName[];
   attackCard: CardName;
-  attacker: string;
+  attacker: PlayerId;
   onReveal: (card: CardName) => void;
   onDecline: () => void;
 }

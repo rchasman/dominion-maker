@@ -1,9 +1,9 @@
 import type { CardName } from "../types/game-state";
-import type { DecisionRequest } from "../events/types";
+import type { PendingChoice } from "../events/types";
 import { Card } from "./Card";
 
 interface ActionPromptProps {
-  decision: DecisionRequest;
+  decision: Extract<PendingChoice, { choiceType: "decision" }>;
   selectedCards: CardName[];
   onToggleCard: (card: CardName) => void;
   onConfirm: () => void;
@@ -11,7 +11,7 @@ interface ActionPromptProps {
 }
 
 function renderCardOptions(
-  decision: DecisionRequest,
+  decision: Extract<PendingChoice, { choiceType: "decision" }>,
   selectedCards: CardName[],
   onToggleCard: (card: CardName) => void,
 ) {

@@ -3,8 +3,9 @@ import type {
   PlayerState,
   Phase,
   GameState,
+  PlayerId,
 } from "../types/game-state";
-import type { DecisionRequest } from "../events/types";
+import type { PendingChoice } from "../events/types";
 import { getSubPhase } from "../lib/state-helpers";
 import { PlayerLabelSection } from "./PlayerArea/PlayerLabelSection";
 import { InPlaySection } from "./PlayerArea/InPlaySection";
@@ -16,7 +17,7 @@ import {
 } from "./PlayerArea/phase-styles";
 
 interface PlayerAreaProps {
-  player: PlayerState;
+  playerId: PlayerState;
   label: string;
   vpCount?: number;
   isActive: boolean;
@@ -25,11 +26,11 @@ interface PlayerAreaProps {
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName, index: number) => void;
   inverted?: boolean; // If true, in-play appears at bottom (for top player)
-  pendingDecision?: DecisionRequest | null;
+  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
   phase: Phase;
   actions?: number;
   loading?: boolean;
-  playerId?: string;
+  playerId?: PlayerId;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
   playerStrategy?: {
     gameplan: string;
@@ -42,7 +43,7 @@ interface PlayerAreaProps {
 function getBorderStyle(
   isActive: boolean,
   gameState: GameState | undefined,
-  borderColor: string,
+  borderColor: string
 ): React.CSSProperties {
   const borderWidth = isActive && gameState ? "2px" : "1px";
   const borderStyle = `${borderWidth} solid ${borderColor}`;
@@ -68,11 +69,11 @@ function LoadingAnimation({ show }: { show: boolean }) {
 }
 
 function HandAndDeckGrid({
-  player,
+  playerId,
   showCards,
   loading,
   selectedCardIndices,
-  pendingDecision,
+  pendingChoice,
   isInteractive,
   isActive,
   playerId,
@@ -81,14 +82,17 @@ function HandAndDeckGrid({
   onCardClick,
   inverted = false,
 }: {
-  player: PlayerState;
+  playerId: PlayerState;
   showCards: boolean;
   loading: boolean;
   selectedCardIndices: number[];
-  pendingDecision: DecisionRequest | null | undefined;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   isInteractive: boolean;
   isActive: boolean;
-  playerId: string | undefined;
+  playerId: PlayerId | undefined;
   phase: Phase;
   actions: number | undefined;
   onCardClick?: (card: CardName, index: number) => void;
@@ -108,7 +112,7 @@ function HandAndDeckGrid({
         showCards={showCards}
         loading={loading}
         selectedCardIndices={selectedCardIndices}
-        pendingDecision={pendingDecision}
+        pendingChoice={pendingChoice}
         isInteractive={isInteractive}
         isActive={isActive}
         playerId={playerId}
@@ -124,7 +128,7 @@ function HandAndDeckGrid({
           discard={player.discard}
           loading={loading}
           deckTopRevealed={player.deckTopRevealed}
-          pendingDecision={pendingDecision}
+          pendingChoice={pendingChoice}
           isInteractive={isInteractive}
           onCardClick={onCardClick}
           inverted={inverted}
@@ -135,7 +139,7 @@ function HandAndDeckGrid({
 }
 
 function PlayerAreaContent({
-  player,
+  playerId,
   label,
   vpCount,
   isActive,
@@ -144,7 +148,7 @@ function PlayerAreaContent({
   onCardClick,
   onInPlayClick,
   inverted,
-  pendingDecision,
+  pendingChoice,
   playerId,
   phase,
   actions,
@@ -180,7 +184,7 @@ function PlayerAreaContent({
             showCards={showCards}
             loading={loading}
             selectedCardIndices={selectedCardIndices}
-            pendingDecision={pendingDecision}
+            pendingChoice={pendingChoice}
             isInteractive={isInteractive}
             isActive={isActive}
             playerId={playerId}
@@ -238,7 +242,7 @@ function PlayerAreaContent({
             showCards={showCards}
             loading={loading}
             selectedCardIndices={selectedCardIndices}
-            pendingDecision={pendingDecision}
+            pendingChoice={pendingChoice}
             isInteractive={isInteractive}
             isActive={isActive}
             playerId={playerId}
@@ -255,7 +259,7 @@ function PlayerAreaContent({
 }
 
 export function PlayerArea({
-  player,
+  playerId,
   label,
   vpCount,
   isActive,
@@ -264,7 +268,7 @@ export function PlayerArea({
   onCardClick,
   onInPlayClick,
   inverted = false,
-  pendingDecision,
+  pendingChoice,
   playerId,
   phase,
   actions,
@@ -278,7 +282,7 @@ export function PlayerArea({
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
   const hasMadePurchases = turnHistory.some(
-    action => action.type === "buy_card",
+    action => action.type === "buy_card"
   );
 
   return (
@@ -292,7 +296,7 @@ export function PlayerArea({
       onCardClick={onCardClick}
       onInPlayClick={onInPlayClick}
       inverted={inverted}
-      pendingDecision={pendingDecision}
+      pendingChoice={pendingChoice}
       playerId={playerId}
       phase={phase}
       subPhase={subPhase}

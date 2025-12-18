@@ -1,4 +1,4 @@
-import type { LogEntry as LogEntryType, CardName } from "../types/game-state";
+import type { LogEntry as LogEntryType, CardName, PlayerId } from "../types/game-state";
 import {
   PlayerName,
   CardNameSpan,
@@ -44,7 +44,7 @@ function getInitials(name: string): string {
 
 function renderTurnStart(
   entry: Extract<LogEntryType, { type: "turn-start" }>,
-  isAI: boolean | undefined,
+  isAI: boolean | undefined
 ) {
   return (
     <div
@@ -62,7 +62,7 @@ function renderTurnStart(
         Turn {entry.turn}
       </span>
       {" - "}
-      <TurnHeaderPlayerName playerId={entry.player} isAI={isAI} />
+      <TurnHeaderPlayerName playerId={entry.playerId} isAI={isAI} />
     </div>
   );
 }
@@ -71,7 +71,7 @@ function TurnHeaderPlayerName({
   playerId,
   isAI,
 }: {
-  playerId: string;
+  playerId: PlayerId;
   isAI?: boolean;
 }) {
   const { gameState, players, gameMode } = useGame();
@@ -101,17 +101,17 @@ function TurnHeaderPlayerName({
 function renderTurnEnd(entry: Extract<LogEntryType, { type: "turn-end" }>) {
   return (
     <span>
-      <PlayerName playerId={entry.player} /> <Verb>ends turn</Verb>
+      <PlayerName playerId={entry.playerId} /> <Verb>ends turn</Verb>
     </span>
   );
 }
 
 function renderPhaseChange(
-  entry: Extract<LogEntryType, { type: "phase-change" }>,
+  entry: Extract<LogEntryType, { type: "phase-change" }>
 ) {
   return (
     <span>
-      <PlayerName playerId={entry.player} /> <Verb>moves to</Verb> {entry.phase}{" "}
+      <PlayerName playerId={entry.playerId} /> <Verb>moves to</Verb> {entry.phase}{" "}
       phase
     </span>
   );
@@ -120,7 +120,7 @@ function renderPhaseChange(
 function renderCardAction(
   entry: Extract<LogEntryType, { card: CardName; children?: LogEntryType[] }>,
   verb: string,
-  reasoning?: string,
+  reasoning?: string
 ) {
   const count = getAggregatedCount(entry);
   const suffix = count > 1 ? ` x${count}` : "";
@@ -129,7 +129,7 @@ function renderCardAction(
   return (
     <>
       <span>
-        <PlayerName playerId={entry.player} /> <Verb>{verb}</Verb>{" "}
+        <PlayerName playerId={entry.playerId} /> <Verb>{verb}</Verb>{" "}
         <span style={cardStyle}>{entry.card}</span>
         {suffix}
       </span>
@@ -139,19 +139,19 @@ function renderCardAction(
 }
 
 function renderPlayTreasure(
-  entry: Extract<LogEntryType, { type: "play-treasure" }>,
+  entry: Extract<LogEntryType, { type: "play-treasure" }>
 ) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
 
 function renderUnplayTreasure(
-  entry: Extract<LogEntryType, { type: "unplay-treasure" }>,
+  entry: Extract<LogEntryType, { type: "unplay-treasure" }>
 ) {
   return renderCardAction(entry, "takes back");
 }
 
 function renderPlayAction(
-  entry: Extract<LogEntryType, { type: "play-action" }>,
+  entry: Extract<LogEntryType, { type: "play-action" }>
 ) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
@@ -162,10 +162,10 @@ function renderBuyCard(entry: Extract<LogEntryType, { type: "buy-card" }>) {
 
 function renderDrawCards(
   entry: Extract<LogEntryType, { type: "draw-cards" }>,
-  viewer: string,
+  viewer: string
 ) {
-  const isOpponent = entry.player !== viewer;
-  const playerPrefix = renderPlayerPrefix(entry.player);
+  const isOpponent = entry.playerId !== viewer;
+  const playerPrefix = renderPlayerPrefix(entry.playerId);
 
   if (isOpponent) {
     return (
@@ -205,7 +205,7 @@ function renderDrawCards(
 function renderGainCard(entry: Extract<LogEntryType, { type: "gain-card" }>) {
   const count = getAggregatedCount(entry);
   const suffix = count > 1 ? ` x${count}` : "";
-  const playerPrefix = renderPlayerPrefix(entry.player);
+  const playerPrefix = renderPlayerPrefix(entry.playerId);
 
   const cardDef = CARDS[entry.card];
   const isVictory =
@@ -238,9 +238,9 @@ function renderGainCard(entry: Extract<LogEntryType, { type: "gain-card" }>) {
 }
 
 function renderDiscardCards(
-  entry: Extract<LogEntryType, { type: "discard-cards" }>,
+  entry: Extract<LogEntryType, { type: "discard-cards" }>
 ) {
-  const playerPrefix = renderPlayerPrefix(entry.player);
+  const playerPrefix = renderPlayerPrefix(entry.playerId);
 
   if (entry.cards) {
     const aggregated = entry as typeof entry & {
@@ -269,7 +269,7 @@ function renderDiscardCards(
 }
 
 function renderTrashCard(entry: Extract<LogEntryType, { type: "trash-card" }>) {
-  const playerPrefix = renderPlayerPrefix(entry.player);
+  const playerPrefix = renderPlayerPrefix(entry.playerId);
 
   if (entry.cards) {
     const cardCounts = getCardCounts(entry.cards);
@@ -301,11 +301,11 @@ function renderTrashCard(entry: Extract<LogEntryType, { type: "trash-card" }>) {
 }
 
 function renderShuffleDeck(
-  entry: Extract<LogEntryType, { type: "shuffle-deck" }>,
+  entry: Extract<LogEntryType, { type: "shuffle-deck" }>
 ) {
   return (
     <span>
-      {renderPlayerPrefix(entry.player)}
+      {renderPlayerPrefix(entry.playerId)}
       <Verb>shuffles</Verb> deck
     </span>
   );
@@ -314,7 +314,7 @@ function renderShuffleDeck(
 function renderEndTurn(entry: Extract<LogEntryType, { type: "end-turn" }>) {
   return (
     <span>
-      <PlayerName playerId={entry.player} /> <Verb>ends turn</Verb>
+      <PlayerName playerId={entry.playerId} /> <Verb>ends turn</Verb>
     </span>
   );
 }
@@ -334,7 +334,7 @@ function renderGameOver(entry: Extract<LogEntryType, { type: "game-over" }>) {
     >
       <div>Game Over!</div>
       <div style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}>
-        {scores.map(([player, vp], i) => (
+        {scores.map(([playerId, vp], i) => (
           <span key={player}>
             {i > 0 && ", "}
             <PlayerName playerId={player} />: <VPValue vp={vp} />
@@ -349,7 +349,7 @@ function renderStartGame(entry: Extract<LogEntryType, { type: "start-game" }>) {
   const goldStyle = { color: "var(--color-gold)", fontWeight: 600 };
   return (
     <span>
-      <PlayerName playerId={entry.player} /> <Verb>starts with</Verb>{" "}
+      <PlayerName playerId={entry.playerId} /> <Verb>starts with</Verb>{" "}
       <span style={goldStyle}>{entry.coppers}</span> Coppers and{" "}
       <span style={goldStyle}>{entry.estates}</span> Estates
     </span>
@@ -369,7 +369,7 @@ function renderResourceChange(verb: string, component: ComponentChildren) {
 }
 
 function renderGetActions(
-  entry: Extract<LogEntryType, { type: "get-actions" }>,
+  entry: Extract<LogEntryType, { type: "get-actions" }>
 ) {
   return renderResourceChange("earns", <ActionValue count={entry.count} />);
 }
@@ -379,7 +379,7 @@ function renderGetBuys(entry: Extract<LogEntryType, { type: "get-buys" }>) {
 }
 
 function renderUseActions(
-  entry: Extract<LogEntryType, { type: "use-actions" }>,
+  entry: Extract<LogEntryType, { type: "use-actions" }>
 ) {
   return renderResourceChange("spends", <ActionValue count={-entry.count} />);
 }
@@ -393,7 +393,7 @@ function renderGetCoins(entry: Extract<LogEntryType, { type: "get-coins" }>) {
 }
 
 function renderSpendCoins(
-  entry: Extract<LogEntryType, { type: "spend-coins" }>,
+  entry: Extract<LogEntryType, { type: "spend-coins" }>
 ) {
   return renderResourceChange("spends", <CoinValue coins={-entry.count} />);
 }
@@ -403,11 +403,11 @@ const ENTRY_RENDERERS = {
   "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
     const isAI =
       ctx.gameMode && ctx.gameMode !== "multiplayer"
-        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(String(entry.player ?? ""))
+        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(String(entry.playerId ?? ""))
         : undefined;
     return renderTurnStart(
       entry as Extract<LogEntryType, { type: "turn-start" }>,
-      isAI,
+      isAI
     );
   },
   "turn-end": (entry: LogEntryType) =>
@@ -416,11 +416,11 @@ const ENTRY_RENDERERS = {
     renderPhaseChange(entry as Extract<LogEntryType, { type: "phase-change" }>),
   "play-treasure": (entry: LogEntryType) =>
     renderPlayTreasure(
-      entry as Extract<LogEntryType, { type: "play-treasure" }>,
+      entry as Extract<LogEntryType, { type: "play-treasure" }>
     ),
   "unplay-treasure": (entry: LogEntryType) =>
     renderUnplayTreasure(
-      entry as Extract<LogEntryType, { type: "unplay-treasure" }>,
+      entry as Extract<LogEntryType, { type: "unplay-treasure" }>
     ),
   "play-action": (entry: LogEntryType) =>
     renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
@@ -429,13 +429,13 @@ const ENTRY_RENDERERS = {
   "draw-cards": (entry: LogEntryType, ctx: { viewer: string }) =>
     renderDrawCards(
       entry as Extract<LogEntryType, { type: "draw-cards" }>,
-      ctx.viewer,
+      ctx.viewer
     ),
   "gain-card": (entry: LogEntryType) =>
     renderGainCard(entry as Extract<LogEntryType, { type: "gain-card" }>),
   "discard-cards": (entry: LogEntryType) =>
     renderDiscardCards(
-      entry as Extract<LogEntryType, { type: "discard-cards" }>,
+      entry as Extract<LogEntryType, { type: "discard-cards" }>
     ),
   "trash-card": (entry: LogEntryType) =>
     renderTrashCard(entry as Extract<LogEntryType, { type: "trash-card" }>),
@@ -491,7 +491,7 @@ type RenderContext = {
 
 function renderChildren(
   childrenToRender: LogEntryType[] | undefined,
-  ctx: RenderContext,
+  ctx: RenderContext
 ) {
   return childrenToRender?.map((child, i) => (
     <LogEntry
@@ -587,7 +587,7 @@ export function LogEntry({
         child.type === "text" &&
         "message" in child &&
         child.message.endsWith("x")
-      ),
+      )
   );
 
   const ctx: RenderContext = { depth, viewer, gameMode, parentPrefix };
