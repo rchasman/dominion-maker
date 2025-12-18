@@ -1,49 +1,7 @@
-// Card names for base game
-export type CardName =
-  // Treasures
-  | "Copper"
-  | "Silver"
-  | "Gold"
-  // Victory
-  | "Estate"
-  | "Duchy"
-  | "Province"
-  // Curse
-  | "Curse"
-  // Kingdom cards (base game 2nd edition)
-  | "Cellar"
-  | "Chapel"
-  | "Moat"
-  | "Harbinger"
-  | "Merchant"
-  | "Vassal"
-  | "Village"
-  | "Workshop"
-  | "Bureaucrat"
-  | "Gardens"
-  | "Militia"
-  | "Moneylender"
-  | "Poacher"
-  | "Remodel"
-  | "Smithy"
-  | "Throne Room"
-  | "Bandit"
-  | "Council Room"
-  | "Festival"
-  | "Laboratory"
-  | "Library"
-  | "Market"
-  | "Mine"
-  | "Sentry"
-  | "Witch"
-  | "Artisan";
+// Re-export basic types
+export type { CardName, PlayerId } from "./basic-types";
 
 export type Phase = "action" | "buy" | "cleanup";
-
-// Player identifiers
-// For single-playerId: "human" vs "ai"
-// For multiplayer: "player0", "player1", etc.
-export type PlayerId = string; // ClientId strings
 
 // Player type (human or AI-controlled)
 export type PlayerType = "human" | "ai";

@@ -1,4 +1,4 @@
-import type { CardName, PlayerId } from "./game-state";
+import type { CardName, PlayerId } from "./basic-types";
 
 export type CardActionId =
   | "trash_card"
