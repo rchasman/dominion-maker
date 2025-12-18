@@ -17,81 +17,81 @@ export type StartGameCommand = {
 // Action phase
 export type PlayActionCommand = {
   type: "PLAY_ACTION";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 // Buy phase
 export type PlayTreasureCommand = {
   type: "PLAY_TREASURE";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 export type PlayAllTreasuresCommand = {
   type: "PLAY_ALL_TREASURES";
-  player: PlayerId;
+  playerId: PlayerId;
 };
 
 export type UnplayTreasureCommand = {
   type: "UNPLAY_TREASURE";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 export type BuyCardCommand = {
   type: "BUY_CARD";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 // Phase transitions
 export type EndPhaseCommand = {
   type: "END_PHASE";
-  player: PlayerId;
+  playerId: PlayerId;
 };
 
 // Decision responses
 export type SubmitDecisionCommand = {
   type: "SUBMIT_DECISION";
-  player: PlayerId;
+  playerId: PlayerId;
   choice: DecisionChoice;
 };
 
 export type SkipDecisionCommand = {
   type: "SKIP_DECISION";
-  player: PlayerId;
+  playerId: PlayerId;
 };
 
 // Reaction responses (first-class)
 export type RevealReactionCommand = {
   type: "REVEAL_REACTION";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 export type DeclineReactionCommand = {
   type: "DECLINE_REACTION";
-  player: PlayerId;
+  playerId: PlayerId;
 };
 
 // Undo system
 export type RequestUndoCommand = {
   type: "REQUEST_UNDO";
-  player: PlayerId;
+  playerId: PlayerId;
   toEventId: string; // Changed from toEventIndex to toEventId for causality tracking
   reason?: string;
 };
 
 export type ApproveUndoCommand = {
   type: "APPROVE_UNDO";
-  player: PlayerId;
+  playerId: PlayerId;
   requestId: string;
 };
 
 export type DenyUndoCommand = {
   type: "DENY_UNDO";
-  player: PlayerId;
+  playerId: PlayerId;
   requestId: string;
 };
 

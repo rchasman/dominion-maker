@@ -20,7 +20,7 @@ export function handleStartGame(
   state: GameState,
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number,
+  seed?: number
 ): CommandResult {
   void state;
   // Select kingdom cards if not provided
@@ -45,28 +45,28 @@ export function handleStartGame(
   // Deal starting decks (7 Copper, 3 Estate per official rules)
   const copperCards: CardName[] = Array.from(
     { length: STARTING_DECK.COPPER },
-    () => "Copper" as CardName,
+    () => "Copper" as CardName
   );
   const estateCards: CardName[] = Array.from(
     { length: STARTING_DECK.ESTATE },
-    () => "Estate" as CardName,
+    () => "Estate" as CardName
   );
   const startingDeck: CardName[] = [...copperCards, ...estateCards];
 
-  const playerSetupEvents = players.flatMap(player => {
+  const playerSetupEvents = players.flatMap(playerId => {
     const shuffledDeck = shuffle([...startingDeck]);
     const initialHand = shuffledDeck.slice(-GAME_CONSTANTS.INITIAL_HAND_SIZE);
     return [
       {
         type: "INITIAL_DECK_DEALT" as const,
-        player,
+        playerId,
         cards: shuffledDeck,
         id: generateEventId(),
         causedBy: rootEventId,
       },
       {
         type: "INITIAL_HAND_DRAWN" as const,
-        player,
+        playerId,
         cards: initialHand,
         id: generateEventId(),
         causedBy: rootEventId,
@@ -86,7 +86,7 @@ export function handleStartGame(
       {
         type: "TURN_STARTED",
         turn: 1,
-        player: players[0],
+        playerId: players[0],
         id: turnStartId,
       },
       ...createResourceEvents(
@@ -94,7 +94,7 @@ export function handleStartGame(
           { type: "ACTIONS_MODIFIED", delta: 1 },
           { type: "BUYS_MODIFIED", delta: 1 },
         ],
-        turnStartId,
+        turnStartId
       ),
     ],
   };
@@ -102,10 +102,10 @@ export function handleStartGame(
 
 export function handleEndPhase(
   state: GameState,
-  player: PlayerId,
+  playerId: PlayerId
 ): CommandResult {
   // Cannot end phase while there's a pending decision
-  if (state.pendingDecision) {
+  if (state.pendingChoice) {
     return { ok: false, error: "Cannot end phase while a decision is pending" };
   }
 
@@ -126,7 +126,7 @@ export function handleEndPhase(
 
   if (state.phase === "buy") {
     // End turn - cleanup and start next player's turn
-    const playerState = state.players[player];
+    const playerState = state.players[playerId];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
@@ -135,7 +135,7 @@ export function handleEndPhase(
     const endTurnId = generateEventId();
     const turnEndedEvent: GameEvent = {
       type: "TURN_ENDED",
-      player: player,
+      playerId,
       turn: state.turn,
       id: endTurnId,
     };
@@ -143,7 +143,7 @@ export function handleEndPhase(
     // Discard hand and in-play cards (atomic events)
     const handDiscardEvents: GameEvent[] = playerState.hand.map(card => ({
       type: "CARD_DISCARDED" as const,
-      player,
+      playerId,
       card,
       from: "hand" as const,
       id: generateEventId(),
@@ -152,7 +152,7 @@ export function handleEndPhase(
 
     const inPlayDiscardEvents: GameEvent[] = playerState.inPlay.map(card => ({
       type: "CARD_DISCARDED" as const,
-      player,
+      playerId,
       card,
       from: "inPlay" as const,
       id: generateEventId(),
@@ -167,9 +167,9 @@ export function handleEndPhase(
 
     // Draw 5 new cards
     const drawEvents = createDrawEvents(
-      player,
-      applyEvents(state, cleanupEvents).players[player],
-      GAME_CONSTANTS.INITIAL_HAND_SIZE,
+      playerId,
+      applyEvents(state, cleanupEvents).players[playerId],
+      GAME_CONSTANTS.INITIAL_HAND_SIZE
     );
 
     const allEvents = [
@@ -195,7 +195,7 @@ export function handleEndPhase(
     }
 
     // Start next turn - new root event (not caused by previous turn for log clarity)
-    const nextPlayer = getNextPlayer(stateAfterDraw, player);
+    const nextPlayerId = getNextPlayer(stateAfterDraw, playerId);
     const turnStartId = generateEventId();
     return {
       ok: true,
@@ -204,7 +204,7 @@ export function handleEndPhase(
         {
           type: "TURN_STARTED",
           turn: state.turn + 1,
-          player: nextPlayer,
+          playerId: nextPlayerId,
           id: turnStartId,
         },
         ...createResourceEvents(
@@ -212,7 +212,7 @@ export function handleEndPhase(
             { type: "ACTIONS_MODIFIED", delta: 1 },
             { type: "BUYS_MODIFIED", delta: 1 },
           ],
-          turnStartId,
+          turnStartId
         ),
       ],
     };
@@ -223,18 +223,20 @@ export function handleEndPhase(
 
 export function handleRequestUndo(
   state: GameState,
-  player: PlayerId,
+  playerId: PlayerId,
   toEventId: string,
-  reason?: string,
+  reason?: string
 ): CommandResult {
   void state;
-  const requestId = `undo_${Date.now()}_${Math.random().toString(GAME_CONSTANTS.UUID_BASE).slice(GAME_CONSTANTS.UUID_SLICE)}`;
+  const requestId = `undo_${Date.now()}_${Math.random()
+    .toString(GAME_CONSTANTS.UUID_BASE)
+    .slice(GAME_CONSTANTS.UUID_SLICE)}`;
 
   const builder = new EventBuilder();
   builder.add({
     type: "UNDO_REQUESTED",
     requestId,
-    byPlayer: player,
+    byPlayer: playerId,
     toEventId,
     reason,
   });

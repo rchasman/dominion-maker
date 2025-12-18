@@ -23,7 +23,7 @@ import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
 export function handleCommand(
   state: GameState,
   command: GameCommand,
-  fromPlayer?: PlayerId,
+  fromPlayer?: PlayerId
 ): CommandResult {
   // Validate player turn (unless it's a decision response or undo)
   if (fromPlayer && !isValidPlayer(state, command, fromPlayer)) {
@@ -36,45 +36,45 @@ export function handleCommand(
         state,
         command.players,
         command.kingdomCards,
-        command.seed,
+        command.seed
       );
 
     case "PLAY_ACTION":
-      return handlePlayAction(state, command.player, command.card);
+      return handlePlayAction(state, command.playerId, command.card);
 
     case "PLAY_TREASURE":
-      return handlePlayTreasure(state, command.player, command.card);
+      return handlePlayTreasure(state, command.playerId, command.card);
 
     case "PLAY_ALL_TREASURES":
-      return handlePlayAllTreasures(state, command.player);
+      return handlePlayAllTreasures(state, command.playerId);
 
     case "UNPLAY_TREASURE":
-      return handleUnplayTreasure(state, command.player, command.card);
+      return handleUnplayTreasure(state, command.playerId, command.card);
 
     case "BUY_CARD":
-      return handleBuyCard(state, command.player, command.card);
+      return handleBuyCard(state, command.playerId, command.card);
 
     case "END_PHASE":
-      return handleEndPhase(state, command.player);
+      return handleEndPhase(state, command.playerId);
 
     case "SUBMIT_DECISION":
-      return handleSubmitDecision(state, command.player, command.choice);
+      return handleSubmitDecision(state, command.playerId, command.choice);
 
     case "SKIP_DECISION":
-      return handleSkipDecision(state, command.player);
+      return handleSkipDecision(state, command.playerId);
 
     case "REVEAL_REACTION":
-      return handleRevealReaction(state, command.player, command.card);
+      return handleRevealReaction(state, command.playerId, command.card);
 
     case "DECLINE_REACTION":
-      return handleDeclineReaction(state, command.player);
+      return handleDeclineReaction(state, command.playerId);
 
     case "REQUEST_UNDO":
       return handleRequestUndo(
         state,
-        command.player,
+        command.playerId,
         command.toEventId,
-        command.reason,
+        command.reason
       );
 
     case "APPROVE_UNDO":
@@ -96,11 +96,11 @@ export function handleCommand(
 function isValidPlayer(
   state: GameState,
   command: GameCommand,
-  fromPlayer: PlayerId,
+  fromPlayer: PlayerId
 ): boolean {
   // Decision responses can come from the decision's player
   if (command.type === "SUBMIT_DECISION" || command.type === "SKIP_DECISION") {
-    return state.pendingDecision?.player === fromPlayer;
+    return state.pendingChoice?.playerId === fromPlayer;
   }
 
   // Reaction responses can come from the defender (even during opponent's turn)
@@ -108,7 +108,7 @@ function isValidPlayer(
     command.type === "REVEAL_REACTION" ||
     command.type === "DECLINE_REACTION"
   ) {
-    return state.pendingReaction?.player === fromPlayer;
+    return state.pendingChoice?.playerId === fromPlayer;
   }
 
   // Undo requests can come from any player

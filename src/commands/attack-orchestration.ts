@@ -24,7 +24,7 @@ interface AttackOrchestrationConfig {
  * Returns events including ATTACK_DECLARED, reaction decisions/resolutions, and card effect execution.
  */
 export function orchestrateAttack(
-  config: AttackOrchestrationConfig,
+  config: AttackOrchestrationConfig
 ): GameEvent[] {
   const { state, attacker, attackCard, effect, rootEventId } = config;
   const opponents = state.playerOrder?.filter(p => p !== attacker) || [];
@@ -50,14 +50,14 @@ export function orchestrateAttack(
         const reactions = getAvailableReactions(
           state,
           firstTarget,
-          "on_attack",
+          "on_attack"
         );
 
         if (reactions.length > 0) {
           // Ask first target for reaction - continuation handled by handle-reaction
           const reactionEvent: GameEvent = {
             type: "REACTION_OPPORTUNITY",
-            player: firstTarget,
+            playerId: firstTarget,
             attacker,
             attackCard,
             availableReactions: reactions,
@@ -110,14 +110,14 @@ export function orchestrateAttack(
   const blockedTargets = eventsWithReactions
     .filter(
       (e): e is GameEvent & { type: "ATTACK_RESOLVED"; blocked: true } =>
-        e.type === "ATTACK_RESOLVED" && e.blocked,
+        e.type === "ATTACK_RESOLVED" && e.blocked
     )
     .map(e => e.target);
   const resolvedTargets = opponents.filter(t => !blockedTargets.includes(t));
 
   const attackResult = effect({
     state: midState,
-    player: attacker,
+    playerId: attacker,
     card: attackCard,
     attackTargets: resolvedTargets,
   });
@@ -128,15 +128,15 @@ export function orchestrateAttack(
     causedBy: rootEventId,
   }));
 
-  const pendingDecisionEvent: GameEvent[] = attackResult.pendingDecision
+  const pendingChoiceEvent: GameEvent[] = attackResult.pendingChoice
     ? [
         {
           type: "DECISION_REQUIRED",
           decision: {
-            ...attackResult.pendingDecision,
+            ...attackResult.pendingChoice,
             cardBeingPlayed: attackCard,
             metadata: {
-              ...attackResult.pendingDecision.metadata,
+              ...attackResult.pendingChoice.metadata,
               originalCause: rootEventId,
             },
           },
@@ -146,7 +146,7 @@ export function orchestrateAttack(
       ]
     : [];
 
-  return [...eventsWithReactions, ...linkedEvents, ...pendingDecisionEvent];
+  return [...eventsWithReactions, ...linkedEvents, ...pendingChoiceEvent];
 }
 
 interface ResolveRemainingTargetsConfig {
@@ -163,7 +163,7 @@ interface ResolveRemainingTargetsConfig {
  * Returns events and may include DECISION_REQUIRED if a target has reactions.
  */
 function resolveRemainingTargets(
-  config: ResolveRemainingTargetsConfig,
+  config: ResolveRemainingTargetsConfig
 ): GameEvent[] {
   const {
     state,
@@ -183,7 +183,7 @@ function resolveRemainingTargets(
     return [
       {
         type: "REACTION_OPPORTUNITY",
-        player: nextTarget,
+        playerId: nextTarget,
         attacker,
         attackCard,
         availableReactions: reactions,

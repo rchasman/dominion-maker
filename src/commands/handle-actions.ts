@@ -21,11 +21,11 @@ import { orchestrateAttack } from "./attack-orchestration";
  */
 function processTriggers(
   state: GameState,
-  player: PlayerId,
+  playerId: PlayerId,
   triggerType: TriggerType,
-  context: TriggerContext,
+  context: TriggerContext
 ) {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   if (!playerState) return [];
 
   return playerState.inPlay.flatMap(inPlayCard => {
@@ -41,8 +41,8 @@ function processTriggers(
 
 export function handlePlayAction(
   state: GameState,
-  player: PlayerId,
-  card: CardName,
+  playerId: PlayerId,
+  card: CardName
 ): CommandResult {
   // Validate using middleware
   const validationError = validateCommand(
@@ -50,8 +50,8 @@ export function handlePlayAction(
     () => validators.hasActions(state),
     () => validators.noPendingDecision(state),
     () => validators.isAction(card),
-    () => validators.playerExists(state, player),
-    () => validators.cardInHand(state, player, card),
+    () => validators.playerExists(state, playerId),
+    () => validators.cardInHand(state, playerId, card)
   );
   if (validationError) {
     return validationError;
@@ -59,20 +59,20 @@ export function handlePlayAction(
 
   // Root cause event - playing the card
   const rootEventId = generateEventId();
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   const sourceIndex = playerState.hand.indexOf(card);
 
   const baseEvents = [
     {
       type: "CARD_PLAYED" as const,
-      player: player,
+      playerId,
       card,
       sourceIndex,
       id: rootEventId,
     },
     ...createResourceEvents(
       [{ type: "ACTIONS_MODIFIED", delta: -1 }],
-      rootEventId,
+      rootEventId
     ),
   ];
 
@@ -90,7 +90,7 @@ export function handlePlayAction(
       // Delegate to centralized attack orchestration
       const attackEvents = orchestrateAttack({
         state: midState,
-        attacker: player,
+        attacker: playerId,
         attackCard: card,
         effect,
         rootEventId,
@@ -101,7 +101,7 @@ export function handlePlayAction(
     // Not an attack card, call effect normally
     const result = effect({
       state: midState,
-      player,
+      playerId,
       card,
     });
 
@@ -112,15 +112,15 @@ export function handlePlayAction(
     }));
 
     // Handle normal decision if present
-    const decisionEvent = result.pendingDecision
+    const decisionEvent = result.pendingChoice
       ? [
           {
             type: "DECISION_REQUIRED" as const,
             decision: {
-              ...result.pendingDecision,
+              ...result.pendingChoice,
               cardBeingPlayed: card,
               metadata: {
-                ...result.pendingDecision.metadata,
+                ...result.pendingChoice.metadata,
                 originalCause: rootEventId,
               },
             },
@@ -141,22 +141,22 @@ export function handlePlayAction(
 
 export function handlePlayTreasure(
   state: GameState,
-  player: PlayerId,
-  card: CardName,
+  playerId: PlayerId,
+  card: CardName
 ): CommandResult {
   // Validate using middleware
   const validationError = validateCommand(
     () => validators.phase(state, "buy"),
     () => validators.noPendingDecision(state),
     () => validators.isTreasure(card),
-    () => validators.playerExists(state, player),
-    () => validators.cardInHand(state, player, card),
+    () => validators.playerExists(state, playerId),
+    () => validators.cardInHand(state, playerId, card)
   );
   if (validationError) {
     return validationError;
   }
 
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   const sourceIndex = playerState.hand.indexOf(card);
 
   // Root cause event - playing the treasure
@@ -164,7 +164,7 @@ export function handlePlayTreasure(
   const baseEvents = [
     {
       type: "CARD_PLAYED" as const,
-      player: player,
+      playerId,
       card,
       sourceIndex,
       id: rootEventId,
@@ -177,17 +177,17 @@ export function handlePlayTreasure(
     coins > 0
       ? createResourceEvents(
           [{ type: "COINS_MODIFIED", delta: coins }],
-          rootEventId,
+          rootEventId
         )
       : [];
 
   // Check for treasure triggers from cards in play
   const treasuresInPlay = playerState.inPlay.filter(c =>
-    CARDS[c].types.includes("treasure"),
+    CARDS[c].types.includes("treasure")
   );
   const isFirstOfType = !treasuresInPlay.includes(card);
 
-  const triggerEvents = processTriggers(state, player, "treasure_played", {
+  const triggerEvents = processTriggers(state, playerId, "treasure_played", {
     card,
     isFirstOfType,
     treasuresInPlay,
@@ -207,9 +207,9 @@ export function handlePlayTreasure(
 
 export function handlePlayAllTreasures(
   state: GameState,
-  player: PlayerId,
+  playerId: PlayerId
 ): CommandResult {
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -226,14 +226,14 @@ export function handlePlayAllTreasures(
   // Play treasures in hand order (triggers fire automatically)
   const { events } = treasures.reduce(
     (acc, card) => {
-      const result = handlePlayTreasure(acc.currentState, player, card);
+      const result = handlePlayTreasure(acc.currentState, playerId, card);
       if (!result.ok) return acc;
       return {
         events: [...acc.events, ...result.events],
         currentState: applyEvents(acc.currentState, result.events),
       };
     },
-    { events: [] as GameEvent[], currentState: state },
+    { events: [] as GameEvent[], currentState: state }
   );
 
   return { ok: true, events };
@@ -241,8 +241,8 @@ export function handlePlayAllTreasures(
 
 export function handleUnplayTreasure(
   state: GameState,
-  player: PlayerId,
-  card: CardName,
+  playerId: PlayerId,
+  card: CardName
 ): CommandResult {
   if (state.phase !== "buy") {
     return { ok: false, error: "Not in buy phase" };
@@ -251,7 +251,7 @@ export function handleUnplayTreasure(
     return { ok: false, error: "Not a treasure card" };
   }
 
-  const playerState = state.players[player];
+  const playerState = state.players[playerId];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -261,7 +261,7 @@ export function handleUnplayTreasure(
 
   // Check if any purchases have been made this turn
   const hasMadePurchases = state.turnHistory.some(
-    action => action.type === "buy_card",
+    action => action.type === "buy_card"
   );
   if (hasMadePurchases) {
     return {
@@ -275,7 +275,7 @@ export function handleUnplayTreasure(
   // Root cause event - returning the treasure to hand
   builder.add({
     type: "CARD_RETURNED_TO_HAND",
-    player: player,
+    playerId,
     card,
     from: "inPlay",
   });
@@ -289,19 +289,19 @@ export function handleUnplayTreasure(
 
   // Reverse treasure triggers (e.g., remove Merchant bonus if unplaying Silver)
   const treasuresInPlay = playerState.inPlay.filter(c =>
-    CARDS[c].types.includes("treasure"),
+    CARDS[c].types.includes("treasure")
   );
   const wasFirstOfType = treasuresInPlay.filter(c => c === card).length === 1;
 
   const originalTriggerEvents = processTriggers(
     state,
-    player,
+    playerId,
     "treasure_played",
     {
       card,
       isFirstOfType: wasFirstOfType,
       treasuresInPlay,
-    },
+    }
   );
 
   const reverseTriggerEvents = originalTriggerEvents.map(e => {
@@ -323,7 +323,7 @@ export function handleUnplayTreasure(
  */
 function calculateEffectiveCost(
   state: GameState,
-  card: CardName,
+  card: CardName
 ): {
   baseCost: number;
   modifiedCost: number;
@@ -336,7 +336,7 @@ function calculateEffectiveCost(
 
   const modifiedCost = Math.max(
     0,
-    baseCost + modifiers.reduce((sum, m) => sum + m.delta, 0),
+    baseCost + modifiers.reduce((sum, m) => sum + m.delta, 0)
   );
 
   return { baseCost, modifiedCost, modifiers };
@@ -344,15 +344,15 @@ function calculateEffectiveCost(
 
 export function handleBuyCard(
   state: GameState,
-  player: PlayerId,
-  card: CardName,
+  playerId: PlayerId,
+  card: CardName
 ): CommandResult {
   // Validate using middleware
   const validationError = validateCommand(
     () => validators.phase(state, "buy"),
     () => validators.noPendingDecision(state),
     () => validators.hasBuys(state),
-    () => validators.cardExists(card),
+    () => validators.cardExists(card)
   );
   if (validationError) {
     return validationError;
@@ -361,13 +361,13 @@ export function handleBuyCard(
   // Calculate effective cost with modifiers
   const { modifiedCost, baseCost, modifiers } = calculateEffectiveCost(
     state,
-    card,
+    card
   );
 
   // Validate cost and supply
   const costValidationError = validateCommand(
     () => validators.hasCoins(state, modifiedCost),
-    () => validators.cardInSupply(state, card),
+    () => validators.cardInSupply(state, card)
   );
   if (costValidationError) {
     return costValidationError;
@@ -378,7 +378,7 @@ export function handleBuyCard(
   // Root cause event - gaining the card
   builder.add({
     type: "CARD_GAINED",
-    player: player,
+    playerId,
     card,
     to: "discard",
   });

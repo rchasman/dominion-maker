@@ -18,7 +18,7 @@ type Validator = () => ValidationResult;
 export function validateCommand(...validators: Validator[]): ValidationResult {
   return validators.reduce<ValidationResult>(
     (acc, validator) => acc || validator(),
-    null,
+    null
   );
 }
 
@@ -83,8 +83,8 @@ export const validators = {
   /**
    * Validate that a player exists in the game state
    */
-  playerExists: (state: GameState, player: PlayerId): ValidationResult => {
-    return !state.players[player as string]
+  playerExists: (state: GameState, playerId: PlayerId): ValidationResult => {
+    return !state.players[playerId]
       ? { ok: false, error: "Player not found" }
       : undefined;
   },
@@ -94,10 +94,10 @@ export const validators = {
    */
   cardInHand: (
     state: GameState,
-    player: PlayerId,
-    card: CardName,
+    playerId: PlayerId,
+    card: CardName
   ): ValidationResult => {
-    const playerState = state.players[player as string];
+    const playerState = state.players[playerId];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
@@ -111,10 +111,10 @@ export const validators = {
    */
   cardInPlay: (
     state: GameState,
-    player: PlayerId,
-    card: CardName,
+    playerId: PlayerId,
+    card: CardName
   ): ValidationResult => {
-    const playerState = state.players[player as string];
+    const playerState = state.players[playerId];
     if (!playerState) {
       return { ok: false, error: "Player not found" };
     }
@@ -144,7 +144,7 @@ export const validators = {
    */
   noPurchasesMade: (state: GameState): ValidationResult => {
     const hasMadePurchases = state.turnHistory.some(
-      action => action.type === "buy_card",
+      action => action.type === "buy_card"
     );
     return hasMadePurchases
       ? {
@@ -158,7 +158,7 @@ export const validators = {
    * Validate that there is no pending decision
    */
   noPendingDecision: (state: GameState): ValidationResult => {
-    return state.pendingDecision
+    return state.pendingChoice
       ? { ok: false, error: "Cannot act while a decision is pending" }
       : undefined;
   },

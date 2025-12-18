@@ -24,8 +24,8 @@ function createEmptyState(): GameState {
     coins: 0,
     gameOver: false,
     winner: null,
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
     trash: [],
     log: [],
     turnHistory: [],
@@ -93,13 +93,13 @@ describe("Command System - START_GAME", () => {
     const result = handleCommand(state, command);
     if (!result.events) throw new Error("Expected events");
     const deckEvents = result.events.filter(
-      e => e.type === "INITIAL_DECK_DEALT",
+      e => e.type === "INITIAL_DECK_DEALT"
     );
 
     expect(deckEvents.length).toBe(2);
-    expect(deckEvents[0].player).toBe("human");
+    expect(deckEvents[0].playerId).toBe("human");
     expect(deckEvents[0].cards.length).toBe(10); // 7 Copper + 3 Estate
-    expect(deckEvents[1].player).toBe("ai");
+    expect(deckEvents[1].playerId).toBe("ai");
     expect(deckEvents[1].cards.length).toBe(10);
   });
 
@@ -113,7 +113,7 @@ describe("Command System - START_GAME", () => {
     const result = handleCommand(state, command);
     if (!result.events) throw new Error("Expected events");
     const handEvents = result.events.filter(
-      e => e.type === "INITIAL_HAND_DRAWN",
+      e => e.type === "INITIAL_HAND_DRAWN"
     );
 
     expect(handEvents.length).toBe(2);
@@ -136,11 +136,11 @@ describe("Command System - START_GAME", () => {
     expect(turnStart).toBeDefined();
     if (!turnStart) throw new Error("Expected TURN_STARTED event");
     expect(turnStart.turn).toBe(1);
-    expect(turnStart.player).toBe("human");
+    expect(turnStart.playerId).toBe("human");
 
     // Should have initial resources
     const actionsModified = result.events.filter(
-      e => e.type === "ACTIONS_MODIFIED",
+      e => e.type === "ACTIONS_MODIFIED"
     );
     const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
 
@@ -178,7 +178,7 @@ describe("Command System - PLAY_ACTION", () => {
     const state = createGameWithCardsInHand(["Village", "Copper"]);
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -195,13 +195,13 @@ describe("Command System - PLAY_ACTION", () => {
 
     // Should deduct action cost
     const actionCost = result.events.find(
-      e => e.type === "ACTIONS_MODIFIED" && e.delta === -1,
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === -1
     );
     expect(actionCost).toBeDefined();
 
     // Village gives +1 card, +2 actions
     const actionBonus = result.events.find(
-      e => e.type === "ACTIONS_MODIFIED" && e.delta === 2,
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === 2
     );
     expect(actionBonus).toBeDefined();
   });
@@ -212,7 +212,7 @@ describe("Command System - PLAY_ACTION", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -228,7 +228,7 @@ describe("Command System - PLAY_ACTION", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -243,7 +243,7 @@ describe("Command System - PLAY_ACTION", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -258,7 +258,7 @@ describe("Command System - PLAY_ACTION", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     };
 
@@ -298,7 +298,7 @@ describe("Command System - PLAY_TREASURE", () => {
     const state = createBuyPhaseState(["Copper"]);
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     };
 
@@ -311,7 +311,7 @@ describe("Command System - PLAY_TREASURE", () => {
     expect(cardPlayed).toBeDefined();
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 1,
+      e => e.type === "COINS_MODIFIED" && e.delta === 1
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -320,7 +320,7 @@ describe("Command System - PLAY_TREASURE", () => {
     const state = createBuyPhaseState(["Silver"]);
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -330,7 +330,7 @@ describe("Command System - PLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 2,
+      e => e.type === "COINS_MODIFIED" && e.delta === 2
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -339,7 +339,7 @@ describe("Command System - PLAY_TREASURE", () => {
     const state = createBuyPhaseState(["Gold"]);
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Gold",
     };
 
@@ -349,7 +349,7 @@ describe("Command System - PLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 3,
+      e => e.type === "COINS_MODIFIED" && e.delta === 3
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -360,7 +360,7 @@ describe("Command System - PLAY_TREASURE", () => {
 
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     };
 
@@ -376,7 +376,7 @@ describe("Command System - PLAY_TREASURE", () => {
 
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -431,7 +431,7 @@ describe("Command System - BUY_CARD", () => {
     const state = createBuyState(1, 5);
     const command: GameCommand = {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -447,12 +447,12 @@ describe("Command System - BUY_CARD", () => {
     expect(cardGained.to).toBe("discard");
 
     const buysModified = result.events.find(
-      e => e.type === "BUYS_MODIFIED" && e.delta === -1,
+      e => e.type === "BUYS_MODIFIED" && e.delta === -1
     );
     expect(buysModified).toBeDefined();
 
     const coinsModified = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -3,
+      e => e.type === "COINS_MODIFIED" && e.delta === -3
     );
     expect(coinsModified).toBeDefined();
   });
@@ -461,7 +461,7 @@ describe("Command System - BUY_CARD", () => {
     const state = createBuyState(0, 10);
     const command: GameCommand = {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -475,7 +475,7 @@ describe("Command System - BUY_CARD", () => {
     const state = createBuyState(1, 2);
     const command: GameCommand = {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -491,7 +491,7 @@ describe("Command System - BUY_CARD", () => {
 
     const command: GameCommand = {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -505,7 +505,7 @@ describe("Command System - BUY_CARD", () => {
     const state = createBuyState(1, 8);
     const command: GameCommand = {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Province",
     };
 
@@ -515,7 +515,7 @@ describe("Command System - BUY_CARD", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsModified = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -8,
+      e => e.type === "COINS_MODIFIED" && e.delta === -8
     );
     expect(coinsModified).toBeDefined();
   });
@@ -547,7 +547,7 @@ describe("Command System - END_PHASE", () => {
 
     const command: GameCommand = {
       type: "END_PHASE",
-      player: "human",
+      playerId: "human",
     };
 
     const result = handleCommand(state, command);
@@ -600,7 +600,7 @@ describe("Command System - END_PHASE", () => {
 
     const command: GameCommand = {
       type: "END_PHASE",
-      player: "human",
+      playerId: "human",
     };
 
     const result = handleCommand(state, command);
@@ -614,7 +614,7 @@ describe("Command System - END_PHASE", () => {
     const turnEnded = result.events.find(e => e.type === "TURN_ENDED");
     expect(turnEnded).toBeDefined();
     if (!turnEnded) throw new Error("Expected TURN_ENDED event");
-    expect(turnEnded.player).toBe("human");
+    expect(turnEnded.playerId).toBe("human");
     expect(turnEnded.turn).toBe(1);
 
     // Should have turn started event for next player
@@ -622,7 +622,7 @@ describe("Command System - END_PHASE", () => {
     expect(turnStarted).toBeDefined();
     if (!turnStarted) throw new Error("Expected TURN_STARTED event");
     expect(turnStarted.turn).toBe(2);
-    expect(turnStarted.player).toBe("ai");
+    expect(turnStarted.playerId).toBe("ai");
 
     // Should have discarded hand and in-play cards
     const discarded = result.events.filter(e => e.type === "CARD_DISCARDED");
@@ -630,7 +630,7 @@ describe("Command System - END_PHASE", () => {
 
     // Should have resource initialization for new turn
     const actionsModified = result.events.filter(
-      e => e.type === "ACTIONS_MODIFIED",
+      e => e.type === "ACTIONS_MODIFIED"
     );
     const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
     expect(actionsModified.length).toBeGreaterThan(0);
@@ -664,7 +664,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     const command: GameCommand = {
       type: "UNPLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     };
 
@@ -674,7 +674,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const returnedToHand = result.events.find(
-      e => e.type === "CARD_RETURNED_TO_HAND",
+      e => e.type === "CARD_RETURNED_TO_HAND"
     );
     expect(returnedToHand).toBeDefined();
     if (!returnedToHand)
@@ -682,7 +682,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     expect(returnedToHand.card).toBe("Copper");
 
     const coinsRemoved = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -1,
+      e => e.type === "COINS_MODIFIED" && e.delta === -1
     );
     expect(coinsRemoved).toBeDefined();
   });
@@ -708,7 +708,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     const command: GameCommand = {
       type: "UNPLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -719,12 +719,12 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     // Should remove 2 coins from Silver + 1 from Merchant = -3 total
     const coinsModifiedEvents = result.events.filter(
-      e => e.type === "COINS_MODIFIED",
+      e => e.type === "COINS_MODIFIED"
     );
     expect(coinsModifiedEvents.length).toBeGreaterThan(0);
     const totalCoinsRemoved = coinsModifiedEvents.reduce(
       (sum, e) => sum + e.delta,
-      0,
+      0
     );
     expect(totalCoinsRemoved).toBe(-3);
   });
@@ -747,7 +747,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     const command: GameCommand = {
       type: "UNPLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     };
 
@@ -781,7 +781,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     // Play Copper
     const playResult = handleCommand(state, {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     });
     expect(playResult.ok).toBe(true);
@@ -791,7 +791,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     // Buy a card
     const buyResult = handleCommand(state, {
       type: "BUY_CARD",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     });
     expect(buyResult.ok).toBe(true);
@@ -801,7 +801,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     // Try to unplay - should fail
     const unplayResult = handleCommand(state, {
       type: "UNPLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     });
 
@@ -830,7 +830,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     // Play Silver
     const playResult = handleCommand(state, {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     });
     expect(playResult.ok).toBe(true);
@@ -841,7 +841,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     // Unplay before buying - should work
     const unplayResult = handleCommand(state, {
       type: "UNPLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     });
 
@@ -879,7 +879,7 @@ describe("Command System - Event Causality", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Market",
     };
 
@@ -899,7 +899,7 @@ describe("Command System - Event Causality", () => {
         e.type === "ACTIONS_MODIFIED" ||
         e.type === "BUYS_MODIFIED" ||
         e.type === "COINS_MODIFIED" ||
-        e.type === "CARDS_DRAWN",
+        e.type === "CARDS_DRAWN"
     );
 
     for (const event of effectEvents) {
@@ -929,7 +929,7 @@ describe("Command System - Event Causality", () => {
 
     const command: GameCommand = {
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Silver",
     };
 
@@ -979,7 +979,7 @@ describe("Command System - Player Validation", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "ai", // Wrong player!
+      playerId: "ai", // Wrong player!
       card: "Village",
     };
 
@@ -1008,7 +1008,7 @@ describe("Command System - Player Validation", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -1043,7 +1043,7 @@ describe("Command System - Cellar Causality", () => {
     // Play Cellar - should create CARD_PLAYED and DECISION_REQUIRED
     const playResult = handleCommand(state, {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Cellar",
     });
 
@@ -1051,7 +1051,7 @@ describe("Command System - Cellar Causality", () => {
     if (!playResult.ok) throw new Error("Expected ok result");
 
     const cardPlayedEvent = playResult.events.find(
-      e => e.type === "CARD_PLAYED",
+      e => e.type === "CARD_PLAYED"
     );
     expect(cardPlayedEvent).toBeDefined();
     if (!cardPlayedEvent) throw new Error("Expected CARD_PLAYED event");
@@ -1060,26 +1060,32 @@ describe("Command System - Cellar Causality", () => {
 
     // Apply events to get updated state
     let midState = applyEvents(state, playResult.events);
-    expect(midState.pendingDecision).toBeDefined();
+    expect(midState.pendingChoice).toBeDefined();
+    console.log(
+      "pendingChoice:",
+      JSON.stringify(midState.pendingChoice, null, 2)
+    );
 
     // Batch discard: Estate (just 1 card)
     const decision1Result = handleCommand(midState, {
       type: "SUBMIT_DECISION",
-      player: "human",
+      playerId: "human",
       choice: {
         selectedCards: ["Estate"],
       },
     });
 
+    if (!decision1Result.ok) {
+      console.log("Decision failed:", decision1Result.error);
+    }
     expect(decision1Result.ok).toBe(true);
-    if (!decision1Result.ok) throw new Error("Expected ok result");
 
     // Cellar now processes batch and auto-draws in one decision
     const discardEvents = decision1Result.events.filter(
-      e => e.type === "CARD_DISCARDED",
+      e => e.type === "CARD_DISCARDED"
     );
     const drawEvents = decision1Result.events.filter(
-      e => e.type === "CARD_DRAWN",
+      e => e.type === "CARD_DRAWN"
     );
 
     expect(discardEvents.length).toBe(1); // Discarded 1
@@ -1092,6 +1098,6 @@ describe("Command System - Cellar Causality", () => {
 
     // No pending decision after batch
     midState = applyEvents(midState, decision1Result.events);
-    expect(midState.pendingDecision).toBeNull();
+    expect(midState.pendingChoice).toBeNull();
   });
 });
