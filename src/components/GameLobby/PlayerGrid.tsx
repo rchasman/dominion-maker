@@ -321,8 +321,8 @@ function GameCircle({
       return;
     }
 
-    const player1 = game.players[0];
-    const player2 = game.players[1];
+    const player1 = game.players[0]!;
+    const player2 = game.players[1]!;
 
     const color1 =
       player1.isConnected === false

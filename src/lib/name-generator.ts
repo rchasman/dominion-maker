@@ -252,8 +252,8 @@ function capitalize(str: string): string {
 export function generatePlayerName(): string {
   // Use timestamp + crypto random for maximum uniqueness
   const timestamp = Date.now();
-  const cryptoRandom1 = crypto.getRandomValues(new Uint32Array(1))[0];
-  const cryptoRandom2 = crypto.getRandomValues(new Uint32Array(1))[0];
+  const cryptoRandom1 = crypto.getRandomValues(new Uint32Array(1))[0]!;
+  const cryptoRandom2 = crypto.getRandomValues(new Uint32Array(1))[0]!;
 
   const seed1 = (timestamp + cryptoRandom1) % adjectives.length;
   const seed2 = (timestamp * 2 + cryptoRandom2) % nouns.length;

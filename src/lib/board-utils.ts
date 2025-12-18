@@ -174,7 +174,7 @@ const aggregateGroup = (
   // Don't aggregate children - keep resource changes individual
   const aggregatedChildren = allChildren;
 
-  if (first.type === "play-treasure" || first.type === "unplay-treasure") {
+  if (first!.type === "play-treasure" || first!.type === "unplay-treasure") {
     const totalCoins = entries.reduce(
       (sum, e) =>
         sum +
@@ -184,7 +184,7 @@ const aggregateGroup = (
       0,
     );
     return {
-      ...first,
+      ...first!,
       coins: totalCoins,
       children:
         count > 1
@@ -194,7 +194,7 @@ const aggregateGroup = (
     };
   }
 
-  if (first.type === "buy-card") {
+  if (first!.type === "buy-card") {
     const totalVP = entries.reduce(
       (sum, e) =>
         sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0),
@@ -202,14 +202,14 @@ const aggregateGroup = (
     );
     const vp = totalVP !== 0 ? totalVP : undefined;
     return {
-      ...first,
+      ...first!,
       ...(vp !== undefined && { vp }),
       children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
       eventIds,
     };
   }
 
-  if (first.type === "discard-cards" || first.type === "draw-cards") {
+  if (first!.type === "discard-cards" || first!.type === "draw-cards") {
     const totalCount = entries.reduce(
       (sum, e) =>
         sum +
@@ -230,7 +230,7 @@ const aggregateGroup = (
     const finalCardCounts =
       Object.keys(cardCounts).length > 0 ? cardCounts : undefined;
     return {
-      ...first,
+      ...first!,
       count: totalCount,
       ...(cards !== undefined && { cards }),
       ...(finalCardCounts !== undefined && { cardCounts: finalCardCounts }),
@@ -239,9 +239,9 @@ const aggregateGroup = (
   }
 
   // play-action: show count but keep children individual
-  if (first.type === "play-action") {
+  if (first!.type === "play-action") {
     return {
-      ...first,
+      ...first!,
       children:
         count > 1
           ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]

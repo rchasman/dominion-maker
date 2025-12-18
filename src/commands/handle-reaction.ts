@@ -62,7 +62,7 @@ export function handleRevealReaction(
     type: "REACTION_PLAYED",
     playerId,
     card,
-    triggerEventId: reaction.metadata.originalCause,
+    triggerEventId: reaction.metadata!.originalCause,
     id: generateEventId(),
     causedBy: rootEventId,
   });
@@ -80,18 +80,18 @@ export function handleRevealReaction(
 
   // Update metadata for next target
   const updatedMetadata = {
-    ...reaction.metadata,
-    blockedTargets: [...reaction.metadata.blockedTargets, playerId],
+    ...reaction.metadata!,
+    blockedTargets: [...reaction.metadata!.blockedTargets, playerId],
   };
 
   // Check if more targets need reactions
-  const nextIndex = reaction.metadata.currentTargetIndex + 1;
-  if (nextIndex < reaction.metadata.allTargets.length) {
+  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
+  if (nextIndex < reaction.metadata!.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
       updatedMetadata,
       nextIndex,
-      reaction.metadata.originalCause,
+      reaction.metadata!.originalCause,
     );
     events.push(...nextEvents);
   } else {
@@ -100,7 +100,7 @@ export function handleRevealReaction(
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
       updatedMetadata,
-      reaction.metadata.originalCause,
+      reaction.metadata!.originalCause,
     );
     events.push(...attackEvents);
   }
@@ -151,13 +151,13 @@ export function handleDeclineReaction(
   });
 
   // Check if more targets need reactions
-  const nextIndex = reaction.metadata.currentTargetIndex + 1;
-  if (nextIndex < reaction.metadata.allTargets.length) {
+  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
+  if (nextIndex < reaction.metadata!.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
-      reaction.metadata,
+      reaction.metadata!,
       nextIndex,
-      reaction.metadata.originalCause,
+      reaction.metadata!.originalCause,
     );
     events.push(...nextEvents);
   } else {
@@ -165,8 +165,8 @@ export function handleDeclineReaction(
     const midState = applyEvents(state, events);
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
-      reaction.metadata,
-      reaction.metadata.originalCause,
+      reaction.metadata!,
+      reaction.metadata!.originalCause,
     );
     events.push(...attackEvents);
   }

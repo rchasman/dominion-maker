@@ -446,7 +446,7 @@ export default class GameServer implements Party.Server {
     this.botPlayers.add(botClientId);
 
     // In full mode, mark human player as bot too
-    const humanPlayer = players[0];
+    const humanPlayer = players[0]!;
     if (isFullMode) {
       this.botPlayers.add(humanPlayer.clientId);
     }
@@ -533,8 +533,8 @@ export default class GameServer implements Party.Server {
       const [player1, player2] = players;
       if (isFullMode) {
         // Mark both players as bots
-        this.botPlayers.add(player1.clientId);
-        this.botPlayers.add(player2.clientId);
+        this.botPlayers.add(player1!.clientId);
+        this.botPlayers.add(player2!.clientId);
       } else {
         // Only the bot opponent is marked as bot
         const humanPlayer = players.find(p => !p.isBot);
@@ -875,7 +875,7 @@ export default class GameServer implements Party.Server {
   }
 
   private async updateLobby() {
-    const lobby = this.room.context.parties.lobby;
+    const lobby = this.room.context.parties.lobby!;
     const lobbyRoom = lobby.get("main");
 
     // Get all players from playerInfo

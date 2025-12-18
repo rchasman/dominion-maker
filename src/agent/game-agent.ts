@@ -21,6 +21,7 @@ import {
   generateActionViaBackend,
   executeActionWithEngine,
 } from "./game-agent-helpers";
+import { isDecisionChoice } from "../types/pending-choice";
 import {
   type LLMLogger,
   type ModelResult,
@@ -299,7 +300,7 @@ async function handleBatchConsensus(
     round: number,
     acc: { cards: CardName[]; engine: DominionEngine },
   ): Promise<{ cards: CardName[]; engine: DominionEngine }> => {
-    if (round >= max) return acc;
+    if (round >= (max ?? 1)) return acc;
 
     const legalActions = getLegalActions(acc.engine.state);
     agentLogger.info(

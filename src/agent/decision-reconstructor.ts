@@ -52,7 +52,7 @@ export function simulateCardSelection(
 export function isBatchDecision(
   decision: PendingChoice | null | undefined,
 ): decision is Extract<PendingChoice, { choiceType: "decision" }> {
-  return isDecisionChoice(decision) && decision.max > 1;
+  return isDecisionChoice(decision) && (decision.max ?? 1) > 1;
 }
 
 /**

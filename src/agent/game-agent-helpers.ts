@@ -57,7 +57,7 @@ export function getLegalActions(state: GameState): Action[] {
     }
 
     // Check if this is a batch decision that needs decomposition for AI
-    if (decision.max > 1) {
+    if ((decision.max ?? 1) > 1) {
       return decomposeDecisionForAI(decision);
     }
 

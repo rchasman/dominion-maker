@@ -112,7 +112,7 @@ export const checkEarlyConsensus = (
   );
   if (groups.length === 0) return null;
 
-  const leader = groups[0];
+  const leader = groups[0]!;
   const runnerUp = groups[1]?.count ?? 0;
 
   if (leader.count - runnerUp >= aheadByK) {

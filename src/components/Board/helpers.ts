@@ -40,7 +40,7 @@ export function getHintText({
   }
 
   if (displayState.phase === "buy") {
-    const localPlayer = displayState.players[localPlayerId];
+    const localPlayer = displayState.players[localPlayerId]!;
     const hasInPlayTreasures = localPlayer.inPlay.length > 0;
 
     if (displayState.coins === 0 && hasTreasuresInHand) {

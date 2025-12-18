@@ -131,7 +131,7 @@ function buildPlayerDeckInfo(
   composition: Record<string, number>;
 }> {
   return playerIds.map(playerId => {
-    const player = currentState.players[playerId];
+    const player = currentState.players[playerId]!;
     const allCards = [
       ...player.deck,
       ...player.hand,
