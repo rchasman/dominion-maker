@@ -17,7 +17,7 @@ import {
 } from "./PlayerArea/phase-styles";
 
 interface PlayerAreaProps {
-  playerId: PlayerState;
+  player: PlayerState;
   label: string;
   vpCount?: number;
   isActive: boolean;
@@ -259,7 +259,7 @@ function PlayerAreaContent({
 }
 
 export function PlayerArea({
-  playerId,
+  player,
   label,
   vpCount,
   isActive,
@@ -272,6 +272,7 @@ export function PlayerArea({
   phase,
   actions,
   loading = false,
+  playerId,
   turnHistory = [],
   playerStrategy,
   gameState,

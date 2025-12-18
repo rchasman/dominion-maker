@@ -8,6 +8,7 @@ interface StartScreenProps {
   gameMode: GameMode;
   onGameModeChange: (mode: GameMode) => void;
   onStartSinglePlayer?: () => void;
+  onStartMultiplayer?: () => void;
 }
 
 function getModeDescription(gameMode: string): string {
@@ -102,6 +103,7 @@ export function StartScreen({
   gameMode,
   onGameModeChange,
   onStartSinglePlayer,
+  onStartMultiplayer,
 }: StartScreenProps) {
   return (
     <div
@@ -154,7 +156,7 @@ export function StartScreen({
         {getModeDescription(gameMode)}
       </p>
 
-      {renderActionButtons(onStartSinglePlayer)}
+      {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
     </div>
   );
 }
