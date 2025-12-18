@@ -61,12 +61,12 @@ export type ModelExecutionContext = {
   pendingModels: Set<number>;
   modelStartTimes: Map<number, number>;
   providers: ModelProvider[];
-  onEarlyConsensus: (winnerId: VoteGroup) => void;
+  onEarlyConsensus: (winner: VoteGroup) => void;
   onComplete: () => void;
 };
 
 export type ConsensusWinnerResult = {
-  winnerId: VoteGroup;
+  winner: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
   rankedGroups: VoteGroup[];
@@ -81,7 +81,7 @@ export type ConsensusStartParams = {
 };
 
 export type VotingResultsParams = {
-  winnerId: VoteGroup;
+  winner: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
   rankedGroups: VoteGroup[];
@@ -312,13 +312,13 @@ export const selectConsensusWinner = (
     throw new Error("All AI actions invalid - models may be confused");
   }
 
-  const winnerId = validEarlyConsensus || validRankedGroups[0];
+  const winner = validEarlyConsensus || validRankedGroups[0];
   const votesConsidered = earlyConsensus
     ? results.length
     : successfulResults.length;
 
   return {
-    winnerId,
+    winner,
     votesConsidered,
     validEarlyConsensus: !!validEarlyConsensus,
     rankedGroups,
@@ -328,7 +328,7 @@ export const selectConsensusWinner = (
 // Log voting results
 export const logVotingResults = (params: VotingResultsParams): void => {
   const {
-    winnerId,
+    winner,
     votesConsidered,
     validEarlyConsensus,
     rankedGroups,
@@ -344,19 +344,19 @@ export const logVotingResults = (params: VotingResultsParams): void => {
     logger,
   } = params;
 
-  const consensusStrength = winnerId.count / votesConsidered;
-  const actionDesc = formatActionDescription(winnerId.action);
+  const consensusStrength = winner.count / votesConsidered;
+  const actionDesc = formatActionDescription(winner.action);
 
   logger?.({
     type: "consensus-voting",
     message: validEarlyConsensus
-      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winnerId.count} votes)`
-      : `◉ Voting: winnerId ${actionDesc} (${winnerId.count}/${votesConsidered})`,
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} votes)`
+      : `◉ Voting: winner ${actionDesc} (${winner.count}/${votesConsidered})`,
     data: {
       topResult: {
-        action: winnerId.action,
-        votes: winnerId.count,
-        voters: winnerId.voters,
+        action: winner.action,
+        votes: winner.count,
+        voters: winner.voters,
         percentage: `${(consensusStrength * PERCENTAGE_MULTIPLIER).toFixed(1)}%`,
         totalVotes: votesConsidered,
         completed: votesConsidered,
