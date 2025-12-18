@@ -64,8 +64,8 @@ export function GameRoom({
     {},
   );
   const lastEventCountRef = useRef(0);
-  const previousGameStateRef = useRef<GameState | null>(null);
 
+  // Memoize derived state for GameContext (used by child components)
   const hasPlayableActions = useMemo(
     () => computeHasPlayableActions(game.gameState, game.playerId),
     [game.gameState, game.playerId],
@@ -140,26 +140,25 @@ export function GameRoom({
     if (!game.gameState || game.isProcessing || isSpectator) return;
 
     const state = game.gameState;
-
-    // Don't auto-skip immediately after gameState changes (reconnection or initial load)
-    // This prevents race conditions where hasPlayableActions hasn't been recalculated yet
-    if (previousGameStateRef.current !== state) {
-      previousGameStateRef.current = state;
-      return;
-    }
-
     const isMyTurn = state.activePlayer === game.playerId;
+
+    // Calculate fresh - guaranteed to match current state (no race conditions)
+    const currentHasPlayableActions = computeHasPlayableActions(
+      state,
+      game.playerId,
+    );
+
     const shouldAutoSkip =
       state.phase === "action" &&
       isMyTurn &&
       !state.pendingDecision &&
       !state.gameOver &&
-      !hasPlayableActions;
+      !currentHasPlayableActions;
 
     if (shouldAutoSkip) {
       game.endPhase();
     }
-  }, [game, hasPlayableActions, isSpectator]);
+  }, [game.gameState, game.isProcessing, game.playerId, isSpectator]);
 
   // Build GameContext value
   const contextValue = useMemo(
