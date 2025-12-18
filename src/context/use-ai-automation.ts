@@ -15,6 +15,7 @@ import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
 import { useAnimationSafe } from "../animation";
 import { hasPlayableActions as computeHasPlayableActions } from "./derived-state";
+import { isDecisionChoice, isReactionChoice } from "../types/pending-choice";
 
 interface AIAutomationParams {
   gameState: GameState | null;
@@ -73,7 +74,8 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     }
 
     // It IS an AI turn - check if we need a new abort controller
-    const currentAITurnId = `${gameState.activePlayerId}-${gameState.turn}-${gameMode}`;
+    // Include event log length so undo triggers re-processing of the same turn
+    const currentAITurnId = `${gameState.activePlayerId}-${gameState.turn}-${gameMode}-${engine.eventLog.length}`;
 
     if (currentAITurnId !== lastAITurnRef.current) {
       // New AI turn, create new abort controller
@@ -264,13 +266,16 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     }
 
     // It IS an AI action - check if we need a new abort controller
-    const currentAIDecisionId = isAIReaction
-      ? `reaction-${gameState.pendingChoice!.defender}-${
+    // Include event log length so undo triggers re-processing of the same decision
+    const currentAIDecisionId = isReactionChoice(gameState.pendingChoice)
+      ? `reaction-${gameState.pendingChoice.playerId}-${
           gameState.turn
-        }-${gameMode}`
-      : `decision-${gameState.pendingChoice!.player}-${
-          gameState.pendingChoice!.type
-        }-${gameState.turn}-${gameMode}`;
+        }-${gameMode}-${engine.eventLog.length}`
+      : isDecisionChoice(gameState.pendingChoice)
+        ? `decision-${gameState.pendingChoice.playerId}-${
+            gameState.pendingChoice.cardBeingPlayed
+          }-${gameState.turn}-${gameMode}-${engine.eventLog.length}`
+        : `unknown-${gameState.turn}-${engine.eventLog.length}`;
 
     if (currentAIDecisionId !== lastAIDecisionRef.current) {
       // New AI decision, create new abort controller
