@@ -76,6 +76,8 @@ export function usePartyGame({
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
   const eventsRef = useRef<GameEvent[]>([]);
+  // Use ref to track spectator status without causing action functions to recreate
+  const isSpectatorRef = useRef(false);
 
   const [state, setState] = useState<PartyGameState>({
     isConnected: false,
@@ -92,6 +94,11 @@ export function usePartyGame({
     disconnectedPlayers: new Map(),
     chatMessages: [],
   });
+
+  // Sync ref with state
+  useEffect(() => {
+    isSpectatorRef.current = state.isSpectator;
+  }, [state.isSpectator]);
 
   useEffect(() => {
     const socket = new PartySocket({
@@ -247,62 +254,62 @@ export function usePartyGame({
 
   const playAction = useCallback(
     (card: CardName): CommandResult => {
-      if (state.isSpectator) {
+      if (isSpectatorRef.current) {
         return { ok: false, error: "Spectators cannot act" };
       }
       send({ type: "play_action", card });
       return { ok: true, events: [] };
     },
-    [send, state.isSpectator],
+    [send],
   );
 
   const playTreasure = useCallback(
     (card: CardName): CommandResult => {
-      if (state.isSpectator) {
+      if (isSpectatorRef.current) {
         return { ok: false, error: "Spectators cannot act" };
       }
       send({ type: "play_treasure", card });
       return { ok: true, events: [] };
     },
-    [send, state.isSpectator],
+    [send],
   );
 
   const playAllTreasures = useCallback((): CommandResult => {
-    if (state.isSpectator) {
+    if (isSpectatorRef.current) {
       return { ok: false, error: "Spectators cannot act" };
     }
     send({ type: "play_all_treasures" });
     return { ok: true, events: [] };
-  }, [send, state.isSpectator]);
+  }, [send]);
 
   const buyCard = useCallback(
     (card: CardName): CommandResult => {
-      if (state.isSpectator) {
+      if (isSpectatorRef.current) {
         return { ok: false, error: "Spectators cannot act" };
       }
       send({ type: "buy_card", card });
       return { ok: true, events: [] };
     },
-    [send, state.isSpectator],
+    [send],
   );
 
   const endPhase = useCallback((): CommandResult => {
-    if (state.isSpectator) {
+    if (isSpectatorRef.current) {
       return { ok: false, error: "Spectators cannot act" };
     }
     send({ type: "end_phase" });
     return { ok: true, events: [] };
-  }, [send, state.isSpectator]);
+  }, [send]);
 
   const submitDecision = useCallback(
     (choice: DecisionChoice): CommandResult => {
-      if (state.isSpectator) {
+      if (isSpectatorRef.current) {
         return { ok: false, error: "Spectators cannot act" };
       }
       send({ type: "submit_decision", choice });
       return { ok: true, events: [] };
     },
-    [send, state.isSpectator],
+    [send],
   );
 
   const requestUndo = useCallback(
