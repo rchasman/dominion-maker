@@ -5,22 +5,13 @@
  * Shows waiting room or game board based on game state.
  */
 import { lazy, Suspense } from "preact/compat";
-import { useMemo, useState } from "preact/hooks";
+import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { BoardWithProviders } from "../Board/BoardWithProviders";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
-import type { CardName } from "../../types/game-state";
-import type { CommandResult } from "../../commands/types";
-import type { PlayerStrategyData } from "../../types/player-strategy";
-import {
-  hasPlayableActions as computeHasPlayableActions,
-  hasTreasuresInHand as computeHasTreasuresInHand,
-} from "../../context/derived-state";
-import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
-import { useStrategyAnalysisFromEvents } from "../../context/use-strategy-analysis";
-import { useAutoPhaseAdvanceMultiplayer } from "../../context/use-ai-automation";
+import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
 import type { GameMode } from "../../types/game-mode";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
@@ -60,42 +51,23 @@ export function GameRoom({
     gameMode,
     onConnectionError,
   });
-  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
-    {},
-  );
 
-  // Memoize derived state for GameContext (used by child components)
-  const hasPlayableActions = useMemo(
-    () => computeHasPlayableActions(game.gameState, game.playerId),
-    [game.gameState, game.playerId],
-  );
-
-  const hasTreasuresInHand = useMemo(
-    () => computeHasTreasuresInHand(game.gameState, game.playerId),
-    [game.gameState, game.playerId],
-  );
-
-  // Strategy analysis - shared hook
-  useStrategyAnalysisFromEvents(
-    game.events,
-    game.gameState,
-    setPlayerStrategies,
-  );
-
-  // No-op unplayTreasure for multiplayer
-  const unplayTreasure = (_card: CardName): CommandResult => {
-    return { ok: false, error: "Unplay treasure not supported in multiplayer" };
-  };
-
-  // Handle mode change
-  const handleGameModeChange = (mode: GameMode) => {
-    if (isSinglePlayer) {
-      game.changeGameMode(mode);
-    }
-    if (onGameModeChange) {
-      onGameModeChange(mode);
-    }
-  };
+  // Build GameContext value from multiplayer game state
+  const contextValue = useMultiplayerGameContext({
+    game,
+    playerName,
+    isSpectator,
+    isSinglePlayer,
+    gameMode,
+    onGameModeChange: (mode: GameMode) => {
+      if (isSinglePlayer) {
+        game.changeGameMode(mode);
+      }
+      if (onGameModeChange) {
+        onGameModeChange(mode);
+      }
+    },
+  });
 
   // Handle resignation
   const handleResign = () => {
@@ -108,63 +80,6 @@ export function GameRoom({
       onBack();
     }
   };
-
-  // Auto-skip action phase when no playable actions - shared hook
-  useAutoPhaseAdvanceMultiplayer(
-    game.gameState,
-    game.playerId,
-    game.isProcessing,
-    isSpectator,
-    game.endPhase,
-  );
-
-  // Build GameContext value
-  const contextValue = useMemo(
-    () => ({
-      gameState: game.gameState,
-      events: game.events,
-      gameMode: isSinglePlayer ? gameMode : ("multiplayer" as const),
-      isProcessing: !game.isConnected,
-      isLoading: !game.isJoined,
-      modelSettings: DEFAULT_MODEL_SETTINGS,
-      playerStrategies,
-      localPlayerId: game.playerId,
-      localPlayerName: playerName,
-      isSpectator,
-      spectatorCount: game.spectatorCount,
-      players: game.players,
-      chatMessages: game.chatMessages,
-      sendChat: game.sendChat,
-      hasPlayableActions,
-      hasTreasuresInHand,
-      strategy: {
-        getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
-      } as never,
-      setGameMode: handleGameModeChange,
-      setModelSettings: () => {},
-      startGame: () => game.startGame(),
-      playAction: game.playAction,
-      playTreasure: game.playTreasure,
-      unplayTreasure,
-      playAllTreasures: game.playAllTreasures,
-      buyCard: game.buyCard,
-      endPhase: game.endPhase,
-      submitDecision: game.submitDecision,
-      requestUndo: game.requestUndo,
-      getStateAtEvent: game.getStateAtEvent,
-    }),
-    [
-      game,
-      playerStrategies,
-      hasPlayableActions,
-      hasTreasuresInHand,
-      isSinglePlayer,
-      gameMode,
-      handleGameModeChange,
-      isSpectator,
-      playerName,
-    ],
-  );
 
   // Get disconnected opponent (if any)
   const disconnectedOpponent = useMemo(() => {

@@ -1,11 +1,5 @@
 import type { GameState, Player } from "../../types/game-state";
 
-// Re-export centralized utilities for backward compatibility
-export { getPlayerPerspective } from "../../lib/player-utils";
-export type { PlayerPerspective } from "../../lib/player-utils";
-export { canSkipDecision, shouldSelectCard } from "../../lib/decision-utils";
-export { canPlayCard, canBuyCards } from "../../lib/game-rules";
-
 interface GetHintTextParams {
   displayState: GameState;
   localPlayerId: Player;

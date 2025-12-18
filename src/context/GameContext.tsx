@@ -32,7 +32,7 @@ import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
 import { BoardWithProviders } from "../components/Board/BoardWithProviders";
 
-interface GameContextValue {
+export interface GameContextValue {
   gameState: GameState | null;
   events: GameEvent[];
   gameMode: GameMode;
