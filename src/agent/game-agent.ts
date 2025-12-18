@@ -330,7 +330,7 @@ export async function advanceGameStateWithConsensus(
           actionId: `${actionId}-r${round}`,
         });
 
-      const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
+      const { winnerId, votesConsidered, validEarlyConsensus, rankedGroups } =
         selectConsensusWinner(
           voteGroups,
           results,
@@ -350,7 +350,7 @@ export async function advanceGameStateWithConsensus(
 
       // Log voting results for this batch round
       logVotingResults({
-        winner,
+        winnerId,
         votesConsidered,
         validEarlyConsensus,
         rankedGroups,
@@ -366,22 +366,22 @@ export async function advanceGameStateWithConsensus(
         logger,
       });
 
-      if (winner.action.type === "skip_decision") {
+      if (winnerId.action.type === "skip_decision") {
         agentLogger.info(
           `AI voted to skip after ${acc.cards.length} selections`,
         );
         return acc;
       }
 
-      const card = winner.action.card;
+      const card = winnerId.action.card;
       if (!card) {
         agentLogger.warn("Action missing card, stopping batch reconstruction");
         return acc;
       }
 
       agentLogger.info(
-        `Batch round ${round + 1} winnerId: ${winner.action.type}(${card}) - ${
-          winner.count
+        `Batch round ${round + 1} winnerId: ${winnerId.action.type}(${card}) - ${
+          winnerId.count
         } votes`,
       );
 
@@ -487,7 +487,7 @@ export async function advanceGameStateWithConsensus(
             legalActions,
           );
 
-          if (winner.action.type === "skip_decision") {
+          if (winnerId.action.type === "skip_decision") {
             agentLogger.info(
               `AI skipped at round ${
                 roundIndex + 1
@@ -497,10 +497,10 @@ export async function advanceGameStateWithConsensus(
           }
 
           agentLogger.debug(
-            `Card ${roundIndex} (${decision.cardOptions[roundIndex]}): ${winner.action.type}`,
+            `Card ${roundIndex} (${decision.cardOptions[roundIndex]}): ${winnerId.action.type}`,
           );
 
-          return { ...acc, [roundIndex]: winner.action.type };
+          return { ...acc, [roundIndex]: winnerId.action.type };
         },
         Promise.resolve({}),
       );
@@ -633,11 +633,11 @@ export async function advanceGameStateWithConsensus(
       actionId,
     });
 
-  const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
+  const { winnerId, votesConsidered, validEarlyConsensus, rankedGroups } =
     selectConsensusWinner(voteGroups, results, earlyConsensus, legalActions);
 
   logVotingResults({
-    winner,
+    winnerId,
     votesConsidered,
     validEarlyConsensus,
     rankedGroups,
@@ -654,8 +654,8 @@ export async function advanceGameStateWithConsensus(
   });
 
   // Execute winner action via engine
-  const actionDesc = formatActionDescription(winner.action);
-  const success = executeActionWithEngine(engine, winner.action, playerId);
+  const actionDesc = formatActionDescription(winnerId.action);
+  const success = executeActionWithEngine(engine, winnerId.action, playerId);
 
   if (!success) {
     agentLogger.error(`Failed to execute: ${actionDesc}`);
@@ -664,7 +664,7 @@ export async function advanceGameStateWithConsensus(
   const overallDuration = performance.now() - overallStart;
   agentLogger.info(
     `${actionDesc} (${
-      winner.count
+      winnerId.count
     }/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`,
   );
 }

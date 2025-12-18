@@ -312,13 +312,13 @@ export const selectConsensusWinner = (
     throw new Error("All AI actions invalid - models may be confused");
   }
 
-  const winner = validEarlyConsensus || validRankedGroups[0];
+  const winnerId = validEarlyConsensus || validRankedGroups[0];
   const votesConsidered = earlyConsensus
     ? results.length
     : successfulResults.length;
 
   return {
-    winner,
+    winnerId,
     votesConsidered,
     validEarlyConsensus: !!validEarlyConsensus,
     rankedGroups,
@@ -328,7 +328,7 @@ export const selectConsensusWinner = (
 // Log voting results
 export const logVotingResults = (params: VotingResultsParams): void => {
   const {
-    winner,
+    winnerId,
     votesConsidered,
     validEarlyConsensus,
     rankedGroups,
@@ -344,19 +344,19 @@ export const logVotingResults = (params: VotingResultsParams): void => {
     logger,
   } = params;
 
-  const consensusStrength = winner.count / votesConsidered;
-  const actionDesc = formatActionDescription(winner.action);
+  const consensusStrength = winnerId.count / votesConsidered;
+  const actionDesc = formatActionDescription(winnerId.action);
 
   logger?.({
     type: "consensus-voting",
     message: validEarlyConsensus
-      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} votes)`
-      : `◉ Voting: winner ${actionDesc} (${winner.count}/${votesConsidered})`,
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winnerId.count} votes)`
+      : `◉ Voting: winnerId ${actionDesc} (${winnerId.count}/${votesConsidered})`,
     data: {
       topResult: {
-        action: winner.action,
-        votes: winner.count,
-        voters: winner.voters,
+        action: winnerId.action,
+        votes: winnerId.count,
+        voters: winnerId.voters,
         percentage: `${(consensusStrength * PERCENTAGE_MULTIPLIER).toFixed(1)}%`,
         totalVotes: votesConsidered,
         completed: votesConsidered,

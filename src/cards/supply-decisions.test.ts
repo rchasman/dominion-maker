@@ -11,6 +11,7 @@
  * instead of buyCard.
  */
 
+import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "../engine";
 import type { CardName } from "../types/game-state";
 

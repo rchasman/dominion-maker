@@ -14,6 +14,7 @@ import { getSubPhase } from "../src/lib/state-helpers";
 import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
+import { env } from "../src/lib/env";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -99,7 +100,7 @@ const ActionSchema = z
   .describe("A single atomic game action");
 
 // Debug logging for deployment
-if (!process.env.AI_GATEWAY_API_KEY) {
+if (!env.AI_GATEWAY_API_KEY) {
   apiLogger.error("AI_GATEWAY_API_KEY is not set");
 } else {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
@@ -137,7 +138,7 @@ function getDevToolsMiddleware(
   actionId?: string,
 ): ReturnType<typeof devToolsMiddleware> | undefined {
   // Only use devtools in development
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     return undefined;
   }
 

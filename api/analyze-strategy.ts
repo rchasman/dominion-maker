@@ -8,6 +8,7 @@ import {
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { run } from "../src/lib/run";
+import { env } from "../src/lib/env";
 import { encodeToon } from "../src/lib/toon";
 import { buildCardDefinitionsTable } from "../src/agent/system-prompt";
 
@@ -32,7 +33,7 @@ const VP_VALUES = {
 // Create devtools middleware per request for independent tracking (development only)
 function createDevToolsMiddleware() {
   // Only use devtools in development
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     return;
   }
   return devToolsMiddleware();
