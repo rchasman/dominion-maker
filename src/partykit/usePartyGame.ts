@@ -242,7 +242,7 @@ export function usePartyGame({
         send({ type: "start_game", kingdomCards });
       }
     },
-    [send, isSingleplayerId, gameMode],
+    [send, isSinglePlayer, gameMode],
   );
 
   const changeGameMode = useCallback(

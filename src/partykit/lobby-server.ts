@@ -171,7 +171,7 @@ export default class LobbyServer implements Party.Server {
     // Check if there's already a request from target to us (mutual request = instant match)
     const mutualRequest = this.findRequest(targetId, conn.id);
     if (mutualRequest) {
-      this.startGame(mutualRequest, toplayerId, fromPlayer);
+      this.startGame(mutualRequest, toPlayer, fromPlayer);
       return;
     }
 
@@ -218,7 +218,7 @@ export default class LobbyServer implements Party.Server {
       return;
     }
 
-    this.startGame(request, fromplayerId, toPlayer);
+    this.startGame(request, fromPlayer, toPlayer);
   }
 
   private handleCancelRequest(conn: Party.Connection, requestId: string) {
