@@ -25,7 +25,6 @@ export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
   useEffect(() => {
     return () => {
       localStorage.removeItem(STORAGE_KEYS.EVENTS);
-      localStorage.removeItem(STORAGE_KEYS.GAME_STATE);
     };
   }, []);
 

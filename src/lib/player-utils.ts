@@ -36,7 +36,7 @@ export function getPlayerPerspective(
     const localIndex = playerIds.indexOf(localPlayerId);
     if (localIndex > 0) {
       playerIds = [
-        localPlayerId as PlayerId,
+        localPlayerId,
         ...playerIds.filter(id => id !== localPlayerId),
       ];
     }

@@ -48,7 +48,10 @@ function LogEntryWithUndo({
       }}
     >
       <div style={{ flex: 1 }}>
-        <LogEntry entry={entry} gameMode={gameMode} />
+        <LogEntry
+          entry={entry}
+          {...(gameMode !== undefined && { gameMode })}
+        />
       </div>
       {hasUndo && (
         <button
@@ -164,8 +167,8 @@ export function GameLogSection({
           <LogEntryWithUndo
             key={i}
             entry={entry}
-            onRequestUndo={onRequestUndo}
-            lastEventId={lastEventId}
+            {...(onRequestUndo !== undefined && { onRequestUndo })}
+            {...(lastEventId !== undefined && { lastEventId })}
             gameMode={gameMode}
           />
         ))}

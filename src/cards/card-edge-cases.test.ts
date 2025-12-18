@@ -291,8 +291,8 @@ describe("Edge Cases - Opponent Interactions", () => {
 
   it("Militia vs opponent with ≤3 cards skips them", () => {
     const state = createTestState([]);
-    state.players.human.hand = ["Militia"];
-    state.players.ai = {
+    state.players["human"]!.hand = ["Militia"];
+    state.players["ai"] = {
       deck: [],
       hand: ["Copper", "Estate", "Duchy"],
       discard: [],
@@ -320,8 +320,8 @@ describe("Edge Cases - Opponent Interactions", () => {
 
   it("Bureaucrat vs opponent with no victory cards skips them", () => {
     const state = createTestState([]);
-    state.players.human.hand = ["Bureaucrat"];
-    state.players.ai = {
+    state.players["human"]!.hand = ["Bureaucrat"];
+    state.players["ai"] = {
       deck: [],
       hand: ["Copper", "Silver", "Gold"],
       discard: [],
@@ -351,15 +351,15 @@ describe("Edge Cases - Opponent Interactions", () => {
 
   it("Witch with 2 opponents curses both", () => {
     const state = createTestState([], ["Copper", "Silver"]);
-    state.players.human.hand = ["Witch"];
-    state.players.ai1 = {
+    state.players["human"]!.hand = ["Witch"];
+    state.players["ai1"] = {
       deck: [],
       hand: [],
       discard: [],
       inPlay: [],
       inPlaySourceIndices: [],
     };
-    state.players.ai2 = {
+    state.players["ai2"] = {
       deck: [],
       hand: [],
       discard: [],

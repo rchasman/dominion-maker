@@ -15,7 +15,7 @@ describe("Consensus System", () => {
     engine.startGame(["player1", "player2"]);
 
     // Set up game state with multiple action cards to trigger consensus
-    engine.state.players.player1.hand = [
+    engine.state.players["player1"]!.hand = [
       "Smithy",
       "Village",
       "Market",
@@ -94,7 +94,7 @@ describe("Consensus System", () => {
     engine.startGame(["player1", "player2"]);
 
     // Give player Chapel and cards
-    engine.state.players.player1.hand = [
+    engine.state.players["player1"]!.hand = [
       "Chapel",
       "Copper",
       "Copper",

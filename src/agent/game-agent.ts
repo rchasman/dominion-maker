@@ -434,6 +434,12 @@ async function handleMultiActionConsensus(
       async (accPromise, roundIndex) => {
         const acc = await accPromise;
 
+        const currentCard = decision.cardOptions[roundIndex];
+        if (!currentCard) {
+          agentLogger.warn(`No card at index ${roundIndex}, skipping round`);
+          return acc;
+        }
+
         const roundState: GameState = {
           ...engine.state,
           pendingChoice: engine.state.pendingChoice
@@ -441,9 +447,7 @@ async function handleMultiActionConsensus(
                 ...engine.state.pendingChoice,
                 prompt: `${engine.state.pendingChoice.prompt} (Card ${
                   roundIndex + 1
-                }/${numCards}: ${
-                  engine.state.pendingChoice.cardOptions[roundIndex] ?? ""
-                })`,
+                }/${numCards}: ${currentCard})`,
                 metadata: {
                   ...engine.state.pendingChoice.metadata,
                   currentRoundIndex: roundIndex,
@@ -455,9 +459,7 @@ async function handleMultiActionConsensus(
         const legalActions = getLegalActions(roundState);
 
         agentLogger.info(
-          `Round ${roundIndex + 1}/${numCards}: Voting on ${
-            decision.cardOptions[roundIndex] ?? ""
-          }`
+          `Round ${roundIndex + 1}/${numCards}: Voting on ${currentCard}`
         );
 
         const { results, earlyConsensus, voteGroups } =
@@ -485,9 +487,7 @@ async function handleMultiActionConsensus(
         }
 
         agentLogger.debug(
-          `Card ${roundIndex} (${
-            decision.cardOptions[roundIndex] ?? ""
-          }): ${winner.action.type}`
+          `Card ${roundIndex} (${currentCard}): ${winner.action.type}`
         );
 
         return { ...acc, [roundIndex]: winner.action.type };

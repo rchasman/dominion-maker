@@ -107,8 +107,8 @@ describe("buildStrategicContext", () => {
 
     it("should not expose opponent's hand or private info", () => {
       const state = createMockGameState("ai1", ["ai1", "ai2"]);
-      state.players.ai1.hand = ["Witch", "Bandit"];
-      state.players.ai2.hand = ["Copper", "Copper"];
+      state.players["ai1"]!.hand = ["Witch", "Bandit"];
+      state.players["ai2"]!.hand = ["Copper", "Copper"];
 
       const context = buildStrategicContext(state);
 
@@ -140,10 +140,10 @@ describe("buildStrategicContext", () => {
   describe("deck composition", () => {
     it("should not contain deck composition (moved to main state)", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
-      state.players.ai.deck = ["Copper", "Copper", "Estate"];
-      state.players.ai.hand = ["Silver"];
-      state.players.ai.discard = ["Gold"];
-      state.players.ai.inPlay = [];
+      state.players["ai"]!.deck = ["Copper", "Copper", "Estate"];
+      state.players["ai"]!.hand = ["Silver"];
+      state.players["ai"]!.discard = ["Gold"];
+      state.players["ai"]!.inPlay = [];
 
       const context = buildStrategicContext(state);
 
@@ -158,8 +158,8 @@ describe("buildStrategicContext", () => {
 
     it("should focus only on AI strategy not state facts", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
-      state.players.ai.deck = ["Copper", "Copper", "Copper"];
-      state.players.ai.discard = ["Silver", "Gold"];
+      state.players["ai"]!.deck = ["Copper", "Copper", "Copper"];
+      state.players["ai"]!.discard = ["Silver", "Gold"];
 
       const context = buildStrategicContext(state);
 
@@ -294,9 +294,9 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.phase = "buy";
       state.coins = 5;
-      state.players.ai.hand = ["Copper", "Silver"];
-      state.players.ai.deck = ["Estate", "Copper"];
-      state.players.ai.discard = ["Copper", "Copper"];
+      state.players["ai"]!.hand = ["Copper", "Silver"];
+      state.players["ai"]!.deck = ["Estate", "Copper"];
+      state.players["ai"]!.discard = ["Copper", "Copper"];
 
       const context = buildStrategicContext(state);
 
@@ -318,7 +318,7 @@ describe("buildStrategicContext", () => {
       const state = createMockGameState("ai", ["human", "ai"]);
       state.phase = "action";
       state.actions = 1;
-      state.players.ai.hand = ["Village", "Smithy", "Copper"];
+      state.players["ai"]!.hand = ["Village", "Smithy", "Copper"];
 
       const context = buildStrategicContext(state);
 

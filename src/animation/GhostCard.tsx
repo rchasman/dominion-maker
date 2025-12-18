@@ -29,6 +29,28 @@ const ZONE_SCALE: Record<Zone, number> = {
   trash: 0.76,
 };
 
+// Constants for center calculations
+const CENTER_DIVISOR = 2;
+
+// Image optimization constants
+const SRCSET_WIDTH_200 = 200;
+const SRCSET_WIDTH_300 = 300;
+const SRCSET_WIDTH_400 = 400;
+const SRCSET_WIDTH_600 = 600;
+const SRCSET_WIDTHS = [
+  SRCSET_WIDTH_200,
+  SRCSET_WIDTH_300,
+  SRCSET_WIDTH_400,
+  SRCSET_WIDTH_600,
+];
+const DEFAULT_IMAGE_WIDTH = SRCSET_WIDTH_400;
+const CARD_IMAGE_WIDTH = "200";
+const CARD_IMAGE_HEIGHT = "320";
+const CARD_BORDER_RADIUS = "4px";
+const CARD_SHADOW_BLUR = "25px";
+const CARD_SHADOW_OFFSET = "6px";
+const GHOST_Z_INDEX = 9999;
+
 export function GhostCard({
   cardName,
   fromRect,
@@ -55,10 +77,10 @@ export function GhostCard({
     }
 
     // Calculate center-to-center translation
-    const fromCenterX = fromRect.left + fromRect.width / 2;
-    const fromCenterY = fromRect.top + fromRect.height / 2;
-    const toCenterX = toRect.left + toRect.width / 2;
-    const toCenterY = toRect.top + toRect.height / 2;
+    const fromCenterX = fromRect.left + fromRect.width / CENTER_DIVISOR;
+    const fromCenterY = fromRect.top + fromRect.height / CENTER_DIVISOR;
+    const toCenterX = toRect.left + toRect.width / CENTER_DIVISOR;
+    const toCenterY = toRect.top + toRect.height / CENTER_DIVISOR;
 
     const deltaX = toCenterX - fromCenterX;
     const deltaY = toCenterY - fromCenterY;
@@ -106,32 +128,32 @@ export function GhostCard({
         width: fromRect.width,
         height: fromRect.height,
         pointerEvents: "none",
-        zIndex: 9999,
+        zIndex: GHOST_Z_INDEX,
         willChange: "transform, opacity",
       }}
     >
       <picture>
         <source
           type="image/webp"
-          srcSet={generateSrcSet(imageUrl, [200, 300, 400, 600])}
+          srcSet={generateSrcSet(imageUrl, SRCSET_WIDTHS)}
           sizes={`${fromRect.width}px`}
         />
         <source
           type="image/jpeg"
-          srcSet={generateSrcSet(fallbackUrl, [200, 300, 400, 600])}
+          srcSet={generateSrcSet(fallbackUrl, SRCSET_WIDTHS)}
           sizes={`${fromRect.width}px`}
         />
         <img
-          src={getOptimizedImageUrl({ url: imageUrl, width: 400 })}
+          src={getOptimizedImageUrl({ url: imageUrl, width: DEFAULT_IMAGE_WIDTH })}
           alt={cardName}
-          width="200"
-          height="320"
+          width={CARD_IMAGE_WIDTH}
+          height={CARD_IMAGE_HEIGHT}
           style={{
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            borderRadius: "4px",
-            boxShadow: "0 6px 25px rgba(0, 0, 0, 0.5)",
+            borderRadius: CARD_BORDER_RADIUS,
+            boxShadow: `0 ${CARD_SHADOW_OFFSET} ${CARD_SHADOW_BLUR} rgba(0, 0, 0, 0.5)`,
           }}
         />
       </picture>

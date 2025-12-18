@@ -66,7 +66,10 @@ function renderTurnStart(
         Turn {entry.turn}
       </span>
       {" - "}
-      <TurnHeaderPlayerName playerId={entry.playerId} isAI={isAI} />
+      <TurnHeaderPlayerName
+        playerId={entry.playerId}
+        {...(isAI !== undefined && { isAI })}
+      />
     </div>
   );
 }
@@ -507,7 +510,7 @@ function renderChildren(
       isLast={i === childrenToRender.length - 1}
       parentPrefix={ctx.parentPrefix}
       viewer={ctx.viewer}
-      gameMode={ctx.gameMode}
+      {...(ctx.gameMode !== undefined && { gameMode: ctx.gameMode })}
     />
   ));
 }
@@ -524,7 +527,9 @@ function renderHeaderEntry(props: {
           entry={props.entry}
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
-          gameMode={props.ctx.gameMode}
+          {...(props.ctx.gameMode !== undefined && {
+            gameMode: props.ctx.gameMode,
+          })}
         />
       </div>
       {renderChildren(props.childrenToRender, {
@@ -567,7 +572,9 @@ function renderRegularEntry(props: {
           entry={props.entry}
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
-          gameMode={props.ctx.gameMode}
+          {...(props.ctx.gameMode !== undefined && {
+            gameMode: props.ctx.gameMode,
+          })}
         />
       </div>
       {renderChildren(props.childrenToRender, {

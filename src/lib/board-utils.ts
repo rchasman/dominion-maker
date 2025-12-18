@@ -200,9 +200,10 @@ const aggregateGroup = (
         sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0),
       0,
     );
+    const vp = totalVP !== 0 ? totalVP : undefined;
     return {
       ...first,
-      vp: totalVP !== 0 ? totalVP : undefined,
+      ...(vp !== undefined && { vp }),
       children: [{ type: "text", message: `${count}x` }, ...aggregatedChildren],
       eventIds,
     };
@@ -222,11 +223,13 @@ const aggregateGroup = (
       cardCounts[card] = (cardCounts[card] || 0) + 1;
     });
 
+    const cards = allCards.length > 0 ? allCards : undefined;
+    const finalCardCounts = Object.keys(cardCounts).length > 0 ? cardCounts : undefined;
     return {
       ...first,
       count: totalCount,
-      cards: allCards.length > 0 ? allCards : undefined,
-      cardCounts: Object.keys(cardCounts).length > 0 ? cardCounts : undefined,
+      ...(cards !== undefined && { cards }),
+      ...(finalCardCounts !== undefined && { cardCounts: finalCardCounts }),
       eventIds,
     };
   }

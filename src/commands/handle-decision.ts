@@ -1,4 +1,4 @@
-import type { GameState, CardName, PendingChoice } from "../types/game-state";
+import type { GameState, CardName } from "../types/game-state";
 import type { CommandResult } from "./types";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { getCardEffect } from "../cards/base";

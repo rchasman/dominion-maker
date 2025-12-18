@@ -50,14 +50,14 @@ describe("Cellar - duplicate card handling", () => {
   it("should discard multiple cards in batch and draw that many", () => {
     const state = createTestState();
     // Player has 3 Estates, wants to discard 2
-    state.players.human.hand = [
+    state.players["human"]!.hand = [
       "Estate",
       "Estate",
       "Estate",
       "Copper",
       "Silver",
     ];
-    state.players.human.deck = ["Gold", "Gold", "Gold"]; // Cards to draw
+    state.players["human"]!.deck = ["Gold", "Gold", "Gold"]; // Cards to draw
 
     // Initial call - get decision
     const result1 = cellar({
@@ -94,8 +94,8 @@ describe("Cellar - duplicate card handling", () => {
 
   it("should handle skipping immediately (discard zero)", () => {
     const state = createTestState();
-    state.players.human.hand = ["Estate", "Estate", "Copper"];
-    state.players.human.deck = ["Gold", "Gold"];
+    state.players["human"]!.hand = ["Estate", "Estate", "Copper"];
+    state.players["human"]!.deck = ["Gold", "Gold"];
 
     const result1 = cellar({
       state,
@@ -122,8 +122,8 @@ describe("Cellar - duplicate card handling", () => {
 
   it("should handle discarding all cards in hand", () => {
     let state = createTestState();
-    state.players.human.hand = ["Estate", "Copper"];
-    state.players.human.deck = ["Gold", "Gold"];
+    state.players["human"]!.hand = ["Estate", "Copper"];
+    state.players["human"]!.deck = ["Gold", "Gold"];
 
     const result1 = cellar({
       state,
