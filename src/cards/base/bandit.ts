@@ -103,15 +103,16 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
       { opponent, data },
       remainingOpponents,
       attackingPlayer,
+      cardName,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
       from: "revealed",
-      prompt: "Bandit Attack: Choose which Treasure to trash",
+      prompt: `${cardName} Attack: Choose which Treasure to trash`,
       cardOptions: data.trashable,
       min: 1,
       max: 1,
-      cardBeingPlayed: "Bandit",
+      cardBeingPlayed: cardName,
       stage: STAGES.VICTIM_TRASH_CHOICE,
       metadata: {
         revealed: data.revealed,

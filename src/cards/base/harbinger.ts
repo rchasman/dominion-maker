@@ -50,7 +50,7 @@ export const harbinger: CardEffect = ({
             {
               type: "CARD_PUT_ON_DECK" as const,
               playerId,
-              card: decision.selectedCards[0],
+              card: decision.selectedCards[0]!,
               from: "discard" as const,
             },
           ]

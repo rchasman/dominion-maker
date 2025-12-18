@@ -495,6 +495,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
   return ({
     state,
     playerId,
+    card,
     attackTargets,
     decision,
     stage,
@@ -535,7 +536,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             playerId,
-            isDecisionChoice(state.pendingChoice) ? state.pendingChoice.cardBeingPlayed : ("" as CardName),
+            card,
           ),
         };
       }
@@ -590,7 +591,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             attackingPlayer,
-            isDecisionChoice(state.pendingChoice) ? state.pendingChoice.cardBeingPlayed : ("" as CardName),
+            card,
           ),
         };
       }

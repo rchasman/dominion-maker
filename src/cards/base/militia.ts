@@ -31,15 +31,16 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
       { opponent, data },
       remainingOpponents,
       attackingPlayer,
+      cardName,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
       from: "hand",
-      prompt: `Militia: Discard down to 3 cards (discard ${data.discardCount})`,
+      prompt: `${cardName}: Discard down to 3 cards (discard ${data.discardCount})`,
       cardOptions: [...data.hand] as CardName[],
       min: data.discardCount,
       max: data.discardCount,
-      cardBeingPlayed: "Militia",
+      cardBeingPlayed: cardName,
       stage: STAGES.OPPONENT_DISCARD,
       metadata: {
         remainingOpponents,

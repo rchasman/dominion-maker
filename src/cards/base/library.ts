@@ -78,11 +78,11 @@ export const library: CardEffect = ({
   const discardEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
     .filter(({ index, action }) => action === "discard_card" && peeked[index])
-    .map(({ index }) => ({
-      type: "CARD_DISCARDED" as const,
+    .map(({ index }): GameEvent => ({
+      type: "CARD_DISCARDED",
       playerId,
-      card: peeked[index],
-      from: "deck" as const,
+      card: peeked[index]!,
+      from: "deck",
     }));
 
   return { events: [...drawEvents, ...discardEvents] };

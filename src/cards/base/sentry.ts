@@ -40,11 +40,11 @@ function createActionEvents(params: ActionEventParams): GameEvent[] {
     .filter(([, action]) => action === actionType)
     .map(([indexStr]) => parseInt(indexStr))
     .filter(index => revealed[index])
-    .map(index => ({
+    .map((index): GameEvent => ({
       type: eventType,
       playerId,
-      card: revealed[index],
-      from: "deck" as const,
+      card: revealed[index]!,
+      from: "deck",
     }));
 }
 
@@ -64,11 +64,11 @@ function createTopdeckEvents(
   return [...topdeckIndices]
     .reverse()
     .filter(index => revealed[index])
-    .map(index => ({
-      type: "CARD_PUT_ON_DECK" as const,
+    .map((index): GameEvent => ({
+      type: "CARD_PUT_ON_DECK",
       playerId,
-      card: revealed[index],
-      from: "hand" as const,
+      card: revealed[index]!,
+      from: "hand",
     }));
 }
 

@@ -32,15 +32,16 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
       { opponent, data },
       remainingOpponents,
       attackingPlayer,
+      cardName,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
       from: "hand",
-      prompt: "Bureaucrat: Put a Victory card on your deck",
+      prompt: `${cardName}: Put a Victory card on your deck`,
       cardOptions: data.victoryCards,
       min: 1,
       max: 1,
-      cardBeingPlayed: "Bureaucrat",
+      cardBeingPlayed: cardName,
       stage: STAGES.OPPONENT_TOPDECK,
       metadata: {
         remainingOpponents,
