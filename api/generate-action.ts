@@ -447,6 +447,34 @@ function tryRecoverFromError(
     }
   }
 
+  // Handle models that wrap response in "answer" field (e.g., glm-4.6)
+  if (errorRecord.text && typeof errorRecord.text === "string") {
+    try {
+      const parsed = JSON.parse(errorRecord.text);
+
+      // Check for {"answer": "{...JSON...}"} pattern
+      if (parsed.answer && typeof parsed.answer === "string") {
+        const innerParsed = JSON.parse(parsed.answer);
+        const validated = ActionSchema.parse(innerParsed);
+        apiLogger.info(`${provider} recovered from answer wrapper`);
+        return res.status(HTTP_OK).json({ action: validated, strategySummary });
+      }
+
+      // Check if response is the schema definition itself (contains "$schema")
+      if (parsed.$schema) {
+        apiLogger.error(`${provider} returned schema definition instead of data`);
+        return undefined;
+      }
+
+      // Try direct parsing
+      const validated = ActionSchema.parse(parsed);
+      apiLogger.info(`${provider} recovered from text response`);
+      return res.status(HTTP_OK).json({ action: validated, strategySummary });
+    } catch (parseErr) {
+      apiLogger.error(`${provider} text recovery failed: ${parseErr}`);
+    }
+  }
+
   // Try to recover from text fallback providers - skip for type safety
   return undefined;
 }
@@ -531,6 +559,12 @@ async function processGenerationRequest(
           ERROR_TEXT_PREVIEW_LONG,
         )}`,
       );
+    }
+
+    // Try to recover from model-specific response formats
+    const recovered = tryRecoverFromError(err, provider, res);
+    if (recovered) {
+      return recovered;
     }
 
     return res.status(HTTP_INTERNAL_ERROR).json({
