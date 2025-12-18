@@ -3,6 +3,7 @@ import { CardDecisionModal } from "../CardDecisionModal";
 import { ReactionModal } from "../ReactionModal";
 import { formatPlayerName } from "../../lib/board-utils";
 import { useGame } from "../../context/hooks";
+import { getPlayerPerspective } from "../../lib/player-utils";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
@@ -10,14 +11,12 @@ import type { PlayerStrategyData } from "../../types/player-strategy";
 
 interface MainPlayerAreaProps {
   localPlayer: GameState["players"][PlayerId];
-  localPlayerId: PlayerId;
   localPlayerVP: number;
   isLocalPlayerTurn: boolean;
   isLocalPlayerAI: boolean;
   selectedCardIndices: number[];
   isPreviewMode: boolean;
   displayState: GameState;
-  playerStrategy: PlayerStrategyData[number] | undefined;
   onCardClick?: (card: CardName, index: number) => void;
   onInPlayClick?: (card: CardName) => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
@@ -27,21 +26,21 @@ interface MainPlayerAreaProps {
 
 export function MainPlayerArea({
   mainPlayer,
-  localPlayerId,
   localPlayerVP,
   isLocalPlayerTurn,
   isLocalPlayerAI,
   selectedCardIndices,
   isPreviewMode,
   displayState,
-  playerStrategy,
   onCardClick,
   onInPlayClick,
   onComplexDecisionChange,
   onRevealReaction,
   onDeclineReaction,
 }: MainPlayerAreaProps) {
-  const { players } = useGame();
+  const { players, gameMode, localPlayerId: contextLocalPlayerId, playerStrategies } = useGame();
+  const { localPlayerId } = getPlayerPerspective(displayState, gameMode, contextLocalPlayerId);
+  const playerStrategy = playerStrategies[localPlayerId];
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
   const playerName = players?.find(p => p.playerId === localPlayerId)?.name;

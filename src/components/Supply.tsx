@@ -8,6 +8,8 @@ import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
 import { canSkipDecision } from "../lib/decision-utils";
 import { useAnimationSafe } from "../animation";
+import { useGame } from "../context/hooks";
+import { getPlayerPerspective } from "../lib/player-utils";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -17,7 +19,6 @@ interface SupplyProps {
   canBuy: boolean;
   availableCoins: number;
   pendingDecision?: DecisionRequest | null;
-  localPlayerId: string;
   // Action button props
   isPlayerActive?: boolean;
   hasTreasuresInHand?: boolean;
@@ -285,7 +286,6 @@ export function Supply({
   canBuy,
   availableCoins,
   pendingDecision,
-  localPlayerId,
   isPlayerActive = false,
   hasTreasuresInHand = false,
   onPlayAllTreasures,
@@ -296,8 +296,12 @@ export function Supply({
   complexDecisionData,
 }: SupplyProps) {
   const animation = useAnimationSafe();
+  const { gameMode, localPlayerId: contextLocalPlayerId } = useGame();
   const supplyRef = useRef<HTMLDivElement>(null);
   const trashRef = useRef<HTMLDivElement>(null);
+
+  // Derive local player ID from context and state
+  const { localPlayerId } = getPlayerPerspective(state, gameMode, contextLocalPlayerId);
 
   // Register supply and trash as animation zones
   useEffect(() => {
