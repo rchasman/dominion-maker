@@ -242,14 +242,14 @@ export function usePartyGame({
         send({ type: "start_game", kingdomCards });
       }
     },
-    [send, isSinglePlayer, gameMode],
+    [send, isSingleplayerId, gameMode]
   );
 
   const changeGameMode = useCallback(
     (newGameMode: string) => {
       send({ type: "change_game_mode", gameMode: newGameMode });
     },
-    [send],
+    [send]
   );
 
   const playAction = useCallback(
@@ -260,7 +260,7 @@ export function usePartyGame({
       send({ type: "play_action", card });
       return { ok: true, events: [] };
     },
-    [send],
+    [send]
   );
 
   const playTreasure = useCallback(
@@ -271,7 +271,7 @@ export function usePartyGame({
       send({ type: "play_treasure", card });
       return { ok: true, events: [] };
     },
-    [send],
+    [send]
   );
 
   const playAllTreasures = useCallback((): CommandResult => {
@@ -290,7 +290,7 @@ export function usePartyGame({
       send({ type: "buy_card", card });
       return { ok: true, events: [] };
     },
-    [send],
+    [send]
   );
 
   const endPhase = useCallback((): CommandResult => {
@@ -309,28 +309,28 @@ export function usePartyGame({
       send({ type: "submit_decision", choice });
       return { ok: true, events: [] };
     },
-    [send],
+    [send]
   );
 
   const requestUndo = useCallback(
     (toEventId: string, reason?: string) => {
       send({ type: "request_undo", toEventId, reason });
     },
-    [send],
+    [send]
   );
 
   const approveUndo = useCallback(
     (requestId: string) => {
       send({ type: "approve_undo", requestId });
     },
-    [send],
+    [send]
   );
 
   const denyUndo = useCallback(
     (requestId: string) => {
       send({ type: "deny_undo", requestId });
     },
-    [send],
+    [send]
   );
 
   const resign = useCallback(() => {
@@ -345,7 +345,7 @@ export function usePartyGame({
     (message: ChatMessageData) => {
       send({ type: "chat", message });
     },
-    [send],
+    [send]
   );
 
   const getStateAtEvent = useCallback((eventId: string): GameState => {

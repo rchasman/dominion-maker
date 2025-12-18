@@ -104,11 +104,11 @@ export default class LobbyServer implements Party.Server {
   private handleJoinLobby(
     conn: Party.Connection,
     name: string,
-    clientId: string,
+    clientId: string
   ) {
     // Check if this clientId is already connected (deduplication)
     const existingPlayer = [...this.players.entries()].find(
-      ([_, p]) => p.clientId === clientId,
+      ([_, p]) => p.clientId === clientId
     );
 
     if (existingPlayer) {
@@ -130,7 +130,7 @@ export default class LobbyServer implements Party.Server {
       this.disconnectTimeouts.delete(conn.id);
     }
 
-    const player: ConnectedPlayer = {
+    const playerId: ConnectedPlayer = {
       id: conn.id,
       name: name.trim() || `Player${conn.id.slice(0, 4)}`,
       clientId,
@@ -170,7 +170,7 @@ export default class LobbyServer implements Party.Server {
     // Check if there's already a request from target to us (mutual request = instant match)
     const mutualRequest = this.findRequest(targetId, conn.id);
     if (mutualRequest) {
-      this.startGame(mutualRequest, toPlayer, fromPlayer);
+      this.startGame(mutualRequest, toplayerId, fromPlayer);
       return;
     }
 
@@ -217,7 +217,7 @@ export default class LobbyServer implements Party.Server {
       return;
     }
 
-    this.startGame(request, fromPlayer, toPlayer);
+    this.startGame(request, fromplayerId, toPlayer);
   }
 
   private handleCancelRequest(conn: Party.Connection, requestId: string) {
@@ -234,7 +234,7 @@ export default class LobbyServer implements Party.Server {
   private startGame(
     request: GameRequest,
     player1: ConnectedPlayer,
-    player2: ConnectedPlayer,
+    player2: ConnectedPlayer
   ) {
     // Generate room ID
     const roomId = generateRoomId();

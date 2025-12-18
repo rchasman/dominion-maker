@@ -53,14 +53,14 @@ type ServerMessage =
     }
   | {
       type: "player_list";
-      players: Array<{ name: string; playerId: PlayerId }>;
+      players: Array<{ name: string; playerId }>;
     }
   | { type: "spectator_count"; count: number }
   | { type: "game_started"; state: GameState; events: GameEvent[] }
   | { type: "events"; events: GameEvent[]; state: GameState }
   | { type: "full_state"; state: GameState; events: GameEvent[] }
-  | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
-  | { type: "player_reconnected"; playerName: string; playerId: PlayerId }
+  | { type: "player_disconnected"; playerName: string; playerId }
+  | { type: "player_reconnected"; playerName: string; playerId }
   | { type: "error"; message: string }
   | { type: "game_ended"; reason: string }
   | { type: "chat"; message: ChatMessageData }
@@ -157,7 +157,7 @@ export default class GameServer implements Party.Server {
           sender,
           msg.botName,
           msg.kingdomCards,
-          msg.gameMode,
+          msg.gameMode
         );
         break;
       case "change_game_mode":
@@ -192,7 +192,7 @@ export default class GameServer implements Party.Server {
   private handleChat(_sender: Party.Connection, message: ChatMessageData) {
     // Store message (with limit)
     this.chatMessages = [...this.chatMessages, message].slice(
-      -MAX_CHAT_MESSAGES,
+      -MAX_CHAT_MESSAGES
     );
 
     // Broadcast to all connections
@@ -201,16 +201,16 @@ export default class GameServer implements Party.Server {
 
   private handleJoin(
     conn: Party.Connection,
-    player: PlayerConnection,
+    playerId: PlayerConnection,
     name: string,
     clientId?: string,
-    isBot?: boolean,
+    isBot?: boolean
   ) {
     // If game started, check if this player can rejoin
     if (this.isStarted && this.engine) {
       console.log(
         `[Rejoin] Attempt by ${name} (${clientId}), playerInfo keys:`,
-        Object.keys(this.playerInfo),
+        Object.keys(this.playerInfo)
       );
 
       // Try to find by clientId first (more stable), then fall back to name
@@ -339,7 +339,7 @@ export default class GameServer implements Party.Server {
 
     console.log(
       "[AutoStart] Players:",
-      players.map(p => `${p.name} (${p.clientId})`),
+      players.map(p => `${p.name} (${p.clientId})`)
     );
 
     const playerIds = players.map(p => p.clientId);
@@ -362,7 +362,7 @@ export default class GameServer implements Party.Server {
 
     console.log(
       "[AutoStart] Broadcasting state with playerInfo:",
-      Object.keys(this.playerInfo),
+      Object.keys(this.playerInfo)
     );
 
     this.engine.subscribe((events, state) => {
@@ -405,7 +405,7 @@ export default class GameServer implements Party.Server {
     conn: Party.Connection,
     botName?: string,
     kingdomCards?: CardName[],
-    gameMode?: string,
+    gameMode?: string
   ) {
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
@@ -580,9 +580,9 @@ export default class GameServer implements Party.Server {
 
   private handleSpectate(
     conn: Party.Connection,
-    player: PlayerConnection,
+    playerId: PlayerConnection,
     name: string,
-    clientId?: string,
+    clientId?: string
   ) {
     player.name = name;
     player.clientId = clientId || crypto.randomUUID();
@@ -617,7 +617,7 @@ export default class GameServer implements Party.Server {
   private handleStartGame(
     conn: Party.Connection,
     kingdomCards?: CardName[],
-    botPlayerIds?: PlayerId[],
+    botPlayerIds?: PlayerId[]
   ) {
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
@@ -692,8 +692,8 @@ export default class GameServer implements Party.Server {
 
   private handleGameCommand(
     conn: Party.Connection,
-    player: PlayerConnection,
-    msg: ClientMessage,
+    playerId: PlayerConnection,
+    msg: ClientMessage
   ) {
     if (!this.engine || !this.isStarted) {
       this.send(conn, { type: "error", message: "Game not started" });
@@ -750,7 +750,7 @@ export default class GameServer implements Party.Server {
     }
   }
 
-  private handleResign(conn: Party.Connection, player: PlayerConnection) {
+  private handleResign(conn: Party.Connection, playerId: PlayerConnection) {
     if (!player.clientId || player.isSpectator) {
       this.send(conn, { type: "error", message: "Not a player" });
       return;
@@ -806,7 +806,7 @@ export default class GameServer implements Party.Server {
 
       // Check if only bots remain or it's a single-player game
       const onlyBotsRemain = remainingPlayers.every(
-        p => p.clientId && this.botPlayers.has(p.clientId),
+        p => p.clientId && this.botPlayers.has(p.clientId)
       );
 
       if (onlyBotsRemain && !this.isFullMode()) {
@@ -822,7 +822,7 @@ export default class GameServer implements Party.Server {
 
   private getPlayers(): PlayerConnection[] {
     return [...this.connections.values()].filter(
-      p => p.clientId && !p.isSpectator,
+      p => p.clientId && !p.isSpectator
     );
   }
 
@@ -883,7 +883,7 @@ export default class GameServer implements Party.Server {
     const players = Object.entries(this.playerInfo).map(([clientId, info]) => {
       // Check if this player has an active connection
       const activeConnection = [...this.connections.values()].find(
-        conn => conn.clientId === clientId && !conn.isSpectator,
+        conn => conn.clientId === clientId && !conn.isSpectator
       );
 
       return {
@@ -914,7 +914,7 @@ export default class GameServer implements Party.Server {
     // Remove all bot connections
     const botConnectionIds = [...this.connections.entries()]
       .filter(
-        ([_, conn]) => conn.clientId && this.botPlayers.has(conn.clientId),
+        ([_, conn]) => conn.clientId && this.botPlayers.has(conn.clientId)
       )
       .map(([id]) => id);
 

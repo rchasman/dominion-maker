@@ -11,6 +11,7 @@ import type {
   ActiveGame,
   LobbyClientMessage,
   LobbyServerMessage,
+  PlayerId,
 } from "./protocol";
 
 const PARTYKIT_HOST =
@@ -34,8 +35,8 @@ interface UsePartyLobbyReturn {
   matchedGame: MatchedGame | null;
   error: string | null;
 
-  getRequestState: (playerId: string) => RequestState;
-  getIncomingRequest: (playerId: string) => GameRequest | undefined;
+  getRequestState: (playerId: PlayerId) => RequestState;
+  getIncomingRequest: (playerId: PlayerId) => GameRequest | undefined;
 
   requestGame: (targetId: string) => void;
   acceptRequest: (requestId: string) => void;
@@ -126,7 +127,7 @@ export function usePartyLobby(
   }, [playerName, clientId]);
 
   const getRequestState = useCallback(
-    (playerId: string): RequestState => {
+    (playerId: PlayerId): RequestState => {
       if (!myId) return "none";
 
       // Did I send them a request?
@@ -147,7 +148,7 @@ export function usePartyLobby(
   );
 
   const getIncomingRequest = useCallback(
-    (playerId: string): GameRequest | undefined => {
+    (playerId: PlayerId): GameRequest | undefined => {
       if (!myId) return undefined;
       return requests.find(r => r.fromId === playerId && r.toId === myId);
     },
