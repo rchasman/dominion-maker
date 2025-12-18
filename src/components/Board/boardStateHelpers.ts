@@ -1,6 +1,6 @@
 import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
-import { GAME_MODE_CONFIG } from "../../types/game-mode";
+import { isAIControlled } from "../../lib/game-mode-utils";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { getPlayerIds, getHintText, canBuyCards } from "./helpers";
 import { MAIN_PLAYER_INDEX, OPPONENT_PLAYER_INDEX } from "./constants";
@@ -75,13 +75,9 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     hasTreasuresInHand,
   });
 
-  const isOpponentAI =
-    gameMode !== "multiplayer" &&
-    GAME_MODE_CONFIG[gameMode].isAIPlayer(opponentPlayerId);
+  const isOpponentAI = isAIControlled(gameMode, opponentPlayerId);
 
-  const isMainPlayerAI =
-    gameMode !== "multiplayer" &&
-    GAME_MODE_CONFIG[gameMode].isAIPlayer(mainPlayerId);
+  const isMainPlayerAI = isAIControlled(gameMode, mainPlayerId);
 
   const result: BoardState = {
     displayState,

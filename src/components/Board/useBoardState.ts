@@ -2,7 +2,7 @@
 // Pure utility function for computing board state
 import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
-import { GAME_MODE_CONFIG } from "../../types/game-mode";
+import { isAIControlled } from "../../lib/game-mode-utils";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { getPlayerIds, getHintText, canBuyCards } from "./helpers";
 import { MAIN_PLAYER_INDEX, OPPONENT_PLAYER_INDEX } from "./constants";
@@ -85,13 +85,6 @@ function computeHint(params: HintParams): string {
   );
 }
 
-function computeIsAIPlayer(gameMode: GameMode, playerId: Player): boolean {
-  return (
-    gameMode !== "multiplayer" &&
-    GAME_MODE_CONFIG[gameMode].isAIPlayer(playerId)
-  );
-}
-
 export function useBoardState(params: BoardStateParams): BoardState {
   const {
     state,
@@ -136,8 +129,8 @@ export function useBoardState(params: BoardStateParams): BoardState {
     hasTreasuresInHand,
   });
 
-  const isOpponentAI: boolean = computeIsAIPlayer(gameMode, opponentPlayerId);
-  const isMainPlayerAI: boolean = computeIsAIPlayer(gameMode, mainPlayerId);
+  const isOpponentAI: boolean = isAIControlled(gameMode, opponentPlayerId);
+  const isMainPlayerAI: boolean = isAIControlled(gameMode, mainPlayerId);
 
   return {
     displayState,

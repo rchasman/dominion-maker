@@ -10,6 +10,7 @@ import type { GameState } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { GameEvent } from "../events/types";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
+import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
 import { useAnimationSafe } from "../animation";
@@ -58,9 +59,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       return;
     }
 
-    const isAITurn =
-      gameMode !== "multiplayer" &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.activePlayer);
+    const isAITurn = isAIControlled(gameMode, gameState.activePlayer);
 
     if (!isAITurn) {
       // Not an AI turn - abort any ongoing automation and clear state
@@ -225,17 +224,15 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 
     // Check for AI reaction (awaiting_reaction subPhase)
     const isAIReaction =
-      gameMode !== "multiplayer" &&
       gameState.subPhase === "awaiting_reaction" &&
       gameState.pendingReaction?.defender &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingReaction.defender);
+      isAIControlled(gameMode, gameState.pendingReaction.defender);
 
     // Check for AI decision (opponent_decision subPhase)
     const isAIDecision =
-      gameMode !== "multiplayer" &&
       gameState.subPhase === "opponent_decision" &&
       gameState.pendingDecision?.player &&
-      GAME_MODE_CONFIG[gameMode].isAIPlayer(gameState.pendingDecision.player);
+      isAIControlled(gameMode, gameState.pendingDecision.player);
 
     if (!isAIReaction && !isAIDecision) {
       // Not an AI action - abort any ongoing automation and clear state
