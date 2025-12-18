@@ -24,7 +24,7 @@ interface AttackOrchestrationConfig {
  * Returns events including ATTACK_DECLARED, reaction decisions/resolutions, and card effect execution.
  */
 export function orchestrateAttack(
-  config: AttackOrchestrationConfig
+  config: AttackOrchestrationConfig,
 ): GameEvent[] {
   const { state, attacker, attackCard, effect, rootEventId } = config;
   const opponents = state.playerOrder?.filter(p => p !== attacker) || [];
@@ -50,7 +50,7 @@ export function orchestrateAttack(
         const reactions = getAvailableReactions(
           state,
           firstTarget,
-          "on_attack"
+          "on_attack",
         );
 
         if (reactions.length > 0) {
@@ -110,7 +110,7 @@ export function orchestrateAttack(
   const blockedTargets = eventsWithReactions
     .filter(
       (e): e is GameEvent & { type: "ATTACK_RESOLVED"; blocked: true } =>
-        e.type === "ATTACK_RESOLVED" && e.blocked
+        e.type === "ATTACK_RESOLVED" && e.blocked,
     )
     .map(e => e.target);
   const resolvedTargets = opponents.filter(t => !blockedTargets.includes(t));
@@ -163,7 +163,7 @@ interface ResolveRemainingTargetsConfig {
  * Returns events and may include DECISION_REQUIRED if a target has reactions.
  */
 function resolveRemainingTargets(
-  config: ResolveRemainingTargetsConfig
+  config: ResolveRemainingTargetsConfig,
 ): GameEvent[] {
   const {
     state,

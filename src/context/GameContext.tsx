@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from "preact/hooks";
-import { createContext, type ComponentChildren } from "preact";
-import type { GameState, CardName } from "../types/game-state";
+import type { ComponentChildren } from "preact";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
@@ -47,7 +47,7 @@ export interface GameContextValue {
   localPlayerName?: string; // Display name of the local player
   isSpectator?: boolean; // Whether the current user is spectating (not playing)
   spectatorCount?: number; // Number of spectators watching the game
-  players?: Array<{ name: string; playerId: string }>; // All players in the game (for multiplayer)
+  players?: Array<{ name: string; playerId: PlayerId }>; // All players in the game (for multiplayer)
   chatMessages?: Array<{
     id: string;
     senderName: string;
@@ -76,16 +76,13 @@ export interface GameContextValue {
   getStateAtEvent: (eventId: string) => GameState;
 }
 
-interface LLMLogsContextValue {
-  llmLogs: LLMLogEntry[];
-}
-
 import type { PlayerStrategyData } from "../types/player-strategy";
 
-const GameContext = createContext<GameContextValue | null>(null);
-const LLMLogsContext = createContext<LLMLogsContextValue | null>(null);
-
-export { GameContext, LLMLogsContext };
+export {
+  GameContext,
+  LLMLogsContext,
+  type GameContextValue,
+} from "./GameContextTypes";
 
 /**
  * Create LLM log entry with metadata

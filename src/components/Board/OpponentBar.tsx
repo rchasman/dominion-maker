@@ -17,10 +17,7 @@ function getPhaseBorderColor(
 ): string {
   if (isAiTurn) {
     // AI's turn - show phase colors
-    if (
-      subPhase === "awaiting_reaction" ||
-      subPhase === "opponent_decision"
-    ) {
+    if (subPhase === "awaiting_reaction" || subPhase === "opponent_decision") {
       return "var(--color-reaction)";
     }
     if (phase === "action") return "var(--color-action-phase)";

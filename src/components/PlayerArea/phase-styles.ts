@@ -7,10 +7,7 @@ export function getPhaseBorderColor(
 ): string {
   if (!isActive) return "var(--color-border)";
 
-  if (
-    subPhase === "awaiting_reaction" ||
-    subPhase === "opponent_decision"
-  ) {
+  if (subPhase === "awaiting_reaction" || subPhase === "opponent_decision") {
     return "var(--color-reaction)";
   }
 
@@ -29,10 +26,7 @@ export function getPhaseBackground(
     return "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)";
   }
 
-  if (
-    subPhase === "awaiting_reaction" ||
-    subPhase === "opponent_decision"
-  ) {
+  if (subPhase === "awaiting_reaction" || subPhase === "opponent_decision") {
     return "linear-gradient(180deg, #253837 0%, #1a2628 100%)";
   }
 

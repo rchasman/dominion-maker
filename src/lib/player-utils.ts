@@ -18,7 +18,7 @@ export interface PlayerPerspective {
 export function getPlayerPerspective(
   state: GameState | null,
   gameMode: GameMode,
-  localPlayerId?: string | null
+  localPlayerId?: string | null,
 ): PlayerPerspective {
   // Get all player IDs
   let playerIds: PlayerId[];

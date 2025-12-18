@@ -31,7 +31,7 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
     createDecision: (
       { opponent, data },
       remainingOpponents,
-      attackingPlayer
+      attackingPlayer,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
@@ -69,5 +69,5 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
       card: "Silver" as const,
       to: "deck" as const,
     },
-  ]
+  ],
 );

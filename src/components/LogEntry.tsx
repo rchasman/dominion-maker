@@ -1,4 +1,8 @@
-import type { LogEntry as LogEntryType, CardName, PlayerId } from "../types/game-state";
+import type {
+  LogEntry as LogEntryType,
+  CardName,
+  PlayerId,
+} from "../types/game-state";
 import {
   PlayerName,
   CardNameSpan,
@@ -44,7 +48,7 @@ function getInitials(name: string): string {
 
 function renderTurnStart(
   entry: Extract<LogEntryType, { type: "turn-start" }>,
-  isAI: boolean | undefined
+  isAI: boolean | undefined,
 ) {
   return (
     <div
@@ -107,12 +111,12 @@ function renderTurnEnd(entry: Extract<LogEntryType, { type: "turn-end" }>) {
 }
 
 function renderPhaseChange(
-  entry: Extract<LogEntryType, { type: "phase-change" }>
+  entry: Extract<LogEntryType, { type: "phase-change" }>,
 ) {
   return (
     <span>
-      <PlayerName playerId={entry.playerId} /> <Verb>moves to</Verb> {entry.phase}{" "}
-      phase
+      <PlayerName playerId={entry.playerId} /> <Verb>moves to</Verb>{" "}
+      {entry.phase} phase
     </span>
   );
 }
@@ -120,7 +124,7 @@ function renderPhaseChange(
 function renderCardAction(
   entry: Extract<LogEntryType, { card: CardName; children?: LogEntryType[] }>,
   verb: string,
-  reasoning?: string
+  reasoning?: string,
 ) {
   const count = getAggregatedCount(entry);
   const suffix = count > 1 ? ` x${count}` : "";
@@ -139,19 +143,19 @@ function renderCardAction(
 }
 
 function renderPlayTreasure(
-  entry: Extract<LogEntryType, { type: "play-treasure" }>
+  entry: Extract<LogEntryType, { type: "play-treasure" }>,
 ) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
 
 function renderUnplayTreasure(
-  entry: Extract<LogEntryType, { type: "unplay-treasure" }>
+  entry: Extract<LogEntryType, { type: "unplay-treasure" }>,
 ) {
   return renderCardAction(entry, "takes back");
 }
 
 function renderPlayAction(
-  entry: Extract<LogEntryType, { type: "play-action" }>
+  entry: Extract<LogEntryType, { type: "play-action" }>,
 ) {
   return renderCardAction(entry, "plays", entry.reasoning);
 }
@@ -162,7 +166,7 @@ function renderBuyCard(entry: Extract<LogEntryType, { type: "buy-card" }>) {
 
 function renderDrawCards(
   entry: Extract<LogEntryType, { type: "draw-cards" }>,
-  viewer: string
+  viewer: string,
 ) {
   const isOpponent = entry.playerId !== viewer;
   const playerPrefix = renderPlayerPrefix(entry.playerId);
@@ -238,7 +242,7 @@ function renderGainCard(entry: Extract<LogEntryType, { type: "gain-card" }>) {
 }
 
 function renderDiscardCards(
-  entry: Extract<LogEntryType, { type: "discard-cards" }>
+  entry: Extract<LogEntryType, { type: "discard-cards" }>,
 ) {
   const playerPrefix = renderPlayerPrefix(entry.playerId);
 
@@ -301,7 +305,7 @@ function renderTrashCard(entry: Extract<LogEntryType, { type: "trash-card" }>) {
 }
 
 function renderShuffleDeck(
-  entry: Extract<LogEntryType, { type: "shuffle-deck" }>
+  entry: Extract<LogEntryType, { type: "shuffle-deck" }>,
 ) {
   return (
     <span>
@@ -335,9 +339,9 @@ function renderGameOver(entry: Extract<LogEntryType, { type: "game-over" }>) {
       <div>Game Over!</div>
       <div style={{ marginBlockStart: "var(--space-2)", fontSize: "0.75rem" }}>
         {scores.map(([playerId, vp], i) => (
-          <span key={player}>
+          <span key={playerId}>
             {i > 0 && ", "}
-            <PlayerName playerId={player} />: <VPValue vp={vp} />
+            <PlayerName playerId={playerId} />: <VPValue vp={vp} />
           </span>
         ))}
       </div>
@@ -369,7 +373,7 @@ function renderResourceChange(verb: string, component: ComponentChildren) {
 }
 
 function renderGetActions(
-  entry: Extract<LogEntryType, { type: "get-actions" }>
+  entry: Extract<LogEntryType, { type: "get-actions" }>,
 ) {
   return renderResourceChange("earns", <ActionValue count={entry.count} />);
 }
@@ -379,7 +383,7 @@ function renderGetBuys(entry: Extract<LogEntryType, { type: "get-buys" }>) {
 }
 
 function renderUseActions(
-  entry: Extract<LogEntryType, { type: "use-actions" }>
+  entry: Extract<LogEntryType, { type: "use-actions" }>,
 ) {
   return renderResourceChange("spends", <ActionValue count={-entry.count} />);
 }
@@ -393,7 +397,7 @@ function renderGetCoins(entry: Extract<LogEntryType, { type: "get-coins" }>) {
 }
 
 function renderSpendCoins(
-  entry: Extract<LogEntryType, { type: "spend-coins" }>
+  entry: Extract<LogEntryType, { type: "spend-coins" }>,
 ) {
   return renderResourceChange("spends", <CoinValue coins={-entry.count} />);
 }
@@ -403,11 +407,13 @@ const ENTRY_RENDERERS = {
   "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
     const isAI =
       ctx.gameMode && ctx.gameMode !== "multiplayer"
-        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(String(entry.playerId ?? ""))
+        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(
+            String(entry.playerId ?? ""),
+          )
         : undefined;
     return renderTurnStart(
       entry as Extract<LogEntryType, { type: "turn-start" }>,
-      isAI
+      isAI,
     );
   },
   "turn-end": (entry: LogEntryType) =>
@@ -416,11 +422,11 @@ const ENTRY_RENDERERS = {
     renderPhaseChange(entry as Extract<LogEntryType, { type: "phase-change" }>),
   "play-treasure": (entry: LogEntryType) =>
     renderPlayTreasure(
-      entry as Extract<LogEntryType, { type: "play-treasure" }>
+      entry as Extract<LogEntryType, { type: "play-treasure" }>,
     ),
   "unplay-treasure": (entry: LogEntryType) =>
     renderUnplayTreasure(
-      entry as Extract<LogEntryType, { type: "unplay-treasure" }>
+      entry as Extract<LogEntryType, { type: "unplay-treasure" }>,
     ),
   "play-action": (entry: LogEntryType) =>
     renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
@@ -429,13 +435,13 @@ const ENTRY_RENDERERS = {
   "draw-cards": (entry: LogEntryType, ctx: { viewer: string }) =>
     renderDrawCards(
       entry as Extract<LogEntryType, { type: "draw-cards" }>,
-      ctx.viewer
+      ctx.viewer,
     ),
   "gain-card": (entry: LogEntryType) =>
     renderGainCard(entry as Extract<LogEntryType, { type: "gain-card" }>),
   "discard-cards": (entry: LogEntryType) =>
     renderDiscardCards(
-      entry as Extract<LogEntryType, { type: "discard-cards" }>
+      entry as Extract<LogEntryType, { type: "discard-cards" }>,
     ),
   "trash-card": (entry: LogEntryType) =>
     renderTrashCard(entry as Extract<LogEntryType, { type: "trash-card" }>),
@@ -491,7 +497,7 @@ type RenderContext = {
 
 function renderChildren(
   childrenToRender: LogEntryType[] | undefined,
-  ctx: RenderContext
+  ctx: RenderContext,
 ) {
   return childrenToRender?.map((child, i) => (
     <LogEntry
@@ -587,7 +593,7 @@ export function LogEntry({
         child.type === "text" &&
         "message" in child &&
         child.message.endsWith("x")
-      )
+      ),
   );
 
   const ctx: RenderContext = { depth, viewer, gameMode, parentPrefix };

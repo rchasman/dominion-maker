@@ -62,7 +62,7 @@ function compareSimpleValues(prev: GameState, next: GameState): StateChange[] {
 function comparePlayerStates(
   playerId: string,
   prevPlayer: PlayerState,
-  nextPlayer: PlayerState
+  nextPlayer: PlayerState,
 ): StateChange[] {
   return [
     prevPlayer.hand.length !== nextPlayer.hand.length

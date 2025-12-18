@@ -20,7 +20,7 @@ export function handleStartGame(
   state: GameState,
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number
+  seed?: number,
 ): CommandResult {
   void state;
   // Select kingdom cards if not provided
@@ -45,11 +45,11 @@ export function handleStartGame(
   // Deal starting decks (7 Copper, 3 Estate per official rules)
   const copperCards: CardName[] = Array.from(
     { length: STARTING_DECK.COPPER },
-    () => "Copper" as CardName
+    () => "Copper" as CardName,
   );
   const estateCards: CardName[] = Array.from(
     { length: STARTING_DECK.ESTATE },
-    () => "Estate" as CardName
+    () => "Estate" as CardName,
   );
   const startingDeck: CardName[] = [...copperCards, ...estateCards];
 
@@ -94,7 +94,7 @@ export function handleStartGame(
           { type: "ACTIONS_MODIFIED", delta: 1 },
           { type: "BUYS_MODIFIED", delta: 1 },
         ],
-        turnStartId
+        turnStartId,
       ),
     ],
   };
@@ -102,7 +102,7 @@ export function handleStartGame(
 
 export function handleEndPhase(
   state: GameState,
-  playerId: PlayerId
+  playerId: PlayerId,
 ): CommandResult {
   // Cannot end phase while there's a pending decision
   if (state.pendingChoice) {
@@ -169,7 +169,7 @@ export function handleEndPhase(
     const drawEvents = createDrawEvents(
       playerId,
       applyEvents(state, cleanupEvents).players[playerId],
-      GAME_CONSTANTS.INITIAL_HAND_SIZE
+      GAME_CONSTANTS.INITIAL_HAND_SIZE,
     );
 
     const allEvents = [
@@ -212,7 +212,7 @@ export function handleEndPhase(
             { type: "ACTIONS_MODIFIED", delta: 1 },
             { type: "BUYS_MODIFIED", delta: 1 },
           ],
-          turnStartId
+          turnStartId,
         ),
       ],
     };
@@ -225,7 +225,7 @@ export function handleRequestUndo(
   state: GameState,
   playerId: PlayerId,
   toEventId: string,
-  reason?: string
+  reason?: string,
 ): CommandResult {
   void state;
   const requestId = `undo_${Date.now()}_${Math.random()

@@ -30,7 +30,7 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
     createDecision: (
       { opponent, data },
       remainingOpponents,
-      attackingPlayer
+      attackingPlayer,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
@@ -55,5 +55,5 @@ export const militia = createOpponentIteratorEffect<MilitiaData>(
       })),
     stage: STAGES.OPPONENT_DISCARD,
   },
-  [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }]
+  [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }],
 );

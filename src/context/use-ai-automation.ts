@@ -9,9 +9,7 @@ import type { DominionEngine } from "../engine";
 import type { GameState, PlayerId } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { GameEvent } from "../events/types";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
 import { isAIControlled } from "../lib/game-mode-utils";
-import { getSubPhase } from "../lib/state-helpers";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
 import { useAnimationSafe } from "../animation";
@@ -29,7 +27,7 @@ interface AIAutomationParams {
 }
 
 function getOpponentZone(
-  base: "hand" | "inPlay" | "deck" | "discard"
+  base: "hand" | "inPlay" | "deck" | "discard",
 ): "hand-opponent" | "inPlay-opponent" | "deck-opponent" | "discard-opponent" {
   return `${base}-opponent`;
 }
@@ -127,26 +125,26 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                   event.sourceIndex !== undefined
                 ) {
                   cardElement = document.querySelector(
-                    `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`
+                    `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`,
                   );
                   toZone = getOpponentZone("inPlay");
                 } else if (event.type === "CARD_GAINED") {
                   cardElement = document.querySelector(
-                    `[data-card-id="supply-${event.card}"]`
+                    `[data-card-id="supply-${event.card}"]`,
                   );
                   toZone = getOpponentZone(event.to);
                   duration = 300;
                 } else if (event.type === "CARD_TRASHED") {
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
-                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
                   );
                   toZone = "trash";
                   duration = 250;
                 } else if (event.type === "CARD_RETURNED_TO_HAND") {
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
-                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`
+                    `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
                   );
                   toZone = getOpponentZone("hand");
                 }
@@ -311,7 +309,7 @@ export function useAutoPhaseAdvance(
   actions: {
     setEvents: (events: GameEvent[]) => void;
     setGameState: (state: GameState) => void;
-  }
+  },
 ): void {
   const { setEvents, setGameState } = actions;
   useEffect(() => {
@@ -345,7 +343,7 @@ export function useAutoPhaseAdvanceMultiplayer(
   playerId: PlayerId | null,
   isProcessing: boolean,
   isSpectator: boolean,
-  endPhase: () => void
+  endPhase: () => void,
 ): void {
   useEffect(() => {
     if (!gameState || isProcessing || isSpectator || !playerId) {
@@ -355,7 +353,7 @@ export function useAutoPhaseAdvanceMultiplayer(
     const isMyTurn = gameState.activePlayer === playerId;
     const currentHasPlayableActions = computeHasPlayableActions(
       gameState,
-      playerId
+      playerId,
     );
 
     const shouldAutoSkip =

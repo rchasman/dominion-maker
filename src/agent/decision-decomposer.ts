@@ -11,7 +11,9 @@ import type { Action } from "../types/action";
  * For multi-action decisions (like Sentry), returns actions for the NEXT card
  * based on currentRoundIndex in metadata.
  */
-export function decomposeDecisionForAI(decision: Extract<PendingChoice, { choiceType: "decision" }>): Action[] {
+export function decomposeDecisionForAI(
+  decision: Extract<PendingChoice, { choiceType: "decision" }>,
+): Action[] {
   const { min, max, cardOptions, stage, actions: availableActions } = decision;
 
   // Decision with custom actions (like Sentry: topdeck/trash/discard per card)

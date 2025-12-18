@@ -95,7 +95,7 @@ export class DominionEngine {
   startGame(
     players: PlayerId[],
     kingdomCards?: CardName[],
-    seed?: number
+    seed?: number,
   ): CommandResult {
     // Clear existing state
     this.events = [];
@@ -149,7 +149,10 @@ export class DominionEngine {
    * Submit a decision response.
    */
   submitDecision(playerId: PlayerId, choice: DecisionChoice): CommandResult {
-    return this.dispatch({ type: "SUBMIT_DECISION", playerId, choice }, playerId);
+    return this.dispatch(
+      { type: "SUBMIT_DECISION", playerId, choice },
+      playerId,
+    );
   }
 
   /**
@@ -165,7 +168,7 @@ export class DominionEngine {
   requestUndo(
     playerId: PlayerId,
     toEventId: string,
-    reason?: string
+    reason?: string,
   ): CommandResult {
     const result = this.dispatch(
       {
@@ -174,7 +177,7 @@ export class DominionEngine {
         toEventId,
         reason,
       },
-      playerId
+      playerId,
     );
 
     if (result.ok) {
@@ -318,7 +321,7 @@ export class DominionEngine {
   applyExternalEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() }
+      event.id ? event : { ...event, id: generateEventId() },
     );
     this.events = [...this.events, ...eventsWithIds];
     this.cachedState = null;
@@ -340,7 +343,7 @@ export class DominionEngine {
   private appendEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() }
+      event.id ? event : { ...event, id: generateEventId() },
     );
     this.events = [...this.events, ...eventsWithIds];
     this.cachedState = null;
@@ -439,7 +442,7 @@ export class DominionEngine {
 export function createGame(
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number
+  seed?: number,
 ): DominionEngine {
   const engine = new DominionEngine();
   engine.startGame(players, kingdomCards, seed);

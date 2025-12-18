@@ -7,7 +7,12 @@
 
 import { useMemo, useState } from "preact/hooks";
 import type { GameContextValue } from "./GameContext";
-import type { GameState, CardName, PlayerId } from "../types/game-state";
+import type {
+  GameState,
+  CardName,
+  PlayerId,
+  DecisionChoice,
+} from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
@@ -40,11 +45,11 @@ interface MultiplayerGameState {
   playAllTreasures: () => CommandResult;
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
-  submitDecision: (choice: any) => CommandResult;
+  submitDecision: (choice: DecisionChoice) => CommandResult;
   requestUndo: (toEventId: string) => void;
   getStateAtEvent: (eventId: string) => GameState;
   startGame: () => void;
-  sendChat: (message: any) => void;
+  sendChat: (message: string) => void;
 }
 
 interface UseMultiplayerGameContextOptions {

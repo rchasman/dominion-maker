@@ -1,4 +1,4 @@
-import type { GameState, Player } from "../../types/game-state";
+import type { GameState, PlayerId } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { isAIControlled } from "../../lib/game-mode-utils";
 import { countVP, getAllCards } from "../../lib/board-utils";
@@ -15,19 +15,19 @@ interface BoardStateParams {
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   getStateAtEvent: (eventId: string) => GameState;
-  localPlayerId?: string | null;
+  localPlayerId?: PlayerId | null;
   isSpectator?: boolean;
 }
 
 export interface BoardState {
   displayState: GameState;
   playerPerspective: PlayerPerspective;
-  localPlayerId: Player;
-  opponentPlayerId: Player;
+  localPlayerId: PlayerId;
+  opponentPlayerId: PlayerId;
   isLocalPlayerTurn: boolean;
   canBuy: boolean;
-  opponent: GameState["players"][Player];
-  localPlayer: GameState["players"][Player];
+  opponent: GameState["players"][PlayerId];
+  localPlayer: GameState["players"][PlayerId];
   localPlayerVP: number;
   opponentVP: number;
   hint: string;
@@ -49,8 +49,13 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   } = params;
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
-  const playerPerspective = getPlayerPerspective(state, gameMode, localPlayerId);
-  const { localPlayerId: resolvedLocalPlayerId, opponentPlayerId } = playerPerspective;
+  const playerPerspective = getPlayerPerspective(
+    state,
+    gameMode,
+    localPlayerId,
+  );
+  const { localPlayerId: resolvedLocalPlayerId, opponentPlayerId } =
+    playerPerspective;
 
   const isLocalPlayerTurn =
     !isSpectator && displayState.activePlayer === resolvedLocalPlayerId;

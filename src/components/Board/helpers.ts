@@ -1,8 +1,8 @@
-import type { GameState, Player } from "../../types/game-state";
+import type { GameState, PlayerId } from "../../types/game-state";
 
 interface GetHintTextParams {
   displayState: GameState;
-  localPlayerId: Player;
+  localPlayerId: PlayerId;
   isLocalPlayerTurn: boolean;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
@@ -17,18 +17,18 @@ export function getHintText({
 }: GetHintTextParams): string {
   // Check for pending reaction first
   if (
-    displayState.pendingReaction &&
-    displayState.pendingReaction.player === localPlayerId
+    displayState.pendingChoice &&
+    displayState.pendingChoice.player === localPlayerId
   ) {
-    const { attackCard, attacker } = displayState.pendingReaction;
+    const { attackCard, attacker } = displayState.pendingChoice;
     return `${attacker} played ${attackCard}. Reveal a reaction?`;
   }
 
   if (
-    displayState.pendingDecision &&
-    displayState.pendingDecision.player === localPlayerId
+    displayState.pendingChoice &&
+    displayState.pendingChoice.player === localPlayerId
   ) {
-    return displayState.pendingDecision.prompt;
+    return displayState.pendingChoice.prompt;
   }
 
   if (!isLocalPlayerTurn) {

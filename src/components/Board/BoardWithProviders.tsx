@@ -5,11 +5,8 @@
  * Used by both single-player (via GameProvider) and multiplayer (via GameRoom).
  */
 import type { ComponentChildren } from "preact";
-import {
-  GameContext,
-  LLMLogsContext,
-  type GameContextValue,
-} from "../../context/GameContext";
+import type { GameContextValue } from "../../context/GameContextTypes";
+import { GameContext, LLMLogsContext } from "../../context/GameContextTypes";
 import { AnimationProvider } from "../../animation";
 import type { LLMLogEntry } from "../LLMLog";
 

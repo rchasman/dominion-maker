@@ -26,7 +26,7 @@ type BanditAttackData = {
  */
 function processOpponentAutoAttack(
   state: GameState,
-  target: PlayerId
+  target: PlayerId,
 ): GameEvent[] {
   const targetState = state.players[target];
   if (!targetState) return [];
@@ -42,7 +42,7 @@ function processOpponentAutoAttack(
   }));
 
   const trashable = revealed.filter(
-    c => CARDS[c].types.includes("treasure") && c !== "Copper"
+    c => CARDS[c].types.includes("treasure") && c !== "Copper",
   );
 
   if (trashable.length === 0) {
@@ -86,7 +86,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
       if (revealed.length === 0) return null;
 
       const trashable = revealed.filter(
-        c => CARDS[c].types.includes("treasure") && c !== "Copper"
+        c => CARDS[c].types.includes("treasure") && c !== "Copper",
       );
 
       // Only create decision if 2+ trashable treasures
@@ -102,7 +102,7 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
     createDecision: (
       { opponent, data },
       remainingOpponents,
-      attackingPlayer
+      attackingPlayer,
     ) => ({
       choiceType: "decision",
       playerId: opponent,
@@ -153,9 +153,9 @@ export const bandit = createOpponentIteratorEffect<BanditAttackData>(
 
     const targets = attackTargets ?? getOpponents(state, playerId);
     const autoProcessEvents = targets.flatMap(t =>
-      processOpponentAutoAttack(state, t)
+      processOpponentAutoAttack(state, t),
     );
 
     return [gainGold, ...autoProcessEvents];
-  }
+  },
 );

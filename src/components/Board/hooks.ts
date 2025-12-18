@@ -218,6 +218,6 @@ export function useBuyCardHandler(): (card: CardName) => CommandResult {
   return useBuyCardLogic({
     buyCard,
     submitDecision,
-    pendingDecision: gameState?.pendingDecision,
+    pendingChoice: gameState?.pendingChoice,
   });
 }

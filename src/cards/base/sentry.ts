@@ -52,7 +52,7 @@ function createTopdeckEvents(
   playerId: PlayerId,
   revealed: CardName[],
   cardActions: Record<string, string>,
-  cardOrder: number[]
+  cardOrder: number[],
 ): GameEvent[] {
   const topdeckIndices =
     cardOrder.length > 0
@@ -114,7 +114,7 @@ export const sentry: CardEffect = ({
   // Process the decision
   const revealed = getCardNamesFromMetadata(
     state.pendingChoice?.metadata,
-    "revealedCards"
+    "revealedCards",
   );
   const cardActions = decision.cardActions || {};
   const cardOrder = (decision.cardOrder || []) as number[];

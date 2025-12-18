@@ -26,7 +26,7 @@ type ReactionMetadata = {
 export function handleRevealReaction(
   state: GameState,
   playerId: PlayerId,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   const reaction = state.pendingChoice;
 
@@ -91,7 +91,7 @@ export function handleRevealReaction(
       state,
       updatedMetadata,
       nextIndex,
-      reaction.metadata.originalCause
+      reaction.metadata.originalCause,
     );
     events.push(...nextEvents);
   } else {
@@ -100,7 +100,7 @@ export function handleRevealReaction(
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
       updatedMetadata,
-      reaction.metadata.originalCause
+      reaction.metadata.originalCause,
     );
     events.push(...attackEvents);
   }
@@ -113,7 +113,7 @@ export function handleRevealReaction(
  */
 export function handleDeclineReaction(
   state: GameState,
-  playerId: PlayerId
+  playerId: PlayerId,
 ): CommandResult {
   const reaction = state.pendingChoice;
 
@@ -157,7 +157,7 @@ export function handleDeclineReaction(
       state,
       reaction.metadata,
       nextIndex,
-      reaction.metadata.originalCause
+      reaction.metadata.originalCause,
     );
     events.push(...nextEvents);
   } else {
@@ -166,7 +166,7 @@ export function handleDeclineReaction(
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
       reaction.metadata,
-      reaction.metadata.originalCause
+      reaction.metadata.originalCause,
     );
     events.push(...attackEvents);
   }
@@ -181,7 +181,7 @@ function processNextTarget(
   state: GameState,
   metadata: ReactionMetadata,
   nextIndex: number,
-  rootEventId: string
+  rootEventId: string,
 ): GameEvent[] {
   const nextTarget = metadata.allTargets[nextIndex];
   const reactions = getAvailableReactions(state, nextTarget, "on_attack");
@@ -225,7 +225,7 @@ function processNextTarget(
       nextState,
       metadata,
       nextIndex + 1,
-      rootEventId
+      rootEventId,
     );
     resolvedEvents.push(...nextEvents);
   }
@@ -239,10 +239,10 @@ function processNextTarget(
 function applyAttackToUnblockedTargets(
   state: GameState,
   metadata: ReactionMetadata,
-  rootEventId: string
+  rootEventId: string,
 ): GameEvent[] {
   const unblockedTargets = metadata.allTargets.filter(
-    t => !metadata.blockedTargets.includes(t)
+    t => !metadata.blockedTargets.includes(t),
   );
 
   if (unblockedTargets.length === 0) {

@@ -40,7 +40,10 @@ function canInteractWithCard(
   card: CardName,
   canBuyCard: { canBuy: boolean; availableCoins: number },
   state: GameState,
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | undefined
+    | null,
 ): boolean {
   // If there's a gain decision from supply, only enable cards in the options
   if (pendingChoice && pendingChoice.from === "supply") {
@@ -58,7 +61,10 @@ function canInteractWithCard(
 
 function getSupplyCardHighlightMode(
   card: CardName,
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | undefined
+    | null,
 ): "trash" | "discard" | "gain" | undefined {
   if (!pendingChoice || pendingChoice.from !== "supply") return undefined;
 
@@ -77,7 +83,10 @@ function getButtonCursor(disabled: boolean): string {
 }
 
 function getEndPhaseButtonBackground(
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
   phase: string,
 ): string {
   if (pendingChoice && canSkipDecision(pendingChoice)) {
@@ -91,7 +100,10 @@ function getEndPhaseButtonBackground(
 
 function getEndPhaseButtonBorder(
   isTurnComplete: boolean,
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
@@ -101,7 +113,10 @@ function getEndPhaseButtonBorder(
 }
 
 function getEndPhaseButtonText(
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
   phase: string,
 ): string {
   if (pendingChoice && pendingChoice.canSkip) return "Skip";
@@ -177,7 +192,10 @@ function PlayTreasuresButton({
   pendingChoice,
 }: {
   onPlayAllTreasures: () => void;
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
 }) {
   const disabled = !!(pendingChoice && !canSkipDecision(pendingChoice));
 
@@ -211,7 +229,10 @@ function EndPhaseButton({
   isTurnComplete,
 }: {
   onEndPhase: () => void;
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   phase: string;
   isTurnComplete: boolean;
 }) {
@@ -245,11 +266,13 @@ function renderSupplyColumn(params: {
   size: "small" | "large";
   state: GameState;
   canBuyParams: { canBuy: boolean; availableCoins: number };
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | undefined
+    | null;
   onBuyCard: ((card: CardName) => void) | undefined;
 }) {
-  const { cards, size, state, canBuyParams, pendingChoice, onBuyCard } =
-    params;
+  const { cards, size, state, canBuyParams, pendingChoice, onBuyCard } = params;
 
   return (
     <div
@@ -301,7 +324,11 @@ export function Supply({
   const trashRef = useRef<HTMLDivElement>(null);
 
   // Derive local player ID from context and state
-  const { localPlayerId } = getPlayerPerspective(state, gameMode, contextLocalPlayerId);
+  const { localPlayerId } = getPlayerPerspective(
+    state,
+    gameMode,
+    contextLocalPlayerId,
+  );
 
   // Register supply and trash as animation zones
   useEffect(() => {
@@ -506,12 +533,7 @@ export function Supply({
             count={state.supply["Curse"]}
             onClick={() => onBuyCard?.("Curse")}
             disabled={
-              !canInteractWithCard(
-                "Curse",
-                canBuyParams,
-                state,
-                pendingChoice,
-              )
+              !canInteractWithCard("Curse", canBuyParams, state, pendingChoice)
             }
             highlightMode={getSupplyCardHighlightMode("Curse", pendingChoice)}
           />

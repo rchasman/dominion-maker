@@ -19,7 +19,7 @@ export const mine = createMultiStageCard({
 
     // Check if player has treasures
     const treasures = playerState.hand.filter(c =>
-      CARDS[c].types.includes("treasure")
+      CARDS[c].types.includes("treasure"),
     );
     if (treasures.length === 0) return { events: [] };
 

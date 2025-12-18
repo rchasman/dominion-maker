@@ -24,7 +24,7 @@ export interface GameActionResult {
  */
 export function executePlayAction(
   engine: DominionEngine,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
@@ -32,7 +32,7 @@ export function executePlayAction(
       playerId: "human",
       card,
     },
-    "human"
+    "human",
   );
 }
 
@@ -41,7 +41,7 @@ export function executePlayAction(
  */
 export function executePlayTreasure(
   engine: DominionEngine,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
@@ -49,7 +49,7 @@ export function executePlayTreasure(
       playerId: "human",
       card,
     },
-    "human"
+    "human",
   );
 }
 
@@ -58,7 +58,7 @@ export function executePlayTreasure(
  */
 export function executeUnplayTreasure(
   engine: DominionEngine,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
@@ -66,7 +66,7 @@ export function executeUnplayTreasure(
       playerId: "human",
       card,
     },
-    "human"
+    "human",
   );
 }
 
@@ -76,7 +76,7 @@ export function executeUnplayTreasure(
  */
 export function executePlayAllTreasures(
   engine: DominionEngine,
-  gameState: GameState
+  gameState: GameState,
 ): CommandResult {
   const humanState = gameState.players.human;
   if (!humanState) {
@@ -93,7 +93,7 @@ export function executePlayAllTreasures(
         playerId: "human",
         card: treasure,
       },
-      "human"
+      "human",
     );
 
     if (!result.ok) {
@@ -112,7 +112,7 @@ export function executePlayAllTreasures(
  */
 export function executeBuyCard(
   engine: DominionEngine,
-  card: CardName
+  card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
@@ -120,7 +120,7 @@ export function executeBuyCard(
       playerId: "human",
       card,
     },
-    "human"
+    "human",
   );
 }
 
@@ -133,7 +133,7 @@ export function executeEndPhase(engine: DominionEngine): CommandResult {
       type: "END_PHASE",
       playerId: "human",
     },
-    "human"
+    "human",
   );
 }
 
@@ -142,7 +142,7 @@ export function executeEndPhase(engine: DominionEngine): CommandResult {
  */
 export function executeSubmitDecision(
   engine: DominionEngine,
-  choice: DecisionChoice
+  choice: DecisionChoice,
 ): CommandResult {
   return engine.dispatch(
     {
@@ -150,7 +150,7 @@ export function executeSubmitDecision(
       playerId: "human",
       choice,
     },
-    "human"
+    "human",
   );
 }
 
@@ -167,7 +167,7 @@ export function executeUndo(engine: DominionEngine, toEventId: string): void {
 export function getStateAtEvent(
   engine: DominionEngine,
   eventId: string,
-  fallbackState: GameState
+  fallbackState: GameState,
 ): GameState {
   return engine.getStateAtEvent(eventId) ?? fallbackState;
 }

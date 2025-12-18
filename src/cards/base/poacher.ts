@@ -16,7 +16,7 @@ export const poacher: CardEffect = ({
 
   // Count empty supply piles
   const emptyPiles = Object.values(state.supply).filter(
-    count => count === 0
+    count => count === 0,
   ).length;
 
   // Initial: +1 Card, +1 Action, +$1

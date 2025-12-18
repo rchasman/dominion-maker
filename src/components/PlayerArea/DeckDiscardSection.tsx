@@ -50,7 +50,10 @@ interface DeckDiscardSectionProps {
 
 function renderDiscardSelection(
   discard: CardName[],
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | undefined
+    | null,
   onCardClick: ((card: CardName, index: number) => void) | undefined,
 ) {
   return (
@@ -89,7 +92,10 @@ function getDiscardContent(
   loading: boolean,
   shouldShowDiscardSelection: boolean,
   pendingChoiceAndClick: {
-    pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined | null;
+    pendingChoice:
+      | Extract<PendingChoice, { choiceType: "decision" }>
+      | undefined
+      | null;
     onCardClick: ((card: CardName, index: number) => void) | undefined;
   },
 ) {

@@ -18,7 +18,7 @@ type Validator = () => ValidationResult;
 export function validateCommand(...validators: Validator[]): ValidationResult {
   return validators.reduce<ValidationResult>(
     (acc, validator) => acc || validator(),
-    null
+    null,
   );
 }
 
@@ -95,7 +95,7 @@ export const validators = {
   cardInHand: (
     state: GameState,
     playerId: PlayerId,
-    card: CardName
+    card: CardName,
   ): ValidationResult => {
     const playerState = state.players[playerId];
     if (!playerState) {
@@ -112,7 +112,7 @@ export const validators = {
   cardInPlay: (
     state: GameState,
     playerId: PlayerId,
-    card: CardName
+    card: CardName,
   ): ValidationResult => {
     const playerState = state.players[playerId];
     if (!playerState) {
@@ -144,7 +144,7 @@ export const validators = {
    */
   noPurchasesMade: (state: GameState): ValidationResult => {
     const hasMadePurchases = state.turnHistory.some(
-      action => action.type === "buy_card"
+      action => action.type === "buy_card",
     );
     return hasMadePurchases
       ? {

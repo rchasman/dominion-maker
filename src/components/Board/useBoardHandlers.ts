@@ -68,15 +68,18 @@ export function useBoardHandlers(params: BoardHandlersParams) {
 
   const handleCardClick = useCallback(
     (card: CardName, index: number, localPlayerId: string) => {
-      if (!gameState?.activePlayer || gameState.activePlayer !== localPlayerId) {
+      if (
+        !gameState?.activePlayer ||
+        gameState.activePlayer !== localPlayerId
+      ) {
         return;
       }
 
-      if (gameState.pendingDecision) {
+      if (gameState.pendingChoice) {
         const selection = shouldSelectCard(
           index,
           selectedCardIndices,
-          gameState.pendingDecision,
+          gameState.pendingChoice,
         );
 
         if (selection.shouldToggleOff) {

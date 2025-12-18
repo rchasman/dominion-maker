@@ -1,8 +1,9 @@
+import type { ModelProvider } from "../../config/models";
 import type { Action } from "../../types/action";
 import type {
   CardName,
   Phase,
-  Player,
+  PlayerId,
   TurnAction,
 } from "../../types/game-state";
 
@@ -10,7 +11,7 @@ import type {
 export interface GameStateSnapshot {
   turn: number;
   phase: Phase;
-  activePlayer: Player;
+  activePlayerId: PlayerId;
   actions: number;
   buys: number;
   coins: number;
@@ -23,16 +24,16 @@ export interface GameStateSnapshot {
   };
   turnHistory: TurnAction[];
   legalActionsCount?: number;
-  legalActions?: string[];
+  legalActions?: CardName[];
 }
 
 // Voting result for a single action
 export interface VotingResult {
   action: Action;
   votes: number;
-  voters: string[];
+  voters: PlayerId[];
   valid: boolean;
-  reasonings?: Array<{ provider: string; reasoning?: string }>;
+  reasonings?: Array<{ provider: ModelProvider; reasoning?: string }>;
 }
 
 // Top result with additional metadata
@@ -54,7 +55,7 @@ export interface ConsensusVotingData {
 
 // Timing data for model performance
 export interface TimingData {
-  timings: Array<{ provider: string; duration: number }>;
+  timings: Array<{ provider: ModelProvider; duration: number }>;
   parallelDuration: number;
 }
 
@@ -98,7 +99,7 @@ export interface ConsensusDecision {
 }
 
 export interface ModelStatus {
-  provider: string;
+  provider: ModelProvider;
   index: number;
   startTime: number;
   duration?: number;
@@ -110,7 +111,7 @@ export interface ModelStatus {
 }
 
 export interface PendingData {
-  providers: string[];
+  providers: ModelProvider[];
   totalModels: number;
   phase: string;
   gameState?: GameStateSnapshot;

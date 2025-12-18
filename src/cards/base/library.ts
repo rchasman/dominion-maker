@@ -62,7 +62,7 @@ export const library: CardEffect = ({
   // Process decision with indices
   const peeked = getCardNamesFromMetadata(
     state.pendingChoice?.metadata,
-    "peekedCards"
+    "peekedCards",
   );
   const cardActions = decision.cardActions || {};
 

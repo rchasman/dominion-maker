@@ -24,7 +24,10 @@ interface HandSectionProps {
 
 function getHandCardHighlightMode(
   card: CardName,
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
   isInteractive: boolean,
   playerId: PlayerId | undefined,
 ): "trash" | "discard" | "gain" | undefined {
@@ -45,7 +48,10 @@ interface CardDisabledContext {
   card: CardName;
   isInteractive: boolean;
   isActive: boolean;
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   playerId: PlayerId | undefined;
   phase: Phase;
   actions: number | undefined;
@@ -127,7 +133,10 @@ function HandCardRenderer({
   card: CardName;
   index: number;
   selectedCardIndices: number[];
-  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   isInteractive: boolean;
   isActive: boolean;
   playerId: string | undefined;

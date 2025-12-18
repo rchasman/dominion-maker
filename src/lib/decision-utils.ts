@@ -5,9 +5,7 @@ const DEFAULT_DECISION_MAX = 999;
 /**
  * Check if a decision can be skipped (has min = 0).
  */
-export function canSkipDecision(
-  decision: GameState["pendingChoice"],
-): boolean {
+export function canSkipDecision(decision: GameState["pendingChoice"]): boolean {
   return (decision?.min ?? 1) === 0;
 }
 

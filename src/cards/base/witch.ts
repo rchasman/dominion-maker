@@ -17,7 +17,7 @@ export const witch: CardEffect = ({
   const events: GameEvent[] = createDrawEvents(
     playerId,
     playerState,
-    CARDS_TO_DRAW
+    CARDS_TO_DRAW,
   );
 
   const targets = attackTargets ?? getOpponents(state, playerId);

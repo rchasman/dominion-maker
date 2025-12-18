@@ -43,7 +43,7 @@ interface PlayerAreaProps {
 function getBorderStyle(
   isActive: boolean,
   gameState: GameState | undefined,
-  borderColor: string
+  borderColor: string,
 ): React.CSSProperties {
   const borderWidth = isActive && gameState ? "2px" : "1px";
   const borderStyle = `${borderWidth} solid ${borderColor}`;
@@ -69,7 +69,7 @@ function LoadingAnimation({ show }: { show: boolean }) {
 }
 
 function HandAndDeckGrid({
-  playerId,
+  player,
   showCards,
   loading,
   selectedCardIndices,
@@ -82,7 +82,7 @@ function HandAndDeckGrid({
   onCardClick,
   inverted = false,
 }: {
-  playerId: PlayerState;
+  player: PlayerState;
   showCards: boolean;
   loading: boolean;
   selectedCardIndices: number[];
@@ -139,7 +139,7 @@ function HandAndDeckGrid({
 }
 
 function PlayerAreaContent({
-  playerId,
+  player,
   label,
   vpCount,
   isActive,
@@ -269,7 +269,6 @@ export function PlayerArea({
   onInPlayClick,
   inverted = false,
   pendingChoice,
-  playerId,
   phase,
   actions,
   loading = false,
@@ -282,7 +281,7 @@ export function PlayerArea({
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
   const backgroundColor = getPhaseBackground(isActive, phase, subPhase);
   const hasMadePurchases = turnHistory.some(
-    action => action.type === "buy_card"
+    action => action.type === "buy_card",
   );
 
   return (

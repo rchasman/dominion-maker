@@ -7,7 +7,6 @@ import { getPlayerPerspective } from "../../lib/player-utils";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
-import type { PlayerStrategyData } from "../../types/player-strategy";
 
 interface MainPlayerAreaProps {
   localPlayer: GameState["players"][PlayerId];
@@ -38,8 +37,17 @@ export function MainPlayerArea({
   onRevealReaction,
   onDeclineReaction,
 }: MainPlayerAreaProps) {
-  const { players, gameMode, localPlayerId: contextLocalPlayerId, playerStrategies } = useGame();
-  const { localPlayerId } = getPlayerPerspective(displayState, gameMode, contextLocalPlayerId);
+  const {
+    players,
+    gameMode,
+    localPlayerId: contextLocalPlayerId,
+    playerStrategies,
+  } = useGame();
+  const { localPlayerId } = getPlayerPerspective(
+    displayState,
+    gameMode,
+    contextLocalPlayerId,
+  );
   const playerStrategy = playerStrategies[localPlayerId];
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
