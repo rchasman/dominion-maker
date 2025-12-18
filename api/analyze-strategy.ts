@@ -40,7 +40,7 @@ function createDevToolsMiddleware() {
 
 function buildStrategyAnalysisPrompt(
   supply: Record<CardName, number>,
-  hasPreviousAnalysis: boolean,
+  hasPreviousAnalysis: boolean
 ): string {
   const previousAnalysisGuidance = hasPreviousAnalysis
     ? `
@@ -58,7 +58,7 @@ You are a Dominion strategy analyst with personality - think Patrick Chapin anal
 CARD DEFINITIONS (static reference):
 ${buildCardDefinitionsTable(supply)}
 
-For each player, provide:
+For each playerId, provide:
 1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
 2. **Read** (2-3 sentences): Paragraph analyzing their deck, execution, and position. Be specific about card synergies, buying patterns, and deck quality. Include their main weakness.
 3. **Recommendation** (1-2 sentences): What they should do next and why. Be decisive and actionable.
@@ -74,7 +74,7 @@ const PlayerAnalysisSchema = z.object({
   read: z
     .string()
     .describe(
-      "2-3 sentence paragraph analyzing deck quality, execution, and weakness",
+      "2-3 sentence paragraph analyzing deck quality, execution, and weakness"
     ),
   recommendation: z
     .string()
@@ -115,14 +115,14 @@ function calculatePlayerStats(allCards: string[]): CardCounts {
       });
       return { counts: newCounts, vp: acc.vp + vpDelta };
     },
-    { counts: {}, vp: 0 },
+    { counts: {}, vp: 0 }
   );
 }
 
 // Build player deck information as structured data for TOON encoding
 function buildPlayerDeckInfo(
   playerIds: string[],
-  currentState: GameState,
+  currentState: GameState
 ): Array<{
   id: string;
   vp: number;
@@ -158,9 +158,7 @@ interface PlayerAnalysis {
 type PlayerAnalysisRecord = Record<string, PlayerAnalysis>;
 
 // Parse request body safely
-async function parseRequestBody(
-  req: VercelRequest,
-): Promise<{
+async function parseRequestBody(req: VercelRequest): Promise<{
   currentState: GameState;
   previousAnalysis?: PlayerAnalysisRecord;
 }> {
@@ -202,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const turnHistory = formatTurnHistoryForAnalysis(
       currentState,
       "toon",
-      STRATEGY_ANALYSIS_TURNS,
+      STRATEGY_ANALYSIS_TURNS
     );
 
     // If no turn history yet, return empty array
@@ -240,7 +238,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const previousPlayerAnalysis = previousAnalysis?.[playerId];
 
       const previousAnalysisSection = previousPlayerAnalysis
-        ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(previousPlayerAnalysis)}`
+        ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(
+            previousPlayerAnalysis
+          )}`
         : "";
 
       const prompt = `${encodeToon(gameContext)}
@@ -250,13 +250,13 @@ ${turnHistory}
 PLAYER DECK (${playerId}):
 ${encodeToon(playerDeck)}${previousAnalysisSection}
 
-Provide strategic analysis for player: ${playerId}.`;
+Provide strategic analysis for playerId: ${playerId}.`;
 
       const result = await generateObject({
         model,
         system: buildStrategyAnalysisPrompt(
           currentState.supply,
-          !!previousPlayerAnalysis,
+          !!previousPlayerAnalysis
         ),
         prompt,
         schema: PlayerAnalysisSchema,

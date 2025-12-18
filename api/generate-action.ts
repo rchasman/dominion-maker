@@ -88,7 +88,7 @@ const ActionSchema = z
       ])
       .describe("The type of action to perform"),
     card: CardNameSchema.nullish().describe(
-      "The card to act on (not needed for skip_decision or end_phase)",
+      "The card to act on (not needed for skip_decision or end_phase)"
     ),
     reasoning: z
       .string()
@@ -133,7 +133,7 @@ function cleanupOldMiddleware(): void {
 setInterval(cleanupOldMiddleware, CACHE_CLEANUP_INTERVAL);
 
 function getDevToolsMiddleware(
-  actionId?: string,
+  actionId?: string
 ): ReturnType<typeof devToolsMiddleware> | undefined {
   // Only use devtools in development
   if (process.env.NODE_ENV === "production") {
@@ -220,13 +220,10 @@ function parseRequestBody(req: VercelRequest): RequestBody {
 
 // Convert card array to counts for token efficiency
 function cardArrayToCounts(cards: string[]): Record<string, number> {
-  return cards.reduce(
-    (counts, card) => {
-      counts[card] = (counts[card] || 0) + 1;
-      return counts;
-    },
-    {} as Record<string, number>,
-  );
+  return cards.reduce((counts, card) => {
+    counts[card] = (counts[card] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
 }
 
 // Transform game state to use counts instead of arrays for AI consumption
@@ -235,7 +232,7 @@ function optimizeStateForAI(state: GameState): unknown {
   const activePlayerId = state.activePlayer;
   const activePlayer = state.players[activePlayerId];
   const opponentId = Object.keys(state.players).find(
-    id => id !== activePlayerId,
+    id => id !== activePlayerId
   );
   const opponent = opponentId ? state.players[opponentId] : null;
 
@@ -245,7 +242,7 @@ function optimizeStateForAI(state: GameState): unknown {
     .reduce(
       (total, e) =>
         total + ((e.parameters as { amount?: number })?.amount ?? 0),
-      0,
+      0
     );
 
   // Transform supply to array with counts and effective costs
@@ -270,7 +267,7 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   // Calculate VP and deck composition for both players
-  const getAllCards = (player: PlayerState | null) =>
+  const getAllCards = (playerId: PlayerState | null) =>
     player
       ? [...player.deck, ...player.hand, ...player.discard, ...player.inPlay]
       : [];
@@ -281,21 +278,15 @@ function optimizeStateForAI(state: GameState): unknown {
   const yourVP = countVP(yourAllCards);
   const opponentVP = countVP(opponentAllCards);
 
-  const yourDeckCounts = yourAllCards.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  const yourDeckCounts = yourAllCards.reduce((acc, card) => {
+    acc[card] = (acc[card] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const opponentDeckCounts = opponentAllCards.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  const opponentDeckCounts = opponentAllCards.reduce((acc, card) => {
+    acc[card] = (acc[card] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   // Build "you" object with all your state nested together
   const you: Record<string, unknown> = {
@@ -371,13 +362,25 @@ function buildUserMessage(params: {
   const turnHistorySection =
     currentState.turnHistory && currentState.turnHistory.length > 0
       ? [
-          `ACTIONS TAKEN THIS TURN:\n${format === "toon" ? encodeToon(currentState.turnHistory) : JSON.stringify(currentState.turnHistory, null, JSON_INDENT_SPACES)}`,
+          `ACTIONS TAKEN THIS TURN:\n${
+            format === "toon"
+              ? encodeToon(currentState.turnHistory)
+              : JSON.stringify(
+                  currentState.turnHistory,
+                  null,
+                  JSON_INDENT_SPACES
+                )
+          }`,
         ]
       : [];
 
   const humanChoiceSection = humanChoice
     ? [
-        `Human chose: ${format === "toon" ? encodeToon(humanChoice.selectedCards) : JSON.stringify(humanChoice.selectedCards)}`,
+        `Human chose: ${
+          format === "toon"
+            ? encodeToon(humanChoice.selectedCards)
+            : JSON.stringify(humanChoice.selectedCards)
+        }`,
       ]
     : [];
 
@@ -405,7 +408,7 @@ function buildUserMessage(params: {
 function tryRecoverFromError(
   err: unknown,
   provider: string,
-  res: VercelResponse,
+  res: VercelResponse
 ): VercelResponse | undefined {
   const strategySummary = undefined as string | undefined;
 
@@ -440,7 +443,7 @@ function tryRecoverFromError(
 // Process request body and validate input
 async function processGenerationRequest(
   body: RequestBody,
-  res: VercelResponse,
+  res: VercelResponse
 ): Promise<VercelResponse | null> {
   const {
     provider: bodyProvider,
@@ -480,7 +483,7 @@ async function processGenerationRequest(
     currentState,
     strategySummary,
     customStrategy,
-    format,
+    format
   );
 
   const userMessage = buildUserMessage({
@@ -512,7 +515,10 @@ async function processGenerationRequest(
 
     if (error.text) {
       apiLogger.error(
-        `${provider} raw response text: ${error.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+        `${provider} raw response text: ${error.text.slice(
+          0,
+          ERROR_TEXT_PREVIEW_LONG
+        )}`
       );
     }
 
@@ -527,7 +533,7 @@ async function processGenerationRequest(
 
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse,
+  res: VercelResponse
 ): Promise<VercelResponse> {
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
