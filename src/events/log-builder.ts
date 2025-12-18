@@ -448,7 +448,7 @@ function gameFlowEventToLogEntry(
       return {
         type: "game-over",
         scores: event.scores,
-        winnerId: event.winner || currentPlayer,
+        winnerId: event.winnerId || currentPlayer,
         eventId: event.id,
       };
     case "TURN_ENDED":

@@ -23,7 +23,7 @@ function createMockGameState(
 
   return {
     players,
-    activePlayer,
+    activePlayerId,
     turn: 1,
     phase: "action",
     actions: 1,

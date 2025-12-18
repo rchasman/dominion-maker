@@ -30,7 +30,7 @@ describe("Board - Devtools scrubbing", () => {
     expect(displayState).toBe(previewState);
     expect(isPreviewMode).toBe(true);
     expect(displayState.turn).toBe(2);
-    expect(displayState.activePlayer).toBe("ai");
+    expect(displayState.activePlayerId).toBe("ai");
   });
 
   it("should use live state when not scrubbing", () => {
@@ -55,7 +55,7 @@ describe("Board - Devtools scrubbing", () => {
     expect(displayState).toBe(liveState);
     expect(isPreviewMode).toBe(false);
     expect(displayState.turn).toBe(5);
-    expect(displayState.activePlayer).toBe("human");
+    expect(displayState.activePlayerId).toBe("human");
   });
 
   it("should derive player data from displayState not live state", () => {
@@ -99,12 +99,12 @@ describe("Board - Devtools scrubbing", () => {
     // Derive player data from displayState
     const mainPlayer = displayState.players[localPlayerId];
     const opponent = displayState.players[opponentPlayerId];
-    const isLocalPlayerTurn = displayState.activePlayer === localPlayerId;
+    const isLocalPlayerTurn = displayState.activePlayerId === localPlayerId;
 
     // When scrubbing to event 10, we should see preview state values
     expect(displayState).toBe(previewState);
     expect(displayState.turn).toBe(3);
-    expect(displayState.activePlayer).toBe("ai");
+    expect(displayState.activePlayerId).toBe("ai");
     expect(isLocalPlayerTurn).toBe(false);
 
     // mainPlayer and opponent should come from displayState (preview)
@@ -145,11 +145,11 @@ describe("Board - Devtools scrubbing", () => {
     const localPlayerId = "human" as const;
 
     // BUG: This line uses liveState instead of displayState
-    // const isLocalPlayerTurn = liveState.activePlayer === localPlayerId; // WRONG
-    const isLocalPlayerTurn = displayState.activePlayer === localPlayerId; // CORRECT
+    // const isLocalPlayerTurn = liveState.activePlayerId === localPlayerId; // WRONG
+    const isLocalPlayerTurn = displayState.activePlayerId === localPlayerId; // CORRECT
 
     // When scrubbing, isLocalPlayerTurn should reflect preview state (ai's turn)
-    expect(displayState.activePlayer).toBe("ai");
+    expect(displayState.activePlayerId).toBe("ai");
     expect(isLocalPlayerTurn).toBe(false); // Should be false because it's ai's turn in preview
 
     // Phase and other state should also come from displayState

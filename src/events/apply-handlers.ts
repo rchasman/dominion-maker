@@ -345,13 +345,13 @@ export function applyGameEndEvent(
     return {
       ...state,
       gameOver: true,
-      winnerId: event.winner,
+      winnerId: event.winnerId,
       log: [
         ...state.log,
         {
           type: "game-over",
           scores: event.scores,
-          winnerId: event.winner || state.activePlayerId,
+          winnerId: event.winnerId || state.activePlayerId,
         },
       ],
     };

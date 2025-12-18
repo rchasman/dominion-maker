@@ -13,6 +13,7 @@ import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
 import type { GameMode } from "../../types/game-mode";
+import { AnimationProvider } from "../../animation";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
@@ -101,27 +102,29 @@ export function GameRoom({
     }
 
     return (
-      <BoardWithProviders gameContext={contextValue} llmLogs={[]}>
-        <Suspense fallback={<BoardSkeleton />}>
-          <Board onBackToHome={handleResign} />
-        </Suspense>
-        {isSpectator && <SpectatorBadge />}
-        {disconnectedOpponent && (
-          <DisconnectModal
-            playerName={disconnectedOpponent.playerName}
-            onLeave={handleResign}
-          />
-        )}
-        {game.gameEndReason && !isSinglePlayer && (
-          <GameOverNotification
-            message={game.gameEndReason}
-            onClose={() => {
-              localStorage.removeItem("dominion_active_game");
-              onBack();
+      <AnimationProvider>
+        <BoardWithProviders gameContext={contextValue} llmLogs={[]}>
+          <Suspense fallback={<BoardSkeleton />}>
+            <Board onBackToHome={handleResign} />
+          </Suspense>
+          {isSpectator && <SpectatorBadge />}
+          {disconnectedOpponent && (
+            <DisconnectModal
+              playerName={disconnectedOpponent.playerName}
+              onLeave={handleResign}
+            />
+          )}
+          {game.gameEndReason && !isSinglePlayer && (
+            <GameOverNotification
+              message={game.gameEndReason}
+              onClose={() => {
+                localStorage.removeItem("dominion_active_game");
+                onBack();
             }}
           />
         )}
       </BoardWithProviders>
+      </AnimationProvider>
     );
   }
 

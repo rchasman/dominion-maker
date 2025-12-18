@@ -99,6 +99,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
 
             if (!animation) {
               // No animations, just update state immediately
+              uiLogger.warn("Animation context not available for AI turn");
               setEvents([...engine.eventLog]);
               setGameState(state);
               return;
@@ -150,12 +151,30 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                 }
 
                 if (cardElement && toZone) {
+                  uiLogger.debug("Queueing opponent animation", {
+                    card: event.card,
+                    eventType: event.type,
+                    toZone,
+                  });
                   await animation.queueAnimationAsync({
                     cardName: event.card,
                     fromRect: cardElement.getBoundingClientRect(),
                     toZone,
                     duration,
                   });
+                } else if (toZone) {
+                  uiLogger.warn(
+                    "Card element not found for opponent animation",
+                    {
+                      card: event.card,
+                      eventType: event.type,
+                      toZone,
+                      selector:
+                        event.type === "CARD_PLAYED"
+                          ? `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`
+                          : undefined,
+                    },
+                  );
                 }
               }
             }

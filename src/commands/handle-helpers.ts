@@ -147,21 +147,21 @@ function createGameOverEvent(
     winnerId: null,
     maxScore: -Infinity,
   };
-  const { scores, winner } = Object.entries(state.players)
+  const { scores, winnerId } = Object.entries(state.players)
     .filter((entry): entry is [string, NonNullable<(typeof entry)[1]>] =>
       Boolean(entry[1]),
     )
     .reduce((acc, [playerId, playerState]) => {
       const score = countVP(playerState);
       const newScores = { ...acc.scores, [playerId]: score };
-      const newWinner = score > acc.maxScore ? playerId : acc.winner;
+      const newWinnerId = score > acc.maxScore ? playerId : acc.winnerId;
       const newMaxScore = Math.max(acc.maxScore, score);
-      return { scores: newScores, winnerId: newWinner, maxScore: newMaxScore };
+      return { scores: newScores, winnerId: newWinnerId, maxScore: newMaxScore };
     }, initialAcc);
 
   return {
     type: "GAME_ENDED",
-    winner,
+    winnerId,
     scores,
     reason,
   };

@@ -10,6 +10,7 @@ import { useGame } from "./context/hooks";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { PartyKitSync } from "./partykit/PartyKitSync";
 import { STORAGE_KEYS } from "./context/storage-utils";
+import { AnimationProvider } from "./animation";
 
 const Board = lazy(() =>
   import("./components/Board/index").then(m => ({ default: m.Board })),
@@ -29,9 +30,11 @@ export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
   }, []);
 
   return (
-    <GameProvider>
-      <SinglePlayerGame onBackToHome={onBackToHome} />
-    </GameProvider>
+    <AnimationProvider>
+      <GameProvider>
+        <SinglePlayerGame onBackToHome={onBackToHome} />
+      </GameProvider>
+    </AnimationProvider>
   );
 }
 

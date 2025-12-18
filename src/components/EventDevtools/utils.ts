@@ -59,7 +59,7 @@ export function formatEvent(event: GameEvent): string {
     case "DECISION_RESOLVED":
       return `Decision: ${event.choice.selectedCards.join(", ") || "(skip)"}`;
     case "GAME_ENDED":
-      return `Winner: ${event.winner}`;
+      return `Winner: ${event.winnerId}`;
     default:
       return event.type;
   }

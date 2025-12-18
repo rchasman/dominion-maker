@@ -47,6 +47,9 @@ export function GhostCard({
     const toRect = getZoneRect(toZone);
     if (!toRect) {
       // No destination found, just fade out
+      console.warn(
+        `[GhostCard] Zone rect not found for: ${toZone}, card: ${cardName}`,
+      );
       onComplete();
       return;
     }
