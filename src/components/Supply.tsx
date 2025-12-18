@@ -6,7 +6,7 @@ import { Card } from "./Card";
 import { Pile } from "./Pile";
 import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
-import { canSkipDecision } from "./Board/helpers";
+import { canSkipDecision } from "../lib/decision-utils";
 import { useAnimationSafe } from "../animation";
 
 const KINGDOM_GRID_COLUMNS = 5;

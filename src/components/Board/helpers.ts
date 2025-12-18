@@ -1,84 +1,10 @@
-import type { GameState, CardName, Player } from "../../types/game-state";
-import type { GameMode } from "../../types/game-mode";
-import { getPlayersForMode } from "../../types/game-mode";
-import { isActionCard, isTreasureCard } from "../../data/cards";
-import { DEFAULT_DECISION_MAX } from "./constants";
+import type { GameState, Player } from "../../types/game-state";
 
-export interface PlayerPerspective {
-  localPlayerId: Player;
-  opponentPlayerId: Player;
-  allPlayerIds: readonly Player[];
-}
-
-/**
- * Get player IDs organized from the perspective of the local player.
- * Returns the local player, their opponent, and all player IDs.
- */
-export function getPlayerPerspective(
-  state: GameState | null,
-  gameMode: GameMode,
-  localPlayerId?: string | null,
-): PlayerPerspective {
-  // Get all player IDs
-  let playerIds: Player[];
-  if (!state) {
-    playerIds = gameMode === "multiplayer"
-      ? ["player0", "player1"]
-      : (getPlayersForMode(gameMode) as Player[]);
-  } else {
-    playerIds = Object.keys(state.players) as Player[];
-  }
-
-  // In multiplayer, reorder so local player is first
-  if (gameMode === "multiplayer" && localPlayerId) {
-    const localIndex = playerIds.indexOf(localPlayerId as Player);
-    if (localIndex > 0) {
-      playerIds = [localPlayerId as Player, ...playerIds.filter(id => id !== localPlayerId)];
-    }
-  }
-
-  return {
-    localPlayerId: playerIds[0],
-    opponentPlayerId: playerIds[1],
-    allPlayerIds: playerIds,
-  };
-}
-
-export function canSkipDecision(
-  decision: GameState["pendingDecision"],
-): boolean {
-  return (decision?.min ?? 1) === 0;
-}
-
-export function shouldSelectCard(
-  cardIndex: number,
-  selectedCardIndices: number[],
-  pendingDecision: GameState["pendingDecision"],
-): { shouldToggleOff: boolean; canAdd: boolean } {
-  const max = pendingDecision?.max ?? DEFAULT_DECISION_MAX;
-  const isAlreadySelected = selectedCardIndices.includes(cardIndex);
-
-  return {
-    shouldToggleOff: isAlreadySelected,
-    canAdd: !isAlreadySelected && selectedCardIndices.length < max,
-  };
-}
-
-export function canPlayCard(
-  card: CardName,
-  phase: GameState["phase"],
-  actions: number,
-  isLocalPlayerTurn: boolean,
-): { canPlayAction: boolean; canPlayTreasure: boolean } {
-  if (!isLocalPlayerTurn) {
-    return { canPlayAction: false, canPlayTreasure: false };
-  }
-
-  return {
-    canPlayAction: phase === "action" && isActionCard(card) && actions > 0,
-    canPlayTreasure: phase === "buy" && isTreasureCard(card),
-  };
-}
+// Re-export centralized utilities for backward compatibility
+export { getPlayerPerspective } from "../../lib/player-utils";
+export type { PlayerPerspective } from "../../lib/player-utils";
+export { canSkipDecision, shouldSelectCard } from "../../lib/decision-utils";
+export { canPlayCard, canBuyCards } from "../../lib/game-rules";
 
 interface GetHintTextParams {
   displayState: GameState;
@@ -135,13 +61,4 @@ export function getHintText({
   }
 
   return "";
-}
-
-export function canBuyCards(
-  isLocalPlayerTurn: boolean,
-  phase: GameState["phase"],
-  buys: number,
-  isPreviewMode: boolean,
-): boolean {
-  return isLocalPlayerTurn && phase === "buy" && buys > 0 && !isPreviewMode;
 }

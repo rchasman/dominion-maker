@@ -2,8 +2,10 @@ import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { isAIControlled } from "../../lib/game-mode-utils";
 import { countVP, getAllCards } from "../../lib/board-utils";
-import { getPlayerPerspective, getHintText, canBuyCards } from "./helpers";
-import type { PlayerPerspective } from "./helpers";
+import { getPlayerPerspective } from "../../lib/player-utils";
+import type { PlayerPerspective } from "../../lib/player-utils";
+import { canBuyCards } from "../../lib/game-rules";
+import { getHintText } from "./helpers";
 
 interface BoardStateParams {
   state: GameState;

@@ -2,7 +2,8 @@ import { useCallback } from "preact/hooks";
 import type { CardName, GameState } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import type { DecisionChoice } from "../../events/types";
-import { shouldSelectCard, canPlayCard } from "./helpers";
+import { shouldSelectCard } from "../../lib/decision-utils";
+import { canPlayCard } from "../../lib/game-rules";
 import type { ComplexDecisionData } from "./hooks";
 import { useAnimationSafe } from "../../animation";
 
