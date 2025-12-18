@@ -31,7 +31,7 @@ describe("Shuffle Mechanics", () => {
 
     // Should have drawn cards
     const drawEvents = engine.eventLog.filter(
-      e => e.type === "CARD_DRAWN" && e.playerId === "human"
+      e => e.type === "CARD_DRAWN" && e.playerId === "human",
     );
     expect(drawEvents.length).toBe(3);
 

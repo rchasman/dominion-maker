@@ -83,7 +83,7 @@ describe("Cellar - duplicate card handling", () => {
     });
 
     const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED"
+      e => e.type === "CARD_DISCARDED",
     );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
 
@@ -148,7 +148,7 @@ describe("Cellar - duplicate card handling", () => {
 
     // Should discard both and draw 2
     const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED"
+      e => e.type === "CARD_DISCARDED",
     );
     const drawEvents = result2.events.filter(e => e.type === "CARD_DRAWN");
     expect(discardEvents.length).toBe(2); // Discarded both

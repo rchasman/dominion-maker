@@ -174,7 +174,7 @@ describe("Full mode player generation scenarios", () => {
     const hybridPlayers = ["human", "ai"];
     const converted = convertToFullModePlayers(hybridPlayers);
 
-    // human becomes player, ai stays ai
+    // human becomes playerId, ai stays ai
     expect(converted).toEqual(["player", "ai"]);
   });
 

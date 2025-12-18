@@ -297,9 +297,7 @@ describe("Supply Decision E2E Tests", () => {
       // Decision should still be created with remaining cards
       // (e.g., Curse at $0, or kingdom cards like Workshop itself)
       expect(engine.state.pendingChoice).toBeDefined();
-      expect(engine.state.pendingChoice?.cardOptions.length).toBeGreaterThan(
-        0,
-      );
+      expect(engine.state.pendingChoice?.cardOptions.length).toBeGreaterThan(0);
     });
 
     it("Workshop with completely empty supply creates no decision", () => {

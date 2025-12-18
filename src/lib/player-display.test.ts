@@ -94,7 +94,7 @@ describe("formatPlayerName", () => {
 
     it("should format 'player' as 'player' when capitalize=false", () => {
       expect(formatPlayerName("player", false, { capitalize: false })).toBe(
-        "player"
+        "player",
       );
     });
 
@@ -148,16 +148,16 @@ describe("formatPlayerName", () => {
 
     it("should keep lowercase when capitalize=false", () => {
       expect(formatPlayerName("player", false, { capitalize: false })).toBe(
-        "player"
+        "player",
       );
     });
 
     it("should not affect other player names", () => {
       expect(formatPlayerName("Nova", false, { capitalize: false })).toBe(
-        "Nova"
+        "Nova",
       );
       expect(formatPlayerName("human", false, { capitalize: false })).toBe(
-        "You"
+        "You",
       );
     });
   });

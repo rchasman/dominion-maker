@@ -7,7 +7,7 @@ import type { GameState, PlayerState } from "../types/game-state";
 
 function createMockGameState(
   activePlayer: string,
-  playerIds: string[]
+  playerIds: string[],
 ): GameState {
   const players: Record<string, PlayerState> = {};
 

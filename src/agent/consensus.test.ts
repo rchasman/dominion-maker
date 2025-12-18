@@ -81,7 +81,7 @@ describe("Consensus System", () => {
         result =>
           result.reasonings &&
           result.reasonings.length > 0 &&
-          result.reasonings.some(r => r.reasoning === "Test reasoning")
+          result.reasonings.some(r => r.reasoning === "Test reasoning"),
       );
       expect(hasReasoning).toBe(true);
     } finally {
@@ -142,7 +142,7 @@ describe("Consensus System", () => {
         const action =
           responses[Math.min(roundCount - 1, responses.length - 1)];
         votedActions.push(
-          `${action.type}${action.card ? `(${action.card})` : ""}`
+          `${action.type}${action.card ? `(${action.card})` : ""}`,
         );
 
         return Promise.resolve({
@@ -174,7 +174,7 @@ describe("Consensus System", () => {
 
       // Verify Copper appears twice in trash (had 2 in hand)
       const coppersInTrash = engine.state.trash.filter(
-        c => c === "Copper"
+        c => c === "Copper",
       ).length;
       expect(coppersInTrash).toBe(2);
 

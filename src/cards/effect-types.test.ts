@@ -544,7 +544,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
     expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1
+      1,
     );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(1);
@@ -587,7 +587,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
     expect(result.events.filter(e => e.type === "CARD_DRAWN").length).toBe(1);
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2
+      2,
     );
   });
 
@@ -606,7 +606,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
     });
 
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2
+      2,
     );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);

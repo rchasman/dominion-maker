@@ -68,7 +68,7 @@ describe("Undo System - Immediate Undo", () => {
     // Count effects caused by Market
     if (marketEvent && marketEvent.id) {
       const marketEffects = engine.eventLog.filter(
-        e => e.causedBy === marketEvent.id
+        e => e.causedBy === marketEvent.id,
       );
       expect(marketEffects.length).toBeGreaterThan(0);
 
@@ -83,12 +83,12 @@ describe("Undo System - Immediate Undo", () => {
 
         // Market and all its effects should be gone
         const marketAfterUndo = engine.eventLog.find(
-          e => e.id === marketEvent.id
+          e => e.id === marketEvent.id,
         );
         expect(marketAfterUndo).toBeUndefined();
 
         const effectsAfterUndo = engine.eventLog.filter(
-          e => e.causedBy === marketEvent.id
+          e => e.causedBy === marketEvent.id,
         );
         expect(effectsAfterUndo.length).toBe(0);
       }
@@ -192,7 +192,7 @@ describe("Undo System - Root Cause Detection", () => {
 
     // Effect events should have causedBy
     const effectEvents = engine.eventLog.filter(
-      e => e.type === "ACTIONS_MODIFIED" || e.type === "CARD_DRAWN"
+      e => e.type === "ACTIONS_MODIFIED" || e.type === "CARD_DRAWN",
     );
 
     for (const event of effectEvents) {
@@ -229,7 +229,7 @@ describe("Undo System - Causality Utilities", () => {
 
     // Effect events should NOT be valid undo points
     const effectEvents = engine.eventLog.filter(
-      e => e.type === "ACTIONS_MODIFIED" || e.type === "COINS_MODIFIED"
+      e => e.type === "ACTIONS_MODIFIED" || e.type === "COINS_MODIFIED",
     );
 
     for (const event of effectEvents) {

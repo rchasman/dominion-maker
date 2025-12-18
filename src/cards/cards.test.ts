@@ -36,7 +36,7 @@ function createEmptyState(): GameState {
 function createTestState(
   hand: CardName[],
   deck: CardName[] = [],
-  discard: CardName[] = []
+  discard: CardName[] = [],
 ): GameState {
   return {
     ...createEmptyState(),
@@ -94,7 +94,7 @@ function executeCard(
   cardName: CardName,
   state: GameState,
   decision?: unknown,
-  stage?: string
+  stage?: string,
 ): GameState {
   const effect = getCardEffect(cardName);
   if (!effect) throw new Error(`No effect for ${cardName}`);
@@ -118,7 +118,7 @@ function executeCard(
   if (result.pendingChoice) {
     state = { ...state, pendingChoice: result.pendingChoice };
   } else if (decision !== undefined) {
-    // If a decision was provided but result has no pendingDecision, clear it
+    // If a decision was provided but result has no pendingChoice, clear it
     // (mimics DECISION_RESOLVED behavior in real engine)
     state = { ...state, pendingChoice: null };
   }
@@ -243,7 +243,7 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
 
     expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1
+      1,
     );
     expect(result.events.find(e => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(1);
@@ -269,7 +269,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should give +1 Action
       const actionsEvent = result.events.find(
-        e => e.type === "ACTIONS_MODIFIED"
+        e => e.type === "ACTIONS_MODIFIED",
       );
       expect(actionsEvent).toBeDefined();
       if (!actionsEvent) throw new Error("No actions event");
@@ -286,7 +286,7 @@ describe("Multi-Stage Decision Cards", () => {
     it("should discard cards in batch and draw that many", () => {
       const state = createTestState(
         ["Copper", "Estate", "Duchy"],
-        ["Village", "Gold", "Silver"]
+        ["Village", "Gold", "Silver"],
       );
 
       // Execute initial call
@@ -299,7 +299,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Copper", "Estate"],
         },
-        "discard"
+        "discard",
       );
 
       const player = newState.players.human;
@@ -351,7 +351,7 @@ describe("Multi-Stage Decision Cards", () => {
         "Chapel",
         newState,
         { selectedCards: ["Copper", "Copper", "Estate"] },
-        "trash"
+        "trash",
       );
       expect(newState.trash.length).toBe(3);
       expect(newState.pendingChoice).toBeNull(); // Done after batch
@@ -386,7 +386,7 @@ describe("Multi-Stage Decision Cards", () => {
         "Chapel",
         newState,
         { selectedCards: ["Copper", "Estate", "Copper"] },
-        "trash"
+        "trash",
       );
 
       // All 3 cards trashed in one submission
@@ -416,7 +416,7 @@ describe("Multi-Stage Decision Cards", () => {
 
       expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
       expect(result.pendingChoice).toBeDefined();
       if (!result.pendingChoice) throw new Error("No pending decision");
@@ -427,7 +427,7 @@ describe("Multi-Stage Decision Cards", () => {
       const state = createTestState(
         [],
         ["Silver"],
-        ["Copper", "Estate", "Gold"]
+        ["Copper", "Estate", "Gold"],
       );
 
       let newState = executeCard("Harbinger", state);
@@ -438,7 +438,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Gold"],
         },
-        "topdeck"
+        "topdeck",
       );
 
       const player = newState.players.human;
@@ -460,7 +460,7 @@ describe("Multi-Stage Decision Cards", () => {
       // Should draw 1 card and give +1 action
       expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
 
       // Should NOT create a pending decision since discard is empty
@@ -557,7 +557,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Estate"],
         },
-        "trash"
+        "trash",
       );
 
       // Should offer cards up to cost 4 (2+2)
@@ -572,7 +572,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Silver"],
         },
-        "gain"
+        "gain",
       );
 
       const player = newState.players.human;
@@ -595,7 +595,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Copper"],
         },
-        "trash"
+        "trash",
       );
 
       // Should offer treasures up to cost 3 (0+3)
@@ -611,7 +611,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Silver"],
         },
-        "gain"
+        "gain",
       );
 
       const player = newState.players.human;
@@ -633,7 +633,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Silver"],
         },
-        "gain"
+        "gain",
       );
 
       // Topdeck card from hand
@@ -647,7 +647,7 @@ describe("Multi-Stage Decision Cards", () => {
         {
           selectedCards: ["Copper"],
         },
-        "topdeck"
+        "topdeck",
       );
 
       const player = newState.players.human;
@@ -670,7 +670,7 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Militia", playerId: "human" },
-        "human"
+        "human",
       );
 
       if (!result.ok) console.log("ERROR:", result.error);
@@ -698,7 +698,7 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Militia", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
@@ -706,7 +706,7 @@ describe("Attack Cards", () => {
 
       // Should emit DECISION_REQUIRED event for opponent to discard down to 3
       const decisionEvent = result.events.find(
-        e => e.type === "DECISION_REQUIRED"
+        e => e.type === "DECISION_REQUIRED",
       );
       expect(decisionEvent).toBeDefined();
       if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED")
@@ -755,7 +755,7 @@ describe("Attack Cards", () => {
 
       // Should create 2 discard events
       const discardEvents = result.events.filter(
-        e => e.type === "CARD_DISCARDED"
+        e => e.type === "CARD_DISCARDED",
       );
       expect(discardEvents.length).toBe(2);
       expect(discardEvents[0].card).toBe("Estate");
@@ -800,14 +800,14 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Witch", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
 
       const gainEvents = result.events.filter(
-        e => e.type === "CARD_GAINED" && e.card === "Curse"
+        e => e.type === "CARD_GAINED" && e.card === "Curse",
       );
       expect(gainEvents.length).toBeGreaterThan(0);
     });
@@ -822,14 +822,14 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Bureaucrat", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
 
       const gainEvent = result.events.find(
-        e => e.type === "CARD_GAINED" && e.card === "Silver"
+        e => e.type === "CARD_GAINED" && e.card === "Silver",
       );
       expect(gainEvent).toBeDefined();
       if (!gainEvent) throw new Error("No gain event");
@@ -852,7 +852,7 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Bureaucrat", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
@@ -860,7 +860,7 @@ describe("Attack Cards", () => {
 
       // Should emit DECISION_REQUIRED event for opponent to topdeck victory card
       const decisionEvent = result.events.find(
-        e => e.type === "DECISION_REQUIRED"
+        e => e.type === "DECISION_REQUIRED",
       );
       expect(decisionEvent).toBeDefined();
       if (!decisionEvent || decisionEvent.type !== "DECISION_REQUIRED")
@@ -881,14 +881,14 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Bandit", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error("Command failed");
 
       const gainEvent = result.events.find(
-        e => e.type === "CARD_GAINED" && e.card === "Gold"
+        e => e.type === "CARD_GAINED" && e.card === "Gold",
       );
       expect(gainEvent).toBeDefined();
     });
@@ -909,7 +909,7 @@ describe("Attack Cards", () => {
       const result = handleCommand(
         state,
         { type: "PLAY_ACTION", card: "Bandit", playerId: "human" },
-        "human"
+        "human",
       );
 
       expect(result.ok).toBe(true);
@@ -917,7 +917,7 @@ describe("Attack Cards", () => {
 
       // Should gain Gold for player
       const gainEvent = result.events.find(
-        e => e.type === "CARD_GAINED" && e.card === "Gold"
+        e => e.type === "CARD_GAINED" && e.card === "Gold",
       );
       expect(gainEvent).toBeDefined();
 
@@ -936,7 +936,7 @@ describe("Complex Card Interactions", () => {
     it("should draw until 7 cards in hand", () => {
       const state = createTestState(
         ["Copper"],
-        ["Silver", "Gold", "Estate", "Duchy", "Province", "Village", "Copper"]
+        ["Silver", "Gold", "Estate", "Duchy", "Province", "Village", "Copper"],
       );
       const effect = getCardEffect("Library");
       if (!effect) throw new Error("No effect for Library");
@@ -963,7 +963,7 @@ describe("Complex Card Interactions", () => {
     it("should allow skipping action cards", () => {
       const state = createTestState(
         ["Copper"],
-        ["Village", "Smithy", "Copper", "Silver", "Gold", "Estate"]
+        ["Village", "Smithy", "Copper", "Silver", "Gold", "Estate"],
       );
 
       const newState = executeCard("Library", state);
@@ -990,7 +990,7 @@ describe("Complex Card Interactions", () => {
 
       expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
       expect(result.pendingChoice).toBeDefined();
     });
@@ -1069,7 +1069,7 @@ describe("Complex Card Interactions", () => {
     it("should draw 4 cards and give +1 buy", () => {
       const state = createTestState(
         [],
-        ["Copper", "Silver", "Gold", "Estate", "Duchy"]
+        ["Copper", "Silver", "Gold", "Estate", "Duchy"],
       );
       const effect = getCardEffect("Council Room");
       if (!effect) throw new Error("No effect for Council Room");
@@ -1081,7 +1081,7 @@ describe("Complex Card Interactions", () => {
       });
 
       const drawEvents = result.events.filter(
-        e => e.type === "CARD_DRAWN" && e.playerId === "human"
+        e => e.type === "CARD_DRAWN" && e.playerId === "human",
       );
       expect(drawEvents.length).toBe(4);
 
@@ -1111,7 +1111,7 @@ describe("Complex Card Interactions", () => {
       });
 
       const aiDrawEvents = result.events.filter(
-        e => e.type === "CARD_DRAWN" && e.playerId === "ai"
+        e => e.type === "CARD_DRAWN" && e.playerId === "ai",
       );
       expect(aiDrawEvents.length).toBeGreaterThan(0);
     });
@@ -1131,7 +1131,7 @@ describe("Complex Card Interactions", () => {
 
       expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
     });
   });
@@ -1176,7 +1176,7 @@ describe("Complex Card Interactions", () => {
       // Should not request decision or give coins
       expect(result.pendingChoice).toBeUndefined();
       expect(
-        result.events.find(e => e.type === "COINS_MODIFIED")
+        result.events.find(e => e.type === "COINS_MODIFIED"),
       ).toBeUndefined();
     });
   });
@@ -1195,10 +1195,10 @@ describe("Complex Card Interactions", () => {
 
       expect(result.events.find(e => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta
+        result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta,
       ).toBe(1);
       expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(
-        1
+        1,
       );
     });
 

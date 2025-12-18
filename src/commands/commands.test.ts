@@ -93,7 +93,7 @@ describe("Command System - START_GAME", () => {
     const result = handleCommand(state, command);
     if (!result.events) throw new Error("Expected events");
     const deckEvents = result.events.filter(
-      e => e.type === "INITIAL_DECK_DEALT"
+      e => e.type === "INITIAL_DECK_DEALT",
     );
 
     expect(deckEvents.length).toBe(2);
@@ -113,7 +113,7 @@ describe("Command System - START_GAME", () => {
     const result = handleCommand(state, command);
     if (!result.events) throw new Error("Expected events");
     const handEvents = result.events.filter(
-      e => e.type === "INITIAL_HAND_DRAWN"
+      e => e.type === "INITIAL_HAND_DRAWN",
     );
 
     expect(handEvents.length).toBe(2);
@@ -140,7 +140,7 @@ describe("Command System - START_GAME", () => {
 
     // Should have initial resources
     const actionsModified = result.events.filter(
-      e => e.type === "ACTIONS_MODIFIED"
+      e => e.type === "ACTIONS_MODIFIED",
     );
     const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
 
@@ -195,13 +195,13 @@ describe("Command System - PLAY_ACTION", () => {
 
     // Should deduct action cost
     const actionCost = result.events.find(
-      e => e.type === "ACTIONS_MODIFIED" && e.delta === -1
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === -1,
     );
     expect(actionCost).toBeDefined();
 
     // Village gives +1 card, +2 actions
     const actionBonus = result.events.find(
-      e => e.type === "ACTIONS_MODIFIED" && e.delta === 2
+      e => e.type === "ACTIONS_MODIFIED" && e.delta === 2,
     );
     expect(actionBonus).toBeDefined();
   });
@@ -311,7 +311,7 @@ describe("Command System - PLAY_TREASURE", () => {
     expect(cardPlayed).toBeDefined();
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 1
+      e => e.type === "COINS_MODIFIED" && e.delta === 1,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -330,7 +330,7 @@ describe("Command System - PLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 2
+      e => e.type === "COINS_MODIFIED" && e.delta === 2,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -349,7 +349,7 @@ describe("Command System - PLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsAdded = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === 3
+      e => e.type === "COINS_MODIFIED" && e.delta === 3,
     );
     expect(coinsAdded).toBeDefined();
   });
@@ -447,12 +447,12 @@ describe("Command System - BUY_CARD", () => {
     expect(cardGained.to).toBe("discard");
 
     const buysModified = result.events.find(
-      e => e.type === "BUYS_MODIFIED" && e.delta === -1
+      e => e.type === "BUYS_MODIFIED" && e.delta === -1,
     );
     expect(buysModified).toBeDefined();
 
     const coinsModified = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -3
+      e => e.type === "COINS_MODIFIED" && e.delta === -3,
     );
     expect(coinsModified).toBeDefined();
   });
@@ -515,7 +515,7 @@ describe("Command System - BUY_CARD", () => {
     if (!result.events) throw new Error("Expected events");
 
     const coinsModified = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -8
+      e => e.type === "COINS_MODIFIED" && e.delta === -8,
     );
     expect(coinsModified).toBeDefined();
   });
@@ -630,7 +630,7 @@ describe("Command System - END_PHASE", () => {
 
     // Should have resource initialization for new turn
     const actionsModified = result.events.filter(
-      e => e.type === "ACTIONS_MODIFIED"
+      e => e.type === "ACTIONS_MODIFIED",
     );
     const buysModified = result.events.filter(e => e.type === "BUYS_MODIFIED");
     expect(actionsModified.length).toBeGreaterThan(0);
@@ -674,7 +674,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     if (!result.events) throw new Error("Expected events");
 
     const returnedToHand = result.events.find(
-      e => e.type === "CARD_RETURNED_TO_HAND"
+      e => e.type === "CARD_RETURNED_TO_HAND",
     );
     expect(returnedToHand).toBeDefined();
     if (!returnedToHand)
@@ -682,7 +682,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     expect(returnedToHand.card).toBe("Copper");
 
     const coinsRemoved = result.events.find(
-      e => e.type === "COINS_MODIFIED" && e.delta === -1
+      e => e.type === "COINS_MODIFIED" && e.delta === -1,
     );
     expect(coinsRemoved).toBeDefined();
   });
@@ -719,12 +719,12 @@ describe("Command System - UNPLAY_TREASURE", () => {
 
     // Should remove 2 coins from Silver + 1 from Merchant = -3 total
     const coinsModifiedEvents = result.events.filter(
-      e => e.type === "COINS_MODIFIED"
+      e => e.type === "COINS_MODIFIED",
     );
     expect(coinsModifiedEvents.length).toBeGreaterThan(0);
     const totalCoinsRemoved = coinsModifiedEvents.reduce(
       (sum, e) => sum + e.delta,
-      0
+      0,
     );
     expect(totalCoinsRemoved).toBe(-3);
   });
@@ -899,7 +899,7 @@ describe("Command System - Event Causality", () => {
         e.type === "ACTIONS_MODIFIED" ||
         e.type === "BUYS_MODIFIED" ||
         e.type === "COINS_MODIFIED" ||
-        e.type === "CARDS_DRAWN"
+        e.type === "CARDS_DRAWN",
     );
 
     for (const event of effectEvents) {
@@ -1051,7 +1051,7 @@ describe("Command System - Cellar Causality", () => {
     if (!playResult.ok) throw new Error("Expected ok result");
 
     const cardPlayedEvent = playResult.events.find(
-      e => e.type === "CARD_PLAYED"
+      e => e.type === "CARD_PLAYED",
     );
     expect(cardPlayedEvent).toBeDefined();
     if (!cardPlayedEvent) throw new Error("Expected CARD_PLAYED event");
@@ -1063,7 +1063,7 @@ describe("Command System - Cellar Causality", () => {
     expect(midState.pendingChoice).toBeDefined();
     console.log(
       "pendingChoice:",
-      JSON.stringify(midState.pendingChoice, null, 2)
+      JSON.stringify(midState.pendingChoice, null, 2),
     );
 
     // Batch discard: Estate (just 1 card)
@@ -1082,10 +1082,10 @@ describe("Command System - Cellar Causality", () => {
 
     // Cellar now processes batch and auto-draws in one decision
     const discardEvents = decision1Result.events.filter(
-      e => e.type === "CARD_DISCARDED"
+      e => e.type === "CARD_DISCARDED",
     );
     const drawEvents = decision1Result.events.filter(
-      e => e.type === "CARD_DRAWN"
+      e => e.type === "CARD_DRAWN",
     );
 
     expect(discardEvents.length).toBe(1); // Discarded 1

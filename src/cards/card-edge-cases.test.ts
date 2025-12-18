@@ -13,7 +13,7 @@ import type { GameState, CardName } from "../types/game-state";
 function createTestState(
   hand: CardName[],
   deck: CardName[] = [],
-  discard: CardName[] = []
+  discard: CardName[] = [],
 ): GameState {
   return {
     playerOrder: ["human"],
@@ -94,7 +94,7 @@ describe("Edge Cases - Empty Hand", () => {
     });
 
     expect(result.events.find(e => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1
+      1,
     );
     expect(result.pendingChoice).toBeUndefined();
   });
@@ -182,7 +182,7 @@ describe("Edge Cases - Empty Deck", () => {
   it("Library with 7 cards already does nothing", () => {
     const state = createTestState(
       ["Copper", "Silver", "Gold", "Estate", "Duchy", "Province", "Village"],
-      []
+      [],
     );
     const effect = getCardEffect("Library");
     expect(effect).toBeDefined();
@@ -305,7 +305,7 @@ describe("Edge Cases - Opponent Interactions", () => {
     const result = handleCommand(
       state,
       { type: "PLAY_ACTION", card: "Militia", playerId: "human" },
-      "human"
+      "human",
     );
 
     expect(result.ok).toBe(true);
@@ -314,7 +314,7 @@ describe("Edge Cases - Opponent Interactions", () => {
     expect(result.events.find(e => e.type === "COINS_MODIFIED")?.delta).toBe(2);
     // Should not request decision since opponent has ≤3 cards
     expect(
-      result.events.find(e => e.type === "DECISION_REQUIRED")
+      result.events.find(e => e.type === "DECISION_REQUIRED"),
     ).toBeUndefined();
   });
 
@@ -334,18 +334,18 @@ describe("Edge Cases - Opponent Interactions", () => {
     const result = handleCommand(
       state,
       { type: "PLAY_ACTION", card: "Bureaucrat", playerId: "human" },
-      "human"
+      "human",
     );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     expect(
-      result.events.find(e => e.type === "CARD_GAINED" && e.card === "Silver")
+      result.events.find(e => e.type === "CARD_GAINED" && e.card === "Silver"),
     ).toBeDefined();
     // Should not request decision since opponent has no victory cards
     expect(
-      result.events.find(e => e.type === "DECISION_REQUIRED")
+      result.events.find(e => e.type === "DECISION_REQUIRED"),
     ).toBeUndefined();
   });
 
@@ -372,14 +372,14 @@ describe("Edge Cases - Opponent Interactions", () => {
     const result = handleCommand(
       state,
       { type: "PLAY_ACTION", card: "Witch", playerId: "human" },
-      "human"
+      "human",
     );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
     const curseEvents = result.events.filter(
-      e => e.type === "CARD_GAINED" && e.card === "Curse"
+      e => e.type === "CARD_GAINED" && e.card === "Curse",
     );
     expect(curseEvents.length).toBe(2);
   });
