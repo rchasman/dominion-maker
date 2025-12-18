@@ -24,7 +24,7 @@ interface MainPlayerAreaProps {
 }
 
 export function MainPlayerArea({
-  mainPlayer,
+  localPlayer,
   localPlayerVP,
   isLocalPlayerTurn,
   isLocalPlayerAI,
@@ -63,7 +63,7 @@ export function MainPlayerArea({
   return (
     <div style={{ position: "relative" }}>
       <PlayerArea
-        player={mainPlayer}
+        player={localPlayer}
         label={displayName}
         vpCount={localPlayerVP}
         isActive={isLocalPlayerTurn}

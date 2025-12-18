@@ -133,7 +133,7 @@ export function BoardContent({
     isLocalPlayerTurn,
     canBuy,
     opponent,
-    mainPlayer,
+    localPlayer,
     localPlayerVP,
     opponentVP,
     isOpponentAI,
@@ -258,7 +258,7 @@ export function BoardContent({
         />
 
         <MainPlayerArea
-          mainPlayer={mainPlayer}
+          localPlayer={localPlayer}
           localPlayerVP={localPlayerVP}
           isLocalPlayerTurn={isLocalPlayerTurn}
           isLocalPlayerAI={isLocalPlayerAI}
