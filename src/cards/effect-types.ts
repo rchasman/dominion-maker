@@ -5,11 +5,7 @@ import type {
   PlayerId,
   PendingChoice,
 } from "../types/game-state";
-import type {
-  GameEvent,
-  DecisionRequest,
-  DecisionChoice,
-} from "../events/types";
+import type { GameEvent, DecisionChoice } from "../events/types";
 import { shuffle } from "../lib/game-utils";
 import { CARDS, type ReactionTrigger } from "../data/cards";
 import { run } from "../lib/run";
@@ -68,7 +64,7 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
  */
 export function peekDraw(
   { deck: playerDeck, discard: playerDiscard }: PlayerState,
-  count: number
+  count: number,
 ): {
   cards: CardName[];
   shuffled: boolean;
@@ -120,7 +116,7 @@ export function peekDraw(
       discard: [...playerDiscard],
       shuffled: false,
       newDeckOrder: undefined,
-    }
+    },
   );
 
   return {
@@ -136,7 +132,7 @@ export function peekDraw(
  */
 export function getGainableCards(
   state: GameState,
-  maxCost: number
+  maxCost: number,
 ): CardName[] {
   return Object.entries(state.supply)
     .filter((entry): entry is [CardName, number] => {
@@ -152,7 +148,7 @@ export function getGainableCards(
  */
 export function getGainableTreasures(
   state: GameState,
-  maxCost: number
+  maxCost: number,
 ): CardName[] {
   return Object.entries(state.supply)
     .filter((entry): entry is [CardName, number] => {
@@ -182,11 +178,11 @@ export function getOpponents(state: GameState, playerId: PlayerId): PlayerId[] {
 export function createDrawEvents(
   playerId: PlayerId,
   playerState: PlayerState,
-  count: number
+  count: number,
 ): GameEvent[] {
   const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
     playerState,
-    count
+    count,
   );
 
   if (shuffled && cardsBeforeShuffle) {
@@ -258,7 +254,7 @@ export function createSimpleCardEffect(benefits: {
  */
 export function isInitialCall(
   decision: DecisionChoice | undefined,
-  stage: string | undefined
+  stage: string | undefined,
 ): boolean {
   return !decision || stage === undefined;
 }
@@ -292,7 +288,7 @@ export function createCardSelectionDecision(params: {
 }
 
 /**
- * Generate a DecisionRequest from a DecisionSpec (DSL).
+ * Generate a PendingChoice (decision) from a DecisionSpec (DSL).
  * Evaluates dynamic properties (functions) using the provided context.
  */
 export function generateDecisionFromSpec(params: {
@@ -373,7 +369,7 @@ export function isVictoryCard(card: CardName): boolean {
 export function getAvailableReactions(
   state: GameState,
   playerId: PlayerId,
-  trigger: ReactionTrigger
+  trigger: ReactionTrigger,
 ): CardName[] {
   const playerState = state.players[playerId];
   if (!playerState) return [];
@@ -462,20 +458,20 @@ export type OpponentIteratorConfig<T = Record<PlayerId, unknown>> = {
   /** Filter to determine which opponents need a decision */
   filter: (
     opponent: PlayerId,
-    state: GameState
+    state: GameState,
   ) => OpponentDecisionData<T> | null;
   /** Create decision request for an opponent */
   createDecision: (
     opponentData: OpponentDecisionData<T>,
     remainingOpponents: PlayerId[],
     attackingPlayer: PlayerId,
-    cardName: CardName
+    cardName: CardName,
   ) => PendingChoice;
   /** Process decision choice and emit events */
   processChoice: (
     choice: DecisionChoice,
     opponentData: OpponentDecisionData<T>,
-    state: GameState
+    state: GameState,
   ) => GameEvent[];
   /** Stage identifier for the opponent decision */
   stage: string;
@@ -492,8 +488,8 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
     | ((
         state: GameState,
         playerId: PlayerId,
-        attackTargets?: PlayerId[]
-      ) => GameEvent[]) = []
+        attackTargets?: PlayerId[],
+      ) => GameEvent[]) = [],
 ): CardEffect {
   return ({
     state,
@@ -538,7 +534,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             playerId,
-            state.pendingChoice?.cardBeingPlayed || ("" as CardName)
+            state.pendingChoice?.cardBeingPlayed || ("" as CardName),
           ),
         };
       }
@@ -550,14 +546,14 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
       const metadata = state.pendingChoice?.metadata;
       const remainingOpponents = getStringArrayFromMetadata(
         metadata,
-        "remainingOpponents"
+        "remainingOpponents",
       );
       const attackingPlayer = getStringFromMetadata(
         metadata,
         "attackingPlayer",
-        playerId
+        playerId,
       );
-      const currentOpponent = state.pendingChoice?.player || "";
+      const currentOpponent = state.pendingChoice?.playerId || "";
 
       // Reconstruct opponent data for processing
       const opponentData = config.filter(currentOpponent, state);
@@ -580,7 +576,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
         return {
           ...targetWithData.data,
           remainingTargets: remainingOpponents.filter(
-            t => t !== targetWithData.target
+            t => t !== targetWithData.target,
           ),
         };
       });
@@ -593,7 +589,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             attackingPlayer,
-            state.pendingChoice?.cardBeingPlayed || ("" as CardName)
+            state.pendingChoice?.cardBeingPlayed || ("" as CardName),
           ),
         };
       }

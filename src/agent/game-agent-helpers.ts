@@ -18,7 +18,7 @@ import { isReactionChoice, isDecisionChoice } from "../types/pending-choice";
  */
 function withSkipOption<T extends Action>(
   actions: T[],
-  canSkip: boolean
+  canSkip: boolean,
 ): Action[] {
   return canSkip ? [...actions, { type: "skip_decision" as const }] : actions;
 }
@@ -64,21 +64,21 @@ export function getLegalActions(state: GameState): Action[] {
     if (decision.stage === "trash") {
       return withSkipOption(
         options.map(card => ({ type: "trash_card" as const, card })),
-        canSkip
+        canSkip,
       );
     }
 
     if (decision.stage === "discard" || decision.stage === "opponent_discard") {
       return withSkipOption(
         options.map(card => ({ type: "discard_card" as const, card })),
-        canSkip
+        canSkip,
       );
     }
 
     if (decision.stage === "gain" || decision.from === "supply") {
       return withSkipOption(
         options.map(card => ({ type: "gain_card" as const, card })),
-        canSkip
+        canSkip,
       );
     }
 
@@ -139,7 +139,7 @@ type GenerateActionParams = {
  * Call backend API to generate action
  */
 export async function generateActionViaBackend(
-  params: GenerateActionParams
+  params: GenerateActionParams,
 ): Promise<{ action: Action; format: "json" | "toon" }> {
   const {
     provider,
@@ -168,7 +168,7 @@ export async function generateActionViaBackend(
     },
     {
       fetch: { signal },
-    }
+    },
   );
 
   if (error) {
@@ -196,32 +196,32 @@ export async function generateActionViaBackend(
 export function executeActionWithEngine(
   engine: DominionEngine,
   action: Action,
-  playerId: PlayerId
+  playerId: PlayerId,
 ): boolean {
   switch (action.type) {
     case "play_action":
       if (!action.card) throw new Error("play_action requires card");
       return engine.dispatch(
         { type: "PLAY_ACTION", playerId, card: action.card },
-        playerId
+        playerId,
       ).ok;
     case "play_treasure":
       if (!action.card) throw new Error("play_treasure requires card");
       return engine.dispatch(
         { type: "PLAY_TREASURE", playerId, card: action.card },
-        playerId
+        playerId,
       ).ok;
     case "buy_card":
       if (!action.card) throw new Error("buy_card requires card");
       return engine.dispatch(
         { type: "BUY_CARD", playerId, card: action.card },
-        playerId
+        playerId,
       ).ok;
     case "reveal_reaction":
       if (!action.card) throw new Error("reveal_reaction requires card");
       return engine.dispatch(
         { type: "REVEAL_REACTION", playerId, card: action.card },
-        playerId
+        playerId,
       ).ok;
     case "decline_reaction":
       return engine.dispatch({ type: "DECLINE_REACTION", playerId }, playerId)
@@ -243,7 +243,7 @@ export function executeActionWithEngine(
           playerId,
           choice: { selectedCards: [action.card] },
         },
-        playerId
+        playerId,
       ).ok;
     default:
       agentLogger.error(`Unknown action type: ${String(action.type)}`);

@@ -12,7 +12,9 @@ import {
 import type { PlayerId } from "../types/game-state";
 
 // Helper to create the players record with proper typing
-function createPlayersRecord(playerIds: PlayerId[]): Record<PlayerId, PlayerState> {
+function createPlayersRecord(
+  playerIds: PlayerId[],
+): Record<PlayerId, PlayerState> {
   return playerIds.reduce(
     (players, playerId) => ({
       ...players,
@@ -24,7 +26,7 @@ function createPlayersRecord(playerIds: PlayerId[]): Record<PlayerId, PlayerStat
         inPlaySourceIndices: [],
       },
     }),
-    {} as Record<PlayerId, PlayerState>
+    {} as Record<PlayerId, PlayerState>,
   );
 }
 
@@ -33,7 +35,7 @@ function createPlayersRecord(playerIds: PlayerId[]): Record<PlayerId, PlayerStat
  */
 function applyGameSetupEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "GAME_INITIALIZED") {
     const players = createPlayersRecord(event.players);
@@ -52,8 +54,6 @@ function applyGameSetupEvent(
       coins: 0,
       gameOver: false,
       winner: null,
-      pendingChoice: null,
-      pendingChoiceEventId: null,
       pendingChoice: null,
       pendingChoiceEventId: null,
       trash: [],

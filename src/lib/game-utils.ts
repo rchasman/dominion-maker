@@ -12,21 +12,21 @@ export function shuffle<T>(array: T[]): T[] {
       ];
       return result;
     },
-    [...array]
+    [...array],
   );
 }
 
 type DrawEvent = { type: "draw"; cards: CardName[] } | { type: "shuffle" };
 
 export function drawCards(
-  {
+  playerState: PlayerState,
+  count: number,
+): { playerId: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
+  const {
     deck: playerDeck,
     discard: playerDiscard,
     hand: playerHand,
-    ...player
-  }: PlayerState,
-  count: number
-): { playerId: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
+  } = playerState;
   const result = Array.from({ length: count }).reduce<{
     deck: CardName[];
     discard: CardName[];
@@ -72,7 +72,7 @@ export function drawCards(
       drawn: [],
       events: [],
       currentBatch: [],
-    }
+    },
   );
 
   const finalEvents =

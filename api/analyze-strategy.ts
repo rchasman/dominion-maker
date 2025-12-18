@@ -40,7 +40,7 @@ function createDevToolsMiddleware() {
 
 function buildStrategyAnalysisPrompt(
   supply: Record<CardName, number>,
-  hasPreviousAnalysis: boolean
+  hasPreviousAnalysis: boolean,
 ): string {
   const previousAnalysisGuidance = hasPreviousAnalysis
     ? `
@@ -74,7 +74,7 @@ const PlayerAnalysisSchema = z.object({
   read: z
     .string()
     .describe(
-      "2-3 sentence paragraph analyzing deck quality, execution, and weakness"
+      "2-3 sentence paragraph analyzing deck quality, execution, and weakness",
     ),
   recommendation: z
     .string()
@@ -115,14 +115,14 @@ function calculatePlayerStats(allCards: string[]): CardCounts {
       });
       return { counts: newCounts, vp: acc.vp + vpDelta };
     },
-    { counts: {}, vp: 0 }
+    { counts: {}, vp: 0 },
   );
 }
 
 // Build player deck information as structured data for TOON encoding
 function buildPlayerDeckInfo(
   playerIds: string[],
-  currentState: GameState
+  currentState: GameState,
 ): Array<{
   id: string;
   vp: number;
@@ -200,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const turnHistory = formatTurnHistoryForAnalysis(
       currentState,
       "toon",
-      STRATEGY_ANALYSIS_TURNS
+      STRATEGY_ANALYSIS_TURNS,
     );
 
     // If no turn history yet, return empty array
@@ -239,7 +239,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const previousAnalysisSection = previousPlayerAnalysis
         ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(
-            previousPlayerAnalysis
+            previousPlayerAnalysis,
           )}`
         : "";
 
@@ -256,7 +256,7 @@ Provide strategic analysis for playerId: ${playerId}.`;
         model,
         system: buildStrategyAnalysisPrompt(
           currentState.supply,
-          !!previousPlayerAnalysis
+          !!previousPlayerAnalysis,
         ),
         prompt,
         schema: PlayerAnalysisSchema,

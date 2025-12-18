@@ -15,7 +15,7 @@ import {
  */
 export function applyTurnEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "TURN_STARTED") {
     return {
@@ -65,7 +65,7 @@ export function applyTurnEvent(
  */
 export function applyCardMovementEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   const drawnResult = applyCardDrawn(state, event);
   if (drawnResult) return drawnResult;
@@ -93,7 +93,7 @@ export function applyCardMovementEvent(
  */
 export function applyResourceEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "ACTIONS_MODIFIED") {
     const newActions = Math.max(0, state.actions + event.delta);
@@ -191,7 +191,7 @@ export function applyResourceEvent(
  */
 export function applyAttackAndReactionEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "ATTACK_DECLARED") {
     return {
@@ -245,7 +245,7 @@ export function applyAttackAndReactionEvent(
  */
 export function applyReactionEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "REACTION_OPPORTUNITY") {
     return {
@@ -304,7 +304,7 @@ export function applyReactionEvent(
  */
 export function applyDecisionEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "DECISION_REQUIRED") {
     const decision = event.decision;
@@ -339,7 +339,7 @@ export function applyDecisionEvent(
  */
 export function applyGameEndEvent(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "GAME_ENDED") {
     return {

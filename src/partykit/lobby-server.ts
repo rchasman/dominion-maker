@@ -105,11 +105,11 @@ export default class LobbyServer implements Party.Server {
   private handleJoinLobby(
     conn: Party.Connection,
     name: string,
-    clientId: string
+    clientId: string,
   ) {
     // Check if this clientId is already connected (deduplication)
     const existingPlayer = [...this.players.entries()].find(
-      ([_, p]) => p.clientId === clientId
+      ([_, p]) => p.clientId === clientId,
     );
 
     if (existingPlayer) {
@@ -131,7 +131,7 @@ export default class LobbyServer implements Party.Server {
       this.disconnectTimeouts.delete(conn.id);
     }
 
-    const playerId: ConnectedPlayer = {
+    const player: ConnectedPlayer = {
       id: conn.id,
       name: name.trim() || `Player${conn.id.slice(0, 4)}`,
       clientId,
@@ -235,7 +235,7 @@ export default class LobbyServer implements Party.Server {
   private startGame(
     request: GameRequest,
     player1: ConnectedPlayer,
-    player2: ConnectedPlayer
+    player2: ConnectedPlayer,
   ) {
     // Generate room ID
     const roomId = generateRoomId();
@@ -282,7 +282,10 @@ export default class LobbyServer implements Party.Server {
     this.broadcastRequests();
   }
 
-  private findRequest(fromId: PlayerId, toId: PlayerId): GameRequest | undefined {
+  private findRequest(
+    fromId: PlayerId,
+    toId: PlayerId,
+  ): GameRequest | undefined {
     for (const req of this.requests.values()) {
       if (req.fromId === fromId && req.toId === toId) {
         return req;

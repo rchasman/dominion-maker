@@ -183,7 +183,7 @@ type RunModelsResult = {
 
 // Run all models in parallel with early consensus detection
 const runModelsInParallel = async (
-  params: RunModelsParams
+  params: RunModelsParams,
 ): Promise<RunModelsResult> => {
   const {
     providers,
@@ -271,7 +271,7 @@ const runModelsInParallel = async (
 export async function advanceGameStateWithConsensus(
   engine: DominionEngine,
   playerId: PlayerId,
-  config: ConsensusConfig = {}
+  config: ConsensusConfig = {},
 ): Promise<void> {
   const {
     humanChoice,
@@ -296,25 +296,25 @@ export async function advanceGameStateWithConsensus(
   // Check for batch decision (like Chapel: max > 1) - requires multi-round consensus
   if (isBatchDecision(decision) && !isMultiActionDecision(decision)) {
     agentLogger.info(
-      `Batch decision detected: max=${decision.max}, running multi-round consensus`
+      `Batch decision detected: max=${decision.max}, running multi-round consensus`,
     );
 
     const { max } = decision;
     const aheadByK = Math.max(
       CONSENSUS_AHEAD_BY_K_MIN,
-      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
+      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR),
     );
 
     const runBatchRound = async (
       round: number,
-      acc: { cards: CardName[]; engine: DominionEngine }
+      acc: { cards: CardName[]; engine: DominionEngine },
     ): Promise<{ cards: CardName[]; engine: DominionEngine }> => {
       if (round >= max) return acc;
 
       const legalActions = getLegalActions(acc.engine.state);
 
       agentLogger.info(
-        `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`
+        `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`,
       );
 
       const { results, earlyConsensus, voteGroups, completedResults } =
@@ -335,7 +335,7 @@ export async function advanceGameStateWithConsensus(
           voteGroups,
           results,
           earlyConsensus,
-          legalActions
+          legalActions,
         );
 
       // Compute player context for logging
@@ -368,7 +368,7 @@ export async function advanceGameStateWithConsensus(
 
       if (winner.action.type === "skip_decision") {
         agentLogger.info(
-          `AI voted to skip after ${acc.cards.length} selections`
+          `AI voted to skip after ${acc.cards.length} selections`,
         );
         return acc;
       }
@@ -382,7 +382,7 @@ export async function advanceGameStateWithConsensus(
       agentLogger.info(
         `Batch round ${round + 1} winner: ${winner.action.type}(${card}) - ${
           winner.count
-        } votes`
+        } votes`,
       );
 
       return runBatchRound(round + 1, {
@@ -403,7 +403,7 @@ export async function advanceGameStateWithConsensus(
         playerId,
         choice: { selectedCards },
       },
-      playerId
+      playerId,
     ).ok;
 
     if (!success) {
@@ -414,20 +414,20 @@ export async function advanceGameStateWithConsensus(
     agentLogger.info(
       `Batch decision complete: ${
         selectedCards.length
-      } cards (${overallDuration.toFixed(0)}ms)`
+      } cards (${overallDuration.toFixed(0)}ms)`,
     );
     return;
   }
 
   if (isMultiActionDecision(decision)) {
     agentLogger.info(
-      `Multi-action decision detected: ${decision.cardOptions.length} cards, running multi-round consensus`
+      `Multi-action decision detected: ${decision.cardOptions.length} cards, running multi-round consensus`,
     );
 
     const numCards = decision.cardOptions.length;
     const aheadByK = Math.max(
       CONSENSUS_AHEAD_BY_K_MIN,
-      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
+      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR),
     );
 
     const defaultAction = decision.actions?.find(a => a.isDefault);
@@ -464,7 +464,7 @@ export async function advanceGameStateWithConsensus(
           agentLogger.info(
             `Round ${roundIndex + 1}/${numCards}: Voting on ${
               decision.cardOptions[roundIndex]
-            }`
+            }`,
           );
 
           const { results, earlyConsensus, voteGroups } =
@@ -484,32 +484,32 @@ export async function advanceGameStateWithConsensus(
             voteGroups,
             results,
             earlyConsensus,
-            legalActions
+            legalActions,
           );
 
           if (winner.action.type === "skip_decision") {
             agentLogger.info(
               `AI skipped at round ${
                 roundIndex + 1
-              }, using defaults for remaining`
+              }, using defaults for remaining`,
             );
             return acc;
           }
 
           agentLogger.debug(
-            `Card ${roundIndex} (${decision.cardOptions[roundIndex]}): ${winner.action.type}`
+            `Card ${roundIndex} (${decision.cardOptions[roundIndex]}): ${winner.action.type}`,
           );
 
           return { ...acc, [roundIndex]: winner.action.type };
         },
-        Promise.resolve({})
+        Promise.resolve({}),
       );
 
     const cardActionsWithDefaults = Object.fromEntries(
       Array.from({ length: numCards }).map((_, i) => [
         i,
         i in cardActions ? cardActions[i] : defaultAction.id,
-      ])
+      ]),
     );
 
     const cardOrder = Object.entries(cardActionsWithDefaults)
@@ -529,7 +529,7 @@ export async function advanceGameStateWithConsensus(
         playerId,
         choice: finalChoice,
       },
-      playerId
+      playerId,
     ).ok;
 
     if (!success) {
@@ -540,8 +540,8 @@ export async function advanceGameStateWithConsensus(
     const actionCount = Object.keys(cardActions).length;
     agentLogger.info(
       `Multi-action decision complete: ${actionCount} actions (${overallDuration.toFixed(
-        0
-      )}ms)`
+        0,
+      )}ms)`,
     );
     return;
   }
@@ -553,7 +553,7 @@ export async function advanceGameStateWithConsensus(
     const action = legalActions[0];
     const actionDesc = formatActionDescription(action);
     agentLogger.info(
-      `Only one legal action: ${actionDesc} (skipping consensus)`
+      `Only one legal action: ${actionDesc} (skipping consensus)`,
     );
 
     logger?.({
@@ -587,14 +587,14 @@ export async function advanceGameStateWithConsensus(
       })
       .join(", ");
     agentLogger.info(
-      `Buy phase: $${currentState.coins} available | Buyable: ${buyableCards}`
+      `Buy phase: $${currentState.coins} available | Buyable: ${buyableCards}`,
     );
   }
 
   agentLogger.debug(
     `Legal actions (${legalActions.length}): ${actionSummaries.join(
-      ", "
-    )} | Coins: ${currentState.coins}, Buys: ${currentState.buys}`
+      ", ",
+    )} | Coins: ${currentState.coins}, Buys: ${currentState.buys}`,
   );
 
   logConsensusStart({
@@ -617,7 +617,7 @@ export async function advanceGameStateWithConsensus(
   const totalModels = providers.length;
   const aheadByK = Math.max(
     CONSENSUS_AHEAD_BY_K_MIN,
-    Math.ceil(totalModels / CONSENSUS_AHEAD_BY_K_DIVISOR)
+    Math.ceil(totalModels / CONSENSUS_AHEAD_BY_K_DIVISOR),
   );
 
   const { results, earlyConsensus, voteGroups, completedResults } =
@@ -665,7 +665,7 @@ export async function advanceGameStateWithConsensus(
   agentLogger.info(
     `${actionDesc} (${
       winner.count
-    }/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`
+    }/${votesConsidered} votes, ${overallDuration.toFixed(0)}ms)`,
   );
 }
 
@@ -675,7 +675,7 @@ export async function advanceGameStateWithConsensus(
 export async function runAITurnWithConsensus(
   engine: DominionEngine,
   playerId: PlayerId,
-  config: AITurnConfig
+  config: AITurnConfig,
 ): Promise<void> {
   const {
     providers,

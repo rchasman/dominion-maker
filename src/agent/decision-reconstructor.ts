@@ -49,9 +49,12 @@ export function simulateCardSelection(
  * Check if a decision is batch-capable (requires reconstruction).
  */
 export function isBatchDecision(
-  decision: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  decision:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
 ): boolean {
-  return !!decision && decision.type === "card_decision" && decision.max > 1;
+  return !!decision && decision.choiceType === "decision" && decision.max > 1;
 }
 
 /**
@@ -59,7 +62,10 @@ export function isBatchDecision(
  * These require multi-round consensus where AI votes on each card individually.
  */
 export function isMultiActionDecision(
-  decision: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
+  decision:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined,
 ): boolean {
   return !!(
     decision?.actions &&

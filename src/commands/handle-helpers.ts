@@ -1,6 +1,5 @@
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent } from "../events/types";
-import { peekDraw } from "../cards/effect-types";
 import { countVP } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
 import { CARDS } from "../data/cards";

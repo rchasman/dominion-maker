@@ -203,7 +203,7 @@ export type ReactionPlayedEvent = EventMetadata & {
 // New reaction events (first-class)
 export type ReactionOpportunityEvent = EventMetadata & {
   type: "REACTION_OPPORTUNITY";
-  playerId: PlayerId; // The player who can react (unified with DecisionRequest)
+  playerId: PlayerId; // The player who can react (unified with PendingChoice)
   attacker: PlayerId;
   attackCard: CardName;
   availableReactions: CardName[];

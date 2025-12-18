@@ -40,7 +40,7 @@ export class EventBuilder {
    */
   add<T extends Omit<GameEvent, "id" | "causedBy">>(
     event: T,
-    causedBy?: string
+    causedBy?: string,
   ): GameEvent {
     const isFirstEvent = this.events.length === 0;
     const eventWithMetadata: GameEvent = {
@@ -62,7 +62,7 @@ export class EventBuilder {
    */
   addAll<T extends Omit<GameEvent, "id" | "causedBy">>(
     events: T[],
-    causedBy?: string
+    causedBy?: string,
   ): void {
     events.map(event => this.add(event, causedBy));
   }
@@ -117,7 +117,7 @@ export class EventBuilder {
  */
 export function linkEvents(
   events: Array<Omit<GameEvent, "id" | "causedBy">>,
-  causedBy: string
+  causedBy: string,
 ): GameEvent[] {
   return events.map(event => ({
     ...event,

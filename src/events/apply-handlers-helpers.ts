@@ -10,7 +10,7 @@ import { CARDS } from "../data/cards";
 export const removeCardFromInPlay = (
   inPlay: CardName[],
   indices: number[],
-  card: CardName
+  card: CardName,
 ): [CardName[], number[]] => {
   const idx = inPlay.indexOf(card);
   return idx === -1
@@ -26,7 +26,7 @@ export const removeCardFromInPlay = (
  */
 export function applyCardDrawn(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type !== "CARD_DRAWN") return null;
   const playerState = state.players[event.playerId];
@@ -60,7 +60,7 @@ export function applyCardDrawn(
  */
 export function applyCardPlayed(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type !== "CARD_PLAYED") return null;
   const playerState = state.players[event.playerId];
@@ -103,7 +103,7 @@ export function applyCardPlayed(
  */
 export function applyCardDiscarded(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type !== "CARD_DISCARDED") return null;
   const playerState = state.players[event.playerId];
@@ -113,7 +113,7 @@ export function applyCardDiscarded(
       ? removeCardFromInPlay(
           playerState.inPlay,
           playerState.inPlaySourceIndices,
-          event.card
+          event.card,
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
 
@@ -164,7 +164,7 @@ export function applyCardDiscarded(
  */
 export function applyCardTrashed(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type !== "CARD_TRASHED") return null;
   const playerState = state.players[event.playerId];
@@ -174,7 +174,7 @@ export function applyCardTrashed(
       ? removeCardFromInPlay(
           playerState.inPlay,
           playerState.inPlaySourceIndices,
-          event.card
+          event.card,
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
 
@@ -218,7 +218,7 @@ export function applyCardTrashed(
  */
 export function applyCardGained(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type !== "CARD_GAINED") return null;
   const playerState = state.players[event.playerId];
@@ -280,7 +280,7 @@ export function applyCardGained(
  */
 export function applyRevealAndShuffle(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
     return {
@@ -328,7 +328,7 @@ export function applyRevealAndShuffle(
  */
 export function applyCardReposition(
   state: GameState,
-  event: GameEvent
+  event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_PUT_ON_DECK") {
     const playerState = state.players[event.playerId];
@@ -362,7 +362,7 @@ export function applyCardReposition(
         ? removeCardFromInPlay(
             playerState.inPlay,
             playerState.inPlaySourceIndices,
-            event.card
+            event.card,
           )
         : [playerState.inPlay, playerState.inPlaySourceIndices];
     return {

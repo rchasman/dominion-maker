@@ -1,4 +1,9 @@
-import type { GameState, LogEntry, CardName, PlayerId } from "../types/game-state";
+import type {
+  GameState,
+  LogEntry,
+  CardName,
+  PlayerId,
+} from "../types/game-state";
 import { run } from "../lib/run";
 import { encodeToon } from "../lib/toon";
 
@@ -38,7 +43,7 @@ export const DEFAULT_STRATEGY = {
 
 function extractRecentTurns(
   log: LogEntry[],
-  lastNTurns = DEFAULT_LAST_N_TURNS
+  lastNTurns = DEFAULT_LAST_N_TURNS,
 ): TurnSummary[] {
   interface TurnState {
     turnMap: Map<string, TurnSummary>;
@@ -101,11 +106,11 @@ function extractRecentTurns(
       turnMap: new Map<string, TurnSummary>(),
       currentTurn: 0,
       currentPlayer: "",
-    }
+    },
   );
 
   const allSummaries = Array.from(turnMap.values()).sort(
-    (a, b) => b.turn - a.turn
+    (a, b) => b.turn - a.turn,
   );
   return allSummaries.slice(0, lastNTurns * SUMMARIES_PER_TURN);
 }
@@ -121,7 +126,7 @@ function extractRecentTurns(
 export function formatTurnHistoryForAnalysis(
   state: GameState,
   format: "json" | "toon" = "toon",
-  turnCount = DEFAULT_LAST_N_TURNS
+  turnCount = DEFAULT_LAST_N_TURNS,
 ): string {
   const recentTurns = extractRecentTurns(state.log, turnCount);
 
@@ -162,7 +167,7 @@ export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
   customStrategy?: string,
-  format: "json" | "toon" = "toon"
+  format: "json" | "toon" = "toon",
 ): string {
   // Strategic insights only - AI strategy analysis
   const facts: StrategicFacts = {};

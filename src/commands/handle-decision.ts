@@ -21,7 +21,7 @@ function handleThroneRoomExecution(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
   throneRoomTarget: string,
-  executionsRemaining: number
+  executionsRemaining: number,
 ): GameEvent[] {
   const midState = applyEvents(ctx.state, baseEvents);
   const targetEffect = getCardEffect(throneRoomTarget);
@@ -106,14 +106,15 @@ type ReactionMetadata = {
 };
 
 function extractReactionMetadata(
-  ctx: DecisionContext
+  ctx: DecisionContext,
 ): ReactionMetadata & { currentTarget: PlayerId } {
   const allTargets = (ctx.metadata?.allTargets as PlayerId[]) || [];
   const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
   const blockedTargets = (ctx.metadata?.blockedTargets as PlayerId[]) || [];
   const attackCard =
     (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
-  const attacker = (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayer;
+  const attacker =
+    (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayer;
   const currentTarget = allTargets[currentTargetIndex];
 
   return {
@@ -129,7 +130,7 @@ function extractReactionMetadata(
 function createReactionEvents(
   choice: DecisionChoice,
   metadata: ReactionMetadata & { currentTarget: string },
-  causedBy: string
+  causedBy: string,
 ): { events: GameEvent[]; updatedBlockedTargets: string[] } {
   const revealedReaction = choice.cardActions?.["0"] === "reveal";
 
@@ -182,7 +183,7 @@ function processNextTarget(
   ctx: DecisionContext,
   currentEvents: GameEvent[],
   metadata: ReactionMetadata,
-  nextIndex: number
+  nextIndex: number,
 ): GameEvent[] | null {
   const nextTarget = metadata.allTargets[nextIndex];
   const midState = applyEvents(ctx.state, currentEvents);
@@ -192,7 +193,7 @@ function processNextTarget(
     const decisionEvent: GameEvent = {
       type: "DECISION_REQUIRED",
       decision: {
-        type: "card_decision",
+        choiceType: "decision",
         playerId: nextTarget,
         from: "hand",
         prompt: `${metadata.attacker} played ${metadata.attackCard}. Reveal a reaction?`,
@@ -249,7 +250,7 @@ function processNextTarget(
         },
       },
       [...currentEvents, autoResolveEvent],
-      { selectedCards: [] }
+      { selectedCards: [] },
     ) || [...currentEvents, autoResolveEvent]
   );
 }
@@ -257,10 +258,10 @@ function processNextTarget(
 function applyAttackToResolvedTargets(
   ctx: DecisionContext,
   currentEvents: GameEvent[],
-  metadata: ReactionMetadata
+  metadata: ReactionMetadata,
 ): GameEvent[] {
   const resolvedTargets = metadata.allTargets.filter(
-    t => !metadata.blockedTargets.includes(t)
+    t => !metadata.blockedTargets.includes(t),
   );
   const midState = applyEvents(ctx.state, currentEvents);
 
@@ -303,7 +304,7 @@ function applyAttackToResolvedTargets(
 function handleAutoReaction(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
-  choice: DecisionChoice
+  choice: DecisionChoice,
 ): GameEvent[] | null {
   if (!ctx.stage?.startsWith("__auto_reaction__")) return null;
 
@@ -312,7 +313,7 @@ function handleAutoReaction(
     createReactionEvents(
       choice,
       metadata,
-      ctx.originalCause || ctx.rootEventId
+      ctx.originalCause || ctx.rootEventId,
     );
 
   const currentEvents = [...baseEvents, ...reactionEvents];
@@ -332,7 +333,7 @@ function handleAutoReaction(
 function handleCardEffectContinuation(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
-  choice: DecisionChoice
+  choice: DecisionChoice,
 ): GameEvent[] {
   // Reactions are now handled by handle-reaction.ts, not here
   if (!ctx.cardBeingPlayed) return baseEvents;
@@ -393,7 +394,7 @@ function handleCardEffectContinuation(
 export function handleSubmitDecision(
   state: GameState,
   playerId: PlayerId,
-  choice: DecisionChoice
+  choice: DecisionChoice,
 ): CommandResult {
   if (!state.pendingChoice) {
     return { ok: false, error: "No pending decision" };
@@ -421,7 +422,7 @@ export function handleSubmitDecision(
       playerId,
       choice,
     },
-    state.pendingChoiceEventId || undefined
+    state.pendingChoiceEventId || undefined,
   );
   const rootEventId = builder.getRootId();
   const baseEvents = builder.build();
@@ -446,7 +447,7 @@ export function handleSubmitDecision(
       ctx,
       baseEvents,
       throneRoomTarget,
-      executionsRemaining
+      executionsRemaining,
     );
     return { ok: true, events };
   }
@@ -461,7 +462,7 @@ export function handleSubmitDecision(
 
 export function handleSkipDecision(
   state: GameState,
-  playerId: PlayerId
+  playerId: PlayerId,
 ): CommandResult {
   if (!state.pendingChoice) {
     return { ok: false, error: "No pending decision" };
@@ -493,7 +494,7 @@ export function handleSkipDecision(
       cardBeingPlayed,
       stage,
     },
-    state.pendingChoiceEventId || undefined
+    state.pendingChoiceEventId || undefined,
   );
   const rootEventId = builder.getRootId();
   const skipEvent = builder.build();

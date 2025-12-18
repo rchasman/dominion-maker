@@ -410,7 +410,11 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
     case "CARD_GAINED":
       return cardGainedToLogEntry(event);
     case "DECK_SHUFFLED":
-      return { type: "shuffle-deck", playerId: event.playerId, eventId: event.id };
+      return {
+        type: "shuffle-deck",
+        playerId: event.playerId,
+        eventId: event.id,
+      };
     case "CARD_RETURNED_TO_HAND":
       return cardReturnedToHandToLogEntry(event);
     default:

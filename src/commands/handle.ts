@@ -23,7 +23,7 @@ import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
 export function handleCommand(
   state: GameState,
   command: GameCommand,
-  fromPlayer?: PlayerId
+  fromPlayer?: PlayerId,
 ): CommandResult {
   // Validate player turn (unless it's a decision response or undo)
   if (fromPlayer && !isValidPlayer(state, command, fromPlayer)) {
@@ -36,7 +36,7 @@ export function handleCommand(
         state,
         command.players,
         command.kingdomCards,
-        command.seed
+        command.seed,
       );
 
     case "PLAY_ACTION":
@@ -74,7 +74,7 @@ export function handleCommand(
         state,
         command.playerId,
         command.toEventId,
-        command.reason
+        command.reason,
       );
 
     case "APPROVE_UNDO":
@@ -96,7 +96,7 @@ export function handleCommand(
 function isValidPlayer(
   state: GameState,
   command: GameCommand,
-  fromPlayer: PlayerId
+  fromPlayer: PlayerId,
 ): boolean {
   // Decision responses can come from the decision's player
   if (command.type === "SUBMIT_DECISION" || command.type === "SKIP_DECISION") {
