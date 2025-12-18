@@ -136,6 +136,14 @@ export const MODELS: ModelConfig[] = [
     inputPrice: 0.11,
     outputPrice: 0.34,
   },
+  {
+    id: "glm-4.6",
+    fullName: "zai/glm-4.6",
+    provider: "zai",
+    color: "#22d3ee",
+    inputPrice: 0.4,
+    outputPrice: 1.75,
+  },
 ];
 
 // Derived exports
@@ -155,6 +163,7 @@ export const MODEL_IDS = [
   "cerebras-llama-3.3-70b",
   "groq-llama-3.3-70b",
   "groq-llama-4-scout",
+  "glm-4.6",
 ] as const;
 export type ModelProvider = (typeof MODEL_IDS)[number];
 

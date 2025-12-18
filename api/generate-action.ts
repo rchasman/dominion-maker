@@ -170,7 +170,7 @@ function getDevToolsMiddleware(
 }
 
 // Models that don't support structured output well - use tool calling instead
-const TOOL_CALLING_MODELS = new Set<string>([]);
+const TOOL_CALLING_MODELS = new Set(["glm-4.6"]);
 
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
@@ -184,6 +184,15 @@ function getProviderOptions(providerId: string) {
         gateway: {
           only: [modelConfig.provider],
         },
+      },
+    };
+  }
+
+  // GLM models benefit from explicit JSON mode
+  if (providerId === "glm-4.6") {
+    return {
+      providerOptions: {
+        response_format: { type: "json_object" },
       },
     };
   }
