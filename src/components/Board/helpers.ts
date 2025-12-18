@@ -4,27 +4,56 @@ import { getPlayersForMode } from "../../types/game-mode";
 import { isActionCard, isTreasureCard } from "../../data/cards";
 import { DEFAULT_DECISION_MAX } from "./constants";
 
+export interface PlayerPerspective {
+  localPlayerId: Player;
+  opponentPlayerId: Player;
+  allPlayerIds: readonly Player[];
+}
+
+/**
+ * Get player IDs organized from the perspective of the local player.
+ * Returns the local player, their opponent, and all player IDs.
+ */
+export function getPlayerPerspective(
+  state: GameState | null,
+  gameMode: GameMode,
+  localPlayerId?: string | null,
+): PlayerPerspective {
+  // Get all player IDs
+  let playerIds: Player[];
+  if (!state) {
+    playerIds = gameMode === "multiplayer"
+      ? ["player0", "player1"]
+      : (getPlayersForMode(gameMode) as Player[]);
+  } else {
+    playerIds = Object.keys(state.players) as Player[];
+  }
+
+  // In multiplayer, reorder so local player is first
+  if (gameMode === "multiplayer" && localPlayerId) {
+    const localIndex = playerIds.indexOf(localPlayerId as Player);
+    if (localIndex > 0) {
+      playerIds = [localPlayerId as Player, ...playerIds.filter(id => id !== localPlayerId)];
+    }
+  }
+
+  return {
+    localPlayerId: playerIds[0],
+    opponentPlayerId: playerIds[1],
+    allPlayerIds: playerIds,
+  };
+}
+
+/**
+ * @deprecated Use getPlayerPerspective() instead for clearer intent
+ */
 export function getPlayerIds(
   state: GameState | null,
   gameMode: GameMode,
   localPlayerId?: string | null,
 ): readonly string[] {
-  if (!state) {
-    if (gameMode === "multiplayer") return ["player0", "player1"] as const;
-    return getPlayersForMode(gameMode);
-  }
-
-  const playerIds = Object.keys(state.players);
-
-  // In multiplayer, reorder so local player is first (index 0)
-  if (gameMode === "multiplayer" && localPlayerId) {
-    const localIndex = playerIds.indexOf(localPlayerId);
-    if (localIndex > 0) {
-      return [localPlayerId, ...playerIds.filter(id => id !== localPlayerId)];
-    }
-  }
-
-  return playerIds;
+  const perspective = getPlayerPerspective(state, gameMode, localPlayerId);
+  return perspective.allPlayerIds;
 }
 
 export function canSkipDecision(

@@ -2,8 +2,8 @@ import type { GameState, Player } from "../../types/game-state";
 import type { GameMode } from "../../types/game-mode";
 import { isAIControlled } from "../../lib/game-mode-utils";
 import { countVP, getAllCards } from "../../lib/board-utils";
-import { getPlayerIds, getHintText, canBuyCards } from "./helpers";
-import { MAIN_PLAYER_INDEX, OPPONENT_PLAYER_INDEX } from "./constants";
+import { getPlayerPerspective, getHintText, canBuyCards } from "./helpers";
+import type { PlayerPerspective } from "./helpers";
 
 interface BoardStateParams {
   state: GameState;
@@ -19,7 +19,7 @@ interface BoardStateParams {
 
 export interface BoardState {
   displayState: GameState;
-  playerIds: Player[];
+  playerPerspective: PlayerPerspective;
   localPlayerId: Player;
   opponentPlayerId: Player;
   isLocalPlayerTurn: boolean;
@@ -47,9 +47,8 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   } = params;
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
-  const playerIds = getPlayerIds(state, gameMode, localPlayerId);
-  const resolvedLocalPlayerId = playerIds[MAIN_PLAYER_INDEX];
-  const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX];
+  const playerPerspective = getPlayerPerspective(state, gameMode, localPlayerId);
+  const { localPlayerId: resolvedLocalPlayerId, opponentPlayerId } = playerPerspective;
 
   const isLocalPlayerTurn =
     !isSpectator && displayState.activePlayer === resolvedLocalPlayerId;
@@ -81,7 +80,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
 
   const result: BoardState = {
     displayState,
-    playerIds,
+    playerPerspective,
     localPlayerId: resolvedLocalPlayerId,
     opponentPlayerId,
     isLocalPlayerTurn,
