@@ -1,5 +1,5 @@
 import type { DominionEngine } from "../engine/engine";
-import type { CardName, DecisionRequest } from "../types/game-state";
+import type { CardName, PendingChoice } from "../types/game-state";
 
 /**
  * Helper functions for multi-round consensus decision reconstruction.
@@ -19,7 +19,7 @@ export function simulateCardSelection(
   card: CardName,
 ): DominionEngine {
   const state = { ...engine.state };
-  const decision = state.pendingDecision;
+  const decision = state.pendingChoice;
 
   if (!decision) return engine;
 
@@ -37,7 +37,7 @@ export function simulateCardSelection(
     ...engine,
     state: {
       ...state,
-      pendingDecision: {
+      pendingChoice: {
         ...decision,
         cardOptions: updatedOptions,
       },
@@ -49,7 +49,7 @@ export function simulateCardSelection(
  * Check if a decision is batch-capable (requires reconstruction).
  */
 export function isBatchDecision(
-  decision: DecisionRequest | null | undefined,
+  decision: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
 ): boolean {
   return !!decision && decision.type === "card_decision" && decision.max > 1;
 }
@@ -59,7 +59,7 @@ export function isBatchDecision(
  * These require multi-round consensus where AI votes on each card individually.
  */
 export function isMultiActionDecision(
-  decision: DecisionRequest | null | undefined,
+  decision: Extract<PendingChoice, { choiceType: "decision" }> | null | undefined,
 ): boolean {
   return !!(
     decision?.actions &&

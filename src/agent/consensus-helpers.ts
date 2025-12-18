@@ -2,7 +2,7 @@
  * Consensus system helpers for multi-model voting and execution
  */
 
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { Action } from "../types/action";
 import { stripReasoning } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
@@ -74,7 +74,7 @@ export type ConsensusWinnerResult = {
 
 export type ConsensusStartParams = {
   currentState: GameState;
-  playerId: string;
+  playerId: PlayerId;
   providers: ModelProvider[];
   legalActions: Action[];
   logger?: LLMLogger;

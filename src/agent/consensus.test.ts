@@ -3,6 +3,7 @@ import { advanceGameStateWithConsensus } from "./game-agent";
 import { DominionEngine } from "../engine";
 import { resetEventCounter } from "../events/id-generator";
 import type { LLMLogEntry } from "../components/LLMLog";
+import { isDecisionChoice } from "../types/game-state";
 
 describe("Consensus System", () => {
   beforeEach(() => {
@@ -80,7 +81,7 @@ describe("Consensus System", () => {
         result =>
           result.reasonings &&
           result.reasonings.length > 0 &&
-          result.reasonings.some(r => r.reasoning === "Test reasoning"),
+          result.reasonings.some(r => r.reasoning === "Test reasoning")
       );
       expect(hasReasoning).toBe(true);
     } finally {
@@ -107,13 +108,16 @@ describe("Consensus System", () => {
     // Play Chapel to create batch decision
     const playResult = engine.dispatch({
       type: "PLAY_ACTION",
-      player: "player1",
+      playerId: "player1",
       card: "Chapel",
     });
 
     expect(playResult.ok).toBe(true);
-    expect(engine.state.pendingDecision).toBeDefined();
-    expect(engine.state.pendingDecision?.max).toBe(4);
+    expect(engine.state.pendingChoice).toBeDefined();
+    expect(isDecisionChoice(engine.state.pendingChoice)).toBe(true);
+    if (isDecisionChoice(engine.state.pendingChoice)) {
+      expect(engine.state.pendingChoice.max).toBe(4);
+    }
 
     let roundCount = 0;
     const votedActions: string[] = [];
@@ -138,7 +142,7 @@ describe("Consensus System", () => {
         const action =
           responses[Math.min(roundCount - 1, responses.length - 1)];
         votedActions.push(
-          `${action.type}${action.card ? `(${action.card})` : ""}`,
+          `${action.type}${action.card ? `(${action.card})` : ""}`
         );
 
         return Promise.resolve({
@@ -170,12 +174,12 @@ describe("Consensus System", () => {
 
       // Verify Copper appears twice in trash (had 2 in hand)
       const coppersInTrash = engine.state.trash.filter(
-        c => c === "Copper",
+        c => c === "Copper"
       ).length;
       expect(coppersInTrash).toBe(2);
 
       // Verify no pending decision (Chapel finished)
-      expect(engine.state.pendingDecision).toBeNull();
+      expect(engine.state.pendingChoice).toBeNull();
     } finally {
       global.fetch = originalFetch;
     }

@@ -7,7 +7,7 @@ import type { GameState, PlayerState } from "../types/game-state";
 
 function createMockGameState(
   activePlayer: string,
-  playerIds: string[],
+  playerIds: string[]
 ): GameState {
   const players: Record<string, PlayerState> = {};
 
@@ -43,8 +43,8 @@ function createMockGameState(
     winner: null,
     turnHistory: [],
     kingdomCards: [],
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
   };
 }
 
@@ -233,18 +233,23 @@ describe("buildStrategicContext", () => {
 
       // Add some log entries
       state.log = [
-        { type: "turn-start", turn: 1, player: "human" },
+        { type: "turn-start", turn: 1, playerId: "human" },
         {
           type: "play-action",
-          player: "human",
+          playerId: "human",
           card: "Village",
           reasoning: "",
         },
-        { type: "play-action", player: "human", card: "Smithy", reasoning: "" },
-        { type: "buy-card", player: "human", card: "Silver", reasoning: "" },
-        { type: "turn-start", turn: 2, player: "ai" },
-        { type: "play-action", player: "ai", card: "Market", reasoning: "" },
-        { type: "buy-card", player: "ai", card: "Gold", reasoning: "" },
+        {
+          type: "play-action",
+          playerId: "human",
+          card: "Smithy",
+          reasoning: "",
+        },
+        { type: "buy-card", playerId: "human", card: "Silver", reasoning: "" },
+        { type: "turn-start", turn: 2, playerId: "ai" },
+        { type: "play-action", playerId: "ai", card: "Market", reasoning: "" },
+        { type: "buy-card", playerId: "ai", card: "Gold", reasoning: "" },
       ];
 
       const formatted = formatTurnHistoryForAnalysis(state);
@@ -252,7 +257,7 @@ describe("buildStrategicContext", () => {
       expect(formatted).toContain("RECENT TURN HISTORY:");
       // TOON format should be compact
       expect(formatted).toContain("turn:");
-      expect(formatted).toContain("player:");
+      expect(formatted).toContain("playerId:");
       expect(formatted).toContain("Village");
       expect(formatted).toContain("Silver");
     });
@@ -273,7 +278,7 @@ describe("buildStrategicContext", () => {
       state.log = Array.from({ length: 10 }, (_, i) => ({
         type: "turn-start" as const,
         turn: i + 1,
-        player: i % 2 === 0 ? "human" : "ai",
+        playerId: i % 2 === 0 ? "human" : "ai",
       }));
 
       const formatted3 = formatTurnHistoryForAnalysis(state, "toon", 3);

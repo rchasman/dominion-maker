@@ -1,4 +1,4 @@
-import type { GameState, LogEntry, CardName } from "../types/game-state";
+import type { GameState, LogEntry, CardName, PlayerId } from "../types/game-state";
 import { run } from "../lib/run";
 import { encodeToon } from "../lib/toon";
 
@@ -14,7 +14,7 @@ type StrategicFacts = {
  * Extracts recent turn actions from game log for strategy analysis
  */
 interface TurnSummary {
-  player: string;
+  playerId: PlayerId;
   turn: number;
   actionsPlayed: CardName[];
   treasuresPlayed: CardName[];
@@ -38,7 +38,7 @@ export const DEFAULT_STRATEGY = {
 
 function extractRecentTurns(
   log: LogEntry[],
-  lastNTurns = DEFAULT_LAST_N_TURNS,
+  lastNTurns = DEFAULT_LAST_N_TURNS
 ): TurnSummary[] {
   interface TurnState {
     turnMap: Map<string, TurnSummary>;
@@ -50,12 +50,12 @@ function extractRecentTurns(
     (state, entry) => {
       if (entry.type === "turn-start") {
         const newTurn = entry.turn;
-        const newPlayer = entry.player;
+        const newPlayer = entry.playerId;
         const key = `${newPlayer}-${newTurn}`;
         if (!state.turnMap.has(key)) {
           const newTurnMap = new Map(state.turnMap);
           newTurnMap.set(key, {
-            player: newPlayer,
+            playerId: newPlayer,
             turn: newTurn,
             actionsPlayed: [],
             treasuresPlayed: [],
@@ -73,7 +73,7 @@ function extractRecentTurns(
 
       if (state.currentTurn === 0) return state;
 
-      const player = "player" in entry ? entry.player : state.currentPlayer;
+      const player = "playerId" in entry ? entry.playerId : state.currentPlayer;
       const key = `${player}-${state.currentTurn}`;
       const summary = state.turnMap.get(key);
       if (!summary) return state;
@@ -101,11 +101,11 @@ function extractRecentTurns(
       turnMap: new Map<string, TurnSummary>(),
       currentTurn: 0,
       currentPlayer: "",
-    },
+    }
   );
 
   const allSummaries = Array.from(turnMap.values()).sort(
-    (a, b) => b.turn - a.turn,
+    (a, b) => b.turn - a.turn
   );
   return allSummaries.slice(0, lastNTurns * SUMMARIES_PER_TURN);
 }
@@ -121,7 +121,7 @@ function extractRecentTurns(
 export function formatTurnHistoryForAnalysis(
   state: GameState,
   format: "json" | "toon" = "toon",
-  turnCount = DEFAULT_LAST_N_TURNS,
+  turnCount = DEFAULT_LAST_N_TURNS
 ): string {
   const recentTurns = extractRecentTurns(state.log, turnCount);
 
@@ -133,7 +133,7 @@ export function formatTurnHistoryForAnalysis(
   const activePlayerId = state.activePlayer;
   const compactTurns = recentTurns.map(turn => ({
     turn: turn.turn,
-    player: turn.player === activePlayerId ? "you" : "opponent",
+    playerId: turn.playerId === activePlayerId ? "you" : "opponent",
     actions: turn.actionsPlayed.length > 0 ? turn.actionsPlayed : null,
     bought: turn.cardsBought.length > 0 ? turn.cardsBought : null,
   }));
@@ -162,7 +162,7 @@ export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
   customStrategy?: string,
-  format: "json" | "toon" = "toon",
+  format: "json" | "toon" = "toon"
 ): string {
   // Strategic insights only - AI strategy analysis
   const facts: StrategicFacts = {};
