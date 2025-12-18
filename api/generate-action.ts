@@ -170,7 +170,7 @@ function getDevToolsMiddleware(
 }
 
 // Models that don't support structured output well - use tool calling instead
-const TOOL_CALLING_MODELS = new Set(["llama-3.1-8b", "nova-micro"]);
+const TOOL_CALLING_MODELS = new Set(["nova-micro"]);
 
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
