@@ -80,7 +80,9 @@ export function handleRevealReaction(
   });
 
   // Update metadata for next target
-  const updatedMetadata = {
+  const updatedMetadata: ReactionMetadata = {
+    attackCard: reaction.attackCard,
+    attacker: reaction.attacker,
     ...reaction.metadata!,
     blockedTargets: [...reaction.metadata!.blockedTargets, playerId],
   };
@@ -164,12 +166,19 @@ export function handleDeclineReaction(
     causedBy: rootEventId,
   });
 
+  // Prepare metadata with attackCard included
+  const fullMetadata: ReactionMetadata = {
+    attackCard: reaction.attackCard,
+    attacker: reaction.attacker,
+    ...reaction.metadata!,
+  };
+
   // Check if more targets need reactions
   const nextIndex = reaction.metadata!.currentTargetIndex + 1;
   if (nextIndex < reaction.metadata!.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
-      reaction.metadata!,
+      fullMetadata,
       nextIndex,
       reaction.metadata!.originalCause,
     );
@@ -182,7 +191,7 @@ export function handleDeclineReaction(
       const midState = applyEvents(state, events);
       const attackEvents = applyAttackToUnblockedTargets(
         midState,
-        reaction.metadata!,
+        fullMetadata,
         reaction.metadata!.originalCause,
       );
       events.push(...attackEvents);
@@ -192,7 +201,7 @@ export function handleDeclineReaction(
     const midState = applyEvents(state, events);
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
-      reaction.metadata!,
+      fullMetadata,
       reaction.metadata!.originalCause,
     );
     events.push(...attackEvents);
