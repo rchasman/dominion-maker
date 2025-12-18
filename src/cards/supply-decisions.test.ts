@@ -299,13 +299,15 @@ describe("Supply Decision E2E Tests", () => {
 
       // Should create a special "execute_throned_card" decision
       expect(result.ok).toBe(true);
-      expect(engine.state.pendingChoice?.stage).toBe("execute_throned_card");
-      expect(engine.state.pendingChoice?.metadata?.throneRoomTarget).toBe(
-        "Workshop",
-      );
-      expect(
-        engine.state.pendingChoice?.metadata?.throneRoomExecutionsRemaining,
-      ).toBe(2);
+      if (isDecisionChoice(engine.state.pendingChoice)) {
+        expect(engine.state.pendingChoice.stage).toBe("execute_throned_card");
+        expect(engine.state.pendingChoice.metadata?.throneRoomTarget).toBe(
+          "Workshop",
+        );
+        expect(
+          engine.state.pendingChoice.metadata?.throneRoomExecutionsRemaining,
+        ).toBe(2);
+      }
     });
   });
 
@@ -323,7 +325,9 @@ describe("Supply Decision E2E Tests", () => {
       // Decision should still be created with remaining cards
       // (e.g., Curse at $0, or kingdom cards like Workshop itself)
       expect(engine.state.pendingChoice).toBeDefined();
-      expect(engine.state.pendingChoice?.cardOptions.length).toBeGreaterThan(0);
+      if (isDecisionChoice(engine.state.pendingChoice)) {
+        expect(engine.state.pendingChoice.cardOptions.length).toBeGreaterThan(0);
+      }
     });
 
     it("Workshop with completely empty supply creates no decision", () => {

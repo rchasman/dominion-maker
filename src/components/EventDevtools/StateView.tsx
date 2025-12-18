@@ -1,5 +1,6 @@
 import type { GameState } from "../../types/game-state";
 import { styles } from "./constants";
+import { isDecisionChoice } from "../../types/pending-choice";
 
 interface StateViewProps {
   state: GameState;
@@ -76,10 +77,12 @@ export function StateView({ state }: StateViewProps) {
               {state.pendingChoice.playerId}
             </span>
           </div>
-          <div style={styles.stateRow}>
-            <span>Prompt:</span>{" "}
-            <span style={styles.stateValue}>{state.pendingChoice.prompt}</span>
-          </div>
+          {isDecisionChoice(state.pendingChoice) && (
+            <div style={styles.stateRow}>
+              <span>Prompt:</span>{" "}
+              <span style={styles.stateValue}>{state.pendingChoice.prompt}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

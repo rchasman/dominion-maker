@@ -10,6 +10,7 @@ import { generateEventId } from "../events/id-generator";
 import { applyEvents } from "../events/apply";
 import { getCardEffect } from "../cards/base";
 import { getAvailableReactions } from "../cards/effect-types";
+import { isReactionChoice } from "../types/pending-choice";
 
 type ReactionMetadata = {
   attackCard: CardName;
@@ -31,7 +32,7 @@ export function handleRevealReaction(
   const reaction = state.pendingChoice;
 
   // Validation
-  if (!reaction) {
+  if (!isReactionChoice(reaction)) {
     return { ok: false, error: "No pending reaction" };
   }
 
@@ -118,7 +119,7 @@ export function handleDeclineReaction(
   const reaction = state.pendingChoice;
 
   // Validation
-  if (!reaction) {
+  if (!isReactionChoice(reaction)) {
     return { ok: false, error: "No pending reaction" };
   }
 

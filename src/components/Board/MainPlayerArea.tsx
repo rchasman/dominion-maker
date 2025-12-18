@@ -7,6 +7,7 @@ import { getPlayerPerspective } from "../../lib/player-utils";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
+import { isDecisionChoice, isReactionChoice } from "../../types/pending-choice";
 
 interface MainPlayerAreaProps {
   localPlayer: GameState["players"][PlayerId];
@@ -80,7 +81,7 @@ export function MainPlayerArea({
         gameState={displayState}
       />
 
-      {displayState.pendingChoice &&
+      {isDecisionChoice(displayState.pendingChoice) &&
         displayState.pendingChoice.actions &&
         displayState.pendingChoice.playerId === localPlayerId &&
         !isPreviewMode && (
@@ -92,8 +93,7 @@ export function MainPlayerArea({
           />
         )}
 
-      {displayState.pendingChoice &&
-        displayState.pendingChoice.choiceType === "reaction" &&
+      {isReactionChoice(displayState.pendingChoice) &&
         displayState.pendingChoice.playerId === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal

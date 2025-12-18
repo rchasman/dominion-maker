@@ -1,4 +1,5 @@
 import type { GameState, PlayerId } from "../../types/game-state";
+import { isDecisionChoice, isReactionChoice } from "../../types/pending-choice";
 
 interface GetHintTextParams {
   displayState: GameState;
@@ -17,7 +18,7 @@ export function getHintText({
 }: GetHintTextParams): string {
   // Check for pending reaction first
   if (
-    displayState.pendingChoice &&
+    isReactionChoice(displayState.pendingChoice) &&
     displayState.pendingChoice.playerId === localPlayerId
   ) {
     const { attackCard, attacker } = displayState.pendingChoice;
@@ -25,7 +26,7 @@ export function getHintText({
   }
 
   if (
-    displayState.pendingChoice &&
+    isDecisionChoice(displayState.pendingChoice) &&
     displayState.pendingChoice.playerId === localPlayerId
   ) {
     return displayState.pendingChoice.prompt;

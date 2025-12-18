@@ -12,6 +12,7 @@ import {
   type LLMLogger,
   type ModelSettings,
 } from "../agent/game-agent";
+import { isDecisionChoice } from "../types/pending-choice";
 
 /**
  * MAKER: Uses multi-model consensus voting for AI turns
@@ -73,13 +74,13 @@ export class MakerStrategy implements GameStrategy {
     const pendingChoice = engine.state.pendingChoice;
 
     // Log ai-decision-resolving to create a new "turn" in consensus viewer
-    if (pendingChoice) {
+    if (isDecisionChoice(pendingChoice)) {
       this.logger?.({
         type: "ai-decision-resolving",
-        message: `AI resolving ${pendingChoice.type}`,
+        message: `AI resolving ${pendingChoice.cardBeingPlayed}`,
         data: {
           turn: engine.state.turn,
-          decisionType: pendingChoice.type,
+          decisionType: pendingChoice.cardBeingPlayed,
           prompt: pendingChoice.prompt,
         },
       });

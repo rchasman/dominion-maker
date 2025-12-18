@@ -10,6 +10,7 @@ import { canSkipDecision } from "../lib/decision-utils";
 import { useAnimationSafe } from "../animation";
 import { useGame } from "../context/hooks";
 import { getPlayerPerspective } from "../lib/player-utils";
+import { isDecisionChoice } from "../types/pending-choice";
 
 const KINGDOM_GRID_COLUMNS = 5;
 
@@ -554,7 +555,7 @@ export function Supply({
         >
           {run(() => {
             if (onConfirmDecision && hasPendingDecision) {
-              const minRequired = state.pendingChoice?.min ?? 0;
+              const minRequired = isDecisionChoice(state.pendingChoice) ? (state.pendingChoice.min ?? 0) : 0;
               return (
                 <>
                   <ConfirmButton

@@ -442,7 +442,7 @@ async function handleMultiActionConsensus(
 
       const roundState: GameState = {
         ...engine.state,
-        pendingChoice: engine.state.pendingChoice
+        pendingChoice: isDecisionChoice(engine.state.pendingChoice)
           ? {
               ...engine.state.pendingChoice,
               prompt: `${engine.state.pendingChoice.prompt} (Card ${
@@ -453,7 +453,7 @@ async function handleMultiActionConsensus(
                 currentRoundIndex: roundIndex,
               },
             }
-          : null,
+          : engine.state.pendingChoice,
       };
 
       const legalActions = getLegalActions(roundState);

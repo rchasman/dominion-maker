@@ -13,6 +13,7 @@ import {
   getStringArrayFromMetadata,
   getStringFromMetadata,
 } from "../lib/metadata-helpers";
+import { isDecisionChoice } from "../types/pending-choice";
 
 // Type guard for CardName - validates that a string is a known card
 function isCardName(card: string): card is CardName {
@@ -534,7 +535,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             playerId,
-            state.pendingChoice?.cardBeingPlayed || ("" as CardName),
+            isDecisionChoice(state.pendingChoice) ? state.pendingChoice.cardBeingPlayed : ("" as CardName),
           ),
         };
       }
@@ -589,7 +590,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
             rest,
             remainingTargets,
             attackingPlayer,
-            state.pendingChoice?.cardBeingPlayed || ("" as CardName),
+            isDecisionChoice(state.pendingChoice) ? state.pendingChoice.cardBeingPlayed : ("" as CardName),
           ),
         };
       }
