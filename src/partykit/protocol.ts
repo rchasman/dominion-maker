@@ -25,8 +25,8 @@ export interface LobbyPlayer {
 
 export interface GameRequest {
   id: string;
-  fromId: string;
-  toId: string;
+  fromId: PlayerId;
+  toId: PlayerId;
 }
 
 export interface ActiveGame {

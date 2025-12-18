@@ -9,9 +9,10 @@ import {
   applyDecisionEvent,
   applyGameEndEvent,
 } from "./apply-handlers";
+import type { PlayerId } from "../types/game-state";
 
 // Helper to create the players record with proper typing
-function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
+function createPlayersRecord(playerIds: PlayerId[]): Record<PlayerId, PlayerState> {
   return playerIds.reduce(
     (players, playerId) => ({
       ...players,
@@ -23,7 +24,7 @@ function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
         inPlaySourceIndices: [],
       },
     }),
-    {} as Record<string, PlayerState>
+    {} as Record<PlayerId, PlayerState>
   );
 }
 

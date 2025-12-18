@@ -13,6 +13,7 @@ import type {
   LobbyClientMessage,
   LobbyServerMessage,
   GameUpdateMessage,
+  PlayerId,
 } from "./protocol";
 import { generateRoomId } from "../lib/room-id";
 
@@ -281,7 +282,7 @@ export default class LobbyServer implements Party.Server {
     this.broadcastRequests();
   }
 
-  private findRequest(fromId: string, toId: string): GameRequest | undefined {
+  private findRequest(fromId: PlayerId, toId: PlayerId): GameRequest | undefined {
     for (const req of this.requests.values()) {
       if (req.fromId === fromId && req.toId === toId) {
         return req;

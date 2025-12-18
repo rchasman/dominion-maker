@@ -1,11 +1,11 @@
 import { formatPlayerName } from "../../lib/board-utils";
 import { BaseModal } from "../Modal/BaseModal";
-import type { GameState } from "../../types/game-state";
+import type { GameState, PlayerId } from "../../types/game-state";
 
 interface GameOverModalProps {
-  winner: string | null;
-  localPlayerId: string;
-  opponentPlayerId: string;
+  winner: PlayerId | null;
+  localPlayerId: PlayerId;
+  opponentPlayerId: PlayerId;
   isLocalPlayerAI: boolean;
   isOpponentAI: boolean;
   localPlayerVP: number;

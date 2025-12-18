@@ -139,8 +139,8 @@ function createGameOverEvent(
   reason: "provinces_empty" | "three_piles_empty",
 ): GameEvent {
   type ScoreAccumulator = {
-    scores: Record<string, number>;
-    winner: string | null;
+    scores: Record<PlayerId, number>;
+    winner: PlayerId | null;
     maxScore: number;
   };
   const initialAcc: ScoreAccumulator = {
