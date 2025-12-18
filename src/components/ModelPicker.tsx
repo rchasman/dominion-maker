@@ -51,8 +51,6 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Groq Llama 4 Scout (412 tok/s)";
     case "glm-4.6":
       return "GLM-4.6";
-    case "nova-micro":
-      return "Nova Micro";
     default: {
       const _exhaustive: never = model;
       return String(_exhaustive);

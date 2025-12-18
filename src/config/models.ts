@@ -144,14 +144,6 @@ export const MODELS: ModelConfig[] = [
     inputPrice: 0.4,
     outputPrice: 1.75,
   },
-  {
-    id: "nova-micro",
-    fullName: "amazon/nova-micro",
-    provider: "amazon",
-    color: "#ff9900",
-    inputPrice: 0.03,
-    outputPrice: 0.05,
-  },
 ];
 
 // Derived exports
@@ -172,7 +164,6 @@ export const MODEL_IDS = [
   "groq-llama-3.3-70b",
   "groq-llama-4-scout",
   "glm-4.6",
-  "nova-micro",
 ] as const;
 export type ModelProvider = (typeof MODEL_IDS)[number];
 
