@@ -166,6 +166,16 @@ export function ModelSettingsPanel({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const typingTimeoutRef = useRef<number>();
 
+  // Ensure dataFormat has a default value
+  const dataFormat = settings.dataFormat || "toon";
+
+  // Ensure dataFormat is set to default on mount if undefined
+  useEffect(() => {
+    if (!settings.dataFormat) {
+      onChange({ ...settings, dataFormat: "toon" });
+    }
+  }, []);
+
   // Load conversation from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -310,7 +320,7 @@ export function ModelSettingsPanel({
                 cursor: "pointer",
                 fontSize: "0.8125rem",
                 color:
-                  settings.dataFormat === format
+                  dataFormat === format
                     ? "var(--color-text-primary)"
                     : "var(--color-text-secondary)",
               }}
@@ -319,7 +329,7 @@ export function ModelSettingsPanel({
                 type="radio"
                 name="dataFormat"
                 value={format}
-                checked={settings.dataFormat === format}
+                checked={dataFormat === format}
                 onChange={e =>
                   onChange({
                     ...settings,
