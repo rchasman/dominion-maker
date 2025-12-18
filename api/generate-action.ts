@@ -1,4 +1,4 @@
-import { generateObject, generateText, gateway, tool, wrapLanguageModel } from "ai";
+import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName, PlayerState } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
@@ -169,9 +169,6 @@ function getDevToolsMiddleware(
   return entry.middleware;
 }
 
-// Models that don't support structured output well - use tool calling instead
-const TOOL_CALLING_MODELS = new Set(["glm-4.6"]);
-
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
   const modelConfig = MODELS.find(m => m.id === providerId);
@@ -187,15 +184,6 @@ function getProviderOptions(providerId: string) {
       },
     };
   }
-
-  // GLM models - don't use response_format with tool calling as it conflicts
-  // if (providerId === "glm-4.6") {
-  //   return {
-  //     providerOptions: {
-  //       response_format: { type: "json_object" },
-  //     },
-  //   };
-  // }
 
   return {};
 }
@@ -427,84 +415,6 @@ function buildUserMessage(params: {
   return sections.join("\n\n");
 }
 
-// Try to recover from model generation errors
-function tryRecoverFromError(
-  err: unknown,
-  provider: string,
-  res: VercelResponse,
-): VercelResponse | undefined {
-  const strategySummary = undefined as string | undefined;
-
-  // Type guard: check if error is an object
-  if (typeof err !== "object" || err === null) {
-    return undefined;
-  }
-
-  const errorRecord = err as Record<string, unknown>;
-
-  // Handle Gemini wrapping response in extra "action" key
-  if (
-    errorRecord.value &&
-    typeof errorRecord.value === "object" &&
-    errorRecord.value !== null
-  ) {
-    const valueRecord = errorRecord.value as Record<string, unknown>;
-    if (valueRecord.action && provider.includes("gemini")) {
-      try {
-        const validated = ActionSchema.parse(valueRecord.action);
-        return res.status(HTTP_OK).json({ action: validated, strategySummary });
-      } catch {
-        apiLogger.error(`${provider} recovery failed`);
-      }
-    }
-  }
-
-  // Handle models that wrap response in "answer" or "action" field (e.g., glm-4.6)
-  if (errorRecord.text && typeof errorRecord.text === "string") {
-    try {
-      const parsed = JSON.parse(errorRecord.text);
-
-      // Check for {"answer": "{...JSON...}"} pattern (string wrapper)
-      if (parsed.answer && typeof parsed.answer === "string") {
-        const innerParsed = JSON.parse(parsed.answer);
-        const validated = ActionSchema.parse(innerParsed);
-        apiLogger.info(`${provider} recovered from answer string wrapper`);
-        return res.status(HTTP_OK).json({ action: validated, strategySummary });
-      }
-
-      // Check for {"answer": {...}} pattern (object wrapper)
-      if (parsed.answer && typeof parsed.answer === "object") {
-        const validated = ActionSchema.parse(parsed.answer);
-        apiLogger.info(`${provider} recovered from answer object wrapper`);
-        return res.status(HTTP_OK).json({ action: validated, strategySummary });
-      }
-
-      // Check for {"action": {...}} pattern (action wrapper)
-      if (parsed.action && typeof parsed.action === "object") {
-        const validated = ActionSchema.parse(parsed.action);
-        apiLogger.info(`${provider} recovered from action object wrapper`);
-        return res.status(HTTP_OK).json({ action: validated, strategySummary });
-      }
-
-      // Check if response is the schema definition itself (contains "$schema")
-      if (parsed.$schema) {
-        apiLogger.error(`${provider} returned schema definition instead of data`);
-        return undefined;
-      }
-
-      // Try direct parsing
-      const validated = ActionSchema.parse(parsed);
-      apiLogger.info(`${provider} recovered from text response`);
-      return res.status(HTTP_OK).json({ action: validated, strategySummary });
-    } catch (parseErr) {
-      apiLogger.error(`${provider} text recovery failed: ${parseErr}`);
-    }
-  }
-
-  // Try to recover from text fallback providers - skip for type safety
-  return undefined;
-}
-
 // Process request body and validate input
 async function processGenerationRequest(
   body: RequestBody,
@@ -560,80 +470,7 @@ async function processGenerationRequest(
     format,
   });
 
-  // Use tool calling for models with poor structured output support
-  if (TOOL_CALLING_MODELS.has(provider)) {
-    apiLogger.info(`${provider} using tool calling path`);
-    try {
-      const submitAction = tool({
-        description: "Submit the game action decision",
-        parameters: ActionSchema,
-      });
-
-      apiLogger.info(`${provider} calling generateText with tools`);
-
-      // Enhanced system prompt for tool calling models
-      const systemPrompt = `${buildSystemPrompt(currentState.supply)}
-
-TOOL CALLING INSTRUCTIONS:
-You MUST call the submitAction tool with the action parameters filled in.
-The tool expects an object with these fields:
-- type: one of the valid action types (play_action, play_treasure, buy_card, etc.)
-- card: the card name (if applicable)
-- reasoning: brief explanation of why you chose this action
-
-Example: {type: "play_action", card: "Smithy", reasoning: "Draw more cards"}
-
-Call the submitAction tool NOW with the complete action object.`;
-
-      const result = await generateText({
-        model,
-        system: systemPrompt,
-        prompt: userMessage,
-        tools: { submitAction },
-        toolChoice: "required",
-        maxToolRoundtrips: 1,
-        maxRetries: 0,
-        ...getProviderOptions(provider),
-      });
-
-      apiLogger.info(`${provider} generateText completed, checking tool calls`);
-      const toolCall = result.toolCalls[0];
-      if (!toolCall || toolCall.toolName !== "submitAction") {
-        apiLogger.error(`${provider} no valid tool call: ${JSON.stringify(result.toolCalls)}`);
-        throw new Error("No valid tool call received");
-      }
-
-      apiLogger.info(`${provider} tool call structure: ${JSON.stringify(toolCall, null, 2)}`);
-
-      // Handle both 'args' and 'input' field names (glm-4.6 uses 'input')
-      const toolArgs = (toolCall as any).args || (toolCall as any).input;
-      if (!toolArgs || Object.keys(toolArgs).length === 0) {
-        apiLogger.error(`${provider} tool call has empty arguments`);
-        throw new Error("Tool call received but arguments are empty");
-      }
-
-      const validated = ActionSchema.parse(toolArgs);
-      apiLogger.info(`${provider} used tool calling successfully`);
-
-      return res
-        .status(HTTP_OK)
-        .json({ action: validated, strategySummary, format });
-    } catch (err) {
-      const error = err as Error & { text?: string };
-      apiLogger.error(`${provider} tool calling failed: ${error.message}`);
-      if (error.text) {
-        apiLogger.error(`${provider} tool calling raw text: ${error.text.slice(0, 200)}`);
-      }
-
-      return res.status(HTTP_INTERNAL_ERROR).json({
-        error: "Tool calling generation failed",
-        provider,
-        message: error.message,
-      });
-    }
-  }
-
-  // Use generateObject with structured output for all other models
+  // Use generateObject with structured output for all models
   try {
     const result = await generateObject({
       model,
@@ -642,42 +479,6 @@ Call the submitAction tool NOW with the complete action object.`;
       prompt: userMessage,
       maxRetries: 0,
       ...getProviderOptions(provider),
-      experimental_repairText: async ({ text }) => {
-        try {
-          const parsed = JSON.parse(text);
-
-          // Detect schema definition echo (contains $schema property)
-          if (parsed.$schema) {
-            apiLogger.error(
-              `${provider} returned schema definition instead of data`,
-            );
-            return null; // Cannot repair - model fundamentally broken
-          }
-
-          // Unwrap glm-4.6 style wrappers (answer or action field)
-          // Case 1: {"answer": "{...JSON...}"} - string wrapper
-          if (parsed.answer && typeof parsed.answer === "string") {
-            apiLogger.info(`${provider} unwrapping answer string`);
-            return parsed.answer;
-          }
-
-          // Case 2: {"answer": {...}} - object wrapper
-          if (parsed.answer && typeof parsed.answer === "object") {
-            apiLogger.info(`${provider} unwrapping answer object`);
-            return JSON.stringify(parsed.answer);
-          }
-
-          // Case 3: {"action": {...}} - action wrapper
-          if (parsed.action && typeof parsed.action === "object") {
-            apiLogger.info(`${provider} unwrapping action object`);
-            return JSON.stringify(parsed.action);
-          }
-
-          return text; // Try as-is
-        } catch {
-          return text; // Not JSON, let normal parsing handle it
-        }
-      },
     });
 
     return res
@@ -694,12 +495,6 @@ Call the submitAction tool NOW with the complete action object.`;
           ERROR_TEXT_PREVIEW_LONG,
         )}`,
       );
-    }
-
-    // Try to recover from model-specific response formats
-    const recovered = tryRecoverFromError(err, provider, res);
-    if (recovered) {
-      return recovered;
     }
 
     return res.status(HTTP_INTERNAL_ERROR).json({
