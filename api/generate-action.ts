@@ -188,14 +188,14 @@ function getProviderOptions(providerId: string) {
     };
   }
 
-  // GLM models benefit from explicit JSON mode
-  if (providerId === "glm-4.6") {
-    return {
-      providerOptions: {
-        response_format: { type: "json_object" },
-      },
-    };
-  }
+  // GLM models - don't use response_format with tool calling as it conflicts
+  // if (providerId === "glm-4.6") {
+  //   return {
+  //     providerOptions: {
+  //       response_format: { type: "json_object" },
+  //     },
+  //   };
+  // }
 
   return {};
 }
@@ -562,12 +562,14 @@ async function processGenerationRequest(
 
   // Use tool calling for models with poor structured output support
   if (TOOL_CALLING_MODELS.has(provider)) {
+    apiLogger.info(`${provider} using tool calling path`);
     try {
       const submitAction = tool({
         description: "Submit the game action decision",
         parameters: ActionSchema,
       });
 
+      apiLogger.info(`${provider} calling generateText with tools`);
       const result = await generateText({
         model,
         system: buildSystemPrompt(currentState.supply),
@@ -579,12 +581,23 @@ async function processGenerationRequest(
         ...getProviderOptions(provider),
       });
 
+      apiLogger.info(`${provider} generateText completed, checking tool calls`);
       const toolCall = result.toolCalls[0];
       if (!toolCall || toolCall.toolName !== "submitAction") {
+        apiLogger.error(`${provider} no valid tool call: ${JSON.stringify(result.toolCalls)}`);
         throw new Error("No valid tool call received");
       }
 
-      const validated = ActionSchema.parse(toolCall.args);
+      apiLogger.info(`${provider} tool call structure: ${JSON.stringify(toolCall, null, 2)}`);
+
+      // Handle both 'args' and 'input' field names (glm-4.6 uses 'input')
+      const toolArgs = (toolCall as any).args || (toolCall as any).input;
+      if (!toolArgs || Object.keys(toolArgs).length === 0) {
+        apiLogger.error(`${provider} tool call has empty arguments`);
+        throw new Error("Tool call received but arguments are empty");
+      }
+
+      const validated = ActionSchema.parse(toolArgs);
       apiLogger.info(`${provider} used tool calling successfully`);
 
       return res
@@ -593,6 +606,9 @@ async function processGenerationRequest(
     } catch (err) {
       const error = err as Error & { text?: string };
       apiLogger.error(`${provider} tool calling failed: ${error.message}`);
+      if (error.text) {
+        apiLogger.error(`${provider} tool calling raw text: ${error.text.slice(0, 200)}`);
+      }
 
       return res.status(HTTP_INTERNAL_ERROR).json({
         error: "Tool calling generation failed",
