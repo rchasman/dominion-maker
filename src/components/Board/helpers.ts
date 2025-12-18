@@ -18,7 +18,7 @@ export function getHintText({
   // Check for pending reaction first
   if (
     displayState.pendingReaction &&
-    displayState.pendingReaction.defender === localPlayerId
+    displayState.pendingReaction.player === localPlayerId
   ) {
     const { attackCard, attacker } = displayState.pendingReaction;
     return `${attacker} played ${attackCard}. Reveal a reaction?`;

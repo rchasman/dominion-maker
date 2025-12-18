@@ -76,7 +76,7 @@ export type CardAction = {
 
 export type DecisionRequest = {
   type: "card_decision";
-  player: string;
+  playerId: string;
   prompt: string;
   cardOptions: CardName[];
   cardBeingPlayed: CardName;
@@ -270,7 +270,7 @@ export type LogEntry =
 
 // Reaction Request (first-class, separate from decisions)
 export type ReactionRequest = {
-  defender: string;
+  playerId: string; // The player who can react (unified with DecisionRequest)
   attacker: string;
   attackCard: CardName;
   availableReactions: CardName[];

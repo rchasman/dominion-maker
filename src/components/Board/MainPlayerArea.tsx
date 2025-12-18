@@ -85,7 +85,7 @@ export function MainPlayerArea({
         )}
 
       {displayState.pendingReaction &&
-        displayState.pendingReaction.defender === localPlayerId &&
+        displayState.pendingReaction.player === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal
             reactions={displayState.pendingReaction.availableReactions}

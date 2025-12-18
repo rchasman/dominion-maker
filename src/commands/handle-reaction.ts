@@ -50,7 +50,7 @@ export function handleRevealReaction(
   // REACTION_REVEALED event
   events.push({
     type: "REACTION_REVEALED",
-    defender: player,
+    player: player,
     card,
     attackCard: reaction.attackCard,
     id: generateEventId(),
@@ -133,7 +133,7 @@ export function handleDeclineReaction(
   // REACTION_DECLINED event
   events.push({
     type: "REACTION_DECLINED",
-    defender: player,
+    player: player,
     attackCard: reaction.attackCard,
     id: generateEventId(),
     causedBy: rootEventId,
@@ -191,7 +191,7 @@ function processNextTarget(
     return [
       {
         type: "REACTION_OPPORTUNITY",
-        defender: nextTarget,
+        player: nextTarget,
         attacker: metadata.attacker,
         attackCard: metadata.attackCard,
         availableReactions: reactions,

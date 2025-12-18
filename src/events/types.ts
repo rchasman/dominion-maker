@@ -202,7 +202,7 @@ export type ReactionPlayedEvent = EventMetadata & {
 // New reaction events (first-class)
 export type ReactionOpportunityEvent = EventMetadata & {
   type: "REACTION_OPPORTUNITY";
-  defender: PlayerId;
+  playerId: PlayerId; // The player who can react (unified with DecisionRequest)
   attacker: PlayerId;
   attackCard: CardName;
   availableReactions: CardName[];
@@ -216,14 +216,14 @@ export type ReactionOpportunityEvent = EventMetadata & {
 
 export type ReactionRevealedEvent = EventMetadata & {
   type: "REACTION_REVEALED";
-  defender: PlayerId;
+  playerId: PlayerId; // The player who revealed the reaction
   card: CardName;
   attackCard: CardName;
 };
 
 export type ReactionDeclinedEvent = EventMetadata & {
   type: "REACTION_DECLINED";
-  defender: PlayerId;
+  playerId: PlayerId; // The player who declined to react
   attackCard: CardName;
 };
 

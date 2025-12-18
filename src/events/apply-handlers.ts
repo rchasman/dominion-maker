@@ -249,7 +249,7 @@ export function applyReactionEvent(
     return {
       ...state,
       pendingReaction: {
-        defender: event.defender,
+        player: event.player,
         attacker: event.attacker,
         attackCard: event.attackCard,
         availableReactions: event.availableReactions,
@@ -268,8 +268,8 @@ export function applyReactionEvent(
         ...state.log,
         {
           type: "text",
-          player: event.defender,
-          message: `${event.defender} reveals ${event.card} to block ${event.attackCard}`,
+          player: event.player,
+          message: `${event.player} reveals ${event.card} to block ${event.attackCard}`,
           eventId: event.id,
         },
       ],
@@ -285,8 +285,8 @@ export function applyReactionEvent(
         ...state.log,
         {
           type: "text",
-          player: event.defender,
-          message: `${event.defender} declines to reveal a reaction to ${event.attackCard}`,
+          player: event.player,
+          message: `${event.player} declines to reveal a reaction to ${event.attackCard}`,
           eventId: event.id,
         },
       ],

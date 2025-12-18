@@ -57,7 +57,7 @@ export function orchestrateAttack(
           // Ask first target for reaction - continuation handled by handle-reaction
           const reactionEvent: GameEvent = {
             type: "REACTION_OPPORTUNITY",
-            defender: firstTarget,
+            player: firstTarget,
             attacker,
             attackCard,
             availableReactions: reactions,
@@ -183,7 +183,7 @@ function resolveRemainingTargets(
     return [
       {
         type: "REACTION_OPPORTUNITY",
-        defender: nextTarget,
+        player: nextTarget,
         attacker,
         attackCard,
         availableReactions: reactions,

@@ -108,7 +108,7 @@ function isValidPlayer(
     command.type === "REVEAL_REACTION" ||
     command.type === "DECLINE_REACTION"
   ) {
-    return state.pendingReaction?.defender === fromPlayer;
+    return state.pendingReaction?.player === fromPlayer;
   }
 
   // Undo requests can come from any player
