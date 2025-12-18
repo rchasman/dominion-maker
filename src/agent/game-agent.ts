@@ -242,7 +242,7 @@ const runModelsInParallel = async (
           if (state.resolved) return;
           state.resolved = true;
           const results = Array.from(completedResultsMap.values());
-          resolveAll({ results, earlyConsensus: winner });
+          resolveAll({ results, earlyConsensus: winnerId });
         },
         onComplete: () => {
           if (state.resolved) return;
