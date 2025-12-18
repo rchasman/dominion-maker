@@ -1,4 +1,4 @@
-import { generateObject, gateway, wrapLanguageModel } from "ai";
+import { generateObject, generateText, gateway, tool, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName, PlayerState } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
@@ -168,6 +168,9 @@ function getDevToolsMiddleware(
   }
   return entry.middleware;
 }
+
+// Models that don't support structured output well - use tool calling instead
+const TOOL_CALLING_MODELS = new Set(["llama-3.1-8b", "nova-micro"]);
 
 // Get provider options for AI Gateway routing
 function getProviderOptions(providerId: string) {
@@ -534,7 +537,49 @@ async function processGenerationRequest(
     format,
   });
 
-  // Use generateObject with structured output for all models
+  // Use tool calling for models with poor structured output support
+  if (TOOL_CALLING_MODELS.has(provider)) {
+    try {
+      const submitAction = tool({
+        description: "Submit the game action decision",
+        parameters: ActionSchema,
+      });
+
+      const result = await generateText({
+        model,
+        system: buildSystemPrompt(currentState.supply),
+        prompt: userMessage,
+        tools: { submitAction },
+        toolChoice: "required",
+        maxToolRoundtrips: 1,
+        maxRetries: 0,
+        ...getProviderOptions(provider),
+      });
+
+      const toolCall = result.toolCalls[0];
+      if (!toolCall || toolCall.toolName !== "submitAction") {
+        throw new Error("No valid tool call received");
+      }
+
+      const validated = ActionSchema.parse(toolCall.args);
+      apiLogger.info(`${provider} used tool calling successfully`);
+
+      return res
+        .status(HTTP_OK)
+        .json({ action: validated, strategySummary, format });
+    } catch (err) {
+      const error = err as Error & { text?: string };
+      apiLogger.error(`${provider} tool calling failed: ${error.message}`);
+
+      return res.status(HTTP_INTERNAL_ERROR).json({
+        error: "Tool calling generation failed",
+        provider,
+        message: error.message,
+      });
+    }
+  }
+
+  // Use generateObject with structured output for all other models
   try {
     const result = await generateObject({
       model,
@@ -543,6 +588,29 @@ async function processGenerationRequest(
       prompt: userMessage,
       maxRetries: 0,
       ...getProviderOptions(provider),
+      experimental_repairText: async ({ text }) => {
+        try {
+          const parsed = JSON.parse(text);
+
+          // Detect schema definition echo (contains $schema property)
+          if (parsed.$schema) {
+            apiLogger.error(
+              `${provider} returned schema definition instead of data`,
+            );
+            return null; // Cannot repair - model fundamentally broken
+          }
+
+          // Unwrap glm-4.6 style {"answer": "{...JSON...}"} wrapper
+          if (parsed.answer && typeof parsed.answer === "string") {
+            apiLogger.info(`${provider} unwrapping answer field`);
+            return parsed.answer;
+          }
+
+          return text; // Try as-is
+        } catch {
+          return text; // Not JSON, let normal parsing handle it
+        }
+      },
     });
 
     return res
