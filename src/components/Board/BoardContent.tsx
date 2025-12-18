@@ -60,6 +60,7 @@ interface BoardContentProps {
 
 interface SupplyAreaProps {
   displayState: GameState;
+  mainPlayerId: string;
   onBuyCard?: (card: CardName) => void;
   canBuy: boolean;
   isPlayerActive: boolean;
@@ -74,6 +75,7 @@ interface SupplyAreaProps {
 
 function SupplyArea({
   displayState,
+  mainPlayerId,
   onBuyCard,
   canBuy,
   isPlayerActive,
@@ -88,6 +90,7 @@ function SupplyArea({
   return (
     <Supply
       state={displayState}
+      mainPlayerId={mainPlayerId}
       onBuyCard={onBuyCard}
       canBuy={canBuy}
       availableCoins={displayState.coins}
@@ -246,6 +249,7 @@ export function BoardContent({
 
         <SupplyArea
           displayState={displayState}
+          mainPlayerId={mainPlayerId}
           onBuyCard={isPreviewMode ? undefined : animatedBuyCard}
           canBuy={isPreviewMode ? false : canBuy}
           isPlayerActive={isMainPlayerTurn}
