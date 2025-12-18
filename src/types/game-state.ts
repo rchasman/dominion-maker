@@ -41,9 +41,9 @@ export type CardName =
 export type Phase = "action" | "buy" | "cleanup";
 
 // Player identifiers
-// For single-player: "human" vs "ai"
+// For single-playerId: "human" vs "ai"
 // For multiplayer: "player0", "player1", etc.
-export type Player = string; // ClientId strings
+export type PlayerId = string; // ClientId strings
 
 // Player type (human or AI-controlled)
 export type PlayerType = "human" | "ai";
@@ -59,73 +59,40 @@ export type PlayerInfo = {
 // Turn sub-phases for handling interruptions (attacks, reactions, etc.)
 export type TurnSubPhase = "opponent_decision" | "awaiting_reaction" | null;
 
-// Decision types (moved here to break circular dependency with events/types)
-
-export type CardActionId =
-  | "trash_card"
-  | "discard_card"
-  | "topdeck_card"
-  | "gain_card";
-
-export type CardAction = {
-  id: CardActionId;
-  label: string;
-  color: string;
-  isDefault?: boolean;
-};
-
-export type DecisionRequest = {
-  type: "card_decision";
-  playerId: string;
-  prompt: string;
-  cardOptions: CardName[];
-  cardBeingPlayed: CardName;
-
-  // Simple selection mode (when actions is not provided)
-  from?: "hand" | "supply" | "revealed" | "options" | "discard";
-  min?: number;
-  max?: number;
-  stage?: string;
-
-  // Complex multi-action mode (when actions is provided)
-  actions?: CardAction[]; // Available actions per card (trash, discard, topdeck, etc.)
-  requiresOrdering?: boolean; // True if cards need to be ordered
-  orderingPrompt?: string;
-
-  metadata?: Record<string, unknown>;
-};
-
-export type DecisionChoice = {
-  selectedCards: CardName[];
-  cardActions?: Record<string | number, string>; // Map of card name/index to action id
-  cardOrder?: (CardName | number)[]; // Ordered list of cards or indices (for ordering decisions)
-};
+// Re-export decision types from pending-choice
+export type {
+  PendingChoice,
+  DecisionChoice,
+  CardAction,
+  CardActionId,
+} from "./pending-choice";
+export { isDecisionChoice, isReactionChoice } from "./pending-choice";
 
 // Log entry types with recursive children support
 export type LogEntry =
   | {
       type: "turn-start";
       turn: number;
-      player: string;
+      playerId: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "turn-end";
-      player: string;
+      playerId: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "phase-change";
-      player: string;
+      playerId: PlayerId;
       phase: Phase;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "play-treasure";
-      player: string;
+      playerId: PlayerId;
       card: CardName;
       coins: number;
       reasoning?: string;
@@ -134,7 +101,7 @@ export type LogEntry =
     }
   | {
       type: "unplay-treasure";
-      player: string;
+      playerId: PlayerId;
       card: CardName;
       coins: number;
       eventId?: string;
@@ -142,7 +109,7 @@ export type LogEntry =
     }
   | {
       type: "play-action";
-      player: string;
+      playerId: PlayerId;
       card: CardName;
       reasoning?: string;
       eventId?: string;
@@ -150,7 +117,7 @@ export type LogEntry =
     }
   | {
       type: "buy-card";
-      player: string;
+      playerId: PlayerId;
       card: CardName;
       vp?: number;
       reasoning?: string;
@@ -159,7 +126,7 @@ export type LogEntry =
     }
   | {
       type: "draw-cards";
-      player: string;
+      playerId: PlayerId;
       count: number;
       cards?: CardName[];
       cardCounts?: Record<string, number>; // For aggregated display
@@ -168,14 +135,14 @@ export type LogEntry =
     }
   | {
       type: "gain-card";
-      player: string;
+      playerId: PlayerId;
       card: CardName;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "discard-cards";
-      player: string;
+      playerId: PlayerId;
       count: number;
       cards?: CardName[];
       cardCounts?: Record<string, number>; // For aggregated display
@@ -184,7 +151,7 @@ export type LogEntry =
     }
   | {
       type: "trash-card";
-      player: string;
+      playerId: PlayerId;
       card?: CardName;
       cards?: CardName[];
       count?: number;
@@ -193,27 +160,27 @@ export type LogEntry =
     }
   | {
       type: "shuffle-deck";
-      player: string;
+      playerId: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "end-turn";
-      player: string;
-      nextPlayer: string;
+      playerId: PlayerId;
+      nextPlayerId: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "game-over";
       scores: Record<string, number>;
-      winner: string;
+      winner: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "start-game";
-      player: string;
+      playerId: PlayerId;
       coppers: number;
       estates: number;
       eventId?: string;
@@ -227,60 +194,46 @@ export type LogEntry =
     }
   | {
       type: "get-actions";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "get-buys";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "use-actions";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "use-buys";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "get-coins";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     }
   | {
       type: "spend-coins";
-      player: string;
+      playerId: PlayerId;
       count: number;
       eventId?: string;
       children?: LogEntry[];
     };
-
-// Reaction Request (first-class, separate from decisions)
-export type ReactionRequest = {
-  playerId: string; // The player who can react (unified with DecisionRequest)
-  attacker: string;
-  attackCard: CardName;
-  availableReactions: CardName[];
-  metadata: {
-    allTargets: string[];
-    currentTargetIndex: number;
-    blockedTargets: string[];
-    originalCause: string;
-  };
-};
 
 export type PlayerState = {
   deck: CardName[];
@@ -307,14 +260,14 @@ export type TurnAction = {
 export type GameState = {
   turn: number;
   phase: Phase;
-  activePlayer: string;
+  activePlayerId: PlayerId;
 
   // Single-player mode: { human, ai }
   // Multiplayer mode: { player0, player1, player2?, player3? }
   // Partial record to allow 2-4 players
-  players: Record<string, PlayerState>;
+  players: Record<PlayerId, PlayerState>;
 
-  supply: Record<string, number>;
+  supply: Record<CardName, number>;
   trash: CardName[];
   kingdomCards: CardName[];
 
@@ -322,14 +275,11 @@ export type GameState = {
   buys: number;
   coins: number;
 
-  pendingDecision: DecisionRequest | null;
-  pendingDecisionEventId: string | null; // Event ID that created pendingDecision (for causality)
-
-  pendingReaction: ReactionRequest | null;
-  pendingReactionEventId: string | null; // Event ID that created pendingReaction (for causality)
+  pendingChoice: PendingChoice | null;
+  pendingChoiceEventId: string | null; // Event ID that created pendingChoice (for causality)
 
   gameOver: boolean;
-  winner: string | null;
+  winnerId: PlayerId | null;
 
   log: LogEntry[];
   turnHistory: TurnAction[]; // Actions taken this turn (reset on cleanup)
@@ -337,15 +287,15 @@ export type GameState = {
   // Active effects (cost reductions, etc.) cleared at turn end
   activeEffects: Array<{
     type: "EFFECT_REGISTERED";
-    player: string;
+    playerId: PlayerId;
     effectType: "cost_reduction";
     source: CardName;
     parameters: { amount: number };
   }>;
 
   // Player tracking
-  playerOrder: string[]; // Turn order for N-player games (always set by GAME_INITIALIZED)
-  playerInfo?: Record<string, PlayerInfo>; // Player names, types, connection status
+  playerOrder: PlayerId[]; // Turn order for N-player games (always set by GAME_INITIALIZED)
+  playerInfo?: Record<PlayerId, PlayerInfo>; // Player names, types, connection status
   isMultiplayer?: boolean; // Flag to indicate multiplayer mode
 };
 

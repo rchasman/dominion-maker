@@ -1,12 +1,13 @@
 import type {
   CardName,
   Phase,
-  DecisionRequest,
+  PendingChoice,
   DecisionChoice,
 } from "../types/game-state";
 import { multiplayerLogger } from "../lib/logger";
 
-export type { DecisionRequest, DecisionChoice };
+export type { PendingChoice, DecisionChoice };
+export { isDecisionChoice, isReactionChoice } from "../types/game-state";
 
 // PlayerId - string for multiplayer flexibility (can be custom peer IDs or Player enum values)
 export type PlayerId = string;
@@ -39,13 +40,13 @@ export type GameInitializedEvent = EventMetadata & {
 
 export type InitialDeckDealtEvent = EventMetadata & {
   type: "INITIAL_DECK_DEALT";
-  player: PlayerId;
+  playerId: PlayerId;
   cards: CardName[];
 };
 
 export type InitialHandDrawnEvent = EventMetadata & {
   type: "INITIAL_HAND_DRAWN";
-  player: PlayerId;
+  playerId: PlayerId;
   cards: CardName[];
 };
 
@@ -53,12 +54,12 @@ export type InitialHandDrawnEvent = EventMetadata & {
 export type TurnStartedEvent = EventMetadata & {
   type: "TURN_STARTED";
   turn: number;
-  player: PlayerId;
+  playerId: PlayerId;
 };
 
 export type TurnEndedEvent = EventMetadata & {
   type: "TURN_ENDED";
-  player: PlayerId;
+  playerId: PlayerId;
   turn: number;
 };
 
@@ -70,69 +71,69 @@ export type PhaseChangedEvent = EventMetadata & {
 // Card Movements (atomic primitives)
 export type CardDrawnEvent = EventMetadata & {
   type: "CARD_DRAWN";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
 };
 
 export type CardPlayedEvent = EventMetadata & {
   type: "CARD_PLAYED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   sourceIndex: number; // Index in hand before playing
 };
 
 export type CardDiscardedEvent = EventMetadata & {
   type: "CARD_DISCARDED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "hand" | "inPlay" | "deck";
 };
 
 export type CardTrashedEvent = EventMetadata & {
   type: "CARD_TRASHED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "hand" | "deck" | "inPlay";
 };
 
 export type CardGainedEvent = EventMetadata & {
   type: "CARD_GAINED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   to: "hand" | "discard" | "deck";
 };
 
 export type CardRevealedEvent = EventMetadata & {
   type: "CARD_REVEALED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "hand" | "deck" | "discard";
 };
 
 export type CardPeekedEvent = EventMetadata & {
   type: "CARD_PEEKED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "deck" | "discard";
 };
 
 export type DeckShuffledEvent = EventMetadata & {
   type: "DECK_SHUFFLED";
-  player: PlayerId;
+  playerId: PlayerId;
   /** New deck order after shuffle (for perfect replay fidelity) */
   newDeckOrder?: CardName[];
 };
 
 export type CardPutOnDeckEvent = EventMetadata & {
   type: "CARD_PUT_ON_DECK";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "hand" | "discard";
 };
 
 export type CardReturnedToHandEvent = EventMetadata & {
   type: "CARD_RETURNED_TO_HAND";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   from: "inPlay" | "discard" | "deck";
 };
@@ -156,7 +157,7 @@ export type CoinsModifiedEvent = EventMetadata & {
 // Effects (persistent modifiers like cost reduction)
 export type EffectRegisteredEvent = EventMetadata & {
   type: "EFFECT_REGISTERED";
-  player: PlayerId;
+  playerId: PlayerId;
   effectType: "cost_reduction";
   source: CardName;
   parameters: {
@@ -194,7 +195,7 @@ export type AttackResolvedEvent = EventMetadata & {
 
 export type ReactionPlayedEvent = EventMetadata & {
   type: "REACTION_PLAYED";
-  player: PlayerId;
+  playerId: PlayerId;
   card: CardName;
   triggerEventId: string;
 };
@@ -227,21 +228,21 @@ export type ReactionDeclinedEvent = EventMetadata & {
   attackCard: CardName;
 };
 
-// Decisions (DecisionRequest and DecisionChoice moved to types/game-state to break circular dep)
+// Decisions (PendingChoice moved to types/game-state to break circular dep)
 export type DecisionRequiredEvent = EventMetadata & {
   type: "DECISION_REQUIRED";
-  decision: DecisionRequest;
+  decision: Extract<PendingChoice, { choiceType: "decision" }>;
 };
 
 export type DecisionResolvedEvent = EventMetadata & {
   type: "DECISION_RESOLVED";
-  player: PlayerId;
+  playerId: PlayerId;
   choice: DecisionChoice;
 };
 
 export type DecisionSkippedEvent = EventMetadata & {
   type: "DECISION_SKIPPED";
-  player: PlayerId;
+  playerId: PlayerId;
   cardBeingPlayed?: CardName;
   stage?: string;
 };

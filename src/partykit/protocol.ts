@@ -49,7 +49,7 @@ export type LobbyClientMessage =
 
 // Lobby Server -> Client
 export type LobbyServerMessage =
-  | { type: "lobby_joined"; playerId: string }
+  | { type: "lobby_joined"; playerId: PlayerId }
   | { type: "players"; players: LobbyPlayer[] }
   | { type: "requests"; requests: GameRequest[] }
   | { type: "active_games"; games: ActiveGame[] }
@@ -121,8 +121,8 @@ export type GameServerMessage =
   | { type: "events"; events: GameEvent[]; state: GameState }
   | { type: "full_state"; state: GameState; events: GameEvent[] }
   | { type: "player_resigned"; playerName: string }
-  | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
-  | { type: "player_reconnected"; playerName: string; playerId: PlayerId }
+  | { type: "player_disconnected"; playerName: string; playerId }
+  | { type: "player_reconnected"; playerName: string; playerId }
   | { type: "error"; message: string }
   | { type: "game_ended"; reason: string }
   | { type: "chat"; message: ChatMessageData }

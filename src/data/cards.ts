@@ -1,4 +1,4 @@
-import type { CardName } from "../types/game-state";
+import type { CardName, PlayerId } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 
 // Card-specific constants
@@ -41,7 +41,7 @@ export type CardTrigger = {
 // DSL types for decision requests
 export type DecisionContext = {
   state: import("../types/game-state").GameState;
-  player: string;
+  playerId: PlayerId;
   stage?: string;
 };
 
@@ -146,9 +146,9 @@ export const CARDS: Record<CardName, CardDefinition> = {
       discard: {
         from: "hand",
         prompt: "Cellar: Discard any number of cards to draw that many",
-        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
         min: 0,
-        max: ctx => ctx.state.players[ctx.player].hand.length,
+        max: ctx => ctx.state.players[ctx.playerId].hand.length,
       },
     },
   },
@@ -161,10 +161,10 @@ export const CARDS: Record<CardName, CardDefinition> = {
       trash: {
         from: "hand",
         prompt: "Chapel: Trash up to 4 cards from your hand",
-        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
         min: 0,
         max: ctx =>
-          Math.min(CHAPEL_MAX_TRASH, ctx.state.players[ctx.player].hand.length),
+          Math.min(CHAPEL_MAX_TRASH, ctx.state.players[ctx.playerId].hand.length),
       },
     },
   },
@@ -263,14 +263,14 @@ export const CARDS: Record<CardName, CardDefinition> = {
       trash: {
         from: "hand",
         prompt: "Remodel: Choose a card to trash",
-        cardOptions: ctx => ctx.state.players[ctx.player].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
         min: 1,
         max: 1,
       },
       gain: {
         from: "supply",
         prompt: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata
+          const trashedCard = ctx.state.pendingChoice?.metadata
             ?.trashedCard as CardName | undefined;
           if (!trashedCard) return "Remodel: Gain a card costing up to $2 more";
           const trashCost = CARDS[trashedCard].cost;
@@ -278,7 +278,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
           return `Remodel: Gain a card costing up to $${maxCost}`;
         },
         cardOptions: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata
+          const trashedCard = ctx.state.pendingChoice?.metadata
             ?.trashedCard as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
@@ -294,7 +294,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
         min: 1,
         max: 1,
         metadata: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata
+          const trashedCard = ctx.state.pendingChoice?.metadata
             ?.trashedCard as CardName | undefined;
           if (!trashedCard) return {};
           return {
@@ -368,7 +368,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
         from: "hand",
         prompt: "Mine: Trash a Treasure from your hand",
         cardOptions: ctx =>
-          ctx.state.players[ctx.player].hand.filter(c => {
+          ctx.state.players[ctx.playerId].hand.filter(c => {
             const cardDef = CARDS[c];
             return cardDef.types.includes("treasure");
           }),
@@ -378,7 +378,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
       gain: {
         from: "supply",
         prompt: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata
+          const trashedCard = ctx.state.pendingChoice?.metadata
             ?.trashedCard as CardName | undefined;
           if (!trashedCard)
             return "Mine: Gain a Treasure costing up to $3 more";
@@ -387,7 +387,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
           return `Mine: Gain a Treasure costing up to $${maxCost} to your hand`;
         },
         cardOptions: ctx => {
-          const trashedCard = ctx.state.pendingDecision?.metadata
+          const trashedCard = ctx.state.pendingChoice?.metadata
             ?.trashedCard as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
