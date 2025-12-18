@@ -15,7 +15,7 @@ export const library: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Library peek strategy:
   // Peeks ahead to see which cards would be drawn. If shuffle occurs during

@@ -205,8 +205,8 @@ describe("createDrawEvents - Event Generation", () => {
 
     const drawEvents = events.filter(e => e.type === "CARD_DRAWN");
     expect(drawEvents.length).toBe(2);
-    expect(drawEvents[0].card).toBe("Gold");
-    expect(drawEvents[1].card).toBe("Silver");
+    expect(drawEvents[0]!.card).toBe("Gold");
+    expect(drawEvents[1]!.card).toBe("Silver");
   });
 
   it("should create DECK_SHUFFLED event when shuffle occurs", () => {

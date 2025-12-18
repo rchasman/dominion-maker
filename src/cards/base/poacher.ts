@@ -12,7 +12,7 @@ export const poacher: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Count empty supply piles
   const emptyPiles = Object.values(state.supply).filter(

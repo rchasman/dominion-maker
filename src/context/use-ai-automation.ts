@@ -9,6 +9,7 @@ import type { DominionEngine } from "../engine";
 import type { GameState, PlayerId } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { GameEvent } from "../events/types";
+import type { Zone } from "../animation/types";
 import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";

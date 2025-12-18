@@ -33,7 +33,7 @@ export const artisan = createMultiStageCard({
     const gained = decision.selectedCards[0];
     if (!gained) return { events: [] };
 
-    const playerState = state.players[playerId];
+    const playerState = state.players[playerId]!;
     const handAfterGain = [...playerState.hand, gained];
 
     return {

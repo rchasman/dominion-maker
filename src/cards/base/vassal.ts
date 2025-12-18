@@ -13,7 +13,7 @@ export const vassal: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Initial: +$2, reveal and discard top card
   if (!decision || stage === undefined) {

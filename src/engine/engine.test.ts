@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { DominionEngine } from "./engine";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameCommand } from "../commands/types";
+import type { GameEvent } from "../events/types";
 
 /**
  * Engine integration tests

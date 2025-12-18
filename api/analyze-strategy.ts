@@ -232,19 +232,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       : gateway("gpt-5.2");
 
     // Generate analysis one player at a time, build record
-    const strategySummary: PlayerAnalysisRecord = {};
+    const strategySummary = Object.fromEntries(
+      await Promise.all(
+        playerIds.map(async (playerId) => {
+          const playerDeck = playerDecks.find(p => p.id === playerId);
+          const previousPlayerAnalysis = previousAnalysis?.[playerId];
 
-    for (const playerId of playerIds) {
-      const playerDeck = playerDecks.find(p => p.id === playerId);
-      const previousPlayerAnalysis = previousAnalysis?.[playerId];
+          const previousAnalysisSection = previousPlayerAnalysis
+            ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(
+                previousPlayerAnalysis,
+              )}`
+            : "";
 
-      const previousAnalysisSection = previousPlayerAnalysis
-        ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(
-            previousPlayerAnalysis,
-          )}`
-        : "";
-
-      const prompt = `${encodeToon(gameContext)}
+          const prompt = `${encodeToon(gameContext)}
 
 ${turnHistory}
 
@@ -253,27 +253,29 @@ ${encodeToon(playerDeck)}${previousAnalysisSection}
 
 Provide strategic analysis for playerId: ${playerId}.`;
 
-      const result = await generateObject({
-        model,
-        system: buildStrategyAnalysisPrompt(
-          currentState.supply,
-          !!previousPlayerAnalysis,
-        ),
-        prompt,
-        schema: PlayerAnalysisSchema,
-        maxRetries: 1,
-        providerOptions: {
-          anthropic: {
-            headers: {
-              "anthropic-beta": "structured-outputs-2025-11-13",
+          const result = await generateObject({
+            model,
+            system: buildStrategyAnalysisPrompt(
+              currentState.supply,
+              !!previousPlayerAnalysis,
+            ),
+            prompt,
+            schema: PlayerAnalysisSchema,
+            maxRetries: 1,
+            providerOptions: {
+              anthropic: {
+                headers: {
+                  "anthropic-beta": "structured-outputs-2025-11-13",
+                },
+              },
             },
-          },
-        },
-      });
+          });
 
-      strategySummary[playerId] = result.object;
-      apiLogger.info(`Strategy analysis completed for ${playerId}`);
-    }
+          apiLogger.info(`Strategy analysis completed for ${playerId}`);
+          return [playerId, result.object] as const;
+        }),
+      ),
+    ) as PlayerAnalysisRecord;
 
     return res.status(HTTP_STATUS.OK).json({
       strategySummary,

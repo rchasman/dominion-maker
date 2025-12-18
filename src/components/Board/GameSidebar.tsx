@@ -187,9 +187,9 @@ export function GameSidebar({
     >
       <GameLogSection
         state={state}
-        events={events}
+        {...(events !== undefined && { events })}
         isProcessing={isProcessing}
-        onRequestUndo={onRequestUndo}
+        {...(onRequestUndo !== undefined && { onRequestUndo })}
         gameMode={gameMode}
         gameLogHeight={gameLogHeight}
         turnStatusIndicator={
@@ -223,8 +223,8 @@ export function GameSidebar({
           llmLogs={llmLogs}
           gameMode={gameMode}
           gameLogHeight={gameLogHeight}
-          modelSettings={modelSettings}
-          onModelSettingsChange={onModelSettingsChange}
+          {...(modelSettings !== undefined && { modelSettings })}
+          {...(onModelSettingsChange !== undefined && { onModelSettingsChange })}
         />
       )}
 
@@ -232,10 +232,10 @@ export function GameSidebar({
 
       <GameControlsSection
         gameMode={gameMode}
-        onGameModeChange={onGameModeChange}
-        onNewGame={onNewGame}
-        onEndGame={onEndGame}
-        onBackToHome={onBackToHome}
+        {...(onGameModeChange !== undefined && { onGameModeChange })}
+        {...(onNewGame !== undefined && { onNewGame })}
+        {...(onEndGame !== undefined && { onEndGame })}
+        {...(onBackToHome !== undefined && { onBackToHome })}
         isSpectator={isSpectator}
       />
     </div>

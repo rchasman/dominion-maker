@@ -62,9 +62,10 @@ function handleAITurnStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
     state.turns = [...state.turns, state.buildingTurn];
   }
+  const gameTurn = entry.data?.turn as number | undefined;
   state.buildingTurn = {
     turnNumber: state.turns.length + 1,
-    gameTurn: entry.data?.turn as number | undefined,
+    ...(gameTurn !== undefined && { gameTurn }),
     decisions: [],
   };
   state.stepNumber = 0;
@@ -78,9 +79,10 @@ function handleAIDecisionResolving(
     state.turns = [...state.turns, state.buildingTurn];
   }
   const prompt = (entry.data?.prompt as string) || "";
+  const gameTurn = entry.data?.turn as number | undefined;
   state.buildingTurn = {
     turnNumber: state.turns.length + 1,
-    gameTurn: entry.data?.turn as number | undefined,
+    ...(gameTurn !== undefined && { gameTurn }),
     decisions: [],
     isSubPhase: true,
     subPhaseLabel: createSubPhaseLabel(entry.data?.decisionType, prompt),
@@ -90,18 +92,23 @@ function handleAIDecisionResolving(
 
 function handleConsensusStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (!state.buildingTurn) {
+    const gameTurn = entry.data?.turn as number | undefined;
+    const pendingData = entry.data as PendingData | undefined;
     state.buildingTurn = {
       turnNumber: state.turns.length + 1,
-      gameTurn: entry.data?.turn as number | undefined,
+      ...(gameTurn !== undefined && { gameTurn }),
       decisions: [],
       pending: true,
-      pendingData: entry.data as PendingData | undefined,
+      ...(pendingData !== undefined && { pendingData }),
       modelStatuses: new Map(),
       consensusStartTime: entry.timestamp,
     };
   } else {
     state.buildingTurn.pending = true;
-    state.buildingTurn.pendingData = entry.data as PendingData | undefined;
+    const pendingData = entry.data as PendingData | undefined;
+    if (pendingData !== undefined) {
+      state.buildingTurn.pendingData = pendingData;
+    }
     state.buildingTurn.modelStatuses = new Map();
     state.buildingTurn.consensusStartTime = entry.timestamp;
   }
@@ -186,9 +193,9 @@ function handleConsensusVoting(
     {
       id: entry.id,
       votingEntry: entry,
-      timingEntry,
+      ...(timingEntry !== undefined && { timingEntry }),
       stepNumber: state.stepNumber,
-      modelStatuses: modelStatusesSnapshot,
+      ...(modelStatusesSnapshot !== undefined && { modelStatuses: modelStatusesSnapshot }),
     },
   ];
 }

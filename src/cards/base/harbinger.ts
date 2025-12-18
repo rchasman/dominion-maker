@@ -12,7 +12,7 @@ export const harbinger: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Initial: +1 Card, +1 Action
   if (!decision || stage === undefined) {

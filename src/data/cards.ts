@@ -146,9 +146,9 @@ export const CARDS: Record<CardName, CardDefinition> = {
       discard: {
         from: "hand",
         prompt: "Cellar: Discard any number of cards to draw that many",
-        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId]!.hand,
         min: 0,
-        max: ctx => ctx.state.players[ctx.playerId].hand.length,
+        max: ctx => ctx.state.players[ctx.playerId]!.hand.length,
       },
     },
   },
@@ -161,12 +161,12 @@ export const CARDS: Record<CardName, CardDefinition> = {
       trash: {
         from: "hand",
         prompt: "Chapel: Trash up to 4 cards from your hand",
-        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId]!.hand,
         min: 0,
         max: ctx =>
           Math.min(
             CHAPEL_MAX_TRASH,
-            ctx.state.players[ctx.playerId].hand.length,
+            ctx.state.players[ctx.playerId]!.hand.length,
           ),
       },
     },
@@ -266,7 +266,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
       trash: {
         from: "hand",
         prompt: "Remodel: Choose a card to trash",
-        cardOptions: ctx => ctx.state.players[ctx.playerId].hand,
+        cardOptions: ctx => ctx.state.players[ctx.playerId]!.hand,
         min: 1,
         max: 1,
       },
@@ -374,7 +374,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
         from: "hand",
         prompt: "Mine: Trash a Treasure from your hand",
         cardOptions: ctx =>
-          ctx.state.players[ctx.playerId].hand.filter(c => {
+          ctx.state.players[ctx.playerId]!.hand.filter(c => {
             const cardDef = CARDS[c];
             return cardDef.types.includes("treasure");
           }),

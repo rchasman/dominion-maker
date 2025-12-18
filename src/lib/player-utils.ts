@@ -26,17 +26,17 @@ export function getPlayerPerspective(
     playerIds =
       gameMode === "multiplayer"
         ? ["player0", "player1"]
-        : (getPlayersForMode(gameMode) as PlayerId[]);
+        : (getPlayersForMode(gameMode));
   } else {
-    playerIds = Object.keys(state.players) as PlayerId[];
+    playerIds = Object.keys(state.players);
   }
 
   // In multiplayerId, reorder so local player is first
   if (gameMode === "multiplayer" && localPlayerId) {
-    const localIndex = playerIds.indexOf(localPlayerId as PlayerId);
+    const localIndex = playerIds.indexOf(localPlayerId);
     if (localIndex > 0) {
       playerIds = [
-        localPlayerId as playerId,
+        localPlayerId as PlayerId,
         ...playerIds.filter(id => id !== localPlayerId),
       ];
     }

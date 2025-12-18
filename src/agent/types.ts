@@ -119,22 +119,13 @@ export function buildModelsFromSettings({
     { models: [], instanceCounts: new Map<ModelProvider, number>() },
   );
 
-  // Shuffle for randomness
-  return models
-    .map((_, i, arr) => {
-      const j = Math.floor(Math.random() * (i + 1));
-      return i === 0 ? arr[0] : arr[j];
-    })
-    .reduceRight<ModelProvider[]>(
-      (result, _, currentIndex) => {
-        if (currentIndex === 0) return result;
-        const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
-        [result[currentIndex], result[randomIndex]] = [
-          result[randomIndex],
-          result[currentIndex],
-        ];
-        return result;
-      },
-      [...models],
-    );
+  // Shuffle for randomness using Fisher-Yates algorithm
+  const shuffled = [...models];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled;
 }

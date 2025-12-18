@@ -10,7 +10,7 @@ export const moneylender: CardEffect = ({
   playerId,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
   const hasCopperInHand = playerState.hand.includes("Copper");
 
   if (!hasCopperInHand) return { events: [] };

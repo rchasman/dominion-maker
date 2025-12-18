@@ -33,8 +33,8 @@ interface AnimationProviderProps {
 export function AnimationProvider({ children }: AnimationProviderProps) {
   const [animations, setAnimations] = useState<CardAnimation[]>([]);
   const zoneRefs = useRef<Map<Zone, HTMLElement>>(new Map());
-  const animationIdCounter = useRef(0);
-  const animationCallbacks = useRef<Map<string, () => void>>(new Map());
+  const animationIdCounterRef = useRef(0);
+  const animationCallbacksRef = useRef<Map<string, () => void>>(new Map());
 
   const registerZoneRef = useCallback(
     (zone: Zone, element: HTMLElement | null) => {
@@ -53,15 +53,17 @@ export function AnimationProvider({ children }: AnimationProviderProps) {
   }, []);
 
   const queueAnimation = useCallback((animation: Omit<CardAnimation, "id">) => {
-    const id = `anim-${++animationIdCounter.current}`;
+    animationIdCounterRef.current = animationIdCounterRef.current + 1;
+    const id = `anim-${animationIdCounterRef.current}`;
     setAnimations(prev => [...prev, { ...animation, id }]);
   }, []);
 
   const queueAnimationAsync = useCallback(
     (animation: Omit<CardAnimation, "id">): Promise<void> => {
       return new Promise(resolve => {
-        const id = `anim-${++animationIdCounter.current}`;
-        animationCallbacks.current.set(id, resolve);
+        animationIdCounterRef.current = animationIdCounterRef.current + 1;
+        const id = `anim-${animationIdCounterRef.current}`;
+        animationCallbacksRef.current.set(id, resolve);
         setAnimations(prev => [...prev, { ...animation, id }]);
       });
     },
@@ -70,10 +72,10 @@ export function AnimationProvider({ children }: AnimationProviderProps) {
 
   const removeAnimation = useCallback((id: string) => {
     setAnimations(prev => prev.filter(a => a.id !== id));
-    const callback = animationCallbacks.current.get(id);
+    const callback = animationCallbacksRef.current.get(id);
     if (callback) {
       callback();
-      animationCallbacks.current.delete(id);
+      animationCallbacksRef.current.delete(id);
     }
   }, []);
 

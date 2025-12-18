@@ -1,5 +1,6 @@
 import type { DominionEngine } from "../engine/engine";
 import type { CardName, PendingChoice } from "../types/game-state";
+import { isDecisionChoice } from "../types/pending-choice";
 
 /**
  * Helper functions for multi-round consensus decision reconstruction.
@@ -21,7 +22,7 @@ export function simulateCardSelection(
   const state = { ...engine.state };
   const decision = state.pendingChoice;
 
-  if (!decision) return engine;
+  if (!isDecisionChoice(decision)) return engine;
 
   // Remove only ONE instance of the card (not all duplicates)
   const idx = decision.cardOptions.indexOf(card);
@@ -49,12 +50,9 @@ export function simulateCardSelection(
  * Check if a decision is batch-capable (requires reconstruction).
  */
 export function isBatchDecision(
-  decision:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined,
-): boolean {
-  return !!decision && decision.choiceType === "decision" && decision.max > 1;
+  decision: PendingChoice | null | undefined,
+): decision is Extract<PendingChoice, { choiceType: "decision" }> {
+  return isDecisionChoice(decision) && decision.max > 1;
 }
 
 /**
@@ -62,13 +60,11 @@ export function isBatchDecision(
  * These require multi-round consensus where AI votes on each card individually.
  */
 export function isMultiActionDecision(
-  decision:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined,
-): boolean {
-  return !!(
-    decision?.actions &&
+  decision: PendingChoice | null | undefined,
+): decision is Extract<PendingChoice, { choiceType: "decision" }> {
+  return (
+    isDecisionChoice(decision) &&
+    !!decision.actions &&
     decision.actions.length > 0 &&
     !decision.actions.every(a => a.id === "select" || a.id === "skip")
   );

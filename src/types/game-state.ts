@@ -1,3 +1,7 @@
+// Import basic types for internal use
+import type { CardName, PlayerId } from "./basic-types";
+import type { PendingChoice } from "./pending-choice";
+
 // Re-export basic types
 export type { CardName, PlayerId } from "./basic-types";
 

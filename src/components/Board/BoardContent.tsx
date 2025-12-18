@@ -239,13 +239,16 @@ export function BoardContent({
           actions={displayState.actions}
           playerId={opponentPlayerId}
           turnHistory={displayState.turnHistory}
-          playerStrategy={game.playerStrategies[opponentPlayerId]}
+          {...(game.playerStrategies[opponentPlayerId] !== undefined && {
+            playerStrategy: game.playerStrategies[opponentPlayerId],
+          })}
           gameState={displayState}
         />
 
         <SupplyArea
           displayState={displayState}
-          onBuyCard={isPreviewMode ? undefined : animatedBuyCard}
+          {...(!isPreviewMode &&
+            animatedBuyCard !== undefined && { onBuyCard: animatedBuyCard })}
           canBuy={isPreviewMode ? false : canBuy}
           isPlayerActive={isLocalPlayerTurn}
           hasTreasuresInHand={game.hasTreasuresInHand}
@@ -265,11 +268,13 @@ export function BoardContent({
           selectedCardIndices={selectedCardIndices}
           isPreviewMode={isPreviewMode}
           displayState={displayState}
-          onCardClick={onCardClick}
-          onInPlayClick={onInPlayClick}
-          onComplexDecisionChange={onComplexDecisionChange}
-          onRevealReaction={onRevealReaction}
-          onDeclineReaction={onDeclineReaction}
+          {...(onCardClick !== undefined && { onCardClick })}
+          {...(onInPlayClick !== undefined && { onInPlayClick })}
+          {...(onComplexDecisionChange !== undefined && {
+            onComplexDecisionChange,
+          })}
+          {...(onRevealReaction !== undefined && { onRevealReaction })}
+          {...(onDeclineReaction !== undefined && { onDeclineReaction })}
         />
       </GameAreaLayout>
 
@@ -278,20 +283,20 @@ export function BoardContent({
         events={game.events}
         isProcessing={game.isProcessing}
         gameMode={game.gameMode}
-        onGameModeChange={game.setGameMode}
+        {...(game.setGameMode !== undefined && { onGameModeChange: game.setGameMode })}
         localPlayer={localPlayerId}
         modelSettings={game.modelSettings}
         onModelSettingsChange={game.setModelSettings}
-        onNewGame={onNewGame}
-        onBackToHome={onBackToHome}
+        {...(onNewGame !== undefined && { onNewGame })}
+        {...(onBackToHome !== undefined && { onBackToHome })}
         onRequestUndo={onRequestUndo}
       />
 
       {game.gameOver && game.winner && (
         <GameOverModal
           winner={game.winner}
-          localPlayerId={localPlayerId as PlayerId}
-          opponentPlayerId={opponentPlayerId as PlayerId}
+          localPlayerId={localPlayerId}
+          opponentPlayerId={opponentPlayerId}
           isLocalPlayerAI={isLocalPlayerAI}
           isOpponentAI={isOpponentAI}
           localPlayerVP={localPlayerVP}

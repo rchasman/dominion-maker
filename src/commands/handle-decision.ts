@@ -1,4 +1,4 @@
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, PendingChoice } from "../types/game-state";
 import type { CommandResult } from "./types";
 import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { getCardEffect } from "../cards/base";
@@ -411,7 +411,7 @@ export function handleSubmitDecision(
     cardBeingPlayed,
     stage,
     metadata,
-  } = state.pendingChoice as Extract<PendingChoice, { choiceType: "decision" }>;
+  } = state.pendingChoice;
   const originalCause = metadata?.originalCause as string | undefined;
 
   const builder = new EventBuilder();
@@ -482,7 +482,7 @@ export function handleSkipDecision(
     cardBeingPlayed,
     stage,
     metadata,
-  } = state.pendingChoice as Extract<PendingChoice, { choiceType: "decision" }>;
+  } = state.pendingChoice;
   const originalCause = metadata?.originalCause as string | undefined;
 
   // Build DECISION_SKIPPED event (always emit this)

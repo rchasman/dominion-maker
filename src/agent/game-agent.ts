@@ -265,6 +265,276 @@ const runModelsInParallel = async (
 };
 
 /**
+ * Handle batch consensus (Chapel, Cellar) - vote on cards one at a time
+ */
+async function handleBatchConsensus(
+  engine: DominionEngine,
+  playerId: PlayerId,
+  decision: Extract<
+    NonNullable<GameState["pendingChoice"]>,
+    { choiceType: "decision" }
+  >,
+  config: {
+    providers: ModelProvider[];
+    humanChoice?: string;
+    logger?: LLMLogger;
+    strategySummary?: string;
+    customStrategy?: string;
+    dataFormat: "toon" | "json" | "mixed";
+    actionId: string;
+    overallStart: number;
+  }
+): Promise<void> {
+  const { max } = decision;
+  const aheadByK = Math.max(
+    CONSENSUS_AHEAD_BY_K_MIN,
+    Math.ceil(config.providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
+  );
+
+  agentLogger.info(
+    `Batch decision detected: max=${max}, running multi-round consensus`
+  );
+
+  const runBatchRound = async (
+    round: number,
+    acc: { cards: CardName[]; engine: DominionEngine }
+  ): Promise<{ cards: CardName[]; engine: DominionEngine }> => {
+    if (round >= max) return acc;
+
+    const legalActions = getLegalActions(acc.engine.state);
+    agentLogger.info(
+      `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`
+    );
+
+    const { results, earlyConsensus, voteGroups, completedResults } =
+      await runModelsInParallel({
+        ...config,
+        currentState: acc.engine.state,
+        aheadByK,
+        actionId: `${config.actionId}-r${round}`,
+      });
+
+    const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
+      selectConsensusWinner(voteGroups, results, earlyConsensus, legalActions);
+
+    const playerState = acc.engine.state.players[playerId];
+    const hand = playerState?.hand || [];
+    const inPlay = playerState?.inPlay || [];
+    const handCounts = {
+      treasures: hand.filter(isTreasureCard).length,
+      actions: hand.filter(isActionCard).length,
+      total: hand.length,
+    };
+
+    logVotingResults({
+      winner,
+      votesConsidered,
+      validEarlyConsensus,
+      rankedGroups,
+      aheadByK,
+      completedResults,
+      legalActions,
+      overallStart: config.overallStart,
+      currentState: acc.engine.state,
+      playerState,
+      hand,
+      inPlay,
+      handCounts,
+      logger: config.logger,
+    });
+
+    if (winner.action.type === "skip_decision") {
+      agentLogger.info(`AI voted to skip after ${acc.cards.length} selections`);
+      return acc;
+    }
+
+    const card = winner.action.card;
+    if (!card) {
+      agentLogger.warn("Action missing card, stopping batch reconstruction");
+      return acc;
+    }
+
+    agentLogger.info(
+      `Batch round ${round + 1} winner: ${winner.action.type}(${card}) - ${
+        winner.count
+      } votes`
+    );
+
+    return runBatchRound(round + 1, {
+      cards: [...acc.cards, card],
+      engine: simulateCardSelection(acc.engine, card),
+    });
+  };
+
+  const { cards: selectedCards } = await runBatchRound(0, {
+    cards: [],
+    engine,
+  });
+
+  const success = engine.dispatch(
+    {
+      type: "SUBMIT_DECISION",
+      playerId,
+      choice: { selectedCards },
+    },
+    playerId
+  ).ok;
+
+  if (!success) {
+    agentLogger.error("Failed to submit batch decision");
+  }
+
+  const overallDuration = performance.now() - config.overallStart;
+  agentLogger.info(
+    `Batch decision complete: ${
+      selectedCards.length
+    } cards (${overallDuration.toFixed(0)}ms)`
+  );
+}
+
+/**
+ * Handle multi-action consensus (Sentry, Library) - vote on action per card
+ */
+async function handleMultiActionConsensus(
+  engine: DominionEngine,
+  playerId: PlayerId,
+  decision: Extract<
+    NonNullable<GameState["pendingChoice"]>,
+    { choiceType: "decision" }
+  >,
+  config: {
+    providers: ModelProvider[];
+    humanChoice?: string;
+    logger?: LLMLogger;
+    strategySummary?: string;
+    customStrategy?: string;
+    dataFormat: "toon" | "json" | "mixed";
+    actionId: string;
+    overallStart: number;
+  }
+): Promise<void> {
+  const numCards = decision.cardOptions.length;
+  const aheadByK = Math.max(
+    CONSENSUS_AHEAD_BY_K_MIN,
+    Math.ceil(config.providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
+  );
+
+  agentLogger.info(
+    `Multi-action decision detected: ${numCards} cards, running multi-round consensus`
+  );
+
+  const defaultAction = decision.actions?.find(a => a.isDefault);
+  if (!defaultAction) {
+    throw new Error("Multi-action decision requires default action");
+  }
+
+  const cardActions = await Array.from({ length: numCards })
+    .map((_, i) => i)
+    .reduce<Promise<Record<number, string>>>(
+      async (accPromise, roundIndex) => {
+        const acc = await accPromise;
+
+        const roundState: GameState = {
+          ...engine.state,
+          pendingChoice: engine.state.pendingChoice
+            ? {
+                ...engine.state.pendingChoice,
+                prompt: `${engine.state.pendingChoice.prompt} (Card ${
+                  roundIndex + 1
+                }/${numCards}: ${
+                  engine.state.pendingChoice.cardOptions[roundIndex] ?? ""
+                })`,
+                metadata: {
+                  ...engine.state.pendingChoice.metadata,
+                  currentRoundIndex: roundIndex,
+                },
+              }
+            : null,
+        };
+
+        const legalActions = getLegalActions(roundState);
+
+        agentLogger.info(
+          `Round ${roundIndex + 1}/${numCards}: Voting on ${
+            decision.cardOptions[roundIndex] ?? ""
+          }`
+        );
+
+        const { results, earlyConsensus, voteGroups } =
+          await runModelsInParallel({
+            ...config,
+            currentState: roundState,
+            aheadByK,
+            actionId: `${config.actionId}-r${roundIndex}`,
+          });
+
+        const { winner } = selectConsensusWinner(
+          voteGroups,
+          results,
+          earlyConsensus,
+          legalActions
+        );
+
+        if (winner.action.type === "skip_decision") {
+          agentLogger.info(
+            `AI skipped at round ${
+              roundIndex + 1
+            }, using defaults for remaining`
+          );
+          return acc;
+        }
+
+        agentLogger.debug(
+          `Card ${roundIndex} (${
+            decision.cardOptions[roundIndex] ?? ""
+          }): ${winner.action.type}`
+        );
+
+        return { ...acc, [roundIndex]: winner.action.type };
+      },
+      Promise.resolve({})
+    );
+
+  const cardActionsWithDefaults = Object.fromEntries(
+    Array.from({ length: numCards }).map((_, i) => [
+      i,
+      i in cardActions ? cardActions[i] : defaultAction.id,
+    ])
+  );
+
+  const cardOrder = Object.entries(cardActionsWithDefaults)
+    .filter(([, actionId]) => actionId === "topdeck_card")
+    .map(([index]) => parseInt(index));
+
+  const finalChoice = {
+    selectedCards: [],
+    cardActions: cardActionsWithDefaults,
+    cardOrder,
+  };
+
+  const success = engine.dispatch(
+    {
+      type: "SUBMIT_DECISION",
+      playerId,
+      choice: finalChoice,
+    },
+    playerId
+  ).ok;
+
+  if (!success) {
+    agentLogger.error("Failed to submit multi-action decision");
+  }
+
+  const overallDuration = performance.now() - config.overallStart;
+  const actionCount = Object.keys(cardActions).length;
+  agentLogger.info(
+    `Multi-action decision complete: ${actionCount} actions (${overallDuration.toFixed(
+      0
+    )}ms)`
+  );
+}
+
+/**
  * Consensus system adapted for event-sourced engine
  * Runs multiple LLMs, votes on actions, executes winner via engine commands
  */
@@ -284,266 +554,29 @@ export async function advanceGameStateWithConsensus(
   const currentState = engine.state;
   const overallStart = performance.now();
 
-  // Generate actionId to group all consensus votes in devtools
-  // Cache cleared on new game, so just use turn+phase+timestamp
   const actionId = `t${currentState.turn}-${currentState.phase}-${Date.now()}`;
 
   agentLogger.info(`Starting consensus with ${providers.length} models`);
 
-  // Check for special decision types requiring multi-round consensus
   const decision = currentState.pendingChoice;
 
-  // Check for batch decision (like Chapel: max > 1) - requires multi-round consensus
+  const helperConfig = {
+    providers,
+    humanChoice,
+    logger,
+    strategySummary,
+    customStrategy,
+    dataFormat,
+    actionId,
+    overallStart,
+  };
+
   if (isBatchDecision(decision) && !isMultiActionDecision(decision)) {
-    agentLogger.info(
-      `Batch decision detected: max=${decision.max}, running multi-round consensus`
-    );
-
-    const { max } = decision;
-    const aheadByK = Math.max(
-      CONSENSUS_AHEAD_BY_K_MIN,
-      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
-    );
-
-    const runBatchRound = async (
-      round: number,
-      acc: { cards: CardName[]; engine: DominionEngine }
-    ): Promise<{ cards: CardName[]; engine: DominionEngine }> => {
-      if (round >= max) return acc;
-
-      const legalActions = getLegalActions(acc.engine.state);
-
-      agentLogger.info(
-        `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`
-      );
-
-      const { results, earlyConsensus, voteGroups, completedResults } =
-        await runModelsInParallel({
-          providers,
-          currentState: acc.engine.state,
-          humanChoice,
-          strategySummary,
-          customStrategy,
-          logger,
-          aheadByK,
-          dataFormat,
-          actionId: `${actionId}-r${round}`,
-        });
-
-      const { winner, votesConsidered, validEarlyConsensus, rankedGroups } =
-        selectConsensusWinner(
-          voteGroups,
-          results,
-          earlyConsensus,
-          legalActions
-        );
-
-      // Compute player context for logging
-      const playerState = acc.engine.state.players[playerId];
-      const hand = playerState?.hand || [];
-      const inPlay = playerState?.inPlay || [];
-      const handCounts = {
-        treasures: hand.filter(isTreasureCard).length,
-        actions: hand.filter(isActionCard).length,
-        total: hand.length,
-      };
-
-      // Log voting results for this batch round
-      logVotingResults({
-        winner,
-        votesConsidered,
-        validEarlyConsensus,
-        rankedGroups,
-        aheadByK,
-        completedResults,
-        legalActions,
-        overallStart,
-        currentState: acc.engine.state,
-        playerState,
-        hand,
-        inPlay,
-        handCounts,
-        logger,
-      });
-
-      if (winner.action.type === "skip_decision") {
-        agentLogger.info(
-          `AI voted to skip after ${acc.cards.length} selections`
-        );
-        return acc;
-      }
-
-      const card = winner.action.card;
-      if (!card) {
-        agentLogger.warn("Action missing card, stopping batch reconstruction");
-        return acc;
-      }
-
-      agentLogger.info(
-        `Batch round ${round + 1} winner: ${
-          winner.action.type
-        }(${card}) - ${winner.count} votes`
-      );
-
-      return runBatchRound(round + 1, {
-        cards: [...acc.cards, card],
-        engine: simulateCardSelection(acc.engine, card),
-      });
-    };
-
-    const { cards: selectedCards } = await runBatchRound(0, {
-      cards: [],
-      engine,
-    });
-
-    // Submit accumulated batch
-    const success = engine.dispatch(
-      {
-        type: "SUBMIT_DECISION",
-        playerId,
-        choice: { selectedCards },
-      },
-      playerId
-    ).ok;
-
-    if (!success) {
-      agentLogger.error("Failed to submit batch decision");
-    }
-
-    const overallDuration = performance.now() - overallStart;
-    agentLogger.info(
-      `Batch decision complete: ${
-        selectedCards.length
-      } cards (${overallDuration.toFixed(0)}ms)`
-    );
-    return;
+    return handleBatchConsensus(engine, playerId, decision, helperConfig);
   }
 
   if (isMultiActionDecision(decision)) {
-    agentLogger.info(
-      `Multi-action decision detected: ${decision.cardOptions.length} cards, running multi-round consensus`
-    );
-
-    const numCards = decision.cardOptions.length;
-    const aheadByK = Math.max(
-      CONSENSUS_AHEAD_BY_K_MIN,
-      Math.ceil(providers.length / CONSENSUS_AHEAD_BY_K_DIVISOR)
-    );
-
-    const defaultAction = decision.actions?.find(a => a.isDefault);
-    if (!defaultAction) {
-      throw new Error("Multi-action decision requires default action");
-    }
-
-    const cardActions = await Array.from({ length: numCards })
-      .map((_, i) => i)
-      .reduce<Promise<Record<number, string>>>(
-        async (accPromise, roundIndex) => {
-          const acc = await accPromise;
-
-          const roundState: GameState = {
-            ...engine.state,
-            pendingChoice: engine.state.pendingChoice
-              ? {
-                  ...engine.state.pendingChoice,
-                  prompt: `${engine.state.pendingChoice.prompt} (Card ${
-                    roundIndex + 1
-                  }/${numCards}: ${
-                    engine.state.pendingChoice.cardOptions[roundIndex]
-                  })`,
-                  metadata: {
-                    ...engine.state.pendingChoice.metadata,
-                    currentRoundIndex: roundIndex,
-                  },
-                }
-              : null,
-          };
-
-          const legalActions = getLegalActions(roundState);
-
-          agentLogger.info(
-            `Round ${roundIndex + 1}/${numCards}: Voting on ${
-              decision.cardOptions[roundIndex]
-            }`
-          );
-
-          const { results, earlyConsensus, voteGroups } =
-            await runModelsInParallel({
-              providers,
-              currentState: roundState,
-              humanChoice,
-              strategySummary,
-              customStrategy,
-              logger,
-              aheadByK,
-              dataFormat,
-              actionId: `${actionId}-r${roundIndex}`,
-            });
-
-          const { winner } = selectConsensusWinner(
-            voteGroups,
-            results,
-            earlyConsensus,
-            legalActions
-          );
-
-          if (winner.action.type === "skip_decision") {
-            agentLogger.info(
-              `AI skipped at round ${
-                roundIndex + 1
-              }, using defaults for remaining`
-            );
-            return acc;
-          }
-
-          agentLogger.debug(
-            `Card ${roundIndex} (${decision.cardOptions[roundIndex]}): ${winner.action.type}`
-          );
-
-          return { ...acc, [roundIndex]: winner.action.type };
-        },
-        Promise.resolve({})
-      );
-
-    const cardActionsWithDefaults = Object.fromEntries(
-      Array.from({ length: numCards }).map((_, i) => [
-        i,
-        i in cardActions ? cardActions[i] : defaultAction.id,
-      ])
-    );
-
-    const cardOrder = Object.entries(cardActionsWithDefaults)
-      .filter(([, actionId]) => actionId === "topdeck_card")
-      .map(([index]) => parseInt(index));
-
-    const finalChoice = {
-      selectedCards: [],
-      cardActions: cardActionsWithDefaults,
-      cardOrder,
-    };
-
-    // Execute the full decision
-    const success = engine.dispatch(
-      {
-        type: "SUBMIT_DECISION",
-        playerId,
-        choice: finalChoice,
-      },
-      playerId
-    ).ok;
-
-    if (!success) {
-      agentLogger.error("Failed to submit multi-action decision");
-    }
-
-    const overallDuration = performance.now() - overallStart;
-    const actionCount = Object.keys(cardActions).length;
-    agentLogger.info(
-      `Multi-action decision complete: ${actionCount} actions (${overallDuration.toFixed(
-        0
-      )}ms)`
-    );
-    return;
+    return handleMultiActionConsensus(engine, playerId, decision, helperConfig);
   }
 
   const legalActions = getLegalActions(currentState);

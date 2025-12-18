@@ -283,7 +283,7 @@ export function createCardSelectionDecision(params: {
     max: params.max,
     cardBeingPlayed: params.cardBeingPlayed,
     stage: params.stage,
-    metadata: params.metadata,
+    ...(params.metadata !== undefined && { metadata: params.metadata }),
   };
 }
 
@@ -330,7 +330,7 @@ export function generateDecisionFromSpec(params: {
     max,
     cardBeingPlayed: card,
     stage,
-    metadata,
+    ...(metadata !== undefined && { metadata }),
   };
 }
 

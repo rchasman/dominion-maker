@@ -1,4 +1,4 @@
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import { countVP } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";

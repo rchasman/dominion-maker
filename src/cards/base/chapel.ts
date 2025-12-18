@@ -14,7 +14,7 @@ export const chapel: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Initial call: request batch selection
   if (isInitialCall(decision, stage)) {

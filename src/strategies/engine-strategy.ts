@@ -6,6 +6,7 @@ import type { GameStrategy } from "../types/game-mode";
 import type { DominionEngine } from "../engine";
 import type { CardName, GameState } from "../types/game-state";
 import { isActionCard, isTreasureCard, CARDS } from "../data/cards";
+import { isDecisionChoice } from "../types/pending-choice";
 
 const AI_TURN_DELAY_MS = 300;
 
@@ -203,6 +204,7 @@ export class EngineStrategy implements GameStrategy {
   resolveAIPendingDecision(engine: DominionEngine): void {
     const decision = engine.state.pendingChoice;
     if (!decision || decision.playerId !== "ai") return;
+    if (!isDecisionChoice(decision)) return;
 
     if (decision.stage === "opponent_discard" || decision.stage === "discard") {
       this.handleDiscardDecision(engine);
@@ -225,9 +227,9 @@ export class EngineStrategy implements GameStrategy {
   private handleDiscardDecision(engine: DominionEngine): void {
     const decision = engine.state.pendingChoice;
     const aiPlayer = engine.state.players.ai;
-    if (!decision || !aiPlayer) return;
+    if (!isDecisionChoice(decision) || !aiPlayer) return;
 
-    const numToDiscard = decision.min;
+    const numToDiscard = decision.min ?? 0;
     const options = decision.cardOptions ?? aiPlayer.hand;
 
     const selected = selectCardsByPriority(
@@ -255,10 +257,10 @@ export class EngineStrategy implements GameStrategy {
 
   private handleTrashDecision(engine: DominionEngine): void {
     const decision = engine.state.pendingChoice;
-    if (!decision) return;
+    if (!isDecisionChoice(decision)) return;
 
     const options = decision.cardOptions ?? [];
-    const numToTrash = decision.min;
+    const numToTrash = decision.min ?? 0;
 
     const selected = selectCardsByPriority(
       options,
@@ -285,11 +287,11 @@ export class EngineStrategy implements GameStrategy {
 
   private handleGainDecision(engine: DominionEngine): void {
     const decision = engine.state.pendingChoice;
-    if (!decision) return;
+    if (!isDecisionChoice(decision)) return;
 
     const options = decision.cardOptions ?? [];
     const sorted = [...options].sort((a, b) => CARDS[b].cost - CARDS[a].cost);
-    const selected = sorted.slice(0, decision.min);
+    const selected = sorted.slice(0, decision.min ?? 0);
 
     engine.dispatch(
       {
@@ -303,10 +305,11 @@ export class EngineStrategy implements GameStrategy {
 
   private handleDefaultDecision(engine: DominionEngine): void {
     const decision = engine.state.pendingChoice;
-    if (!decision) return;
+    if (!isDecisionChoice(decision)) return;
 
     const options = decision.cardOptions ?? [];
-    const selected = decision.min === 0 ? [] : options.slice(0, decision.min);
+    const minCount = decision.min ?? 0;
+    const selected = minCount === 0 ? [] : options.slice(0, minCount);
 
     engine.dispatch(
       {

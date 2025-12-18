@@ -103,7 +103,7 @@ function compareAllPlayers(prev: GameState, next: GameState): StateChange[] {
       const nextPlayer = next.players[playerId];
       if (!prevPlayer || !nextPlayer) return [];
 
-      return comparePlayerStates(playerId, prevPlayerId, nextPlayer);
+      return comparePlayerStates(playerId, prevPlayer, nextPlayer);
     })
     .flat();
 }

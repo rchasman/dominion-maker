@@ -124,12 +124,12 @@ describe("Causality Tracking", () => {
 
     // Should keep Festival chain + Market chain (Market + its effects)
     expect(afterUndo.length).toBe(6);
-    expect(afterUndo[0].id).toBe("evt-1"); // Festival CARD_PLAYED
-    expect(afterUndo[1].id).toBe("evt-2"); // Festival ACTIONS_MODIFIED
-    expect(afterUndo[2].id).toBe("evt-3"); // Festival COINS_MODIFIED
-    expect(afterUndo[3].id).toBe("evt-4"); // Market CARD_PLAYED
-    expect(afterUndo[4].id).toBe("evt-5"); // Market ACTIONS_MODIFIED (caused by Market)
-    expect(afterUndo[5].id).toBe("evt-6"); // Market COINS_MODIFIED (caused by Market)
+    expect(afterUndo[0]!.id).toBe("evt-1"); // Festival CARD_PLAYED
+    expect(afterUndo[1]!.id).toBe("evt-2"); // Festival ACTIONS_MODIFIED
+    expect(afterUndo[2]!.id).toBe("evt-3"); // Festival COINS_MODIFIED
+    expect(afterUndo[3]!.id).toBe("evt-4"); // Market CARD_PLAYED
+    expect(afterUndo[4]!.id).toBe("evt-5"); // Market ACTIONS_MODIFIED (caused by Market)
+    expect(afterUndo[5]!.id).toBe("evt-6"); // Market COINS_MODIFIED (caused by Market)
   });
 
   it("should handle nested causality chains", () => {

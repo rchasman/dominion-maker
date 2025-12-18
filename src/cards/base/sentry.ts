@@ -77,7 +77,7 @@ export const sentry: CardEffect = ({
   playerId,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Initial: +1 Card, +1 Action, look at top 2
   if (!decision) {

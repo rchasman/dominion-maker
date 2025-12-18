@@ -40,7 +40,7 @@ export function decomposeDecisionForAI(
   }
 
   // Multi-card decision: decompose into atomic actions
-  if (max > 1) {
+  if ((max ?? 0) > 1) {
     const actions = cardOptions.map(card => {
       if (stage === "trash") {
         return { type: "trash_card" as const, card };

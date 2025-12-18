@@ -12,7 +12,7 @@ export const throneRoom: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
+  const playerState = state.players[playerId]!;
 
   // Initial: Choose an action to play twice
   if (!decision || stage === undefined) {

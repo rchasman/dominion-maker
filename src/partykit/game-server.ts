@@ -580,7 +580,7 @@ export default class GameServer implements Party.Server {
 
   private handleSpectate(
     conn: Party.Connection,
-    playerId: PlayerConnection,
+    player: PlayerConnection,
     name: string,
     clientId?: string,
   ) {

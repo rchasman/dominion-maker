@@ -141,7 +141,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
       const nextEvent = remainingEvents[i];
 
       // Stop if we hit a shuffle between current and next
-      if (i > 0 && events[startIndex + i].type === "DECK_SHUFFLED") {
+      if (i > 0 && events[startIndex + i]!.type === "DECK_SHUFFLED") {
         consecutiveCount = i;
         break;
       }
@@ -260,7 +260,7 @@ function cardDrawnToLogEntry(event: MaybeAggregatedEvent): LogEntry {
       count: event.count,
       cards: event.cards,
       cardCounts: event.cardCounts,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
   return {
@@ -268,7 +268,7 @@ function cardDrawnToLogEntry(event: MaybeAggregatedEvent): LogEntry {
     playerId: (event as CardDrawnEvent).playerId,
     count: 1,
     cards: [(event as CardDrawnEvent).card],
-    eventId: event.id,
+    ...(event.id !== undefined && { eventId: event.id }),
   };
 }
 
@@ -283,7 +283,7 @@ function cardDiscardedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
       count: event.count,
       cards: event.cards,
       cardCounts: event.cardCounts,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
   return {
@@ -291,7 +291,7 @@ function cardDiscardedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
     playerId: (event as CardDiscardedEvent).playerId,
     count: 1,
     cards: [(event as CardDiscardedEvent).card],
-    eventId: event.id,
+    ...(event.id !== undefined && { eventId: event.id }),
   };
 }
 
@@ -306,14 +306,14 @@ function cardTrashedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
       card: event.cards[0],
       cards: event.cards,
       count: event.count,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
   return {
     type: "trash-card",
     playerId: (event as CardTrashedEvent).playerId,
     card: (event as CardTrashedEvent).card,
-    eventId: event.id,
+    ...(event.id !== undefined && { eventId: event.id }),
   };
 }
 
@@ -327,18 +327,19 @@ function cardGainedToLogEntry(
   const isBuy = !event.causedBy;
 
   if (isBuy) {
+    const vp = typeof cardDef.vp === "number" ? cardDef.vp : undefined;
     return {
       type: "buy-card",
       playerId: event.playerId,
       card: event.card,
-      vp: typeof cardDef.vp === "number" ? cardDef.vp : undefined,
-      eventId: event.id,
+      ...(vp !== undefined && { vp }),
+      ...(event.id !== undefined && { eventId: event.id }),
       children: [
         {
           type: "gain-card",
           playerId: event.playerId,
           card: event.card,
-          eventId: event.id,
+          ...(event.id !== undefined && { eventId: event.id }),
         },
       ],
     };
@@ -348,7 +349,7 @@ function cardGainedToLogEntry(
     type: "gain-card",
     playerId: event.playerId,
     card: event.card,
-    eventId: event.id,
+    ...(event.id !== undefined && { eventId: event.id }),
   };
 }
 

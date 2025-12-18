@@ -235,7 +235,7 @@ describe("Game initialization with different modes", () => {
       });
 
       // All should have same supply when using same kingdom cards
-      const supply0 = JSON.stringify(engines[0].state.supply);
+      const supply0 = JSON.stringify(engines[0]!.state.supply);
       engines.forEach(engine => {
         expect(JSON.stringify(engine.state.supply)).toBe(supply0);
       });

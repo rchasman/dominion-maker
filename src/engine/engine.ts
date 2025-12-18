@@ -191,7 +191,7 @@ export class DominionEngine {
           requestId: requestEvent.requestId,
           byPlayer: playerId,
           toEventId,
-          reason,
+          ...(reason !== undefined && { reason }),
           approvals: new Set(),
           needed: opponents.length, // All opponents must approve
         };

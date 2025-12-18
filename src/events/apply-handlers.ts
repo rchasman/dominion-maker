@@ -273,7 +273,7 @@ export function applyReactionEvent(
           type: "text",
           playerId: event.playerId,
           message: `${event.playerId} reveals ${event.card} to block ${event.attackCard}`,
-          eventId: event.id,
+          ...(event.id !== undefined && { eventId: event.id }),
         },
       ],
     };
@@ -290,7 +290,7 @@ export function applyReactionEvent(
           type: "text",
           playerId: event.playerId,
           message: `${event.playerId} declines to reveal a reaction to ${event.attackCard}`,
-          eventId: event.id,
+          ...(event.id !== undefined && { eventId: event.id }),
         },
       ],
     };

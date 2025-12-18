@@ -66,7 +66,7 @@ function getInitialCardActions(
   return cards.reduce(
     (acc, _, index) => ({
       ...acc,
-      [index]: defaultAction?.id || actions[0].id,
+      [index]: defaultAction?.id || actions[0]!.id,
     }),
     {} as Record<number, CardActionId>,
   );
@@ -102,7 +102,7 @@ function useCardDecisionState(
       setCardActions(prev => {
         const nextIdx =
           (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
-        const newActions = { ...prev, [index]: actions[nextIdx].id };
+        const newActions = { ...prev, [index]: actions[nextIdx]!.id };
         onDataChange({
           cardActions: newActions,
           cardOrder: requiresOrdering

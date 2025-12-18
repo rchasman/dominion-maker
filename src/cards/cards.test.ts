@@ -362,8 +362,8 @@ describe("Multi-Stage Decision Cards", () => {
       expect(newState.trash).toContain("Estate");
 
       // Hand should have remaining card (only Duchy)
-      expect(newState.players["human"].hand).toEqual(["Duchy"]);
-      expect(newState.players["human"].hand).not.toContain("Copper");
+      expect(newState.players["human"]!.hand).toEqual(["Duchy"]);
+      expect(newState.players["human"]!.hand).not.toContain("Copper");
     });
 
     it("should handle AI reconstructed batch submission", () => {
@@ -398,7 +398,7 @@ describe("Multi-Stage Decision Cards", () => {
       expect(newState.pendingChoice).toBeNull();
 
       // Hand has remaining cards
-      expect(newState.players["human"].hand).toEqual(["Estate", "Duchy"]);
+      expect(newState.players["human"]!.hand).toEqual(["Estate", "Duchy"]);
     });
   });
 
@@ -758,10 +758,10 @@ describe("Attack Cards", () => {
         e => e.type === "CARD_DISCARDED",
       );
       expect(discardEvents.length).toBe(2);
-      expect(discardEvents[0].card).toBe("Estate");
-      expect(discardEvents[0].playerId).toBe("ai");
-      expect(discardEvents[1].card).toBe("Duchy");
-      expect(discardEvents[1].playerId).toBe("ai");
+      expect(discardEvents[0]!.card).toBe("Estate");
+      expect(discardEvents[0]!.playerId).toBe("ai");
+      expect(discardEvents[1]!.card).toBe("Duchy");
+      expect(discardEvents[1]!.playerId).toBe("ai");
 
       // Should not create another pending decision
       expect(result.pendingChoice).toBeUndefined();

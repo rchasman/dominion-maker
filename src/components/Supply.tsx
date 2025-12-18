@@ -48,14 +48,14 @@ function canInteractWithCard(
   // If there's a gain decision from supply, only enable cards in the options
   if (pendingChoice && pendingChoice.from === "supply") {
     const options = pendingChoice.cardOptions || [];
-    return options.includes(card) && state.supply[card] > 0;
+    return options.includes(card) && (state.supply[card] ?? 0) > 0;
   }
 
   // Normal buy phase logic
   return (
     canBuyCard.canBuy &&
     CARDS[card].cost <= canBuyCard.availableCoins &&
-    state.supply[card] > 0
+    (state.supply[card] ?? 0) > 0
   );
 }
 
