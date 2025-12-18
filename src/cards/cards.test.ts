@@ -303,7 +303,7 @@ describe("Multi-Stage Decision Cards", () => {
         "discard",
       );
 
-      const player = newState.players.human;
+      const player = newState.players.human!;
 
       // Should have drawn 2 cards (started with 3, discarded 2, drew 2 = 3)
       expect(player.hand.length).toBe(3);
@@ -445,7 +445,7 @@ describe("Multi-Stage Decision Cards", () => {
         "topdeck",
       );
 
-      const player = newState.players.human;
+      const player = newState.players.human!;
       expect(player.deck[player.deck.length - 1]).toBe("Gold");
     });
 
@@ -485,7 +485,7 @@ describe("Multi-Stage Decision Cards", () => {
       }
 
       // Discard should still have the cards until decision is resolved
-      expect(newState.players.human.discard).toEqual(["Copper", "Estate"]);
+      expect(newState.players.human!.discard).toEqual(["Copper", "Estate"]);
     });
   });
 
@@ -582,7 +582,7 @@ describe("Multi-Stage Decision Cards", () => {
         "gain",
       );
 
-      const player = newState.players.human;
+      const player = newState.players.human!;
       expect(player.discard).toContain("Silver");
     });
   });
@@ -621,7 +621,7 @@ describe("Multi-Stage Decision Cards", () => {
         "gain",
       );
 
-      const player = newState.players.human;
+      const player = newState.players.human!;
       expect(player.hand).toContain("Silver");
     });
   });
@@ -657,7 +657,7 @@ describe("Multi-Stage Decision Cards", () => {
         "topdeck",
       );
 
-      const player = newState.players.human;
+      const player = newState.players.human!;
       expect(player.deck[player.deck.length - 1]).toBe("Copper");
     });
   });
@@ -671,7 +671,7 @@ describe("Attack Cards", () => {
   describe("Militia", () => {
     it("should give +$2 to player", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Militia"];
+      state.players.human!.hand = ["Militia"];
       state.actions = 1;
 
       const result = handleCommand(
@@ -691,7 +691,7 @@ describe("Attack Cards", () => {
 
     it("should attack opponents with more than 3 cards", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Militia"];
+      state.players.human!.hand = ["Militia"];
       state.players.ai = {
         deck: [],
         hand: ["Copper", "Silver", "Gold", "Estate", "Duchy"],
@@ -793,7 +793,7 @@ describe("Attack Cards", () => {
 
     it("should give Curse to opponents", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Witch"];
+      state.players.human!.hand = ["Witch"];
       state.players.ai = {
         deck: [],
         hand: [],
@@ -823,7 +823,7 @@ describe("Attack Cards", () => {
   describe("Bureaucrat", () => {
     it("should gain Silver to top of deck", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Bureaucrat"];
+      state.players.human!.hand = ["Bureaucrat"];
       state.actions = 1;
 
       const result = handleCommand(
@@ -845,7 +845,7 @@ describe("Attack Cards", () => {
 
     it("should make opponents topdeck victory card", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Bureaucrat"];
+      state.players.human!.hand = ["Bureaucrat"];
       state.players.ai = {
         deck: [],
         hand: ["Copper", "Estate", "Duchy"],
@@ -882,7 +882,7 @@ describe("Attack Cards", () => {
   describe("Bandit", () => {
     it("should gain Gold", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Bandit"];
+      state.players.human!.hand = ["Bandit"];
       state.actions = 1;
 
       const result = handleCommand(
@@ -902,7 +902,7 @@ describe("Attack Cards", () => {
 
     it("should trash opponent treasures (not Copper)", () => {
       const state = createTestState([]);
-      state.players.human.hand = ["Bandit"];
+      state.players.human!.hand = ["Bandit"];
       state.players.ai = {
         deck: ["Silver", "Gold", "Copper"],
         hand: [],
@@ -1009,7 +1009,7 @@ describe("Complex Card Interactions", () => {
 
       // Should reveal 2 cards with decision
       expect(newState.pendingChoice).toBeDefined();
-      if (!newState.pendingChoice) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
       expect(newState.pendingChoice.choiceType).toBe("decision");
       expect(newState.pendingChoice.cardOptions.length).toBe(2);
       expect(newState.pendingChoice.actions).toHaveLength(3);
@@ -1219,7 +1219,7 @@ describe("Complex Card Interactions", () => {
 
       // Should request discarding 3 cards
       expect(newState.pendingChoice).toBeDefined();
-      if (!newState.pendingChoice) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
       expect(newState.pendingChoice.min).toBe(3);
       expect(newState.pendingChoice.max).toBe(3);
     });

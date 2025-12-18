@@ -19,8 +19,8 @@ describe("Undo System - Immediate Undo", () => {
     engine.startGame(["human"]);
 
     // Play a card
-    engine.state.players.human.hand = ["Village"];
-    engine.state.players.human.deck = ["Copper"];
+    engine.state.players.human!.hand = ["Village"];
+    engine.state.players.human!.deck = ["Copper"];
     engine.state.actions = 1;
 
     const eventsBefore = engine.eventLog.length;
@@ -38,23 +38,23 @@ describe("Undo System - Immediate Undo", () => {
     expect(turnStartEvent).toBeDefined();
 
     // Undo to turn start (removes all actions)
-    if (turnStartEvent.id) {
-      engine.undoToEvent(turnStartEvent.id);
+    if (turnStartEvent!.id) {
+      engine.undoToEvent(turnStartEvent!.id);
     }
 
     // Events after turn start should be removed
     expect(engine.eventLog.length).toBeLessThan(eventsAfter);
 
     // Village should not be in inPlay
-    expect(engine.state.players.human.inPlay).not.toContain("Village");
+    expect(engine.state.players.human!.inPlay).not.toContain("Village");
   });
 
   it("should remove causal chain when undoing", () => {
     const engine = new DominionEngine();
     engine.startGame(["human"]);
 
-    engine.state.players.human.hand = ["Market"];
-    engine.state.players.human.deck = ["Copper"];
+    engine.state.players.human!.hand = ["Market"];
+    engine.state.players.human!.deck = ["Copper"];
     engine.state.actions = 1;
 
     engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Market" });
@@ -99,7 +99,7 @@ describe("Undo System - Immediate Undo", () => {
     const engine = new DominionEngine();
     engine.startGame(["human"]);
 
-    engine.state.players.human.hand = ["Festival"];
+    engine.state.players.human!.hand = ["Festival"];
     engine.state.actions = 1;
 
     const coinsBefore = engine.state.coins;
@@ -167,8 +167,8 @@ describe("Undo System - Root Cause Detection", () => {
     const engine = new DominionEngine();
     engine.startGame(["human"]);
 
-    engine.state.players.human.hand = ["Village", "Smithy"];
-    engine.state.players.human.deck = ["Copper", "Silver", "Gold"];
+    engine.state.players.human!.hand = ["Village", "Smithy"];
+    engine.state.players.human!.deck = ["Copper", "Silver", "Gold"];
     engine.state.actions = 2;
 
     engine.dispatch({
@@ -213,8 +213,8 @@ describe("Undo System - Causality Utilities", () => {
     const engine = new DominionEngine();
     engine.startGame(["human"]);
 
-    engine.state.players.human.hand = ["Market"];
-    engine.state.players.human.deck = ["Copper"];
+    engine.state.players.human!.hand = ["Market"];
+    engine.state.players.human!.deck = ["Copper"];
     engine.state.actions = 1;
 
     engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Market" });
@@ -295,7 +295,7 @@ describe("Undo System - getStateAtEvent", () => {
 
     const stateAfterStart = { ...engine.state };
 
-    engine.state.players.human.hand = ["Festival"];
+    engine.state.players.human!.hand = ["Festival"];
     engine.state.actions = 1;
 
     engine.dispatch({

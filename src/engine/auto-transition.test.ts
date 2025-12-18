@@ -9,7 +9,7 @@ describe("Auto-transition logic", () => {
 
       // Play actions until none remain
       const state = engine.state;
-      const humanPlayer = state.players.human;
+      const humanPlayer = state.players.human!;
 
       // Manually set actions to 0 by playing action
       if (humanPlayer.hand.some(card => card === "Village")) {
@@ -49,7 +49,7 @@ describe("Auto-transition logic", () => {
 
       // Find and play a card that creates a decision (like Cellar)
       const state = engine.state;
-      const humanPlayer = state.players.human;
+      const humanPlayer = state.players.human!;
       const cellar = humanPlayer.hand.find(card => card === "Cellar");
 
       if (cellar) {

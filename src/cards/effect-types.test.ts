@@ -482,7 +482,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
   it("should create effect that draws cards", () => {
     const state = createBasicState();
-    state.players.human.deck = ["Copper", "Silver", "Gold"];
+    state.players.human!.deck = ["Copper", "Silver", "Gold"];
 
     const effect = createSimpleCardEffect({ cards: 3 });
     const result = effect({ state, playerId: "human", card: "Smithy" });
@@ -532,7 +532,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
   it("should create effect with multiple benefits (Market)", () => {
     const state = createBasicState();
-    state.players.human.deck = ["Copper"];
+    state.players.human!.deck = ["Copper"];
 
     const effect = createSimpleCardEffect({
       cards: 1,
@@ -565,7 +565,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
   it("should exactly match Smithy behavior (+3 cards)", () => {
     const state = createBasicState();
-    state.players.human.deck = ["Copper", "Silver", "Gold"];
+    state.players.human!.deck = ["Copper", "Silver", "Gold"];
 
     const smithyFactory = createSimpleCardEffect({ cards: 3 });
     const result = smithyFactory({ state, playerId: "human", card: "Smithy" });
@@ -576,7 +576,7 @@ describe("createSimpleCardEffect - Factory Function", () => {
 
   it("should exactly match Village behavior (+1 card, +2 actions)", () => {
     const state = createBasicState();
-    state.players.human.deck = ["Copper"];
+    state.players.human!.deck = ["Copper"];
 
     const villageFactory = createSimpleCardEffect({ cards: 1, actions: 2 });
     const result = villageFactory({
@@ -720,8 +720,8 @@ describe("Helper Function Integration", () => {
 
   it("createSimpleCardEffect should handle empty deck gracefully", () => {
     const state = createBasicState();
-    state.players.human.deck = [];
-    state.players.human.discard = [];
+    state.players.human!.deck = [];
+    state.players.human!.discard = [];
 
     const smithy = createSimpleCardEffect({ cards: 3 });
     const result = smithy({ state, playerId: "human", card: "Smithy" });

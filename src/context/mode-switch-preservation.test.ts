@@ -42,16 +42,16 @@ describe("Mode switching preserves game state", () => {
 
     engine.startGame(["human", "ai"]);
 
-    const humanHandBefore = [...engine.state.players.human.hand];
-    const humanDeckBefore = [...engine.state.players.human.deck];
-    const aiHandBefore = [...engine.state.players.ai.hand];
+    const humanHandBefore = [...engine.state.players.human!.hand];
+    const humanDeckBefore = [...engine.state.players.human!.deck];
+    const aiHandBefore = [...engine.state.players.ai!.hand];
 
     // In actual implementation, mode switch doesn't restart
     // So these should stay the same
 
-    const humanHandAfter = [...engine.state.players.human.hand];
-    const humanDeckAfter = [...engine.state.players.human.deck];
-    const aiHandAfter = [...engine.state.players.ai.hand];
+    const humanHandAfter = [...engine.state.players.human!.hand];
+    const humanDeckAfter = [...engine.state.players.human!.deck];
+    const aiHandAfter = [...engine.state.players.ai!.hand];
 
     expect(humanHandAfter).toEqual(humanHandBefore);
     expect(humanDeckAfter).toEqual(humanDeckBefore);
@@ -91,7 +91,7 @@ describe("Mode switching preserves game state", () => {
     engine.startGame(["human", "ai"]);
 
     // Play some actions to generate events
-    const humanHand = engine.state.players.human.hand;
+    const humanHand = engine.state.players.human!.hand;
     const copper = humanHand.find(c => c === "Copper");
     if (copper) {
       engine.playTreasure("human", copper);

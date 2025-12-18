@@ -60,7 +60,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
 
   it("Witch with empty Curse supply does not gain Curses", () => {
     const state = createTestState();
-    state.players.human.deck = ["Copper", "Silver"];
+    state.players.human!.deck = ["Copper", "Silver"];
 
     const effect = getCardEffect("Witch");
     expect(effect).toBeDefined();
@@ -77,10 +77,10 @@ describe("Supply Depletion - Centralized Enforcement", () => {
     const newState = applyEvents(state, result.events);
 
     // Verify draws happened
-    expect(newState.players.human.hand.length).toBe(2);
+    expect(newState.players.human!.hand.length).toBe(2);
 
     // Verify Curse was not gained (supply was empty)
-    expect(newState.players.ai.discard.length).toBe(0);
+    expect(newState.players.ai!.discard.length).toBe(0);
     expect(newState.supply.Curse).toBe(0);
   });
 
@@ -102,7 +102,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
     const newState = applyEvents(state, result.events);
 
     // Verify Silver was not gained (supply was empty)
-    expect(newState.players.human.deck.length).toBe(0);
+    expect(newState.players.human!.deck.length).toBe(0);
     expect(newState.supply.Silver).toBe(0);
   });
 
@@ -124,14 +124,14 @@ describe("Supply Depletion - Centralized Enforcement", () => {
     const newState = applyEvents(state, result.events);
 
     // Verify Gold was not gained (supply was empty)
-    expect(newState.players.human.discard.length).toBe(0);
+    expect(newState.players.human!.discard.length).toBe(0);
     expect(newState.supply.Gold).toBe(0);
   });
 
   it("Multiple Witch plays with limited Curse supply", () => {
     const state = createTestState();
     state.supply.Curse = 1; // Only 1 Curse available
-    state.players.human.deck = ["Copper", "Silver", "Gold", "Estate"];
+    state.players.human!.deck = ["Copper", "Silver", "Gold", "Estate"];
     state.playerOrder = ["human", "ai1", "ai2"];
     state.players.ai1 = {
       deck: [],
@@ -163,12 +163,12 @@ describe("Supply Depletion - Centralized Enforcement", () => {
     const newState = applyEvents(state, result.events);
 
     // Verify draws happened
-    expect(newState.players.human.hand.length).toBe(2);
+    expect(newState.players.human!.hand.length).toBe(2);
 
     // Verify only 1 Curse was gained (first target gets it, second doesn't)
     const totalCursesGained =
-      newState.players.ai1.discard.filter(c => c === "Curse").length +
-      newState.players.ai2.discard.filter(c => c === "Curse").length;
+      newState.players.ai1!.discard.filter(c => c === "Curse").length +
+      newState.players.ai2!.discard.filter(c => c === "Curse").length;
     expect(totalCursesGained).toBe(1);
     expect(newState.supply.Curse).toBe(0);
   });

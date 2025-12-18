@@ -80,7 +80,7 @@ describe("Mode switching during active game", () => {
 
     // Should be able to access all actual players
     actualPlayerIds.forEach(playerId => {
-      const player = engine.state.players[playerId];
+      const player = engine.state.players[playerId]!;
       expect(player).toBeDefined();
       expect(player.deck).toBeDefined();
       expect(player.hand).toBeDefined();

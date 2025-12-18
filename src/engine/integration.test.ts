@@ -17,9 +17,9 @@ describe("Shuffle Mechanics", () => {
     engine.startGame(["human"]);
 
     // Setup: empty deck, cards in discard
-    engine.state.players.human.deck = [];
-    engine.state.players.human.discard = ["Copper", "Silver", "Gold"];
-    engine.state.players.human.hand = ["Smithy"];
+    engine.state.players.human!.deck = [];
+    engine.state.players.human!.discard = ["Copper", "Silver", "Gold"];
+    engine.state.players.human!.hand = ["Smithy"];
     engine.state.actions = 1;
 
     // Play Smithy (draws 3)
@@ -36,16 +36,16 @@ describe("Shuffle Mechanics", () => {
     expect(drawEvents.length).toBe(3);
 
     // Discard should be empty (shuffled into deck)
-    expect(engine.state.players.human.discard.length).toBe(0);
+    expect(engine.state.players.human!.discard.length).toBe(0);
   });
 
   it("should generate DECK_SHUFFLED event with newDeckOrder", () => {
     const engine = new DominionEngine();
     engine.startGame(["human"]);
 
-    engine.state.players.human.deck = [];
-    engine.state.players.human.discard = ["Copper", "Silver", "Gold"];
-    engine.state.players.human.hand = ["Smithy"];
+    engine.state.players.human!.deck = [];
+    engine.state.players.human!.discard = ["Copper", "Silver", "Gold"];
+    engine.state.players.human!.hand = ["Smithy"];
     engine.state.actions = 1;
 
     engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
@@ -74,7 +74,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayerId).toBe("human");
 
     // End human's turn
-    engine.state.players.human.deck = [
+    engine.state.players.human!.deck = [
       "Copper",
       "Silver",
       "Gold",
@@ -88,7 +88,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayerId).toBe("ai");
 
     // End ai's turn
-    engine.state.players.ai.deck = [
+    engine.state.players.ai!.deck = [
       "Copper",
       "Copper",
       "Copper",
@@ -107,7 +107,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.startGame(["human", "ai"]);
 
     // Play Festival for +2 actions, +1 buy, +$2
-    engine.state.players.human.hand = ["Festival"];
+    engine.state.players.human!.hand = ["Festival"];
     engine.state.actions = 1;
 
     engine.dispatch({
@@ -125,7 +125,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(coinsAfterFestival).toBeGreaterThan(0);
 
     // End turn
-    engine.state.players.human.deck = [
+    engine.state.players.human!.deck = [
       "Copper",
       "Silver",
       "Gold",
@@ -148,7 +148,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayerId).toBe("player1");
 
     // End player1's turn
-    engine.state.players.player1.deck = [
+    engine.state.players.player1!.deck = [
       "Copper",
       "Copper",
       "Copper",
@@ -161,7 +161,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayerId).toBe("player2");
 
     // End player2's turn
-    engine.state.players.player2.deck = [
+    engine.state.players.player2!.deck = [
       "Copper",
       "Copper",
       "Copper",
@@ -174,7 +174,7 @@ describe("Multi-Turn Scenarios", () => {
     expect(engine.state.activePlayerId).toBe("player3");
 
     // End player3's turn - should cycle back
-    engine.state.players.player3.deck = [
+    engine.state.players.player3!.deck = [
       "Copper",
       "Copper",
       "Copper",

@@ -29,7 +29,7 @@ describe("DominionEngine - Initialization", () => {
     const result = engine.startGame(["human", "ai"]);
 
     expect(result.ok).toBe(true);
-    expect(engine.state.players.human).toBeDefined();
+    expect(engine.state.players.human!).toBeDefined();
     expect(engine.state.players.ai).toBeDefined();
     expect(engine.state.turn).toBe(1);
     expect(engine.state.activePlayerId).toBe("human");
@@ -44,7 +44,7 @@ describe("DominionEngine - Initialization", () => {
     engine.startGame(["player1", "player2"]);
 
     // Should have reset
-    expect(engine.state.players.human).toBeUndefined();
+    expect(engine.state.players.human!).toBeUndefined();
     expect(engine.state.players.player1).toBeDefined();
     // Event log replaced
     expect(engine.eventLog.length).toBeGreaterThan(0);
@@ -76,7 +76,7 @@ describe("DominionEngine - Command Dispatch", () => {
     engine.startGame(["human", "ai"]);
 
     // Give human a Village in hand
-    const humanPlayer = engine.state.players.human;
+    const humanPlayer = engine.state.players.human!;
     humanPlayer.hand.push("Village");
     engine.state.actions = 1;
 
@@ -100,7 +100,7 @@ describe("DominionEngine - Command Dispatch", () => {
     const eventCountAfterStart = engine.eventLog.length;
 
     // Manually add cards to hand for testing
-    const humanPlayer = engine.state.players.human;
+    const humanPlayer = engine.state.players.human!;
     humanPlayer.hand = ["Village", "Smithy"];
     humanPlayer.deck = ["Copper", "Silver", "Gold", "Estate"];
     engine.state.actions = 2;
@@ -161,7 +161,7 @@ describe("DominionEngine - State Caching", () => {
     const coins1 = state1.coins;
 
     // Add cards to enable play
-    const humanPlayer = engine.state.players.human;
+    const humanPlayer = engine.state.players.human!;
     humanPlayer.hand = ["Festival"];
     engine.state.actions = 1;
 
@@ -185,7 +185,7 @@ describe("DominionEngine - State Caching", () => {
     engine.startGame(["human", "ai"]);
 
     // Manually modify event log (simulating direct event addition)
-    const humanPlayer = engine.state.players.human;
+    const humanPlayer = engine.state.players.human!;
     humanPlayer.hand = ["Market"];
     engine.state.actions = 1;
 
@@ -278,7 +278,7 @@ describe("DominionEngine - Forking", () => {
     const forked = engine.fork();
 
     // Add cards to forked engine
-    forked.state.players.human.hand = ["Village"];
+    forked.state.players.human!.hand = ["Village"];
     forked.state.actions = 1;
 
     forked.dispatch({
@@ -307,8 +307,8 @@ describe("DominionEngine - Full Game Flow", () => {
     const initialPlayer = engine.state.activePlayerId;
 
     // Give human some cards
-    engine.state.players.human.hand = ["Village", "Copper"];
-    engine.state.players.human.deck = ["Estate", "Duchy"];
+    engine.state.players.human!.hand = ["Village", "Copper"];
+    engine.state.players.human!.deck = ["Estate", "Duchy"];
     engine.state.actions = 1;
 
     // Action phase
@@ -328,7 +328,7 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.phase).toBe("buy");
 
     // Buy phase - play treasure
-    engine.state.players.human.hand = ["Copper"];
+    engine.state.players.human!.hand = ["Copper"];
     const playTreasureResult = engine.dispatch({
       type: "PLAY_TREASURE",
       playerId: "human",
@@ -338,7 +338,7 @@ describe("DominionEngine - Full Game Flow", () => {
     expect(engine.state.coins).toBeGreaterThan(0);
 
     // End buy phase (ends turn)
-    engine.state.players.human.deck = [
+    engine.state.players.human!.deck = [
       "Estate",
       "Duchy",
       "Province",
@@ -368,7 +368,7 @@ describe("DominionEngine - State Consistency", () => {
 
     // Perform 10 operations
     Array.from({ length: 10 }).forEach(() => {
-      engine.state.players.human.hand = ["Festival"];
+      engine.state.players.human!.hand = ["Festival"];
       engine.state.actions = 1;
 
       const result = engine.dispatch({

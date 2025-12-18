@@ -82,7 +82,7 @@ describe("Event Application - Game Setup", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human).toBeDefined();
+    expect(newState.players.human!).toBeDefined();
     expect(newState.players.ai).toBeDefined();
     expect(newState.supply).toEqual({ Copper: 46, Estate: 8 });
     expect(newState.kingdomCards).toEqual(["Village", "Smithy"]);
@@ -95,7 +95,7 @@ describe("Event Application - Game Setup", () => {
 
   it("should apply INITIAL_DECK_DEALT", () => {
     const state = createBasicGameState();
-    state.players.human.deck = [];
+    state.players.human!.deck = [];
 
     const event: GameEvent = {
       type: "INITIAL_DECK_DEALT",
@@ -116,13 +116,13 @@ describe("Event Application - Game Setup", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.deck.length).toBe(10);
-    expect(newState.players.human.deck).toEqual(event.cards);
+    expect(newState.players.human!.deck.length).toBe(10);
+    expect(newState.players.human!.deck).toEqual(event.cards);
   });
 
   it("should apply INITIAL_HAND_DRAWN", () => {
     const state = createBasicGameState();
-    state.players.human.deck = [
+    state.players.human!.deck = [
       "Copper",
       "Copper",
       "Copper",
@@ -131,7 +131,7 @@ describe("Event Application - Game Setup", () => {
       "Estate",
       "Estate",
     ];
-    state.players.human.hand = [];
+    state.players.human!.hand = [];
 
     const event: GameEvent = {
       type: "INITIAL_HAND_DRAWN",
@@ -141,8 +141,8 @@ describe("Event Application - Game Setup", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(event.cards);
-    expect(newState.players.human.deck.length).toBe(2); // 7 - 5 = 2
+    expect(newState.players.human!.hand).toEqual(event.cards);
+    expect(newState.players.human!.deck.length).toBe(2); // 7 - 5 = 2
     expect(newState.turn).toBe(1); // Sets turn to 1
   });
 });
@@ -211,8 +211,8 @@ describe("Event Application - Card Movement", () => {
 
   it("should apply CARD_DRAWN (single card)", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper", "Silver", "Gold"];
-    state.players.human.hand = ["Estate"];
+    state.players.human!.deck = ["Copper", "Silver", "Gold"];
+    state.players.human!.hand = ["Estate"];
 
     const event: GameEvent = {
       type: "CARD_DRAWN",
@@ -223,13 +223,13 @@ describe("Event Application - Card Movement", () => {
     const newState = applyEvent(state, event);
 
     // Card moved from end of deck to hand
-    expect(newState.players.human.deck).toEqual(["Copper", "Silver"]);
-    expect(newState.players.human.hand).toEqual(["Estate", "Gold"]);
+    expect(newState.players.human!.deck).toEqual(["Copper", "Silver"]);
+    expect(newState.players.human!.hand).toEqual(["Estate", "Gold"]);
   });
 
   it("should apply CARD_PLAYED", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Village", "Estate", "Copper"];
+    state.players.human!.hand = ["Village", "Estate", "Copper"];
 
     const event: GameEvent = {
       type: "CARD_PLAYED",
@@ -240,15 +240,15 @@ describe("Event Application - Card Movement", () => {
     const newState = applyEvent(state, event);
 
     // Card moved from hand to inPlay
-    expect(newState.players.human.hand).toEqual(["Estate", "Copper"]);
-    expect(newState.players.human.inPlay).toEqual(["Village"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([0]); // Was at index 0
+    expect(newState.players.human!.hand).toEqual(["Estate", "Copper"]);
+    expect(newState.players.human!.inPlay).toEqual(["Village"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([0]); // Was at index 0
   });
 
   it("should apply CARD_DISCARDED from hand", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper", "Estate"];
-    state.players.human.discard = [];
+    state.players.human!.hand = ["Copper", "Estate"];
+    state.players.human!.discard = [];
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
@@ -259,15 +259,15 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Estate"]);
-    expect(newState.players.human.discard).toEqual(["Copper"]);
+    expect(newState.players.human!.hand).toEqual(["Estate"]);
+    expect(newState.players.human!.discard).toEqual(["Copper"]);
   });
 
   it("should apply CARD_DISCARDED from inPlay", () => {
     const state = createBasicGameState();
-    state.players.human.inPlay = ["Village", "Smithy"];
-    state.players.human.inPlaySourceIndices = [0, 1];
-    state.players.human.discard = [];
+    state.players.human!.inPlay = ["Village", "Smithy"];
+    state.players.human!.inPlaySourceIndices = [0, 1];
+    state.players.human!.discard = [];
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
@@ -278,15 +278,15 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.inPlay).toEqual(["Smithy"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([1]);
-    expect(newState.players.human.discard).toEqual(["Village"]);
+    expect(newState.players.human!.inPlay).toEqual(["Smithy"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([1]);
+    expect(newState.players.human!.discard).toEqual(["Village"]);
   });
 
   it("should apply CARD_DISCARDED from deck", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper", "Silver", "Gold"];
-    state.players.human.discard = [];
+    state.players.human!.deck = ["Copper", "Silver", "Gold"];
+    state.players.human!.discard = [];
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
@@ -298,13 +298,13 @@ describe("Event Application - Card Movement", () => {
     const newState = applyEvent(state, event);
 
     // Removes from end of deck (top)
-    expect(newState.players.human.deck).toEqual(["Copper", "Silver"]);
-    expect(newState.players.human.discard).toEqual(["Gold"]);
+    expect(newState.players.human!.deck).toEqual(["Copper", "Silver"]);
+    expect(newState.players.human!.discard).toEqual(["Gold"]);
   });
 
   it("should apply CARD_TRASHED from hand", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper", "Estate"];
+    state.players.human!.hand = ["Copper", "Estate"];
     state.trash = [];
 
     const event: GameEvent = {
@@ -316,13 +316,13 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Estate"]);
+    expect(newState.players.human!.hand).toEqual(["Estate"]);
     expect(newState.trash).toEqual(["Copper"]);
   });
 
   it("should apply CARD_TRASHED from deck", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper", "Silver", "Gold"];
+    state.players.human!.deck = ["Copper", "Silver", "Gold"];
     state.trash = [];
 
     const event: GameEvent = {
@@ -334,13 +334,13 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.deck).toEqual(["Copper", "Silver"]);
+    expect(newState.players.human!.deck).toEqual(["Copper", "Silver"]);
     expect(newState.trash).toEqual(["Gold"]);
   });
 
   it("should apply CARD_GAINED to discard", () => {
     const state = createBasicGameState();
-    state.players.human.discard = [];
+    state.players.human!.discard = [];
     state.supply.Silver = 40;
 
     const event: GameEvent = {
@@ -352,13 +352,13 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.discard).toEqual(["Silver"]);
+    expect(newState.players.human!.discard).toEqual(["Silver"]);
     expect(newState.supply.Silver).toBe(39);
   });
 
   it("should apply CARD_GAINED to hand", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper"];
+    state.players.human!.hand = ["Copper"];
     state.supply.Gold = 30;
 
     const event: GameEvent = {
@@ -370,13 +370,13 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Copper", "Gold"]);
+    expect(newState.players.human!.hand).toEqual(["Copper", "Gold"]);
     expect(newState.supply.Gold).toBe(29);
   });
 
   it("should apply CARD_GAINED to deck (top)", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper", "Silver"];
+    state.players.human!.deck = ["Copper", "Silver"];
     state.supply.Gold = 30;
 
     const event: GameEvent = {
@@ -389,7 +389,7 @@ describe("Event Application - Card Movement", () => {
     const newState = applyEvent(state, event);
 
     // Added to top of deck (end of array)
-    expect(newState.players.human.deck).toEqual(["Copper", "Silver", "Gold"]);
+    expect(newState.players.human!.deck).toEqual(["Copper", "Silver", "Gold"]);
     expect(newState.supply.Gold).toBe(29);
   });
 
@@ -410,8 +410,8 @@ describe("Event Application - Card Movement", () => {
 
   it("should apply DECK_SHUFFLED", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper"];
-    state.players.human.discard = ["Silver", "Gold", "Estate"];
+    state.players.human!.deck = ["Copper"];
+    state.players.human!.discard = ["Silver", "Gold", "Estate"];
 
     const event: GameEvent = {
       type: "DECK_SHUFFLED",
@@ -421,14 +421,14 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.deck).toEqual(["Gold", "Estate", "Silver"]);
-    expect(newState.players.human.discard).toEqual([]);
+    expect(newState.players.human!.deck).toEqual(["Gold", "Estate", "Silver"]);
+    expect(newState.players.human!.discard).toEqual([]);
   });
 
   it("should apply CARD_PUT_ON_DECK from hand", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper", "Estate"];
-    state.players.human.deck = ["Silver"];
+    state.players.human!.hand = ["Copper", "Estate"];
+    state.players.human!.deck = ["Silver"];
 
     const event: GameEvent = {
       type: "CARD_PUT_ON_DECK",
@@ -439,14 +439,14 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Copper"]);
-    expect(newState.players.human.deck).toEqual(["Silver", "Estate"]);
+    expect(newState.players.human!.hand).toEqual(["Copper"]);
+    expect(newState.players.human!.deck).toEqual(["Silver", "Estate"]);
   });
 
   it("should apply CARD_PUT_ON_DECK from discard", () => {
     const state = createBasicGameState();
-    state.players.human.discard = ["Copper", "Estate", "Gold"];
-    state.players.human.deck = ["Silver"];
+    state.players.human!.discard = ["Copper", "Estate", "Gold"];
+    state.players.human!.deck = ["Silver"];
 
     const event: GameEvent = {
       type: "CARD_PUT_ON_DECK",
@@ -457,15 +457,15 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.discard).toEqual(["Copper", "Estate"]);
-    expect(newState.players.human.deck).toEqual(["Silver", "Gold"]);
+    expect(newState.players.human!.discard).toEqual(["Copper", "Estate"]);
+    expect(newState.players.human!.deck).toEqual(["Silver", "Gold"]);
   });
 
   it("should apply CARD_RETURNED_TO_HAND from inPlay", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Estate"];
-    state.players.human.inPlay = ["Copper", "Silver"];
-    state.players.human.inPlaySourceIndices = [0, 1];
+    state.players.human!.hand = ["Estate"];
+    state.players.human!.inPlay = ["Copper", "Silver"];
+    state.players.human!.inPlaySourceIndices = [0, 1];
 
     const event: GameEvent = {
       type: "CARD_RETURNED_TO_HAND",
@@ -476,15 +476,15 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Estate", "Copper"]);
-    expect(newState.players.human.inPlay).toEqual(["Silver"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([1]);
+    expect(newState.players.human!.hand).toEqual(["Estate", "Copper"]);
+    expect(newState.players.human!.inPlay).toEqual(["Silver"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([1]);
   });
 
   it("should apply CARD_RETURNED_TO_HAND from discard", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Estate"];
-    state.players.human.discard = ["Copper", "Silver"];
+    state.players.human!.hand = ["Estate"];
+    state.players.human!.discard = ["Copper", "Silver"];
 
     const event: GameEvent = {
       type: "CARD_RETURNED_TO_HAND",
@@ -495,8 +495,8 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.hand).toEqual(["Estate", "Silver"]);
-    expect(newState.players.human.discard).toEqual(["Copper"]);
+    expect(newState.players.human!.hand).toEqual(["Estate", "Silver"]);
+    expect(newState.players.human!.discard).toEqual(["Copper"]);
   });
 });
 
@@ -716,8 +716,8 @@ describe("Event Application - Multiple Events", () => {
 
   it("should apply multiple events in sequence (applyEvents)", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Village"];
-    state.players.human.deck = ["Copper", "Silver"];
+    state.players.human!.hand = ["Village"];
+    state.players.human!.deck = ["Copper", "Silver"];
     state.actions = 1;
 
     const events: GameEvent[] = [
@@ -730,16 +730,16 @@ describe("Event Application - Multiple Events", () => {
     const newState = applyEvents(state, events);
 
     // All events applied
-    expect(newState.players.human.hand).toEqual(["Silver"]);
-    expect(newState.players.human.inPlay).toEqual(["Village"]);
-    expect(newState.players.human.deck).toEqual(["Copper"]);
+    expect(newState.players.human!.hand).toEqual(["Silver"]);
+    expect(newState.players.human!.inPlay).toEqual(["Village"]);
+    expect(newState.players.human!.deck).toEqual(["Copper"]);
     expect(newState.actions).toBe(2); // 1 - 1 + 2
   });
 
   it("should handle complex event chain (Market played)", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Market"];
-    state.players.human.deck = ["Copper"];
+    state.players.human!.hand = ["Market"];
+    state.players.human!.deck = ["Copper"];
     state.actions = 1;
     state.buys = 1;
     state.coins = 0;
@@ -755,8 +755,8 @@ describe("Event Application - Multiple Events", () => {
 
     const newState = applyEvents(state, events);
 
-    expect(newState.players.human.hand).toEqual(["Copper"]);
-    expect(newState.players.human.inPlay).toEqual(["Market"]);
+    expect(newState.players.human!.hand).toEqual(["Copper"]);
+    expect(newState.players.human!.inPlay).toEqual(["Market"]);
     expect(newState.actions).toBe(1); // 1 - 1 + 1
     expect(newState.buys).toBe(2); // 1 + 1
     expect(newState.coins).toBe(1); // 0 + 1
@@ -770,8 +770,8 @@ describe("Event Application - Edge Cases", () => {
 
   it("should handle drawing card not in deck (adds anyway, deck unchanged)", () => {
     const state = createBasicGameState();
-    state.players.human.deck = ["Copper"];
-    state.players.human.hand = [];
+    state.players.human!.deck = ["Copper"];
+    state.players.human!.hand = [];
 
     // Try to draw a card that doesn't exist at top of deck
     const event: GameEvent = {
@@ -783,15 +783,15 @@ describe("Event Application - Edge Cases", () => {
     const newState = applyEvent(state, event);
 
     // Implementation adds to hand and slices deck (events are trusted)
-    expect(newState.players.human.hand).toEqual(["Gold"]);
+    expect(newState.players.human!.hand).toEqual(["Gold"]);
     // Deck.slice(0, -1) removes last element regardless
-    expect(newState.players.human.deck).toEqual([]);
+    expect(newState.players.human!.deck).toEqual([]);
   });
 
   it("should handle discarding card not in hand (adds to discard anyway)", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper"];
-    state.players.human.discard = [];
+    state.players.human!.hand = ["Copper"];
+    state.players.human!.discard = [];
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
@@ -803,15 +803,15 @@ describe("Event Application - Edge Cases", () => {
     const newState = applyEvent(state, event);
 
     // Hand unchanged (card not found)
-    expect(newState.players.human.hand).toEqual(["Copper"]);
+    expect(newState.players.human!.hand).toEqual(["Copper"]);
     // But discard still gets the card (events are trusted)
-    expect(newState.players.human.discard).toEqual(["Gold"]);
+    expect(newState.players.human!.discard).toEqual(["Gold"]);
   });
 
   it("should silently ignore gaining from empty supply", () => {
     const state = createBasicGameState();
     state.supply.Silver = 0;
-    state.players.human.discard = [];
+    state.players.human!.discard = [];
 
     const event: GameEvent = {
       type: "CARD_GAINED",
@@ -822,7 +822,7 @@ describe("Event Application - Edge Cases", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.players.human.discard).toEqual([]);
+    expect(newState.players.human!.discard).toEqual([]);
     expect(newState.supply.Silver).toBe(0); // No-op when supply is empty
   });
 
@@ -843,7 +843,7 @@ describe("Event Application - Edge Cases", () => {
 
   it("should handle multiple cards with same name in hand", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Copper", "Copper", "Copper", "Estate"];
+    state.players.human!.hand = ["Copper", "Copper", "Copper", "Estate"];
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
@@ -855,8 +855,8 @@ describe("Event Application - Edge Cases", () => {
     const newState = applyEvent(state, event);
 
     // Should remove first occurrence only
-    expect(newState.players.human.hand).toEqual(["Copper", "Copper", "Estate"]);
-    expect(newState.players.human.discard.length).toBe(2); // Original discard + new
+    expect(newState.players.human!.hand).toEqual(["Copper", "Copper", "Estate"]);
+    expect(newState.players.human!.discard.length).toBe(2); // Original discard + new
   });
 });
 
@@ -867,7 +867,7 @@ describe("Event Application - Source Index Tracking", () => {
 
   it("should track inPlaySourceIndices when playing cards", () => {
     const state = createBasicGameState();
-    state.players.human.hand = ["Village", "Smithy", "Market", "Copper"];
+    state.players.human!.hand = ["Village", "Smithy", "Market", "Copper"];
 
     // Play Smithy (index 1)
     let newState = applyEvent(state, {
@@ -876,8 +876,8 @@ describe("Event Application - Source Index Tracking", () => {
       card: "Smithy",
     });
 
-    expect(newState.players.human.inPlay).toEqual(["Smithy"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([1]);
+    expect(newState.players.human!.inPlay).toEqual(["Smithy"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([1]);
 
     // Play Market (was index 2, now index 1)
     newState = applyEvent(newState, {
@@ -886,14 +886,14 @@ describe("Event Application - Source Index Tracking", () => {
       card: "Market",
     });
 
-    expect(newState.players.human.inPlay).toEqual(["Smithy", "Market"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([1, 1]);
+    expect(newState.players.human!.inPlay).toEqual(["Smithy", "Market"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([1, 1]);
   });
 
   it("should update inPlaySourceIndices when discarding from play", () => {
     const state = createBasicGameState();
-    state.players.human.inPlay = ["Village", "Smithy", "Market"];
-    state.players.human.inPlaySourceIndices = [0, 1, 2];
+    state.players.human!.inPlay = ["Village", "Smithy", "Market"];
+    state.players.human!.inPlaySourceIndices = [0, 1, 2];
 
     // Discard Smithy (middle card)
     const newState = applyEvent(state, {
@@ -903,8 +903,8 @@ describe("Event Application - Source Index Tracking", () => {
       from: "inPlay",
     });
 
-    expect(newState.players.human.inPlay).toEqual(["Village", "Market"]);
-    expect(newState.players.human.inPlaySourceIndices).toEqual([0, 2]);
+    expect(newState.players.human!.inPlay).toEqual(["Village", "Market"]);
+    expect(newState.players.human!.inPlaySourceIndices).toEqual([0, 2]);
   });
 });
 

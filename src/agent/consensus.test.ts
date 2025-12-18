@@ -140,7 +140,7 @@ describe("Consensus System", () => {
         ];
 
         const action =
-          responses[Math.min(roundCount - 1, responses.length - 1)];
+          responses[Math.min(roundCount - 1, responses.length - 1)]!;
         votedActions.push(
           `${action.type}${action.card ? `(${action.card})` : ""}`,
         );

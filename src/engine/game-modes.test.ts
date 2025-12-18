@@ -165,12 +165,12 @@ describe("Game initialization with different modes", () => {
       engine.startGame(["ai1", "ai2"]);
 
       const player1Cards = [
-        ...engine.state.players.ai1.deck,
-        ...engine.state.players.ai1.hand,
+        ...engine.state.players.ai1!.deck,
+        ...engine.state.players.ai1!.hand,
       ];
       const player2Cards = [
-        ...engine.state.players.ai2.deck,
-        ...engine.state.players.ai2.hand,
+        ...engine.state.players.ai2!.deck,
+        ...engine.state.players.ai2!.hand,
       ];
 
       // Count card types
@@ -252,7 +252,7 @@ describe("Game initialization with different modes", () => {
         engine.startGame(["ai1", "ai2"]);
 
         // This should not throw
-        const activePlayer = engine.state.players[engine.state.activePlayerId];
+        const activePlayer = engine.state.players[engine.state.activePlayerId]!;
         expect(activePlayer).toBeDefined();
         expect(activePlayer.hand).toBeDefined();
       });

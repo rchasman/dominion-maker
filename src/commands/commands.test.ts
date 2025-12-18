@@ -372,7 +372,7 @@ describe("Command System - PLAY_TREASURE", () => {
 
   it("should handle Merchant bonus on first Silver", () => {
     const state = createBuyPhaseState(["Silver"]);
-    state.players.human.inPlay = ["Merchant"];
+    state.players.human!.inPlay = ["Merchant"];
 
     const command: GameCommand = {
       type: "PLAY_TREASURE",
@@ -849,7 +849,7 @@ describe("Command System - UNPLAY_TREASURE", () => {
     if (!unplayResult.ok) throw new Error("Expected successful unplay");
     state = applyEvents(state, unplayResult.events);
     expect(state.coins).toBe(0);
-    expect(state.players.human.hand).toContain("Silver");
+    expect(state.players.human!.hand).toContain("Silver");
   });
 });
 

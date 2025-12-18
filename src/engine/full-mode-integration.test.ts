@@ -56,8 +56,8 @@ describe("Full mode integration", () => {
 
     engine.startGame(["ai1", "ai2"]);
 
-    const ai1InitialHand = [...engine.state.players.ai1.hand];
-    const ai2InitialHand = [...engine.state.players.ai2.hand];
+    const ai1InitialHand = [...engine.state.players.ai1!.hand];
+    const ai2InitialHand = [...engine.state.players.ai2!.hand];
 
     // Both should have 5 cards
     expect(ai1InitialHand).toHaveLength(5);
@@ -116,7 +116,7 @@ describe("Full mode integration", () => {
     if (engine.state.phase === "action") engine.endPhase("ai1");
 
     // Play all treasures for ai1
-    const ai1Hand = [...engine.state.players.ai1.hand];
+    const ai1Hand = [...engine.state.players.ai1!.hand];
     ai1Hand.forEach(card => {
       if (card === "Copper" || card === "Silver" || card === "Gold") {
         engine.playTreasure("ai1", card);
@@ -145,7 +145,7 @@ describe("Full mode integration", () => {
     engine.startGame(["ai1", "ai2"]);
 
     const countVP = (playerId: string) => {
-      const player = engine.state.players[playerId];
+      const player = engine.state.players[playerId]!;
       const allCards = [
         ...player.deck,
         ...player.hand,
