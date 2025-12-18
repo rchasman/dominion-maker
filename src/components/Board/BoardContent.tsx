@@ -36,7 +36,7 @@ interface BoardContentProps {
     endPhase: () => void;
     hasTreasuresInHand: boolean;
     gameOver: boolean;
-    winner: PlayerId | undefined;
+    winnerId: PlayerId | undefined;
   };
   isPreviewMode: boolean;
   selectedCardIndices: number[];

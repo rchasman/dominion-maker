@@ -7,7 +7,7 @@ import type { GameState, TurnSubPhase } from "../types/game-state";
 export function getSubPhase(state: GameState): TurnSubPhase {
   if (
     state.pendingChoice &&
-    state.pendingChoice.playerId !== state.activePlayer
+    state.pendingChoice.playerId !== state.activePlayerId
   ) {
     return "opponent_decision";
   }

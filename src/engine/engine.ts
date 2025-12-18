@@ -262,7 +262,7 @@ export class DominionEngine {
     if (state.phase !== "action") return false;
 
     // Don't auto-advance if it's not the player's turn
-    if (state.activePlayer !== playerId) return false;
+    if (state.activePlayerId !== playerId) return false;
 
     // Don't auto-advance during decisions
     if (state.pendingChoice) return false;

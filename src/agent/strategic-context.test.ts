@@ -6,7 +6,7 @@ import {
 import type { GameState, PlayerState } from "../types/game-state";
 
 function createMockGameState(
-  activePlayer: string,
+  activePlayerId: string,
   playerIds: string[],
 ): GameState {
   const players: Record<string, PlayerState> = {};
@@ -40,7 +40,7 @@ function createMockGameState(
     trash: [],
     log: [],
     gameOver: false,
-    winner: null,
+    winnerId: null,
     turnHistory: [],
     kingdomCards: [],
     pendingChoice: null,

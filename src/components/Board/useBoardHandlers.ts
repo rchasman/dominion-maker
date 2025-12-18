@@ -69,8 +69,8 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   const handleCardClick = useCallback(
     (card: CardName, index: number, localPlayerId: string) => {
       if (
-        !gameState?.activePlayer ||
-        gameState.activePlayer !== localPlayerId
+        !gameState?.activePlayerId ||
+        gameState.activePlayerId !== localPlayerId
       ) {
         return;
       }
@@ -94,7 +94,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
         card,
         gameState.phase,
         gameState.actions,
-        gameState.activePlayer === localPlayerId,
+        gameState.activePlayerId === localPlayerId,
       );
 
       // Capture card position before playing
@@ -142,7 +142,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
     (card: CardName, localPlayerId: string) => {
       if (
         !gameState ||
-        gameState.activePlayer !== localPlayerId ||
+        gameState.activePlayerId !== localPlayerId ||
         gameState.phase !== "buy"
       ) {
         return;

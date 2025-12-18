@@ -11,7 +11,7 @@ export function createEmptyState(): GameState {
   return {
     turn: 0,
     phase: "action",
-    activePlayer: "human",
+    activePlayerId: "human",
     players: {},
     supply: {},
     trash: [],
@@ -22,7 +22,7 @@ export function createEmptyState(): GameState {
     pendingChoice: null,
     pendingChoiceEventId: null,
     gameOver: false,
-    winner: null,
+    winnerId: null,
     log: [],
     turnHistory: [],
     playerOrder: [],

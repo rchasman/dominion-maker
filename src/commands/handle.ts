@@ -121,5 +121,5 @@ function isValidPlayer(
   }
 
   // Other commands must come from active player
-  return state.activePlayer === fromPlayer;
+  return state.activePlayerId === fromPlayer;
 }

@@ -201,7 +201,7 @@ export default class GameServer implements Party.Server {
 
   private handleJoin(
     conn: Party.Connection,
-    playerId: PlayerConnection,
+    player: PlayerConnection,
     name: string,
     clientId?: string,
     isBot?: boolean,

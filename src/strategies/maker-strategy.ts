@@ -56,7 +56,7 @@ export class MakerStrategy implements GameStrategy {
     // Use LLM consensus for strategic decisions
     const models = buildModelsFromSettings(this.modelSettings);
     // Use the actual active player (could be "ai", "ai1", or "ai2")
-    const activeplayerId = engine.state.activePlayer;
+    const activeplayerId = engine.state.activePlayerId;
     return runAITurnWithConsensus(engine, activeplayerId, {
       providers: models,
       logger: this.logger,
@@ -86,7 +86,7 @@ export class MakerStrategy implements GameStrategy {
     }
 
     // Use the actual pending decision player (could be "ai", "ai1", or "ai2")
-    const playerId = pendingChoice?.playerId || engine.state.activePlayer;
+    const playerId = pendingChoice?.playerId || engine.state.activePlayerId;
     return advanceGameStateWithConsensus(engine, playerId, {
       providers: models,
       logger: this.logger,

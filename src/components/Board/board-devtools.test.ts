@@ -8,8 +8,8 @@ import { describe, it, expect } from "bun:test";
 describe("Board - Devtools scrubbing", () => {
   it("should use displayState derived from preview mode when scrubbing", () => {
     // Test the logic that determines what state to display
-    const liveState = { turn: 5, activePlayer: "human" as const };
-    const previewState = { turn: 2, activePlayer: "ai" as const };
+    const liveState = { turn: 5, activePlayerId: "human" as const };
+    const previewState = { turn: 2, activePlayerId: "ai" as const };
     const previewEventId = "event-123";
 
     // Mock getStateAtEvent function
@@ -34,8 +34,8 @@ describe("Board - Devtools scrubbing", () => {
   });
 
   it("should use live state when not scrubbing", () => {
-    const liveState = { turn: 5, activePlayer: "human" as const };
-    const previewState = { turn: 2, activePlayer: "ai" as const };
+    const liveState = { turn: 5, activePlayerId: "human" as const };
+    const previewState = { turn: 2, activePlayerId: "ai" as const };
     const previewEventId = null;
 
     const getStateAtEvent = (eventId: string) => {
@@ -65,7 +65,7 @@ describe("Board - Devtools scrubbing", () => {
     // Mock state at event 10 (preview)
     const previewState = {
       turn: 3,
-      activePlayer: "ai" as const,
+      activePlayerId: "ai" as const,
       players: {
         human: { deck: [], hand: [], discard: [], inPlay: [] },
         ai: { deck: [], hand: [], discard: [], inPlay: [] },
@@ -75,7 +75,7 @@ describe("Board - Devtools scrubbing", () => {
     // Mock current live state at event 50
     const liveState = {
       turn: 15,
-      activePlayer: "human" as const,
+      activePlayerId: "human" as const,
       players: {
         human: { deck: [], hand: [], discard: [], inPlay: [] },
         ai: { deck: [], hand: [], discard: [], inPlay: [] },
@@ -118,7 +118,7 @@ describe("Board - Devtools scrubbing", () => {
     // Live state: human's turn, buy phase
     const liveState = {
       turn: 10,
-      activePlayer: "human" as const,
+      activePlayerId: "human" as const,
       phase: "buy" as const,
       buys: 1,
       coins: 5,
@@ -127,7 +127,7 @@ describe("Board - Devtools scrubbing", () => {
     // Preview state: ai's turn, action phase (scrubbing to earlier event)
     const previewState = {
       turn: 3,
-      activePlayer: "ai" as const,
+      activePlayerId: "ai" as const,
       phase: "action" as const,
       buys: 0,
       coins: 0,

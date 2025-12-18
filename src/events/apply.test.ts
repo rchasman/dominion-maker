@@ -18,12 +18,12 @@ function createEmptyState(): GameState {
     playerOrder: [],
     turn: 0,
     phase: "action",
-    activePlayer: "human",
+    activePlayerId: "human",
     actions: 0,
     buys: 0,
     coins: 0,
     gameOver: false,
-    winner: null,
+    winnerId: null,
     pendingChoice: null,
     pendingChoiceEventId: null,
     trash: [],
@@ -62,7 +62,7 @@ function createBasicGameState(): GameState {
       Province: 8,
     },
     turn: 1,
-    activePlayer: "human",
+    activePlayerId: "human",
   };
 }
 
@@ -87,7 +87,7 @@ describe("Event Application - Game Setup", () => {
     expect(newState.supply).toEqual({ Copper: 46, Estate: 8 });
     expect(newState.kingdomCards).toEqual(["Village", "Smithy"]);
     expect(newState.playerOrder).toEqual(["human", "ai"]);
-    expect(newState.activePlayer).toBe("human");
+    expect(newState.activePlayerId).toBe("human");
     expect(newState.turn).toBe(0);
     expect(newState.actions).toBe(1);
     expect(newState.buys).toBe(1);
@@ -165,7 +165,7 @@ describe("Event Application - Turn Structure", () => {
     const newState = applyEvent(state, event);
 
     expect(newState.turn).toBe(2);
-    expect(newState.activePlayer).toBe("ai");
+    expect(newState.activePlayerId).toBe("ai");
     expect(newState.phase).toBe("action");
     expect(newState.actions).toBe(0);
     expect(newState.buys).toBe(0);
@@ -637,7 +637,7 @@ describe("Event Application - Decisions", () => {
 
   it("should apply DECISION_REQUIRED for opponent (sets subPhase)", () => {
     const state = createBasicGameState();
-    state.activePlayer = "human";
+    state.activePlayerId = "human";
 
     const decision = {
       choiceType: "decision" as const,
@@ -698,14 +698,14 @@ describe("Event Application - Game End", () => {
 
     const event: GameEvent = {
       type: "GAME_ENDED",
-      winner: "human",
+      winnerId: "human",
       scores: { human: 10, ai: 5 },
     };
 
     const newState = applyEvent(state, event);
 
     expect(newState.gameOver).toBe(true);
-    expect(newState.winner).toBe("human");
+    expect(newState.winnerId).toBe("human");
   });
 });
 

@@ -86,7 +86,7 @@ export function getLegalActions(state: GameState): Action[] {
   }
 
   // No pending decision - use active player
-  const player = state.activePlayer;
+  const player = state.activePlayerId;
   const playerState = state.players[player];
   if (!playerState) return [];
 

@@ -7,7 +7,7 @@ import { applyEvents } from "../../events/apply";
 function createTestState(): GameState {
   return {
     playerOrder: ["human", "ai"],
-    activePlayer: "human",
+    activePlayerId: "human",
     phase: "action",
     turn: 1,
     actions: 1,
@@ -37,7 +37,7 @@ function createTestState(): GameState {
     pendingChoice: null,
     pendingChoiceEventId: null,
     gameOver: false,
-    winner: null,
+    winnerId: null,
     activeEffects: [],
   };
 }

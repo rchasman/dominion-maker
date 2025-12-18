@@ -3,7 +3,7 @@ import { BaseModal } from "../Modal/BaseModal";
 import type { GameState, PlayerId } from "../../types/game-state";
 
 interface GameOverModalProps {
-  winner: PlayerId | null;
+  winnerId: PlayerId | null;
   localPlayerId: PlayerId;
   opponentPlayerId: PlayerId;
   isLocalPlayerAI: boolean;

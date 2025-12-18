@@ -48,12 +48,12 @@ function applyGameSetupEvent(
       playerInfo: state.playerInfo || {},
       turn: 0,
       phase: "action",
-      activePlayer: event.players[0],
+      activePlayerId: event.players[0],
       actions: 1,
       buys: 1,
       coins: 0,
       gameOver: false,
-      winner: null,
+      winnerId: null,
       pendingChoice: null,
       pendingChoiceEventId: null,
       trash: [],
@@ -95,7 +95,7 @@ function applyGameSetupEvent(
       turn: 1,
       log: [
         ...state.log,
-        { type: "turn-start", turn: 1, playerId: state.activePlayer },
+        { type: "turn-start", turn: 1, playerId: state.activePlayerId },
       ],
     };
   }

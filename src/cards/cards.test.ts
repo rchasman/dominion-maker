@@ -19,12 +19,12 @@ function createEmptyState(): GameState {
     playerOrder: [],
     turn: 0,
     phase: "action",
-    activePlayer: "human",
+    activePlayerId: "human",
     actions: 0,
     buys: 0,
     coins: 0,
     gameOver: false,
-    winner: null,
+    winnerId: null,
     pendingChoice: null,
     pendingChoiceEventId: null,
     trash: [],
@@ -85,7 +85,7 @@ function createTestState(
       Witch: 10,
       Artisan: 10,
     },
-    activePlayer: "human",
+    activePlayerId: "human",
     phase: "action",
   };
 }

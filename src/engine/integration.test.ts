@@ -71,7 +71,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.startGame(["human", "ai"]);
 
     expect(engine.state.turn).toBe(1);
-    expect(engine.state.activePlayer).toBe("human");
+    expect(engine.state.activePlayerId).toBe("human");
 
     // End human's turn
     engine.state.players.human.deck = [
@@ -85,7 +85,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.dispatch({ type: "END_PHASE", playerId: "human" });
 
     expect(engine.state.turn).toBe(2);
-    expect(engine.state.activePlayer).toBe("ai");
+    expect(engine.state.activePlayerId).toBe("ai");
 
     // End ai's turn
     engine.state.players.ai.deck = [
@@ -99,7 +99,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.dispatch({ type: "END_PHASE", playerId: "ai" });
 
     expect(engine.state.turn).toBe(3);
-    expect(engine.state.activePlayer).toBe("human");
+    expect(engine.state.activePlayerId).toBe("human");
   });
 
   it("should reset resources each turn", () => {
@@ -145,7 +145,7 @@ describe("Multi-Turn Scenarios", () => {
     const engine = new DominionEngine();
     engine.startGame(["player1", "player2", "player3"]);
 
-    expect(engine.state.activePlayer).toBe("player1");
+    expect(engine.state.activePlayerId).toBe("player1");
 
     // End player1's turn
     engine.state.players.player1.deck = [
@@ -158,7 +158,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.dispatch({ type: "END_PHASE", playerId: "player1" });
     engine.dispatch({ type: "END_PHASE", playerId: "player1" });
 
-    expect(engine.state.activePlayer).toBe("player2");
+    expect(engine.state.activePlayerId).toBe("player2");
 
     // End player2's turn
     engine.state.players.player2.deck = [
@@ -171,7 +171,7 @@ describe("Multi-Turn Scenarios", () => {
     engine.dispatch({ type: "END_PHASE", playerId: "player2" });
     engine.dispatch({ type: "END_PHASE", playerId: "player2" });
 
-    expect(engine.state.activePlayer).toBe("player3");
+    expect(engine.state.activePlayerId).toBe("player3");
 
     // End player3's turn - should cycle back
     engine.state.players.player3.deck = [
@@ -184,6 +184,6 @@ describe("Multi-Turn Scenarios", () => {
     engine.dispatch({ type: "END_PHASE", playerId: "player3" });
     engine.dispatch({ type: "END_PHASE", playerId: "player3" });
 
-    expect(engine.state.activePlayer).toBe("player1");
+    expect(engine.state.activePlayerId).toBe("player1");
   });
 });

@@ -28,11 +28,11 @@ function compareSimpleValues(prev: GameState, next: GameState): StateChange[] {
           to: next.phase,
         }
       : null,
-    prev.activePlayer !== next.activePlayer
+    prev.activePlayerId !== next.activePlayerId
       ? {
           path: "activePlayer",
-          from: prev.activePlayer,
-          to: next.activePlayer,
+          from: prev.activePlayerId,
+          to: next.activePlayerId,
         }
       : null,
     prev.actions !== next.actions
@@ -103,7 +103,7 @@ function compareAllPlayers(prev: GameState, next: GameState): StateChange[] {
       const nextPlayer = next.players[playerId];
       if (!prevPlayer || !nextPlayer) return [];
 
-      return comparePlayerStates(playerId, prevplayerId, nextPlayer);
+      return comparePlayerStates(playerId, prevPlayerId, nextPlayer);
     })
     .flat();
 }

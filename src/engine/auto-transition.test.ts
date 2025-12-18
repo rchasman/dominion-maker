@@ -39,7 +39,7 @@ describe("Auto-transition logic", () => {
       engine.startGame(["human", "ai"]);
 
       // Check for AI when it's human's turn
-      expect(engine.state.activePlayer).toBe("human");
+      expect(engine.state.activePlayerId).toBe("human");
       expect(engine.shouldAutoAdvancePhase("ai")).toBe(false);
     });
 

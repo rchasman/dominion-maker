@@ -27,7 +27,7 @@ describe("Mode switching preserves game state", () => {
     if (engine.state.phase === "buy") engine.endPhase("human");
 
     const turn = engine.state.turn;
-    const activePlayer = engine.state.activePlayer;
+    const activePlayer = engine.state.activePlayerId;
     const eventCount = engine.eventLog.length;
 
     // These should all stay the same when mode switches
@@ -140,7 +140,7 @@ describe("Full mode treats all players as AI", () => {
     engine.startGame(["human", "ai"]);
 
     // Verify it's human's turn
-    const isHumanTurn = engine.state.activePlayer === "human";
+    const isHumanTurn = engine.state.activePlayerId === "human";
 
     if (isHumanTurn) {
       // In full mode, "human" should be treated as AI
@@ -201,7 +201,7 @@ describe("Mode switching scenarios", () => {
 
     // Play several turns
     Array.from({ length: 4 }).forEach(() => {
-      const activePlayer = engine.state.activePlayer;
+      const activePlayer = engine.state.activePlayerId;
       if (engine.state.phase === "action") engine.endPhase(activePlayer);
       if (engine.state.phase === "buy") engine.endPhase(activePlayer);
     });

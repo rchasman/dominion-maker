@@ -104,7 +104,7 @@ function checkIsMyTurn(
   if (!gameState || !myPlayerId) {
     return false;
   }
-  return gameState.activePlayer === myPlayerId && !gameState.pendingChoice;
+  return gameState.activePlayerId === myPlayerId && !gameState.pendingChoice;
 }
 
 // Helper: Find event index by ID
@@ -219,7 +219,7 @@ function useDecisionAction(
       }
       const decisionPlayerId = engine.state.pendingChoice?.playerId;
       if (decisionPlayerId) {
-        return engine.submitDecision(decisionplayerId, choice);
+        return engine.submitDecision(decisionPlayerId, choice);
       }
       return { ok: false, error: "No pending decision" };
     },

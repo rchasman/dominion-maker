@@ -73,7 +73,7 @@ describe("TOON encoding and decoding", () => {
     const gameState = {
       turn: 1,
       phase: "action",
-      activePlayer: "human",
+      activePlayerId: "human",
       players: {
         human: {
           deck: ["Copper", "Copper", "Copper"],

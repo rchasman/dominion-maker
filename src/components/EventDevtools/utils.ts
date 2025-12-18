@@ -37,15 +37,15 @@ export function formatEvent(event: GameEvent): string {
 
   switch (event.type) {
     case "CARD_DRAWN":
-      return `${event.player} drew ${event.card}`;
+      return `${event.playerId} drew ${event.card}`;
     case "CARD_PLAYED":
-      return `${event.player} played ${event.card}`;
+      return `${event.playerId} played ${event.card}`;
     case "CARD_DISCARDED":
-      return `${event.player} discarded ${event.card}`;
+      return `${event.playerId} discarded ${event.card}`;
     case "CARD_GAINED":
-      return `${event.player} gained ${event.card} to ${event.to}`;
+      return `${event.playerId} gained ${event.card} to ${event.to}`;
     case "TURN_STARTED":
-      return `Turn ${event.turn} - ${event.player}`;
+      return `Turn ${event.turn} - ${event.playerId}`;
     case "PHASE_CHANGED":
       return `Phase: ${event.phase}`;
     case "ACTIONS_MODIFIED":

@@ -59,7 +59,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       return;
     }
 
-    const isAITurn = isAIControlled(gameMode, gameState.activePlayer);
+    const isAITurn = isAIControlled(gameMode, gameState.activePlayerId);
 
     if (!isAITurn) {
       // Not an AI turn - abort any ongoing automation and clear state
@@ -72,7 +72,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     }
 
     // It IS an AI turn - check if we need a new abort controller
-    const currentAITurnId = `${gameState.activePlayer}-${gameState.turn}-${gameMode}`;
+    const currentAITurnId = `${gameState.activePlayerId}-${gameState.turn}-${gameMode}`;
 
     if (currentAITurnId !== lastAITurnRef.current) {
       // New AI turn, create new abort controller
@@ -230,7 +230,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     // Check for AI decision (opponent making decision during active player's turn)
     const isAIDecision =
       gameState.pendingChoice?.player &&
-      gameState.pendingChoice.playerId !== gameState.activePlayer &&
+      gameState.pendingChoice.playerId !== gameState.activePlayerId &&
       isAIControlled(gameMode, gameState.pendingChoice.playerId);
 
     if (!isAIReaction && !isAIDecision) {
@@ -350,7 +350,7 @@ export function useAutoPhaseAdvanceMultiplayer(
       return;
     }
 
-    const isMyTurn = gameState.activePlayer === playerId;
+    const isMyTurn = gameState.activePlayerId === playerId;
     const currentHasPlayableActions = computeHasPlayableActions(
       gameState,
       playerId,

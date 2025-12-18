@@ -136,7 +136,7 @@ export function PlayerGrid({
         ? myClientId
         : (player as LobbyPlayer).clientId;
     return {
-      playerId,
+      playerId: player.id,
       hash: hashPlayerId(hashKey),
       isMe,
     };
@@ -154,7 +154,7 @@ export function PlayerGrid({
     const position = Math.floor(
       (index / playersWithHash.length) * maxPositions,
     );
-    playerPositions.set(item.player.id, position);
+    playerPositions.set(item.playerId, position);
   });
 
   return (

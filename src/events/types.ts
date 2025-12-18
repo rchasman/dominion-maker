@@ -250,7 +250,7 @@ export type DecisionSkippedEvent = EventMetadata & {
 // Game End
 export type GameEndedEvent = EventMetadata & {
   type: "GAME_ENDED";
-  winner: PlayerId | null;
+  winnerId: PlayerId | null;
   scores: Record<PlayerId, number>;
   reason: "provinces_empty" | "three_piles_empty";
 };

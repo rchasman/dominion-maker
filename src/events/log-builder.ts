@@ -118,7 +118,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
     if (next.type === "DECK_SHUFFLED") return false;
     if (next.type !== current.type) return false;
     if (!isPlayerEvent(current) || !isPlayerEvent(next)) return false;
-    return current.player === next.player && next.causedBy === current.causedBy;
+    return current.playerId === next.playerId && next.causedBy === current.causedBy;
   };
 
   const collectConsecutive = (
@@ -448,7 +448,7 @@ function gameFlowEventToLogEntry(
       return {
         type: "game-over",
         scores: event.scores,
-        winner: event.winner || currentPlayer,
+        winnerId: event.winner || currentPlayer,
         eventId: event.id,
       };
     case "TURN_ENDED":

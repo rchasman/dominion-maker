@@ -31,7 +31,7 @@ describe("DominionEngine - Initialization", () => {
     expect(engine.state.players.human).toBeDefined();
     expect(engine.state.players.ai).toBeDefined();
     expect(engine.state.turn).toBe(1);
-    expect(engine.state.activePlayer).toBe("human");
+    expect(engine.state.activePlayerId).toBe("human");
     expect(engine.eventLog.length).toBeGreaterThan(0);
   });
 
@@ -303,7 +303,7 @@ describe("DominionEngine - Full Game Flow", () => {
     engine.startGame(["human", "ai"]);
 
     const initialTurn = engine.state.turn;
-    const initialPlayer = engine.state.activePlayer;
+    const initialPlayer = engine.state.activePlayerId;
 
     // Give human some cards
     engine.state.players.human.hand = ["Village", "Copper"];
@@ -352,7 +352,7 @@ describe("DominionEngine - Full Game Flow", () => {
 
     // Should have moved to next turn
     expect(engine.state.turn).toBe(initialTurn + 1);
-    expect(engine.state.activePlayer).not.toBe(initialPlayer);
+    expect(engine.state.activePlayerId).not.toBe(initialPlayer);
   });
 });
 

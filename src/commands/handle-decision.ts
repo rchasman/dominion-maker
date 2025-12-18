@@ -29,7 +29,7 @@ function handleThroneRoomExecution(
 
   const result = targetEffect({
     state: midState,
-    playerId: ctx.state.activePlayer,
+    playerId: ctx.state.activePlayerId,
     card: throneRoomTarget,
   });
 
@@ -37,7 +37,7 @@ function handleThroneRoomExecution(
     ...baseEvents,
     {
       type: "CARD_PLAYED",
-      playerId: ctx.state.activePlayer,
+      playerId: ctx.state.activePlayerId,
       card: throneRoomTarget,
     },
     ...linkEvents(result.events, ctx.originalCause || ctx.rootEventId),
@@ -68,7 +68,7 @@ function handleThroneRoomExecution(
   const secondMidState = applyEvents(midState, result.events);
   const secondResult = targetEffect({
     state: secondMidState,
-    playerId: ctx.state.activePlayer,
+    playerId: ctx.state.activePlayerId,
     card: throneRoomTarget,
   });
   const withSecond = [
@@ -114,7 +114,7 @@ function extractReactionMetadata(
   const attackCard =
     (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
   const attacker =
-    (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayer;
+    (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayerId;
   const currentTarget = allTargets[currentTargetIndex];
 
   return {
@@ -360,7 +360,7 @@ function handleCardEffectContinuation(
 
   const result = effect({
     state: effectState,
-    playerId: ctx.state.activePlayer,
+    playerId: ctx.state.activePlayerId,
     card: ctx.cardBeingPlayed,
     decision: choice,
     stage: ctx.stage,

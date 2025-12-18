@@ -44,7 +44,7 @@ export function StateView({ state }: StateViewProps) {
     <div style={styles.stateContent}>
       <div style={styles.stateSection}>
         <div style={styles.stateSectionTitle}>
-          Turn {state.turn} - {state.activePlayer}
+          Turn {state.turn} - {state.activePlayerId}
         </div>
         <div style={styles.stateRow}>
           <span>Phase:</span>{" "}

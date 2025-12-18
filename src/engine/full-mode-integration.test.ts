@@ -11,7 +11,7 @@ describe("Full mode integration", () => {
     expect(startResult.ok).toBe(true);
 
     // Verify ai1 starts
-    expect(engine.state.activePlayer).toBe("ai1");
+    expect(engine.state.activePlayerId).toBe("ai1");
     expect(engine.state.turn).toBe(1);
 
     // ai1 plays their turn
@@ -27,7 +27,7 @@ describe("Full mode integration", () => {
     }
 
     // Should now be ai2's turn
-    expect(engine.state.activePlayer).toBe("ai2");
+    expect(engine.state.activePlayerId).toBe("ai2");
     expect(engine.state.turn).toBe(2);
   });
 
@@ -40,14 +40,14 @@ describe("Full mode integration", () => {
     if (engine.state.phase === "action") engine.endPhase("ai1");
     if (engine.state.phase === "buy") engine.endPhase("ai1");
 
-    expect(engine.state.activePlayer).toBe("ai2");
+    expect(engine.state.activePlayerId).toBe("ai2");
 
     // End ai2's turn
     if (engine.state.phase === "action") engine.endPhase("ai2");
     if (engine.state.phase === "buy") engine.endPhase("ai2");
 
     // Should cycle back to ai1
-    expect(engine.state.activePlayer).toBe("ai1");
+    expect(engine.state.activePlayerId).toBe("ai1");
     expect(engine.state.turn).toBe(3);
   });
 
@@ -96,7 +96,7 @@ describe("Full mode integration", () => {
     if (engine.state.phase === "action") engine.endPhase("ai1");
     if (engine.state.phase === "buy") engine.endPhase("ai1");
 
-    expect(engine.state.activePlayer).toBe("ai2");
+    expect(engine.state.activePlayerId).toBe("ai2");
 
     // Should not throw
     const context = buildStrategicContext(engine.state);
@@ -136,7 +136,7 @@ describe("Full mode integration", () => {
     engine.endPhase("ai1");
 
     // ai2's turn
-    expect(engine.state.activePlayer).toBe("ai2");
+    expect(engine.state.activePlayerId).toBe("ai2");
   });
 
   it("should track VP correctly for both AI players", () => {
@@ -174,7 +174,7 @@ describe("Full mode integration", () => {
 
     // Game should be over
     expect(engine.state.gameOver).toBe(true);
-    expect(["ai1", "ai2"]).toContain(engine.state.winner);
+    expect(["ai1", "ai2"]).toContain(engine.state.winnerId);
   });
 
   it("should not allow human or ai players to act in full mode", () => {
@@ -199,13 +199,13 @@ describe("Full mode integration", () => {
     const turnSequence = Array.from({ length: 10 }).reduce<string[]>(acc => {
       if (engine.state.gameOver) return acc;
 
-      acc.push(engine.state.activePlayer);
+      acc.push(engine.state.activePlayerId);
 
       if (engine.state.phase === "action") {
-        engine.endPhase(engine.state.activePlayer);
+        engine.endPhase(engine.state.activePlayerId);
       }
       if (engine.state.phase === "buy") {
-        engine.endPhase(engine.state.activePlayer);
+        engine.endPhase(engine.state.activePlayerId);
       }
 
       return acc;

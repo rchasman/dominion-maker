@@ -233,7 +233,7 @@ function cardArrayToCounts(cards: string[]): Record<string, number> {
 // Transform game state to use counts instead of arrays for AI consumption
 // Nests all "your" state together for clearer AI reasoning
 function optimizeStateForAI(state: GameState): unknown {
-  const activePlayerId = state.activePlayer;
+  const activePlayerId = state.activePlayerId;
   const activePlayer = state.players[activePlayerId];
   const opponentId = Object.keys(state.players).find(
     id => id !== activePlayerId,

@@ -61,12 +61,12 @@ export type ModelExecutionContext = {
   pendingModels: Set<number>;
   modelStartTimes: Map<number, number>;
   providers: ModelProvider[];
-  onEarlyConsensus: (winner: VoteGroup) => void;
+  onEarlyConsensus: (winnerId: VoteGroup) => void;
   onComplete: () => void;
 };
 
 export type ConsensusWinnerResult = {
-  winner: VoteGroup;
+  winnerId: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
   rankedGroups: VoteGroup[];
@@ -81,7 +81,7 @@ export type ConsensusStartParams = {
 };
 
 export type VotingResultsParams = {
-  winner: VoteGroup;
+  winnerId: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
   rankedGroups: VoteGroup[];
@@ -387,7 +387,7 @@ export const logVotingResults = (params: VotingResultsParams): void => {
       gameState: {
         turn: currentState.turn,
         phase: currentState.phase,
-        activePlayer: playerState || {
+        activePlayerId: playerState || {
           hand: [],
           deck: [],
           discard: [],
@@ -436,7 +436,7 @@ export const logConsensusStart = (params: ConsensusStartParams): void => {
       gameState: {
         turn: currentState.turn,
         phase: currentState.phase,
-        activePlayer: playerState || {
+        activePlayerId: playerState || {
           hand: [],
           deck: [],
           discard: [],

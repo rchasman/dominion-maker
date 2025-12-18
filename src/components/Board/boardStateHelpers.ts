@@ -58,7 +58,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     playerPerspective;
 
   const isLocalPlayerTurn =
-    !isSpectator && displayState.activePlayer === resolvedLocalPlayerId;
+    !isSpectator && displayState.activePlayerId === resolvedLocalPlayerId;
 
   const canBuy = canBuyCards(
     isLocalPlayerTurn,

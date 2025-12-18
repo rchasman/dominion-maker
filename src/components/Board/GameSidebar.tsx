@@ -75,7 +75,7 @@ interface TurnStatusIndicatorProps {
   isProcessing: boolean;
   isLocalPlayerTurn: boolean;
   subPhase: string;
-  activePlayer: string;
+  activePlayerId: string;
 }
 
 function TurnStatusIndicator({
@@ -169,7 +169,7 @@ export function GameSidebar({
   const { llmLogs } = useLLMLogs();
   const { spectatorCount = 0, isSpectator = false } = useGame();
 
-  const isLocalPlayerTurn = state.activePlayer === localPlayer;
+  const isLocalPlayerTurn = state.activePlayerId === localPlayer;
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
     useResizeHandle();
 
@@ -197,7 +197,7 @@ export function GameSidebar({
             isProcessing={isProcessing}
             isLocalPlayerTurn={isLocalPlayerTurn}
             subPhase={getSubPhase(state)}
-            activePlayer={state.activePlayer}
+            activePlayer={state.activePlayerId}
           />
         }
       />

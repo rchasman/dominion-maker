@@ -120,7 +120,7 @@ export function applyCardDiscarded(
   // Track discard decisions from hand (Cellar, Militia response, etc)
   // Don't track end-of-turn cleanup discards
   const shouldTrack =
-    event.from === "hand" && event.playerId === state.activePlayer;
+    event.from === "hand" && event.playerId === state.activePlayerId;
   const turnHistoryEntry = shouldTrack
     ? { type: "discard_card" as const, card: event.card }
     : null;

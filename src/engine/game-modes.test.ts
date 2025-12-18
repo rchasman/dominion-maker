@@ -22,7 +22,7 @@ describe("Game initialization with different modes", () => {
 
       engine.startGame(players);
 
-      expect(engine.state.activePlayer).toBe(players[0]);
+      expect(engine.state.activePlayerId).toBe(players[0]);
     });
 
     it("should correctly identify AI player during turns", () => {
@@ -32,8 +32,8 @@ describe("Game initialization with different modes", () => {
       engine.startGame(getPlayersForMode("engine"));
 
       // Check that isAIPlayer correctly identifies the AI
-      expect(config.isAIPlayer(engine.state.activePlayer)).toBe(
-        engine.state.activePlayer === "ai",
+      expect(config.isAIPlayer(engine.state.activePlayerId)).toBe(
+        engine.state.activePlayerId === "ai",
       );
     });
   });
@@ -94,7 +94,7 @@ describe("Game initialization with different modes", () => {
 
       engine.startGame(players);
 
-      expect(engine.state.activePlayer).toBe(players[0]);
+      expect(engine.state.activePlayerId).toBe(players[0]);
     });
 
     it("should identify all players as AI in full mode", () => {
@@ -121,14 +121,14 @@ describe("Game initialization with different modes", () => {
 
       engine.startGame(players);
 
-      const initialPlayer = engine.state.activePlayer;
+      const initialPlayer = engine.state.activePlayerId;
       expect(config.isAIPlayer(initialPlayer)).toBe(true);
 
       // End both phases for first player to complete turn
       if (engine.state.phase === "action") engine.endPhase(initialPlayer);
       if (engine.state.phase === "buy") engine.endPhase(initialPlayer);
 
-      const nextPlayer = engine.state.activePlayer;
+      const nextPlayer = engine.state.activePlayerId;
       expect(config.isAIPlayer(nextPlayer)).toBe(true);
       expect(nextPlayer).not.toBe(initialPlayer);
     });
@@ -200,8 +200,8 @@ describe("Game initialization with different modes", () => {
 
         engine.startGame(["ai1", "ai2"]);
 
-        expect(engine.state.activePlayer).toBeTruthy();
-        expect(engine.state.players).toHaveProperty(engine.state.activePlayer);
+        expect(engine.state.activePlayerId).toBeTruthy();
+        expect(engine.state.players).toHaveProperty(engine.state.activePlayerId);
       });
     });
 
@@ -250,7 +250,7 @@ describe("Game initialization with different modes", () => {
         engine.startGame(["ai1", "ai2"]);
 
         // This should not throw
-        const activePlayer = engine.state.players[engine.state.activePlayer];
+        const activePlayer = engine.state.players[engine.state.activePlayerId];
         expect(activePlayer).toBeDefined();
         expect(activePlayer.hand).toBeDefined();
       });

@@ -139,12 +139,12 @@ function createGameOverEvent(
 ): GameEvent {
   type ScoreAccumulator = {
     scores: Record<PlayerId, number>;
-    winner: PlayerId | null;
+    winnerId: PlayerId | null;
     maxScore: number;
   };
   const initialAcc: ScoreAccumulator = {
     scores: {},
-    winner: null,
+    winnerId: null,
     maxScore: -Infinity,
   };
   const { scores, winner } = Object.entries(state.players)
@@ -156,7 +156,7 @@ function createGameOverEvent(
       const newScores = { ...acc.scores, [playerId]: score };
       const newWinner = score > acc.maxScore ? playerId : acc.winner;
       const newMaxScore = Math.max(acc.maxScore, score);
-      return { scores: newScores, winner: newWinner, maxScore: newMaxScore };
+      return { scores: newScores, winnerId: newWinner, maxScore: newMaxScore };
     }, initialAcc);
 
   return {

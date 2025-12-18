@@ -238,7 +238,7 @@ const runModelsInParallel = async (
         pendingModels,
         modelStartTimes,
         providers,
-        onEarlyConsensus: (winner: VoteGroup) => {
+        onEarlyConsensus: (winnerId: VoteGroup) => {
           if (state.resolved) return;
           state.resolved = true;
           const results = Array.from(completedResultsMap.values());
@@ -380,7 +380,7 @@ export async function advanceGameStateWithConsensus(
       }
 
       agentLogger.info(
-        `Batch round ${round + 1} winner: ${winner.action.type}(${card}) - ${
+        `Batch round ${round + 1} winnerId: ${winner.action.type}(${card}) - ${
           winner.count
         } votes`,
       );
@@ -699,7 +699,7 @@ export async function runAITurnWithConsensus(
       engine.state.pendingChoice.playerId !== playerId;
 
     if (
-      engine.state.activePlayer !== playerId ||
+      engine.state.activePlayerId !== playerId ||
       engine.state.gameOver ||
       hasOpponentDecision ||
       stepCount >= MAX_TURN_STEPS

@@ -34,6 +34,6 @@ export function createGameProps(gameContext: {
     endPhase: gameContext.endPhase,
     hasTreasuresInHand: gameContext.hasTreasuresInHand,
     gameOver: gameContext.gameState.gameOver,
-    winner: gameContext.gameState.winner,
+    winnerId: gameContext.gameState.winnerId,
   };
 }

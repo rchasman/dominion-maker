@@ -135,7 +135,7 @@ export function formatTurnHistoryForAnalysis(
   }
 
   // Convert player IDs to "you" and "opponent" for consistency
-  const activePlayerId = state.activePlayer;
+  const activePlayerId = state.activePlayerId;
   const compactTurns = recentTurns.map(turn => ({
     turn: turn.turn,
     playerId: turn.playerId === activePlayerId ? "you" : "opponent",
@@ -180,7 +180,7 @@ export function buildStrategicContext(
         string,
         PlayerStrategyAnalysis
       >;
-      return strategies[state.activePlayer];
+      return strategies[state.activePlayerId];
     }
     return DEFAULT_STRATEGY;
   });

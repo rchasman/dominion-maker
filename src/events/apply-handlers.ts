@@ -21,7 +21,7 @@ export function applyTurnEvent(
     return {
       ...state,
       turn: event.turn,
-      activePlayer: event.playerId,
+      activePlayerId: event.playerId,
       phase: "action",
       actions: 0,
       buys: 0,
@@ -50,7 +50,7 @@ export function applyTurnEvent(
         ...state.log,
         {
           type: "phase-change",
-          playerId: state.activePlayer,
+          playerId: state.activePlayerId,
           phase: event.phase,
         },
       ],
@@ -101,7 +101,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-actions" as const,
-            playerId: state.activePlayer,
+            playerId: state.activePlayerId,
             count: event.delta,
           }
         : null;
@@ -118,7 +118,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-buys" as const,
-            playerId: state.activePlayer,
+            playerId: state.activePlayerId,
             count: event.delta,
           }
         : null;
@@ -135,7 +135,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-coins" as const,
-            playerId: state.activePlayer,
+            playerId: state.activePlayerId,
             count: event.delta,
           }
         : null;
@@ -345,13 +345,13 @@ export function applyGameEndEvent(
     return {
       ...state,
       gameOver: true,
-      winner: event.winner,
+      winnerId: event.winner,
       log: [
         ...state.log,
         {
           type: "game-over",
           scores: event.scores,
-          winner: event.winner || state.activePlayer,
+          winnerId: event.winner || state.activePlayerId,
         },
       ],
     };

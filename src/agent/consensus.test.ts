@@ -22,7 +22,7 @@ describe("Consensus System", () => {
       "Copper",
       "Copper",
     ];
-    engine.state.activePlayer = "player1";
+    engine.state.activePlayerId = "player1";
     engine.state.phase = "action";
     engine.state.actions = 1;
 
@@ -101,7 +101,7 @@ describe("Consensus System", () => {
       "Estate",
       "Duchy",
     ];
-    engine.state.activePlayer = "player1";
+    engine.state.activePlayerId = "player1";
     engine.state.phase = "action";
     engine.state.actions = 1;
 

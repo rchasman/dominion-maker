@@ -132,7 +132,7 @@ export type LogEntry =
   | {
       type: "game-over";
       scores: Record<string, number>;
-      winner: PlayerId;
+      winnerId: PlayerId;
       eventId?: string;
       children?: LogEntry[];
     }
