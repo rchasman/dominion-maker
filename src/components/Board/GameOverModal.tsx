@@ -4,11 +4,11 @@ import type { GameState } from "../../types/game-state";
 
 interface GameOverModalProps {
   winner: string | null;
-  mainPlayerId: string;
+  localPlayerId: string;
   opponentPlayerId: string;
-  isMainPlayerAI: boolean;
+  isLocalPlayerAI: boolean;
   isOpponentAI: boolean;
-  mainPlayerVP: number;
+  localPlayerVP: number;
   opponentVP: number;
   turnCount: number;
   gameState: GameState;
@@ -17,19 +17,19 @@ interface GameOverModalProps {
 
 export function GameOverModal({
   winner,
-  mainPlayerId,
+  localPlayerId,
   opponentPlayerId,
-  isMainPlayerAI,
+  isLocalPlayerAI,
   isOpponentAI,
-  mainPlayerVP,
+  localPlayerVP,
   opponentVP,
   turnCount,
   gameState,
   onNewGame,
 }: GameOverModalProps) {
   const winnerName =
-    winner === mainPlayerId
-      ? formatPlayerName(mainPlayerId, isMainPlayerAI, { gameState })
+    winner === localPlayerId
+      ? formatPlayerName(localPlayerId, isLocalPlayerAI, { gameState })
       : formatPlayerName(opponentPlayerId, isOpponentAI, { gameState });
   return (
     <BaseModal>
@@ -46,7 +46,7 @@ export function GameOverModal({
         style={{
           fontSize: "1.375rem",
           margin: 0,
-          color: winner === mainPlayerId ? "var(--color-victory)" : "#ef5350",
+          color: winner === localPlayerId ? "var(--color-victory)" : "#ef5350",
         }}
       >
         {winnerName} {winnerName === "You" ? "win" : "wins"}!
@@ -67,7 +67,7 @@ export function GameOverModal({
           color: "var(--color-text-secondary)",
         }}
       >
-        You: {mainPlayerVP} VP | Opponent: {opponentVP} VP
+        You: {localPlayerVP} VP | Opponent: {opponentVP} VP
       </div>
       <button
         onClick={onNewGame}

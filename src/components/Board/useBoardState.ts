@@ -20,17 +20,17 @@ interface BoardStateParams {
 interface BoardState {
   displayState: GameState;
   playerIds: readonly [Player, Player];
-  mainPlayerId: Player;
+  localPlayerId: Player;
   opponentPlayerId: Player;
-  isMainPlayerTurn: boolean;
+  isLocalPlayerTurn: boolean;
   canBuy: boolean;
   opponent: GameState["players"][Player];
-  mainPlayer: GameState["players"][Player];
-  mainPlayerVP: number;
+  localPlayer: GameState["players"][Player];
+  localPlayerVP: number;
   opponentVP: number;
   hint: string;
   isOpponentAI: boolean;
-  isMainPlayerAI: boolean;
+  isLocalPlayerAI: boolean;
 }
 
 function computeDisplayState(
@@ -55,12 +55,12 @@ function computePlayerIds(
 }
 
 function computeCanBuy(
-  isMainPlayerTurn: boolean,
+  isLocalPlayerTurn: boolean,
   phase: GameState["phase"],
   buys: number,
   isPreviewMode: boolean,
 ): boolean {
-  return canBuyCards(isMainPlayerTurn, phase, buys, isPreviewMode);
+  return canBuyCards(isLocalPlayerTurn, phase, buys, isPreviewMode);
 }
 
 function computeVictoryPoints(player: GameState["players"][Player]): number {
@@ -69,8 +69,8 @@ function computeVictoryPoints(player: GameState["players"][Player]): number {
 
 interface HintParams {
   displayState: GameState;
-  mainPlayerId: Player;
-  isMainPlayerTurn: boolean;
+  localPlayerId: Player;
+  isLocalPlayerTurn: boolean;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
 }
@@ -78,8 +78,8 @@ interface HintParams {
 function computeHint(params: HintParams): string {
   return getHintText(
     params.displayState,
-    params.mainPlayerId,
-    params.isMainPlayerTurn,
+    params.localPlayerId,
+    params.isLocalPlayerTurn,
     params.hasPlayableActions,
     params.hasTreasuresInHand,
   );
@@ -105,11 +105,11 @@ export function useBoardState(params: BoardStateParams): BoardState {
     state,
     gameMode,
   );
-  const mainPlayerId: Player = playerIds[MAIN_PLAYER_INDEX];
+  const localPlayerId: Player = playerIds[MAIN_PLAYER_INDEX];
   const opponentPlayerId: Player = playerIds[OPPONENT_PLAYER_INDEX];
-  const isMainPlayerTurn: boolean = displayState.activePlayer === mainPlayerId;
+  const isLocalPlayerTurn: boolean = displayState.activePlayer === localPlayerId;
   const canBuy: boolean = computeCanBuy(
-    isMainPlayerTurn,
+    isLocalPlayerTurn,
     displayState.phase,
     displayState.buys,
     isPreviewMode,
@@ -117,34 +117,34 @@ export function useBoardState(params: BoardStateParams): BoardState {
 
   const opponent: GameState["players"][Player] =
     displayState.players[opponentPlayerId];
-  const mainPlayer: GameState["players"][Player] =
-    displayState.players[mainPlayerId];
-  const mainPlayerVP: number = computeVictoryPoints(mainPlayer);
+  const localPlayer: GameState["players"][Player] =
+    displayState.players[localPlayerId];
+  const localPlayerVP: number = computeVictoryPoints(mainPlayer);
   const opponentVP: number = computeVictoryPoints(opponent);
   const hint: string = computeHint({
     displayState,
-    mainPlayerId,
-    isMainPlayerTurn,
+    localPlayerId,
+    isLocalPlayerTurn,
     hasPlayableActions,
     hasTreasuresInHand,
   });
 
   const isOpponentAI: boolean = isAIControlled(gameMode, opponentPlayerId);
-  const isMainPlayerAI: boolean = isAIControlled(gameMode, mainPlayerId);
+  const isLocalPlayerAI: boolean = isAIControlled(gameMode, localPlayerId);
 
   return {
     displayState,
     playerIds,
-    mainPlayerId,
+    localPlayerId,
     opponentPlayerId,
-    isMainPlayerTurn,
+    isLocalPlayerTurn,
     canBuy,
     opponent,
     mainPlayer,
-    mainPlayerVP,
+    localPlayerVP,
     opponentVP,
     hint,
     isOpponentAI,
-    isMainPlayerAI,
+    isLocalPlayerAI,
   };
 }

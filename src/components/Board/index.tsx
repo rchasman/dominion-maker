@@ -44,12 +44,12 @@ export function Board({ onBackToHome }: BoardProps) {
     isSpectator: game.isSpectator,
   });
 
-  const mainPlayerId = boardState.mainPlayerId;
+  const localPlayerId = boardState.localPlayerId;
 
   const callbacks = createBoardCallbacks({
     isPreviewMode,
-    isMainPlayerTurn: boardState.isMainPlayerTurn,
-    mainPlayerId,
+    isLocalPlayerTurn: boardState.isLocalPlayerTurn,
+    localPlayerId,
     phase: boardState.displayState.phase,
     handleCardClick,
     handleInPlayClick,

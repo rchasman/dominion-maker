@@ -34,11 +34,11 @@ function submitComplexDecision(
 
 function submitSimpleDecision(
   selectedCardIndices: number[],
-  mainPlayerId: string,
+  localPlayerId: string,
   gameState: GameState,
   submitDecision: (choice: DecisionChoice) => CommandResult,
 ): CommandResult {
-  const mainPlayer = gameState.players[mainPlayerId];
+  const mainPlayer = gameState.players[localPlayerId];
   if (!mainPlayer) {
     return { ok: false, error: "No main player" };
   }
@@ -66,8 +66,8 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   const animation = useAnimationSafe();
 
   const handleCardClick = useCallback(
-    (card: CardName, index: number, mainPlayerId: string) => {
-      if (!gameState?.activePlayer || gameState.activePlayer !== mainPlayerId) {
+    (card: CardName, index: number, localPlayerId: string) => {
+      if (!gameState?.activePlayer || gameState.activePlayer !== localPlayerId) {
         return;
       }
 
@@ -90,7 +90,7 @@ export function useBoardHandlers(params: BoardHandlersParams) {
         card,
         gameState.phase,
         gameState.actions,
-        gameState.activePlayer === mainPlayerId,
+        gameState.activePlayer === localPlayerId,
       );
 
       // Capture card position before playing
@@ -135,10 +135,10 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   );
 
   const handleInPlayClick = useCallback(
-    (card: CardName, mainPlayerId: string) => {
+    (card: CardName, localPlayerId: string) => {
       if (
         !gameState ||
-        gameState.activePlayer !== mainPlayerId ||
+        gameState.activePlayer !== localPlayerId ||
         gameState.phase !== "buy"
       ) {
         return;
@@ -166,14 +166,14 @@ export function useBoardHandlers(params: BoardHandlersParams) {
   );
 
   const handleConfirmDecision = useCallback(
-    (data: ComplexDecisionData | null, mainPlayerId: string) => {
+    (data: ComplexDecisionData | null, localPlayerId: string) => {
       if (!gameState) return;
 
       const result = data
         ? submitComplexDecision(data, submitDecision)
         : submitSimpleDecision(
             selectedCardIndices,
-            mainPlayerId,
+            localPlayerId,
             gameState,
             submitDecision,
           );

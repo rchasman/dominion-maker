@@ -9,11 +9,11 @@ import type { ComplexDecisionData } from "./hooks";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 
 interface MainPlayerAreaProps {
-  mainPlayer: GameState["players"][PlayerId];
-  mainPlayerId: PlayerId;
-  mainPlayerVP: number;
-  isMainPlayerTurn: boolean;
-  isMainPlayerAI: boolean;
+  localPlayer: GameState["players"][PlayerId];
+  localPlayerId: PlayerId;
+  localPlayerVP: number;
+  isLocalPlayerTurn: boolean;
+  isLocalPlayerAI: boolean;
   selectedCardIndices: number[];
   isPreviewMode: boolean;
   displayState: GameState;
@@ -27,10 +27,10 @@ interface MainPlayerAreaProps {
 
 export function MainPlayerArea({
   mainPlayer,
-  mainPlayerId,
-  mainPlayerVP,
-  isMainPlayerTurn,
-  isMainPlayerAI,
+  localPlayerId,
+  localPlayerVP,
+  isLocalPlayerTurn,
+  isLocalPlayerAI,
   selectedCardIndices,
   isPreviewMode,
   displayState,
@@ -44,12 +44,12 @@ export function MainPlayerArea({
   const { players } = useGame();
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
-  const playerName = players?.find(p => p.playerId === mainPlayerId)?.name;
+  const playerName = players?.find(p => p.playerId === localPlayerId)?.name;
   const displayName = playerName
-    ? isMainPlayerAI
+    ? isLocalPlayerAI
       ? `${playerName} (AI)`
       : playerName
-    : formatPlayerName(mainPlayerId, isMainPlayerAI, {
+    : formatPlayerName(localPlayerId, isLocalPlayerAI, {
         gameState: displayState,
       });
 
@@ -58,8 +58,8 @@ export function MainPlayerArea({
       <PlayerArea
         player={mainPlayer}
         label={displayName}
-        vpCount={mainPlayerVP}
-        isActive={isMainPlayerTurn}
+        vpCount={localPlayerVP}
+        isActive={isLocalPlayerTurn}
         showCards={true}
         selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
         onCardClick={onCardClick}
@@ -68,7 +68,7 @@ export function MainPlayerArea({
         phase={displayState.phase}
         subPhase={displayState.subPhase}
         actions={displayState.actions}
-        playerId={mainPlayerId}
+        playerId={localPlayerId}
         turnHistory={displayState.turnHistory}
         playerStrategy={playerStrategy}
         gameState={displayState}
@@ -76,7 +76,7 @@ export function MainPlayerArea({
 
       {displayState.pendingDecision &&
         displayState.pendingDecision.actions &&
-        displayState.pendingDecision.player === mainPlayerId &&
+        displayState.pendingDecision.player === localPlayerId &&
         !isPreviewMode && (
           <CardDecisionModal
             cards={displayState.pendingDecision.cardOptions}
@@ -87,7 +87,7 @@ export function MainPlayerArea({
         )}
 
       {displayState.pendingReaction &&
-        displayState.pendingReaction.defender === mainPlayerId &&
+        displayState.pendingReaction.defender === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal
             reactions={displayState.pendingReaction.availableReactions}

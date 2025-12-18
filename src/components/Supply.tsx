@@ -17,7 +17,7 @@ interface SupplyProps {
   canBuy: boolean;
   availableCoins: number;
   pendingDecision?: DecisionRequest | null;
-  mainPlayerId: string;
+  localPlayerId: string;
   // Action button props
   isPlayerActive?: boolean;
   hasTreasuresInHand?: boolean;
@@ -285,7 +285,7 @@ export function Supply({
   canBuy,
   availableCoins,
   pendingDecision,
-  mainPlayerId,
+  localPlayerId,
   isPlayerActive = false,
   hasTreasuresInHand = false,
   onPlayAllTreasures,
@@ -334,7 +334,7 @@ export function Supply({
       (state.phase === "buy" && state.buys === 0 && !hasTreasuresInHand));
 
   const hasPendingDecision =
-    state.pendingDecision && state.pendingDecision.player === mainPlayerId;
+    state.pendingDecision && state.pendingDecision.player === localPlayerId;
 
   return (
     <div

@@ -51,9 +51,9 @@ export function canPlayCard(
   card: CardName,
   phase: GameState["phase"],
   actions: number,
-  isMainPlayerTurn: boolean,
+  isLocalPlayerTurn: boolean,
 ): { canPlayAction: boolean; canPlayTreasure: boolean } {
-  if (!isMainPlayerTurn) {
+  if (!isLocalPlayerTurn) {
     return { canPlayAction: false, canPlayTreasure: false };
   }
 
@@ -65,23 +65,23 @@ export function canPlayCard(
 
 interface GetHintTextParams {
   displayState: GameState;
-  mainPlayerId: Player;
-  isMainPlayerTurn: boolean;
+  localPlayerId: Player;
+  isLocalPlayerTurn: boolean;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
 }
 
 export function getHintText({
   displayState,
-  mainPlayerId,
-  isMainPlayerTurn,
+  localPlayerId,
+  isLocalPlayerTurn,
   hasPlayableActions,
   hasTreasuresInHand,
 }: GetHintTextParams): string {
   // Check for pending reaction first
   if (
     displayState.pendingReaction &&
-    displayState.pendingReaction.defender === mainPlayerId
+    displayState.pendingReaction.defender === localPlayerId
   ) {
     const { attackCard, attacker } = displayState.pendingReaction;
     return `${attacker} played ${attackCard}. Reveal a reaction?`;
@@ -89,12 +89,12 @@ export function getHintText({
 
   if (
     displayState.pendingDecision &&
-    displayState.pendingDecision.player === mainPlayerId
+    displayState.pendingDecision.player === localPlayerId
   ) {
     return displayState.pendingDecision.prompt;
   }
 
-  if (!isMainPlayerTurn) {
+  if (!isLocalPlayerTurn) {
     return "Opponent is playing...";
   }
 
@@ -103,8 +103,8 @@ export function getHintText({
   }
 
   if (displayState.phase === "buy") {
-    const mainPlayer = displayState.players[mainPlayerId];
-    const hasInPlayTreasures = mainPlayer.inPlay.length > 0;
+    const localPlayer = displayState.players[localPlayerId];
+    const hasInPlayTreasures = localPlayer.inPlay.length > 0;
 
     if (displayState.coins === 0 && hasTreasuresInHand) {
       return "Play treasures to get coins";
@@ -121,12 +121,12 @@ export function getHintText({
 }
 
 export function canBuyCards(
-  isMainPlayerTurn: boolean,
+  isLocalPlayerTurn: boolean,
   phase: GameState["phase"],
   buys: number,
   isPreviewMode: boolean,
 ): boolean {
-  return isMainPlayerTurn && phase === "buy" && buys > 0 && !isPreviewMode;
+  return isLocalPlayerTurn && phase === "buy" && buys > 0 && !isPreviewMode;
 }
 
 export function formatPlayerLabel(

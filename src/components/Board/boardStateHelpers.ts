@@ -20,17 +20,17 @@ interface BoardStateParams {
 export interface BoardState {
   displayState: GameState;
   playerIds: Player[];
-  mainPlayerId: Player;
+  localPlayerId: Player;
   opponentPlayerId: Player;
-  isMainPlayerTurn: boolean;
+  isLocalPlayerTurn: boolean;
   canBuy: boolean;
   opponent: GameState["players"][Player];
-  mainPlayer: GameState["players"][Player];
-  mainPlayerVP: number;
+  localPlayer: GameState["players"][Player];
+  localPlayerVP: number;
   opponentVP: number;
   hint: string;
   isOpponentAI: boolean;
-  isMainPlayerAI: boolean;
+  isLocalPlayerAI: boolean;
 }
 
 export function computeBoardState(params: BoardStateParams): BoardState {
@@ -48,51 +48,51 @@ export function computeBoardState(params: BoardStateParams): BoardState {
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
   const playerIds = getPlayerIds(state, gameMode, localPlayerId);
-  const mainPlayerId = playerIds[MAIN_PLAYER_INDEX];
+  const resolvedLocalPlayerId = playerIds[MAIN_PLAYER_INDEX];
   const opponentPlayerId = playerIds[OPPONENT_PLAYER_INDEX];
 
-  const isMainPlayerTurn =
-    !isSpectator && displayState.activePlayer === mainPlayerId;
+  const isLocalPlayerTurn =
+    !isSpectator && displayState.activePlayer === resolvedLocalPlayerId;
 
   const canBuy = canBuyCards(
-    isMainPlayerTurn,
+    isLocalPlayerTurn,
     displayState.phase,
     displayState.buys,
     isPreviewMode,
   );
 
   const opponent = displayState.players[opponentPlayerId];
-  const mainPlayer = displayState.players[mainPlayerId];
+  const localPlayer = displayState.players[resolvedLocalPlayerId];
 
-  const mainPlayerVP = countVP(getAllCards(mainPlayer));
+  const localPlayerVP = countVP(getAllCards(localPlayer));
   const opponentVP = countVP(getAllCards(opponent));
 
   const hint = getHintText({
     displayState,
-    mainPlayerId,
-    isMainPlayerTurn,
+    localPlayerId: resolvedLocalPlayerId,
+    isLocalPlayerTurn,
     hasPlayableActions,
     hasTreasuresInHand,
   });
 
   const isOpponentAI = isAIControlled(gameMode, opponentPlayerId);
 
-  const isMainPlayerAI = isAIControlled(gameMode, mainPlayerId);
+  const isLocalPlayerAI = isAIControlled(gameMode, resolvedLocalPlayerId);
 
   const result: BoardState = {
     displayState,
     playerIds,
-    mainPlayerId,
+    localPlayerId: resolvedLocalPlayerId,
     opponentPlayerId,
-    isMainPlayerTurn,
+    isLocalPlayerTurn,
     canBuy,
     opponent,
-    mainPlayer,
-    mainPlayerVP,
+    localPlayer,
+    localPlayerVP,
     opponentVP,
     hint,
     isOpponentAI,
-    isMainPlayerAI,
+    isLocalPlayerAI,
   };
 
   return result;

@@ -60,7 +60,7 @@ interface BoardContentProps {
 
 interface SupplyAreaProps {
   displayState: GameState;
-  mainPlayerId: string;
+  localPlayerId: string;
   onBuyCard?: (card: CardName) => void;
   canBuy: boolean;
   isPlayerActive: boolean;
@@ -75,7 +75,7 @@ interface SupplyAreaProps {
 
 function SupplyArea({
   displayState,
-  mainPlayerId,
+  localPlayerId,
   onBuyCard,
   canBuy,
   isPlayerActive,
@@ -90,7 +90,7 @@ function SupplyArea({
   return (
     <Supply
       state={displayState}
-      mainPlayerId={mainPlayerId}
+      localPlayerId={localPlayerId}
       onBuyCard={onBuyCard}
       canBuy={canBuy}
       availableCoins={displayState.coins}
@@ -131,16 +131,16 @@ export function BoardContent({
 }: BoardContentProps) {
   const {
     displayState,
-    mainPlayerId,
+    localPlayerId,
     opponentPlayerId,
-    isMainPlayerTurn,
+    isLocalPlayerTurn,
     canBuy,
     opponent,
     mainPlayer,
-    mainPlayerVP,
+    localPlayerVP,
     opponentVP,
     isOpponentAI,
-    isMainPlayerAI,
+    isLocalPlayerAI,
   } = boardState;
 
   const { players } = useGame();
@@ -234,7 +234,7 @@ export function BoardContent({
           player={opponent}
           label={opponentDisplayName}
           vpCount={opponentVP}
-          isActive={!isMainPlayerTurn}
+          isActive={!isLocalPlayerTurn}
           showCards={true}
           selectedCardIndices={[]}
           inverted={true}
@@ -249,10 +249,10 @@ export function BoardContent({
 
         <SupplyArea
           displayState={displayState}
-          mainPlayerId={mainPlayerId}
+          localPlayerId={localPlayerId}
           onBuyCard={isPreviewMode ? undefined : animatedBuyCard}
           canBuy={isPreviewMode ? false : canBuy}
-          isPlayerActive={isMainPlayerTurn}
+          isPlayerActive={isLocalPlayerTurn}
           hasTreasuresInHand={game.hasTreasuresInHand}
           onPlayAllTreasures={animatedPlayAllTreasures}
           onEndPhase={onEndPhase}
@@ -264,14 +264,14 @@ export function BoardContent({
 
         <MainPlayerArea
           mainPlayer={mainPlayer}
-          mainPlayerId={mainPlayerId}
-          mainPlayerVP={mainPlayerVP}
-          isMainPlayerTurn={isMainPlayerTurn}
-          isMainPlayerAI={isMainPlayerAI}
+          localPlayerId={localPlayerId}
+          localPlayerVP={localPlayerVP}
+          isLocalPlayerTurn={isLocalPlayerTurn}
+          isLocalPlayerAI={isLocalPlayerAI}
           selectedCardIndices={selectedCardIndices}
           isPreviewMode={isPreviewMode}
           displayState={displayState}
-          playerStrategy={game.playerStrategies[mainPlayerId]}
+          playerStrategy={game.playerStrategies[localPlayerId]}
           onCardClick={onCardClick}
           onInPlayClick={onInPlayClick}
           onComplexDecisionChange={onComplexDecisionChange}
@@ -287,7 +287,7 @@ export function BoardContent({
         isProcessing={game.isProcessing}
         gameMode={game.gameMode}
         onGameModeChange={game.setGameMode}
-        localPlayer={mainPlayerId}
+        localPlayer={localPlayerId}
         modelSettings={game.modelSettings}
         onModelSettingsChange={game.setModelSettings}
         onNewGame={onNewGame}
@@ -298,11 +298,11 @@ export function BoardContent({
       {game.gameOver && game.winner && (
         <GameOverModal
           winner={game.winner}
-          mainPlayerId={mainPlayerId as PlayerId}
+          localPlayerId={localPlayerId as PlayerId}
           opponentPlayerId={opponentPlayerId as PlayerId}
-          isMainPlayerAI={isMainPlayerAI}
+          isLocalPlayerAI={isLocalPlayerAI}
           isOpponentAI={isOpponentAI}
-          mainPlayerVP={mainPlayerVP}
+          localPlayerVP={localPlayerVP}
           opponentVP={opponentVP}
           turnCount={displayState.turn}
           gameState={displayState}

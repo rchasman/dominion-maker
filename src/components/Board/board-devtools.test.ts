@@ -93,19 +93,19 @@ describe("Board - Devtools scrubbing", () => {
 
     // Get player IDs from GAME_MODE_CONFIG
     const playerIds = ["human", "ai"] as const;
-    const mainPlayerId = playerIds[0];
+    const localPlayerId = playerIds[0];
     const opponentPlayerId = playerIds[1];
 
     // Derive player data from displayState
-    const mainPlayer = displayState.players[mainPlayerId];
+    const mainPlayer = displayState.players[localPlayerId];
     const opponent = displayState.players[opponentPlayerId];
-    const isMainPlayerTurn = displayState.activePlayer === mainPlayerId;
+    const isLocalPlayerTurn = displayState.activePlayer === localPlayerId;
 
     // When scrubbing to event 10, we should see preview state values
     expect(displayState).toBe(previewState);
     expect(displayState.turn).toBe(3);
     expect(displayState.activePlayer).toBe("ai");
-    expect(isMainPlayerTurn).toBe(false);
+    expect(isLocalPlayerTurn).toBe(false);
 
     // mainPlayer and opponent should come from displayState (preview)
     expect(mainPlayer).toBe(previewState.players.human);
@@ -142,15 +142,15 @@ describe("Board - Devtools scrubbing", () => {
         ? getStateAtEvent(previewEventId)
         : liveState;
 
-    const mainPlayerId = "human" as const;
+    const localPlayerId = "human" as const;
 
     // BUG: This line uses liveState instead of displayState
-    // const isMainPlayerTurn = liveState.activePlayer === mainPlayerId; // WRONG
-    const isMainPlayerTurn = displayState.activePlayer === mainPlayerId; // CORRECT
+    // const isLocalPlayerTurn = liveState.activePlayer === localPlayerId; // WRONG
+    const isLocalPlayerTurn = displayState.activePlayer === localPlayerId; // CORRECT
 
-    // When scrubbing, isMainPlayerTurn should reflect preview state (ai's turn)
+    // When scrubbing, isLocalPlayerTurn should reflect preview state (ai's turn)
     expect(displayState.activePlayer).toBe("ai");
-    expect(isMainPlayerTurn).toBe(false); // Should be false because it's ai's turn in preview
+    expect(isLocalPlayerTurn).toBe(false); // Should be false because it's ai's turn in preview
 
     // Phase and other state should also come from displayState
     expect(displayState.phase).toBe("action");

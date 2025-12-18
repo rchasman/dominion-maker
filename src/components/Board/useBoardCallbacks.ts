@@ -3,18 +3,18 @@ import type { ComplexDecisionData } from "./hooks";
 
 interface BoardCallbacksParams {
   isPreviewMode: boolean;
-  isMainPlayerTurn: boolean;
-  mainPlayerId: string;
+  isLocalPlayerTurn: boolean;
+  localPlayerId: string;
   phase: "action" | "buy" | "cleanup";
   handleCardClick: (
     card: CardName,
     index: number,
-    mainPlayerId: string,
+    localPlayerId: string,
   ) => void;
-  handleInPlayClick: (card: CardName, mainPlayerId: string) => void;
+  handleInPlayClick: (card: CardName, localPlayerId: string) => void;
   handleConfirmDecision: (
     data: ComplexDecisionData | null,
-    mainPlayerId: string,
+    localPlayerId: string,
   ) => void;
   handleSkipDecision: () => void;
   playAllTreasures: () => void;
@@ -36,8 +36,8 @@ export function createBoardCallbacks(
 ): BoardCallbacks {
   const {
     isPreviewMode,
-    isMainPlayerTurn,
-    mainPlayerId,
+    isLocalPlayerTurn,
+    localPlayerId,
     phase,
     handleCardClick,
     handleInPlayClick,
@@ -49,36 +49,36 @@ export function createBoardCallbacks(
 
   const onCardClick = (card: CardName, index: number) => {
     if (!isPreviewMode) {
-      handleCardClick(card, index, mainPlayerId);
+      handleCardClick(card, index, localPlayerId);
     }
   };
 
   const onInPlayClick = (card: CardName) => {
     if (!isPreviewMode && phase === "buy") {
-      handleInPlayClick(card, mainPlayerId);
+      handleInPlayClick(card, localPlayerId);
     }
   };
 
   const onPlayAllTreasures = () => {
-    if (isMainPlayerTurn && !isPreviewMode) {
+    if (isLocalPlayerTurn && !isPreviewMode) {
       playAllTreasures();
     }
   };
 
   const onEndPhase = () => {
-    if (isMainPlayerTurn && !isPreviewMode) {
+    if (isLocalPlayerTurn && !isPreviewMode) {
       endPhase();
     }
   };
 
   const onConfirmDecision = (data: ComplexDecisionData | null) => {
-    if (isMainPlayerTurn && !isPreviewMode) {
-      handleConfirmDecision(data, mainPlayerId);
+    if (isLocalPlayerTurn && !isPreviewMode) {
+      handleConfirmDecision(data, localPlayerId);
     }
   };
 
   const onSkipDecision = () => {
-    if (isMainPlayerTurn && !isPreviewMode) {
+    if (isLocalPlayerTurn && !isPreviewMode) {
       handleSkipDecision();
     }
   };
@@ -88,11 +88,11 @@ export function createBoardCallbacks(
     onInPlayClick:
       !isPreviewMode && phase === "buy" ? onInPlayClick : undefined,
     onPlayAllTreasures:
-      isMainPlayerTurn && !isPreviewMode ? onPlayAllTreasures : undefined,
-    onEndPhase: isMainPlayerTurn && !isPreviewMode ? onEndPhase : undefined,
+      isLocalPlayerTurn && !isPreviewMode ? onPlayAllTreasures : undefined,
+    onEndPhase: isLocalPlayerTurn && !isPreviewMode ? onEndPhase : undefined,
     onConfirmDecision:
-      isMainPlayerTurn && !isPreviewMode ? onConfirmDecision : undefined,
+      isLocalPlayerTurn && !isPreviewMode ? onConfirmDecision : undefined,
     onSkipDecision:
-      isMainPlayerTurn && !isPreviewMode ? onSkipDecision : undefined,
+      isLocalPlayerTurn && !isPreviewMode ? onSkipDecision : undefined,
   };
 }
