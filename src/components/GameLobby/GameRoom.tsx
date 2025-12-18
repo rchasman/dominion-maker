@@ -22,6 +22,7 @@ import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
 import { api } from "../../api/client";
 import { MIN_TURN_FOR_STRATEGY } from "../../context/game-constants";
 import type { GameMode } from "../../types/game-mode";
+import { AnimationProvider } from "../../animation";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
@@ -220,29 +221,31 @@ export function GameRoom({
     }
 
     return (
-      <GameContext.Provider value={contextValue}>
-        <LLMLogsContext.Provider value={{ llmLogs: [] }}>
-          <Suspense fallback={<BoardSkeleton />}>
-            <Board onBackToHome={handleResign} />
-          </Suspense>
-          {isSpectator && <SpectatorBadge />}
-          {disconnectedOpponent && (
-            <DisconnectModal
-              playerName={disconnectedOpponent.playerName}
-              onLeave={handleResign}
-            />
-          )}
-          {game.gameEndReason && !isSinglePlayer && (
-            <GameOverNotification
-              message={game.gameEndReason}
-              onClose={() => {
-                localStorage.removeItem("dominion_active_game");
-                onBack();
-              }}
-            />
-          )}
-        </LLMLogsContext.Provider>
-      </GameContext.Provider>
+      <AnimationProvider>
+        <GameContext.Provider value={contextValue}>
+          <LLMLogsContext.Provider value={{ llmLogs: [] }}>
+            <Suspense fallback={<BoardSkeleton />}>
+              <Board onBackToHome={handleResign} />
+            </Suspense>
+            {isSpectator && <SpectatorBadge />}
+            {disconnectedOpponent && (
+              <DisconnectModal
+                playerName={disconnectedOpponent.playerName}
+                onLeave={handleResign}
+              />
+            )}
+            {game.gameEndReason && !isSinglePlayer && (
+              <GameOverNotification
+                message={game.gameEndReason}
+                onClose={() => {
+                  localStorage.removeItem("dominion_active_game");
+                  onBack();
+                }}
+              />
+            )}
+          </LLMLogsContext.Provider>
+        </GameContext.Provider>
+      </AnimationProvider>
     );
   }
 
