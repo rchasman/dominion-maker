@@ -377,7 +377,7 @@ function GameCircle({
       }}
     >
       {/* Player avatars arranged in circle */}
-      {game.players.map((playerId, i) => {
+      {game.players.map((player, i) => {
         const angle = (i / totalAvatars) * 2 * Math.PI - Math.PI / 2;
         const x = Math.cos(angle) * circleRadius;
         const y = Math.sin(angle) * circleRadius;

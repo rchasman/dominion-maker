@@ -21,7 +21,7 @@ const CRITICAL_CARDS: CardName[] = [
  */
 export function preloadCriticalImages(): void {
   // Preload card back (always visible)
-  preloadImage("/cards/Card_back.jpg", 128);
+  preloadImage("/cards/Card_back.webp", 128);
 
   // Preload basic cards (in every game)
   CRITICAL_CARDS.forEach(card => {
