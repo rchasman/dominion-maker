@@ -21,7 +21,7 @@ type DrawEvent = { type: "draw"; cards: CardName[] } | { type: "shuffle" };
 export function drawCards(
   playerState: PlayerState,
   count: number,
-): { playerId: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
+): { player: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
   const {
     deck: playerDeck,
     discard: playerDiscard,
@@ -84,8 +84,8 @@ export function drawCards(
       : result.events;
 
   return {
-    playerId: {
-      ...playerId,
+    player: {
+      ...playerState,
       deck: result.deck,
       hand: result.hand,
       discard: result.discard,
