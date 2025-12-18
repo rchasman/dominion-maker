@@ -51,6 +51,7 @@ http://localhost:5173 — configure models, voter count (1-16), k-value.
 Preact, TypeScript, Bun, Vite 8 beta, Vercel AI SDK v6 beta
 
 - **Build**: 58ms build, 81ms types, 73ms tests (497), ~15s deploy
+- **Bundle**: 134 KB gzipped (72% compression), smart preloading, AVIF/WebP images
 - **Multiplayer**: P2P via trystero (WebRTC)
 - **Dev tools**: Event scrubber for time-travel debugging
 
