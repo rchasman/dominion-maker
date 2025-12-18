@@ -247,7 +247,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const defender = gameState.pendingChoice?.player;
+      const defender = gameState.pendingChoice?.playerId;
       if (!defender) {
         return { ok: false, error: "No pending reaction" };
       }
@@ -272,7 +272,7 @@ export function useGameActions(
       return { ok: false, error: "No engine" };
     }
 
-    const defender = gameState.pendingChoice?.player;
+    const defender = gameState.pendingChoice?.playerId;
     if (!defender) {
       return { ok: false, error: "No pending reaction" };
     }
