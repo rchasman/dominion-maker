@@ -42,11 +42,14 @@ export function decomposeDecisionForAI(
   // Multi-card decision: decompose into atomic actions
   if ((max ?? 0) > 1) {
     const actions = cardOptions.map(card => {
-      if (stage === "trash") {
+      if (stage === "trash" || stage === "victim_trash_choice") {
         return { type: "trash_card" as const, card };
       }
-      if (stage === "discard") {
+      if (stage === "discard" || stage === "opponent_discard") {
         return { type: "discard_card" as const, card };
+      }
+      if (stage === "topdeck" || stage === "opponent_topdeck") {
+        return { type: "topdeck_card" as const, card };
       }
       if (stage === "gain") {
         return { type: "gain_card" as const, card };
