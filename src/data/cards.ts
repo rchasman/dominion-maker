@@ -478,17 +478,6 @@ export const FIRST_GAME_KINGDOM: CardName[] = [
   "Moneylender",
 ];
 
-export function getCardImageUrl(cardName: CardName): string {
-  // Handle spaces in card names
-  const urlName = cardName.replace(/ /g, "_");
-  return `/cards/${urlName}.webp`;
-}
-
-export function getCardImageFallbackUrl(cardName: CardName): string {
-  const urlName = cardName.replace(/ /g, "_");
-  return `/cards/${urlName}.jpg`;
-}
-
 export function isActionCard(cardName: CardName): boolean {
   return CARDS[cardName].types.includes("action");
 }

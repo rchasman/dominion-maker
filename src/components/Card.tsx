@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 import { run } from "../lib/run";
 import {

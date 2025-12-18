@@ -1,5 +1,5 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
 import {

@@ -1,5 +1,5 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/cards";
+import { getCardImageUrl } from "../data/card-urls";
 import { getOptimizedImageUrl } from "./image-optimization";
 
 /**

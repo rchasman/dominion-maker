@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/cards";
+import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
 import type { Zone } from "./types";
 import {
   getOptimizedImageUrl,
