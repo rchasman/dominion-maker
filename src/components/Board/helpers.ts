@@ -44,18 +44,6 @@ export function getPlayerPerspective(
   };
 }
 
-/**
- * @deprecated Use getPlayerPerspective() instead for clearer intent
- */
-export function getPlayerIds(
-  state: GameState | null,
-  gameMode: GameMode,
-  localPlayerId?: string | null,
-): readonly string[] {
-  const perspective = getPlayerPerspective(state, gameMode, localPlayerId);
-  return perspective.allPlayerIds;
-}
-
 export function canSkipDecision(
   decision: GameState["pendingDecision"],
 ): boolean {
@@ -156,27 +144,4 @@ export function canBuyCards(
   isPreviewMode: boolean,
 ): boolean {
   return isLocalPlayerTurn && phase === "buy" && buys > 0 && !isPreviewMode;
-}
-
-export function formatPlayerLabel(
-  playerId: Player,
-  gameMode: GameMode,
-  isAIPlayer: boolean,
-  playerName?: string,
-  localPlayerName?: string,
-): string {
-  if (gameMode === "multiplayer") {
-    // In multiplayer, use actual names if available
-    if (playerId === "player0" && localPlayerName) {
-      return localPlayerName;
-    }
-    return playerName || (playerId === "human" ? "You" : "Opponent");
-  }
-
-  // In single-player, use actual names
-  if (isAIPlayer) {
-    return playerName || `AI (${playerId})`;
-  }
-
-  return localPlayerName || playerName || `You (${playerId})`;
 }

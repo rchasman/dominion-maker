@@ -111,51 +111,6 @@ export function calculateSupply(
   return { ...supply, ...kingdomSupply };
 }
 
-export function createDrawEventsForCleanup(
-  state: GameState,
-  player: string,
-  count: number,
-  causedBy?: string,
-): GameEvent[] {
-  const playerState = state.players[player];
-  if (!playerState) return [];
-
-  const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
-    playerState,
-    count,
-  );
-
-  const createDrawEvent = (card: CardName): GameEvent => ({
-    type: "CARD_DRAWN",
-    player,
-    card,
-    id: generateEventId(),
-    causedBy,
-  });
-
-  if (shuffled && cardsBeforeShuffle) {
-    // Draw cards before shuffle
-    const beforeShuffleEvents = cardsBeforeShuffle.map(createDrawEvent);
-
-    // Then shuffle
-    const shuffleEvent: GameEvent = {
-      type: "DECK_SHUFFLED",
-      player,
-      newDeckOrder,
-      id: generateEventId(),
-      causedBy,
-    };
-
-    // Then draw remaining cards after shuffle
-    const cardsAfterShuffle = cards.slice(cardsBeforeShuffle.length);
-    const afterShuffleEvents = cardsAfterShuffle.map(createDrawEvent);
-
-    return [...beforeShuffleEvents, shuffleEvent, ...afterShuffleEvents];
-  }
-  // No shuffle, just draw all cards
-  return cards.map(createDrawEvent);
-}
-
 export function getNextPlayer(state: GameState, currentPlayer: string): string {
   const playerOrder = state.playerOrder || ["human", "ai"];
   const currentIdx = playerOrder.indexOf(currentPlayer);
