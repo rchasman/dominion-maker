@@ -93,6 +93,7 @@ export function MainPlayerArea({
         )}
 
       {displayState.pendingChoice &&
+        displayState.pendingChoice.choiceType === "reaction" &&
         displayState.pendingChoice.playerId === localPlayerId &&
         !isPreviewMode && (
           <ReactionModal

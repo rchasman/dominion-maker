@@ -3,7 +3,7 @@ import { BaseModal } from "./Modal/BaseModal";
 import { Card } from "./Card";
 
 interface ReactionModalProps {
-  reactions?: CardName[];
+  reactions: CardName[];
   attackCard: CardName;
   attacker: PlayerId;
   onReveal: (card: CardName) => void;
@@ -35,7 +35,7 @@ export function ReactionModal({
             marginBottom: "20px",
           }}
         >
-          {reactions?.map(card => (
+          {reactions.map(card => (
             <div
               key={card}
               onClick={() => onReveal(card)}
