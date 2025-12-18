@@ -14,6 +14,7 @@ import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
 import { useAnimationSafe } from "../animation";
+import { hasPlayableActions as computeHasPlayableActions } from "./derived-state";
 
 interface AIAutomationParams {
   gameState: GameState | null;
@@ -297,7 +298,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 }
 
 /**
- * Handle automatic phase advancement
+ * Handle automatic phase advancement (single-player with engine)
  */
 export function useAutoPhaseAdvance(
   gameState: GameState | null,
@@ -330,4 +331,47 @@ export function useAutoPhaseAdvance(
 
     return;
   }, [gameState, isProcessing, engineRef, setEvents, setGameState]);
+}
+
+/**
+ * Handle automatic phase advancement (multiplayer without engine)
+ */
+export function useAutoPhaseAdvanceMultiplayer(
+  gameState: GameState | null,
+  playerId: string | null,
+  isProcessing: boolean,
+  isSpectator: boolean,
+  endPhase: () => void,
+): void {
+  useEffect(() => {
+    if (!gameState || isProcessing || isSpectator || !playerId) {
+      return;
+    }
+
+    const isMyTurn = gameState.activePlayer === playerId;
+    const currentHasPlayableActions = computeHasPlayableActions(
+      gameState,
+      playerId,
+    );
+
+    const shouldAutoSkip =
+      gameState.phase === "action" &&
+      isMyTurn &&
+      !gameState.pendingDecision &&
+      !gameState.gameOver &&
+      !currentHasPlayableActions;
+
+    if (shouldAutoSkip) {
+      const timer = setTimeout(() => {
+        uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
+        endPhase();
+      }, TIMING.AUTO_ADVANCE_DELAY);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+
+    return;
+  }, [gameState, playerId, isProcessing, isSpectator, endPhase]);
 }

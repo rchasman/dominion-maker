@@ -5,7 +5,7 @@
  * Shows waiting room or game board based on game state.
  */
 import { lazy, Suspense } from "preact/compat";
-import { useMemo, useState, useEffect, useRef } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { BoardWithProviders } from "../Board/BoardWithProviders";
@@ -19,8 +19,8 @@ import {
   hasTreasuresInHand as computeHasTreasuresInHand,
 } from "../../context/derived-state";
 import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
-import { api } from "../../api/client";
-import { MIN_TURN_FOR_STRATEGY } from "../../context/game-constants";
+import { useStrategyAnalysisFromEvents } from "../../context/use-strategy-analysis";
+import { useAutoPhaseAdvanceMultiplayer } from "../../context/use-ai-automation";
 import type { GameMode } from "../../types/game-mode";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
@@ -63,7 +63,6 @@ export function GameRoom({
   const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
     {},
   );
-  const lastEventCountRef = useRef(0);
 
   // Memoize derived state for GameContext (used by child components)
   const hasPlayableActions = useMemo(
@@ -76,37 +75,12 @@ export function GameRoom({
     [game.gameState, game.playerId],
   );
 
-  // Fetch strategy analysis when turns end
-  useEffect(() => {
-    const { events, gameState } = game;
-    if (!gameState || events.length <= lastEventCountRef.current) return;
-
-    const newEvents = events.slice(lastEventCountRef.current);
-    lastEventCountRef.current = events.length;
-
-    const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
-    if (!hasTurnEnded || gameState.turn < MIN_TURN_FOR_STRATEGY) return;
-
-    api.api["analyze-strategy"]
-      .post({ currentState: gameState })
-      .then(({ data }) => {
-        if (data?.strategySummary?.length) {
-          const record = data.strategySummary.reduce<PlayerStrategyData>(
-            (acc, item) => {
-              acc[item.id] = {
-                gameplan: item.gameplan,
-                read: item.read,
-                recommendation: item.recommendation,
-              };
-              return acc;
-            },
-            {},
-          );
-          setPlayerStrategies(record);
-        }
-      })
-      .catch(() => {});
-  }, [game.events, game.gameState]);
+  // Strategy analysis - shared hook
+  useStrategyAnalysisFromEvents(
+    game.events,
+    game.gameState,
+    setPlayerStrategies,
+  );
 
   // No-op unplayTreasure for multiplayer
   const unplayTreasure = (_card: CardName): CommandResult => {
@@ -135,30 +109,14 @@ export function GameRoom({
     }
   };
 
-  // Auto-skip action phase when no playable actions
-  useEffect(() => {
-    if (!game.gameState || game.isProcessing || isSpectator) return;
-
-    const state = game.gameState;
-    const isMyTurn = state.activePlayer === game.playerId;
-
-    // Calculate fresh - guaranteed to match current state (no race conditions)
-    const currentHasPlayableActions = computeHasPlayableActions(
-      state,
-      game.playerId,
-    );
-
-    const shouldAutoSkip =
-      state.phase === "action" &&
-      isMyTurn &&
-      !state.pendingDecision &&
-      !state.gameOver &&
-      !currentHasPlayableActions;
-
-    if (shouldAutoSkip) {
-      game.endPhase();
-    }
-  }, [game.gameState, game.isProcessing, game.playerId, isSpectator]);
+  // Auto-skip action phase when no playable actions - shared hook
+  useAutoPhaseAdvanceMultiplayer(
+    game.gameState,
+    game.playerId,
+    game.isProcessing,
+    isSpectator,
+    game.endPhase,
+  );
 
   // Build GameContext value
   const contextValue = useMemo(
