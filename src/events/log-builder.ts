@@ -27,7 +27,7 @@ type MaybeAggregatedEvent = GameEvent | AggregatedCardEvent;
 function isPlayerEvent(
   event: GameEvent,
 ): event is GameEvent & { playerId: PlayerId } {
-  return "player" in event;
+  return "playerId" in event;
 }
 
 function isCardEvent(
@@ -118,15 +118,40 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
     if (next.type === "DECK_SHUFFLED") return false;
     if (next.type !== current.type) return false;
     if (!isPlayerEvent(current) || !isPlayerEvent(next)) return false;
-    return current.playerId === next.playerId && next.causedBy === current.causedBy;
+
+    // Same player is required
+    if (current.playerId !== next.playerId) return false;
+
+    // For cleanup discards/draws (no causedBy), aggregate all consecutive ones
+    // For effect-caused discards/draws, only aggregate if same cause
+    if (!current.causedBy && !next.causedBy) return true;
+
+    return next.causedBy === current.causedBy;
   };
 
   const collectConsecutive = (
     startIndex: number,
   ): { events: GameEvent[]; count: number } => {
-    const consecutiveCount = events
-      .slice(startIndex + 1)
-      .findIndex(next => !canMatchNext(events[startIndex], next));
+    // Find the first event that doesn't match OR if we hit a shuffle
+    const remainingEvents = events.slice(startIndex + 1);
+    let consecutiveCount = -1;
+
+    for (let i = 0; i < remainingEvents.length; i++) {
+      const currentEvent = events[startIndex + i];
+      const nextEvent = remainingEvents[i];
+
+      // Stop if we hit a shuffle between current and next
+      if (i > 0 && events[startIndex + i].type === "DECK_SHUFFLED") {
+        consecutiveCount = i;
+        break;
+      }
+
+      // Stop if next event doesn't match
+      if (!canMatchNext(currentEvent, nextEvent)) {
+        consecutiveCount = i;
+        break;
+      }
+    }
 
     const count =
       consecutiveCount === -1

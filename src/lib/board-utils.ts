@@ -124,16 +124,20 @@ const isAggregatable = (entry: LogEntry) =>
     "gain-card",
     "discard-cards",
     "draw-cards",
+    "play-action",
   ].includes(entry.type);
 
 const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
   if (next.type !== current.type) return false;
-  if (!("player" in next) || !("player" in current)) return false;
-  if (next.player !== current.player) return false;
+  if (!("playerId" in next) || !("playerId" in current)) return false;
+  if (next.playerId !== current.playerId) return false;
 
+  // For entries with cards, they must match on card
   if ("card" in next && "card" in current) {
     return next.card === current.card;
   }
+
+  // draw-cards and discard-cards can aggregate without card matching
   return current.type === "discard-cards" || current.type === "draw-cards";
 };
 
@@ -167,8 +171,8 @@ const aggregateGroup = (
       : [],
   );
   const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
-  const aggregatedChildren =
-    allChildren.length > 0 ? aggregateLogEntries(allChildren) : [];
+  // Don't aggregate children - keep resource changes individual
+  const aggregatedChildren = allChildren;
 
   if (first.type === "play-treasure" || first.type === "unplay-treasure") {
     const totalCoins = entries.reduce(
@@ -211,10 +215,30 @@ const aggregateGroup = (
         (e.type === "discard-cards" || e.type === "draw-cards" ? e.count : 0),
       0,
     );
+
+    // Create card counts for grouped display (e.g., "Estate x2, Copper x3")
+    const cardCounts: Record<string, number> = {};
+    allCards.forEach(card => {
+      cardCounts[card] = (cardCounts[card] || 0) + 1;
+    });
+
     return {
       ...first,
       count: totalCount,
       cards: allCards.length > 0 ? allCards : undefined,
+      cardCounts: Object.keys(cardCounts).length > 0 ? cardCounts : undefined,
+      eventIds,
+    };
+  }
+
+  // play-action: show count but keep children individual
+  if (first.type === "play-action") {
+    return {
+      ...first,
+      children:
+        count > 1
+          ? [{ type: "text", message: `${count}x` }, ...aggregatedChildren]
+          : aggregatedChildren,
       eventIds,
     };
   }
