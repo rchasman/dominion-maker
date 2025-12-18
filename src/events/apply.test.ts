@@ -24,8 +24,8 @@ function createEmptyState(): GameState {
     coins: 0,
     gameOver: false,
     winner: null,
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
     trash: [],
     log: [],
     turnHistory: [],
@@ -99,7 +99,7 @@ describe("Event Application - Game Setup", () => {
 
     const event: GameEvent = {
       type: "INITIAL_DECK_DEALT",
-      player: "human",
+      playerId: "human",
       cards: [
         "Copper",
         "Copper",
@@ -135,7 +135,7 @@ describe("Event Application - Game Setup", () => {
 
     const event: GameEvent = {
       type: "INITIAL_HAND_DRAWN",
-      player: "human",
+      playerId: "human",
       cards: ["Estate", "Estate", "Copper", "Copper", "Copper"],
     };
 
@@ -159,7 +159,7 @@ describe("Event Application - Turn Structure", () => {
     const event: GameEvent = {
       type: "TURN_STARTED",
       turn: 2,
-      player: "ai",
+      playerId: "ai",
     };
 
     const newState = applyEvent(state, event);
@@ -193,7 +193,7 @@ describe("Event Application - Turn Structure", () => {
 
     const event: GameEvent = {
       type: "TURN_ENDED",
-      player: "human",
+      playerId: "human",
       turn: 1,
     };
 
@@ -216,7 +216,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_DRAWN",
-      player: "human",
+      playerId: "human",
       card: "Gold",
     };
 
@@ -233,7 +233,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_PLAYED",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -252,7 +252,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Copper",
       from: "hand",
     };
@@ -271,7 +271,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Village",
       from: "inPlay",
     };
@@ -290,7 +290,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Gold",
       from: "deck",
     };
@@ -309,7 +309,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_TRASHED",
-      player: "human",
+      playerId: "human",
       card: "Copper",
       from: "hand",
     };
@@ -327,7 +327,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_TRASHED",
-      player: "human",
+      playerId: "human",
       card: "Gold",
       from: "deck",
     };
@@ -345,7 +345,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_GAINED",
-      player: "human",
+      playerId: "human",
       card: "Silver",
       to: "discard",
     };
@@ -363,7 +363,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_GAINED",
-      player: "human",
+      playerId: "human",
       card: "Gold",
       to: "hand",
     };
@@ -381,7 +381,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_GAINED",
-      player: "human",
+      playerId: "human",
       card: "Gold",
       to: "deck",
     };
@@ -398,7 +398,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_REVEALED",
-      player: "human",
+      playerId: "human",
       cards: ["Copper", "Silver"],
     };
 
@@ -415,7 +415,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "DECK_SHUFFLED",
-      player: "human",
+      playerId: "human",
       newDeckOrder: ["Gold", "Estate", "Silver"],
     };
 
@@ -432,7 +432,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_PUT_ON_DECK",
-      player: "human",
+      playerId: "human",
       card: "Estate",
       from: "hand",
     };
@@ -450,7 +450,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_PUT_ON_DECK",
-      player: "human",
+      playerId: "human",
       card: "Gold",
       from: "discard",
     };
@@ -469,7 +469,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_RETURNED_TO_HAND",
-      player: "human",
+      playerId: "human",
       card: "Copper",
       from: "inPlay",
     };
@@ -488,7 +488,7 @@ describe("Event Application - Card Movement", () => {
 
     const event: GameEvent = {
       type: "CARD_RETURNED_TO_HAND",
-      player: "human",
+      playerId: "human",
       card: "Silver",
       from: "discard",
     };
@@ -613,11 +613,11 @@ describe("Event Application - Decisions", () => {
     const state = createBasicGameState();
 
     const decision = {
-      type: "select_cards" as const,
-      player: "human",
-      from: "hand" as const,
+      choiceType: "decision" as const,
+      playerId: "human",
       prompt: "Choose a card",
       cardOptions: ["Copper", "Estate"] as CardName[],
+      from: "hand" as const,
       min: 1,
       max: 1,
       cardBeingPlayed: "Chapel" as CardName,
@@ -631,7 +631,7 @@ describe("Event Application - Decisions", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.pendingDecision).toEqual(decision);
+    expect(newState.pendingChoice).toEqual(decision);
     expect(getSubPhase(newState)).toBeNull();
   });
 
@@ -640,11 +640,11 @@ describe("Event Application - Decisions", () => {
     state.activePlayer = "human";
 
     const decision = {
-      type: "select_cards" as const,
-      player: "ai", // Opponent!
-      from: "hand" as const,
+      choiceType: "decision" as const,
+      playerId: "ai", // Opponent!
       prompt: "Discard down to 3",
       cardOptions: ["Copper"] as CardName[],
+      from: "hand" as const,
       min: 1,
       max: 1,
       cardBeingPlayed: "Militia" as CardName,
@@ -658,18 +658,18 @@ describe("Event Application - Decisions", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.pendingDecision).toEqual(decision);
+    expect(newState.pendingChoice).toEqual(decision);
     expect(getSubPhase(newState)).toBe("opponent_decision");
   });
 
   it("should apply DECISION_RESOLVED", () => {
     const state = createBasicGameState();
-    state.pendingDecision = {
-      type: "select_cards",
-      player: "human",
-      from: "hand",
+    state.pendingChoice = {
+      choiceType: "decision",
+      playerId: "human",
       prompt: "Test",
       cardOptions: [],
+      from: "hand",
       min: 0,
       max: 1,
       cardBeingPlayed: "Chapel",
@@ -682,7 +682,7 @@ describe("Event Application - Decisions", () => {
 
     const newState = applyEvent(state, event);
 
-    expect(newState.pendingDecision).toBeNull();
+    expect(newState.pendingChoice).toBeNull();
     expect(getSubPhase(newState)).toBeNull();
   });
 });
@@ -721,9 +721,9 @@ describe("Event Application - Multiple Events", () => {
     state.actions = 1;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", player: "human", card: "Village" },
+      { type: "CARD_PLAYED", playerId: "human", card: "Village" },
       { type: "ACTIONS_MODIFIED", delta: -1 },
-      { type: "CARD_DRAWN", player: "human", card: "Silver" },
+      { type: "CARD_DRAWN", playerId: "human", card: "Silver" },
       { type: "ACTIONS_MODIFIED", delta: 2 },
     ];
 
@@ -745,9 +745,9 @@ describe("Event Application - Multiple Events", () => {
     state.coins = 0;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", player: "human", card: "Market" },
+      { type: "CARD_PLAYED", playerId: "human", card: "Market" },
       { type: "ACTIONS_MODIFIED", delta: -1 },
-      { type: "CARD_DRAWN", player: "human", card: "Copper" },
+      { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
       { type: "ACTIONS_MODIFIED", delta: 1 },
       { type: "BUYS_MODIFIED", delta: 1 },
       { type: "COINS_MODIFIED", delta: 1 },
@@ -776,7 +776,7 @@ describe("Event Application - Edge Cases", () => {
     // Try to draw a card that doesn't exist at top of deck
     const event: GameEvent = {
       type: "CARD_DRAWN",
-      player: "human",
+      playerId: "human",
       card: "Gold", // Not in deck!
     };
 
@@ -795,7 +795,7 @@ describe("Event Application - Edge Cases", () => {
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Gold", // Not in hand!
       from: "hand",
     };
@@ -815,7 +815,7 @@ describe("Event Application - Edge Cases", () => {
 
     const event: GameEvent = {
       type: "CARD_GAINED",
-      player: "human",
+      playerId: "human",
       card: "Silver",
       to: "discard",
     };
@@ -831,7 +831,7 @@ describe("Event Application - Edge Cases", () => {
 
     const event: GameEvent = {
       type: "CARD_DRAWN",
-      player: "nonexistent",
+      playerId: "nonexistent",
       card: "Copper",
     };
 
@@ -847,7 +847,7 @@ describe("Event Application - Edge Cases", () => {
 
     const event: GameEvent = {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Copper",
       from: "hand",
     };
@@ -872,7 +872,7 @@ describe("Event Application - Source Index Tracking", () => {
     // Play Smithy (index 1)
     let newState = applyEvent(state, {
       type: "CARD_PLAYED",
-      player: "human",
+      playerId: "human",
       card: "Smithy",
     });
 
@@ -882,7 +882,7 @@ describe("Event Application - Source Index Tracking", () => {
     // Play Market (was index 2, now index 1)
     newState = applyEvent(newState, {
       type: "CARD_PLAYED",
-      player: "human",
+      playerId: "human",
       card: "Market",
     });
 
@@ -898,7 +898,7 @@ describe("Event Application - Source Index Tracking", () => {
     // Discard Smithy (middle card)
     const newState = applyEvent(state, {
       type: "CARD_DISCARDED",
-      player: "human",
+      playerId: "human",
       card: "Smithy",
       from: "inPlay",
     });

@@ -15,13 +15,13 @@ import {
  */
 export function applyTurnEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "TURN_STARTED") {
     return {
       ...state,
       turn: event.turn,
-      activePlayer: event.player,
+      activePlayer: event.playerId,
       phase: "action",
       actions: 0,
       buys: 0,
@@ -29,7 +29,7 @@ export function applyTurnEvent(
       turnHistory: [],
       log: [
         ...state.log,
-        { type: "turn-start", turn: event.turn, player: event.player },
+        { type: "turn-start", turn: event.turn, playerId: event.playerId },
       ],
     };
   }
@@ -50,7 +50,7 @@ export function applyTurnEvent(
         ...state.log,
         {
           type: "phase-change",
-          player: state.activePlayer,
+          playerId: state.activePlayer,
           phase: event.phase,
         },
       ],
@@ -65,7 +65,7 @@ export function applyTurnEvent(
  */
 export function applyCardMovementEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   const drawnResult = applyCardDrawn(state, event);
   if (drawnResult) return drawnResult;
@@ -93,7 +93,7 @@ export function applyCardMovementEvent(
  */
 export function applyResourceEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "ACTIONS_MODIFIED") {
     const newActions = Math.max(0, state.actions + event.delta);
@@ -101,7 +101,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-actions" as const,
-            player: state.activePlayer,
+            playerId: state.activePlayer,
             count: event.delta,
           }
         : null;
@@ -118,7 +118,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-buys" as const,
-            player: state.activePlayer,
+            playerId: state.activePlayer,
             count: event.delta,
           }
         : null;
@@ -135,7 +135,7 @@ export function applyResourceEvent(
       event.delta > 0
         ? {
             type: "get-coins" as const,
-            player: state.activePlayer,
+            playerId: state.activePlayer,
             count: event.delta,
           }
         : null;
@@ -153,7 +153,7 @@ export function applyResourceEvent(
         ...state.activeEffects,
         {
           type: event.type,
-          player: event.player,
+          playerId: event.playerId,
           effectType: event.effectType,
           source: event.source,
           parameters: event.parameters,
@@ -191,7 +191,7 @@ export function applyResourceEvent(
  */
 export function applyAttackAndReactionEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "ATTACK_DECLARED") {
     return {
@@ -200,7 +200,9 @@ export function applyAttackAndReactionEvent(
         ...state.log,
         {
           type: "text",
-          message: `${event.attacker} plays ${event.attackCard}, attacking ${event.targets.join(", ")}`,
+          message: `${event.attacker} plays ${
+            event.attackCard
+          }, attacking ${event.targets.join(", ")}`,
         },
       ],
     };
@@ -229,7 +231,7 @@ export function applyAttackAndReactionEvent(
         ...state.log,
         {
           type: "text",
-          message: `${event.player} reveals ${event.card}`,
+          message: `${event.playerId} reveals ${event.card}`,
         },
       ],
     };
@@ -243,33 +245,34 @@ export function applyAttackAndReactionEvent(
  */
 export function applyReactionEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "REACTION_OPPORTUNITY") {
     return {
       ...state,
-      pendingReaction: {
-        player: event.player,
+      pendingChoice: {
+        choiceType: "reaction",
+        playerId: event.playerId,
         attacker: event.attacker,
         attackCard: event.attackCard,
         availableReactions: event.availableReactions,
         metadata: event.metadata,
       },
-      pendingReactionEventId: event.id || null,
+      pendingChoiceEventId: event.id || null,
     };
   }
 
   if (event.type === "REACTION_REVEALED") {
     return {
       ...state,
-      pendingReaction: null,
-      pendingReactionEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
       log: [
         ...state.log,
         {
           type: "text",
-          player: event.player,
-          message: `${event.player} reveals ${event.card} to block ${event.attackCard}`,
+          playerId: event.playerId,
+          message: `${event.playerId} reveals ${event.card} to block ${event.attackCard}`,
           eventId: event.id,
         },
       ],
@@ -279,14 +282,14 @@ export function applyReactionEvent(
   if (event.type === "REACTION_DECLINED") {
     return {
       ...state,
-      pendingReaction: null,
-      pendingReactionEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
       log: [
         ...state.log,
         {
           type: "text",
-          player: event.player,
-          message: `${event.player} declines to reveal a reaction to ${event.attackCard}`,
+          playerId: event.playerId,
+          message: `${event.playerId} declines to reveal a reaction to ${event.attackCard}`,
           eventId: event.id,
         },
       ],
@@ -301,30 +304,30 @@ export function applyReactionEvent(
  */
 export function applyDecisionEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "DECISION_REQUIRED") {
     const decision = event.decision;
     return {
       ...state,
-      pendingDecision: decision,
-      pendingDecisionEventId: event.id || null, // Track which event created this decision
+      pendingChoice: { ...decision, choiceType: "decision" },
+      pendingChoiceEventId: event.id || null, // Track which event created this decision
     };
   }
 
   if (event.type === "DECISION_RESOLVED") {
     return {
       ...state,
-      pendingDecision: null,
-      pendingDecisionEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
     };
   }
 
   if (event.type === "DECISION_SKIPPED") {
     return {
       ...state,
-      pendingDecision: null,
-      pendingDecisionEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
     };
   }
 
@@ -336,7 +339,7 @@ export function applyDecisionEvent(
  */
 export function applyGameEndEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "GAME_ENDED") {
     return {

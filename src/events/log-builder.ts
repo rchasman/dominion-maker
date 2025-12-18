@@ -6,6 +6,7 @@ import type {
   ActionsModifiedEvent,
   BuysModifiedEvent,
   CoinsModifiedEvent,
+  PlayerId,
 } from "./types";
 import type { LogEntry, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
@@ -25,7 +26,7 @@ type MaybeAggregatedEvent = GameEvent | AggregatedCardEvent;
 
 function isPlayerEvent(
   event: GameEvent,
-): event is GameEvent & { player: string } {
+): event is GameEvent & { playerId: PlayerId } {
   return "player" in event;
 }
 
@@ -55,7 +56,7 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
     (acc, event) => {
       // Track current player from TURN_STARTED events
       const currentPlayer =
-        event.type === "TURN_STARTED" ? event.player : acc.currentPlayer;
+        event.type === "TURN_STARTED" ? event.playerId : acc.currentPlayer;
 
       const logEntry = eventToLogEntry(event, currentPlayer);
       const eventId = event.id;
@@ -205,7 +206,7 @@ function cardPlayedToLogEntry(
   if (isTreasure) {
     return {
       type: "play-treasure",
-      player: event.player,
+      playerId: event.playerId,
       card: event.card,
       coins: cardDef.coins || 0,
       eventId: event.id,
@@ -215,7 +216,7 @@ function cardPlayedToLogEntry(
   if (isAction) {
     return {
       type: "play-action",
-      player: event.player,
+      playerId: event.playerId,
       card: event.card,
       eventId: event.id,
     };
@@ -230,7 +231,7 @@ function cardDrawnToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   if (isAggregatedEvent(event)) {
     return {
       type: "draw-cards",
-      player: event.player,
+      playerId: event.playerId,
       count: event.count,
       cards: event.cards,
       cardCounts: event.cardCounts,
@@ -239,7 +240,7 @@ function cardDrawnToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   }
   return {
     type: "draw-cards",
-    player: (event as CardDrawnEvent).player,
+    playerId: (event as CardDrawnEvent).playerId,
     count: 1,
     cards: [(event as CardDrawnEvent).card],
     eventId: event.id,
@@ -253,7 +254,7 @@ function cardDiscardedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   if (isAggregatedEvent(event)) {
     return {
       type: "discard-cards",
-      player: event.player,
+      playerId: event.playerId,
       count: event.count,
       cards: event.cards,
       cardCounts: event.cardCounts,
@@ -262,7 +263,7 @@ function cardDiscardedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   }
   return {
     type: "discard-cards",
-    player: (event as CardDiscardedEvent).player,
+    playerId: (event as CardDiscardedEvent).playerId,
     count: 1,
     cards: [(event as CardDiscardedEvent).card],
     eventId: event.id,
@@ -276,7 +277,7 @@ function cardTrashedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   if (isAggregatedEvent(event)) {
     return {
       type: "trash-card",
-      player: event.player,
+      playerId: event.playerId,
       card: event.cards[0],
       cards: event.cards,
       count: event.count,
@@ -285,7 +286,7 @@ function cardTrashedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
   }
   return {
     type: "trash-card",
-    player: (event as CardTrashedEvent).player,
+    playerId: (event as CardTrashedEvent).playerId,
     card: (event as CardTrashedEvent).card,
     eventId: event.id,
   };
@@ -303,14 +304,14 @@ function cardGainedToLogEntry(
   if (isBuy) {
     return {
       type: "buy-card",
-      player: event.player,
+      playerId: event.playerId,
       card: event.card,
       vp: typeof cardDef.vp === "number" ? cardDef.vp : undefined,
       eventId: event.id,
       children: [
         {
           type: "gain-card",
-          player: event.player,
+          playerId: event.playerId,
           card: event.card,
           eventId: event.id,
         },
@@ -320,7 +321,7 @@ function cardGainedToLogEntry(
 
   return {
     type: "gain-card",
-    player: event.player,
+    playerId: event.playerId,
     card: event.card,
     eventId: event.id,
   };
@@ -341,7 +342,7 @@ function cardReturnedToHandToLogEntry(
   if (isTreasure && event.from === "inPlay") {
     return {
       type: "unplay-treasure",
-      player: event.player,
+      playerId: event.playerId,
       card: event.card,
       coins: cardDef.coins || 0,
       eventId: event.id,
@@ -375,7 +376,7 @@ function resourceModifiedToLogEntry(
   if (event.delta > 0) {
     return {
       type: typeMap[event.type].positive,
-      player: currentPlayer,
+      playerId: currentPlayer,
       count: event.delta,
       eventId: event.id,
     };
@@ -384,7 +385,7 @@ function resourceModifiedToLogEntry(
   if (event.delta < 0) {
     return {
       type: typeMap[event.type].negative,
-      player: currentPlayer,
+      playerId: currentPlayer,
       count: -event.delta,
       eventId: event.id,
     };
@@ -409,7 +410,7 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
     case "CARD_GAINED":
       return cardGainedToLogEntry(event);
     case "DECK_SHUFFLED":
-      return { type: "shuffle-deck", player: event.player, eventId: event.id };
+      return { type: "shuffle-deck", playerId: event.playerId, eventId: event.id };
     case "CARD_RETURNED_TO_HAND":
       return cardReturnedToHandToLogEntry(event);
     default:
@@ -429,13 +430,13 @@ function gameFlowEventToLogEntry(
       return {
         type: "turn-start",
         turn: event.turn,
-        player: event.player,
+        playerId: event.playerId,
         eventId: event.id,
       };
     case "PHASE_CHANGED":
       return {
         type: "phase-change",
-        player: currentPlayer,
+        playerId: currentPlayer,
         phase: event.phase,
         eventId: event.id,
       };
@@ -447,7 +448,7 @@ function gameFlowEventToLogEntry(
         eventId: event.id,
       };
     case "TURN_ENDED":
-      return { type: "turn-end", player: event.player, eventId: event.id };
+      return { type: "turn-end", playerId: event.playerId, eventId: event.id };
     default:
       return null;
   }

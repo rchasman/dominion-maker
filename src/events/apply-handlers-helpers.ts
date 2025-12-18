@@ -10,7 +10,7 @@ import { CARDS } from "../data/cards";
 export const removeCardFromInPlay = (
   inPlay: CardName[],
   indices: number[],
-  card: CardName,
+  card: CardName
 ): [CardName[], number[]] => {
   const idx = inPlay.indexOf(card);
   return idx === -1
@@ -26,17 +26,17 @@ export const removeCardFromInPlay = (
  */
 export function applyCardDrawn(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type !== "CARD_DRAWN") return null;
-  const playerState = state.players[event.player];
+  const playerState = state.players[event.playerId];
   if (!playerState) return state;
   const newDeck = playerState.deck.slice(0, -1);
   return {
     ...state,
     players: {
       ...state.players,
-      [event.player]: {
+      [event.playerId]: {
         ...playerState,
         deck: newDeck,
         hand: [...playerState.hand, event.card],
@@ -47,7 +47,7 @@ export function applyCardDrawn(
       ...state.log,
       {
         type: "draw-cards",
-        player: event.player,
+        playerId: event.playerId,
         count: 1,
         cards: [event.card],
       },
@@ -60,10 +60,10 @@ export function applyCardDrawn(
  */
 export function applyCardPlayed(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type !== "CARD_PLAYED") return null;
-  const playerState = state.players[event.player];
+  const playerState = state.players[event.playerId];
   if (!playerState) return state;
   const handIndex = playerState.hand.indexOf(event.card);
   if (handIndex === -1) return state;
@@ -85,7 +85,7 @@ export function applyCardPlayed(
     ...state,
     players: {
       ...state.players,
-      [event.player]: {
+      [event.playerId]: {
         ...playerState,
         hand: newHand,
         inPlay: [...playerState.inPlay, event.card],
@@ -103,24 +103,24 @@ export function applyCardPlayed(
  */
 export function applyCardDiscarded(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type !== "CARD_DISCARDED") return null;
-  const playerState = state.players[event.player];
+  const playerState = state.players[event.playerId];
   if (!playerState) return state;
   const [newInPlay, newInPlaySourceIndices] =
     event.from === "inPlay"
       ? removeCardFromInPlay(
           playerState.inPlay,
           playerState.inPlaySourceIndices,
-          event.card,
+          event.card
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
 
   // Track discard decisions from hand (Cellar, Militia response, etc)
   // Don't track end-of-turn cleanup discards
   const shouldTrack =
-    event.from === "hand" && event.player === state.activePlayer;
+    event.from === "hand" && event.playerId === state.activePlayer;
   const turnHistoryEntry = shouldTrack
     ? { type: "discard_card" as const, card: event.card }
     : null;
@@ -129,7 +129,7 @@ export function applyCardDiscarded(
     ...state,
     players: {
       ...state.players,
-      [event.player]: {
+      [event.playerId]: {
         ...playerState,
         hand:
           event.from === "hand"
@@ -151,7 +151,7 @@ export function applyCardDiscarded(
       ...state.log,
       {
         type: "discard-cards",
-        player: event.player,
+        playerId: event.playerId,
         count: 1,
         cards: [event.card],
       },
@@ -164,17 +164,17 @@ export function applyCardDiscarded(
  */
 export function applyCardTrashed(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type !== "CARD_TRASHED") return null;
-  const playerState = state.players[event.player];
+  const playerState = state.players[event.playerId];
   if (!playerState) return state;
   const [newInPlay, newInPlaySourceIndices] =
     event.from === "inPlay"
       ? removeCardFromInPlay(
           playerState.inPlay,
           playerState.inPlaySourceIndices,
-          event.card,
+          event.card
         )
       : [playerState.inPlay, playerState.inPlaySourceIndices];
 
@@ -188,7 +188,7 @@ export function applyCardTrashed(
     ...state,
     players: {
       ...state.players,
-      [event.player]: {
+      [event.playerId]: {
         ...playerState,
         hand:
           event.from === "hand"
@@ -208,7 +208,7 @@ export function applyCardTrashed(
       : state.turnHistory,
     log: [
       ...state.log,
-      { type: "trash-card", player: event.player, card: event.card },
+      { type: "trash-card", playerId: event.playerId, card: event.card },
     ],
   };
 }
@@ -218,10 +218,10 @@ export function applyCardTrashed(
  */
 export function applyCardGained(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type !== "CARD_GAINED") return null;
-  const playerState = state.players[event.player];
+  const playerState = state.players[event.playerId];
   if (!playerState) return state;
 
   // Silently ignore if supply is empty (centralized supply depletion check)
@@ -261,7 +261,7 @@ export function applyCardGained(
     ...state,
     players: {
       ...state.players,
-      [event.player]: {
+      [event.playerId]: {
         ...playerState,
         ...updates,
       },
@@ -270,7 +270,7 @@ export function applyCardGained(
     turnHistory: newTurnHistory,
     log: [
       ...state.log,
-      { type: "gain-card", player: event.player, card: event.card },
+      { type: "gain-card", playerId: event.playerId, card: event.card },
     ],
   };
 }
@@ -280,14 +280,14 @@ export function applyCardGained(
  */
 export function applyRevealAndShuffle(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
     return {
       ...state,
       log: [
         ...state.log,
-        { type: "text", message: `${event.player} reveals ${event.card}` },
+        { type: "text", message: `${event.playerId} reveals ${event.card}` },
       ],
     };
   }
@@ -297,13 +297,13 @@ export function applyRevealAndShuffle(
       ...state,
       log: [
         ...state.log,
-        { type: "text", message: `${event.player} looks at ${event.card}` },
+        { type: "text", message: `${event.playerId} looks at ${event.card}` },
       ],
     };
   }
 
   if (event.type === "DECK_SHUFFLED") {
-    const playerState = state.players[event.player];
+    const playerState = state.players[event.playerId];
     if (!playerState) return state;
     const updatedPlayer: PlayerState = {
       ...playerState,
@@ -315,7 +315,7 @@ export function applyRevealAndShuffle(
       ...state,
       players: {
         ...state.players,
-        [event.player]: updatedPlayer,
+        [event.playerId]: updatedPlayer,
       },
     };
   }
@@ -328,16 +328,16 @@ export function applyRevealAndShuffle(
  */
 export function applyCardReposition(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "CARD_PUT_ON_DECK") {
-    const playerState = state.players[event.player];
+    const playerState = state.players[event.playerId];
     if (!playerState) return state;
     return {
       ...state,
       players: {
         ...state.players,
-        [event.player]: {
+        [event.playerId]: {
           ...playerState,
           hand:
             event.from === "hand"
@@ -355,21 +355,21 @@ export function applyCardReposition(
   }
 
   if (event.type === "CARD_RETURNED_TO_HAND") {
-    const playerState = state.players[event.player];
+    const playerState = state.players[event.playerId];
     if (!playerState) return state;
     const [newInPlay, newInPlaySourceIndices] =
       event.from === "inPlay"
         ? removeCardFromInPlay(
             playerState.inPlay,
             playerState.inPlaySourceIndices,
-            event.card,
+            event.card
           )
         : [playerState.inPlay, playerState.inPlaySourceIndices];
     return {
       ...state,
       players: {
         ...state.players,
-        [event.player]: {
+        [event.playerId]: {
           ...playerState,
           hand: [...playerState.hand, event.card],
           inPlay: newInPlay,

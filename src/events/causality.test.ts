@@ -11,7 +11,7 @@ describe("Causality Tracking", () => {
   it("should identify root cause events", () => {
     const cardPlayedEvent: GameEvent = {
       type: "CARD_PLAYED",
-      player: "human",
+      playerId: "human",
       card: "Village",
       id: "evt-1",
     };
@@ -31,7 +31,7 @@ describe("Causality Tracking", () => {
     const events: GameEvent[] = [
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Market",
         id: "evt-1",
       },
@@ -43,7 +43,7 @@ describe("Causality Tracking", () => {
       },
       {
         type: "CARD_DRAWN",
-        player: "human",
+        playerId: "human",
         card: "Estate",
         id: "evt-3",
         causedBy: "evt-1",
@@ -83,7 +83,7 @@ describe("Causality Tracking", () => {
     const events: GameEvent[] = [
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Festival",
         id: "evt-1",
       },
@@ -101,7 +101,7 @@ describe("Causality Tracking", () => {
       },
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Market",
         id: "evt-4",
       },
@@ -136,7 +136,7 @@ describe("Causality Tracking", () => {
     const events: GameEvent[] = [
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Village",
         id: "evt-1",
       },
@@ -148,7 +148,7 @@ describe("Causality Tracking", () => {
       },
       {
         type: "CARD_DRAWN",
-        player: "human",
+        playerId: "human",
         card: "Copper",
         id: "evt-3",
         causedBy: "evt-1",
@@ -156,14 +156,14 @@ describe("Causality Tracking", () => {
       // Throne Room that doubles Village
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Village",
         id: "evt-4",
         causedBy: "evt-1", // Second play caused by Throne Room
       },
       {
         type: "CARD_DRAWN",
-        player: "human",
+        playerId: "human",
         card: "Estate",
         id: "evt-5",
         causedBy: "evt-4",
@@ -190,7 +190,7 @@ describe("Causality Tracking", () => {
     const events: GameEvent[] = [
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Copper",
         id: "evt-1", // ROOT
       },
@@ -202,7 +202,7 @@ describe("Causality Tracking", () => {
       },
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Silver",
         id: "evt-3", // ROOT
       },
@@ -214,7 +214,7 @@ describe("Causality Tracking", () => {
       },
       {
         type: "CARD_PLAYED",
-        player: "human",
+        playerId: "human",
         card: "Gold",
         id: "evt-5", // ROOT
       },

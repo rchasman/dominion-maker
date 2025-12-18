@@ -23,7 +23,7 @@ function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
         inPlaySourceIndices: [],
       },
     }),
-    {} as Record<string, PlayerState>,
+    {} as Record<string, PlayerState>
   );
 }
 
@@ -32,7 +32,7 @@ function createPlayersRecord(playerIds: string[]): Record<string, PlayerState> {
  */
 function applyGameSetupEvent(
   state: GameState,
-  event: GameEvent,
+  event: GameEvent
 ): GameState | null {
   if (event.type === "GAME_INITIALIZED") {
     const players = createPlayersRecord(event.players);
@@ -51,10 +51,10 @@ function applyGameSetupEvent(
       coins: 0,
       gameOver: false,
       winner: null,
-      pendingDecision: null,
-      pendingDecisionEventId: null,
-      pendingReaction: null,
-      pendingReactionEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
+      pendingChoice: null,
+      pendingChoiceEventId: null,
       trash: [],
       log: [],
       turnHistory: [],
@@ -63,13 +63,13 @@ function applyGameSetupEvent(
   }
 
   if (event.type === "INITIAL_DECK_DEALT") {
-    const playerState = state.players[event.player];
+    const playerState = state.players[event.playerId];
     if (!playerState) return state;
     return {
       ...state,
       players: {
         ...state.players,
-        [event.player]: {
+        [event.playerId]: {
           ...playerState,
           deck: [...event.cards],
         },
@@ -78,14 +78,14 @@ function applyGameSetupEvent(
   }
 
   if (event.type === "INITIAL_HAND_DRAWN") {
-    const playerState = state.players[event.player];
+    const playerState = state.players[event.playerId];
     if (!playerState) return state;
     const newDeck = playerState.deck.slice(0, -event.cards.length);
     return {
       ...state,
       players: {
         ...state.players,
-        [event.player]: {
+        [event.playerId]: {
           ...playerState,
           deck: newDeck,
           hand: [...event.cards],
@@ -94,7 +94,7 @@ function applyGameSetupEvent(
       turn: 1,
       log: [
         ...state.log,
-        { type: "turn-start", turn: 1, player: state.activePlayer },
+        { type: "turn-start", turn: 1, playerId: state.activePlayer },
       ],
     };
   }

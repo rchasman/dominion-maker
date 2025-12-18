@@ -46,8 +46,8 @@ function createTestState(): GameState {
     coins: 0,
     gameOver: false,
     winner: null,
-    pendingDecision: null,
-    pendingDecisionEventId: null,
+    pendingChoice: null,
+    pendingChoiceEventId: null,
     trash: [],
     log: [],
     turnHistory: [],
@@ -68,7 +68,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
 
     const result = effect({
       state,
-      player: "human",
+      playerId: "human",
       card: "Witch",
       attackTargets: ["ai"], // Simulate resolved attack
     });
@@ -93,7 +93,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
 
     const result = effect({
       state,
-      player: "human",
+      playerId: "human",
       card: "Bureaucrat",
       attackTargets: [], // No opponents with victory cards
     });
@@ -115,7 +115,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
 
     const result = effect({
       state,
-      player: "human",
+      playerId: "human",
       card: "Bandit",
       attackTargets: [], // No opponents
     });
@@ -154,7 +154,7 @@ describe("Supply Depletion - Centralized Enforcement", () => {
 
     const result = effect({
       state,
-      player: "human",
+      playerId: "human",
       card: "Witch",
       attackTargets: ["ai1", "ai2"], // 2 targets, but only 1 Curse
     });
