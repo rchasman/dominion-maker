@@ -57,10 +57,10 @@ export function getAggregatedCount(entry: {
 }
 
 // Helper to render player name prefix (always shown for clarity on attacks)
-export function renderPlayerPrefix(player: string): ComponentChildren {
+export function renderPlayerPrefix(playerId: string): ComponentChildren {
   return (
     <>
-      <PlayerName player={player} />{" "}
+      <PlayerName playerId={playerId} />{" "}
     </>
   );
 }

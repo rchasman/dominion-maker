@@ -165,9 +165,9 @@ export function getGainableTreasures(
 /**
  * Get opponents for attack cards.
  */
-export function getOpponents(state: GameState, player: string): string[] {
+export function getOpponents(state: GameState, playerId: string): string[] {
   const playerOrder = state.playerOrder || ["human", "ai"];
-  return playerOrder.filter(p => p !== player && state.players[p]);
+  return playerOrder.filter(p => p !== playerId && state.players[p]);
 }
 
 /**

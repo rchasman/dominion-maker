@@ -62,25 +62,25 @@ function renderTurnStart(
         Turn {entry.turn}
       </span>
       {" - "}
-      <TurnHeaderPlayerName player={entry.player} isAI={isAI} />
+      <TurnHeaderPlayerName playerId={entry.player} isAI={isAI} />
     </div>
   );
 }
 
 function TurnHeaderPlayerName({
-  player,
+  playerId,
   isAI,
 }: {
-  player: string;
+  playerId: string;
   isAI?: boolean;
 }) {
   const { gameState, players, gameMode } = useGame();
-  const playerName = players?.find(p => p.playerId === player)?.name;
+  const playerName = players?.find(p => p.playerId === playerId)?.name;
   const displayName = playerName
     ? isAI
       ? `${playerName} (AI)`
       : playerName
-    : formatPlayerName(player, isAI || false, { gameState });
+    : formatPlayerName(playerId, isAI || false, { gameState });
 
   // Only use initials in multiplayer mode
   const isMultiplayer = gameMode === "multiplayer";
@@ -92,7 +92,7 @@ function TurnHeaderPlayerName({
     : displayName;
 
   return (
-    <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
+    <span style={{ color: getPlayerColor(playerId), fontWeight: 600 }}>
       {finalDisplay}
     </span>
   );
@@ -101,7 +101,7 @@ function TurnHeaderPlayerName({
 function renderTurnEnd(entry: Extract<LogEntryType, { type: "turn-end" }>) {
   return (
     <span>
-      <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
+      <PlayerName playerId={entry.player} /> <Verb>ends turn</Verb>
     </span>
   );
 }
@@ -111,7 +111,7 @@ function renderPhaseChange(
 ) {
   return (
     <span>
-      <PlayerName player={entry.player} /> <Verb>moves to</Verb> {entry.phase}{" "}
+      <PlayerName playerId={entry.player} /> <Verb>moves to</Verb> {entry.phase}{" "}
       phase
     </span>
   );
@@ -129,7 +129,7 @@ function renderCardAction(
   return (
     <>
       <span>
-        <PlayerName player={entry.player} /> <Verb>{verb}</Verb>{" "}
+        <PlayerName playerId={entry.player} /> <Verb>{verb}</Verb>{" "}
         <span style={cardStyle}>{entry.card}</span>
         {suffix}
       </span>
@@ -314,7 +314,7 @@ function renderShuffleDeck(
 function renderEndTurn(entry: Extract<LogEntryType, { type: "end-turn" }>) {
   return (
     <span>
-      <PlayerName player={entry.player} /> <Verb>ends turn</Verb>
+      <PlayerName playerId={entry.player} /> <Verb>ends turn</Verb>
     </span>
   );
 }
@@ -337,7 +337,7 @@ function renderGameOver(entry: Extract<LogEntryType, { type: "game-over" }>) {
         {scores.map(([player, vp], i) => (
           <span key={player}>
             {i > 0 && ", "}
-            <PlayerName player={player} />: <VPValue vp={vp} />
+            <PlayerName playerId={player} />: <VPValue vp={vp} />
           </span>
         ))}
       </div>
@@ -349,7 +349,7 @@ function renderStartGame(entry: Extract<LogEntryType, { type: "start-game" }>) {
   const goldStyle = { color: "var(--color-gold)", fontWeight: 600 };
   return (
     <span>
-      <PlayerName player={entry.player} /> <Verb>starts with</Verb>{" "}
+      <PlayerName playerId={entry.player} /> <Verb>starts with</Verb>{" "}
       <span style={goldStyle}>{entry.coppers}</span> Coppers and{" "}
       <span style={goldStyle}>{entry.estates}</span> Estates
     </span>

@@ -4,25 +4,25 @@ import { getCardColor } from "../lib/card-colors";
 import { useGame } from "../context/hooks";
 
 export function PlayerName({
-  player,
+  playerId,
   isAI,
 }: {
-  player: string;
+  playerId: string;
   isAI?: boolean;
 }) {
   const { gameState, players } = useGame();
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
-  const playerName = players?.find(p => p.playerId === player)?.name;
+  const playerName = players?.find(p => p.playerId === playerId)?.name;
 
   const displayName = playerName
     ? isAI
       ? `${playerName} (AI)`
       : playerName
-    : formatPlayerName(player, isAI || false, { gameState });
+    : formatPlayerName(playerId, isAI || false, { gameState });
 
   return (
-    <span style={{ color: getPlayerColor(player), fontWeight: 600 }}>
+    <span style={{ color: getPlayerColor(playerId), fontWeight: 600 }}>
       {displayName}
     </span>
   );
