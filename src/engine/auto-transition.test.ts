@@ -56,7 +56,7 @@ describe("Auto-transition logic", () => {
         engine.playAction("human", "Cellar");
 
         // Should have pending decision
-        if (engine.state.pendingDecision) {
+        if (engine.state.pendingChoice) {
           expect(engine.shouldAutoAdvancePhase("human")).toBe(false);
         }
       } else {

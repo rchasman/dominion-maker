@@ -1,11 +1,11 @@
-import type { CardName, DecisionRequest } from "../types/game-state";
+import type { CardName, PendingChoice } from "../types/game-state";
 
 /**
  * Type-safe metadata accessors to eliminate unsafe casts.
  */
 
 export function getCardNamesFromMetadata(
-  metadata: DecisionRequest["metadata"],
+  metadata: Extract<PendingChoice, { choiceType: "decision" }>["metadata"],
   key: string,
 ): CardName[] {
   const value = metadata?.[key];
@@ -13,7 +13,7 @@ export function getCardNamesFromMetadata(
 }
 
 export function getStringArrayFromMetadata(
-  metadata: DecisionRequest["metadata"],
+  metadata: Extract<PendingChoice, { choiceType: "decision" }>["metadata"],
   key: string,
 ): string[] {
   const value = metadata?.[key];
@@ -21,7 +21,7 @@ export function getStringArrayFromMetadata(
 }
 
 export function getNumberFromMetadata(
-  metadata: DecisionRequest["metadata"],
+  metadata: Extract<PendingChoice, { choiceType: "decision" }>["metadata"],
   key: string,
   defaultValue: number = 0,
 ): number {
@@ -30,7 +30,7 @@ export function getNumberFromMetadata(
 }
 
 export function getStringFromMetadata(
-  metadata: DecisionRequest["metadata"],
+  metadata: Extract<PendingChoice, { choiceType: "decision" }>["metadata"],
   key: string,
   defaultValue: string = "",
 ): string {

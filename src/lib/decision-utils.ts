@@ -6,7 +6,7 @@ const DEFAULT_DECISION_MAX = 999;
  * Check if a decision can be skipped (has min = 0).
  */
 export function canSkipDecision(
-  decision: GameState["pendingDecision"],
+  decision: GameState["pendingChoice"],
 ): boolean {
   return (decision?.min ?? 1) === 0;
 }
@@ -18,9 +18,9 @@ export function canSkipDecision(
 export function shouldSelectCard(
   cardIndex: number,
   selectedCardIndices: number[],
-  pendingDecision: GameState["pendingDecision"],
+  pendingChoice: GameState["pendingChoice"],
 ): { shouldToggleOff: boolean; canAdd: boolean } {
-  const max = pendingDecision?.max ?? DEFAULT_DECISION_MAX;
+  const max = pendingChoice?.max ?? DEFAULT_DECISION_MAX;
   const isAlreadySelected = selectedCardIndices.includes(cardIndex);
 
   return {

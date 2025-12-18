@@ -56,7 +56,7 @@ describe("TOON encoding and decoding", () => {
 
   test("handles nested objects", () => {
     const data = {
-      player: {
+      playerId: {
         name: "Alice",
         deck: ["Copper", "Silver", "Gold"],
         hand: ["Estate", "Duchy"],

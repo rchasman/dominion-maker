@@ -81,7 +81,7 @@ describe("DominionEngine - Command Dispatch", () => {
 
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -104,10 +104,14 @@ describe("DominionEngine - Command Dispatch", () => {
     humanPlayer.deck = ["Copper", "Silver", "Gold", "Estate"];
     engine.state.actions = 2;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Village" });
+    engine.dispatch({
+      type: "PLAY_ACTION",
+      playerId: "human",
+      card: "Village",
+    });
     const eventsAfterVillage = engine.eventLog.length;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Smithy" });
+    engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
     const eventsAfterSmithy = engine.eventLog.length;
 
     expect(eventsAfterVillage).toBeGreaterThan(eventCountAfterStart);
@@ -121,7 +125,7 @@ describe("DominionEngine - Command Dispatch", () => {
     // Try to play card not in hand
     const command: GameCommand = {
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     };
 
@@ -160,7 +164,11 @@ describe("DominionEngine - State Caching", () => {
     humanPlayer.hand = ["Festival"];
     engine.state.actions = 1;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Festival" });
+    engine.dispatch({
+      type: "PLAY_ACTION",
+      playerId: "human",
+      card: "Festival",
+    });
 
     const state2 = engine.state;
     const coins2 = state2.coins;
@@ -182,7 +190,7 @@ describe("DominionEngine - State Caching", () => {
 
     const eventsBefore = engine.eventLog.length;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Market" });
+    engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Market" });
 
     // State should be recomputed from full event log
     expect(engine.eventLog.length).toBeGreaterThan(eventsBefore); // Market generates multiple events
@@ -272,7 +280,11 @@ describe("DominionEngine - Forking", () => {
     forked.state.players.human.hand = ["Village"];
     forked.state.actions = 1;
 
-    forked.dispatch({ type: "PLAY_ACTION", player: "human", card: "Village" });
+    forked.dispatch({
+      type: "PLAY_ACTION",
+      playerId: "human",
+      card: "Village",
+    });
 
     // Original unchanged
     expect(engine.eventLog.length).toBe(originalEvents);
@@ -301,7 +313,7 @@ describe("DominionEngine - Full Game Flow", () => {
     // Action phase
     const playResult = engine.dispatch({
       type: "PLAY_ACTION",
-      player: "human",
+      playerId: "human",
       card: "Village",
     });
     expect(playResult.ok).toBe(true);
@@ -309,7 +321,7 @@ describe("DominionEngine - Full Game Flow", () => {
     // End action phase
     const endActionResult = engine.dispatch({
       type: "END_PHASE",
-      player: "human",
+      playerId: "human",
     });
     expect(endActionResult.ok).toBe(true);
     expect(engine.state.phase).toBe("buy");
@@ -318,7 +330,7 @@ describe("DominionEngine - Full Game Flow", () => {
     engine.state.players.human.hand = ["Copper"];
     const playTreasureResult = engine.dispatch({
       type: "PLAY_TREASURE",
-      player: "human",
+      playerId: "human",
       card: "Copper",
     });
     expect(playTreasureResult.ok).toBe(true);
@@ -334,7 +346,7 @@ describe("DominionEngine - Full Game Flow", () => {
     ];
     const endTurnResult = engine.dispatch({
       type: "END_PHASE",
-      player: "human",
+      playerId: "human",
     });
     expect(endTurnResult.ok).toBe(true);
 
@@ -360,7 +372,7 @@ describe("DominionEngine - State Consistency", () => {
 
       const result = engine.dispatch({
         type: "PLAY_ACTION",
-        player: "human",
+        playerId: "human",
         card: "Festival",
       });
 

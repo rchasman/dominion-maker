@@ -1,4 +1,4 @@
-import type { CardName, LogEntry, GameState } from "../types/game-state";
+import type { CardName, LogEntry, GameState, PlayerId } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { run } from "./run";
 
@@ -34,7 +34,7 @@ const FIXED_PLAYER_COLORS: Record<string, number> = {
  * Get unique color for each player using deterministic hash
  * Same player ID always gets same color, but different players get different colors
  */
-export function getPlayerColor(playerId: string): string {
+export function getPlayerColor(playerId: PlayerId): string {
   // Check if this is a fixed player ID
   if (playerId in FIXED_PLAYER_COLORS) {
     const index = FIXED_PLAYER_COLORS[playerId];
@@ -55,9 +55,9 @@ export function getPlayerColor(playerId: string): string {
  * Format player name for display with optional AI suffix
  */
 export function formatPlayerName(
-  playerId: string,
+  playerId: PlayerId,
   isAI: boolean,
-  options?: { capitalize?: boolean; gameState?: GameState },
+  options?: { capitalize?: boolean; gameState?: GameState }
 ): string {
   const { capitalize = true, gameState } = options || {};
 
@@ -134,7 +134,7 @@ const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
 
 const collectConsecutive = (
   log: LogEntry[],
-  startIndex: number,
+  startIndex: number
 ): { entries: LogEntry[]; count: number } => {
   const current = log[startIndex];
   const consecutiveCount = log
@@ -148,7 +148,7 @@ const collectConsecutive = (
 };
 
 const aggregateGroup = (
-  entries: LogEntry[],
+  entries: LogEntry[]
 ): LogEntry & { eventIds?: string[] } => {
   const [first] = entries;
   const count = entries.length;
@@ -159,7 +159,7 @@ const aggregateGroup = (
   const allCards = entries.flatMap(e =>
     (e.type === "discard-cards" || e.type === "draw-cards") && e.cards
       ? e.cards
-      : [],
+      : []
   );
   const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
   const aggregatedChildren =
@@ -172,7 +172,7 @@ const aggregateGroup = (
         (e.type === "play-treasure" || e.type === "unplay-treasure"
           ? e.coins
           : 0),
-      0,
+      0
     );
     return {
       ...first,
@@ -189,7 +189,7 @@ const aggregateGroup = (
     const totalVP = entries.reduce(
       (sum, e) =>
         sum + (e.type === "buy-card" && e.vp !== undefined ? e.vp : 0),
-      0,
+      0
     );
     return {
       ...first,
@@ -204,7 +204,7 @@ const aggregateGroup = (
       (sum, e) =>
         sum +
         (e.type === "discard-cards" || e.type === "draw-cards" ? e.count : 0),
-      0,
+      0
     );
     return {
       ...first,
@@ -223,13 +223,13 @@ const aggregateGroup = (
 };
 
 export function aggregateLogEntries(
-  log: LogEntry[],
+  log: LogEntry[]
 ): (LogEntry & { eventIds?: string[] })[] {
   if (log.length === 0) return [];
 
   const processEntries = (
     index: number,
-    acc: (LogEntry & { eventIds?: string[] })[],
+    acc: (LogEntry & { eventIds?: string[] })[]
   ): (LogEntry & { eventIds?: string[] })[] => {
     if (index >= log.length) return acc;
 

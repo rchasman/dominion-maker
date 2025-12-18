@@ -12,7 +12,7 @@ export function shuffle<T>(array: T[]): T[] {
       ];
       return result;
     },
-    [...array],
+    [...array]
   );
 }
 
@@ -25,8 +25,8 @@ export function drawCards(
     hand: playerHand,
     ...player
   }: PlayerState,
-  count: number,
-): { player: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
+  count: number
+): { playerId: PlayerState; drawn: CardName[]; events: DrawEvent[] } {
   const result = Array.from({ length: count }).reduce<{
     deck: CardName[];
     discard: CardName[];
@@ -72,7 +72,7 @@ export function drawCards(
       drawn: [],
       events: [],
       currentBatch: [],
-    },
+    }
   );
 
   const finalEvents =
@@ -84,8 +84,8 @@ export function drawCards(
       : result.events;
 
   return {
-    player: {
-      ...player,
+    playerId: {
+      ...playerId,
       deck: result.deck,
       hand: result.hand,
       discard: result.discard,

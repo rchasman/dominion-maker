@@ -95,7 +95,7 @@ export class DominionEngine {
   startGame(
     players: PlayerId[],
     kingdomCards?: CardName[],
-    seed?: number,
+    seed?: number
   ): CommandResult {
     // Clear existing state
     this.events = [];
@@ -113,68 +113,68 @@ export class DominionEngine {
   /**
    * Play an action card.
    */
-  playAction(player: PlayerId, card: CardName): CommandResult {
-    return this.dispatch({ type: "PLAY_ACTION", player, card }, player);
+  playAction(playerId: PlayerId, card: CardName): CommandResult {
+    return this.dispatch({ type: "PLAY_ACTION", playerId, card }, playerId);
   }
 
   /**
    * Play a treasure card.
    */
-  playTreasure(player: PlayerId, card: CardName): CommandResult {
-    return this.dispatch({ type: "PLAY_TREASURE", player, card }, player);
+  playTreasure(playerId: PlayerId, card: CardName): CommandResult {
+    return this.dispatch({ type: "PLAY_TREASURE", playerId, card }, playerId);
   }
 
   /**
    * Play all treasures in hand.
    */
-  playAllTreasures(player: PlayerId): CommandResult {
-    return this.dispatch({ type: "PLAY_ALL_TREASURES", player }, player);
+  playAllTreasures(playerId: PlayerId): CommandResult {
+    return this.dispatch({ type: "PLAY_ALL_TREASURES", playerId }, playerId);
   }
 
   /**
    * Buy a card.
    */
-  buyCard(player: PlayerId, card: CardName): CommandResult {
-    return this.dispatch({ type: "BUY_CARD", player, card }, player);
+  buyCard(playerId: PlayerId, card: CardName): CommandResult {
+    return this.dispatch({ type: "BUY_CARD", playerId, card }, playerId);
   }
 
   /**
    * End the current phase.
    */
-  endPhase(player: PlayerId): CommandResult {
-    return this.dispatch({ type: "END_PHASE", player }, player);
+  endPhase(playerId: PlayerId): CommandResult {
+    return this.dispatch({ type: "END_PHASE", playerId }, playerId);
   }
 
   /**
    * Submit a decision response.
    */
-  submitDecision(player: PlayerId, choice: DecisionChoice): CommandResult {
-    return this.dispatch({ type: "SUBMIT_DECISION", player, choice }, player);
+  submitDecision(playerId: PlayerId, choice: DecisionChoice): CommandResult {
+    return this.dispatch({ type: "SUBMIT_DECISION", playerId, choice }, playerId);
   }
 
   /**
    * Skip the current decision.
    */
-  skipDecision(player: PlayerId): CommandResult {
-    return this.dispatch({ type: "SKIP_DECISION", player }, player);
+  skipDecision(playerId: PlayerId): CommandResult {
+    return this.dispatch({ type: "SKIP_DECISION", playerId }, playerId);
   }
 
   /**
    * Request to undo to a specific event ID (causal root).
    */
   requestUndo(
-    player: PlayerId,
+    playerId: PlayerId,
     toEventId: string,
-    reason?: string,
+    reason?: string
   ): CommandResult {
     const result = this.dispatch(
       {
         type: "REQUEST_UNDO",
-        player,
+        playerId,
         toEventId,
         reason,
       },
-      player,
+      playerId
     );
 
     if (result.ok) {
@@ -182,11 +182,11 @@ export class DominionEngine {
       const requestEvent = result.events.find(e => e.type === "UNDO_REQUESTED");
       if (requestEvent && requestEvent.type === "UNDO_REQUESTED") {
         // Set up pending undo request
-        const opponents = this.state.playerOrder.filter(p => p !== player);
+        const opponents = this.state.playerOrder.filter(p => p !== playerId);
 
         this.pendingUndo = {
           requestId: requestEvent.requestId,
-          byPlayer: player,
+          byPlayer: playerId,
           toEventId,
           reason,
           approvals: new Set(),
@@ -201,19 +201,23 @@ export class DominionEngine {
   /**
    * Approve an undo request.
    */
-  approveUndo(player: PlayerId, requestId: string): CommandResult {
-    return this.handleUndoResponse({ type: "APPROVE_UNDO", player, requestId });
+  approveUndo(playerId: PlayerId, requestId: string): CommandResult {
+    return this.handleUndoResponse({
+      type: "APPROVE_UNDO",
+      playerId,
+      requestId,
+    });
   }
 
   /**
    * Deny an undo request.
    */
-  denyUndo(player: PlayerId, requestId: string): CommandResult {
-    return this.handleUndoResponse({ type: "DENY_UNDO", player, requestId });
+  denyUndo(playerId: PlayerId, requestId: string): CommandResult {
+    return this.handleUndoResponse({ type: "DENY_UNDO", playerId, requestId });
   }
 
   /**
-   * Immediate undo to event (single-player, no approval needed).
+   * Immediate undo to event (single-playerId, no approval needed).
    * Removes the event and its causal chain.
    */
   undoToEvent(toEventId: string): void {
@@ -258,7 +262,7 @@ export class DominionEngine {
     if (state.activePlayer !== playerId) return false;
 
     // Don't auto-advance during decisions
-    if (state.pendingDecision) return false;
+    if (state.pendingChoice) return false;
 
     // Don't auto-advance if game is over
     if (state.gameOver) return false;
@@ -314,7 +318,7 @@ export class DominionEngine {
   applyExternalEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() },
+      event.id ? event : { ...event, id: generateEventId() }
     );
     this.events = [...this.events, ...eventsWithIds];
     this.cachedState = null;
@@ -336,7 +340,7 @@ export class DominionEngine {
   private appendEvents(events: GameEvent[]): void {
     // Add IDs to events that don't have them
     const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() },
+      event.id ? event : { ...event, id: generateEventId() }
     );
     this.events = [...this.events, ...eventsWithIds];
     this.cachedState = null;
@@ -350,11 +354,11 @@ export class DominionEngine {
 
   private handleUndoResponse({
     type,
-    player: playerId,
+    playerId,
     requestId,
   }: {
     type: "APPROVE_UNDO" | "DENY_UNDO";
-    player: PlayerId;
+    playerId: PlayerId;
     requestId: string;
   }): CommandResult {
     if (!this.pendingUndo) {
@@ -435,7 +439,7 @@ export class DominionEngine {
 export function createGame(
   players: PlayerId[],
   kingdomCards?: CardName[],
-  seed?: number,
+  seed?: number
 ): DominionEngine {
   const engine = new DominionEngine();
   engine.startGame(players, kingdomCards, seed);

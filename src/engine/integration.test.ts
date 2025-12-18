@@ -23,7 +23,7 @@ describe("Shuffle Mechanics", () => {
     engine.state.actions = 1;
 
     // Play Smithy (draws 3)
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Smithy" });
+    engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
 
     // Should have shuffled
     const shuffleEvent = engine.eventLog.find(e => e.type === "DECK_SHUFFLED");
@@ -31,7 +31,7 @@ describe("Shuffle Mechanics", () => {
 
     // Should have drawn cards
     const drawEvents = engine.eventLog.filter(
-      e => e.type === "CARD_DRAWN" && e.player === "human",
+      e => e.type === "CARD_DRAWN" && e.playerId === "human"
     );
     expect(drawEvents.length).toBe(3);
 
@@ -48,7 +48,7 @@ describe("Shuffle Mechanics", () => {
     engine.state.players.human.hand = ["Smithy"];
     engine.state.actions = 1;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Smithy" });
+    engine.dispatch({ type: "PLAY_ACTION", playerId: "human", card: "Smithy" });
 
     const shuffleEvent = engine.eventLog.find(e => e.type === "DECK_SHUFFLED");
     expect(shuffleEvent).toBeDefined();
@@ -81,8 +81,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Duchy",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "human" });
-    engine.dispatch({ type: "END_PHASE", player: "human" });
+    engine.dispatch({ type: "END_PHASE", playerId: "human" });
+    engine.dispatch({ type: "END_PHASE", playerId: "human" });
 
     expect(engine.state.turn).toBe(2);
     expect(engine.state.activePlayer).toBe("ai");
@@ -95,8 +95,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Estate",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "ai" });
-    engine.dispatch({ type: "END_PHASE", player: "ai" });
+    engine.dispatch({ type: "END_PHASE", playerId: "ai" });
+    engine.dispatch({ type: "END_PHASE", playerId: "ai" });
 
     expect(engine.state.turn).toBe(3);
     expect(engine.state.activePlayer).toBe("human");
@@ -110,7 +110,11 @@ describe("Multi-Turn Scenarios", () => {
     engine.state.players.human.hand = ["Festival"];
     engine.state.actions = 1;
 
-    engine.dispatch({ type: "PLAY_ACTION", player: "human", card: "Festival" });
+    engine.dispatch({
+      type: "PLAY_ACTION",
+      playerId: "human",
+      card: "Festival",
+    });
 
     const actionsAfterFestival = engine.state.actions;
     const buysAfterFestival = engine.state.buys;
@@ -128,8 +132,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Duchy",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "human" });
-    engine.dispatch({ type: "END_PHASE", player: "human" });
+    engine.dispatch({ type: "END_PHASE", playerId: "human" });
+    engine.dispatch({ type: "END_PHASE", playerId: "human" });
 
     // AI's turn should have fresh resources
     expect(engine.state.actions).toBe(1);
@@ -151,8 +155,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Estate",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "player1" });
-    engine.dispatch({ type: "END_PHASE", player: "player1" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player1" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player1" });
 
     expect(engine.state.activePlayer).toBe("player2");
 
@@ -164,8 +168,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Estate",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "player2" });
-    engine.dispatch({ type: "END_PHASE", player: "player2" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player2" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player2" });
 
     expect(engine.state.activePlayer).toBe("player3");
 
@@ -177,8 +181,8 @@ describe("Multi-Turn Scenarios", () => {
       "Estate",
       "Estate",
     ];
-    engine.dispatch({ type: "END_PHASE", player: "player3" });
-    engine.dispatch({ type: "END_PHASE", player: "player3" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player3" });
+    engine.dispatch({ type: "END_PHASE", playerId: "player3" });
 
     expect(engine.state.activePlayer).toBe("player1");
   });

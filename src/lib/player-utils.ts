@@ -1,16 +1,16 @@
-import type { GameState, Player } from "../types/game-state";
+import type { GameState, PlayerId } from "../types/game-state";
 import type { GameMode } from "../types/game-mode";
 import { getPlayersForMode } from "../types/game-mode";
 
 export interface PlayerPerspective {
-  localPlayerId: Player;
-  opponentPlayerId: Player;
-  allPlayerIds: readonly Player[];
+  localPlayerId: PlayerId;
+  opponentPlayerId: PlayerId;
+  allPlayerIds: readonly PlayerId[];
 }
 
 /**
  * Get player IDs organized from the perspective of the local player.
- * Returns the local player, their opponent, and all player IDs.
+ * Returns the local playerId, their opponent, and all player IDs.
  *
  * In multiplayer mode, reorders players so the local player is first.
  * In single-player mode, returns players in their natural order.
@@ -18,23 +18,27 @@ export interface PlayerPerspective {
 export function getPlayerPerspective(
   state: GameState | null,
   gameMode: GameMode,
-  localPlayerId?: string | null,
+  localPlayerId?: string | null
 ): PlayerPerspective {
   // Get all player IDs
-  let playerIds: Player[];
+  let playerIds: PlayerId[];
   if (!state) {
-    playerIds = gameMode === "multiplayer"
-      ? ["player0", "player1"]
-      : (getPlayersForMode(gameMode) as Player[]);
+    playerIds =
+      gameMode === "multiplayer"
+        ? ["player0", "player1"]
+        : (getPlayersForMode(gameMode) as PlayerId[]);
   } else {
-    playerIds = Object.keys(state.players) as Player[];
+    playerIds = Object.keys(state.players) as PlayerId[];
   }
 
-  // In multiplayer, reorder so local player is first
+  // In multiplayerId, reorder so local player is first
   if (gameMode === "multiplayer" && localPlayerId) {
-    const localIndex = playerIds.indexOf(localPlayerId as Player);
+    const localIndex = playerIds.indexOf(localPlayerId as PlayerId);
     if (localIndex > 0) {
-      playerIds = [localPlayerId as Player, ...playerIds.filter(id => id !== localPlayerId)];
+      playerIds = [
+        localPlayerId as playerId,
+        ...playerIds.filter(id => id !== localPlayerId),
+      ];
     }
   }
 

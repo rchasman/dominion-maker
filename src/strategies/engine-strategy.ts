@@ -53,13 +53,13 @@ const TRASH_PRIORITIES: CardName[] = ["Curse", "Estate", "Copper"];
 
 const sortActionsByPriority = (actions: CardName[]): CardName[] =>
   [...actions].sort(
-    (a, b) => (ACTION_PRIORITIES[b] ?? 0) - (ACTION_PRIORITIES[a] ?? 0),
+    (a, b) => (ACTION_PRIORITIES[b] ?? 0) - (ACTION_PRIORITIES[a] ?? 0)
   );
 
 const selectCardsByPriority = (
   options: CardName[],
   priorities: CardName[],
-  count: number,
+  count: number
 ): CardName[] => {
   const selected = priorities.reduce<CardName[]>((acc, priority) => {
     if (acc.length >= count) return acc;
@@ -75,7 +75,7 @@ const fillRemainingCards = (
   options: CardName[],
   selected: CardName[],
   count: number,
-  compareFn: (a: CardName, b: CardName) => number,
+  compareFn: (a: CardName, b: CardName) => number
 ): CardName[] => {
   if (selected.length >= count) return selected;
 
@@ -90,7 +90,7 @@ const fillRemainingCards = (
 const findAffordableCard = (
   buyPriority: CardName[],
   supply: Record<string, number>,
-  coins: number,
+  coins: number
 ): CardName | null => {
   const affordable = buyPriority.find(card => {
     const cardSupply = supply[card] ?? 0;
@@ -104,7 +104,7 @@ const findAffordableCard = (
 export class EngineStrategy implements GameStrategy {
   async runAITurn(
     engine: DominionEngine,
-    onStateChange?: (state: GameState) => void,
+    onStateChange?: (state: GameState) => void
   ): Promise<void> {
     const delay = async (): Promise<void> => {
       await new Promise(resolve => setTimeout(resolve, AI_TURN_DELAY_MS));
@@ -114,14 +114,14 @@ export class EngineStrategy implements GameStrategy {
     await this.playTreasurePhase(engine, onStateChange, delay);
     await this.playBuyPhase(engine, onStateChange, delay);
 
-    engine.dispatch({ type: "END_PHASE", player: "ai" }, "ai");
+    engine.dispatch({ type: "END_PHASE", playerId: "ai" }, "ai");
     onStateChange?.(engine.state);
   }
 
   private async playActionPhase(
     engine: DominionEngine,
     onStateChange: ((state: GameState) => void) | undefined,
-    delay: () => Promise<void>,
+    delay: () => Promise<void>
   ): Promise<void> {
     while (
       engine.state.phase === "action" &&
@@ -134,8 +134,8 @@ export class EngineStrategy implements GameStrategy {
 
       const sortedActions = sortActionsByPriority(actionCards);
       const result = engine.dispatch(
-        { type: "PLAY_ACTION", player: "ai", card: sortedActions[0] },
-        "ai",
+        { type: "PLAY_ACTION", playerId: "ai", card: sortedActions[0] },
+        "ai"
       );
 
       if (!result.ok) break;
@@ -144,7 +144,7 @@ export class EngineStrategy implements GameStrategy {
       await delay();
     }
 
-    engine.dispatch({ type: "END_PHASE", player: "ai" }, "ai");
+    engine.dispatch({ type: "END_PHASE", playerId: "ai" }, "ai");
     onStateChange?.(engine.state);
     await delay();
   }
@@ -152,16 +152,16 @@ export class EngineStrategy implements GameStrategy {
   private async playTreasurePhase(
     engine: DominionEngine,
     onStateChange: ((state: GameState) => void) | undefined,
-    delay: () => Promise<void>,
+    delay: () => Promise<void>
   ): Promise<void> {
     const treasures = (engine.state.players.ai?.hand ?? []).filter(
-      isTreasureCard,
+      isTreasureCard
     );
 
     treasures.reduce((acc, treasure) => {
       engine.dispatch(
-        { type: "PLAY_TREASURE", player: "ai", card: treasure },
-        "ai",
+        { type: "PLAY_TREASURE", playerId: "ai", card: treasure },
+        "ai"
       );
       return acc;
     }, null);
@@ -173,7 +173,7 @@ export class EngineStrategy implements GameStrategy {
   private async playBuyPhase(
     engine: DominionEngine,
     onStateChange: ((state: GameState) => void) | undefined,
-    delay: () => Promise<void>,
+    delay: () => Promise<void>
   ): Promise<void> {
     while (
       engine.state.buys > 0 &&
@@ -183,14 +183,14 @@ export class EngineStrategy implements GameStrategy {
       const cardToBuy = findAffordableCard(
         BUY_PRIORITY,
         engine.state.supply,
-        engine.state.coins,
+        engine.state.coins
       );
 
       if (!cardToBuy) break;
 
       const result = engine.dispatch(
-        { type: "BUY_CARD", player: "ai", card: cardToBuy },
-        "ai",
+        { type: "BUY_CARD", playerId: "ai", card: cardToBuy },
+        "ai"
       );
 
       if (!result.ok) break;
@@ -201,8 +201,8 @@ export class EngineStrategy implements GameStrategy {
   }
 
   resolveAIPendingDecision(engine: DominionEngine): void {
-    const decision = engine.state.pendingDecision;
-    if (!decision || decision.player !== "ai") return;
+    const decision = engine.state.pendingChoice;
+    if (!decision || decision.playerId !== "ai") return;
 
     if (decision.stage === "opponent_discard" || decision.stage === "discard") {
       this.handleDiscardDecision(engine);
@@ -223,7 +223,7 @@ export class EngineStrategy implements GameStrategy {
   }
 
   private handleDiscardDecision(engine: DominionEngine): void {
-    const decision = engine.state.pendingDecision;
+    const decision = engine.state.pendingChoice;
     const aiPlayer = engine.state.players.ai;
     if (!decision || !aiPlayer) return;
 
@@ -233,28 +233,28 @@ export class EngineStrategy implements GameStrategy {
     const selected = selectCardsByPriority(
       options,
       DISCARD_PRIORITIES,
-      numToDiscard,
+      numToDiscard
     );
 
     const finalSelection = fillRemainingCards(
       options,
       selected,
       numToDiscard,
-      (a, b) => CARDS[b].cost - CARDS[a].cost,
+      (a, b) => CARDS[b].cost - CARDS[a].cost
     );
 
     engine.dispatch(
       {
         type: "SUBMIT_DECISION",
-        player: "ai",
+        playerId: "ai",
         choice: { selectedCards: finalSelection },
       },
-      "ai",
+      "ai"
     );
   }
 
   private handleTrashDecision(engine: DominionEngine): void {
-    const decision = engine.state.pendingDecision;
+    const decision = engine.state.pendingChoice;
     if (!decision) return;
 
     const options = decision.cardOptions ?? [];
@@ -263,28 +263,28 @@ export class EngineStrategy implements GameStrategy {
     const selected = selectCardsByPriority(
       options,
       TRASH_PRIORITIES,
-      numToTrash,
+      numToTrash
     );
 
     const finalSelection = fillRemainingCards(
       options,
       selected,
       numToTrash,
-      (a, b) => CARDS[a].cost - CARDS[b].cost,
+      (a, b) => CARDS[a].cost - CARDS[b].cost
     );
 
     engine.dispatch(
       {
         type: "SUBMIT_DECISION",
-        player: "ai",
+        playerId: "ai",
         choice: { selectedCards: finalSelection },
       },
-      "ai",
+      "ai"
     );
   }
 
   private handleGainDecision(engine: DominionEngine): void {
-    const decision = engine.state.pendingDecision;
+    const decision = engine.state.pendingChoice;
     if (!decision) return;
 
     const options = decision.cardOptions ?? [];
@@ -294,15 +294,15 @@ export class EngineStrategy implements GameStrategy {
     engine.dispatch(
       {
         type: "SUBMIT_DECISION",
-        player: "ai",
+        playerId: "ai",
         choice: { selectedCards: selected },
       },
-      "ai",
+      "ai"
     );
   }
 
   private handleDefaultDecision(engine: DominionEngine): void {
-    const decision = engine.state.pendingDecision;
+    const decision = engine.state.pendingChoice;
     if (!decision) return;
 
     const options = decision.cardOptions ?? [];
@@ -311,10 +311,10 @@ export class EngineStrategy implements GameStrategy {
     engine.dispatch(
       {
         type: "SUBMIT_DECISION",
-        player: "ai",
+        playerId: "ai",
         choice: { selectedCards: selected },
       },
-      "ai",
+      "ai"
     );
   }
 

@@ -25,7 +25,7 @@ export class MakerStrategy implements GameStrategy {
     _provider?: unknown,
     logger?: LLMLogger,
     modelSettings?: ModelSettings,
-    strategySummary?: string,
+    strategySummary?: string
   ) {
     this.logger = logger;
     this.modelSettings = modelSettings || {
@@ -51,13 +51,13 @@ export class MakerStrategy implements GameStrategy {
 
   async runAITurn(
     engine: DominionEngine,
-    onStateChange?: (state: GameState) => void,
+    onStateChange?: (state: GameState) => void
   ): Promise<void> {
     // Use LLM consensus for strategic decisions
     const models = buildModelsFromSettings(this.modelSettings);
     // Use the actual active player (could be "ai", "ai1", or "ai2")
     const activePlayer = engine.state.activePlayer;
-    return runAITurnWithConsensus(engine, activePlayer, {
+    return runAITurnWithConsensus(engine, activeplayerId, {
       providers: models,
       logger: this.logger,
       onStateChange,
@@ -70,24 +70,24 @@ export class MakerStrategy implements GameStrategy {
   async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
     // Use LLM consensus for decisions
     const models = buildModelsFromSettings(this.modelSettings);
-    const pendingDecision = engine.state.pendingDecision;
+    const pendingChoice = engine.state.pendingChoice;
 
     // Log ai-decision-resolving to create a new "turn" in consensus viewer
-    if (pendingDecision) {
+    if (pendingChoice) {
       this.logger?.({
         type: "ai-decision-resolving",
-        message: `AI resolving ${pendingDecision.type}`,
+        message: `AI resolving ${pendingChoice.type}`,
         data: {
           turn: engine.state.turn,
-          decisionType: pendingDecision.type,
-          prompt: pendingDecision.prompt,
+          decisionType: pendingChoice.type,
+          prompt: pendingChoice.prompt,
         },
       });
     }
 
     // Use the actual pending decision player (could be "ai", "ai1", or "ai2")
-    const player = pendingDecision?.player || engine.state.activePlayer;
-    return advanceGameStateWithConsensus(engine, player, {
+    const player = pendingChoice?.player || engine.state.activePlayer;
+    return advanceGameStateWithConsensus(engine, playerId, {
       providers: models,
       logger: this.logger,
       strategySummary: this.strategySummary,
