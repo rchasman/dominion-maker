@@ -30,6 +30,7 @@ import { useStrategyAnalysis } from "./use-strategy-analysis";
 import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
+import { BoardWithProviders } from "../components/Board/BoardWithProviders";
 
 interface GameContextValue {
   gameState: GameState | null;
@@ -253,38 +254,64 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     setGameState,
   });
 
+  const contextValue: GameContextValue = useMemo(
+    () => ({
+      gameState,
+      events,
+      gameMode,
+      isProcessing,
+      isLoading: storage.isLoading,
+      modelSettings,
+      playerStrategies,
+      hasPlayableActions: hasPlayableActionsValue,
+      hasTreasuresInHand: hasTreasuresInHandValue,
+      strategy,
+      setGameMode,
+      setModelSettings,
+      startGame,
+      playAction,
+      playTreasure,
+      unplayTreasure,
+      playAllTreasures,
+      buyCard,
+      endPhase,
+      submitDecision,
+      revealReaction,
+      declineReaction,
+      requestUndo,
+      getStateAtEvent,
+    }),
+    [
+      gameState,
+      events,
+      gameMode,
+      isProcessing,
+      storage.isLoading,
+      modelSettings,
+      playerStrategies,
+      hasPlayableActionsValue,
+      hasTreasuresInHandValue,
+      strategy,
+      setGameMode,
+      setModelSettings,
+      startGame,
+      playAction,
+      playTreasure,
+      unplayTreasure,
+      playAllTreasures,
+      buyCard,
+      endPhase,
+      submitDecision,
+      revealReaction,
+      declineReaction,
+      requestUndo,
+      getStateAtEvent,
+    ],
+  );
+
   return (
-    <GameContext.Provider
-      value={{
-        gameState,
-        events,
-        gameMode,
-        isProcessing,
-        isLoading: storage.isLoading,
-        modelSettings,
-        playerStrategies,
-        hasPlayableActions: hasPlayableActionsValue,
-        hasTreasuresInHand: hasTreasuresInHandValue,
-        strategy,
-        setGameMode,
-        setModelSettings,
-        startGame,
-        playAction,
-        playTreasure,
-        unplayTreasure,
-        playAllTreasures,
-        buyCard,
-        endPhase,
-        submitDecision,
-        revealReaction,
-        declineReaction,
-        requestUndo,
-        getStateAtEvent,
-      }}
-    >
-      <LLMLogsContext.Provider value={{ llmLogs }}>
-        {children}
-      </LLMLogsContext.Provider>
-    </GameContext.Provider>
+    <BoardWithProviders gameContext={contextValue} llmLogs={llmLogs}>
+      {children}
+    </BoardWithProviders>
   );
 }

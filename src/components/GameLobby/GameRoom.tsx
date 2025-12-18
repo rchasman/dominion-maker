@@ -6,9 +6,9 @@
  */
 import { lazy, Suspense } from "preact/compat";
 import { useMemo, useState, useEffect, useRef } from "preact/hooks";
-import { GameContext, LLMLogsContext } from "../../context/GameContext";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
+import { BoardWithProviders } from "../Board/BoardWithProviders";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import type { CardName } from "../../types/game-state";
@@ -22,7 +22,6 @@ import { DEFAULT_MODEL_SETTINGS } from "../../agent/game-agent";
 import { api } from "../../api/client";
 import { MIN_TURN_FOR_STRATEGY } from "../../context/game-constants";
 import type { GameMode } from "../../types/game-mode";
-import { AnimationProvider } from "../../animation";
 
 const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
@@ -230,31 +229,27 @@ export function GameRoom({
     }
 
     return (
-      <AnimationProvider>
-        <GameContext.Provider value={contextValue}>
-          <LLMLogsContext.Provider value={{ llmLogs: [] }}>
-            <Suspense fallback={<BoardSkeleton />}>
-              <Board onBackToHome={handleResign} />
-            </Suspense>
-            {isSpectator && <SpectatorBadge />}
-            {disconnectedOpponent && (
-              <DisconnectModal
-                playerName={disconnectedOpponent.playerName}
-                onLeave={handleResign}
-              />
-            )}
-            {game.gameEndReason && !isSinglePlayer && (
-              <GameOverNotification
-                message={game.gameEndReason}
-                onClose={() => {
-                  localStorage.removeItem("dominion_active_game");
-                  onBack();
-                }}
-              />
-            )}
-          </LLMLogsContext.Provider>
-        </GameContext.Provider>
-      </AnimationProvider>
+      <BoardWithProviders gameContext={contextValue} llmLogs={[]}>
+        <Suspense fallback={<BoardSkeleton />}>
+          <Board onBackToHome={handleResign} />
+        </Suspense>
+        {isSpectator && <SpectatorBadge />}
+        {disconnectedOpponent && (
+          <DisconnectModal
+            playerName={disconnectedOpponent.playerName}
+            onLeave={handleResign}
+          />
+        )}
+        {game.gameEndReason && !isSinglePlayer && (
+          <GameOverNotification
+            message={game.gameEndReason}
+            onClose={() => {
+              localStorage.removeItem("dominion_active_game");
+              onBack();
+            }}
+          />
+        )}
+      </BoardWithProviders>
     );
   }
 
