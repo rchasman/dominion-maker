@@ -25,14 +25,26 @@ export function UndoRequestModal({
   onDeny,
 }: UndoRequestModalProps) {
   const [timeLeft, setTimeLeft] = useState(TIMEOUT_SECONDS);
+  const [hasDenied, setHasDenied] = useState(false);
 
   // Find the target event
   const targetEvent = events.find(e => e.id === toEventId);
   const targetIndex = events.findIndex(e => e.id === toEventId);
 
+  // If event not found, auto-deny immediately
+  useEffect(() => {
+    if (!targetEvent && !hasDenied) {
+      setHasDenied(true);
+      onDeny(requestId);
+    }
+  }, [targetEvent, hasDenied, requestId, onDeny]);
+
   // Countdown timer
   useEffect(() => {
+    if (hasDenied) return;
+
     if (timeLeft <= 0) {
+      setHasDenied(true);
       onDeny(requestId);
       return;
     }
@@ -42,15 +54,23 @@ export function UndoRequestModal({
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeLeft, requestId, onDeny]);
+  }, [timeLeft, requestId, onDeny, hasDenied]);
 
   const handleApprove = () => {
+    if (hasDenied) return;
     onApprove(requestId);
   };
 
   const handleDeny = () => {
+    if (hasDenied) return;
+    setHasDenied(true);
     onDeny(requestId);
   };
+
+  // Don't render if event not found
+  if (!targetEvent) {
+    return null;
+  }
 
   return (
     <BaseModal zIndex={2000}>
@@ -99,16 +119,10 @@ export function UndoRequestModal({
               color: "var(--color-text-tertiary)",
             }}
           >
-            {targetEvent ? (
-              <>
-                <div>Move #{targetIndex + 1}</div>
-                <div style={{ marginTop: "var(--space-2)" }}>
-                  {targetEvent.type}
-                </div>
-              </>
-            ) : (
-              "Unknown event"
-            )}
+            <div>Move #{targetIndex + 1}</div>
+            <div style={{ marginTop: "var(--space-2)" }}>
+              {targetEvent.type}
+            </div>
           </div>
         </div>
 
@@ -122,18 +136,19 @@ export function UndoRequestModal({
           <button
             onClick={handleApprove}
             style={{
-              padding: "var(--space-3) var(--space-6)",
+              padding: "var(--space-4) var(--space-8)",
               fontSize: "0.875rem",
               fontWeight: 600,
-              background: "var(--color-action-success)",
+              background:
+                "linear-gradient(180deg, #10b981 0%, #059669 100%)",
               color: "#fff",
-              border: "none",
+              border: "2px solid #10b981",
               cursor: "pointer",
               textTransform: "uppercase",
               letterSpacing: "0.1rem",
               fontFamily: "inherit",
               borderRadius: "4px",
-              boxShadow: "var(--shadow-md)",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             Approve
@@ -142,18 +157,19 @@ export function UndoRequestModal({
           <button
             onClick={handleDeny}
             style={{
-              padding: "var(--space-3) var(--space-6)",
+              padding: "var(--space-4) var(--space-8)",
               fontSize: "0.875rem",
               fontWeight: 600,
-              background: "var(--color-action-error)",
+              background:
+                "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)",
               color: "#fff",
-              border: "none",
+              border: "2px solid #dc2626",
               cursor: "pointer",
               textTransform: "uppercase",
               letterSpacing: "0.1rem",
               fontFamily: "inherit",
               borderRadius: "4px",
-              boxShadow: "var(--shadow-md)",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             Deny

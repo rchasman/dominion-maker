@@ -325,6 +325,7 @@ export function BoardContent({
       {pendingUndo &&
         approveUndo &&
         denyUndo &&
+        !game.gameOver &&
         contextLocalPlayerId !== pendingUndo.byPlayer && (
           <UndoRequestModal
             requestId={pendingUndo.requestId}
@@ -335,8 +336,18 @@ export function BoardContent({
             }
             toEventId={pendingUndo.toEventId}
             events={game.events}
-            onApprove={approveUndo}
-            onDeny={denyUndo}
+            onApprove={useCallback(
+              (id: string) => {
+                if (approveUndo) approveUndo(id);
+              },
+              [approveUndo],
+            )}
+            onDeny={useCallback(
+              (id: string) => {
+                if (denyUndo) denyUndo(id);
+              },
+              [denyUndo],
+            )}
           />
         )}
 

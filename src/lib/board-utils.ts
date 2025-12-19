@@ -285,5 +285,11 @@ export function aggregateLogEntries(
     return processEntries(index + 1, [...acc, current]);
   };
 
-  return processEntries(0, []);
+  const result = processEntries(0, []);
+  const textEntries = result.filter(e => e.type === "text");
+  console.log("[DEBUG] aggregateLogEntries: total entries:", result.length, "text entries:", textEntries.length);
+  if (textEntries.length > 0) {
+    console.log("[DEBUG] Text entries:", textEntries.map(e => e.type === "text" ? e.message : ""));
+  }
+  return result;
 }
