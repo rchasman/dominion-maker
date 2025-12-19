@@ -40,12 +40,10 @@ function createActionEvents(params: ActionEventParams): GameEvent[] {
     .filter(([, action]) => action === actionType)
     .map(([indexStr]) => parseInt(indexStr))
     .filter(index => revealed[index])
-    .map((index): GameEvent => ({
-      type: eventType,
-      playerId,
-      card: revealed[index]!,
-      from: "deck",
-    }));
+    .flatMap((index): GameEvent[] => {
+      const card = revealed[index];
+      return card ? [{ type: eventType, playerId, card, from: "deck" }] : [];
+    });
 }
 
 function createTopdeckEvents(
@@ -64,12 +62,12 @@ function createTopdeckEvents(
   return [...topdeckIndices]
     .reverse()
     .filter(index => revealed[index])
-    .map((index): GameEvent => ({
-      type: "CARD_PUT_ON_DECK",
-      playerId,
-      card: revealed[index]!,
-      from: "hand",
-    }));
+    .flatMap((index): GameEvent[] => {
+      const card = revealed[index];
+      return card
+        ? [{ type: "CARD_PUT_ON_DECK", playerId, card, from: "hand" }]
+        : [];
+    });
 }
 
 export const sentry: CardEffect = ({
@@ -77,7 +75,8 @@ export const sentry: CardEffect = ({
   playerId,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
 
   // Initial: +1 Card, +1 Action, look at top 2
   if (!decision) {

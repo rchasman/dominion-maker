@@ -13,7 +13,9 @@ export const witch: CardEffect = ({
   playerId,
   attackTargets,
 }): CardEffectResult => {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
+
   const events: GameEvent[] = createDrawEvents(
     playerId,
     playerState,
