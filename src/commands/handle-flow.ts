@@ -23,6 +23,11 @@ export function handleStartGame(
   seed?: number,
 ): CommandResult {
   void state;
+
+  if (players.length === 0) {
+    return { ok: false, error: "Cannot start game with no players" };
+  }
+
   // Select kingdom cards if not provided
   const selectedKingdom = kingdomCards || selectRandomKingdomCards();
 
@@ -76,6 +81,7 @@ export function handleStartGame(
 
   // Start turn 1
   const turnStartId = generateEventId();
+  const firstPlayer = players[0];
 
   // Add initial resources as explicit events for log clarity
   return {
@@ -86,7 +92,7 @@ export function handleStartGame(
       {
         type: "TURN_STARTED",
         turn: 1,
-        playerId: players[0]!,
+        playerId: firstPlayer,
         id: turnStartId,
       },
       ...createResourceEvents(
