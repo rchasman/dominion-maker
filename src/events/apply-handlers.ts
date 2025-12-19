@@ -248,21 +248,23 @@ export function applyReactionEvent(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "REACTION_OPPORTUNITY") {
+    const reactionEvent = event as Extract<GameEvent, { type: "REACTION_OPPORTUNITY" }>;
     return {
       ...state,
       pendingChoice: {
         choiceType: "reaction",
-        playerId: event.playerId,
-        attacker: event.attacker,
-        attackCard: event.attackCard,
-        availableReactions: event.availableReactions,
-        metadata: event.metadata,
+        playerId: reactionEvent.playerId,
+        attacker: reactionEvent.triggeringPlayer,
+        attackCard: reactionEvent.triggeringCard,
+        availableReactions: reactionEvent.availableReactions,
+        metadata: reactionEvent.metadata,
       },
-      pendingChoiceEventId: event.id || null,
+      pendingChoiceEventId: reactionEvent.id || null,
     };
   }
 
   if (event.type === "REACTION_REVEALED") {
+    const revealedEvent = event as Extract<GameEvent, { type: "REACTION_REVEALED" }>;
     return {
       ...state,
       pendingChoice: null,
@@ -271,15 +273,15 @@ export function applyReactionEvent(
         ...state.log,
         {
           type: "text",
-          playerId: event.playerId,
-          message: `${event.playerId} reveals ${event.card} to block ${event.attackCard}`,
-          ...(event.id !== undefined && { eventId: event.id }),
+          message: `${revealedEvent.playerId} reveals ${revealedEvent.card} to block ${revealedEvent.triggeringCard}`,
+          ...(revealedEvent.id !== undefined && { eventId: revealedEvent.id }),
         },
       ],
     };
   }
 
   if (event.type === "REACTION_DECLINED") {
+    const declinedEvent = event as Extract<GameEvent, { type: "REACTION_DECLINED" }>;
     return {
       ...state,
       pendingChoice: null,
@@ -288,9 +290,8 @@ export function applyReactionEvent(
         ...state.log,
         {
           type: "text",
-          playerId: event.playerId,
-          message: `${event.playerId} declines to reveal a reaction to ${event.attackCard}`,
-          ...(event.id !== undefined && { eventId: event.id }),
+          message: `${declinedEvent.playerId} declines to reveal a reaction to ${declinedEvent.triggeringCard}`,
+          ...(declinedEvent.id !== undefined && { eventId: declinedEvent.id }),
         },
       ],
     };
