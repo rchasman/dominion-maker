@@ -2,6 +2,7 @@ import type { CardName, PlayerId } from "../types/game-state";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { getCardColor } from "../lib/card-colors";
 import { useGame } from "../context/hooks";
+import { run } from "../lib/run";
 
 export function PlayerName({
   playerId,
@@ -15,11 +16,12 @@ export function PlayerName({
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
   const playerName = players?.find(p => p.id === playerId)?.name;
 
-  const displayName = playerName
-    ? isAI
-      ? `${playerName} (AI)`
-      : playerName
-    : formatPlayerName(playerId, isAI || false, { gameState });
+  const displayName = run(() => {
+    if (playerName) {
+      return isAI ? `${playerName} (AI)` : playerName;
+    }
+    return formatPlayerName(playerId, isAI || false, { gameState });
+  });
 
   return (
     <span style={{ color: getPlayerColor(playerId), fontWeight: 600 }}>
