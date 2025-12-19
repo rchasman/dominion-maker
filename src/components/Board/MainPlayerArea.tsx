@@ -102,8 +102,8 @@ export function MainPlayerArea({
         !isPreviewMode && (
           <ReactionModal
             reactions={displayState.pendingChoice.availableReactions}
-            attackCard={displayState.pendingChoice.attackCard}
-            attacker={displayState.pendingChoice.attacker}
+            triggeringCard={displayState.pendingChoice.triggeringCard}
+            triggeringPlayerId={displayState.pendingChoice.triggeringPlayerId}
             onReveal={onRevealReaction || (() => {})}
             onDecline={onDeclineReaction || (() => {})}
           />

@@ -4,16 +4,16 @@ import { Card } from "./Card";
 
 interface ReactionModalProps {
   reactions: CardName[];
-  attackCard: CardName;
-  attacker: PlayerId;
+  triggeringCard: CardName;
+  triggeringPlayerId: PlayerId;
   onReveal: (card: CardName) => void;
   onDecline: () => void;
 }
 
 export function ReactionModal({
   reactions,
-  attackCard,
-  attacker,
+  triggeringCard,
+  triggeringPlayerId,
   onReveal,
   onDecline,
 }: ReactionModalProps) {
@@ -21,10 +21,10 @@ export function ReactionModal({
     <BaseModal isOpen={true} onClose={() => {}}>
       <div style={{ padding: "20px", textAlign: "center" }}>
         <h3 style={{ marginBottom: "16px", fontSize: "18px", fontWeight: 600 }}>
-          {attacker} played {attackCard}
+          {triggeringPlayerId} played {triggeringCard}
         </h3>
         <p style={{ marginBottom: "20px", color: "#6B7280" }}>
-          Reveal a reaction to block the attack?
+          Reveal a reaction to block?
         </p>
 
         <div
