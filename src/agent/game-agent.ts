@@ -5,6 +5,7 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
+import type { Action } from "../types/action";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import { run } from "../lib/run";
@@ -138,12 +139,12 @@ const executeModel = (context: ModelExecutionContext): void => {
   void generateActionViaBackend({
     provider,
     currentState,
-    humanChoice,
+    ...(humanChoice !== undefined && { humanChoice }),
     signal: modelAbortController.signal,
-    strategySummary,
-    customStrategy,
+    ...(strategySummary !== undefined && { strategySummary }),
+    ...(customStrategy !== undefined && { customStrategy }),
     format: context.format,
-    actionId,
+    ...(actionId !== undefined && { actionId }),
   })
     .then(({ action, format }) => {
       clearTimeout(timeoutId);
@@ -226,16 +227,16 @@ const runModelsInParallel = async (
         provider,
         index,
         currentState,
-        humanChoice,
-        strategySummary,
-        customStrategy,
+        ...(humanChoice !== undefined && { humanChoice }),
+        ...(strategySummary !== undefined && { strategySummary }),
+        ...(customStrategy !== undefined && { customStrategy }),
         format: modelFormat,
         actionId,
         abortController,
         voteGroups,
         completedResultsMap,
         aheadByK,
-        logger,
+        ...(logger !== undefined && { logger }),
         pendingModels,
         modelStartTimes,
         providers,
@@ -277,7 +278,7 @@ async function handleBatchConsensus(
   >,
   config: {
     providers: ModelProvider[];
-    humanChoice?: string;
+    humanChoice?: { selectedCards: CardName[] };
     logger?: LLMLogger;
     strategySummary?: string;
     customStrategy?: string;
@@ -309,7 +310,12 @@ async function handleBatchConsensus(
 
     const { results, earlyConsensus, voteGroups, completedResults } =
       await runModelsInParallel({
-        ...config,
+        providers: config.providers,
+        dataFormat: config.dataFormat,
+        ...(config.humanChoice !== undefined && { humanChoice: config.humanChoice }),
+        ...(config.logger !== undefined && { logger: config.logger }),
+        ...(config.strategySummary !== undefined && { strategySummary: config.strategySummary }),
+        ...(config.customStrategy !== undefined && { customStrategy: config.customStrategy }),
         currentState: acc.engine.state,
         aheadByK,
         actionId: `${config.actionId}-r${round}`,
@@ -341,7 +347,7 @@ async function handleBatchConsensus(
       hand,
       inPlay,
       handCounts,
-      logger: config.logger,
+      ...(config.logger !== undefined && { logger: config.logger }),
     });
 
     if (winner.action.type === "skip_decision") {
@@ -349,6 +355,10 @@ async function handleBatchConsensus(
       return acc;
     }
 
+    if (winner.action.type === "choose_from_options") {
+      agentLogger.warn("Cannot reconstruct batch from option choice");
+      return acc;
+    }
     const card = winner.action.card;
     if (!card) {
       agentLogger.warn("Action missing card, stopping batch reconstruction");
@@ -405,7 +415,7 @@ async function handleMultiActionConsensus(
   >,
   config: {
     providers: ModelProvider[];
-    humanChoice?: string;
+    humanChoice?: { selectedCards: CardName[] };
     logger?: LLMLogger;
     strategySummary?: string;
     customStrategy?: string;
@@ -464,7 +474,12 @@ async function handleMultiActionConsensus(
 
       const { results, earlyConsensus, voteGroups } = await runModelsInParallel(
         {
-          ...config,
+          providers: config.providers,
+          dataFormat: config.dataFormat,
+          ...(config.humanChoice !== undefined && { humanChoice: config.humanChoice }),
+          ...(config.logger !== undefined && { logger: config.logger }),
+          ...(config.strategySummary !== undefined && { strategySummary: config.strategySummary }),
+          ...(config.customStrategy !== undefined && { customStrategy: config.customStrategy }),
           currentState: roundState,
           aheadByK,
           actionId: `${config.actionId}-r${roundIndex}`,
@@ -581,6 +596,10 @@ export async function advanceGameStateWithConsensus(
   // Shortcut: if only one legal action, execute it directly without consensus
   if (legalActions.length === 1) {
     const action = legalActions[0];
+    if (!action) {
+      agentLogger.error("Expected action but got undefined");
+      return;
+    }
     const actionDesc = formatActionDescription(action);
     agentLogger.info(
       `Only one legal action: ${actionDesc} (skipping consensus)`,
@@ -609,9 +628,10 @@ export async function advanceGameStateWithConsensus(
   // If in buy phase, show detailed supply info
   if (currentState.phase === "buy" && currentState.buys > 0) {
     const buyableCards = legalActions
-      .filter(a => a.type === "buy_card")
+      .filter((a): a is Extract<Action, { type: "buy_card" }> => a.type === "buy_card")
+      .filter(a => a.card != null)
       .map(a => {
-        const card = a.card as CardName;
+        const card = a.card!;
         const cost = CARDS[card]?.cost || 0;
         return `${card}($${cost})`;
       })
@@ -632,7 +652,7 @@ export async function advanceGameStateWithConsensus(
     playerId,
     providers,
     legalActions,
-    logger,
+    ...(logger !== undefined && { logger }),
   });
 
   const playerState = currentState.players[playerId];
@@ -654,10 +674,10 @@ export async function advanceGameStateWithConsensus(
     await runModelsInParallel({
       providers,
       currentState,
-      humanChoice,
-      strategySummary,
-      customStrategy,
-      logger,
+      ...(humanChoice !== undefined && { humanChoice }),
+      ...(strategySummary !== undefined && { strategySummary }),
+      ...(customStrategy !== undefined && { customStrategy }),
+      ...(logger !== undefined && { logger }),
       aheadByK,
       dataFormat,
       actionId,
@@ -680,7 +700,7 @@ export async function advanceGameStateWithConsensus(
     hand,
     inPlay,
     handCounts,
-    logger,
+    ...(logger !== undefined && { logger }),
   });
 
   // Execute winner action via engine
@@ -740,9 +760,9 @@ export async function runAITurnWithConsensus(
     try {
       await advanceGameStateWithConsensus(engine, playerId, {
         providers,
-        logger,
-        strategySummary,
-        customStrategy,
+        ...(logger !== undefined && { logger }),
+        ...(strategySummary !== undefined && { strategySummary }),
+        ...(customStrategy !== undefined && { customStrategy }),
         dataFormat,
       });
 
@@ -760,9 +780,9 @@ export async function runAITurnWithConsensus(
         agentLogger.debug("Resolving pending decision");
         await advanceGameStateWithConsensus(engine, playerId, {
           providers,
-          logger,
-          strategySummary,
-          customStrategy,
+          ...(logger !== undefined && { logger }),
+          ...(strategySummary !== undefined && { strategySummary }),
+          ...(customStrategy !== undefined && { customStrategy }),
           dataFormat,
         });
         onStateChange?.(engine.state);

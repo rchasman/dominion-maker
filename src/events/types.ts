@@ -203,9 +203,10 @@ export type ReactionPlayedEvent = EventMetadata & {
 // New reaction events (first-class)
 export type ReactionOpportunityEvent = EventMetadata & {
   type: "REACTION_OPPORTUNITY";
-  playerId: PlayerId; // The player who can react (unified with PendingChoice)
-  attacker: PlayerId;
-  attackCard: CardName;
+  playerId: PlayerId; // The player who can react
+  triggeringPlayer: PlayerId; // The player who triggered this (was: attacker)
+  triggeringCard: CardName; // The card that triggered this (was: attackCard)
+  triggerType: import("../data/cards").ReactionTrigger; // on_attack, on_gain, etc.
   availableReactions: CardName[];
   metadata: {
     allTargets: PlayerId[];
@@ -219,13 +220,13 @@ export type ReactionRevealedEvent = EventMetadata & {
   type: "REACTION_REVEALED";
   playerId: PlayerId; // The player who revealed the reaction
   card: CardName;
-  attackCard: CardName;
+  triggeringCard: CardName; // The card that triggered this reaction (was: attackCard)
 };
 
 export type ReactionDeclinedEvent = EventMetadata & {
   type: "REACTION_DECLINED";
   playerId: PlayerId; // The player who declined to react
-  attackCard: CardName;
+  triggeringCard: CardName; // The card that triggered this reaction (was: attackCard)
 };
 
 // Decisions (PendingChoice moved to types/game-state to break circular dep)
