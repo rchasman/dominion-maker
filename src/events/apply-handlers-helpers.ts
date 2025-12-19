@@ -283,6 +283,8 @@ export function applyRevealAndShuffle(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
+    console.log("[DEBUG] CARD_REVEALED:", { playerId: event.playerId, card: event.card, from: event.from });
+
     // Check if the last log entry is also a reveal from the same player
     const lastLog = state.log[state.log.length - 1];
     const isConsecutiveReveal =
@@ -295,6 +297,7 @@ export function applyRevealAndShuffle(
       // Append to existing reveal message (before the "from" part)
       const parts = lastLog.message.split(" from ");
       const updatedMessage = `${parts[0]}, ${event.card} from ${parts[1]}`;
+      console.log("[DEBUG] Batching reveal:", updatedMessage);
       return {
         ...state,
         log: [...state.log.slice(0, -1), { type: "text", message: updatedMessage }],
@@ -303,11 +306,13 @@ export function applyRevealAndShuffle(
 
     // First reveal from this player
     const fromLocation = event.from || "deck";
+    const message = `${event.playerId} reveals ${event.card} from ${fromLocation}`;
+    console.log("[DEBUG] New reveal entry:", message);
     return {
       ...state,
       log: [
         ...state.log,
-        { type: "text", message: `${event.playerId} reveals ${event.card} from ${fromLocation}` },
+        { type: "text", message },
       ],
     };
   }
