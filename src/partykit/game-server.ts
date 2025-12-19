@@ -82,6 +82,7 @@ export default class GameServer implements Party.Server {
     PlayerId,
     { id: PlayerId; name: string; type: "human" | "ai"; connected: boolean }
   > = {}; // Track player info separately from engine state
+  private spectatorTimeoutId: ReturnType<typeof setTimeout> | null = null; // Timeout for kicking spectators
 
   constructor(readonly room: Party.Room) {}
 
@@ -130,6 +131,17 @@ export default class GameServer implements Party.Server {
           this.endGame("Player left");
         }
       }
+    }
+
+    // CRITICAL FIX: End game immediately when all players disconnect
+    // One player can wait indefinitely, but zero means game is dead
+    if (this.isStarted && this.getPlayerCount() === 0) {
+      const spectatorCount = this.getSpectatorCount();
+      if (spectatorCount > 0) {
+        // Spectators remain - schedule their cleanup after 5 minutes
+        this.scheduleSpectatorTimeout();
+      }
+      this.endGame("All players disconnected");
     }
 
     if (conn.id === this.hostConnectionId && !this.isStarted) {
@@ -585,6 +597,18 @@ export default class GameServer implements Party.Server {
     name: string,
     clientId?: string,
   ) {
+    // CRITICAL FIX: Block spectators when only 1 player in room
+    // Prevents spectating incomplete/waiting games
+    const currentPlayerCount = this.getPlayerCount();
+    if (currentPlayerCount < 2) {
+      this.send(conn, {
+        type: "error",
+        message: "Cannot spectate - game needs at least 2 players",
+      });
+      conn.close();
+      return;
+    }
+
     player.name = name;
     player.clientId = clientId || crypto.randomUUID();
     player.isSpectator = true;
@@ -793,13 +817,19 @@ export default class GameServer implements Party.Server {
 
     const wasPlayer = player.clientId && !player.isSpectator;
 
+    // CRITICAL FIX: End game if host leaves pre-game
+    if (!this.isStarted && conn.id === this.hostConnectionId) {
+      this.broadcast({ type: "game_ended", reason: "Host left" });
+      return;
+    }
+
     // Keep clientId but mark as spectator
     player.isSpectator = true;
 
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
 
-    // If a player left a single-player game, end it immediately
+    // If a player left a game, end it (both single-player and multiplayer)
     if (wasPlayer && this.isStarted) {
       const remainingPlayers = this.getPlayers();
 
@@ -812,6 +842,23 @@ export default class GameServer implements Party.Server {
         // Single-player game abandoned - clean it up
         this.cleanupBotConnections();
         this.endGame("Player left");
+        return;
+      }
+
+      // CRITICAL FIX: End multiplayer games when any player leaves
+      // Multiplayer games require all human players to continue
+      const humanPlayerCount = remainingPlayers.filter(
+        p => p.clientId && !this.botPlayers.has(p.clientId),
+      ).length;
+
+      if (humanPlayerCount < remainingPlayers.length && humanPlayerCount > 0) {
+        // This is multiplayer (has non-bot players) and someone left
+        this.broadcast({
+          type: "player_disconnected",
+          playerName: player.name,
+          playerId: player.clientId!,
+        });
+        this.endGame(`${player.name} left the game`);
         return;
       }
     }
@@ -849,6 +896,43 @@ export default class GameServer implements Party.Server {
     return (
       players.length > 0 && players.every(p => this.botPlayers.has(p.clientId))
     );
+  }
+
+  private scheduleSpectatorTimeout() {
+    // Clear any existing timeout
+    if (this.spectatorTimeoutId) {
+      clearTimeout(this.spectatorTimeoutId);
+    }
+
+    // Kick spectators after 5 minutes (300000ms) when game ends with no players
+    this.spectatorTimeoutId = setTimeout(() => {
+      const spectators = [...this.connections.values()].filter(
+        c => c.isSpectator,
+      );
+
+      // Notify and disconnect all spectators
+      for (const spectator of spectators) {
+        const conn = [...this.room.getConnections()].find(
+          c => c.id === spectator.id,
+        );
+        if (conn) {
+          this.send(conn, {
+            type: "error",
+            message: "Game ended - spectator session expired",
+          });
+          conn.close();
+        }
+      }
+
+      this.spectatorTimeoutId = null;
+    }, 300000); // 5 minutes
+  }
+
+  private clearSpectatorTimeout() {
+    if (this.spectatorTimeoutId) {
+      clearTimeout(this.spectatorTimeoutId);
+      this.spectatorTimeoutId = null;
+    }
   }
 
   private broadcastPlayerList() {
@@ -901,6 +985,7 @@ export default class GameServer implements Party.Server {
         this.isStarted &&
         players.length > 0 &&
         !(this.engine?.state.gameOver ?? false),
+      isSinglePlayer: players.some(p => p.isBot),
     };
 
     await lobbyRoom.fetch({
