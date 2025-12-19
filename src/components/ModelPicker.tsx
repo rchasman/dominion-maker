@@ -162,7 +162,7 @@ const ModelCheckbox = ({
   const metaInfo = modelConfig
     ? run(() => {
         const parts = [
-          `$${modelConfig.inputPrice}/$${modelConfig.outputPrice}/1M`,
+          `$${modelConfig.inputPrice}/$${modelConfig.outputPrice}`,
           ...(modelConfig.speed ? [`${modelConfig.speed} tok/s`] : []),
         ];
         return parts.join(" • ");
