@@ -11,6 +11,8 @@ const CHAT_LAYOUT = {
   MAX_HEIGHT_PX: 300,
 } as const;
 
+const DISABLED_OPACITY = 0.4;
+
 interface ChatMessageData {
   id: string;
   senderName: string;
@@ -213,7 +215,7 @@ function ChatInput({
                 : "var(--color-gold)",
             cursor: disabled || !value.trim() ? "not-allowed" : "pointer",
             transition: "opacity 0.2s",
-            opacity: disabled || !value.trim() ? 0.4 : 1,
+            opacity: disabled || !value.trim() ? DISABLED_OPACITY : 1,
             outline: "none",
             transform: "none",
           }}

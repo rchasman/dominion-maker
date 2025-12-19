@@ -23,6 +23,9 @@ const BADGE_DIMENSIONS = {
 } as const;
 
 const HOVER_SCALE = 1.05;
+const OPACITY_OTHERS = 0.9;
+const FONT_WEIGHT_ME = 600;
+const FONT_WEIGHT_OTHERS = 500;
 
 type RequestState = "none" | "sent" | "received";
 
@@ -64,7 +67,7 @@ export function PlayerAvatar({
         fontFamily: "inherit",
         transition: "all var(--transition-base)",
         position: "relative",
-        opacity: isMe ? 1 : 0.9,
+        opacity: isMe ? 1 : OPACITY_OTHERS,
       }}
       onMouseEnter={e => {
         if (isClickable) {
@@ -171,7 +174,7 @@ export function PlayerAvatar({
           style={{
             color: playerColor,
             fontSize: "0.875rem",
-            fontWeight: isMe ? 600 : 500,
+            fontWeight: isMe ? FONT_WEIGHT_ME : FONT_WEIGHT_OTHERS,
             textAlign: "center",
           }}
         >

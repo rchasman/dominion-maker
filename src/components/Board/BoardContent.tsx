@@ -23,6 +23,8 @@ const ANIMATION_DURATION = {
   PLAY_TREASURE_MS: 200,
 } as const;
 
+const CARD_ID_SKIP_PARTS = 2;
+
 const EventDevtools = lazy(() =>
   import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
 );
@@ -210,7 +212,7 @@ export function BoardContent({
         const cardId = el.getAttribute("data-card-id");
         if (!cardId) return null;
         // Format is hand-{index}-{cardName}, so skip first two parts
-        const card = cardId.split("-").slice(2).join("-") as CardName;
+        const card = cardId.split("-").slice(CARD_ID_SKIP_PARTS).join("-") as CardName;
         return { card, rect: el.getBoundingClientRect() };
       })
       .filter(

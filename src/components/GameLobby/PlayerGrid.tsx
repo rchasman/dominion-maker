@@ -41,10 +41,14 @@ const SPLIT_DEGREES = {
 } as const;
 
 const HASH_BIT_SHIFT = 5;
-const ANGLE_ADJUSTMENT = Math.PI / 2;
-const PI_DOUBLE = 2 * Math.PI;
+const HALF_DIVISOR = 2;
+const ANGLE_ADJUSTMENT = Math.PI / HALF_DIVISOR;
+const DIAMETER_MULTIPLIER = 2;
+const PI_DOUBLE = DIAMETER_MULTIPLIER * Math.PI;
 const PLAYER_MIN_COUNT = 1;
 const PLAYER_DUAL_COUNT = 2;
+const FONT_WEIGHT_MY_GAME = 600;
+const FONT_WEIGHT_OTHER = 400;
 
 type RequestState = "none" | "sent" | "received";
 
@@ -226,8 +230,8 @@ export function PlayerGrid({
       <div
         style={{
           position: "relative",
-          width: `${circleRadius * 2 + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
-          height: `${circleRadius * 2 + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
+          width: `${circleRadius * DIAMETER_MULTIPLIER + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
+          height: `${circleRadius * DIAMETER_MULTIPLIER + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -237,8 +241,8 @@ export function PlayerGrid({
         <div
           style={{
             position: "absolute",
-            width: `${circleRadius * 2}px`,
-            height: `${circleRadius * 2}px`,
+            width: `${circleRadius * DIAMETER_MULTIPLIER}px`,
+            height: `${circleRadius * DIAMETER_MULTIPLIER}px`,
             borderRadius: "50%",
             background: "var(--color-bg-tertiary)",
             border: "2px solid var(--color-border-primary)",
@@ -526,7 +530,7 @@ function GameCircle({
             : "var(--color-text-tertiary)",
           textTransform: "uppercase",
           letterSpacing: "0.05rem",
-          fontWeight: isMyGame ? 600 : 400,
+          fontWeight: isMyGame ? FONT_WEIGHT_MY_GAME : FONT_WEIGHT_OTHER,
         }}
       >
         {isMyGame ? "Rejoin" : "Watch"}
