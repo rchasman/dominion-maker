@@ -143,7 +143,7 @@ const executeModel = (context: ModelExecutionContext): void => {
   })
     .then(({ action }) => {
       clearTimeout(timeoutId);
-      return handleModelSuccess(action, "toon", handlerParams);
+      return handleModelSuccess(action, handlerParams);
     })
     .catch(error => {
       clearTimeout(timeoutId);

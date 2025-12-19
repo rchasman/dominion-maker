@@ -110,7 +110,6 @@ interface TimingBarProps {
     pending?: boolean;
     failed?: boolean;
     aborted?: boolean;
-    format?: "json" | "toon";
   };
   maxDuration: number;
   minDuration: number;
@@ -118,7 +117,6 @@ interface TimingBarProps {
   timingWidth: number;
   modelNameWidth: number;
   barAreaWidth: number;
-  showFormatGlyphs: boolean;
 }
 
 const PERCENTAGE_SCALE = 100;
@@ -227,7 +225,6 @@ interface ModelNameDisplayProps {
   title?: string;
   strikethrough: boolean;
   isHelp: boolean;
-  format?: "json" | "toon";
 }
 
 function ModelNameDisplay({
@@ -237,7 +234,6 @@ function ModelNameDisplay({
   title,
   strikethrough,
   isHelp,
-  format,
 }: ModelNameDisplayProps) {
   return (
     <span
@@ -256,18 +252,6 @@ function ModelNameDisplay({
       }}
     >
       <span>{name}</span>
-      {format && (
-        <span
-          style={{
-            fontSize: "0.7rem",
-            fontWeight: "normal",
-            color: "#ffffff",
-            opacity: 0.6,
-          }}
-        >
-          {format === "json" ? "J" : "T"}
-        </span>
-      )}
     </span>
   );
 }
@@ -402,8 +386,6 @@ function TimingBar({
         })}
         strikethrough={state.isFailed || state.isAborted}
         isHelp={state.isAborted || state.isFailed}
-        {...(showFormatGlyphs &&
-          timing.format !== undefined && { format: timing.format })}
       />
     </div>
   );
@@ -415,7 +397,6 @@ interface TimingEntry {
   pending?: boolean;
   failed?: boolean;
   aborted?: boolean;
-  format?: "json" | "toon";
 }
 
 function buildTimingsFromLiveStatuses(
@@ -507,10 +488,6 @@ export function PerformancePane({
     return null;
   }
 
-  // Check if formats are mixed (both json and toon present)
-  const formats = new Set(timings.map(t => t.format).filter(Boolean));
-  const showFormatGlyphs = formats.size > 1;
-
   const completedTimings = timings.filter(t => !t.pending && !t.aborted);
   const allDurations = timings.map(t => t.duration);
   const maxDuration = allDurations.length > 0 ? Math.max(...allDurations) : 1;
@@ -543,7 +520,6 @@ export function PerformancePane({
             timingWidth={timingWidth}
             modelNameWidth={modelNameWidth}
             barAreaWidth={barAreaWidth}
-            showFormatGlyphs={showFormatGlyphs}
           />
         ))}
       </div>

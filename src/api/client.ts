@@ -11,12 +11,10 @@ interface GenerateActionRequest {
   legalActions?: unknown[];
   strategySummary?: string;
   customStrategy?: string;
-  format?: "json" | "toon";
 }
 
 interface GenerateActionResponse {
   action?: Action;
-  format?: "json" | "toon";
   error?: number;
   message?: string;
 }
