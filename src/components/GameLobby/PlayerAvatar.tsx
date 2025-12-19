@@ -5,6 +5,24 @@
  * Shows status badges for pending/incoming game requests.
  */
 import { getPlayerColor } from "../../lib/board-utils";
+import { run } from "../../lib/run";
+
+const AVATAR_SIZE = {
+  ME_PX: 110,
+  OTHERS_PX: 96,
+} as const;
+
+const BORDER_WIDTH = {
+  ME: "4px",
+  OTHERS: "2px",
+} as const;
+
+const BADGE_DIMENSIONS = {
+  SIZE_PX: 24,
+  OFFSET_PX: -4,
+} as const;
+
+const HOVER_SCALE = 1.05;
 
 type RequestState = "none" | "sent" | "received";
 
@@ -27,8 +45,8 @@ export function PlayerAvatar({
   const playerColor = color ?? getPlayerColor(name);
 
   const isClickable = !isMe && requestState !== "sent";
-  const avatarSize = isMe ? 110 : 96;
-  const borderWidth = isMe ? "4px" : "2px";
+  const avatarSize = isMe ? AVATAR_SIZE.ME_PX : AVATAR_SIZE.OTHERS_PX;
+  const borderWidth = isMe ? BORDER_WIDTH.ME : BORDER_WIDTH.OTHERS;
 
   return (
     <button
@@ -50,7 +68,7 @@ export function PlayerAvatar({
       }}
       onMouseEnter={e => {
         if (isClickable) {
-          e.currentTarget.style.transform = "scale(1.05)";
+          e.currentTarget.style.transform = `scale(${HOVER_SCALE})`;
         }
       }}
       onMouseLeave={e => {
@@ -74,12 +92,15 @@ export function PlayerAvatar({
             height: `${avatarSize}px`,
             borderRadius: "50%",
             background: "var(--color-bg-surface)",
-            border:
-              requestState === "sent"
-                ? `${borderWidth} solid var(--color-action)`
-                : requestState === "received"
-                  ? `${borderWidth} solid var(--color-victory)`
-                  : `${borderWidth} solid ${playerColor}`,
+            border: run(() => {
+              if (requestState === "sent") {
+                return `${borderWidth} solid var(--color-action)`;
+              }
+              if (requestState === "received") {
+                return `${borderWidth} solid var(--color-victory)`;
+              }
+              return `${borderWidth} solid ${playerColor}`;
+            }),
             animation: requestState === "sent" ? "pulse 2s infinite" : "none",
           }}
         />
@@ -89,10 +110,10 @@ export function PlayerAvatar({
           <div
             style={{
               position: "absolute",
-              top: "-4px",
-              right: "-4px",
-              width: "24px",
-              height: "24px",
+              top: `${BADGE_DIMENSIONS.OFFSET_PX}px`,
+              right: `${BADGE_DIMENSIONS.OFFSET_PX}px`,
+              width: `${BADGE_DIMENSIONS.SIZE_PX}px`,
+              height: `${BADGE_DIMENSIONS.SIZE_PX}px`,
               borderRadius: "50%",
               background: "var(--color-victory)",
               display: "flex",
@@ -113,10 +134,10 @@ export function PlayerAvatar({
           <div
             style={{
               position: "absolute",
-              top: "-4px",
-              right: "-4px",
-              width: "24px",
-              height: "24px",
+              top: `${BADGE_DIMENSIONS.OFFSET_PX}px`,
+              right: `${BADGE_DIMENSIONS.OFFSET_PX}px`,
+              width: `${BADGE_DIMENSIONS.SIZE_PX}px`,
+              height: `${BADGE_DIMENSIONS.SIZE_PX}px`,
               borderRadius: "50%",
               background: "var(--color-action)",
               display: "flex",
