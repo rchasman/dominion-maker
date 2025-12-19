@@ -43,8 +43,9 @@ export type PendingChoice =
   | {
       choiceType: "reaction";
       playerId: PlayerId;
-      attacker: PlayerId;
-      attackCard: CardName;
+      triggeringPlayerId: PlayerId; // Player who triggered the reaction
+      triggeringCard: CardName; // Card that triggered the reaction
+      triggerType: import("../data/cards").ReactionTrigger; // on_attack, on_gain, etc.
       availableReactions: CardName[];
       metadata: {
         allTargets: PlayerId[];
