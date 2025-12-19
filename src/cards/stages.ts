@@ -10,8 +10,6 @@ export const STAGES = {
   OPPONENT_DISCARD: "opponent_discard",
   OPPONENT_TOPDECK: "opponent_topdeck",
   VICTIM_TRASH_CHOICE: "victim_trash_choice",
-  ON_SKIP: "on_skip",
-  REVEAL: "reveal",
   CHOOSE_ACTION: "choose_action",
   PLAY_ACTION: "play_action",
   EXECUTE_THRONED_CARD: "execute_throned_card",
