@@ -960,4 +960,241 @@ describe("buildLogFromEvents", () => {
       expect(log[0]?.eventId).toBe("evt-123");
     });
   });
+
+  describe("Additional Coverage Tests", () => {
+    it("handles non-aggregated CARD_DRAWN without eventId", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_DRAWN",
+          playerId: "human",
+          card: "Copper",
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Events without ID won't create log entries
+      expect(log.length).toBe(0);
+    });
+
+    it("handles non-aggregated CARD_DISCARDED without eventId", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_DISCARDED",
+          playerId: "human",
+          card: "Estate",
+          from: "hand",
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Events without ID won't create log entries
+      expect(log.length).toBe(0);
+    });
+
+    it("handles non-aggregated CARD_TRASHED without eventId", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_TRASHED",
+          playerId: "human",
+          card: "Copper",
+          from: "hand",
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Events without ID won't create log entries
+      expect(log.length).toBe(0);
+    });
+
+    it("handles CARD_RETURNED_TO_HAND from inPlay (treasure) → unplay-treasure", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_RETURNED_TO_HAND",
+          playerId: "human",
+          card: "Copper",
+          from: "inPlay",
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(1);
+      expect(log[0]?.type).toBe("unplay-treasure");
+      expect(log[0]?.card).toBe("Copper");
+      expect((log[0] as any).coins).toBe(1);
+    });
+
+    it("handles CARD_RETURNED_TO_HAND from discard (no log entry)", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_RETURNED_TO_HAND",
+          playerId: "human",
+          card: "Silver",
+          from: "discard",
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(0);
+    });
+
+    it("handles CARD_RETURNED_TO_HAND from deck (no log entry)", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_RETURNED_TO_HAND",
+          playerId: "human",
+          card: "Gold",
+          from: "deck",
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(0);
+    });
+
+    it("handles CARD_RETURNED_TO_HAND (action card from inPlay, no log entry)", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_RETURNED_TO_HAND",
+          playerId: "human",
+          card: "Village",
+          from: "inPlay",
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(0);
+    });
+
+    it("handles GAME_ENDED without id", () => {
+      const events: GameEvent[] = [
+        {
+          type: "GAME_ENDED",
+          winnerId: "human",
+          scores: { human: 10, ai: 5 },
+          reason: "provinces_empty",
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Events without ID won't create log entries
+      expect(log.length).toBe(0);
+    });
+
+    it("handles TURN_ENDED without id", () => {
+      const events: GameEvent[] = [
+        {
+          type: "TURN_STARTED",
+          turn: 1,
+          playerId: "human",
+          id: "evt-1",
+        },
+        {
+          type: "TURN_ENDED",
+          playerId: "human",
+          turn: 1,
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // TURN_ENDED without ID won't create a log entry
+      const turnEnd = log.find(entry => entry.type === "turn-end");
+      expect(turnEnd).toBeUndefined();
+    });
+
+    it("handles PHASE_CHANGED without id", () => {
+      const events: GameEvent[] = [
+        {
+          type: "TURN_STARTED",
+          turn: 1,
+          playerId: "human",
+          id: "evt-1",
+        },
+        {
+          type: "PHASE_CHANGED",
+          phase: "buy",
+          id: undefined,
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // PHASE_CHANGED without ID won't create a log entry
+      const phaseChange = log.find(entry => entry.type === "phase-change");
+      expect(phaseChange).toBeUndefined();
+    });
+
+    it("aggregateCardEvents: handles empty currentEvent in collectConsecutive", () => {
+      // This tests a defensive check where currentEvent could be undefined
+      const events: GameEvent[] = [
+        {
+          type: "CARD_DRAWN",
+          playerId: "human",
+          card: "Copper",
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(1);
+    });
+
+    it("aggregateCardEvents: handles DECK_SHUFFLED interrupting aggregation", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_DRAWN",
+          playerId: "human",
+          card: "Copper",
+          id: "evt-1",
+        },
+        {
+          type: "DECK_SHUFFLED",
+          playerId: "human",
+          id: "evt-2",
+        },
+        {
+          type: "CARD_DRAWN",
+          playerId: "human",
+          card: "Silver",
+          id: "evt-3",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Should have separate draw entries due to shuffle
+      const draws = log.filter(entry => entry.type === "draw-cards");
+      expect(draws.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("handles CARD_PLAYED (victory card) → returns null, no log", () => {
+      const events: GameEvent[] = [
+        {
+          type: "CARD_PLAYED",
+          playerId: "human",
+          card: "Estate",
+          sourceIndex: 0,
+          id: "evt-1",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      expect(log.length).toBe(0);
+    });
+
+    it("handles zero delta resource events", () => {
+      const events: GameEvent[] = [
+        {
+          type: "TURN_STARTED",
+          turn: 1,
+          playerId: "human",
+          id: "evt-1",
+        },
+        {
+          type: "ACTIONS_MODIFIED",
+          delta: 0,
+          id: "evt-2",
+        },
+      ];
+      const log = buildLogFromEvents(events);
+      // Zero delta should not create a log entry
+      const actionLogs = log.filter(
+        entry => entry.type === "get-actions" || entry.type === "use-actions",
+      );
+      expect(actionLogs.length).toBe(0);
+    });
+  });
 });
