@@ -46,38 +46,47 @@ export function handleRevealReaction(
 
   // Generate events
   const rootEventId = state.pendingChoiceEventId || generateEventId();
-  const events: GameEvent[] = [];
+  let events: GameEvent[] = [];
 
   // REACTION_REVEALED event
-  events.push({
-    type: "REACTION_REVEALED",
-    playerId,
-    card,
-    triggeringCard: reaction.attackCard,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events = [
+    ...events,
+    {
+      type: "REACTION_REVEALED",
+      playerId,
+      card,
+      triggeringCard: reaction.attackCard,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+  ];
 
   // REACTION_PLAYED event (for animation/logging)
-  events.push({
-    type: "REACTION_PLAYED",
-    playerId,
-    card,
-    triggerEventId: reaction.metadata!.originalCause,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events = [
+    ...events,
+    {
+      type: "REACTION_PLAYED",
+      playerId,
+      card,
+      triggerEventId: reaction.metadata!.originalCause,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+  ];
 
   // ATTACK_RESOLVED (blocked: true)
-  events.push({
-    type: "ATTACK_RESOLVED",
-    attacker: reaction.attacker,
-    target: playerId,
-    attackCard: reaction.attackCard,
-    blocked: true,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events = [
+    ...events,
+    {
+      type: "ATTACK_RESOLVED",
+      attacker: reaction.attacker,
+      target: playerId,
+      attackCard: reaction.attackCard,
+      blocked: true,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+  ];
 
   // Update metadata for next target
   const updatedMetadata: ReactionMetadata = {
@@ -96,10 +105,12 @@ export function handleRevealReaction(
       nextIndex,
       reaction.metadata!.originalCause,
     );
-    events.push(...nextEvents);
+    events = [...events, ...nextEvents];
 
     // If there's another REACTION_OPPORTUNITY, don't apply attack yet (waiting for next reaction)
-    const hasMoreReactions = nextEvents.some(e => e.type === "REACTION_OPPORTUNITY");
+    const hasMoreReactions = nextEvents.some(
+      e => e.type === "REACTION_OPPORTUNITY",
+    );
     if (!hasMoreReactions) {
       // All reactions resolved, apply attack to unblocked targets
       const midState = applyEvents(state, events);
@@ -108,7 +119,7 @@ export function handleRevealReaction(
         updatedMetadata,
         reaction.metadata!.originalCause,
       );
-      events.push(...attackEvents);
+      events = [...events, ...attackEvents];
     }
   } else {
     // All reactions resolved - apply attack to unblocked targets
@@ -118,7 +129,7 @@ export function handleRevealReaction(
       updatedMetadata,
       reaction.metadata!.originalCause,
     );
-    events.push(...attackEvents);
+    events = [...events, ...attackEvents];
   }
 
   return { ok: true, events };
@@ -144,27 +155,33 @@ export function handleDeclineReaction(
 
   // Generate events
   const rootEventId = state.pendingChoiceEventId || generateEventId();
-  const events: GameEvent[] = [];
+  let events: GameEvent[] = [];
 
   // REACTION_DECLINED event
-  events.push({
-    type: "REACTION_DECLINED",
-    playerId,
-    triggeringCard: reaction.attackCard,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events = [
+    ...events,
+    {
+      type: "REACTION_DECLINED",
+      playerId,
+      triggeringCard: reaction.attackCard,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+  ];
 
   // ATTACK_RESOLVED (blocked: false)
-  events.push({
-    type: "ATTACK_RESOLVED",
-    attacker: reaction.attacker,
-    target: playerId,
-    attackCard: reaction.attackCard,
-    blocked: false,
-    id: generateEventId(),
-    causedBy: rootEventId,
-  });
+  events = [
+    ...events,
+    {
+      type: "ATTACK_RESOLVED",
+      attacker: reaction.attacker,
+      target: playerId,
+      attackCard: reaction.attackCard,
+      blocked: false,
+      id: generateEventId(),
+      causedBy: rootEventId,
+    },
+  ];
 
   // Prepare metadata with attackCard included
   const fullMetadata: ReactionMetadata = {
@@ -182,10 +199,12 @@ export function handleDeclineReaction(
       nextIndex,
       reaction.metadata!.originalCause,
     );
-    events.push(...nextEvents);
+    events = [...events, ...nextEvents];
 
     // If there's another REACTION_OPPORTUNITY, don't apply attack yet (waiting for next reaction)
-    const hasMoreReactions = nextEvents.some(e => e.type === "REACTION_OPPORTUNITY");
+    const hasMoreReactions = nextEvents.some(
+      e => e.type === "REACTION_OPPORTUNITY",
+    );
     if (!hasMoreReactions) {
       // All reactions resolved, apply attack to unblocked targets
       const midState = applyEvents(state, events);
@@ -194,7 +213,7 @@ export function handleDeclineReaction(
         fullMetadata,
         reaction.metadata!.originalCause,
       );
-      events.push(...attackEvents);
+      events = [...events, ...attackEvents];
     }
   } else {
     // All reactions resolved - apply attack to unblocked targets
@@ -204,7 +223,7 @@ export function handleDeclineReaction(
       fullMetadata,
       reaction.metadata!.originalCause,
     );
-    events.push(...attackEvents);
+    events = [...events, ...attackEvents];
   }
 
   return { ok: true, events };
@@ -245,7 +264,7 @@ function processNextTarget(
   }
 
   // No reactions - auto-resolve this target and continue
-  const resolvedEvents: GameEvent[] = [
+  let resolvedEvents: GameEvent[] = [
     {
       type: "ATTACK_RESOLVED",
       attacker: metadata.attacker,
@@ -266,7 +285,7 @@ function processNextTarget(
       nextIndex + 1,
       rootEventId,
     );
-    resolvedEvents.push(...nextEvents);
+    resolvedEvents = [...resolvedEvents, ...nextEvents];
   }
 
   return resolvedEvents;
