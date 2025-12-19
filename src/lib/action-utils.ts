@@ -5,10 +5,12 @@ import type { Action } from "../types/action";
  */
 export function hasCardField(
   action: Action,
-): action is Action & { card: string } {
+): action is Exclude<Action, { type: "end_phase" | "skip_decision" | "choose_from_options" }> & { card: string } {
   return (
     action.type !== "end_phase" &&
     action.type !== "skip_decision" &&
+    action.type !== "choose_from_options" &&
+    "card" in action &&
     action.card !== undefined
   );
 }
