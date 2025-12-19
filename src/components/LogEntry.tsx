@@ -82,7 +82,7 @@ function TurnHeaderPlayerName({
   isAI?: boolean;
 }) {
   const { gameState, players, gameMode } = useGame();
-  const playerName = players?.find(p => p.playerId === playerId)?.name;
+  const playerName = players?.find(p => p.id === playerId)?.name;
   const displayName = playerName
     ? isAI
       ? `${playerName} (AI)`
@@ -408,14 +408,15 @@ function renderSpendCoins(
 // Renderer mapping for entry types
 const ENTRY_RENDERERS = {
   "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
+    const turnStartEntry = entry as Extract<LogEntryType, { type: "turn-start" }>;
     const isAI =
       ctx.gameMode && ctx.gameMode !== "multiplayer"
         ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(
-            String(entry.playerId ?? ""),
+            String(turnStartEntry.playerId ?? ""),
           )
         : undefined;
     return renderTurnStart(
-      entry as Extract<LogEntryType, { type: "turn-start" }>,
+      turnStartEntry,
       isAI,
     );
   },
