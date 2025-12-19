@@ -68,7 +68,7 @@ export interface ReactionContext {
   triggeringCard: CardName;
 
   /** The player who triggered this reaction (played attack, gained card, etc.) */
-  triggeringPlayer: PlayerId;
+  triggeringPlayerId: PlayerId;
 
   /** What type of trigger caused this reaction */
   triggerType: ReactionTrigger;
@@ -99,13 +99,13 @@ export interface AttackReactionContext extends ReactionContext {
  */
 export function createAttackReactionContext(
   triggeringCard: CardName,
-  triggeringPlayer: PlayerId,
+  triggeringPlayerId: PlayerId,
   targets: PlayerId[],
   originalCause: string,
 ): AttackReactionContext {
   return {
     triggeringCard,
-    triggeringPlayer,
+    triggeringPlayerId,
     triggerType: "on_attack",
     allTargets: targets,
     currentTargetIndex: 0,

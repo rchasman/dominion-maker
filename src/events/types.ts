@@ -204,7 +204,7 @@ export type ReactionPlayedEvent = EventMetadata & {
 export type ReactionOpportunityEvent = EventMetadata & {
   type: "REACTION_OPPORTUNITY";
   playerId: PlayerId; // The player who can react
-  triggeringPlayer: PlayerId; // The player who triggered this (was: attacker)
+  triggeringPlayerId: PlayerId; // The player who triggered this (was: attacker)
   triggeringCard: CardName; // The card that triggered this (was: attackCard)
   triggerType: import("../data/cards").ReactionTrigger; // on_attack, on_gain, etc.
   availableReactions: CardName[];
