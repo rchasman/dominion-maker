@@ -41,6 +41,41 @@ function isCardEvent(
 }
 
 /**
+ * Reorder children of buy-card log entries so that:
+ * 1. Resource spending (use-buys, spend-coins) comes first
+ * 2. gain-card comes last
+ */
+function reorderBuyCardChildren(logs: LogEntry[]): LogEntry[] {
+  return logs.map(log => {
+    if (log.type === "buy-card" && log.children) {
+      const gainCard = log.children.find(c => c.type === "gain-card");
+      const spending = log.children.filter(
+        c => c.type === "use-buys" || c.type === "spend-coins",
+      );
+      const others = log.children.filter(
+        c =>
+          c.type !== "gain-card" &&
+          c.type !== "use-buys" &&
+          c.type !== "spend-coins",
+      );
+
+      return {
+        ...log,
+        children: [
+          ...spending,
+          ...others,
+          ...(gainCard ? [gainCard] : []),
+        ],
+      };
+    }
+    if (log.children) {
+      return { ...log, children: reorderBuyCardChildren(log.children) };
+    }
+    return log;
+  });
+}
+
+/**
  * Build nested log entries from events using causality chains.
  * Root events become top-level entries, effects nest under their causes.
  * Aggregates consecutive identical card operations (draw/discard/trash).
@@ -105,7 +140,7 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
     { logMap: new Map(), rootLogs: [], currentPlayerId: "human" },
   );
 
-  return rootLogs;
+  return reorderBuyCardChildren(rootLogs);
 }
 
 /**
