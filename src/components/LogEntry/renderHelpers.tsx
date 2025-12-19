@@ -57,13 +57,14 @@ export function getAggregatedCount(entry: {
     : 1;
 }
 
-// Helper to render player name prefix (only shown at depth 0, omitted when nested)
+// Helper to render player name prefix (omitted when nested and same player)
 export function renderPlayerPrefix(
   playerId: PlayerId,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ): ComponentChildren {
-  // Only show player name for top-level entries (depth 0 or undefined)
-  if (depth && depth > 0) {
+  // Only omit prefix if nested AND same player as root (show for attacks on different players)
+  if (depth && depth > 0 && rootPlayerId && playerId === rootPlayerId) {
     return null;
   }
   return (

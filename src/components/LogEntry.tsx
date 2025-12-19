@@ -40,6 +40,7 @@ interface LogEntryProps {
   parentPrefix?: string;
   viewer?: "human" | "ai";
   gameMode?: GameMode;
+  rootPlayerId?: PlayerId;
 }
 
 function getInitials(name: string): string {
@@ -179,9 +180,10 @@ function renderDrawCards(
   entry: Extract<LogEntryType, { type: "draw-cards" }>,
   viewer: string,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ) {
   const isOpponent = entry.playerId !== viewer;
-  const playerPrefix = renderPlayerPrefix(entry.playerId, depth);
+  const playerPrefix = renderPlayerPrefix(entry.playerId, depth, rootPlayerId);
 
   if (isOpponent) {
     return (
@@ -221,10 +223,11 @@ function renderDrawCards(
 function renderGainCard(
   entry: Extract<LogEntryType, { type: "gain-card" }>,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ) {
   const count = getAggregatedCount(entry);
   const suffix = count > 1 ? ` x${count}` : "";
-  const playerPrefix = renderPlayerPrefix(entry.playerId, depth);
+  const playerPrefix = renderPlayerPrefix(entry.playerId, depth, rootPlayerId);
 
   const cardDef = CARDS[entry.card];
   const isVictory =
@@ -259,8 +262,9 @@ function renderGainCard(
 function renderDiscardCards(
   entry: Extract<LogEntryType, { type: "discard-cards" }>,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ) {
-  const playerPrefix = renderPlayerPrefix(entry.playerId, depth);
+  const playerPrefix = renderPlayerPrefix(entry.playerId, depth, rootPlayerId);
 
   if (entry.cards) {
     const aggregated = entry as typeof entry & {
@@ -291,8 +295,9 @@ function renderDiscardCards(
 function renderTrashCard(
   entry: Extract<LogEntryType, { type: "trash-card" }>,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ) {
-  const playerPrefix = renderPlayerPrefix(entry.playerId, depth);
+  const playerPrefix = renderPlayerPrefix(entry.playerId, depth, rootPlayerId);
 
   if (entry.cards) {
     const cardCounts = getCardCounts(entry.cards);
@@ -326,10 +331,11 @@ function renderTrashCard(
 function renderShuffleDeck(
   entry: Extract<LogEntryType, { type: "shuffle-deck" }>,
   depth?: number,
+  rootPlayerId?: PlayerId,
 ) {
   return (
     <span>
-      {renderPlayerPrefix(entry.playerId, depth)}
+      {renderPlayerPrefix(entry.playerId, depth, rootPlayerId)}
       <Verb>shuffles</Verb> deck
     </span>
   );
@@ -453,31 +459,51 @@ const ENTRY_RENDERERS = {
     renderPlayAction(entry as Extract<LogEntryType, { type: "play-action" }>),
   "buy-card": (entry: LogEntryType) =>
     renderBuyCard(entry as Extract<LogEntryType, { type: "buy-card" }>),
-  "draw-cards": (entry: LogEntryType, ctx: { viewer: string; depth: number }) =>
+  "draw-cards": (
+    entry: LogEntryType,
+    ctx: { viewer: string; depth: number; rootPlayerId?: PlayerId },
+  ) =>
     renderDrawCards(
       entry as Extract<LogEntryType, { type: "draw-cards" }>,
       ctx.viewer,
       ctx.depth,
+      ctx.rootPlayerId,
     ),
-  "gain-card": (entry: LogEntryType, ctx: { depth: number }) =>
+  "gain-card": (
+    entry: LogEntryType,
+    ctx: { depth: number; rootPlayerId?: PlayerId },
+  ) =>
     renderGainCard(
       entry as Extract<LogEntryType, { type: "gain-card" }>,
       ctx.depth,
+      ctx.rootPlayerId,
     ),
-  "discard-cards": (entry: LogEntryType, ctx: { depth: number }) =>
+  "discard-cards": (
+    entry: LogEntryType,
+    ctx: { depth: number; rootPlayerId?: PlayerId },
+  ) =>
     renderDiscardCards(
       entry as Extract<LogEntryType, { type: "discard-cards" }>,
       ctx.depth,
+      ctx.rootPlayerId,
     ),
-  "trash-card": (entry: LogEntryType, ctx: { depth: number }) =>
+  "trash-card": (
+    entry: LogEntryType,
+    ctx: { depth: number; rootPlayerId?: PlayerId },
+  ) =>
     renderTrashCard(
       entry as Extract<LogEntryType, { type: "trash-card" }>,
       ctx.depth,
+      ctx.rootPlayerId,
     ),
-  "shuffle-deck": (entry: LogEntryType, ctx: { depth: number }) =>
+  "shuffle-deck": (
+    entry: LogEntryType,
+    ctx: { depth: number; rootPlayerId?: PlayerId },
+  ) =>
     renderShuffleDeck(
       entry as Extract<LogEntryType, { type: "shuffle-deck" }>,
       ctx.depth,
+      ctx.rootPlayerId,
     ),
   "end-turn": (entry: LogEntryType) =>
     renderEndTurn(entry as Extract<LogEntryType, { type: "end-turn" }>),
@@ -506,15 +532,17 @@ function LogEntryContent({
   depth = 0,
   viewer = "human",
   gameMode,
+  rootPlayerId,
 }: {
   entry: LogEntryType;
   depth?: number;
   viewer?: "human" | "ai";
   gameMode?: GameMode;
+  rootPlayerId?: PlayerId;
 }) {
   const renderer = ENTRY_RENDERERS[entry.type];
   return renderer ? (
-    renderer(entry, { depth, viewer, gameMode })
+    renderer(entry, { depth, viewer, gameMode, rootPlayerId })
   ) : (
     <span>{JSON.stringify(entry)}</span>
   );
@@ -525,6 +553,7 @@ type RenderContext = {
   viewer: "human" | "ai";
   gameMode: GameMode | undefined;
   parentPrefix: string;
+  rootPlayerId?: PlayerId;
 };
 
 function renderChildren(
@@ -539,6 +568,7 @@ function renderChildren(
       isLast={i === childrenToRender.length - 1}
       parentPrefix={ctx.parentPrefix}
       viewer={ctx.viewer}
+      rootPlayerId={ctx.rootPlayerId}
       {...(ctx.gameMode !== undefined && { gameMode: ctx.gameMode })}
     />
   ));
@@ -556,6 +586,7 @@ function renderHeaderEntry(props: {
           entry={props.entry}
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
+          rootPlayerId={props.ctx.rootPlayerId}
           {...(props.ctx.gameMode !== undefined && {
             gameMode: props.ctx.gameMode,
           })}
@@ -601,6 +632,7 @@ function renderRegularEntry(props: {
           entry={props.entry}
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
+          rootPlayerId={props.ctx.rootPlayerId}
           {...(props.ctx.gameMode !== undefined && {
             gameMode: props.ctx.gameMode,
           })}
@@ -622,6 +654,7 @@ export function LogEntry({
   parentPrefix = "",
   viewer = "human",
   gameMode,
+  rootPlayerId,
 }: LogEntryProps) {
   const childrenToRender = entry.children?.filter(
     child =>
@@ -632,7 +665,17 @@ export function LogEntry({
       ),
   );
 
-  const ctx: RenderContext = { depth, viewer, gameMode, parentPrefix };
+  // Set rootPlayerId at depth 0 from entry's playerId (if available)
+  const effectiveRootPlayerId =
+    rootPlayerId || (depth === 0 && "playerId" in entry ? entry.playerId : undefined);
+
+  const ctx: RenderContext = {
+    depth,
+    viewer,
+    gameMode,
+    parentPrefix,
+    rootPlayerId: effectiveRootPlayerId,
+  };
   const isHeader = entry.type === "turn-start" || entry.type === "game-over";
 
   return isHeader
