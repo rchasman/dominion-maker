@@ -7,6 +7,21 @@ import {
   generateSrcSet,
 } from "../lib/image-optimization";
 
+const TOOLTIP_DIMENSIONS = {
+  WIDTH_PX: 216,
+  HEIGHT_PX: 336,
+} as const;
+
+const TOOLTIP_OFFSET = {
+  X_PX: 30,
+  Y_PX: 34,
+} as const;
+
+const IMAGE_WIDTHS = {
+  SRCSET_SIZES: [200, 320, 400],
+  OPTIMIZED_WIDTH: 300,
+} as const;
+
 interface CardTooltipProps {
   cardName: CardName;
   mouseX: number;
@@ -27,14 +42,14 @@ export function CardTooltip({
     ? "/cards/Card_back.jpg"
     : getCardImageFallbackUrl(cardName);
 
-  const tooltipWidth = 216;
-  const tooltipHeight = 336;
+  const tooltipWidth = TOOLTIP_DIMENSIONS.WIDTH_PX;
+  const tooltipHeight = TOOLTIP_DIMENSIONS.HEIGHT_PX;
 
   const viewportWidth = window.innerWidth;
 
   // Position so cursor is at bottom-right, but skewed inward and upward (like gripping it)
-  const offsetX = 30; // Move cursor inward from right edge
-  const offsetY = 34; // Move cursor up from bottom edge
+  const offsetX = TOOLTIP_OFFSET.X_PX;
+  const offsetY = TOOLTIP_OFFSET.Y_PX;
 
   const rawLeft = mouseX - tooltipWidth + offsetX;
   const rawTop = mouseY - tooltipHeight + offsetY;
@@ -62,7 +77,7 @@ export function CardTooltip({
         left: `${left}px`,
         top: `${top}px`,
         pointerEvents: "none",
-        zIndex: 10000,
+        zIndex: TOOLTIP_DIMENSIONS.WIDTH_PX,
         animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
@@ -80,21 +95,24 @@ export function CardTooltip({
         <picture>
           <source
             type="image/webp"
-            srcSet={generateSrcSet(imageUrl, [200, 320, 400])}
-            sizes="216px"
+            srcSet={generateSrcSet(imageUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
+            sizes={`${TOOLTIP_DIMENSIONS.WIDTH_PX}px`}
           />
           <source
             type="image/jpeg"
-            srcSet={generateSrcSet(fallbackUrl, [200, 320, 400])}
-            sizes="216px"
+            srcSet={generateSrcSet(fallbackUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
+            sizes={`${TOOLTIP_DIMENSIONS.WIDTH_PX}px`}
           />
           <img
-            src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
+            src={getOptimizedImageUrl({
+              url: imageUrl,
+              width: IMAGE_WIDTHS.OPTIMIZED_WIDTH,
+            })}
             alt={showBack ? "Card back" : cardName}
-            width="216"
+            width={`${TOOLTIP_DIMENSIONS.WIDTH_PX}`}
             height="346"
             style={{
-              width: "216px",
+              width: `${TOOLTIP_DIMENSIONS.WIDTH_PX}px`,
               height: "auto",
               display: "block",
               borderRadius: "4px",
