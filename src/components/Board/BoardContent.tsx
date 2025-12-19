@@ -16,6 +16,12 @@ import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
 import type { ComplexDecisionData } from "./hooks";
 import { useAnimationSafe } from "../../animation";
+import { run } from "../../lib/run";
+
+const ANIMATION_DURATION = {
+  BUY_TO_DISCARD_MS: 300,
+  PLAY_TREASURE_MS: 200,
+} as const;
 
 const EventDevtools = lazy(() =>
   import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
@@ -147,13 +153,14 @@ export function BoardContent({
   const opponentPlayerName = players?.find(
     p => p.id === opponentPlayerId,
   )?.name;
-  const opponentDisplayName = opponentPlayerName
-    ? isOpponentAI
-      ? `${opponentPlayerName} (AI)`
-      : opponentPlayerName
-    : formatPlayerName(opponentPlayerId, isOpponentAI, {
-        gameState: displayState,
-      });
+  const opponentDisplayName = run(() => {
+    if (opponentPlayerName) {
+      return isOpponentAI ? `${opponentPlayerName} (AI)` : opponentPlayerName;
+    }
+    return formatPlayerName(opponentPlayerId, isOpponentAI, {
+      gameState: displayState,
+    });
+  });
 
   // Wrap buyCard to add flying animation from supply to discard
   const animatedBuyCard = useCallback(
@@ -173,7 +180,7 @@ export function BoardContent({
           cardName: card,
           fromRect,
           toZone: "discard",
-          duration: 300,
+          duration: ANIMATION_DURATION.BUY_TO_DISCARD_MS,
         });
       }
     },
@@ -220,7 +227,7 @@ export function BoardContent({
           cardName: card,
           fromRect: rect,
           toZone: "inPlay",
-          duration: 200,
+          duration: ANIMATION_DURATION.PLAY_TREASURE_MS,
         }),
       );
     }
