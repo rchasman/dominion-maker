@@ -334,7 +334,7 @@ export function ModelSettingsPanel({
                 onChange={e =>
                   onChange({
                     ...settings,
-                    dataFormat: e.target.value as "toon" | "json" | "mixed",
+                    dataFormat: (e.target as HTMLInputElement).value as "toon" | "json" | "mixed",
                   })
                 }
                 style={{ cursor: "pointer" }}
