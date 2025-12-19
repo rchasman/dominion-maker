@@ -123,22 +123,26 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                 let cardElement: Element | null = null;
                 let toZone: Zone | null = null;
                 let duration = 200;
+                let cardName: string | null = null;
 
                 if (
                   event.type === "CARD_PLAYED" &&
                   event.sourceIndex !== undefined
                 ) {
+                  cardName = event.card;
                   cardElement = document.querySelector(
                     `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`,
                   );
                   toZone = getOpponentZone("inPlay");
                 } else if (event.type === "CARD_GAINED") {
+                  cardName = event.card;
                   cardElement = document.querySelector(
                     `[data-card-id="supply-${event.card}"]`,
                   );
                   toZone = getOpponentZone(event.to);
                   duration = 300;
                 } else if (event.type === "CARD_TRASHED") {
+                  cardName = event.card;
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
                     `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
@@ -146,6 +150,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                   toZone = "trash";
                   duration = 250;
                 } else if (event.type === "CARD_RETURNED_TO_HAND") {
+                  cardName = event.card;
                   const zonePrefix = getOpponentZone(event.from);
                   cardElement = document.querySelector(
                     `[data-card-id^="${zonePrefix}-"][data-card-id$="-${event.card}"]`,
@@ -153,28 +158,28 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                   toZone = getOpponentZone("hand");
                 }
 
-                if (cardElement && toZone) {
+                if (cardElement && toZone && cardName) {
                   uiLogger.debug("Queueing opponent animation", {
-                    card: event.card,
+                    card: cardName,
                     eventType: event.type,
                     toZone,
                   });
                   await animation.queueAnimationAsync({
-                    cardName: event.card,
+                    cardName,
                     fromRect: cardElement.getBoundingClientRect(),
                     toZone,
                     duration,
                   });
-                } else if (toZone) {
+                } else if (toZone && cardName) {
                   uiLogger.warn(
                     "Card element not found for opponent animation",
                     {
-                      card: event.card,
+                      card: cardName,
                       eventType: event.type,
                       toZone,
                       selector:
-                        event.type === "CARD_PLAYED"
-                          ? `[data-card-id="hand-opponent-${event.sourceIndex}-${event.card}"]`
+                        event.type === "CARD_PLAYED" && event.sourceIndex !== undefined
+                          ? `[data-card-id="hand-opponent-${event.sourceIndex}-${cardName}"]`
                           : undefined,
                     },
                   );
