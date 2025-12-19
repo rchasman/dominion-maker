@@ -404,8 +404,9 @@ describe("Event Application - Card Movement", () => {
 
     const newState = applyEvent(state, event);
 
-    // Reveal is a log event only
-    expect(newState.log.length).toBeGreaterThan(state.log.length);
+    // CARD_REVEALED is logged via event-based log (buildLogFromEvents), not state.log
+    // The event should return state unchanged
+    expect(newState).toBe(state);
   });
 
   it("should apply DECK_SHUFFLED", () => {
