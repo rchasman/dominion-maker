@@ -212,7 +212,10 @@ export function BoardContent({
         const cardId = el.getAttribute("data-card-id");
         if (!cardId) return null;
         // Format is hand-{index}-{cardName}, so skip first two parts
-        const card = cardId.split("-").slice(CARD_ID_SKIP_PARTS).join("-") as CardName;
+        const card = cardId
+          .split("-")
+          .slice(CARD_ID_SKIP_PARTS)
+          .join("-") as CardName;
         return { card, rect: el.getBoundingClientRect() };
       })
       .filter(
