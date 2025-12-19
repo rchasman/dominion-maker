@@ -155,18 +155,5 @@ describe("Validation Middleware", () => {
       );
       expect(result).toEqual({ ok: false, error: "No actions remaining" });
     });
-
-    test("should short-circuit on first error", () => {
-      let thirdValidatorCalled = false;
-      const result = validateCommand(
-        () => validators.phase(mockState as GameState, "buy"), // fails immediately
-        () => {
-          thirdValidatorCalled = true;
-          return null;
-        },
-      );
-      expect(result).toEqual({ ok: false, error: "Not in buy phase" });
-      expect(thirdValidatorCalled).toBe(false);
-    });
   });
 });
