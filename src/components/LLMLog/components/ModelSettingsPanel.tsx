@@ -167,16 +167,6 @@ export function ModelSettingsPanel({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const typingTimeoutRef = useRef<number>();
 
-  // Ensure dataFormat has a default value
-  const dataFormat = settings.dataFormat || "toon";
-
-  // Ensure dataFormat is set to default on mount if undefined
-  useEffect(() => {
-    if (!settings.dataFormat) {
-      onChange({ ...settings, dataFormat: "toon" });
-    }
-  }, [settings, onChange]);
-
   // Load conversation from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -286,76 +276,6 @@ export function ModelSettingsPanel({
       />
 
       <ModelPicker settings={settings} onChange={onChange} />
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--space-2)",
-        }}
-      >
-        <label
-          style={{
-            fontSize: "0.6875rem",
-            fontWeight: 600,
-            color: "var(--color-text-secondary)",
-            textTransform: "uppercase",
-          }}
-        >
-          Data Format
-        </label>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-3)",
-          }}
-        >
-          {(["toon", "json", "mixed"] as const).map(format => (
-            <label
-              key={format}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-1)",
-                cursor: "pointer",
-                fontSize: "0.8125rem",
-                color:
-                  dataFormat === format
-                    ? "var(--color-text-primary)"
-                    : "var(--color-text-secondary)",
-              }}
-            >
-              <input
-                type="radio"
-                name="dataFormat"
-                value={format}
-                checked={dataFormat === format}
-                onChange={e =>
-                  onChange({
-                    ...settings,
-                    dataFormat: (e.target as HTMLInputElement).value as
-                      | "toon"
-                      | "json"
-                      | "mixed",
-                  })
-                }
-                style={{ cursor: "pointer" }}
-              />
-              {format === "mixed" ? "Mixed (A/B test)" : format.toUpperCase()}
-            </label>
-          ))}
-        </div>
-        <div
-          style={{
-            fontSize: "0.625rem",
-            color: "var(--color-text-tertiary)",
-            lineHeight: 1.4,
-          }}
-        >
-          Format for game state context: TOON (compact), JSON (verbose), or
-          Mixed (alternating for comparison)
-        </div>
-      </div>
 
       <div
         style={{

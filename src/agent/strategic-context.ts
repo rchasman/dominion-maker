@@ -121,12 +121,10 @@ function extractRecentTurns(
  * Returns TOON-encoded compact turn summaries
  *
  * @param state - Current game state
- * @param format - Output format (toon or json)
  * @param turnCount - Number of turns to include (default 3 for decisions, use 7 for strategy)
  */
 export function formatTurnHistoryForAnalysis(
   state: GameState,
-  format: "json" | "toon" = "toon",
   turnCount = DEFAULT_LAST_N_TURNS,
 ): string {
   const recentTurns = extractRecentTurns(state.log, turnCount);
@@ -144,10 +142,7 @@ export function formatTurnHistoryForAnalysis(
     bought: turn.cardsBought.length > 0 ? turn.cardsBought : null,
   }));
 
-  const content =
-    format === "toon"
-      ? encodeToon(compactTurns)
-      : JSON.stringify(compactTurns, null, JSON_INDENT_SPACES);
+  const content = encodeToon(compactTurns);
 
   return `RECENT TURN HISTORY:\n${content}`;
 }
@@ -161,14 +156,13 @@ interface PlayerStrategyAnalysis {
 const JSON_INDENT_SPACES = 2;
 
 /**
- * Builds structured game facts encoded based on format
+ * Builds structured game facts encoded in TOON format
  * Only includes strategic insights - removes data already present in game state
  */
 export function buildStrategicContext(
   state: GameState,
   strategySummary?: string,
   customStrategy?: string,
-  format: "json" | "toon" = "toon",
 ): string {
   // Strategic insights only - AI strategy analysis
   const facts: StrategicFacts = {};
@@ -197,7 +191,5 @@ export function buildStrategicContext(
     facts.strategyOverride = customStrategy.trim();
   }
 
-  return format === "toon"
-    ? encodeToon(facts)
-    : JSON.stringify(facts, null, JSON_INDENT_SPACES);
+  return encodeToon(facts);
 }

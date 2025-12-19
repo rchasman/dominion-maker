@@ -7,7 +7,6 @@ import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
-import { run } from "../lib/run";
 import {
   AVAILABLE_MODELS,
   ALL_FAST_MODELS,
@@ -79,7 +78,6 @@ type ConsensusConfig = {
   logger?: LLMLogger;
   strategySummary?: string;
   customStrategy?: string;
-  dataFormat?: "toon" | "json" | "mixed";
 };
 
 // Configuration for AI turn operations
@@ -89,7 +87,6 @@ type AITurnConfig = {
   onStateChange?: (state: GameState) => void;
   strategySummary?: string;
   customStrategy?: string;
-  dataFormat?: "toon" | "json" | "mixed";
 };
 
 // Execute a single model and handle its result
@@ -117,7 +114,7 @@ const executeModel = (context: ModelExecutionContext): void => {
   logger?.({
     type: "consensus-model-pending",
     message: `${provider} started`,
-    data: { provider, index, startTime: uiStartTime, format: context.format },
+    data: { provider, index, startTime: uiStartTime },
   });
 
   const modelAbortController = new AbortController();
@@ -142,12 +139,11 @@ const executeModel = (context: ModelExecutionContext): void => {
     signal: modelAbortController.signal,
     ...(strategySummary !== undefined && { strategySummary }),
     ...(customStrategy !== undefined && { customStrategy }),
-    format: context.format,
     ...(actionId !== undefined && { actionId }),
   })
-    .then(({ action, format }) => {
+    .then(({ action }) => {
       clearTimeout(timeoutId);
-      return handleModelSuccess(action, format, handlerParams);
+      return handleModelSuccess(action, "toon", handlerParams);
     })
     .catch(error => {
       clearTimeout(timeoutId);
@@ -171,7 +167,6 @@ type RunModelsParams = {
   customStrategy?: string;
   logger?: LLMLogger;
   aheadByK: number;
-  dataFormat: "toon" | "json" | "mixed";
   actionId: string;
 };
 
@@ -194,7 +189,6 @@ const runModelsInParallel = async (
     customStrategy,
     logger,
     aheadByK,
-    dataFormat,
     actionId,
   } = params;
 
@@ -214,14 +208,6 @@ const runModelsInParallel = async (
     const state = { resolved: false, completedCount: 0 };
 
     providers.map((provider, index) => {
-      const modelFormat = run(() => {
-        if (dataFormat === "mixed") {
-          const TWO = 2;
-          return index % TWO === 0 ? "json" : "toon";
-        }
-        return dataFormat;
-      });
-
       return executeModel({
         provider,
         index,
@@ -229,7 +215,7 @@ const runModelsInParallel = async (
         ...(humanChoice !== undefined && { humanChoice }),
         ...(strategySummary !== undefined && { strategySummary }),
         ...(customStrategy !== undefined && { customStrategy }),
-        format: modelFormat,
+        format: "toon",
         actionId,
         abortController,
         voteGroups,
@@ -281,7 +267,6 @@ async function handleBatchConsensus(
     logger?: LLMLogger;
     strategySummary?: string;
     customStrategy?: string;
-    dataFormat: "toon" | "json" | "mixed";
     actionId: string;
     overallStart: number;
   },
@@ -310,7 +295,6 @@ async function handleBatchConsensus(
     const { results, earlyConsensus, voteGroups, completedResults } =
       await runModelsInParallel({
         providers: config.providers,
-        dataFormat: config.dataFormat,
         ...(config.humanChoice !== undefined && {
           humanChoice: config.humanChoice,
         }),
@@ -424,7 +408,6 @@ async function handleMultiActionConsensus(
     logger?: LLMLogger;
     strategySummary?: string;
     customStrategy?: string;
-    dataFormat: "toon" | "json" | "mixed";
     actionId: string;
     overallStart: number;
   },
@@ -480,7 +463,6 @@ async function handleMultiActionConsensus(
       const { results, earlyConsensus, voteGroups } = await runModelsInParallel(
         {
           providers: config.providers,
-          dataFormat: config.dataFormat,
           ...(config.humanChoice !== undefined && {
             humanChoice: config.humanChoice,
           }),
@@ -572,7 +554,6 @@ export async function advanceGameStateWithConsensus(
     logger,
     strategySummary,
     customStrategy,
-    dataFormat = "toon",
   } = config;
   const currentState = engine.state;
   const overallStart = performance.now();
@@ -589,7 +570,6 @@ export async function advanceGameStateWithConsensus(
     ...(logger !== undefined ? { logger } : {}),
     ...(strategySummary !== undefined ? { strategySummary } : {}),
     ...(customStrategy !== undefined ? { customStrategy } : {}),
-    dataFormat,
     actionId,
     overallStart,
   };
@@ -691,7 +671,6 @@ export async function advanceGameStateWithConsensus(
       ...(customStrategy !== undefined && { customStrategy }),
       ...(logger !== undefined && { logger }),
       aheadByK,
-      dataFormat,
       actionId,
     });
 
@@ -739,14 +718,8 @@ export async function runAITurnWithConsensus(
   playerId: PlayerId,
   config: AITurnConfig,
 ): Promise<void> {
-  const {
-    providers,
-    logger,
-    onStateChange,
-    strategySummary,
-    customStrategy,
-    dataFormat = "mixed",
-  } = config;
+  const { providers, logger, onStateChange, strategySummary, customStrategy } =
+    config;
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
@@ -775,7 +748,6 @@ export async function runAITurnWithConsensus(
         ...(logger !== undefined && { logger }),
         ...(strategySummary !== undefined && { strategySummary }),
         ...(customStrategy !== undefined && { customStrategy }),
-        dataFormat,
       });
 
       // Handle AI pending decisions
@@ -795,7 +767,6 @@ export async function runAITurnWithConsensus(
           ...(logger !== undefined && { logger }),
           ...(strategySummary !== undefined && { strategySummary }),
           ...(customStrategy !== undefined && { customStrategy }),
-          dataFormat,
         });
         onStateChange?.(engine.state);
 

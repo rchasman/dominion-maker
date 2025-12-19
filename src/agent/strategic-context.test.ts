@@ -281,8 +281,8 @@ describe("buildStrategicContext", () => {
         playerId: i % 2 === 0 ? "human" : "ai",
       }));
 
-      const formatted3 = formatTurnHistoryForAnalysis(state, "toon", 3);
-      const formatted7 = formatTurnHistoryForAnalysis(state, "toon", 7);
+      const formatted3 = formatTurnHistoryForAnalysis(state, 3);
+      const formatted7 = formatTurnHistoryForAnalysis(state, 7);
 
       // 7-turn window should be longer
       expect(formatted7.length).toBeGreaterThan(formatted3.length);

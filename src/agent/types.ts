@@ -11,7 +11,6 @@ export interface ModelSettings {
   enabledModels: Set<ModelProvider>;
   consensusCount: number;
   customStrategy?: string;
-  dataFormat: "toon" | "json" | "mixed";
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
@@ -23,7 +22,6 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   ]),
   consensusCount: 12,
   customStrategy: "",
-  dataFormat: "toon",
 };
 
 // Available unique models

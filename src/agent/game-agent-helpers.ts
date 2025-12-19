@@ -131,7 +131,6 @@ type GenerateActionParams = {
   signal?: AbortSignal;
   strategySummary?: string;
   customStrategy?: string;
-  format?: "json" | "toon";
   actionId?: string; // For grouping consensus votes in devtools
 };
 
@@ -140,7 +139,7 @@ type GenerateActionParams = {
  */
 export async function generateActionViaBackend(
   params: GenerateActionParams,
-): Promise<{ action: Action; format: "json" | "toon" }> {
+): Promise<{ action: Action }> {
   const {
     provider,
     currentState,
@@ -148,7 +147,6 @@ export async function generateActionViaBackend(
     signal,
     strategySummary,
     customStrategy,
-    format,
     actionId,
   } = params;
 
@@ -163,7 +161,6 @@ export async function generateActionViaBackend(
       legalActions,
       strategySummary,
       customStrategy,
-      format,
     },
     {
       fetch: { signal },
@@ -185,7 +182,6 @@ export async function generateActionViaBackend(
 
   return {
     action: data.action,
-    format: data.format || "toon",
   };
 }
 

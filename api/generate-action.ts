@@ -208,7 +208,6 @@ interface RequestBody {
   legalActions?: unknown[];
   strategySummary?: string;
   customStrategy?: string;
-  format?: "json" | "toon";
   actionId?: string; // For grouping consensus votes in devtools
 }
 
@@ -350,7 +349,6 @@ function buildUserMessage(params: {
   recentTurnsStr: string;
   legalActions: unknown[];
   humanChoice?: { selectedCards: string[] };
-  format: "json" | "toon";
 }): string {
   const {
     strategicContext,
@@ -358,47 +356,24 @@ function buildUserMessage(params: {
     recentTurnsStr,
     legalActions,
     humanChoice,
-    format,
   } = params;
 
   // Optimize state by converting arrays to counts
   const optimizedState = optimizeStateForAI(currentState);
 
   // Build structured prompt sections: state → strategy → history → options → decision
-  const stateStr =
-    format === "toon"
-      ? encodeToon(optimizedState)
-      : JSON.stringify(optimizedState, null, JSON_INDENT_SPACES);
+  const stateStr = encodeToon(optimizedState);
 
   const turnHistorySection =
     currentState.turnHistory && currentState.turnHistory.length > 0
-      ? [
-          `ACTIONS TAKEN THIS TURN:\n${
-            format === "toon"
-              ? encodeToon(currentState.turnHistory)
-              : JSON.stringify(
-                  currentState.turnHistory,
-                  null,
-                  JSON_INDENT_SPACES,
-                )
-          }`,
-        ]
+      ? [`ACTIONS TAKEN THIS TURN:\n${encodeToon(currentState.turnHistory)}`]
       : [];
 
   const humanChoiceSection = humanChoice
-    ? [
-        `Human chose: ${
-          format === "toon"
-            ? encodeToon(humanChoice.selectedCards)
-            : JSON.stringify(humanChoice.selectedCards)
-        }`,
-      ]
+    ? [`Human chose: ${encodeToon(humanChoice.selectedCards)}`]
     : [];
 
-  const legalActionsContent =
-    format === "toon"
-      ? encodeToon(legalActions)
-      : JSON.stringify(legalActions, null, JSON_INDENT_SPACES);
+  const legalActionsContent = encodeToon(legalActions);
 
   const legalActionsSection =
     legalActions.length > 0 ? [`LEGAL ACTIONS:\n${legalActionsContent}`] : [];
@@ -427,7 +402,6 @@ async function processGenerationRequest(
     legalActions,
     strategySummary,
     customStrategy,
-    format = "toon",
     actionId,
   } = body;
   const provider = bodyProvider;
@@ -452,13 +426,12 @@ async function processGenerationRequest(
     : gateway(modelName);
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
-  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState, format);
+  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
 
   const strategicContext = buildStrategicContext(
     currentState,
     strategySummary,
     customStrategy,
-    format,
   );
 
   const userMessage = buildUserMessage({
@@ -467,7 +440,6 @@ async function processGenerationRequest(
     recentTurnsStr,
     legalActions: legalActions || [],
     ...(humanChoice ? { humanChoice } : {}),
-    format,
   });
 
   // Use generateObject with structured output for all models
@@ -481,9 +453,7 @@ async function processGenerationRequest(
       ...getProviderOptions(provider),
     });
 
-    return res
-      .status(HTTP_OK)
-      .json({ action: result.object, strategySummary, format });
+    return res.status(HTTP_OK).json({ action: result.object, strategySummary });
   } catch (err) {
     const error = err as Error & { text?: string; response?: unknown };
     apiLogger.error(`${provider} structured output failed: ${error.message}`);
