@@ -25,7 +25,7 @@ function processTriggers(
   triggerType: TriggerType,
   context: TriggerContext,
 ) {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
   if (!playerState) return [];
 
   return playerState.inPlay.flatMap(inPlayCard => {
@@ -59,7 +59,10 @@ export function handlePlayAction(
 
   // Root cause event - playing the card
   const rootEventId = generateEventId();
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) {
+    return { ok: false, error: "Player not found" };
+  }
   const sourceIndex = playerState.hand.indexOf(card);
 
   const baseEvents = [
@@ -156,7 +159,10 @@ export function handlePlayTreasure(
     return validationError;
   }
 
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) {
+    return { ok: false, error: "Player not found" };
+  }
   const sourceIndex = playerState.hand.indexOf(card);
 
   // Root cause event - playing the treasure
@@ -209,7 +215,7 @@ export function handlePlayAllTreasures(
   state: GameState,
   playerId: PlayerId,
 ): CommandResult {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
@@ -251,7 +257,7 @@ export function handleUnplayTreasure(
     return { ok: false, error: "Not a treasure card" };
   }
 
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
   if (!playerState) {
     return { ok: false, error: "Player not found" };
   }
