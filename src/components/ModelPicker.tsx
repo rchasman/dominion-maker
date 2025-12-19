@@ -1,7 +1,6 @@
 import type { ModelSettings } from "../agent/types";
 import { AVAILABLE_MODELS } from "../agent/types";
 import { MODELS, type ModelConfig, type ModelProvider } from "../config/models";
-import { run } from "../lib/run";
 
 interface ModelPickerProps {
   settings: ModelSettings;
@@ -159,16 +158,6 @@ const ModelCheckbox = ({
 }: ModelCheckboxProps) => {
   const modelConfig = MODELS.find(m => m.id === model);
 
-  const metaInfo = modelConfig
-    ? run(() => {
-        const parts = [
-          `$${modelConfig.inputPrice}/$${modelConfig.outputPrice}`,
-          ...(modelConfig.speed ? [`${modelConfig.speed} tok/s`] : []),
-        ];
-        return parts.join(" • ");
-      })
-    : null;
-
   return (
     <label
       style={{
@@ -203,14 +192,30 @@ const ModelCheckbox = ({
         <span style={{ color: "var(--color-text-primary)" }}>
           {getModelDisplayName(model)}
         </span>
-        {metaInfo && (
+        {modelConfig && (
           <span
             style={{
               fontSize: "0.5625rem",
-              color: "var(--color-text-tertiary)",
+              display: "flex",
+              gap: "0.25rem",
+              alignItems: "center",
             }}
           >
-            {metaInfo}
+            <span style={{ color: "#86efac" }}>
+              ${modelConfig.inputPrice}
+            </span>
+            <span style={{ color: "var(--color-text-tertiary)" }}>/</span>
+            <span style={{ color: "#fb923c" }}>
+              ${modelConfig.outputPrice}
+            </span>
+            {modelConfig.speed && (
+              <>
+                <span style={{ color: "var(--color-text-tertiary)" }}>•</span>
+                <span style={{ color: "#93c5fd" }}>
+                  {modelConfig.speed} tok/s
+                </span>
+              </>
+            )}
           </span>
         )}
       </div>
