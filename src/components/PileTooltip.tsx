@@ -7,9 +7,26 @@ import {
   generateSrcSet,
 } from "../lib/image-optimization";
 
-const MAX_TOOLTIP_HEIGHT = 500;
-const CARD_HEIGHT_ESTIMATE = 80;
-const TOOLTIP_PADDING = 100;
+const TOOLTIP_DIMENSIONS = {
+  MAX_HEIGHT_PX: 500,
+  WIDTH_PX: 320,
+} as const;
+
+const CARD_SIZING = {
+  HEIGHT_ESTIMATE_PX: 80,
+  PADDING_PX: 100,
+} as const;
+
+const IMAGE_WIDTHS = {
+  SRCSET_SIZES: [200, 300, 400],
+  OPTIMIZED_WIDTH: 300,
+  DISPLAY_WIDTH: 200,
+  DISPLAY_HEIGHT: 320,
+} as const;
+
+const Z_INDEX = {
+  TOOLTIP: 10000,
+} as const;
 
 interface PileTooltipProps {
   cards: CardName[];
@@ -91,19 +108,22 @@ function CardImage({
       <picture>
         <source
           type="image/webp"
-          srcSet={generateSrcSet(imageUrl, [200, 300, 400])}
+          srcSet={generateSrcSet(imageUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
           sizes="var(--card-width-medium)"
         />
         <source
           type="image/jpeg"
-          srcSet={generateSrcSet(fallbackUrl, [200, 300, 400])}
+          srcSet={generateSrcSet(fallbackUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
           sizes="var(--card-width-medium)"
         />
         <img
-          src={getOptimizedImageUrl({ url: imageUrl, width: 300 })}
+          src={getOptimizedImageUrl({
+            url: imageUrl,
+            width: IMAGE_WIDTHS.OPTIMIZED_WIDTH,
+          })}
           alt={card}
-          width="200"
-          height="320"
+          width={`${IMAGE_WIDTHS.DISPLAY_WIDTH}`}
+          height={`${IMAGE_WIDTHS.DISPLAY_HEIGHT}`}
           style={{
             width: "var(--card-width-medium)",
             height: "auto",
@@ -281,10 +301,11 @@ export function PileTooltip({
   const knownUniqueCards = uniqueCards.filter(card => knownSet.has(card));
   const unknownCards = cards.filter(card => !knownSet.has(card));
 
-  const tooltipWidth = 320;
+  const tooltipWidth = TOOLTIP_DIMENSIONS.WIDTH_PX;
   const tooltipHeight = Math.min(
-    MAX_TOOLTIP_HEIGHT,
-    uniqueCards.length * CARD_HEIGHT_ESTIMATE + TOOLTIP_PADDING,
+    TOOLTIP_DIMENSIONS.MAX_HEIGHT_PX,
+    uniqueCards.length * CARD_SIZING.HEIGHT_ESTIMATE_PX +
+      CARD_SIZING.PADDING_PX,
   );
 
   const { left, top } = calculatePosition(
@@ -304,7 +325,7 @@ export function PileTooltip({
         left: `${left}px`,
         top: `${top}px`,
         pointerEvents: "none",
-        zIndex: 10000,
+        zIndex: Z_INDEX.TOOLTIP,
         animation: "boing 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
       }}
     >
