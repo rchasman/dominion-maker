@@ -628,13 +628,13 @@ export async function advanceGameStateWithConsensus(
   // If in buy phase, show detailed supply info
   if (currentState.phase === "buy" && currentState.buys > 0) {
     const buyableCards = legalActions
-      .filter((a): a is Extract<Action, { type: "buy_card" }> => a.type === "buy_card")
-      .filter(a => a.card != null)
+      .filter((a) => a.type === "buy_card" && "card" in a && a.card != null)
       .map(a => {
-        const card = a.card!;
-        const cost = CARDS[card]?.cost || 0;
-        return `${card}($${cost})`;
+        if (a.type !== "buy_card" || !("card" in a) || a.card == null) return "";
+        const cost = CARDS[a.card]?.cost || 0;
+        return `${a.card}($${cost})`;
       })
+      .filter(Boolean)
       .join(", ");
     agentLogger.info(
       `Buy phase: $${currentState.coins} available | Buyable: ${buyableCards}`,
