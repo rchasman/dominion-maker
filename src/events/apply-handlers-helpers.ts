@@ -283,11 +283,28 @@ export function applyRevealAndShuffle(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
+    // Check if the last log entry is also a reveal from the same player
+    const lastLog = state.log[state.log.length - 1];
+    const isConsecutiveReveal =
+      lastLog?.type === "text" &&
+      typeof lastLog.message === "string" &&
+      lastLog.message.includes("draws to reveal");
+
+    if (isConsecutiveReveal && lastLog.message.startsWith(event.playerId)) {
+      // Append to existing reveal message
+      const updatedMessage = `${lastLog.message}, ${event.card}`;
+      return {
+        ...state,
+        log: [...state.log.slice(0, -1), { type: "text", message: updatedMessage }],
+      };
+    }
+
+    // First reveal from this player
     return {
       ...state,
       log: [
         ...state.log,
-        { type: "text", message: `${event.playerId} reveals ${event.card}` },
+        { type: "text", message: `${event.playerId} draws to reveal ${event.card}` },
       ],
     };
   }
