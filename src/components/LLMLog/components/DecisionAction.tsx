@@ -62,13 +62,18 @@ export function DecisionAction({
         votingData={
           currentDecision.votingEntry.data as unknown as ConsensusVotingData
         }
-        timingData={currentDecision.timingEntry?.data as TimingData | undefined}
-        modelStatuses={currentDecision.modelStatuses}
-        gameStateData={
-          currentDecision.votingEntry.data?.gameState as
-            | GameStateSnapshot
-            | undefined
-        }
+        {...(currentDecision.timingEntry?.data !== undefined && {
+          timingData: currentDecision.timingEntry.data as TimingData,
+        })}
+        {...(currentDecision.modelStatuses !== undefined && {
+          modelStatuses: currentDecision.modelStatuses,
+        })}
+        {...((currentDecision.votingEntry.data?.gameState as
+          | GameStateSnapshot
+          | undefined) !== undefined && {
+          gameStateData: currentDecision.votingEntry.data
+            ?.gameState as GameStateSnapshot,
+        })}
         totalModels={
           Number(
             (
@@ -79,13 +84,13 @@ export function DecisionAction({
           ) || 0
         }
         now={now}
-        legalActions={
-          (
-            currentDecision.votingEntry.data?.gameState as
-              | GameStateSnapshot
-              | undefined
-          )?.legalActions
-        }
+        {...(currentDecision.votingEntry.data?.gameState !== undefined &&
+          (currentDecision.votingEntry.data.gameState as GameStateSnapshot)
+            .legalActions !== undefined && {
+            legalActions: (
+              currentDecision.votingEntry.data.gameState as GameStateSnapshot
+            ).legalActions,
+          })}
       />
     </>
   );

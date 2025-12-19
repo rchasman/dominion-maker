@@ -5,10 +5,9 @@
  */
 
 import { describe, it, expect, beforeEach } from "bun:test";
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState } from "../types/game-state";
 import { handleCommand } from "../commands/handle";
 import { resetEventCounter } from "../events/id-generator";
-import type { GameEvent } from "../events/types";
 import { applyEvents } from "../events/apply";
 
 function createTestState(): GameState {

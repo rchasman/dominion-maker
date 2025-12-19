@@ -12,7 +12,6 @@ import type {
   ActiveGame,
   LobbyClientMessage,
   LobbyServerMessage,
-  GameUpdateMessage,
   PlayerId,
 } from "./protocol";
 import { generateRoomId } from "../lib/room-id";

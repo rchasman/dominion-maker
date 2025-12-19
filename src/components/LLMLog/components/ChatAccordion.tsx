@@ -12,12 +12,6 @@ interface ChatMessageData {
   timestamp: number;
 }
 
-function generateId(): string {
-  const ID_RADIX = 36;
-  const ID_SLICE_START = 2;
-  const ID_SLICE_END = 9;
-  return `${Date.now()}-${Math.random().toString(ID_RADIX).slice(ID_SLICE_START, ID_SLICE_END)}`;
-}
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
@@ -226,7 +220,7 @@ function ChatInput({
 const EXPANDED_KEY = "dominion-chat-expanded";
 
 export function ChatAccordion() {
-  const { localPlayerName = "You", chatMessages = [], sendChat } = useGame();
+  const { chatMessages = [], sendChat } = useGame();
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem(EXPANDED_KEY);
@@ -241,15 +235,9 @@ export function ChatAccordion() {
   const handleSend = useCallback(
     (content: string) => {
       if (!sendChat) return;
-      const message: ChatMessageData = {
-        id: generateId(),
-        senderName: localPlayerName,
-        content: content.trim(),
-        timestamp: Date.now(),
-      };
-      sendChat(message);
+      sendChat(content.trim());
     },
-    [sendChat, localPlayerName],
+    [sendChat],
   );
 
   // Don't render if no sendChat (not in multiplayer context)

@@ -7,10 +7,9 @@
 
 import { useState, useEffect, useRef, useMemo } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import type { GameState, CardName, PlayerId } from "../types/game-state";
+import type { GameState } from "../types/game-state";
 import type { DominionEngine } from "../engine";
-import type { GameEvent, DecisionChoice } from "../events/types";
-import type { CommandResult } from "../commands/types";
+import type { GameEvent } from "../events/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
 import { abortOngoingConsensus, type ModelSettings } from "../agent/game-agent";
@@ -31,50 +30,6 @@ import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
 import { BoardWithProviders } from "../components/Board/BoardWithProviders";
-
-export interface GameContextValue {
-  gameState: GameState | null;
-  events: GameEvent[];
-  gameMode: GameMode;
-  isProcessing: boolean;
-  isLoading: boolean;
-  modelSettings: ModelSettings;
-  playerStrategies: PlayerStrategyData;
-  hasPlayableActions: boolean;
-  hasTreasuresInHand: boolean;
-  strategy: GameStrategy;
-  localPlayerId?: string | null; // For multiplayer: which player slot you're in
-  localPlayerName?: string; // Display name of the local player
-  isSpectator?: boolean; // Whether the current user is spectating (not playing)
-  spectatorCount?: number; // Number of spectators watching the game
-  players?: Array<{ name: string; playerId: PlayerId }>; // All players in the game (for multiplayer)
-  chatMessages?: Array<{
-    id: string;
-    senderName: string;
-    content: string;
-    timestamp: number;
-  }>;
-  sendChat?: (message: {
-    id: string;
-    senderName: string;
-    content: string;
-    timestamp: number;
-  }) => void;
-  setGameMode: (mode: GameMode) => void;
-  setModelSettings: (settings: ModelSettings) => void;
-  startGame: () => void;
-  playAction: (card: CardName) => CommandResult;
-  playTreasure: (card: CardName) => CommandResult;
-  unplayTreasure: (card: CardName) => CommandResult;
-  playAllTreasures: () => CommandResult;
-  buyCard: (card: CardName) => CommandResult;
-  endPhase: () => CommandResult;
-  submitDecision: (choice: DecisionChoice) => CommandResult;
-  revealReaction: (card: CardName) => CommandResult;
-  declineReaction: () => CommandResult;
-  requestUndo: (toEventId: string) => void;
-  getStateAtEvent: (eventId: string) => GameState;
-}
 
 import type { PlayerStrategyData } from "../types/player-strategy";
 
