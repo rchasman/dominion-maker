@@ -141,6 +141,9 @@ export default defineConfig([
     files: ["**/*.test.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
+        projectService: {
+          allowDefaultProject: ["*.test.ts", "*.test.tsx"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -150,7 +153,9 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
       // Test files often need more flexibility
+      "@typescript-eslint/no-non-null-assertion": "off",
       "max-lines-per-function": "off",
       "max-lines": "off",
       "max-nested-callbacks": ["error", 5],
