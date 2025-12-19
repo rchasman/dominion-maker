@@ -141,7 +141,6 @@ export default defineConfig([
     files: ["**/*.test.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
-        project: "./tsconfig.test.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
