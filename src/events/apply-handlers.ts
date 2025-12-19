@@ -254,8 +254,9 @@ export function applyReactionEvent(
       pendingChoice: {
         choiceType: "reaction",
         playerId: reactionEvent.playerId,
-        attacker: reactionEvent.triggeringPlayerId,
-        attackCard: reactionEvent.triggeringCard,
+        triggeringPlayerId: reactionEvent.triggeringPlayerId,
+        triggeringCard: reactionEvent.triggeringCard,
+        triggerType: reactionEvent.triggerType,
         availableReactions: reactionEvent.availableReactions,
         metadata: reactionEvent.metadata,
       },
