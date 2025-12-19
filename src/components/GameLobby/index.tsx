@@ -23,6 +23,30 @@ const STORAGE_KEYS = {
   CLIENT_ID: "dominion_client_id",
 };
 
+interface ActiveGameStorage {
+  roomId: string;
+  isSpectator: boolean;
+}
+
+function parseActiveGameStorage(json: string): ActiveGameStorage | null {
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "roomId" in parsed &&
+      typeof parsed.roomId === "string" &&
+      "isSpectator" in parsed &&
+      typeof parsed.isSpectator === "boolean"
+    ) {
+      return parsed as ActiveGameStorage;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function GameLobby({ onBack }: GameLobbyProps) {
   const [screen, setScreen] = useState<Screen>("lobby");
 
@@ -49,16 +73,22 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   });
   const [roomId, setRoomId] = useState<string | null>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    return stored ? JSON.parse(stored).roomId : null;
+    if (!stored) return null;
+    const parsed = parseActiveGameStorage(stored);
+    return parsed?.roomId ?? null;
   });
-  const [isSpectator, setIsSpectator] = useState(() => {
+  const [isSpectator, setIsSpectator] = useState<boolean>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    return stored ? JSON.parse(stored).isSpectator : false;
+    if (!stored) return false;
+    const parsed = parseActiveGameStorage(stored);
+    return parsed?.isSpectator ?? false;
   });
   const [myLastGameRoomId, setMyLastGameRoomId] = useState<string | null>(
     () => {
       const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-      return stored ? JSON.parse(stored).roomId : null;
+      if (!stored) return null;
+      const parsed = parseActiveGameStorage(stored);
+      return parsed?.roomId ?? null;
     },
   );
 

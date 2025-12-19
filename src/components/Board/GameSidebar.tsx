@@ -118,7 +118,7 @@ function TurnStatusIndicator({
     return (
       <div
         style={{
-          color: getPlayerColor(activePlayer),
+          color: getPlayerColor(activePlayerId),
           fontSize: "0.75rem",
           display: "flex",
           alignItems: "center",
