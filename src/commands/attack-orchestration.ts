@@ -1,6 +1,13 @@
 /**
- * Centralized attack/reaction flow orchestration.
- * Consolidates ~200 lines of duplicated logic from handle.ts.
+ * Attack orchestration (on_attack trigger type)
+ *
+ * Example of trigger-specific orchestration that uses the generic reaction system.
+ * When extending to other triggers (on_gain, on_trash, on_discard), follow this pattern:
+ *
+ * 1. Create trigger-specific orchestration function (e.g., orchestrateGain)
+ * 2. Emit REACTION_OPPORTUNITY events with triggerType set appropriately
+ * 3. handle-reaction.ts will handle reveal/decline generically
+ * 4. Add continuation logic in continueAfterReactions() switch statement
  */
 
 import type { GameState, CardName } from "../types/game-state";
@@ -13,8 +20,8 @@ import { run } from "../lib/run";
 
 interface AttackOrchestrationConfig {
   state: GameState;
-  attacker: PlayerId;
-  attackCard: CardName;
+  attacker: PlayerId; // TODO: Consider renaming to triggeringPlayerId for consistency
+  attackCard: CardName; // TODO: Consider renaming to triggeringCard for consistency
   effect: CardEffect;
   rootEventId: string;
 }

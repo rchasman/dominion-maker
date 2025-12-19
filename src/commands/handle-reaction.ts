@@ -12,14 +12,8 @@ import { getCardEffect } from "../cards/base";
 import { getAvailableReactions } from "../cards/effect-types";
 import { isReactionChoice } from "../types/pending-choice";
 
-type ReactionMetadata = {
-  attackCard: CardName;
-  attacker: PlayerId;
-  allTargets: PlayerId[];
-  currentTargetIndex: number;
-  blockedTargets: PlayerId[];
-  originalCause: string;
-};
+// Import generic ReactionContext from shared types
+import type { ReactionContext } from "./reaction-types";
 
 /**
  * Handle REVEAL_REACTION command
@@ -57,7 +51,7 @@ export function handleRevealReaction(
     type: "REACTION_REVEALED",
     playerId,
     card,
-    triggeringCard: reaction.attackCard,
+    triggeringCard: reaction.triggeringCard,
     id: generateEventId(),
     causedBy: rootEventId,
   };
@@ -67,7 +61,7 @@ export function handleRevealReaction(
     type: "REACTION_PLAYED",
     playerId,
     card,
-    triggerEventId: metadata.originalCause,
+    triggerEventId: reaction.metadata!.originalCause,
     id: generateEventId(),
     causedBy: rootEventId,
   };
@@ -75,9 +69,9 @@ export function handleRevealReaction(
   // ATTACK_RESOLVED (blocked: true)
   const resolvedEvent: GameEvent = {
     type: "ATTACK_RESOLVED",
-    attacker: reaction.attacker,
+    attacker: reaction.triggeringPlayerId,
     target: playerId,
-    attackCard: reaction.attackCard,
+    attackCard: reaction.triggeringCard,
     blocked: true,
     id: generateEventId(),
     causedBy: rootEventId,
@@ -85,22 +79,23 @@ export function handleRevealReaction(
 
   const baseEvents: GameEvent[] = [revealedEvent, playedEvent, resolvedEvent];
 
-  // Update metadata for next target
-  const updatedMetadata: ReactionMetadata = {
-    attackCard: reaction.attackCard,
-    attacker: reaction.attacker,
-    ...metadata,
-    blockedTargets: [...metadata.blockedTargets, playerId],
+  // Update context for next target
+  const updatedContext: ReactionContext = {
+    triggeringCard: reaction.triggeringCard,
+    triggeringPlayerId: reaction.triggeringPlayerId,
+    triggerType: reaction.triggerType,
+    ...reaction.metadata!,
+    blockedTargets: [...reaction.metadata!.blockedTargets, playerId],
   };
 
   // Check if more targets need reactions
-  const nextIndex = metadata.currentTargetIndex + 1;
-  if (nextIndex < metadata.allTargets.length) {
+  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
+  if (nextIndex < reaction.metadata!.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
-      updatedMetadata,
+      updatedContext,
       nextIndex,
-      metadata.originalCause,
+      reaction.metadata!.originalCause,
     );
     const eventsWithNext = [...baseEvents, ...nextEvents];
 
@@ -113,8 +108,8 @@ export function handleRevealReaction(
       const midState = applyEvents(state, eventsWithNext);
       const attackEvents = applyAttackToUnblockedTargets(
         midState,
-        updatedMetadata,
-        metadata.originalCause,
+        updatedContext,
+        reaction.metadata!.originalCause,
       );
       return { ok: true, events: [...eventsWithNext, ...attackEvents] };
     }
@@ -126,7 +121,7 @@ export function handleRevealReaction(
   const attackEvents = applyAttackToUnblockedTargets(
     midState,
     updatedMetadata,
-    metadata.originalCause,
+    context.originalCause,
   );
   return { ok: true, events: [...baseEvents, ...attackEvents] };
 }
@@ -161,7 +156,7 @@ export function handleDeclineReaction(
   const declinedEvent: GameEvent = {
     type: "REACTION_DECLINED",
     playerId,
-    triggeringCard: reaction.attackCard,
+    triggeringCard: reaction.triggeringCard,
     id: generateEventId(),
     causedBy: rootEventId,
   };
@@ -169,9 +164,9 @@ export function handleDeclineReaction(
   // ATTACK_RESOLVED (blocked: false)
   const resolvedEvent: GameEvent = {
     type: "ATTACK_RESOLVED",
-    attacker: reaction.attacker,
+    attacker: reaction.triggeringPlayerId,
     target: playerId,
-    attackCard: reaction.attackCard,
+    attackCard: reaction.triggeringCard,
     blocked: false,
     id: generateEventId(),
     causedBy: rootEventId,
@@ -179,21 +174,22 @@ export function handleDeclineReaction(
 
   const baseEvents: GameEvent[] = [declinedEvent, resolvedEvent];
 
-  // Prepare metadata with attackCard included
-  const fullMetadata: ReactionMetadata = {
-    attackCard: reaction.attackCard,
-    attacker: reaction.attacker,
-    ...metadata,
+  // Prepare full context for continuation
+  const fullContext: ReactionContext = {
+    triggeringCard: reaction.triggeringCard,
+    triggeringPlayerId: reaction.triggeringPlayerId,
+    triggerType: reaction.triggerType,
+    ...reaction.metadata!,
   };
 
   // Check if more targets need reactions
-  const nextIndex = metadata.currentTargetIndex + 1;
-  if (nextIndex < metadata.allTargets.length) {
+  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
+  if (nextIndex < reaction.metadata!.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
-      fullMetadata,
+      fullContext,
       nextIndex,
-      metadata.originalCause,
+      reaction.metadata!.originalCause,
     );
     const eventsWithNext = [...baseEvents, ...nextEvents];
 
@@ -206,8 +202,8 @@ export function handleDeclineReaction(
       const midState = applyEvents(state, eventsWithNext);
       const attackEvents = applyAttackToUnblockedTargets(
         midState,
-        fullMetadata,
-        metadata.originalCause,
+        fullContext,
+        reaction.metadata!.originalCause,
       );
       return { ok: true, events: [...eventsWithNext, ...attackEvents] };
     }
@@ -218,8 +214,8 @@ export function handleDeclineReaction(
   const midState = applyEvents(state, baseEvents);
   const attackEvents = applyAttackToUnblockedTargets(
     midState,
-    fullMetadata,
-    metadata.originalCause,
+    fullContext,
+    context.originalCause,
   );
   return { ok: true, events: [...baseEvents, ...attackEvents] };
 }
@@ -229,11 +225,11 @@ export function handleDeclineReaction(
  */
 function processNextTarget(
   state: GameState,
-  metadata: ReactionMetadata,
+  context: ReactionContext,
   nextIndex: number,
   rootEventId: string,
 ): GameEvent[] {
-  const nextTarget = metadata.allTargets[nextIndex];
+  const nextTarget = context.allTargets[nextIndex];
   if (!nextTarget) return [];
 
   const reactions = getAvailableReactions(state, nextTarget, "on_attack");
@@ -244,12 +240,12 @@ function processNextTarget(
       {
         type: "REACTION_OPPORTUNITY",
         playerId: nextTarget,
-        triggeringPlayerId: metadata.attacker,
-        triggeringCard: metadata.attackCard,
+        triggeringPlayerId: context.triggeringPlayerId,
+        triggeringCard: context.triggeringCard,
         triggerType: "on_attack",
         availableReactions: reactions,
         metadata: {
-          ...metadata,
+          ...reaction.metadata!,
           currentTargetIndex: nextIndex,
         },
         id: generateEventId(),
@@ -261,16 +257,16 @@ function processNextTarget(
   // No reactions - auto-resolve this target and continue
   const resolvedEvent: GameEvent = {
     type: "ATTACK_RESOLVED",
-    attacker: metadata.attacker,
+    attacker: context.triggeringPlayerId,
     target: nextTarget,
-    attackCard: metadata.attackCard,
+    attackCard: context.triggeringCard,
     blocked: false,
     id: generateEventId(),
     causedBy: rootEventId,
   };
 
   // Recursively check next target
-  if (nextIndex + 1 < metadata.allTargets.length) {
+  if (nextIndex + 1 < context.allTargets.length) {
     const nextState = applyEvents(state, [resolvedEvent]);
     const nextEvents = processNextTarget(
       nextState,
@@ -289,11 +285,11 @@ function processNextTarget(
  */
 function applyAttackToUnblockedTargets(
   state: GameState,
-  metadata: ReactionMetadata,
+  context: ReactionContext,
   rootEventId: string,
 ): GameEvent[] {
-  const unblockedTargets = metadata.allTargets.filter(
-    t => !metadata.blockedTargets.includes(t),
+  const unblockedTargets = context.allTargets.filter(
+    t => !context.blockedTargets.includes(t),
   );
 
   if (unblockedTargets.length === 0) {
@@ -301,7 +297,7 @@ function applyAttackToUnblockedTargets(
   }
 
   // Get the attack card effect
-  const effect = getCardEffect(metadata.attackCard);
+  const effect = getCardEffect(context.triggeringCard);
   if (!effect) {
     return [];
   }
@@ -309,8 +305,8 @@ function applyAttackToUnblockedTargets(
   // Call effect with filtered attackTargets
   const result = effect({
     state,
-    playerId: metadata.attacker,
-    card: metadata.attackCard,
+    playerId: context.triggeringPlayerId,
+    card: context.triggeringCard,
     attackTargets: unblockedTargets,
   });
 
@@ -328,7 +324,7 @@ function applyAttackToUnblockedTargets(
           type: "DECISION_REQUIRED",
           decision: {
             ...result.pendingChoice,
-            cardBeingPlayed: metadata.attackCard,
+            cardBeingPlayed: context.triggeringCard,
             metadata: {
               ...result.pendingChoice.metadata,
               originalCause: rootEventId,
