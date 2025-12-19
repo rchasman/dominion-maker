@@ -49,7 +49,6 @@ describe("Consensus System", () => {
                 card: "Smithy",
                 reasoning: "Test reasoning",
               },
-              format: "json",
             }),
         });
       }
@@ -152,7 +151,6 @@ describe("Consensus System", () => {
           json: () =>
             Promise.resolve({
               action,
-              format: "json",
             }),
         });
       }

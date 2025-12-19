@@ -215,7 +215,6 @@ const runModelsInParallel = async (
         ...(humanChoice !== undefined && { humanChoice }),
         ...(strategySummary !== undefined && { strategySummary }),
         ...(customStrategy !== undefined && { customStrategy }),
-        format: "toon",
         actionId,
         abortController,
         voteGroups,
