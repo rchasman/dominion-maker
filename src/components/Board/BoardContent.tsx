@@ -6,6 +6,7 @@ import { formatPlayerName } from "../../lib/board-utils";
 import { useGame } from "../../context/hooks";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
+import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
@@ -148,7 +149,7 @@ export function BoardContent({
     isLocalPlayerAI,
   } = boardState;
 
-  const { players } = useGame();
+  const { players, pendingUndo, approveUndo, denyUndo, localPlayerId: contextLocalPlayerId } = useGame();
   const animation = useAnimationSafe();
 
   // Try to get opponent name from players list (multiplayer)
@@ -320,6 +321,24 @@ export function BoardContent({
           onNewGame={onNewGame}
         />
       )}
+
+      {pendingUndo &&
+        approveUndo &&
+        denyUndo &&
+        contextLocalPlayerId !== pendingUndo.byPlayer && (
+          <UndoRequestModal
+            requestId={pendingUndo.requestId}
+            byPlayer={pendingUndo.byPlayer}
+            byPlayerName={
+              players?.find(p => p.id === pendingUndo.byPlayer)?.name ||
+              pendingUndo.byPlayer
+            }
+            toEventId={pendingUndo.toEventId}
+            events={game.events}
+            onApprove={approveUndo}
+            onDeny={denyUndo}
+          />
+        )}
 
       <Suspense fallback={null}>
         <EventDevtools
