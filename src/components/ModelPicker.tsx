@@ -1,6 +1,7 @@
 import type { ModelSettings } from "../agent/types";
 import { AVAILABLE_MODELS } from "../agent/types";
 import { MODELS, type ModelConfig, type ModelProvider } from "../config/models";
+import { run } from "../lib/run";
 
 interface ModelPickerProps {
   settings: ModelSettings;
@@ -157,8 +158,15 @@ const ModelCheckbox = ({
   onToggle,
 }: ModelCheckboxProps) => {
   const modelConfig = MODELS.find(m => m.id === model);
-  const pricing = modelConfig
-    ? `$${modelConfig.inputPrice}/$${modelConfig.outputPrice} per 1M`
+
+  const metaInfo = modelConfig
+    ? run(() => {
+        const parts = [
+          `$${modelConfig.inputPrice}/$${modelConfig.outputPrice}/1M`,
+          ...(modelConfig.speed ? [`${modelConfig.speed} tok/s`] : []),
+        ];
+        return parts.join(" • ");
+      })
     : null;
 
   return (
@@ -195,14 +203,14 @@ const ModelCheckbox = ({
         <span style={{ color: "var(--color-text-primary)" }}>
           {getModelDisplayName(model)}
         </span>
-        {pricing && (
+        {metaInfo && (
           <span
             style={{
               fontSize: "0.5625rem",
               color: "var(--color-text-tertiary)",
             }}
           >
-            {pricing}
+            {metaInfo}
           </span>
         )}
       </div>
