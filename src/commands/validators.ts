@@ -16,7 +16,7 @@ type Validator = () => ValidationResult;
  * Run a series of validators in order, returning the first error or undefined if all pass
  */
 export function validateCommand(...validators: Validator[]): ValidationResult {
-  return validators.reduce<ValidationResult>((acc, validator) => acc || validator());
+  return validators.reduce<ValidationResult>((acc, validator) => acc || validator(), undefined);
 }
 
 /**
