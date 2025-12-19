@@ -82,7 +82,7 @@ function TurnStatusIndicator({
   isProcessing,
   isLocalPlayerTurn,
   subPhase,
-  activePlayer,
+  activePlayerId,
 }: TurnStatusIndicatorProps) {
   if (
     (isProcessing || subPhase === "opponent_decision") &&
@@ -91,7 +91,7 @@ function TurnStatusIndicator({
     return (
       <div
         style={{
-          color: getPlayerColor(activePlayer),
+          color: getPlayerColor(activePlayerId),
           fontSize: "0.75rem",
           display: "flex",
           alignItems: "center",
@@ -197,7 +197,7 @@ export function GameSidebar({
             isProcessing={isProcessing}
             isLocalPlayerTurn={isLocalPlayerTurn}
             subPhase={getSubPhase(state)}
-            activePlayer={state.activePlayerId}
+            activePlayerId={state.activePlayerId}
           />
         }
       />
