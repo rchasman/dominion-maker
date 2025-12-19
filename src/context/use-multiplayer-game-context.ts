@@ -128,7 +128,14 @@ export function useMultiplayerGameContext({
       spectatorCount: game.spectatorCount,
       players: game.players,
       chatMessages: game.chatMessages,
-      sendChat: game.sendChat,
+      sendChat: (content: string) => {
+        game.sendChat({
+          id: crypto.randomUUID(),
+          senderName: playerName,
+          content,
+          timestamp: Date.now(),
+        });
+      },
       hasPlayableActions,
       hasTreasuresInHand,
       strategy: {
