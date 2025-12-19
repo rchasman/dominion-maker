@@ -86,6 +86,7 @@ export default class LobbyServer implements Party.Server {
             roomId: body.roomId,
             players: body.players,
             spectatorCount: body.spectatorCount,
+            isSinglePlayer: body.isSinglePlayer,
           });
         } else {
           this.activeGames.delete(body.roomId);
