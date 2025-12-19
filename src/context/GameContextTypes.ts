@@ -9,6 +9,7 @@ import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { ModelSettings } from "../agent/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { LLMLogEntry } from "../components/LLMLog";
+import type { PendingUndoRequest } from "../engine/engine";
 
 export interface GameContextValue {
   gameState: GameState | null;
@@ -45,6 +46,9 @@ export interface GameContextValue {
   revealReaction: (card: CardName) => CommandResult;
   declineReaction: () => CommandResult;
   requestUndo: (toEventId: string) => void;
+  approveUndo?: (requestId: string) => void;
+  denyUndo?: (requestId: string) => void;
+  pendingUndo?: PendingUndoRequest | null;
   getStateAtEvent: (eventId: string) => GameState;
   setGameMode?: (mode: GameMode) => void;
   setModelSettings?: (settings: Partial<ModelSettings>) => void;

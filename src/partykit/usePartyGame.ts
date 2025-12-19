@@ -17,11 +17,56 @@ import type {
 } from "./protocol";
 import { projectState } from "../events/project";
 import type { GameMode } from "../types/game-mode";
+import type { PendingUndoRequest } from "../engine/engine";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
     : "dominion-maker.rchasman.partykit.dev";
+
+/**
+ * Compute pending undo request from event log
+ */
+function computePendingUndo(events: GameEvent[]): PendingUndoRequest | null {
+  // Find the most recent UNDO_REQUESTED event
+  let pendingRequest: PendingUndoRequest | null = null;
+
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+
+    if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
+      // If we hit a completion event first, no pending request
+      return null;
+    }
+
+    if (event.type === "UNDO_REQUESTED") {
+      // Found the pending request
+      pendingRequest = {
+        requestId: event.requestId,
+        byPlayer: event.byPlayer,
+        toEventId: event.toEventId,
+        reason: event.reason,
+        approvals: new Set<PlayerId>(),
+        needed: 1, // In 2-player, only 1 approval needed
+      };
+
+      // Count approvals after this request
+      for (let j = i + 1; j < events.length; j++) {
+        const laterEvent = events[j];
+        if (
+          laterEvent.type === "UNDO_APPROVED" &&
+          laterEvent.requestId === event.requestId
+        ) {
+          pendingRequest.approvals.add(laterEvent.byPlayer);
+        }
+      }
+
+      return pendingRequest;
+    }
+  }
+
+  return null;
+}
 
 interface UsePartyGameOptions {
   roomId: string;
@@ -46,6 +91,7 @@ interface PartyGameState {
   isHost: boolean;
   disconnectedPlayers: Map<PlayerId, string>;
   chatMessages: ChatMessageData[];
+  pendingUndo: PendingUndoRequest | null;
 }
 
 interface PartyGameActions {
@@ -93,6 +139,7 @@ export function usePartyGame({
     isHost: false,
     disconnectedPlayers: new Map(),
     chatMessages: [],
+    pendingUndo: null,
   });
 
   // Sync ref with state
@@ -169,6 +216,7 @@ export function usePartyGame({
           ...s,
           gameState: msg.state,
           events: eventsRef.current,
+          pendingUndo: computePendingUndo(eventsRef.current),
         }));
         break;
 
@@ -178,6 +226,7 @@ export function usePartyGame({
           ...s,
           gameState: msg.state,
           events: msg.events,
+          pendingUndo: computePendingUndo(msg.events),
         }));
         break;
 

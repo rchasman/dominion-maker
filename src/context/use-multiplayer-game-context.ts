@@ -154,6 +154,9 @@ export function useMultiplayerGameContext({
       revealReaction: () => ({ ok: false, error: "Not implemented" }),
       declineReaction: () => ({ ok: false, error: "Not implemented" }),
       requestUndo: game.requestUndo,
+      approveUndo: game.approveUndo,
+      denyUndo: game.denyUndo,
+      pendingUndo: game.pendingUndo,
       getStateAtEvent: game.getStateAtEvent,
     }),
     [
