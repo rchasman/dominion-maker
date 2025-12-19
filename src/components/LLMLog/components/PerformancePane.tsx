@@ -396,10 +396,13 @@ function TimingBar({
           getModelColor(timing.provider),
         )}
         opacity={getModelNameOpacity(state.isPending, state.isAborted)}
-        title={getModelNameTitle(state.isAborted, state.isFailed)}
+        {...(getModelNameTitle(state.isAborted, state.isFailed) !== undefined && {
+          title: getModelNameTitle(state.isAborted, state.isFailed),
+        })}
         strikethrough={state.isFailed || state.isAborted}
         isHelp={state.isAborted || state.isFailed}
-        format={showFormatGlyphs ? timing.format : undefined}
+        {...(showFormatGlyphs &&
+          timing.format !== undefined && { format: timing.format })}
       />
     </div>
   );

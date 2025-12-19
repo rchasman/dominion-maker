@@ -3,6 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
+import type { GameEvent } from "../../events/types";
 import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
 import { CARD_ACTIONS } from "../card-actions";
 import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
@@ -69,10 +70,10 @@ export const library: CardEffect = ({
   const drawEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
     .filter(({ index, action }) => action === "draw_card" && peeked[index])
-    .map(({ index }) => ({
-      type: "CARD_DRAWN" as const,
+    .map(({ index }): GameEvent => ({
+      type: "CARD_DRAWN",
       playerId,
-      card: peeked[index],
+      card: peeked[index]!,
     }));
 
   const discardEvents = Object.entries(cardActions)

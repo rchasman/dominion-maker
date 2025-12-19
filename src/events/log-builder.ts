@@ -140,6 +140,11 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
       const currentEvent = events[startIndex + i];
       const nextEvent = remainingEvents[i];
 
+      if (!currentEvent) {
+        consecutiveCount = i;
+        break;
+      }
+
       // Stop if we hit a shuffle between current and next
       if (i > 0 && events[startIndex + i]!.type === "DECK_SHUFFLED") {
         consecutiveCount = i;
@@ -147,7 +152,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
       }
 
       // Stop if next event doesn't match
-      if (!canMatchNext(currentEvent, nextEvent)) {
+      if (!nextEvent || !canMatchNext(currentEvent, nextEvent)) {
         consecutiveCount = i;
         break;
       }
@@ -164,7 +169,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
   const aggregateGroup = (
     groupEvents: (CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent)[],
   ): AggregatedCardEvent => {
-    const [first] = groupEvents;
+    const first = groupEvents[0]!;
     const cards = groupEvents.map(e => e.card);
     const initial: Record<string, number> = {};
     const cardCounts = cards.reduce(
@@ -177,7 +182,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
 
     return {
       ...first,
-      card: cards[0],
+      card: cards[0]!,
       cards,
       cardCounts,
       count: cards.length,
@@ -190,7 +195,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
   ): MaybeAggregatedEvent[] => {
     if (index >= events.length) return acc;
 
-    const event = events[index];
+    const event = events[index]!;
 
     if (isCardEvent(event)) {
       const { events: groupEvents, count } = collectConsecutive(index);
@@ -234,7 +239,7 @@ function cardPlayedToLogEntry(
       playerId: event.playerId,
       card: event.card,
       coins: cardDef.coins || 0,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
 
@@ -243,7 +248,7 @@ function cardPlayedToLogEntry(
       type: "play-action",
       playerId: event.playerId,
       card: event.card,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
   return null;
@@ -303,7 +308,7 @@ function cardTrashedToLogEntry(event: MaybeAggregatedEvent): LogEntry {
     return {
       type: "trash-card",
       playerId: event.playerId,
-      card: event.cards[0],
+      ...(event.cards[0] !== undefined && { card: event.cards[0] }),
       cards: event.cards,
       count: event.count,
       ...(event.id !== undefined && { eventId: event.id }),
@@ -371,7 +376,7 @@ function cardReturnedToHandToLogEntry(
       playerId: event.playerId,
       card: event.card,
       coins: cardDef.coins || 0,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
   return null;
@@ -404,7 +409,7 @@ function resourceModifiedToLogEntry(
       type: typeMap[event.type].positive,
       playerId: currentPlayerId,
       count: event.delta,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
 
@@ -413,7 +418,7 @@ function resourceModifiedToLogEntry(
       type: typeMap[event.type].negative,
       playerId: currentPlayerId,
       count: -event.delta,
-      eventId: event.id,
+      ...(event.id !== undefined && { eventId: event.id }),
     };
   }
 
@@ -439,7 +444,7 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
       return {
         type: "shuffle-deck",
         playerId: event.playerId,
-        eventId: event.id,
+        ...(event.id !== undefined && { eventId: event.id }),
       };
     case "CARD_RETURNED_TO_HAND":
       return cardReturnedToHandToLogEntry(event);
@@ -461,24 +466,28 @@ function gameFlowEventToLogEntry(
         type: "turn-start",
         turn: event.turn,
         playerId: event.playerId,
-        eventId: event.id,
+        ...(event.id !== undefined && { eventId: event.id }),
       };
     case "PHASE_CHANGED":
       return {
         type: "phase-change",
         playerId: currentPlayerId,
         phase: event.phase,
-        eventId: event.id,
+        ...(event.id !== undefined && { eventId: event.id }),
       };
     case "GAME_ENDED":
       return {
         type: "game-over",
         scores: event.scores,
         winnerId: event.winnerId || currentPlayerId,
-        eventId: event.id,
+        ...(event.id !== undefined && { eventId: event.id }),
       };
     case "TURN_ENDED":
-      return { type: "turn-end", playerId: event.playerId, eventId: event.id };
+      return {
+        type: "turn-end",
+        playerId: event.playerId,
+        ...(event.id !== undefined && { eventId: event.id }),
+      };
     default:
       return null;
   }

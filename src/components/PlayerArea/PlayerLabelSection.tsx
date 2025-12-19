@@ -516,7 +516,7 @@ export function PlayerLabelSection({
       <PlayerLabel
         label={label}
         labelColor={labelColor}
-        playerStrategy={playerStrategy}
+        {...(playerStrategy !== undefined && { playerStrategy })}
         setReference={setReference}
       />
       {isOpen &&
@@ -529,7 +529,10 @@ export function PlayerLabelSection({
           floatingRef: setFloating,
         })}
       {vpCount !== undefined && (
-        <VictoryPoints vpCount={vpCount} playerId={playerId} />
+        <VictoryPoints
+          vpCount={vpCount}
+          {...(playerId !== undefined && { playerId })}
+        />
       )}
       <StatDisplay
         label="Actions"

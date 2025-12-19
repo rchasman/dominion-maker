@@ -105,8 +105,8 @@ export class DominionEngine {
     return this.dispatch({
       type: "START_GAME",
       players,
-      kingdomCards,
-      seed,
+      ...(kingdomCards !== undefined && { kingdomCards }),
+      ...(seed !== undefined && { seed }),
     });
   }
 
@@ -175,7 +175,7 @@ export class DominionEngine {
         type: "REQUEST_UNDO",
         playerId,
         toEventId,
-        reason,
+        ...(reason !== undefined && { reason }),
       },
       playerId,
     );

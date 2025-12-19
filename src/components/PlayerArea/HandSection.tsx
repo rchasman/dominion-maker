@@ -153,6 +153,13 @@ function HandCardRenderer({
 
   const cardIdPrefix = inverted ? "hand-opponent" : "hand";
 
+  const highlightMode = getHandCardHighlightMode(
+    card,
+    pendingChoice,
+    isInteractive,
+    playerId,
+  );
+
   return (
     <div key={`${card}-${index}-wrapper`}>
       <Card
@@ -162,12 +169,7 @@ function HandCardRenderer({
         cardId={`${cardIdPrefix}-${index}-${card}`}
         onClick={() => onCardClick?.(card, index)}
         selected={isSelected}
-        highlightMode={getHandCardHighlightMode(
-          card,
-          pendingChoice,
-          isInteractive,
-          playerId,
-        )}
+        {...(highlightMode !== undefined && { highlightMode })}
         disabled={isHandCardDisabled({
           card,
           isInteractive,
@@ -261,13 +263,13 @@ export function HandSection({
                 card={card}
                 index={i}
                 selectedCardIndices={selectedCardIndices}
-                pendingChoice={pendingChoice}
+                {...(pendingChoice !== undefined && { pendingChoice })}
                 isInteractive={isInteractive}
                 isActive={isActive}
-                playerId={playerId}
+                {...(playerId !== undefined && { playerId })}
                 phase={phase}
-                actions={actions}
-                onCardClick={onCardClick}
+                {...(actions !== undefined && { actions })}
+                {...(onCardClick !== undefined && { onCardClick })}
                 inverted={inverted}
               />
             ))}

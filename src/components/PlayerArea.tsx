@@ -84,7 +84,7 @@ function HandAndDeckGrid({
 }: {
   player: PlayerState;
   showCards: boolean;
-  loading: boolean;
+  loading?: boolean;
   selectedCardIndices: number[];
   pendingChoice:
     | Extract<PendingChoice, { choiceType: "decision" }>
@@ -110,28 +110,28 @@ function HandAndDeckGrid({
       <HandSection
         hand={player.hand}
         showCards={showCards}
-        loading={loading}
+        loading={loading ?? false}
         selectedCardIndices={selectedCardIndices}
-        pendingChoice={pendingChoice}
+        {...(pendingChoice !== undefined && { pendingChoice })}
         isInteractive={isInteractive}
         isActive={isActive}
-        playerId={playerId}
+        {...(playerId !== undefined && { playerId })}
         phase={phase}
-        actions={actions}
-        onCardClick={onCardClick}
-        inverted={inverted}
+        {...(actions !== undefined && { actions })}
+        {...(onCardClick !== undefined && { onCardClick })}
+        {...(inverted !== undefined && { inverted })}
       />
 
       {showCards && (
         <DeckDiscardSection
           deck={player.deck}
           discard={player.discard}
-          loading={loading}
-          deckTopRevealed={player.deckTopRevealed}
-          pendingChoice={pendingChoice}
+          loading={loading ?? false}
+          deckTopRevealed={player.deckTopRevealed ?? false}
+          {...(pendingChoice !== undefined && { pendingChoice })}
           isInteractive={isInteractive}
-          onCardClick={onCardClick}
-          inverted={inverted}
+          {...(onCardClick !== undefined && { onCardClick })}
+          {...(inverted !== undefined && { inverted })}
         />
       )}
     </div>
@@ -152,7 +152,7 @@ function PlayerAreaContent({
   playerId,
   phase,
   actions,
-  loading,
+  loading = false,
   hasMadePurchases,
   playerStrategy,
   borderColor,
@@ -182,73 +182,77 @@ function PlayerAreaContent({
           <HandAndDeckGrid
             player={player}
             showCards={showCards}
-            loading={loading}
+            {...(loading !== undefined && { loading })}
             selectedCardIndices={selectedCardIndices}
-            pendingChoice={pendingChoice}
+            {...(pendingChoice !== undefined && { pendingChoice })}
             isInteractive={isInteractive}
             isActive={isActive}
-            playerId={playerId}
+            {...(playerId !== undefined && { playerId })}
             phase={phase}
-            actions={actions}
-            onCardClick={onCardClick}
-            inverted={inverted}
+            {...(actions !== undefined && { actions })}
+            {...(onCardClick !== undefined && { onCardClick })}
+            {...(inverted !== undefined && { inverted })}
           />
 
           <InPlaySection
             inPlay={player.inPlay}
             loading={loading}
             hasMadePurchases={hasMadePurchases}
-            onInPlayClick={onInPlayClick}
-            inverted={inverted}
+            {...(onInPlayClick !== undefined && { onInPlayClick })}
+            {...(inverted !== undefined && { inverted })}
           />
 
           <PlayerLabelSection
             label={label}
-            playerId={playerId}
+            {...(playerId !== undefined && { playerId })}
             loading={loading}
-            playerStrategy={playerStrategy}
-            vpCount={vpCount}
-            phase={gameState?.phase}
-            actions={gameState?.actions}
-            buys={gameState?.buys}
-            coins={gameState?.coins}
-            isActive={isActive}
+            {...(playerStrategy !== undefined && { playerStrategy })}
+            {...(vpCount !== undefined && { vpCount })}
+            {...(gameState?.phase !== undefined && { phase: gameState.phase })}
+            {...(gameState?.actions !== undefined && {
+              actions: gameState.actions,
+            })}
+            {...(gameState?.buys !== undefined && { buys: gameState.buys })}
+            {...(gameState?.coins !== undefined && { coins: gameState.coins })}
+            {...(isActive !== undefined && { isActive })}
           />
         </>
       ) : (
         <>
           <PlayerLabelSection
             label={label}
-            playerId={playerId}
+            {...(playerId !== undefined && { playerId })}
             loading={loading}
-            playerStrategy={playerStrategy}
-            vpCount={vpCount}
-            phase={gameState?.phase}
-            actions={gameState?.actions}
-            buys={gameState?.buys}
-            coins={gameState?.coins}
-            isActive={isActive}
+            {...(playerStrategy !== undefined && { playerStrategy })}
+            {...(vpCount !== undefined && { vpCount })}
+            {...(gameState?.phase !== undefined && { phase: gameState.phase })}
+            {...(gameState?.actions !== undefined && {
+              actions: gameState.actions,
+            })}
+            {...(gameState?.buys !== undefined && { buys: gameState.buys })}
+            {...(gameState?.coins !== undefined && { coins: gameState.coins })}
+            {...(isActive !== undefined && { isActive })}
           />
 
           <InPlaySection
             inPlay={player.inPlay}
             loading={loading}
             hasMadePurchases={hasMadePurchases}
-            onInPlayClick={onInPlayClick}
+            {...(onInPlayClick !== undefined && { onInPlayClick })}
           />
 
           <HandAndDeckGrid
             player={player}
             showCards={showCards}
-            loading={loading}
+            {...(loading !== undefined && { loading })}
             selectedCardIndices={selectedCardIndices}
-            pendingChoice={pendingChoice}
+            {...(pendingChoice !== undefined && { pendingChoice })}
             isInteractive={isInteractive}
             isActive={isActive}
-            playerId={playerId}
+            {...(playerId !== undefined && { playerId })}
             phase={phase}
-            actions={actions}
-            onCardClick={onCardClick}
+            {...(actions !== undefined && { actions })}
+            {...(onCardClick !== undefined && { onCardClick })}
           />
         </>
       )}
@@ -289,25 +293,25 @@ export function PlayerArea({
     <PlayerAreaContent
       player={player}
       label={label}
-      vpCount={vpCount}
-      isActive={isActive}
+      {...(vpCount !== undefined && { vpCount })}
+      {...(isActive !== undefined && { isActive })}
       showCards={showCards}
       selectedCardIndices={selectedCardIndices}
-      onCardClick={onCardClick}
-      onInPlayClick={onInPlayClick}
-      inverted={inverted}
-      pendingChoice={pendingChoice}
-      playerId={playerId}
+      {...(onCardClick !== undefined && { onCardClick })}
+      {...(onInPlayClick !== undefined && { onInPlayClick })}
+      {...(inverted !== undefined && { inverted })}
+      {...(pendingChoice !== undefined && { pendingChoice })}
+      {...(playerId !== undefined && { playerId })}
       phase={phase}
       subPhase={subPhase}
-      actions={actions}
-      loading={loading}
+      {...(actions !== undefined && { actions })}
+      {...(loading !== undefined && { loading })}
       hasMadePurchases={hasMadePurchases}
-      playerStrategy={playerStrategy}
+      {...(playerStrategy !== undefined && { playerStrategy })}
       borderColor={borderColor}
       backgroundColor={backgroundColor}
       isInteractive={isInteractive}
-      gameState={gameState}
+      {...(gameState !== undefined && { gameState })}
     />
   );
 }

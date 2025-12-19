@@ -1,4 +1,4 @@
-import type { StateUpdater, MutableRef } from "preact/hooks";
+import type { StateUpdater, MutableRef, Dispatch } from "preact/hooks";
 import { useEffect, useRef, useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 
@@ -12,8 +12,8 @@ interface PlaybackConfig {
 }
 
 interface PlaybackActions {
-  setScrubberIndex: StateUpdater<number | null>;
-  setIsPlaying: StateUpdater<boolean>;
+  setScrubberIndex: Dispatch<StateUpdater<number | null>>;
+  setIsPlaying: Dispatch<StateUpdater<boolean>>;
 }
 
 export function useListScroll(scrubberIndex: number | null) {

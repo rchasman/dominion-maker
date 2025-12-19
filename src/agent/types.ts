@@ -27,7 +27,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 };
 
 // Available unique models
-export const AVAILABLE_MODELS: ModelProvider[] = MODEL_IDS;
+export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
 
 // Default: cheapest model instances for cost-effective consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
@@ -72,7 +72,7 @@ export function buildModelsFromSettings({
     instanceCounts: Map<ModelProvider, number>;
   }>(
     (acc, i) => {
-      const modelId = enabled[i % enabled.length];
+      const modelId = enabled[i % enabled.length]!; // Safe: enabled is non-empty
       const config = MODELS.find(m => m.id === modelId);
       const currentCount = acc.instanceCounts.get(modelId) ?? 0;
 
@@ -98,7 +98,7 @@ export function buildModelsFromSettings({
         // All models at limit, fall back to cycling through unlimited models
         const fallbackModel =
           modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ??
-          enabled[0];
+          enabled[0]!; // Safe: enabled is non-empty
         return {
           models: [...acc.models, fallbackModel],
           instanceCounts: new Map(acc.instanceCounts).set(
@@ -120,22 +120,27 @@ export function buildModelsFromSettings({
   );
 
   // Shuffle for randomness using functional Fisher-Yates algorithm
-  return models.reduce<ModelProvider[]>((shuffled: ModelProvider[], _: ModelProvider, currentIndex: number) => {
-    if (currentIndex === 0) return [models[0]];
+  return models.reduce<ModelProvider[]>((shuffled: ModelProvider[], currentValue: ModelProvider, currentIndex: number) => {
+    if (currentIndex === 0) return [currentValue];
 
     const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
     const newShuffled = [...shuffled];
-    const temp = models[currentIndex];
 
     // Insert at random position by swapping
     if (randomIndex === currentIndex) {
-      return [...newShuffled, temp];
+      return [...newShuffled, currentValue];
+    }
+
+    const valueAtRandomIndex = newShuffled[randomIndex];
+    if (valueAtRandomIndex === undefined) {
+      // Should never happen, but handle gracefully
+      return [...newShuffled, currentValue];
     }
 
     return [
       ...newShuffled.slice(0, randomIndex),
-      temp,
-      newShuffled[randomIndex],
+      currentValue,
+      valueAtRandomIndex,
       ...newShuffled.slice(randomIndex + 1),
     ];
   }, []);

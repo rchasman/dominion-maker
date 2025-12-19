@@ -70,6 +70,10 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   const opponent = displayState.players[opponentPlayerId];
   const localPlayer = displayState.players[resolvedLocalPlayerId];
 
+  if (!localPlayer || !opponent) {
+    throw new Error("Player state not found");
+  }
+
   const localPlayerVP = countVP(getAllCards(localPlayer));
   const opponentVP = countVP(getAllCards(opponent));
 

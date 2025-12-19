@@ -22,10 +22,9 @@ export function createGameProps(gameContext: {
     events: gameContext.events,
     isProcessing: gameContext.isProcessing,
     gameMode: gameContext.gameMode,
-    setGameMode:
-      gameContext.gameMode === "multiplayer"
-        ? undefined
-        : gameContext.setGameMode,
+    ...(gameContext.gameMode !== "multiplayer" && {
+      setGameMode: gameContext.setGameMode,
+    }),
     modelSettings: gameContext.modelSettings,
     setModelSettings: gameContext.setModelSettings,
     playerStrategies: gameContext.playerStrategies,
@@ -34,6 +33,6 @@ export function createGameProps(gameContext: {
     endPhase: gameContext.endPhase,
     hasTreasuresInHand: gameContext.hasTreasuresInHand,
     gameOver: gameContext.gameState.gameOver,
-    winnerId: gameContext.gameState.winnerId,
+    winnerId: gameContext.gameState.winnerId ?? undefined,
   };
 }

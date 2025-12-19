@@ -20,7 +20,7 @@ type DecisionContext = {
 function handleThroneRoomExecution(
   ctx: DecisionContext,
   baseEvents: GameEvent[],
-  throneRoomTarget: string,
+  throneRoomTarget: CardName,
   executionsRemaining: number,
 ): GameEvent[] {
   const midState = applyEvents(ctx.state, baseEvents);
@@ -39,6 +39,9 @@ function handleThroneRoomExecution(
       type: "CARD_PLAYED",
       playerId: ctx.state.activePlayerId,
       card: throneRoomTarget,
+      sourceIndex: -1,
+      id: generateEventId(),
+      causedBy: ctx.originalCause || ctx.rootEventId,
     },
     ...linkEvents(result.events, ctx.originalCause || ctx.rootEventId),
   ];
@@ -115,7 +118,7 @@ function extractReactionMetadata(
     (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
   const attacker =
     (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayerId;
-  const currentTarget = allTargets[currentTargetIndex];
+  const currentTarget = allTargets[currentTargetIndex]!;
 
   return {
     attackCard,
@@ -135,7 +138,7 @@ function createReactionEvents(
   const revealedReaction = choice.cardActions?.["0"] === "reveal";
 
   if (revealedReaction && choice.selectedCards.length > 0) {
-    const reactionCard = choice.selectedCards[0];
+    const reactionCard = choice.selectedCards[0]!;
     return {
       events: [
         {
@@ -186,6 +189,8 @@ function processNextTarget(
   nextIndex: number,
 ): GameEvent[] | null {
   const nextTarget = metadata.allTargets[nextIndex];
+  if (nextTarget === undefined) return null;
+
   const midState = applyEvents(ctx.state, currentEvents);
   const reactions = getAvailableReactions(midState, nextTarget, "on_attack");
 
@@ -353,8 +358,8 @@ function handleCardEffectContinuation(
       min: 0,
       max: 0,
       cardBeingPlayed: ctx.cardBeingPlayed,
-      stage: ctx.stage,
-      metadata: ctx.metadata,
+      ...(ctx.stage !== undefined && { stage: ctx.stage }),
+      ...(ctx.metadata !== undefined && { metadata: ctx.metadata }),
     },
   };
 
@@ -363,7 +368,7 @@ function handleCardEffectContinuation(
     playerId: ctx.state.activePlayerId,
     card: ctx.cardBeingPlayed,
     decision: choice,
-    stage: ctx.stage,
+    ...(ctx.stage !== undefined && { stage: ctx.stage }),
   });
   const newEvents = [
     ...baseEvents,
@@ -437,7 +442,7 @@ export function handleSubmitDecision(
     rootEventId,
   };
 
-  const throneRoomTarget = metadata?.throneRoomTarget as string | undefined;
+  const throneRoomTarget = metadata?.throneRoomTarget as CardName | undefined;
   const executionsRemaining = metadata?.throneRoomExecutionsRemaining as
     | number
     | undefined;

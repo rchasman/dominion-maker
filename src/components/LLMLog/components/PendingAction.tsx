@@ -49,11 +49,19 @@ export function PendingAction({
         activePane={activePane}
         votingData={null}
         timingData={null}
-        modelStatuses={currentTurn.modelStatuses}
-        gameStateData={currentTurn.pendingData?.gameState}
-        totalModels={currentTurn.pendingData?.totalModels}
+        {...(currentTurn.modelStatuses !== undefined && {
+          modelStatuses: currentTurn.modelStatuses,
+        })}
+        {...(currentTurn.pendingData?.gameState !== undefined && {
+          gameStateData: currentTurn.pendingData.gameState,
+        })}
+        {...(currentTurn.pendingData?.totalModels !== undefined && {
+          totalModels: currentTurn.pendingData.totalModels,
+        })}
         now={now}
-        legalActions={currentTurn.pendingData?.gameState?.legalActions}
+        {...(currentTurn.pendingData?.gameState?.legalActions !== undefined && {
+          legalActions: currentTurn.pendingData.gameState.legalActions,
+        })}
       />
     </>
   );

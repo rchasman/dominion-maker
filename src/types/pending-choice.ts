@@ -4,7 +4,12 @@ export type CardActionId =
   | "trash_card"
   | "discard_card"
   | "topdeck_card"
-  | "gain_card";
+  | "gain_card"
+  | "select"
+  | "skip"
+  | "reveal"
+  | "decline"
+  | "draw_card";
 
 export type CardAction = {
   id: CardActionId;

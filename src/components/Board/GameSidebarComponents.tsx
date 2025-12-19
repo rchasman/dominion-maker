@@ -214,14 +214,13 @@ export function LLMLogSection({
         <LLMLog
           entries={llmLogs}
           gameMode={gameMode}
-          modelSettings={
-            modelSettings && onModelSettingsChange
-              ? {
-                  settings: modelSettings,
-                  onChange: onModelSettingsChange,
-                }
-              : undefined
-          }
+          {...(modelSettings &&
+            onModelSettingsChange && {
+              modelSettings: {
+                settings: modelSettings,
+                onChange: onModelSettingsChange,
+              },
+            })}
         />
       </Suspense>
     </div>
@@ -261,9 +260,9 @@ export function GameControlsSection({
       )}
 
       <GameActionButtons
-        onNewGame={isSpectator ? undefined : onNewGame}
-        onEndGame={isSpectator ? undefined : onEndGame}
-        onBackToHome={onBackToHome}
+        {...(!isSpectator && onNewGame !== undefined && { onNewGame })}
+        {...(!isSpectator && onEndGame !== undefined && { onEndGame })}
+        {...(onBackToHome !== undefined && { onBackToHome })}
         isSpectator={isSpectator}
       />
     </div>

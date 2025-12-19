@@ -312,7 +312,7 @@ export const selectConsensusWinner = (
     throw new Error("All AI actions invalid - models may be confused");
   }
 
-  const winner = validEarlyConsensus || validRankedGroups[0];
+  const winner = validEarlyConsensus || validRankedGroups[0]!; // At least one ranked group must exist
   const votesConsidered = earlyConsensus
     ? results.length
     : successfulResults.length;

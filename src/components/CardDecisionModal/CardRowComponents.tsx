@@ -63,8 +63,14 @@ export function ReorderButtons({
   const handleMoveUp = () => {
     const currentPos = cardsToOrder.indexOf(cardIndex);
     if (currentPos > 0) {
-      const idx1 = cardOrder.indexOf(cardsToOrder[currentPos]);
-      const idx2 = cardOrder.indexOf(cardsToOrder[currentPos - 1]);
+      const card1 = cardsToOrder[currentPos];
+      const card2 = cardsToOrder[currentPos - 1];
+      if (card1 === undefined || card2 === undefined) return;
+
+      const idx1 = cardOrder.indexOf(card1);
+      const idx2 = cardOrder.indexOf(card2);
+      if (idx1 === -1 || idx2 === -1) return;
+
       onReorder(swapInOrder(cardOrder, idx1, idx2));
     }
   };
@@ -72,8 +78,14 @@ export function ReorderButtons({
   const handleMoveDown = () => {
     const currentPos = cardsToOrder.indexOf(cardIndex);
     if (currentPos < cardsToOrder.length - 1) {
-      const idx1 = cardOrder.indexOf(cardsToOrder[currentPos]);
-      const idx2 = cardOrder.indexOf(cardsToOrder[currentPos + 1]);
+      const card1 = cardsToOrder[currentPos];
+      const card2 = cardsToOrder[currentPos + 1];
+      if (card1 === undefined || card2 === undefined) return;
+
+      const idx1 = cardOrder.indexOf(card1);
+      const idx2 = cardOrder.indexOf(card2);
+      if (idx1 === -1 || idx2 === -1) return;
+
       onReorder(swapInOrder(cardOrder, idx1, idx2));
     }
   };

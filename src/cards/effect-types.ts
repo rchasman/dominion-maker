@@ -14,6 +14,7 @@ import {
   getStringFromMetadata,
 } from "../lib/metadata-helpers";
 import { isDecisionChoice } from "../types/pending-choice";
+export { isDecisionChoice };
 
 // Type guard for CardName - validates that a string is a known card
 function isCardName(card: string): card is CardName {
@@ -82,7 +83,7 @@ export function peekDraw(
   };
 
   const result = Array.from({ length: count }).reduce<AccState>(
-    acc => {
+    (acc, _currentValue, _currentIndex, _array) => {
       // Determine which deck to use
       const currentDeck =
         acc.deck.length === 0 && acc.discard.length > 0
@@ -99,7 +100,7 @@ export function peekDraw(
       const card = currentDeck[currentDeck.length - 1];
       if (!card) return acc;
 
-      return {
+      const nextState: AccState = {
         cards: [...acc.cards, card],
         cardsBeforeShuffle: didShuffle
           ? [...acc.cards]
@@ -107,8 +108,13 @@ export function peekDraw(
         deck: currentDeck.slice(0, -1),
         discard: didShuffle ? [] : acc.discard,
         shuffled: acc.shuffled || didShuffle,
-        newDeckOrder: didShuffle ? [...currentDeck] : acc.newDeckOrder,
+        ...(didShuffle
+          ? { newDeckOrder: [...currentDeck] }
+          : acc.newDeckOrder !== undefined
+            ? { newDeckOrder: acc.newDeckOrder }
+            : {}),
       };
+      return nextState;
     },
     {
       cards: [],
@@ -116,15 +122,17 @@ export function peekDraw(
       deck: [...playerDeck],
       discard: [...playerDiscard],
       shuffled: false,
-      newDeckOrder: undefined,
     },
   );
 
   return {
     cards: result.cards,
     shuffled: result.shuffled,
-    newDeckOrder: result.newDeckOrder,
-    cardsBeforeShuffle: result.shuffled ? result.cardsBeforeShuffle : undefined,
+    ...(result.newDeckOrder !== undefined && { newDeckOrder: result.newDeckOrder }),
+    ...(result.shuffled &&
+      result.cardsBeforeShuffle !== undefined && {
+        cardsBeforeShuffle: result.cardsBeforeShuffle,
+      }),
   };
 }
 
@@ -194,7 +202,11 @@ export function createDrawEvents(
         playerId,
         card,
       })),
-      { type: "DECK_SHUFFLED" as const, playerId, newDeckOrder },
+      {
+        type: "DECK_SHUFFLED" as const,
+        playerId,
+        ...(newDeckOrder !== undefined && { newDeckOrder }),
+      },
       ...cardsAfterShuffle.map(card => ({
         type: "CARD_DRAWN" as const,
         playerId,
@@ -226,8 +238,13 @@ export function createSimpleCardEffect(benefits: {
   coins?: number;
 }): CardEffect {
   return ({ playerId, state }): CardEffectResult => {
+    const playerState = state.players[playerId];
+    if (!playerState) {
+      return { events: [] };
+    }
+
     const cardEvents = benefits.cards
-      ? createDrawEvents(playerId, state.players[playerId], benefits.cards)
+      ? createDrawEvents(playerId, playerState, benefits.cards)
       : [];
 
     const resourceEvents: GameEvent[] = [
@@ -467,7 +484,7 @@ export type OpponentIteratorConfig<T = Record<PlayerId, unknown>> = {
     remainingOpponents: PlayerId[],
     attackingPlayer: PlayerId,
     cardName: CardName,
-  ) => PendingChoice;
+  ) => Extract<PendingChoice, { choiceType: "decision" }>;
   /** Process decision choice and emit events */
   processChoice: (
     choice: DecisionChoice,
@@ -520,7 +537,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
           }))
           .find(({ data }) => data);
 
-        if (!targetWithData) return null;
+        if (!targetWithData || !targetWithData.data) return null;
 
         return {
           ...targetWithData.data,
@@ -573,7 +590,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
           }))
           .find(({ data }) => data);
 
-        if (!targetWithData) return null;
+        if (!targetWithData || !targetWithData.data) return null;
 
         return {
           ...targetWithData.data,

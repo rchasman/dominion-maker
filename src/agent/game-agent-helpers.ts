@@ -159,17 +159,17 @@ export async function generateActionViaBackend(
     {
       provider,
       currentState,
-      humanChoice,
+      ...(humanChoice !== undefined ? { humanChoice } : {}),
       legalActions,
       strategySummary,
       customStrategy,
       format,
-      actionId,
     },
     {
       fetch: { signal },
     },
   );
+  void actionId; // Used for logging/tracking, not sent to API
 
   if (error) {
     const errorMsg =

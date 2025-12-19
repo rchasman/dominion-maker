@@ -273,7 +273,7 @@ export function Card({
             cardName={name}
             mouseX={mousePosition.x}
             mouseY={mousePosition.y}
-            showBack={showBack}
+            {...(showBack !== undefined && { showBack })}
           />
         </Suspense>
       )}

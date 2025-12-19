@@ -61,7 +61,7 @@ export function DevtoolsContainer({
       <DevtoolsHeader
         eventsLength={events.length}
         scrubberIndex={scrubberIndex}
-        onToggle={onToggle}
+        {...(onToggle !== undefined && { onToggle })}
       />
       <TimelineScrubber
         rootEvents={rootEvents}

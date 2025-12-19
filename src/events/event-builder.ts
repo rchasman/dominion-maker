@@ -43,12 +43,13 @@ export class EventBuilder {
     causedBy?: string,
   ): GameEvent {
     const isFirstEvent = this.events.length === 0;
+    const determinedCausedBy = causedBy || (isFirstEvent ? undefined : this.rootEventId);
     const eventWithMetadata: GameEvent = {
       ...event,
       id: isFirstEvent ? this.rootEventId : generateEventId(),
       // Allow explicit causedBy even for first event (for decision chains)
-      causedBy: causedBy || (isFirstEvent ? undefined : this.rootEventId),
-    };
+      causedBy: determinedCausedBy,
+    } as GameEvent;
 
     this.events = [...this.events, eventWithMetadata];
     return eventWithMetadata;

@@ -103,11 +103,12 @@ function useCardDecisionState(
         const nextIdx =
           (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
         const newActions = { ...prev, [index]: actions[nextIdx]!.id };
+        const newCardOrder = requiresOrdering
+          ? getCardsToOrder(cardOrder, newActions)
+          : undefined;
         onDataChange({
           cardActions: newActions,
-          cardOrder: requiresOrdering
-            ? getCardsToOrder(cardOrder, newActions)
-            : undefined,
+          ...(newCardOrder !== undefined && { cardOrder: newCardOrder }),
         });
         return newActions;
       });
@@ -129,11 +130,12 @@ function useCardDecisionState(
         const tIdx = order.indexOf(target);
         order.splice(dIdx, 1);
         order.splice(tIdx, 0, draggedIndex);
+        const newCardOrder = requiresOrdering
+          ? getCardsToOrder(order, cardActions)
+          : undefined;
         onDataChange({
           cardActions,
-          cardOrder: requiresOrdering
-            ? getCardsToOrder(order, cardActions)
-            : undefined,
+          ...(newCardOrder !== undefined && { cardOrder: newCardOrder }),
         });
         return order;
       });
@@ -145,11 +147,12 @@ function useCardDecisionState(
   const handleReorder = useCallback(
     (order: number[]) => {
       setCardOrder(order);
+      const newCardOrder = requiresOrdering
+        ? getCardsToOrder(order, cardActions)
+        : undefined;
       onDataChange({
         cardActions,
-        cardOrder: requiresOrdering
-          ? getCardsToOrder(order, cardActions)
-          : undefined,
+        ...(newCardOrder !== undefined && { cardOrder: newCardOrder }),
       });
     },
     [cardActions, onDataChange, requiresOrdering],
@@ -452,7 +455,9 @@ function CardRow({
           name={card}
           size="large"
           onClick={() => onToggleCardAction(cardIndex)}
-          highlightMode={getHighlightMode(action?.id)}
+          {...(getHighlightMode(action?.id) !== undefined && {
+            highlightMode: getHighlightMode(action?.id)!,
+          })}
         />
       </div>
       <ActionIndicator

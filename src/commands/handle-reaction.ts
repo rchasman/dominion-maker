@@ -53,7 +53,7 @@ export function handleRevealReaction(
     type: "REACTION_REVEALED",
     playerId,
     card,
-    attackCard: reaction.attackCard,
+    triggeringCard: reaction.attackCard,
     id: generateEventId(),
     causedBy: rootEventId,
   });
@@ -150,7 +150,7 @@ export function handleDeclineReaction(
   events.push({
     type: "REACTION_DECLINED",
     playerId,
-    attackCard: reaction.attackCard,
+    triggeringCard: reaction.attackCard,
     id: generateEventId(),
     causedBy: rootEventId,
   });
@@ -220,6 +220,8 @@ function processNextTarget(
   rootEventId: string,
 ): GameEvent[] {
   const nextTarget = metadata.allTargets[nextIndex];
+  if (!nextTarget) return [];
+
   const reactions = getAvailableReactions(state, nextTarget, "on_attack");
 
   if (reactions.length > 0) {
@@ -228,8 +230,9 @@ function processNextTarget(
       {
         type: "REACTION_OPPORTUNITY",
         playerId: nextTarget,
-        attacker: metadata.attacker,
-        attackCard: metadata.attackCard,
+        triggeringPlayerId: metadata.attacker,
+        triggeringCard: metadata.attackCard,
+        triggerType: "on_attack",
         availableReactions: reactions,
         metadata: {
           ...metadata,

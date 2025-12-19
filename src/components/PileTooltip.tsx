@@ -322,7 +322,7 @@ export function PileTooltip({
         }}
       >
         <TooltipContent
-          pileType={pileType}
+          {...(pileType !== undefined && { pileType })}
           knownUniqueCards={knownUniqueCards}
           knownCards={knownCards}
           unknownCards={unknownCards}

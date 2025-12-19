@@ -79,6 +79,7 @@ export interface LLMLogEntry {
     | "consensus-step-error"
     | "consensus-voting"
     | "consensus-complete"
+    | "consensus-skipped"
     | "consensus-model-pending"
     | "consensus-model-complete"
     | "consensus-model-aborted"

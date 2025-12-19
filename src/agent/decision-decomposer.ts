@@ -31,10 +31,13 @@ export function decomposeDecisionForAI(
 
     const currentCard = cardOptions[roundIndex];
 
-    const cardActions = availableActions.map(action => ({
-      type: action.id as Action["type"],
-      card: currentCard,
-    }));
+    const cardActions = availableActions.map(
+      action =>
+        ({
+          type: action.id as Exclude<Action["type"], "choose_from_options">,
+          card: currentCard ?? null,
+        }) as Action,
+    );
 
     return [...cardActions, { type: "skip_decision" as const }];
   }

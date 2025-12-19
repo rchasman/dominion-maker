@@ -102,14 +102,20 @@ export function PlayerGrid({
       let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
       // Find next available color if this one is taken
       let attempts = 0;
+      let color = LOBBY_COLORS[colorIndex];
       while (
-        acc.usedColors.has(LOBBY_COLORS[colorIndex]) &&
+        color !== undefined &&
+        acc.usedColors.has(color) &&
         attempts < LOBBY_COLORS.length
       ) {
         colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
+        color = LOBBY_COLORS[colorIndex];
         attempts++;
       }
-      const color = LOBBY_COLORS[colorIndex];
+      if (!color) {
+        // Fallback to first color if something went wrong
+        return acc;
+      }
       return {
         usedColors: new Set([...acc.usedColors, color]),
         playerColors: new Map([...acc.playerColors, [player.id, color]]),
@@ -248,6 +254,9 @@ export function PlayerGrid({
             ? "#4a4a5e" // Gray to match --color-border-primary
             : playerColors.get(player.id);
 
+          const isLobbyPlayer = (p: typeof player): p is LobbyPlayer =>
+            "clientId" in p;
+
           return (
             <div
               key={player.id}
@@ -261,7 +270,11 @@ export function PlayerGrid({
                 name={player.name}
                 isMe={isMe}
                 requestState={isMe ? "none" : getRequestState(player.id)}
-                onClick={isMe ? () => {} : () => handleClick(player)}
+                onClick={
+                  isMe || !isLobbyPlayer(player)
+                    ? () => {}
+                    : () => handleClick(player)
+                }
                 color={assignedColor}
               />
             </div>
@@ -387,8 +400,10 @@ function GameCircle({
         const angle = (i / totalAvatars) * 2 * Math.PI - Math.PI / 2;
         const x = Math.cos(angle) * circleRadius;
         const y = Math.sin(angle) * circleRadius;
+        const playerId = player.id ?? "unknown";
+        const playerName = player.name ?? playerId;
         const playerColor =
-          playerColors.get(player.id) ?? getPlayerColor(player.name);
+          playerColors.get(playerId) ?? getPlayerColor(playerName);
 
         // Detect single-player game (2 players, at least one bot)
         const isSinglePlayer =

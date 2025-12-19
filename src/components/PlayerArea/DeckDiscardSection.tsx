@@ -78,7 +78,7 @@ function renderDiscardSelection(
             name={card}
             size="small"
             onClick={() => onCardClick?.(card, i)}
-            highlightMode={isOption ? "gain" : undefined}
+            {...(isOption && { highlightMode: "gain" as const })}
             disabled={!isOption}
           />
         );
@@ -142,8 +142,9 @@ export function DeckDiscardSection({
     }
   }, [animation, inverted]);
 
-  const shouldShowDiscardSelection =
-    pendingChoice && pendingChoice.from === "discard" && isInteractive;
+  const shouldShowDiscardSelection = Boolean(
+    pendingChoice && pendingChoice.from === "discard" && isInteractive,
+  );
 
   const discardContent = getDiscardContent(
     discard,

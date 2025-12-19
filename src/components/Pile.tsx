@@ -100,10 +100,10 @@ export function Pile({
         <Suspense fallback={null}>
           <PileTooltip
             cards={cards}
-            knownCards={knownCards}
+            {...(knownCards !== undefined && { knownCards })}
             mouseX={tooltipPosition.x}
             mouseY={tooltipPosition.y}
-            pileType={pileType}
+            {...(pileType !== undefined && { pileType })}
           />
         </Suspense>
       )}

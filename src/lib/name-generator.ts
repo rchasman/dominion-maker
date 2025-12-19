@@ -260,5 +260,8 @@ export function generatePlayerName(): string {
 
   const adjective = adjectives[seed1];
   const noun = nouns[seed2];
+  if (!adjective || !noun) {
+    return "Player";
+  }
   return `${capitalize(adjective)}${capitalize(noun)}`;
 }

@@ -58,8 +58,9 @@ export function orchestrateAttack(
           const reactionEvent: GameEvent = {
             type: "REACTION_OPPORTUNITY",
             playerId: firstTarget,
-            attacker,
-            attackCard,
+            triggeringPlayerId: attacker,
+            triggeringCard: attackCard,
+            triggerType: "on_attack",
             availableReactions: reactions,
             metadata: {
               allTargets: opponents,
@@ -176,6 +177,8 @@ function resolveRemainingTargets(
   if (remainingTargets.length === 0) return [];
 
   const [nextTarget, ...rest] = remainingTargets;
+  if (!nextTarget) return [];
+
   const reactions = getAvailableReactions(state, nextTarget, "on_attack");
 
   if (reactions.length > 0) {
@@ -184,8 +187,9 @@ function resolveRemainingTargets(
       {
         type: "REACTION_OPPORTUNITY",
         playerId: nextTarget,
-        attacker,
-        attackCard,
+        triggeringPlayerId: attacker,
+        triggeringCard: attackCard,
+        triggerType: "on_attack",
         availableReactions: reactions,
         metadata: {
           allTargets: [nextTarget, ...rest],

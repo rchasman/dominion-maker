@@ -272,7 +272,7 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   // Calculate VP and deck composition for both players
-  const getAllCards = (player: PlayerState | null) =>
+  const getAllCards = (player: PlayerState | null | undefined) =>
     player
       ? [...player.deck, ...player.hand, ...player.discard, ...player.inPlay]
       : [];
@@ -466,7 +466,7 @@ async function processGenerationRequest(
     currentState,
     recentTurnsStr,
     legalActions: legalActions || [],
-    humanChoice,
+    ...(humanChoice ? { humanChoice } : {}),
     format,
   });
 
@@ -544,10 +544,6 @@ export default async function handler(
         return "unknown";
       }
     });
-
-    // Try recovery strategies
-    const recovered = tryRecoverFromError(err, provider, res);
-    if (recovered) return recovered;
 
     // Log and return error
     const error = err as Error & { cause?: unknown; text?: string };

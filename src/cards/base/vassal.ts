@@ -25,6 +25,10 @@ export const vassal: CardEffect = ({
     }
 
     const topCard = revealed[0];
+    if (!topCard) {
+      return { events: coinEvents };
+    }
+
     const discardEvents: GameEvent[] = [
       {
         type: "CARD_DISCARDED",
@@ -60,9 +64,16 @@ export const vassal: CardEffect = ({
   if (stage === STAGES.PLAY_ACTION) {
     // Coins already emitted in initial stage
     if (decision.selectedCards.length > 0) {
-      const cardToPlay = decision.selectedCards[0];
+      const cardToPlay = decision.selectedCards[0]!;
       return {
-        events: [{ type: "CARD_PLAYED", playerId, card: cardToPlay }],
+        events: [
+          {
+            type: "CARD_PLAYED",
+            playerId,
+            card: cardToPlay,
+            sourceIndex: 0, // From discard, not hand
+          },
+        ],
       };
     }
     return { events: [] };

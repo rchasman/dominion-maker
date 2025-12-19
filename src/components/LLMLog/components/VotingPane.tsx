@@ -267,7 +267,9 @@ function VoteResultItem({
       />
       <ActionDetails
         actionStr={actionStr}
-        reasoning={result.action.reasoning}
+        {...(result.action.reasoning !== undefined && {
+          reasoning: result.action.reasoning,
+        })}
         isValid={isValid}
         isWinner={isWinner}
       />
@@ -304,7 +306,7 @@ function ActionDetails({
     >
       <ActionTextContent
         actionStr={actionStr}
-        reasoning={reasoning}
+        {...(reasoning !== undefined && { reasoning })}
         isWinner={isWinner}
       />
       <ValidationBadge isValid={isValid} />

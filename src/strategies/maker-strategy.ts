@@ -60,10 +60,10 @@ export class MakerStrategy implements GameStrategy {
     const activeplayerId = engine.state.activePlayerId;
     return runAITurnWithConsensus(engine, activeplayerId, {
       providers: models,
-      logger: this.logger,
-      onStateChange,
-      strategySummary: this.strategySummary,
-      customStrategy: this.modelSettings.customStrategy,
+      ...(this.logger !== undefined && { logger: this.logger }),
+      ...(onStateChange !== undefined && { onStateChange }),
+      ...(this.strategySummary !== undefined && { strategySummary: this.strategySummary }),
+      ...(this.modelSettings.customStrategy !== undefined && { customStrategy: this.modelSettings.customStrategy }),
       dataFormat: this.modelSettings.dataFormat,
     });
   }
@@ -90,9 +90,9 @@ export class MakerStrategy implements GameStrategy {
     const playerId = pendingChoice?.playerId || engine.state.activePlayerId;
     return advanceGameStateWithConsensus(engine, playerId, {
       providers: models,
-      logger: this.logger,
-      strategySummary: this.strategySummary,
-      customStrategy: this.modelSettings.customStrategy,
+      ...(this.logger !== undefined && { logger: this.logger }),
+      ...(this.strategySummary !== undefined && { strategySummary: this.strategySummary }),
+      ...(this.modelSettings.customStrategy !== undefined && { customStrategy: this.modelSettings.customStrategy }),
       dataFormat: this.modelSettings.dataFormat,
     });
   }

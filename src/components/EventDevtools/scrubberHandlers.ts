@@ -1,4 +1,4 @@
-import type { MutableRef, StateUpdater } from "preact/hooks";
+import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 
@@ -12,14 +12,14 @@ interface ScrubberDeps {
 }
 
 interface ScrubberActions {
-  setScrubberIndex: StateUpdater<number | null>;
-  setSelectedEventId: StateUpdater<string | null>;
-  setIsPlaying: StateUpdater<boolean>;
+  setScrubberIndex: Dispatch<StateUpdater<number | null>>;
+  setSelectedEventId: Dispatch<StateUpdater<string | null>>;
+  setIsPlaying: Dispatch<StateUpdater<boolean>>;
 }
 
 function stopPlayback(
   playIntervalRef: MutableRef<NodeJS.Timeout | null>,
-  setIsPlaying: StateUpdater<boolean>,
+  setIsPlaying: Dispatch<StateUpdater<boolean>>,
 ) {
   setIsPlaying(false);
   if (playIntervalRef.current) {
@@ -32,7 +32,7 @@ function useHandleScrubberChange(
   rootEvents: GameEvent[],
   events: GameEvent[],
   onScrub: ((eventId: string | null) => void) | undefined,
-  setScrubberIndex: StateUpdater<number | null>,
+  setScrubberIndex: Dispatch<StateUpdater<number | null>>,
 ) {
   return useCallback(
     (e: Event) => {
@@ -56,7 +56,7 @@ function useHandleRewindToBeginning(
   rootEvents: GameEvent[],
   events: GameEvent[],
   onScrub: ((eventId: string | null) => void) | undefined,
-  setScrubberIndex: StateUpdater<number | null>,
+  setScrubberIndex: Dispatch<StateUpdater<number | null>>,
 ) {
   return useCallback(() => {
     if (rootEvents.length > 0) {

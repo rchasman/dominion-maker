@@ -237,9 +237,16 @@ export function usePartyGame({
   const startGame = useCallback(
     (kingdomCards?: CardName[]) => {
       if (isSinglePlayer) {
-        send({ type: "start_singleplayer", kingdomCards, gameMode });
+        send({
+          type: "start_singleplayer",
+          ...(kingdomCards !== undefined && { kingdomCards }),
+          gameMode,
+        });
       } else {
-        send({ type: "start_game", kingdomCards });
+        send({
+          type: "start_game",
+          ...(kingdomCards !== undefined && { kingdomCards }),
+        });
       }
     },
     [send, isSinglePlayer, gameMode],
@@ -314,7 +321,11 @@ export function usePartyGame({
 
   const requestUndo = useCallback(
     (toEventId: string, reason?: string) => {
-      send({ type: "request_undo", toEventId, reason });
+      send({
+        type: "request_undo",
+        toEventId,
+        ...(reason !== undefined && { reason }),
+      });
     },
     [send],
   );

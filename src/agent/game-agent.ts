@@ -5,7 +5,6 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
-import type { Action } from "../types/action";
 import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import { run } from "../lib/run";
@@ -510,9 +509,9 @@ async function handleMultiActionConsensus(
   const cardActionsWithDefaults = Object.fromEntries(
     Array.from({ length: numCards }).map((_, i) => [
       i,
-      i in cardActions ? cardActions[i] : defaultAction.id,
+      i in cardActions ? cardActions[i]! : defaultAction.id,
     ]),
-  );
+  ) as Record<number, string>;
 
   const cardOrder = Object.entries(cardActionsWithDefaults)
     .filter(([, actionId]) => actionId === "topdeck_card")
@@ -574,10 +573,10 @@ export async function advanceGameStateWithConsensus(
 
   const helperConfig = {
     providers,
-    humanChoice,
-    logger,
-    strategySummary,
-    customStrategy,
+    ...(humanChoice !== undefined ? { humanChoice } : {}),
+    ...(logger !== undefined ? { logger } : {}),
+    ...(strategySummary !== undefined ? { strategySummary } : {}),
+    ...(customStrategy !== undefined ? { customStrategy } : {}),
     dataFormat,
     actionId,
     overallStart,

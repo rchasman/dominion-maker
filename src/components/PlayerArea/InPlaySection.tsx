@@ -86,9 +86,9 @@ export function InPlaySection({
                 name={card}
                 size="small"
                 cardId={`inPlay${suffix}-${i}-${card}`}
-                onClick={
-                  onInPlayClick ? () => onInPlayClick(card, i) : undefined
-                }
+                {...(onInPlayClick !== undefined && {
+                  onClick: () => onInPlayClick(card, i),
+                })}
                 dimmed={isTreasure && hasMadePurchases}
               />
             );

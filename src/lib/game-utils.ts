@@ -35,7 +35,7 @@ export function drawCards(
     events: DrawEvent[];
     currentBatch: CardName[];
   }>(
-    acc => {
+    (acc, _currentValue, _currentIndex, _array) => {
       if (acc.deck.length === 0) {
         if (acc.discard.length === 0) return acc;
 
@@ -57,6 +57,8 @@ export function drawCards(
       }
 
       const [card, ...remainingDeck] = acc.deck;
+      if (!card) return acc;
+
       return {
         ...acc,
         deck: remainingDeck,

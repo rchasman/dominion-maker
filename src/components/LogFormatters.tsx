@@ -13,7 +13,7 @@ export function PlayerName({
   const { gameState, players } = useGame();
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
-  const playerName = players?.find(p => p.playerId === playerId)?.name;
+  const playerName = players?.find(p => p.id === playerId)?.name;
 
   const displayName = playerName
     ? isAI

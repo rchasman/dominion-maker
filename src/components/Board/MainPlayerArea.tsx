@@ -52,7 +52,7 @@ export function MainPlayerArea({
   const playerStrategy = playerStrategies[localPlayerId];
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
-  const playerName = players?.find(p => p.playerId === localPlayerId)?.name;
+  const playerName = players?.find(p => p.id === localPlayerId)?.name;
   const displayName = playerName
     ? isLocalPlayerAI
       ? `${playerName} (AI)`
@@ -88,7 +88,9 @@ export function MainPlayerArea({
           <CardDecisionModal
             cards={displayState.pendingChoice.cardOptions}
             actions={displayState.pendingChoice.actions}
-            requiresOrdering={displayState.pendingChoice.requiresOrdering}
+            {...(displayState.pendingChoice.requiresOrdering !== undefined && {
+              requiresOrdering: displayState.pendingChoice.requiresOrdering,
+            })}
             onDataChange={onComplexDecisionChange}
           />
         )}

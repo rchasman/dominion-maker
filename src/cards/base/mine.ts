@@ -55,12 +55,13 @@ export const mine = createMultiStageCard({
 
     // Store the trashed card in a temporary state for gain decision
     if (!state.pendingChoice) return { events };
+    if (state.pendingChoice.choiceType !== "decision") return { events };
 
     const stateWithMetadata = {
       ...state,
       pendingChoice: {
         ...state.pendingChoice,
-        metadata: { trashedCard: toTrash },
+        metadata: { ...state.pendingChoice.metadata, trashedCard: toTrash },
       },
     };
 

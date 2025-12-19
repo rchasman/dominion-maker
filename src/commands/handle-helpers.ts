@@ -116,7 +116,7 @@ export function getNextPlayer(
 ): string {
   const currentIdx = state.playerOrder.indexOf(currentPlayerId);
   const nextIdx = (currentIdx + 1) % state.playerOrder.length;
-  return state.playerOrder[nextIdx];
+  return state.playerOrder[nextIdx]!;
 }
 
 export function checkGameOver(state: GameState): GameEvent | null {

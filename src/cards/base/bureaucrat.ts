@@ -63,7 +63,7 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
     },
     stage: STAGES.OPPONENT_TOPDECK,
   },
-  (state, playerId) => [
+  (_state, playerId) => [
     {
       type: "CARD_GAINED" as const,
       playerId,

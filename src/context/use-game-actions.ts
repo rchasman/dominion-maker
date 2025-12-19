@@ -231,8 +231,7 @@ export function useGameActions(
     (eventId: string): GameState => {
       const engine = engineRef.current;
       if (!engine || !gameState) {
-        const fallback: GameState = gameState ?? ({} satisfies GameState);
-        return fallback;
+        return gameState!;
       }
 
       return getStateAtEventUtil(engine, eventId, gameState);

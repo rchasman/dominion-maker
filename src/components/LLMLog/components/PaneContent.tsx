@@ -36,22 +36,25 @@ export function PaneContent({
       return (
         <VotingPane
           data={votingData}
-          liveStatuses={modelStatuses}
-          totalModels={totalModels}
-          legalActions={legalActions}
+          {...(modelStatuses !== undefined && { liveStatuses: modelStatuses })}
+          {...(totalModels !== undefined && { totalModels })}
+          {...(legalActions !== undefined && { legalActions })}
         />
       );
     case "performance":
       return (
         <PerformancePane
           data={timingData}
-          liveStatuses={modelStatuses}
-          now={now}
+          {...(modelStatuses !== undefined && { liveStatuses: modelStatuses })}
+          {...(now !== undefined && { now })}
         />
       );
     case "reasoning":
       return (
-        <ReasoningPane votingData={votingData} modelStatuses={modelStatuses} />
+        <ReasoningPane
+          {...(votingData !== undefined && { votingData })}
+          {...(modelStatuses !== undefined && { modelStatuses })}
+        />
       );
     case "state":
       return <GameStatePane gameState={gameStateData} />;

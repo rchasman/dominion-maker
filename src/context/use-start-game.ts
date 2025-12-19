@@ -41,9 +41,9 @@ export function useStartGame(
 
     // Clear React state immediately after clearing storage
     setLLMLogs([]);
-    setPlayerStrategies([]);
+    setPlayerStrategies({});
     setEvents([]);
-    setGameState(null);
+    setGameState(engine.getState());
 
     const newEngine = new DominionEngine();
     setEngine(newEngine);

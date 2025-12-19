@@ -45,7 +45,7 @@ export function fetchStrategyAnalysis(
 
       const stringifiedStrategies = JSON.stringify(data.strategySummary);
       strategy.setStrategySummary?.(stringifiedStrategies);
-      setPlayerStrategies(data.strategySummary);
+      setPlayerStrategies(data.strategySummary as PlayerStrategyData);
     })
     .catch((err: unknown) => {
       uiLogger.warn("Failed to fetch strategy analysis:", err);

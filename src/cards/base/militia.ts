@@ -2,6 +2,7 @@
  * Militia - +$2. Each other player discards down to 3 cards in hand
  */
 
+import type { CardName } from "../../types/game-state";
 import { createOpponentIteratorEffect } from "../effect-types";
 import { STAGES } from "../stages";
 

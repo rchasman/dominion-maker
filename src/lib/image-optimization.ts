@@ -33,7 +33,7 @@ export function getOptimizedImageUrl({
  * Generate srcset for responsive images with multiple widths
  * Vercel Image Optimization creates optimized variants for each width
  */
-export function generateSrcSet(url: string, widths: number[]): string {
+export function generateSrcSet(url: string, widths: readonly number[]): string {
   return widths
     .map(w => `${getOptimizedImageUrl({ url, width: w })} ${w}w`)
     .join(", ");

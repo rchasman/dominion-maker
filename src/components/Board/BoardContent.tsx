@@ -95,10 +95,10 @@ function SupplyArea({
       isPlayerActive={isPlayerActive}
       hasTreasuresInHand={hasTreasuresInHand}
       onPlayAllTreasures={onPlayAllTreasures}
-      onEndPhase={onEndPhase}
+      {...(onEndPhase !== undefined && { onEndPhase })}
       selectedCardIndices={selectedCardIndices}
-      onConfirmDecision={onConfirmDecision}
-      onSkipDecision={onSkipDecision}
+      {...(onConfirmDecision !== undefined && { onConfirmDecision })}
+      {...(onSkipDecision !== undefined && { onSkipDecision })}
       complexDecisionData={complexDecisionData}
     />
   );
@@ -145,7 +145,7 @@ export function BoardContent({
 
   // Try to get opponent name from players list (multiplayer)
   const opponentPlayerName = players?.find(
-    p => p.playerId === opponentPlayerId,
+    p => p.id === opponentPlayerId,
   )?.name;
   const opponentDisplayName = opponentPlayerName
     ? isOpponentAI
@@ -255,10 +255,10 @@ export function BoardContent({
           isPlayerActive={isLocalPlayerTurn}
           hasTreasuresInHand={game.hasTreasuresInHand}
           onPlayAllTreasures={animatedPlayAllTreasures}
-          onEndPhase={onEndPhase}
+          {...(onEndPhase !== undefined && { onEndPhase })}
           selectedCardIndices={selectedCardIndices}
-          onConfirmDecision={onConfirmDecision}
-          onSkipDecision={onSkipDecision}
+          {...(onConfirmDecision !== undefined && { onConfirmDecision })}
+          {...(onSkipDecision !== undefined && { onSkipDecision })}
           complexDecisionData={complexDecisionData}
         />
 
@@ -272,9 +272,7 @@ export function BoardContent({
           displayState={displayState}
           {...(onCardClick !== undefined && { onCardClick })}
           {...(onInPlayClick !== undefined && { onInPlayClick })}
-          {...(onComplexDecisionChange !== undefined && {
-            onComplexDecisionChange,
-          })}
+          onComplexDecisionChange={onComplexDecisionChange}
           {...(onRevealReaction !== undefined && { onRevealReaction })}
           {...(onDeclineReaction !== undefined && { onDeclineReaction })}
         />

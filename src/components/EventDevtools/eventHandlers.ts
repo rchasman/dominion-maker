@@ -1,4 +1,4 @@
-import type { MutableRef, StateUpdater } from "preact/hooks";
+import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
 import { useScrubberHandlers } from "./scrubberHandlers";
@@ -15,9 +15,9 @@ interface HandlerDeps {
 }
 
 interface HandlerActions {
-  setScrubberIndex: StateUpdater<number | null>;
-  setSelectedEventId: StateUpdater<string | null>;
-  setIsPlaying: StateUpdater<boolean>;
+  setScrubberIndex: Dispatch<StateUpdater<number | null>>;
+  setSelectedEventId: Dispatch<StateUpdater<string | null>>;
+  setIsPlaying: Dispatch<StateUpdater<boolean>>;
 }
 
 export function useEventHandlers(deps: HandlerDeps, actions: HandlerActions) {

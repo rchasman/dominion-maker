@@ -37,7 +37,7 @@ export function handleStartGame(
       players,
       kingdomCards: selectedKingdom,
       supply,
-      seed,
+      ...(seed !== undefined ? { seed } : {}),
       id: rootEventId,
     },
   ];
@@ -86,7 +86,7 @@ export function handleStartGame(
       {
         type: "TURN_STARTED",
         turn: 1,
-        playerId: players[0],
+        playerId: players[0]!,
         id: turnStartId,
       },
       ...createResourceEvents(
@@ -166,15 +166,21 @@ export function handleEndPhase(
     ];
 
     // Draw 5 new cards
+    const stateAfterCleanup = applyEvents(state, cleanupEvents);
+    const playerStateAfterCleanup = stateAfterCleanup.players[playerId];
+    if (!playerStateAfterCleanup) {
+      return { ok: false, error: "Player not found" };
+    }
+
     const drawEvents = createDrawEvents(
       playerId,
-      applyEvents(state, cleanupEvents).players[playerId],
+      playerStateAfterCleanup,
       GAME_CONSTANTS.INITIAL_HAND_SIZE,
     );
 
     const allEvents = [
       ...cleanupEvents,
-      ...createResourceEvents(drawEvents, endTurnId),
+      ...drawEvents.map(event => ({ ...event, causedBy: endTurnId })),
     ];
 
     // Check game over
