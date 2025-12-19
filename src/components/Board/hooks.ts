@@ -34,6 +34,7 @@ interface TypedGameContext {
   getStateAtEvent: (eventId: string) => GameState;
   playerStrategies: PlayerStrategyData;
   localPlayerId?: string | null;
+  isSpectator?: boolean;
 }
 
 export function useTypedGame(): TypedGameContext {
@@ -63,6 +64,7 @@ export function useTypedGame(): TypedGameContext {
     getStateAtEvent: context.getStateAtEvent,
     playerStrategies: context.playerStrategies,
     localPlayerId: context.localPlayerId,
+    isSpectator: context.isSpectator,
   };
 }
 
