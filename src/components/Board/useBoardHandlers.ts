@@ -68,14 +68,8 @@ export function useBoardHandlers(params: BoardHandlersParams) {
 
   const handleCardClick = useCallback(
     (card: CardName, index: number, localPlayerId: string) => {
-      if (
-        !gameState?.activePlayerId ||
-        gameState.activePlayerId !== localPlayerId
-      ) {
-        return;
-      }
-
-      if (gameState.pendingChoice) {
+      // Allow interaction if there's a pending decision for this player (even if not their turn)
+      if (gameState?.pendingChoice?.playerId === localPlayerId) {
         const selection = shouldSelectCard(
           index,
           selectedCardIndices,
@@ -87,6 +81,14 @@ export function useBoardHandlers(params: BoardHandlersParams) {
         } else if (selection.canAdd) {
           addCardSelection(index);
         }
+        return;
+      }
+
+      // Normal turn-based interaction
+      if (
+        !gameState?.activePlayerId ||
+        gameState.activePlayerId !== localPlayerId
+      ) {
         return;
       }
 
