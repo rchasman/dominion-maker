@@ -855,7 +855,11 @@ describe("Event Application - Edge Cases", () => {
     const newState = applyEvent(state, event);
 
     // Should remove first occurrence only
-    expect(newState.players.human!.hand).toEqual(["Copper", "Copper", "Estate"]);
+    expect(newState.players.human!.hand).toEqual([
+      "Copper",
+      "Copper",
+      "Estate",
+    ]);
     expect(newState.players.human!.discard.length).toBe(2); // Original discard + new
   });
 });

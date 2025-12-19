@@ -108,7 +108,8 @@ function getEndPhaseButtonBorder(
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
-  if (pendingChoice && canSkipDecision(pendingChoice)) return "1px solid #fbbf24";
+  if (pendingChoice && canSkipDecision(pendingChoice))
+    return "1px solid #fbbf24";
   if (phase === "action") return "1px solid var(--color-victory)";
   return "1px solid #666";
 }
@@ -147,9 +148,7 @@ function ConfirmButton({
 
   return (
     <button
-      onClick={() =>
-        onConfirmDecision(complexDecisionData ?? undefined)
-      }
+      onClick={() => onConfirmDecision(complexDecisionData ?? undefined)}
       disabled={disabled}
       style={{
         padding: "var(--space-2) var(--space-4)",
@@ -465,7 +464,10 @@ export function Supply({
         </div>
         <div className="kingdom-grid">
           {sortedKingdom.map(card => {
-            const highlightMode = getSupplyCardHighlightMode(card, pendingChoice);
+            const highlightMode = getSupplyCardHighlightMode(
+              card,
+              pendingChoice,
+            );
             return (
               <Card
                 key={card}
@@ -552,7 +554,10 @@ export function Supply({
             }
             {...(getSupplyCardHighlightMode("Curse", pendingChoice) !==
               undefined && {
-              highlightMode: getSupplyCardHighlightMode("Curse", pendingChoice)!,
+              highlightMode: getSupplyCardHighlightMode(
+                "Curse",
+                pendingChoice,
+              )!,
             })}
           />
         </div>
@@ -572,7 +577,9 @@ export function Supply({
         >
           {run(() => {
             if (onConfirmDecision && hasPendingDecision) {
-              const minRequired = isDecisionChoice(state.pendingChoice) ? (state.pendingChoice.min ?? 0) : 0;
+              const minRequired = isDecisionChoice(state.pendingChoice)
+                ? (state.pendingChoice.min ?? 0)
+                : 0;
               return (
                 <>
                   <ConfirmButton

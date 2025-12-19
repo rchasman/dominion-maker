@@ -76,11 +76,15 @@ describe("Militia with Reaction Flow", () => {
     if (!result.ok) throw new Error(`Command failed: ${result.error}`);
 
     // Should have ATTACK_DECLARED
-    const attackDeclared = result.events.find(e => e.type === "ATTACK_DECLARED");
+    const attackDeclared = result.events.find(
+      e => e.type === "ATTACK_DECLARED",
+    );
     expect(attackDeclared).toBeDefined();
 
     // Should have REACTION_OPPORTUNITY for ai1 (who has Moat)
-    const reactionOpp = result.events.find(e => e.type === "REACTION_OPPORTUNITY");
+    const reactionOpp = result.events.find(
+      e => e.type === "REACTION_OPPORTUNITY",
+    );
     expect(reactionOpp).toBeDefined();
     if (!reactionOpp || reactionOpp.type !== "REACTION_OPPORTUNITY")
       throw new Error("No reaction opportunity");
@@ -88,7 +92,9 @@ describe("Militia with Reaction Flow", () => {
     expect(reactionOpp.availableReactions).toContain("Moat");
 
     // Should NOT have DECISION_REQUIRED yet (waiting for reactions)
-    const decisionEvent = result.events.find(e => e.type === "DECISION_REQUIRED");
+    const decisionEvent = result.events.find(
+      e => e.type === "DECISION_REQUIRED",
+    );
     expect(decisionEvent).toBeUndefined();
   });
 
@@ -116,9 +122,13 @@ describe("Militia with Reaction Flow", () => {
     );
 
     expect(reactionResult.ok).toBe(true);
-    if (!reactionResult.ok) throw new Error(`Reaction failed: ${reactionResult.error}`);
+    if (!reactionResult.ok)
+      throw new Error(`Reaction failed: ${reactionResult.error}`);
 
-    console.log("Events after Moat reveal:", reactionResult.events.map(e => e.type));
+    console.log(
+      "Events after Moat reveal:",
+      reactionResult.events.map(e => e.type),
+    );
 
     // Should have REACTION_REVEALED
     const reactionRevealed = reactionResult.events.find(
@@ -175,9 +185,13 @@ describe("Militia with Reaction Flow", () => {
     );
 
     expect(reactionResult.ok).toBe(true);
-    if (!reactionResult.ok) throw new Error(`Reaction failed: ${reactionResult.error}`);
+    if (!reactionResult.ok)
+      throw new Error(`Reaction failed: ${reactionResult.error}`);
 
-    console.log("Events after decline:", reactionResult.events.map(e => e.type));
+    console.log(
+      "Events after decline:",
+      reactionResult.events.map(e => e.type),
+    );
 
     // Should have REACTION_DECLINED
     const reactionDeclined = reactionResult.events.find(

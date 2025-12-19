@@ -248,7 +248,7 @@ export function applyReactionEvent(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "REACTION_OPPORTUNITY") {
-    const reactionEvent = event as Extract<GameEvent, { type: "REACTION_OPPORTUNITY" }>;
+    const reactionEvent = event;
     return {
       ...state,
       pendingChoice: {
@@ -264,7 +264,7 @@ export function applyReactionEvent(
   }
 
   if (event.type === "REACTION_REVEALED") {
-    const revealedEvent = event as Extract<GameEvent, { type: "REACTION_REVEALED" }>;
+    const revealedEvent = event;
     return {
       ...state,
       pendingChoice: null,
@@ -281,7 +281,7 @@ export function applyReactionEvent(
   }
 
   if (event.type === "REACTION_DECLINED") {
-    const declinedEvent = event as Extract<GameEvent, { type: "REACTION_DECLINED" }>;
+    const declinedEvent = event;
     return {
       ...state,
       pendingChoice: null,

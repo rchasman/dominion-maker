@@ -178,7 +178,8 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                       eventType: event.type,
                       toZone,
                       selector:
-                        event.type === "CARD_PLAYED" && event.sourceIndex !== undefined
+                        event.type === "CARD_PLAYED" &&
+                        event.sourceIndex !== undefined
                           ? `[data-card-id="hand-opponent-${event.sourceIndex}-${cardName}"]`
                           : undefined,
                     },

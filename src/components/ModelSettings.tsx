@@ -45,7 +45,9 @@ function renderConsensusControl(
         min="1"
         max={MAX_CONSENSUS_COUNT}
         value={consensusCount}
-        onChange={e => handleChange(Number((e.target as HTMLInputElement).value))}
+        onChange={e =>
+          handleChange(Number((e.target as HTMLInputElement).value))
+        }
         style={{
           width: "100%",
           cursor: "pointer",

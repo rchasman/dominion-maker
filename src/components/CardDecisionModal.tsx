@@ -103,7 +103,8 @@ function useCardDecisionState(
       setCardActions(prev => {
         const nextIdx =
           (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
-        const nextActionId = actions[nextIdx]?.id ?? actions[0]?.id ?? "keep_card";
+        const nextActionId =
+          actions[nextIdx]?.id ?? actions[0]?.id ?? "keep_card";
         const newActions = { ...prev, [index]: nextActionId };
         const newCardOrder = requiresOrdering
           ? getCardsToOrder(cardOrder, newActions)

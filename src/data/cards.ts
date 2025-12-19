@@ -274,9 +274,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         from: "supply",
         prompt: ctx => {
           const metadata = ctx.state.pendingChoice?.metadata;
-          const trashedCard = (metadata && typeof metadata === "object" && "trashedCard" in metadata ? metadata.trashedCard : undefined) as
-            | CardName
-            | undefined;
+          const trashedCard = (
+            metadata &&
+            typeof metadata === "object" &&
+            "trashedCard" in metadata
+              ? metadata.trashedCard
+              : undefined
+          ) as CardName | undefined;
           if (!trashedCard) return "Remodel: Gain a card costing up to $2 more";
           const trashCost = CARDS[trashedCard].cost;
           const maxCost = trashCost + REMODEL_COST_BONUS;
@@ -284,9 +288,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         },
         cardOptions: ctx => {
           const metadata = ctx.state.pendingChoice?.metadata;
-          const trashedCard = (metadata && typeof metadata === "object" && "trashedCard" in metadata ? metadata.trashedCard : undefined) as
-            | CardName
-            | undefined;
+          const trashedCard = (
+            metadata &&
+            typeof metadata === "object" &&
+            "trashedCard" in metadata
+              ? metadata.trashedCard
+              : undefined
+          ) as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
           const maxCost = trashCost + REMODEL_COST_BONUS;
@@ -302,9 +310,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         max: 1,
         metadata: ctx => {
           const metadata = ctx.state.pendingChoice?.metadata;
-          const trashedCard = (metadata && typeof metadata === "object" && "trashedCard" in metadata ? metadata.trashedCard : undefined) as
-            | CardName
-            | undefined;
+          const trashedCard = (
+            metadata &&
+            typeof metadata === "object" &&
+            "trashedCard" in metadata
+              ? metadata.trashedCard
+              : undefined
+          ) as CardName | undefined;
           if (!trashedCard) return {};
           return {
             trashedCard,
@@ -388,9 +400,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         from: "supply",
         prompt: ctx => {
           const metadata = ctx.state.pendingChoice?.metadata;
-          const trashedCard = (metadata && typeof metadata === "object" && "trashedCard" in metadata ? metadata.trashedCard : undefined) as
-            | CardName
-            | undefined;
+          const trashedCard = (
+            metadata &&
+            typeof metadata === "object" &&
+            "trashedCard" in metadata
+              ? metadata.trashedCard
+              : undefined
+          ) as CardName | undefined;
           if (!trashedCard)
             return "Mine: Gain a Treasure costing up to $3 more";
           const trashCost = CARDS[trashedCard].cost;
@@ -399,9 +415,13 @@ export const CARDS: Record<CardName, CardDefinition> = {
         },
         cardOptions: ctx => {
           const metadata = ctx.state.pendingChoice?.metadata;
-          const trashedCard = (metadata && typeof metadata === "object" && "trashedCard" in metadata ? metadata.trashedCard : undefined) as
-            | CardName
-            | undefined;
+          const trashedCard = (
+            metadata &&
+            typeof metadata === "object" &&
+            "trashedCard" in metadata
+              ? metadata.trashedCard
+              : undefined
+          ) as CardName | undefined;
           if (!trashedCard) return [];
           const trashCost = CARDS[trashedCard].cost;
           const maxCost = trashCost + MINE_COST_BONUS;

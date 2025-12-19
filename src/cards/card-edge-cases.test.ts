@@ -93,9 +93,10 @@ describe("Edge Cases - Empty Hand", () => {
       card: "Cellar",
     });
 
-    expect(result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1,
-    );
+    expect(
+      result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+        ?.delta,
+    ).toBe(1);
     expect(result.pendingChoice).toBeUndefined();
   });
 
@@ -176,7 +177,9 @@ describe("Edge Cases - Empty Deck", () => {
       card: "Smithy",
     });
 
-    expect(result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length).toBe(0);
+    expect(
+      result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
+    ).toBe(0);
   });
 
   it("Library with 7 cards already does nothing", () => {
@@ -209,7 +212,9 @@ describe("Edge Cases - Empty Deck", () => {
       card: "Vassal",
     });
 
-    expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(2);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
+    ).toBe(2);
     expect(result.pendingChoice).toBeUndefined();
   });
 
@@ -225,7 +230,9 @@ describe("Edge Cases - Empty Deck", () => {
       card: "Harbinger",
     });
 
-    expect(result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length).toBe(1);
+    expect(
+      result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
+    ).toBe(1);
     expect(result.pendingChoice).toBeUndefined();
   });
 });
@@ -311,7 +318,9 @@ describe("Edge Cases - Opponent Interactions", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(2);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
+    ).toBe(2);
     // Should not request decision since opponent has ≤3 cards
     expect(
       result.events.find((e: GameEvent) => e.type === "DECISION_REQUIRED"),
@@ -341,7 +350,9 @@ describe("Edge Cases - Opponent Interactions", () => {
     if (!result.ok) return;
 
     expect(
-      result.events.find((e: GameEvent) => e.type === "CARD_GAINED" && e.card === "Silver"),
+      result.events.find(
+        (e: GameEvent) => e.type === "CARD_GAINED" && e.card === "Silver",
+      ),
     ).toBeDefined();
     // Should not request decision since opponent has no victory cards
     expect(
@@ -398,7 +409,9 @@ describe("Edge Cases - Opponent Interactions", () => {
       card: "Council Room",
     });
 
-    expect(result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length).toBe(4);
+    expect(
+      result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
+    ).toBe(4);
   });
 });
 
@@ -460,7 +473,9 @@ describe("Edge Cases - Decision Cancellation", () => {
       stage: "on_skip",
     });
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(0);
   });
 });

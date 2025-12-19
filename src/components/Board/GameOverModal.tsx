@@ -46,7 +46,8 @@ export function GameOverModal({
         style={{
           fontSize: "1.375rem",
           margin: 0,
-          color: winnerId === localPlayerId ? "var(--color-victory)" : "#ef5350",
+          color:
+            winnerId === localPlayerId ? "var(--color-victory)" : "#ef5350",
         }}
       >
         {winnerName} {winnerName === "You" ? "win" : "wins"}!

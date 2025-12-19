@@ -19,7 +19,9 @@ export function shouldSelectCard(
   selectedCardIndices: number[],
   pendingChoice: GameState["pendingChoice"],
 ): { shouldToggleOff: boolean; canAdd: boolean } {
-  const max = isDecisionChoice(pendingChoice) ? (pendingChoice.max ?? DEFAULT_DECISION_MAX) : DEFAULT_DECISION_MAX;
+  const max = isDecisionChoice(pendingChoice)
+    ? (pendingChoice.max ?? DEFAULT_DECISION_MAX)
+    : DEFAULT_DECISION_MAX;
   const isAlreadySelected = selectedCardIndices.includes(cardIndex);
 
   return {

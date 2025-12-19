@@ -145,7 +145,9 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
 
     expect(result.events.length).toBeGreaterThan(0);
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(3);
   });
 
@@ -160,10 +162,14 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
       card: "Village",
     });
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(1);
 
-    const actionsEvent = result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED");
+    const actionsEvent = result.events.find(
+      (e: GameEvent) => e.type === "ACTIONS_MODIFIED",
+    );
     expect(actionsEvent).toBeDefined();
     if (!actionsEvent) throw new Error("No actions event");
     expect(actionsEvent.delta).toBe(2);
@@ -180,10 +186,14 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
       card: "Laboratory",
     });
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(2);
 
-    const actionsEvent = result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED");
+    const actionsEvent = result.events.find(
+      (e: GameEvent) => e.type === "ACTIONS_MODIFIED",
+    );
     expect(actionsEvent).toBeDefined();
     if (!actionsEvent) throw new Error("No actions event");
     expect(actionsEvent.delta).toBe(1);
@@ -200,7 +210,9 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
       card: "Moat",
     });
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(2);
   });
 
@@ -215,17 +227,23 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
       card: "Festival",
     });
 
-    const actionsEvent = result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED");
+    const actionsEvent = result.events.find(
+      (e: GameEvent) => e.type === "ACTIONS_MODIFIED",
+    );
     expect(actionsEvent).toBeDefined();
     if (!actionsEvent) throw new Error("No actions event");
     expect(actionsEvent.delta).toBe(2);
 
-    const buysEvent = result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED");
+    const buysEvent = result.events.find(
+      (e: GameEvent) => e.type === "BUYS_MODIFIED",
+    );
     expect(buysEvent).toBeDefined();
     if (!buysEvent) throw new Error("No buys event");
     expect(buysEvent.delta).toBe(1);
 
-    const coinsEvent = result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED");
+    const coinsEvent = result.events.find(
+      (e: GameEvent) => e.type === "COINS_MODIFIED",
+    );
     expect(coinsEvent).toBeDefined();
     if (!coinsEvent) throw new Error("No coins event");
     expect(coinsEvent.delta).toBe(2);
@@ -242,12 +260,19 @@ describe("Simple Benefit Cards (Factory-Generated)", () => {
       card: "Market",
     });
 
-    expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
-    expect(result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1,
-    );
-    expect(result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
-    expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+    ).toBeDefined();
+    expect(
+      result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+        ?.delta,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
+    ).toBe(1);
   });
 });
 
@@ -418,9 +443,12 @@ describe("Multi-Stage Decision Cards", () => {
         card: "Harbinger",
       });
 
-      expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta,
+        result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+      ).toBeDefined();
+      expect(
+        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+          ?.delta,
       ).toBe(1);
       expect(result.pendingChoice).toBeDefined();
       if (!result.pendingChoice) throw new Error("No pending decision");
@@ -462,9 +490,12 @@ describe("Multi-Stage Decision Cards", () => {
       });
 
       // Should draw 1 card and give +1 action
-      expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta,
+        result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+      ).toBeDefined();
+      expect(
+        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+          ?.delta,
       ).toBe(1);
 
       // Should NOT create a pending decision since discard is empty
@@ -527,7 +558,9 @@ describe("Multi-Stage Decision Cards", () => {
         stage: "gain",
       });
 
-      const gainEvent = result.events.find((e: GameEvent) => e.type === "CARD_GAINED");
+      const gainEvent = result.events.find(
+        (e: GameEvent) => e.type === "CARD_GAINED",
+      );
       expect(gainEvent).toBeDefined();
       if (!gainEvent) throw new Error("No gain event");
       expect(gainEvent.card).toBe("Silver");
@@ -569,7 +602,8 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer cards up to cost 4 (2+2)
       expect(newState.pendingChoice).toBeDefined();
-      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
       expect(newState.pendingChoice.cardOptions).toContain("Silver");
 
       // Gain Silver
@@ -607,7 +641,8 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Should offer treasures up to cost 3 (0+3)
       expect(newState.pendingChoice).toBeDefined();
-      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
       expect(newState.pendingChoice.cardOptions).toContain("Silver");
       expect(newState.pendingChoice.cardOptions).not.toContain("Gold");
 
@@ -645,7 +680,8 @@ describe("Multi-Stage Decision Cards", () => {
 
       // Topdeck card from hand
       expect(newState.pendingChoice).toBeDefined();
-      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
       expect(newState.pendingChoice.from).toBe("hand");
 
       newState = executeCard(
@@ -683,7 +719,9 @@ describe("Attack Cards", () => {
       if (!result.ok) console.log("ERROR:", result.error);
       expect(result.ok).toBe(true);
 
-      const coinsEvent = result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED");
+      const coinsEvent = result.events.find(
+        (e: GameEvent) => e.type === "COINS_MODIFIED",
+      );
       expect(coinsEvent).toBeDefined();
       if (!coinsEvent) throw new Error("No coins event");
       expect(coinsEvent.delta).toBe(2);
@@ -787,7 +825,9 @@ describe("Attack Cards", () => {
         card: "Witch",
       });
 
-      const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+      const drawEvents = result.events.filter(
+        (e: GameEvent) => e.type === "CARD_DRAWN",
+      );
       expect(drawEvents.length).toBe(2);
     });
 
@@ -995,9 +1035,12 @@ describe("Complex Card Interactions", () => {
         card: "Sentry",
       });
 
-      expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta,
+        result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+      ).toBeDefined();
+      expect(
+        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+          ?.delta,
       ).toBe(1);
       expect(result.pendingChoice).toBeDefined();
     });
@@ -1009,7 +1052,8 @@ describe("Complex Card Interactions", () => {
 
       // Should reveal 2 cards with decision
       expect(newState.pendingChoice).toBeDefined();
-      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
       expect(newState.pendingChoice.choiceType).toBe("decision");
       expect(newState.pendingChoice.cardOptions.length).toBe(2);
       expect(newState.pendingChoice.actions).toHaveLength(3);
@@ -1048,7 +1092,9 @@ describe("Complex Card Interactions", () => {
         card: "Vassal",
       });
 
-      const coinsEvent = result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED");
+      const coinsEvent = result.events.find(
+        (e: GameEvent) => e.type === "COINS_MODIFIED",
+      );
       expect(coinsEvent).toBeDefined();
       if (!coinsEvent) throw new Error("No coins event");
       expect(coinsEvent.delta).toBe(2);
@@ -1092,7 +1138,9 @@ describe("Complex Card Interactions", () => {
       );
       expect(drawEvents.length).toBe(4);
 
-      const buysEvent = result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED");
+      const buysEvent = result.events.find(
+        (e: GameEvent) => e.type === "BUYS_MODIFIED",
+      );
       expect(buysEvent).toBeDefined();
       if (!buysEvent) throw new Error("No buys event");
       expect(buysEvent.delta).toBe(1);
@@ -1136,9 +1184,12 @@ describe("Complex Card Interactions", () => {
         card: "Merchant",
       });
 
-      expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta,
+        result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+      ).toBeDefined();
+      expect(
+        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+          ?.delta,
       ).toBe(1);
     });
   });
@@ -1158,12 +1209,16 @@ describe("Complex Card Interactions", () => {
         },
       });
 
-      const trashEvent = result.events.find((e: GameEvent) => e.type === "CARD_TRASHED");
+      const trashEvent = result.events.find(
+        (e: GameEvent) => e.type === "CARD_TRASHED",
+      );
       expect(trashEvent).toBeDefined();
       if (!trashEvent) throw new Error("No trash event");
       expect(trashEvent.card).toBe("Copper");
 
-      const coinsEvent = result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED");
+      const coinsEvent = result.events.find(
+        (e: GameEvent) => e.type === "COINS_MODIFIED",
+      );
       expect(coinsEvent).toBeDefined();
       if (!coinsEvent) throw new Error("No coins event");
       expect(coinsEvent.delta).toBe(3);
@@ -1200,13 +1255,17 @@ describe("Complex Card Interactions", () => {
         card: "Poacher",
       });
 
-      expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
       expect(
-        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta,
+        result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+      ).toBeDefined();
+      expect(
+        result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+          ?.delta,
       ).toBe(1);
-      expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(
-        1,
-      );
+      expect(
+        result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")
+          ?.delta,
+      ).toBe(1);
     });
 
     it("should discard for each empty supply pile", () => {
@@ -1219,7 +1278,8 @@ describe("Complex Card Interactions", () => {
 
       // Should request discarding 3 cards
       expect(newState.pendingChoice).toBeDefined();
-      if (!isDecisionChoice(newState.pendingChoice)) throw new Error("No pending decision");
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
       expect(newState.pendingChoice.min).toBe(3);
       expect(newState.pendingChoice.max).toBe(3);
     });

@@ -110,7 +110,7 @@ type ReactionMetadata = {
 
 function extractReactionMetadata(
   ctx: DecisionContext,
-): ReactionMetadata & { currentTarget: PlayerId } | null {
+): (ReactionMetadata & { currentTarget: PlayerId }) | null {
   const allTargets = (ctx.metadata?.allTargets as PlayerId[]) || [];
   const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
   const blockedTargets = (ctx.metadata?.blockedTargets as PlayerId[]) || [];

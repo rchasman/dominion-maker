@@ -80,7 +80,9 @@ export function StateView({ state }: StateViewProps) {
           {isDecisionChoice(state.pendingChoice) && (
             <div style={styles.stateRow}>
               <span>Prompt:</span>{" "}
-              <span style={styles.stateValue}>{state.pendingChoice.prompt}</span>
+              <span style={styles.stateValue}>
+                {state.pendingChoice.prompt}
+              </span>
             </div>
           )}
         </div>

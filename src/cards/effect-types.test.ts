@@ -220,7 +220,9 @@ describe("createDrawEvents - Event Generation", () => {
 
     const events = createDrawEvents("human", playerState, 2);
 
-    const shuffleEvent = events.find((e: GameEvent) => e.type === "DECK_SHUFFLED");
+    const shuffleEvent = events.find(
+      (e: GameEvent) => e.type === "DECK_SHUFFLED",
+    );
     expect(shuffleEvent).toBeDefined();
     if (shuffleEvent) {
       expect(shuffleEvent.newDeckOrder).toBeDefined();
@@ -243,7 +245,9 @@ describe("createDrawEvents - Event Generation", () => {
 
     // Should have: CARD_DRAWN (Copper), DECK_SHUFFLED, CARD_DRAWN (x2)
     const drawEvents = events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
-    const shuffleEvent = events.find((e: GameEvent) => e.type === "DECK_SHUFFLED");
+    const shuffleEvent = events.find(
+      (e: GameEvent) => e.type === "DECK_SHUFFLED",
+    );
 
     expect(drawEvents.length).toBe(3);
     expect(shuffleEvent).toBeDefined();
@@ -487,7 +491,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const effect = createSimpleCardEffect({ cards: 3 });
     const result = effect({ state, playerId: "human", card: "Smithy" });
 
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(3);
   });
 
@@ -497,7 +503,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const effect = createSimpleCardEffect({ actions: 2 });
     const result = effect({ state, playerId: "human", card: "Village" });
 
-    const actionsEvent = result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED");
+    const actionsEvent = result.events.find(
+      (e: GameEvent) => e.type === "ACTIONS_MODIFIED",
+    );
     expect(actionsEvent).toBeDefined();
     if (actionsEvent) {
       expect(actionsEvent.delta).toBe(2);
@@ -510,7 +518,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const effect = createSimpleCardEffect({ buys: 1 });
     const result = effect({ state, playerId: "human", card: "Festival" });
 
-    const buysEvent = result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED");
+    const buysEvent = result.events.find(
+      (e: GameEvent) => e.type === "BUYS_MODIFIED",
+    );
     expect(buysEvent).toBeDefined();
     if (buysEvent) {
       expect(buysEvent.delta).toBe(1);
@@ -523,7 +533,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const effect = createSimpleCardEffect({ coins: 2 });
     const result = effect({ state, playerId: "human", card: "Festival" });
 
-    const coinsEvent = result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED");
+    const coinsEvent = result.events.find(
+      (e: GameEvent) => e.type === "COINS_MODIFIED",
+    );
     expect(coinsEvent).toBeDefined();
     if (coinsEvent) {
       expect(coinsEvent.delta).toBe(2);
@@ -542,12 +554,19 @@ describe("createSimpleCardEffect - Factory Function", () => {
     });
     const result = effect({ state, playerId: "human", card: "Market" });
 
-    expect(result.events.find((e: GameEvent) => e.type === "CARD_DRAWN")).toBeDefined();
-    expect(result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      1,
-    );
-    expect(result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
-    expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
+    ).toBeDefined();
+    expect(
+      result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+        ?.delta,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
+    ).toBe(1);
   });
 
   it("should create effect with no benefits (empty object)", () => {
@@ -570,7 +589,9 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const smithyFactory = createSimpleCardEffect({ cards: 3 });
     const result = smithyFactory({ state, playerId: "human", card: "Smithy" });
 
-    expect(result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length).toBe(3);
+    expect(
+      result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
+    ).toBe(3);
     expect(result.pendingChoice).toBeUndefined();
   });
 
@@ -585,10 +606,13 @@ describe("createSimpleCardEffect - Factory Function", () => {
       card: "Village",
     });
 
-    expect(result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length).toBe(1);
-    expect(result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2,
-    );
+    expect(
+      result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+        ?.delta,
+    ).toBe(2);
   });
 
   it("should exactly match Festival behavior (+2 actions, +1 buy, +$2)", () => {
@@ -605,11 +629,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
       card: "Festival",
     });
 
-    expect(result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")?.delta).toBe(
-      2,
-    );
-    expect(result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta).toBe(1);
-    expect(result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta).toBe(2);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
+        ?.delta,
+    ).toBe(2);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "BUYS_MODIFIED")?.delta,
+    ).toBe(1);
+    expect(
+      result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
+    ).toBe(2);
   });
 });
 
@@ -703,7 +732,9 @@ describe("Helper Function Integration", () => {
 
     // createDrawEvents should generate shuffle event
     const events = createDrawEvents("human", playerState, 3);
-    expect(events.find((e: GameEvent) => e.type === "DECK_SHUFFLED")).toBeDefined();
+    expect(
+      events.find((e: GameEvent) => e.type === "DECK_SHUFFLED"),
+    ).toBeDefined();
   });
 
   it("getGainableTreasures should use card type checking", () => {
@@ -727,7 +758,9 @@ describe("Helper Function Integration", () => {
     const result = smithy({ state, playerId: "human", card: "Smithy" });
 
     // Should not crash, just return empty events
-    const drawEvents = result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN");
+    const drawEvents = result.events.filter(
+      (e: GameEvent) => e.type === "CARD_DRAWN",
+    );
     expect(drawEvents.length).toBe(0);
   });
 });

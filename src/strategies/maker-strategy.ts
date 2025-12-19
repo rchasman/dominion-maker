@@ -62,8 +62,12 @@ export class MakerStrategy implements GameStrategy {
       providers: models,
       ...(this.logger !== undefined && { logger: this.logger }),
       ...(onStateChange !== undefined && { onStateChange }),
-      ...(this.strategySummary !== undefined && { strategySummary: this.strategySummary }),
-      ...(this.modelSettings.customStrategy !== undefined && { customStrategy: this.modelSettings.customStrategy }),
+      ...(this.strategySummary !== undefined && {
+        strategySummary: this.strategySummary,
+      }),
+      ...(this.modelSettings.customStrategy !== undefined && {
+        customStrategy: this.modelSettings.customStrategy,
+      }),
       dataFormat: this.modelSettings.dataFormat,
     });
   }
@@ -91,8 +95,12 @@ export class MakerStrategy implements GameStrategy {
     return advanceGameStateWithConsensus(engine, playerId, {
       providers: models,
       ...(this.logger !== undefined && { logger: this.logger }),
-      ...(this.strategySummary !== undefined && { strategySummary: this.strategySummary }),
-      ...(this.modelSettings.customStrategy !== undefined && { customStrategy: this.modelSettings.customStrategy }),
+      ...(this.strategySummary !== undefined && {
+        strategySummary: this.strategySummary,
+      }),
+      ...(this.modelSettings.customStrategy !== undefined && {
+        customStrategy: this.modelSettings.customStrategy,
+      }),
       dataFormat: this.modelSettings.dataFormat,
     });
   }

@@ -63,7 +63,9 @@ describe("Consensus System", () => {
       });
 
       // Find the consensus-voting log entry
-      const votingEntry = logEntries.find((e: GameEvent) => e.type === "consensus-voting");
+      const votingEntry = logEntries.find(
+        (e: GameEvent) => e.type === "consensus-voting",
+      );
       expect(votingEntry).toBeDefined();
 
       const votingData = votingEntry?.data;
