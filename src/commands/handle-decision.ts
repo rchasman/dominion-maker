@@ -110,7 +110,7 @@ type ReactionMetadata = {
 
 function extractReactionMetadata(
   ctx: DecisionContext,
-): ReactionMetadata & { currentTarget: PlayerId } {
+): ReactionMetadata & { currentTarget: PlayerId } | null {
   const allTargets = (ctx.metadata?.allTargets as PlayerId[]) || [];
   const currentTargetIndex = (ctx.metadata?.currentTargetIndex as number) || 0;
   const blockedTargets = (ctx.metadata?.blockedTargets as PlayerId[]) || [];
@@ -118,7 +118,9 @@ function extractReactionMetadata(
     (ctx.metadata?.attackCard as CardName) || ctx.cardBeingPlayed;
   const attacker =
     (ctx.metadata?.attacker as PlayerId) || ctx.state.activePlayerId;
-  const currentTarget = allTargets[currentTargetIndex]!;
+  const currentTarget = allTargets[currentTargetIndex];
+
+  if (!currentTarget) return null;
 
   return {
     attackCard,
@@ -138,7 +140,23 @@ function createReactionEvents(
   const revealedReaction = choice.cardActions?.["0"] === "reveal";
 
   if (revealedReaction && choice.selectedCards.length > 0) {
-    const reactionCard = choice.selectedCards[0]!;
+    const reactionCard = choice.selectedCards[0];
+    if (!reactionCard) {
+      return {
+        events: [
+          {
+            type: "ATTACK_RESOLVED",
+            attacker: metadata.attacker,
+            target: metadata.currentTarget,
+            attackCard: metadata.attackCard,
+            blocked: false,
+            id: generateEventId(),
+            causedBy,
+          },
+        ],
+        updatedBlockedTargets: metadata.blockedTargets,
+      };
+    }
     return {
       events: [
         {
@@ -314,6 +332,7 @@ function handleAutoReaction(
   if (!ctx.stage?.startsWith("__auto_reaction__")) return null;
 
   const metadata = extractReactionMetadata(ctx);
+  if (!metadata) return null;
   const { events: reactionEvents, updatedBlockedTargets } =
     createReactionEvents(
       choice,
