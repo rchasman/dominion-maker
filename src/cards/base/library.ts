@@ -16,7 +16,8 @@ export const library: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
 
   // Library peek strategy:
   // Peeks ahead to see which cards would be drawn. If shuffle occurs during
@@ -70,21 +71,20 @@ export const library: CardEffect = ({
   const drawEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
     .filter(({ index, action }) => action === "draw_card" && peeked[index])
-    .map(({ index }): GameEvent => ({
-      type: "CARD_DRAWN",
-      playerId,
-      card: peeked[index]!,
-    }));
+    .flatMap(({ index }): GameEvent[] => {
+      const card = peeked[index];
+      return card ? [{ type: "CARD_DRAWN", playerId, card }] : [];
+    });
 
   const discardEvents = Object.entries(cardActions)
     .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
     .filter(({ index, action }) => action === "discard_card" && peeked[index])
-    .map(({ index }): GameEvent => ({
-      type: "CARD_DISCARDED",
-      playerId,
-      card: peeked[index]!,
-      from: "deck",
-    }));
+    .flatMap(({ index }): GameEvent[] => {
+      const card = peeked[index];
+      return card
+        ? [{ type: "CARD_DISCARDED", playerId, card, from: "deck" }]
+        : [];
+    });
 
   return { events: [...drawEvents, ...discardEvents] };
 };

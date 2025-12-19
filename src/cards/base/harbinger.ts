@@ -12,7 +12,8 @@ export const harbinger: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
 
   // Initial: +1 Card, +1 Action
   if (!decision || stage === undefined) {
@@ -44,18 +45,21 @@ export const harbinger: CardEffect = ({
 
   // Put card on deck
   if (stage === STAGES.TOPDECK) {
-    const events =
-      decision.selectedCards.length > 0
-        ? [
-            {
-              type: "CARD_PUT_ON_DECK" as const,
-              playerId,
-              card: decision.selectedCards[0]!,
-              from: "discard" as const,
-            },
-          ]
-        : [];
-    return { events };
+    if (decision.selectedCards.length === 0) {
+      return { events: [] };
+    }
+    const selectedCard = decision.selectedCards[0];
+    if (!selectedCard) return { events: [] };
+    return {
+      events: [
+        {
+          type: "CARD_PUT_ON_DECK" as const,
+          playerId,
+          card: selectedCard,
+          from: "discard" as const,
+        },
+      ],
+    };
   }
 
   return { events: [] };

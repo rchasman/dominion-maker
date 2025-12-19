@@ -12,19 +12,19 @@ export const councilRoom: CardEffect = ({
   state,
   playerId,
 }): CardEffectResult => {
-  const drawEvents = createDrawEvents(
-    playerId,
-    state.players[playerId]!,
-    CARDS_TO_DRAW,
-  );
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
+
+  const drawEvents = createDrawEvents(playerId, playerState, CARDS_TO_DRAW);
 
   const buyEvent: GameEvent = { type: "BUYS_MODIFIED", delta: 1 };
 
   // Each opponent draws a card
   const opponents = getOpponents(state, playerId);
-  const opponentDrawEvents = opponents.flatMap(opponent =>
-    createDrawEvents(opponent, state.players[opponent]!, 1),
-  );
+  const opponentDrawEvents = opponents.flatMap(opponent => {
+    const opponentState = state.players[opponent];
+    return opponentState ? createDrawEvents(opponent, opponentState, 1) : [];
+  });
 
   return { events: [...drawEvents, buyEvent, ...opponentDrawEvents] };
 };
