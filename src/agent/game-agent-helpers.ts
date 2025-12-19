@@ -85,9 +85,16 @@ export function getLegalActions(state: GameState): Action[] {
       );
     }
 
-    if (decision.stage === "opponent_topdeck") {
+    if (decision.stage === "topdeck" || decision.stage === "opponent_topdeck") {
       return withSkipOption(
         options.map(card => ({ type: "topdeck_card" as const, card })),
+        canSkip,
+      );
+    }
+
+    if (decision.stage === "choose_action" || decision.stage === "play_action") {
+      return withSkipOption(
+        options.map(card => ({ type: "play_action" as const, card })),
         canSkip,
       );
     }
