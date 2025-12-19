@@ -108,11 +108,15 @@ export function peekDraw(
         deck: currentDeck.slice(0, -1),
         discard: didShuffle ? [] : acc.discard,
         shuffled: acc.shuffled || didShuffle,
-        ...(didShuffle
-          ? { newDeckOrder: [...currentDeck] }
-          : acc.newDeckOrder !== undefined
-            ? { newDeckOrder: acc.newDeckOrder }
-            : {}),
+        ...run(() => {
+          if (didShuffle) {
+            return { newDeckOrder: [...currentDeck] };
+          }
+          if (acc.newDeckOrder !== undefined) {
+            return { newDeckOrder: acc.newDeckOrder };
+          }
+          return {};
+        }),
       };
       return nextState;
     },
@@ -128,7 +132,9 @@ export function peekDraw(
   return {
     cards: result.cards,
     shuffled: result.shuffled,
-    ...(result.newDeckOrder !== undefined && { newDeckOrder: result.newDeckOrder }),
+    ...(result.newDeckOrder !== undefined && {
+      newDeckOrder: result.newDeckOrder,
+    }),
     ...(result.shuffled &&
       result.cardsBeforeShuffle !== undefined && {
         cardsBeforeShuffle: result.cardsBeforeShuffle,
