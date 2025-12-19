@@ -69,8 +69,8 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
   } = context;
 
   if (!isInteractive) return true;
-  if (!isActive) return true;
 
+  // If player has pending decision from hand, allow card selection (even if not active player)
   if (
     pendingChoice &&
     pendingChoice.playerId === playerId &&
@@ -79,6 +79,9 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
     const cardOptions = pendingChoice.cardOptions ?? [];
     return cardOptions.length > 0 && !cardOptions.includes(card);
   }
+
+  // Normal turn-based interaction requires active player
+  if (!isActive) return true;
 
   const cardDef = CARDS[card];
 
