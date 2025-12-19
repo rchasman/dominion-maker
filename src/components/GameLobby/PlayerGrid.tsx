@@ -84,34 +84,41 @@ export function PlayerGrid({
 
   // Hash function for consistent mapping
   const hashPlayerId = (id: string): number => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = (hash << 5) - hash + id.charCodeAt(i);
-      hash = hash & hash; // Convert to 32-bit integer
-    }
+    const hash = [...id].reduce(
+      (acc, char) => {
+        const newHash = (acc << 5) - acc + char.charCodeAt(0);
+        return newHash & newHash; // Convert to 32-bit integer
+      },
+      0,
+    );
     return Math.abs(hash);
   };
 
   // Assign colors to ALL players (no duplicates)
+  const findAvailableColor = (
+    initialIndex: number,
+    usedColors: Set<string>,
+  ): string | undefined => {
+    const attemptedIndices = Array.from(
+      { length: LOBBY_COLORS.length },
+      (_, i) => (initialIndex + i) % LOBBY_COLORS.length,
+    );
+    const availableIndex = attemptedIndices.find(
+      idx => !usedColors.has(LOBBY_COLORS[idx]!),
+    );
+    return availableIndex !== undefined ? LOBBY_COLORS[availableIndex] : undefined;
+  };
+
   const { playerColors } = players.reduce<{
     usedColors: Set<string>;
     playerColors: Map<string, string>;
   }>(
     (acc, player) => {
       // Use clientId for stable color across name changes
-      let colorIndex = hashPlayerId(player.clientId) % LOBBY_COLORS.length;
-      // Find next available color if this one is taken
-      let attempts = 0;
-      let color = LOBBY_COLORS[colorIndex];
-      while (
-        color !== undefined &&
-        acc.usedColors.has(color) &&
-        attempts < LOBBY_COLORS.length
-      ) {
-        colorIndex = (colorIndex + 1) % LOBBY_COLORS.length;
-        color = LOBBY_COLORS[colorIndex];
-        attempts++;
-      }
+      const initialColorIndex =
+        hashPlayerId(player.clientId) % LOBBY_COLORS.length;
+      const color = findAvailableColor(initialColorIndex, acc.usedColors);
+
       if (!color) {
         // Fallback to first color if something went wrong
         return acc;
