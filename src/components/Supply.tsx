@@ -564,7 +564,7 @@ export function Supply({
       </div>
 
       {/* Action buttons */}
-      {isPlayerActive && (
+      {(isPlayerActive || hasPendingDecision) && (
         <div
           style={{
             position: "absolute",
