@@ -4,9 +4,9 @@
  * Uses a single PartySocket connection via MultiplayerProvider.
  * Shows waiting room or game board based on game state.
  */
-import { lazy, Suspense } from "preact/compat";
 import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
+import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { BoardWithProviders } from "../Board/BoardWithProviders";
 import { DisconnectModal } from "./DisconnectModal";
@@ -14,8 +14,6 @@ import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
 import type { GameMode } from "../../types/game-mode";
 import { AnimationProvider } from "../../animation";
-
-const Board = lazy(() => import("../Board").then(m => ({ default: m.Board })));
 
 interface GameRoomProps {
   roomId: string;
@@ -102,9 +100,7 @@ export function GameRoom({
     return (
       <AnimationProvider>
         <BoardWithProviders gameContext={contextValue} llmLogs={[]}>
-          <Suspense fallback={<BoardSkeleton />}>
-            <Board onBackToHome={handleResign} />
-          </Suspense>
+          <Board onBackToHome={handleResign} />
           {isSpectator && <SpectatorBadge />}
           {disconnectedOpponent && (
             <DisconnectModal
