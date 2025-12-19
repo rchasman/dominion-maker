@@ -390,6 +390,38 @@ function renderText(entry: Extract<LogEntryType, { type: "text" }>) {
   return <span>{entry.message}</span>;
 }
 
+function renderRevealCard(
+  entry: LogEntryType & { type: "reveal-card"; playerId: string; card: CardName | string; from: string },
+) {
+  // Handle both single card and batched cards (comma-separated string)
+  const cards = typeof entry.card === "string" ? entry.card.split(", ") : [entry.card];
+  const validCards = cards.filter(c => c && c.trim());
+
+  // Count duplicates for "x2" notation
+  const cardCounts = validCards.reduce<Record<string, number>>(
+    (acc, card) => ({
+      ...acc,
+      [card]: (acc[card] || 0) + 1,
+    }),
+    {},
+  );
+
+  const uniqueCards = Object.keys(cardCounts);
+
+  return (
+    <span>
+      <PlayerName playerId={entry.playerId} /> <Verb>reveals</Verb>{" "}
+      {uniqueCards.map((card, i) => (
+        <>
+          <CardNameSpan card={card.trim() as CardName} />
+          {cardCounts[card]! > 1 && <> x{cardCounts[card]}</>}
+          {i < uniqueCards.length - 1 && ", "}
+        </>
+      ))}
+    </span>
+  );
+}
+
 function renderResourceChange(verb: string, component: ComponentChildren) {
   return (
     <span>
@@ -513,6 +545,8 @@ const ENTRY_RENDERERS = {
     renderStartGame(entry as Extract<LogEntryType, { type: "start-game" }>),
   text: (entry: LogEntryType) =>
     renderText(entry as Extract<LogEntryType, { type: "text" }>),
+  "reveal-card": (entry: LogEntryType) =>
+    renderRevealCard(entry as LogEntryType & { type: "reveal-card"; playerId: string; card: CardName | string; from: string }),
   "get-actions": (entry: LogEntryType) =>
     renderGetActions(entry as Extract<LogEntryType, { type: "get-actions" }>),
   "get-buys": (entry: LogEntryType) =>
