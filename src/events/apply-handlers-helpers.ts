@@ -283,49 +283,36 @@ export function applyRevealAndShuffle(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
-    console.log("[DEBUG] CARD_REVEALED:", { playerId: event.playerId, card: event.card, from: event.from });
-
-    // Check if the last log entry is also a reveal from the same player
+    // Check if the last log entry is a reveal from the same player with same source
     const lastLog = state.log[state.log.length - 1];
+    const fromLocation = event.from || "deck";
+    const targetPattern = `${event.playerId} reveals `;
+    const sourcePattern = ` from ${fromLocation}`;
+
     const isConsecutiveReveal =
       lastLog?.type === "text" &&
       typeof lastLog.message === "string" &&
-      lastLog.message.includes("reveals") &&
-      lastLog.message.includes("from");
+      lastLog.message.startsWith(targetPattern) &&
+      lastLog.message.includes(sourcePattern);
 
-    if (isConsecutiveReveal && lastLog.message.startsWith(event.playerId)) {
+    if (isConsecutiveReveal) {
       // Append to existing reveal message (before the "from" part)
-      const parts = lastLog.message.split(" from ");
-      const updatedMessage = `${parts[0]}, ${event.card} from ${parts[1]}`;
-      console.log("[DEBUG] Batching reveal:", updatedMessage);
+      const parts = lastLog.message.split(sourcePattern);
+      const updatedMessage = `${parts[0]}, ${event.card}${sourcePattern}`;
       return {
         ...state,
         log: [...state.log.slice(0, -1), { type: "text", message: updatedMessage }],
       };
     }
 
-    // First reveal from this player
-    const fromLocation = event.from || "deck";
-    const message = `${event.playerId} reveals ${event.card} from ${fromLocation}`;
-    console.log("[DEBUG] Creating newState with message:", message);
-    console.log("[DEBUG] Current state.log length:", state.log?.length);
-
-    try {
-      const newState = {
-        ...state,
-        log: [
-          ...state.log,
-          { type: "text" as const, message },
-        ],
-      };
-      console.log("[DEBUG] New reveal entry created successfully");
-      console.log("[DEBUG] Log now has", newState.log.length, "entries");
-      console.log("[DEBUG] Last 3 log entries:", newState.log.slice(-3));
-      return newState;
-    } catch (error) {
-      console.error("[DEBUG] Error creating reveal entry:", error);
-      return state;
-    }
+    // First reveal from this player/source
+    return {
+      ...state,
+      log: [
+        ...state.log,
+        { type: "text", message: `${targetPattern}${event.card}${sourcePattern}` },
+      ],
+    };
   }
 
   if (event.type === "CARD_PEEKED") {
