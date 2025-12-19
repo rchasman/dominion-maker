@@ -307,14 +307,17 @@ export function applyRevealAndShuffle(
     // First reveal from this player
     const fromLocation = event.from || "deck";
     const message = `${event.playerId} reveals ${event.card} from ${fromLocation}`;
-    console.log("[DEBUG] New reveal entry:", message);
-    return {
+    const newState = {
       ...state,
       log: [
         ...state.log,
         { type: "text", message },
       ],
     };
+    console.log("[DEBUG] New reveal entry:", message);
+    console.log("[DEBUG] Log now has", newState.log.length, "entries");
+    console.log("[DEBUG] Last 3 log entries:", newState.log.slice(-3));
+    return newState;
   }
 
   if (event.type === "CARD_PEEKED") {
