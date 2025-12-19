@@ -4,6 +4,7 @@ import type { PendingChoice } from "../../events/types";
 import { Card } from "../Card";
 import { Pile } from "../Pile";
 import { useAnimationSafe } from "../../animation";
+import { run } from "../../lib/run";
 
 function EmptyPileContent() {
   return (
@@ -192,19 +193,23 @@ export function DeckDiscardSection({
             Deck
           </div>
           <div ref={deckRef} style={{ inlineSize: "100%" }}>
-            {loading ? (
-              <LoadingCardContent />
-            ) : deck.length > 0 ? (
-              <Pile
-                cards={deck}
-                knownCards={knownDeckCards}
-                pileType="deck"
-                size="medium"
-                showBack={!deckTopRevealed}
-              />
-            ) : (
-              <EmptyPileContent />
-            )}
+            {run(() => {
+              if (loading) {
+                return <LoadingCardContent />;
+              }
+              if (deck.length > 0) {
+                return (
+                  <Pile
+                    cards={deck}
+                    knownCards={knownDeckCards}
+                    pileType="deck"
+                    size="medium"
+                    showBack={!deckTopRevealed}
+                  />
+                );
+              }
+              return <EmptyPileContent />;
+            })}
           </div>
         </div>
 
