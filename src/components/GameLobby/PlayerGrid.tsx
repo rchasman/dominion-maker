@@ -12,6 +12,40 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor } from "../../lib/board-utils";
 import { run } from "../../lib/run";
 
+const CIRCLE_LAYOUT = {
+  MAX_POSITIONS: 32,
+  RADIUS_PX: 200,
+  SPACING_MULTIPLIER: 1.4,
+  CONTAINER_PADDING_PX: 200,
+} as const;
+
+const GAME_CIRCLE = {
+  WIDTH_PX: 140,
+  HEIGHT_PX: 140,
+  AVATAR_SIZE_PX: 48,
+  INNER_RADIUS_PX: 40,
+  BORDER_WIDTH_MY_GAME: "3px",
+  BORDER_WIDTH_OTHER: "2px",
+} as const;
+
+const BADGE_SIZE = {
+  WIDTH_PX: 24,
+  HEIGHT_PX: 24,
+  OFFSET_PX: 8,
+} as const;
+
+const SPLIT_DEGREES = {
+  START: 270,
+  HALF: 180,
+  FULL: 360,
+} as const;
+
+const HASH_BIT_SHIFT = 5;
+const ANGLE_ADJUSTMENT = Math.PI / 2;
+const PI_DOUBLE = 2 * Math.PI;
+const PLAYER_MIN_COUNT = 1;
+const PLAYER_DUAL_COUNT = 2;
+
 type RequestState = "none" | "sent" | "received";
 
 // Lobby color palette - evenly distributed around the circle
@@ -78,19 +112,16 @@ export function PlayerGrid({
     }
   };
 
-  // Create fixed positions (32 slots around the circle)
-  const maxPositions = 32;
-  const circleRadius = 200;
+  // Create fixed positions around the circle
+  const maxPositions = CIRCLE_LAYOUT.MAX_POSITIONS;
+  const circleRadius = CIRCLE_LAYOUT.RADIUS_PX;
 
   // Hash function for consistent mapping
   const hashPlayerId = (id: string): number => {
-    const hash = [...id].reduce(
-      (acc, char) => {
-        const newHash = (acc << 5) - acc + char.charCodeAt(0);
-        return newHash & newHash; // Convert to 32-bit integer
-      },
-      0,
-    );
+    const hash = [...id].reduce((acc, char) => {
+      const newHash = (acc << HASH_BIT_SHIFT) - acc + char.charCodeAt(0);
+      return newHash & newHash; // Convert to 32-bit integer
+    }, 0);
     return Math.abs(hash);
   };
 
@@ -106,7 +137,9 @@ export function PlayerGrid({
     const availableIndex = attemptedIndices.find(
       idx => !usedColors.has(LOBBY_COLORS[idx]!),
     );
-    return availableIndex !== undefined ? LOBBY_COLORS[availableIndex] : undefined;
+    return availableIndex !== undefined
+      ? LOBBY_COLORS[availableIndex]
+      : undefined;
   };
 
   const { playerColors } = players.reduce<{
@@ -137,11 +170,15 @@ export function PlayerGrid({
   const lobbyOthers = lobbyPlayersRaw.filter(p => p.id !== myId);
 
   // If connecting (no players yet), show a placeholder for "me"
-  const sortedPlayers = lobbyMe
-    ? [lobbyMe, ...lobbyOthers]
-    : players.length === 0
-      ? [{ id: "connecting", name: myName }]
-      : lobbyPlayersRaw;
+  const sortedPlayers = run(() => {
+    if (lobbyMe) {
+      return [lobbyMe, ...lobbyOthers];
+    }
+    if (players.length === 0) {
+      return [{ id: "connecting", name: myName }];
+    }
+    return lobbyPlayersRaw;
+  });
 
   // Assign stable positions based on hash, distributed evenly
   // Sort players by their hash value to get stable distribution
@@ -189,8 +226,8 @@ export function PlayerGrid({
       <div
         style={{
           position: "relative",
-          width: `${circleRadius * 2 + 200}px`,
-          height: `${circleRadius * 2 + 200}px`,
+          width: `${circleRadius * 2 + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
+          height: `${circleRadius * 2 + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -232,7 +269,7 @@ export function PlayerGrid({
               gap: "var(--space-6)",
               justifyContent: "center",
               alignItems: "center",
-              maxWidth: `${circleRadius * 1.4}px`,
+              maxWidth: `${circleRadius * CIRCLE_LAYOUT.SPACING_MULTIPLIER}px`,
             }}
           >
             {activeGames.map(game => (
@@ -252,7 +289,7 @@ export function PlayerGrid({
           const positionIndex = playerPositions.get(player.id) ?? 0;
           // Use fixed position slots so players don't move when others join/leave
           const angle =
-            (positionIndex / maxPositions) * 2 * Math.PI - Math.PI / 2;
+            (positionIndex / maxPositions) * PI_DOUBLE - ANGLE_ADJUSTMENT;
           const x = Math.cos(angle) * circleRadius;
           const y = Math.sin(angle) * circleRadius;
           const isMe = player.id === myId || player.id === "connecting";
@@ -289,7 +326,7 @@ export function PlayerGrid({
         })}
       </div>
 
-      {sortedPlayers.length > 1 && (
+      {sortedPlayers.length > PLAYER_MIN_COUNT && (
         <p
           style={{
             margin: 0,
@@ -302,17 +339,18 @@ export function PlayerGrid({
         </p>
       )}
 
-      {sortedPlayers.length === 1 && activeGames.length === 0 && (
-        <p
-          style={{
-            margin: 0,
-            color: "var(--color-text-tertiary)",
-            fontSize: "0.875rem",
-          }}
-        >
-          Waiting for other players to join...
-        </p>
-      )}
+      {sortedPlayers.length === PLAYER_MIN_COUNT &&
+        activeGames.length === 0 && (
+          <p
+            style={{
+              margin: 0,
+              color: "var(--color-text-tertiary)",
+              fontSize: "0.875rem",
+            }}
+          >
+            Waiting for other players to join...
+          </p>
+        )}
     </div>
   );
 }
@@ -331,13 +369,13 @@ function GameCircle({
   playerColors,
 }: GameCircleProps) {
   // Position avatars in a circle
-  const avatarSize = 48;
-  const circleRadius = 40;
+  const avatarSize = GAME_CIRCLE.AVATAR_SIZE_PX;
+  const circleRadius = GAME_CIRCLE.INNER_RADIUS_PX;
   const totalAvatars = game.players.length + (game.spectatorCount > 0 ? 1 : 0);
 
   // Create split border for 2-player games
   const borderGradient = run(() => {
-    if (game.players.length !== 2) {
+    if (game.players.length !== PLAYER_DUAL_COUNT) {
       return;
     }
 
@@ -355,7 +393,7 @@ function GameCircle({
         : (playerColors.get(player2.id ?? "") ?? getPlayerColor(player2.name));
 
     // Split at 180deg: left half is player1, right half is player2
-    return `conic-gradient(from 270deg, ${color1} 0deg, ${color1} 180deg, ${color2} 180deg, ${color2} 360deg)`;
+    return `conic-gradient(from ${SPLIT_DEGREES.START}deg, ${color1} 0deg, ${color1} ${SPLIT_DEGREES.HALF}deg, ${color2} ${SPLIT_DEGREES.HALF}deg, ${color2} ${SPLIT_DEGREES.FULL}deg)`;
   });
 
   return (
@@ -363,8 +401,8 @@ function GameCircle({
       onClick={onClick}
       style={{
         position: "relative",
-        width: "140px",
-        height: "140px",
+        width: `${GAME_CIRCLE.WIDTH_PX}px`,
+        height: `${GAME_CIRCLE.HEIGHT_PX}px`,
         background: borderGradient
           ? `${borderGradient}, var(--color-bg-tertiary)`
           : "var(--color-bg-tertiary)",
@@ -372,11 +410,15 @@ function GameCircle({
         backgroundClip: borderGradient
           ? "padding-box, border-box"
           : "padding-box",
-        border: isMyGame
-          ? "3px solid transparent"
-          : borderGradient
-            ? "3px solid transparent"
-            : "2px solid var(--color-border-primary)",
+        border: run(() => {
+          if (isMyGame) {
+            return `${GAME_CIRCLE.BORDER_WIDTH_MY_GAME} solid transparent`;
+          }
+          if (borderGradient) {
+            return `${GAME_CIRCLE.BORDER_WIDTH_MY_GAME} solid transparent`;
+          }
+          return `${GAME_CIRCLE.BORDER_WIDTH_OTHER} solid var(--color-border-primary)`;
+        }),
         borderRadius: "50%",
         cursor: "pointer",
         fontFamily: "inherit",
@@ -404,7 +446,7 @@ function GameCircle({
     >
       {/* Player avatars arranged in circle */}
       {game.players.map((player, i) => {
-        const angle = (i / totalAvatars) * 2 * Math.PI - Math.PI / 2;
+        const angle = (i / totalAvatars) * PI_DOUBLE - ANGLE_ADJUSTMENT;
         const x = Math.cos(angle) * circleRadius;
         const y = Math.sin(angle) * circleRadius;
         const playerId = player.id ?? "unknown";
@@ -414,7 +456,8 @@ function GameCircle({
 
         // Detect single-player game (2 players, at least one bot)
         const isSinglePlayer =
-          game.players.length === 2 && game.players.some(p => p.isBot);
+          game.players.length === PLAYER_DUAL_COUNT &&
+          game.players.some(p => p.isBot);
 
         // Avatar style: bottts for single-playerId, micah for multiplayer
         const avatarStyle = isSinglePlayer ? "bottts" : "micah";
@@ -450,10 +493,10 @@ function GameCircle({
         <div
           style={{
             position: "absolute",
-            bottom: "8px",
-            right: "8px",
-            width: "24px",
-            height: "24px",
+            bottom: `${BADGE_SIZE.OFFSET_PX}px`,
+            right: `${BADGE_SIZE.OFFSET_PX}px`,
+            width: `${BADGE_SIZE.WIDTH_PX}px`,
+            height: `${BADGE_SIZE.HEIGHT_PX}px`,
             borderRadius: "50%",
             background: "var(--color-bg-surface)",
             border: "1px solid var(--color-border-primary)",
@@ -472,7 +515,7 @@ function GameCircle({
       <span
         style={{
           position: "absolute",
-          bottom: "-24px",
+          bottom: `${-BADGE_SIZE.WIDTH_PX}px`,
           fontSize: "0.625rem",
           color: isMyGame
             ? "var(--color-victory)"
