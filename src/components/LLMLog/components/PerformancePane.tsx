@@ -435,7 +435,6 @@ function buildTimingsFromLiveStatuses(
         pending: !status.completed || (isAborted && hasAnyNonAbortedPending),
         failed: status.completed && status.success === false && !status.aborted,
         aborted: showAsAborted,
-        format: status.format,
       };
     })
     .sort((a, b) => {
