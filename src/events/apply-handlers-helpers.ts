@@ -288,11 +288,13 @@ export function applyRevealAndShuffle(
     const isConsecutiveReveal =
       lastLog?.type === "text" &&
       typeof lastLog.message === "string" &&
-      lastLog.message.includes("draws to reveal");
+      lastLog.message.includes("reveals") &&
+      lastLog.message.includes("from");
 
     if (isConsecutiveReveal && lastLog.message.startsWith(event.playerId)) {
-      // Append to existing reveal message
-      const updatedMessage = `${lastLog.message}, ${event.card}`;
+      // Append to existing reveal message (before the "from" part)
+      const parts = lastLog.message.split(" from ");
+      const updatedMessage = `${parts[0]}, ${event.card} from ${parts[1]}`;
       return {
         ...state,
         log: [...state.log.slice(0, -1), { type: "text", message: updatedMessage }],
@@ -300,11 +302,12 @@ export function applyRevealAndShuffle(
     }
 
     // First reveal from this player
+    const fromLocation = event.from || "deck";
     return {
       ...state,
       log: [
         ...state.log,
-        { type: "text", message: `${event.playerId} draws to reveal ${event.card}` },
+        { type: "text", message: `${event.playerId} reveals ${event.card} from ${fromLocation}` },
       ],
     };
   }
