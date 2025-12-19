@@ -61,6 +61,12 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       return;
     }
 
+    // Don't start AI turn if there's a pending decision for any player
+    // (AI needs to wait for human response to attacks, etc.)
+    if (gameState.pendingChoice) {
+      return;
+    }
+
     const isAITurn = isAIControlled(gameMode, gameState.activePlayerId);
 
     if (!isAITurn) {
