@@ -195,6 +195,14 @@ export type LogEntry =
       count: number;
       eventId?: string;
       children?: LogEntry[];
+    }
+  | {
+      type: "reveal-card";
+      playerId: PlayerId;
+      card: CardName | string;
+      from: string;
+      eventId?: string;
+      children?: LogEntry[];
     };
 
 export type PlayerState = {
