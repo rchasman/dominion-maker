@@ -2,8 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "preact/hooks";
 import { useGame } from "../../../context/hooks";
 import { getPlayerColor } from "../../../lib/board-utils";
 
-const MINUTE_PAD_LENGTH = 2;
-const NOON_HOUR = 12;
+const TIME_FORMAT = {
+  MINUTE_PAD_LENGTH: 2,
+  NOON_HOUR: 12,
+} as const;
+
+const CHAT_LAYOUT = {
+  MAX_HEIGHT_PX: 300,
+} as const;
 
 interface ChatMessageData {
   id: string;
@@ -12,13 +18,15 @@ interface ChatMessageData {
   timestamp: number;
 }
 
-
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
   const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(MINUTE_PAD_LENGTH, "0");
-  const ampm = hours >= NOON_HOUR ? "pm" : "am";
-  const displayHours = hours % NOON_HOUR || NOON_HOUR;
+  const minutes = date
+    .getMinutes()
+    .toString()
+    .padStart(TIME_FORMAT.MINUTE_PAD_LENGTH, "0");
+  const ampm = hours >= TIME_FORMAT.NOON_HOUR ? "pm" : "am";
+  const displayHours = hours % TIME_FORMAT.NOON_HOUR || TIME_FORMAT.NOON_HOUR;
   return `${displayHours}:${minutes}${ampm}`;
 }
 
@@ -285,7 +293,7 @@ export function ChatAccordion() {
             padding: "0 var(--space-4) var(--space-4)",
             display: "flex",
             flexDirection: "column",
-            maxHeight: "300px",
+            maxHeight: `${CHAT_LAYOUT.MAX_HEIGHT_PX}px`,
           }}
         >
           <ChatHistory messages={chatMessages} />
