@@ -43,7 +43,6 @@ export function useStartGame(
     setLLMLogs([]);
     setPlayerStrategies({});
     setEvents([]);
-    setGameState(engine.getState());
 
     const newEngine = new DominionEngine();
     setEngine(newEngine);
