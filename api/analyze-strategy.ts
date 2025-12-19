@@ -203,7 +203,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Extract turn history (use longer window for strategy - runs once per turn)
     const turnHistory = formatTurnHistoryForAnalysis(
       currentState,
-      "toon",
       STRATEGY_ANALYSIS_TURNS,
     );
 
