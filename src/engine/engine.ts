@@ -170,6 +170,15 @@ export class DominionEngine {
     toEventId: string,
     reason?: string,
   ): CommandResult {
+    // CRITICAL FIX: Reject simultaneous undo requests
+    if (this.pendingUndo) {
+      return {
+        ok: false,
+        error: "An undo request is already pending",
+        events: [],
+      };
+    }
+
     const result = this.dispatch(
       {
         type: "REQUEST_UNDO",
