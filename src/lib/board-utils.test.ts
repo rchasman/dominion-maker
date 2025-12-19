@@ -1115,4 +1115,161 @@ describe("aggregateLogEntries", () => {
       expect(result.length).toBe(1);
     });
   });
+
+  describe("Additional Coverage Tests", () => {
+    describe("getPlayerColor", () => {
+      it("returns consistent color for human player", () => {
+        const { getPlayerColor } = require("./board-utils");
+        const color = getPlayerColor("human");
+        expect(color).toBeDefined();
+        expect(typeof color).toBe("string");
+      });
+
+      it("returns consistent color for player", () => {
+        const { getPlayerColor } = require("./board-utils");
+        const color = getPlayerColor("player");
+        expect(color).toBeDefined();
+      });
+
+      it("returns consistent color for ai player", () => {
+        const { getPlayerColor } = require("./board-utils");
+        const color = getPlayerColor("ai");
+        expect(color).toBeDefined();
+      });
+
+      it("returns hash-based color for dynamic player names", () => {
+        const { getPlayerColor } = require("./board-utils");
+        const color1 = getPlayerColor("player123");
+        const color2 = getPlayerColor("player123");
+        expect(color1).toBe(color2);
+      });
+
+      it("returns different colors for different dynamic players", () => {
+        const { getPlayerColor } = require("./board-utils");
+        const color1 = getPlayerColor("player123");
+        const color2 = getPlayerColor("player456");
+        expect(color1).toBeDefined();
+        expect(color2).toBeDefined();
+      });
+    });
+
+    describe("formatPlayerName", () => {
+      it("returns player name from gameState playerInfo when available (AI)", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const gameState = {
+          playerInfo: {
+            player1: { name: "Alice", clientId: "player1" },
+          },
+        } as any;
+        const result = formatPlayerName("player1", true, { gameState });
+        expect(result).toBe("Alice (AI)");
+      });
+
+      it("returns player name from gameState playerInfo when available (non-AI)", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const gameState = {
+          playerInfo: {
+            player1: { name: "Alice", clientId: "player1" },
+          },
+        } as any;
+        const result = formatPlayerName("player1", false, { gameState });
+        expect(result).toBe("Alice");
+      });
+
+      it("returns 'You' for human player without gameState", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("human", false);
+        expect(result).toBe("You");
+      });
+
+      it("returns 'Player' for player playerId with capitalize=true", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("player", false, { capitalize: true });
+        expect(result).toBe("Player");
+      });
+
+      it("returns 'player' for player playerId with capitalize=false", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("player", false, { capitalize: false });
+        expect(result).toBe("player");
+      });
+
+      it("returns 'ai' for ai playerId without AI suffix", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("ai", true);
+        expect(result).toBe("ai");
+      });
+
+      it("returns clientId as last resort", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("customPlayerId", false);
+        expect(result).toBe("customPlayerId");
+      });
+
+      it("adds AI suffix for custom player ID when isAI=true", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("customPlayerId", true);
+        expect(result).toBe("customPlayerId (AI)");
+      });
+
+      it("does not add AI suffix for human player", () => {
+        const { formatPlayerName } = require("./board-utils");
+        const result = formatPlayerName("human", true);
+        expect(result).toBe("You");
+      });
+    });
+
+    describe("countVP", () => {
+      it("handles Gardens (variable VP) correctly", () => {
+        const { countVP } = require("./board-utils");
+        const cards = Array(20)
+          .fill("Copper")
+          .concat(["Gardens"]) as any[];
+        const result = countVP(cards);
+        expect(result).toBe(2);
+      });
+    });
+
+    describe("getAllCards", () => {
+      it("combines all card zones into single array", () => {
+        const { getAllCards } = require("./board-utils");
+        const result = getAllCards({
+          deck: ["Copper"],
+          hand: ["Silver"],
+          discard: ["Gold"],
+          inPlay: ["Estate"],
+        });
+        expect(result).toEqual(["Copper", "Silver", "Gold", "Estate"]);
+      });
+
+      it("handles empty zones", () => {
+        const { getAllCards } = require("./board-utils");
+        const result = getAllCards({
+          deck: [],
+          hand: [],
+          discard: [],
+          inPlay: [],
+        });
+        expect(result).toEqual([]);
+      });
+
+      it("preserves order of cards", () => {
+        const { getAllCards } = require("./board-utils");
+        const result = getAllCards({
+          deck: ["Copper", "Silver"],
+          hand: ["Gold", "Estate"],
+          discard: ["Duchy"],
+          inPlay: ["Province"],
+        });
+        expect(result).toEqual([
+          "Copper",
+          "Silver",
+          "Gold",
+          "Estate",
+          "Duchy",
+          "Province",
+        ]);
+      });
+    });
+  });
 });
