@@ -12,7 +12,8 @@ export const cellar: CardEffect = ({
   decision,
   stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId]!;
+  const playerState = state.players[playerId];
+  if (!playerState) return { events: [] };
 
   // Initial call: +1 Action, then request batch discard
   if (isInitialCall(decision, stage)) {
