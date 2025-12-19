@@ -38,6 +38,7 @@ export interface ActiveGame {
     isConnected?: boolean;
   }>;
   spectatorCount: number;
+  isSinglePlayer: boolean;
 }
 
 // Client -> Lobby Server
@@ -68,6 +69,7 @@ export interface GameUpdateMessage {
   }>;
   spectatorCount: number;
   isActive: boolean;
+  isSinglePlayer: boolean;
 }
 
 // ============================================
