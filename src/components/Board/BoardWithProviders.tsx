@@ -22,7 +22,7 @@ export function BoardWithProviders({
 }: BoardWithProvidersProps) {
   return (
     <GameContext.Provider value={gameContext}>
-      <LLMLogsContext.Provider value={{ llmLogs }}>
+      <LLMLogsContext.Provider value={llmLogs}>
         {children}
       </LLMLogsContext.Provider>
     </GameContext.Provider>
