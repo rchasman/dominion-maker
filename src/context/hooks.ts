@@ -11,9 +11,6 @@ export function useGame() {
 
 export function useLLMLogs() {
   const context = useContext(LLMLogsContext);
-  if (!context) {
-    // Return empty logs for multiplayer mode (no GameProvider)
-    return { llmLogs: [] };
-  }
-  return context;
+  // Return empty logs for multiplayer mode (no GameProvider)
+  return { llmLogs: context || [] };
 }
