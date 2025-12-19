@@ -116,7 +116,11 @@ export function getNextPlayer(
 ): string {
   const currentIdx = state.playerOrder.indexOf(currentPlayerId);
   const nextIdx = (currentIdx + 1) % state.playerOrder.length;
-  return state.playerOrder[nextIdx]!;
+  const nextPlayer = state.playerOrder[nextIdx];
+  if (!nextPlayer) {
+    throw new Error("Next player not found in player order");
+  }
+  return nextPlayer;
 }
 
 export function checkGameOver(state: GameState): GameEvent | null {
