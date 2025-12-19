@@ -26,6 +26,12 @@ import {
 } from "./LogEntry/renderHelpers";
 import { useGame } from "../context/hooks";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
+import { run } from "../lib/run";
+
+const INITIALS = {
+  MIN_CAPITAL_LETTERS: 2,
+  FALLBACK_LENGTH: 2,
+} as const;
 
 interface LogEntryProps {
   entry: LogEntryType;
@@ -39,11 +45,11 @@ interface LogEntryProps {
 function getInitials(name: string): string {
   // Extract capital letters from camelCase or PascalCase names
   const capitals = name.match(/[A-Z]/g);
-  if (capitals && capitals.length >= 2) {
-    return capitals.slice(0, 2).join("");
+  if (capitals && capitals.length >= INITIALS.MIN_CAPITAL_LETTERS) {
+    return capitals.slice(0, INITIALS.MIN_CAPITAL_LETTERS).join("");
   }
   // Fallback: first two characters
-  return name.slice(0, 2).toUpperCase();
+  return name.slice(0, INITIALS.FALLBACK_LENGTH).toUpperCase();
 }
 
 function renderTurnStart(
@@ -83,20 +89,22 @@ function TurnHeaderPlayerName({
 }) {
   const { gameState, players, gameMode } = useGame();
   const playerName = players?.find(p => p.id === playerId)?.name;
-  const displayName = playerName
-    ? isAI
-      ? `${playerName} (AI)`
-      : playerName
-    : formatPlayerName(playerId, isAI || false, { gameState });
+  const displayName = run(() => {
+    if (playerName) {
+      return isAI ? `${playerName} (AI)` : playerName;
+    }
+    return formatPlayerName(playerId, isAI || false, { gameState });
+  });
 
   // Only use initials in multiplayer mode
   const isMultiplayer = gameMode === "multiplayer";
   const initials = getInitials(displayName.replace(" (AI)", ""));
-  const finalDisplay = isMultiplayer
-    ? isAI
-      ? `${initials} (AI)`
-      : initials
-    : displayName;
+  const finalDisplay = run(() => {
+    if (isMultiplayer) {
+      return isAI ? `${initials} (AI)` : initials;
+    }
+    return displayName;
+  });
 
   return (
     <span style={{ color: getPlayerColor(playerId), fontWeight: 600 }}>
@@ -408,17 +416,17 @@ function renderSpendCoins(
 // Renderer mapping for entry types
 const ENTRY_RENDERERS = {
   "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
-    const turnStartEntry = entry as Extract<LogEntryType, { type: "turn-start" }>;
+    const turnStartEntry = entry as Extract<
+      LogEntryType,
+      { type: "turn-start" }
+    >;
     const isAI =
       ctx.gameMode && ctx.gameMode !== "multiplayer"
         ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(
             String(turnStartEntry.playerId ?? ""),
           )
         : undefined;
-    return renderTurnStart(
-      turnStartEntry,
-      isAI,
-    );
+    return renderTurnStart(turnStartEntry, isAI);
   },
   "turn-end": (entry: LogEntryType) =>
     renderTurnEnd(entry as Extract<LogEntryType, { type: "turn-end" }>),
