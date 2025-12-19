@@ -38,6 +38,10 @@ interface TurnBuildState {
  */
 export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
   return useMemo(() => {
+    if (!Array.isArray(entries)) {
+      return [];
+    }
+
     const state: TurnBuildState = {
       turns: [],
       buildingTurn: null,
