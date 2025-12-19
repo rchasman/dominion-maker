@@ -240,6 +240,26 @@ export function HandSection({
       >
         Hand ({hand.length})
       </div>
+      {pendingChoice &&
+        pendingChoice.playerId === playerId &&
+        pendingChoice.from === "hand" && (
+          <div
+            style={{
+              position: "absolute",
+              insetBlockStart: "var(--space-1)",
+              insetInlineEnd: "var(--space-2)",
+              fontSize: "0.6875rem",
+              color: "#fbbf24",
+              fontWeight: 600,
+              background: "rgba(251, 191, 36, 0.1)",
+              padding: "var(--space-1) var(--space-2)",
+              borderRadius: "0.25rem",
+              border: "1px solid rgba(251, 191, 36, 0.3)",
+            }}
+          >
+            {pendingChoice.prompt}
+          </div>
+        )}
       <div className="hand-grid">
         {loading
           ? Array.from({ length: PLACEHOLDER_HAND_SIZE }).map((_, i) => (
