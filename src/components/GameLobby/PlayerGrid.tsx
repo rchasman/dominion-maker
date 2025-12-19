@@ -135,7 +135,7 @@ export function PlayerGrid({
       (_, i) => (initialIndex + i) % LOBBY_COLORS.length,
     );
     const availableIndex = attemptedIndices.find(
-      idx => !usedColors.has(LOBBY_COLORS[idx]!),
+      idx => !usedColors.has(LOBBY_COLORS[idx] ?? ""),
     );
     return availableIndex !== undefined
       ? LOBBY_COLORS[availableIndex]
@@ -379,8 +379,12 @@ function GameCircle({
       return;
     }
 
-    const player1 = game.players[0]!;
-    const player2 = game.players[1]!;
+    const player1 = game.players[0];
+    const player2 = game.players[1];
+
+    if (!player1 || !player2) {
+      return;
+    }
 
     const color1 =
       player1.isConnected === false

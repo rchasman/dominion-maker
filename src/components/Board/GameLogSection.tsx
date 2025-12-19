@@ -113,7 +113,7 @@ export function GameLogSection({
   }, [state.log, isProcessing]);
 
   const lastEventId =
-    events && events.length > 0 ? events[events.length - 1]!.id : undefined;
+    events && events.length > 0 ? events[events.length - 1]?.id : undefined;
 
   return (
     <div

@@ -63,10 +63,11 @@ function getInitialCardActions(
   actions: CardAction[],
 ): Record<number, CardActionId> {
   const defaultAction = actions.find(a => a.isDefault);
+  const firstActionId = actions[0]?.id ?? "keep_card";
   return cards.reduce(
     (acc, _, index) => ({
       ...acc,
-      [index]: defaultAction?.id || actions[0]!.id,
+      [index]: defaultAction?.id ?? firstActionId,
     }),
     {} as Record<number, CardActionId>,
   );
@@ -102,7 +103,8 @@ function useCardDecisionState(
       setCardActions(prev => {
         const nextIdx =
           (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
-        const newActions = { ...prev, [index]: actions[nextIdx]!.id };
+        const nextActionId = actions[nextIdx]?.id ?? actions[0]?.id ?? "keep_card";
+        const newActions = { ...prev, [index]: nextActionId };
         const newCardOrder = requiresOrdering
           ? getCardsToOrder(cardOrder, newActions)
           : undefined;
@@ -456,7 +458,7 @@ function CardRow({
           size="large"
           onClick={() => onToggleCardAction(cardIndex)}
           {...(getHighlightMode(action?.id) !== undefined && {
-            highlightMode: getHighlightMode(action?.id)!,
+            highlightMode: getHighlightMode(action?.id),
           })}
         />
       </div>

@@ -160,7 +160,7 @@ function LiveActionGroupDisplay({
       >
         {groupVotersByModel(group.voters)}
       </div>
-      {group.reasonings.length > 0 && (
+      {group.reasonings.length > 0 && group.reasonings[0] && (
         <div
           style={{
             padding: "var(--space-3)",
@@ -173,11 +173,11 @@ function LiveActionGroupDisplay({
             style={{
               fontSize: "0.7rem",
               fontWeight: 600,
-              color: getModelColor(group.reasonings[0]!.provider),
+              color: getModelColor(group.reasonings[0].provider),
               marginBottom: "var(--space-1)",
             }}
           >
-            {group.reasonings[0]!.provider}
+            {group.reasonings[0].provider}
           </div>
           <div
             style={{
@@ -187,7 +187,7 @@ function LiveActionGroupDisplay({
               lineHeight: 1.5,
             }}
           >
-            {group.reasonings[0]!.reasoning}
+            {group.reasonings[0].reasoning}
           </div>
         </div>
       )}
