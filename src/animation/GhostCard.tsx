@@ -111,7 +111,7 @@ export function GhostCard({
     };
 
     return () => animation.cancel();
-  }, [fromRect, toZone, duration, getZoneRect, onComplete]);
+  }, [cardName, fromRect, toZone, duration, getZoneRect, onComplete]);
 
   if (phase === "done") return null;
 

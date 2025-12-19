@@ -175,7 +175,7 @@ export function ModelSettingsPanel({
     if (!settings.dataFormat) {
       onChange({ ...settings, dataFormat: "toon" });
     }
-  }, []);
+  }, [settings, onChange]);
 
   // Load conversation from localStorage on mount
   useEffect(() => {
@@ -263,8 +263,7 @@ export function ModelSettingsPanel({
         clearTimeout(typingTimeoutRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.customStrategy]);
+  }, [settings.customStrategy, conversation, onChange]);
 
   return (
     <div
@@ -334,7 +333,10 @@ export function ModelSettingsPanel({
                 onChange={e =>
                   onChange({
                     ...settings,
-                    dataFormat: (e.target as HTMLInputElement).value as "toon" | "json" | "mixed",
+                    dataFormat: (e.target as HTMLInputElement).value as
+                      | "toon"
+                      | "json"
+                      | "mixed",
                   })
                 }
                 style={{ cursor: "pointer" }}
