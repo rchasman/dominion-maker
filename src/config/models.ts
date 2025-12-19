@@ -85,6 +85,14 @@ export const MODELS: ModelConfig[] = [
     outputPrice: 0.4,
   },
   {
+    id: "gemini-3-flash",
+    fullName: "google/gemini-3-flash",
+    provider: "google",
+    color: "#93c5fd",
+    inputPrice: 0.5,
+    outputPrice: 3.0,
+  },
+  {
     id: "ministral-3b",
     fullName: "mistral/ministral-3b",
     provider: "mistral",
@@ -149,6 +157,7 @@ export const MODEL_IDS = [
   "gpt-oss-20b",
   "gpt-oss-120b",
   "gemini-2.5-flash-lite",
+  "gemini-3-flash",
   "ministral-3b",
   "grok-4-fast",
   "grok-code-fast-1",
