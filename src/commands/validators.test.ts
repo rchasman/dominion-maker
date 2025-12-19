@@ -21,6 +21,7 @@ describe("Validation Middleware", () => {
       Copper: 30,
       Gold: 0,
     },
+    turnHistory: [],
   } as unknown as GameState;
 
   describe("validators.phase", () => {
@@ -120,6 +121,15 @@ describe("Validation Middleware", () => {
       );
       expect(result).toEqual({ ok: false, error: "Card not in play" });
     });
+
+    test("should fail when player doesn't exist", () => {
+      const result = validators.cardInPlay(
+        mockState as GameState,
+        "p99",
+        "Smithy",
+      );
+      expect(result).toEqual({ ok: false, error: "Player not found" });
+    });
   });
 
   describe("validators.cardInSupply", () => {
@@ -133,6 +143,25 @@ describe("Validation Middleware", () => {
       expect(result).toEqual({
         ok: false,
         error: "Card not available in supply",
+      });
+    });
+  });
+
+  describe("validators.noPurchasesMade", () => {
+    test("should pass when no purchases made", () => {
+      const result = validators.noPurchasesMade(mockState as GameState);
+      expect(result).toBeUndefined();
+    });
+
+    test("should fail when purchases have been made", () => {
+      const state = {
+        ...mockState,
+        turnHistory: [{ type: "buy_card", card: "Silver" }],
+      };
+      const result = validators.noPurchasesMade(state as GameState);
+      expect(result).toEqual({
+        ok: false,
+        error: "Cannot unplay treasures after already made purchases",
       });
     });
   });
