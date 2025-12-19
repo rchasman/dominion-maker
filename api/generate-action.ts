@@ -24,7 +24,7 @@ const HTTP_OK = 200;
 const HTTP_INTERNAL_ERROR = 500;
 
 // Formatting Constants
-const JSON_INDENT_SPACES = 2;
+const _JSON_INDENT_SPACES = 2;
 
 // Error message display limits
 const ERROR_TEXT_PREVIEW_LONG = 500;

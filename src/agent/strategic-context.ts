@@ -153,7 +153,7 @@ interface PlayerStrategyAnalysis {
   recommendation: string;
 }
 
-const JSON_INDENT_SPACES = 2;
+const _JSON_INDENT_SPACES = 2;
 
 /**
  * Builds structured game facts encoded in TOON format
