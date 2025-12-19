@@ -7,6 +7,7 @@ export interface ModelConfig {
   color: string; // UI color
   inputPrice: number; // Price per 1M input tokens in USD
   outputPrice: number; // Price per 1M output tokens in USD
+  speed?: number; // Tokens per second (optional)
   maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)
 }
 
@@ -83,6 +84,7 @@ export const MODELS: ModelConfig[] = [
     color: "#93c5fd",
     inputPrice: 0.1,
     outputPrice: 0.4,
+    speed: 496,
   },
   {
     id: "gemini-3-flash",
@@ -99,6 +101,7 @@ export const MODELS: ModelConfig[] = [
     color: "#fda4af",
     inputPrice: 0.04,
     outputPrice: 0.04,
+    speed: 351,
   },
   {
     id: "grok-4-fast",
@@ -125,6 +128,7 @@ export const MODELS: ModelConfig[] = [
     color: "#f472b6",
     inputPrice: 0.08,
     outputPrice: 0.2,
+    speed: 2130,
   },
 
   // Fast Groq models (low latency)
@@ -135,6 +139,7 @@ export const MODELS: ModelConfig[] = [
     color: "#fb923c",
     inputPrice: 0.15,
     outputPrice: 0.75,
+    speed: 347,
   },
   {
     id: "groq-llama-4-scout",
@@ -143,6 +148,7 @@ export const MODELS: ModelConfig[] = [
     color: "#fb923c",
     inputPrice: 0.11,
     outputPrice: 0.34,
+    speed: 412,
   },
 ];
 

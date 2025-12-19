@@ -36,19 +36,21 @@ const getModelDisplayName = (model: ModelProvider): string => {
     case "gpt-oss-120b":
       return "GPT OSS 120B";
     case "gemini-2.5-flash-lite":
-      return "Gemini Flash (496 tok/s)";
+      return "Gemini 2.5 Flash Lite";
+    case "gemini-3-flash":
+      return "Gemini 3 Flash";
     case "ministral-3b":
-      return "Ministral 3B (351 tok/s)";
+      return "Ministral 3B";
     case "grok-4-fast":
       return "Grok 4 Fast";
     case "grok-code-fast-1":
       return "Grok Code Fast 1";
     case "cerebras-llama-3.3-70b":
-      return "Cerebras Llama 3.3 70B (2130 tok/s)";
+      return "Cerebras Llama 3.3 70B";
     case "groq-llama-3.3-70b":
-      return "Groq Llama 3.3 70B (347 tok/s)";
+      return "Groq Llama 3.3 70B";
     case "groq-llama-4-scout":
-      return "Groq Llama 4 Scout (412 tok/s)";
+      return "Groq Llama 4 Scout";
     default: {
       const _exhaustive: never = model;
       return String(_exhaustive);
@@ -153,39 +155,60 @@ const ModelCheckbox = ({
   isEnabled,
   color,
   onToggle,
-}: ModelCheckboxProps) => (
-  <label
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "var(--space-2)",
-      cursor: "pointer",
-      padding: "var(--space-2)",
-      paddingLeft: "var(--space-4)",
-      borderRadius: "3px",
-      background: isEnabled ? `${color}15` : "transparent",
-      border: "1px solid",
-      borderColor: isEnabled ? color : "var(--color-border-secondary)",
-      fontSize: "0.6875rem",
-    }}
-  >
-    <input
-      id={`model-${model}`}
-      type="checkbox"
-      checked={isEnabled}
-      onChange={() => onToggle(model)}
-      style={{ cursor: "pointer" }}
-    />
-    <span
+}: ModelCheckboxProps) => {
+  const modelConfig = MODELS.find(m => m.id === model);
+  const pricing = modelConfig
+    ? `$${modelConfig.inputPrice}/$${modelConfig.outputPrice} per 1M`
+    : null;
+
+  return (
+    <label
       style={{
-        color: "var(--color-text-primary)",
-        flex: FLEX_FILL,
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--space-2)",
+        cursor: "pointer",
+        padding: "var(--space-2)",
+        paddingLeft: "var(--space-4)",
+        borderRadius: "3px",
+        background: isEnabled ? `${color}15` : "transparent",
+        border: "1px solid",
+        borderColor: isEnabled ? color : "var(--color-border-secondary)",
+        fontSize: "0.6875rem",
       }}
     >
-      {getModelDisplayName(model)}
-    </span>
-  </label>
-);
+      <input
+        id={`model-${model}`}
+        type="checkbox"
+        checked={isEnabled}
+        onChange={() => onToggle(model)}
+        style={{ cursor: "pointer" }}
+      />
+      <div
+        style={{
+          flex: FLEX_FILL,
+          display: "flex",
+          flexDirection: "column",
+          gap: "2px",
+        }}
+      >
+        <span style={{ color: "var(--color-text-primary)" }}>
+          {getModelDisplayName(model)}
+        </span>
+        {pricing && (
+          <span
+            style={{
+              fontSize: "0.5625rem",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {pricing}
+          </span>
+        )}
+      </div>
+    </label>
+  );
+};
 
 interface ProviderSectionProps {
   provider: string;
