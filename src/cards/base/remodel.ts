@@ -10,7 +10,8 @@ const COST_BONUS = 2;
 
 export const remodel = createMultiStageCard({
   initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId]!;
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
     if (playerState.hand.length === 0) return { events: [] };
 
     return {

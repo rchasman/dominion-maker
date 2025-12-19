@@ -11,7 +11,9 @@ import { STAGES } from "../stages";
 
 export const mine = createMultiStageCard({
   initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId]!;
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
+
     const cardDef = CARDS.Mine;
     const trashSpec = cardDef.decisions?.trash;
 
