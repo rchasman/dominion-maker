@@ -46,9 +46,14 @@ export function Board({ onBackToHome }: BoardProps) {
 
   const localPlayerId = boardState.localPlayerId;
 
+  const hasPendingDecision =
+    !!boardState.displayState.pendingChoice &&
+    boardState.displayState.pendingChoice.playerId === localPlayerId;
+
   const callbacks = createBoardCallbacks({
     isPreviewMode,
     isLocalPlayerTurn: boardState.isLocalPlayerTurn,
+    hasPendingDecision,
     localPlayerId,
     phase: boardState.displayState.phase,
     handleCardClick,

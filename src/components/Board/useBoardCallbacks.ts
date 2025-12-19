@@ -6,6 +6,7 @@ interface BoardCallbacksParams {
   isLocalPlayerTurn: boolean;
   localPlayerId: string;
   phase: "action" | "buy" | "cleanup";
+  hasPendingDecision: boolean;
   handleCardClick: (
     card: CardName,
     index: number,
@@ -37,6 +38,7 @@ export function createBoardCallbacks(
   const {
     isPreviewMode,
     isLocalPlayerTurn,
+    hasPendingDecision,
     localPlayerId,
     phase,
     handleCardClick,
@@ -72,13 +74,13 @@ export function createBoardCallbacks(
   };
 
   const onConfirmDecision = (data: ComplexDecisionData | null) => {
-    if (isLocalPlayerTurn && !isPreviewMode) {
+    if ((isLocalPlayerTurn || hasPendingDecision) && !isPreviewMode) {
       handleConfirmDecision(data, localPlayerId);
     }
   };
 
   const onSkipDecision = () => {
-    if (isLocalPlayerTurn && !isPreviewMode) {
+    if ((isLocalPlayerTurn || hasPendingDecision) && !isPreviewMode) {
       handleSkipDecision();
     }
   };
@@ -91,8 +93,12 @@ export function createBoardCallbacks(
       isLocalPlayerTurn && !isPreviewMode ? onPlayAllTreasures : undefined,
     onEndPhase: isLocalPlayerTurn && !isPreviewMode ? onEndPhase : undefined,
     onConfirmDecision:
-      isLocalPlayerTurn && !isPreviewMode ? onConfirmDecision : undefined,
+      (isLocalPlayerTurn || hasPendingDecision) && !isPreviewMode
+        ? onConfirmDecision
+        : undefined,
     onSkipDecision:
-      isLocalPlayerTurn && !isPreviewMode ? onSkipDecision : undefined,
+      (isLocalPlayerTurn || hasPendingDecision) && !isPreviewMode
+        ? onSkipDecision
+        : undefined,
   };
 }
