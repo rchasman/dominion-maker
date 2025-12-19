@@ -283,36 +283,9 @@ export function applyRevealAndShuffle(
   event: GameEvent,
 ): GameState | null {
   if (event.type === "CARD_REVEALED") {
-    // Check if the last log entry is a reveal from the same player with same source
-    const lastLog = state.log[state.log.length - 1];
-    const fromLocation = event.from || "deck";
-    const targetPattern = `${event.playerId} reveals `;
-    const sourcePattern = ` from ${fromLocation}`;
-
-    const isConsecutiveReveal =
-      lastLog?.type === "text" &&
-      typeof lastLog.message === "string" &&
-      lastLog.message.startsWith(targetPattern) &&
-      lastLog.message.includes(sourcePattern);
-
-    if (isConsecutiveReveal) {
-      // Append to existing reveal message (before the "from" part)
-      const parts = lastLog.message.split(sourcePattern);
-      const updatedMessage = `${parts[0]}, ${event.card}${sourcePattern}`;
-      return {
-        ...state,
-        log: [...state.log.slice(0, -1), { type: "text", message: updatedMessage }],
-      };
-    }
-
-    // First reveal from this player/source
-    return {
-      ...state,
-      log: [
-        ...state.log,
-        { type: "text", message: `${targetPattern}${event.card}${sourcePattern}` },
-      ],
-    };
+    // CARD_REVEALED is logged via event-based log (buildLogFromEvents), not state.log
+    // No state.log changes needed
+    return state;
   }
 
   if (event.type === "CARD_PEEKED") {
