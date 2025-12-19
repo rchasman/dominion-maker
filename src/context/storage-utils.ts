@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   LLM_LOGS: "dominion-maker-llm-logs",
   MODEL_SETTINGS: "dominion-maker-model-settings",
   STRATEGIES: "dominion-maker-strategies",
+  PLAYER_NAME: "dominion-maker-player-name",
 } as const;
 
 // Valid game modes for validation
