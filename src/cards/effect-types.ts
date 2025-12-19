@@ -523,13 +523,12 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
     decision,
     stage,
   }): CardEffectResult => {
-    const events =
-      typeof initialEvents === "function"
-        ? initialEvents(state, playerId, attackTargets)
-        : [...initialEvents];
-
     // Initial call: find first opponent needing decision
     if (!stage) {
+      const events =
+        typeof initialEvents === "function"
+          ? initialEvents(state, playerId, attackTargets)
+          : [...initialEvents];
       const targets =
         attackTargets !== undefined
           ? attackTargets
@@ -585,7 +584,6 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
       const choiceEvents = opponentData
         ? config.processChoice(decision, opponentData, state)
         : [];
-      const allEvents = [...events, ...choiceEvents];
 
       // Find next opponent needing decision
       const nextOpponentData = run(() => {
@@ -609,7 +607,7 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
       if (nextOpponentData) {
         const { remainingTargets, ...rest } = nextOpponentData;
         return {
-          events: allEvents,
+          events: choiceEvents,
           pendingChoice: config.createDecision(
             rest,
             remainingTargets,
@@ -618,9 +616,9 @@ export function createOpponentIteratorEffect<T = Record<string, unknown>>(
           ),
         };
       }
-      return { events: allEvents };
+      return { events: choiceEvents };
     }
 
-    return { events };
+    return { events: [] };
   };
 }
