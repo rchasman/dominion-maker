@@ -86,12 +86,10 @@ export function GameRoom({
   const disconnectedOpponent = useMemo(() => {
     if (isSpectator || !game.playerId) return null;
 
-    for (const [playerId, playerName] of game.disconnectedPlayers.entries()) {
-      if (playerId !== game.playerId) {
-        return { playerId, playerName };
-      }
-    }
-    return null;
+    const opponent = Array.from(game.disconnectedPlayers.entries()).find(
+      ([playerId]) => playerId !== game.playerId,
+    );
+    return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
   }, [game.disconnectedPlayers, game.playerId, isSpectator]);
 
   // Show game board if game has started
