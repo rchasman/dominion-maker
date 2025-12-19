@@ -8,6 +8,7 @@ import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
 import { isDecisionChoice, isReactionChoice } from "../../types/pending-choice";
+import { run } from "../../lib/run";
 
 interface MainPlayerAreaProps {
   localPlayer: GameState["players"][PlayerId];
@@ -53,13 +54,14 @@ export function MainPlayerArea({
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
   const playerName = players?.find(p => p.id === localPlayerId)?.name;
-  const displayName = playerName
-    ? isLocalPlayerAI
-      ? `${playerName} (AI)`
-      : playerName
-    : formatPlayerName(localPlayerId, isLocalPlayerAI, {
-        gameState: displayState,
-      });
+  const displayName = run(() => {
+    if (playerName) {
+      return isLocalPlayerAI ? `${playerName} (AI)` : playerName;
+    }
+    return formatPlayerName(localPlayerId, isLocalPlayerAI, {
+      gameState: displayState,
+    });
+  });
 
   return (
     <div style={{ position: "relative" }}>
