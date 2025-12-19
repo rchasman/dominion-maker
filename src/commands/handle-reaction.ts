@@ -36,6 +36,11 @@ export function handleRevealReaction(
     return { ok: false, error: "No pending reaction" };
   }
 
+  const metadata = reaction.metadata;
+  if (!metadata) {
+    return { ok: false, error: "Missing reaction metadata" };
+  }
+
   if (reaction.playerId !== playerId) {
     return { ok: false, error: "Not your reaction to reveal" };
   }
@@ -68,7 +73,7 @@ export function handleRevealReaction(
       type: "REACTION_PLAYED",
       playerId,
       card,
-      triggerEventId: reaction.metadata!.originalCause,
+      triggerEventId: metadata.originalCause,
       id: generateEventId(),
       causedBy: rootEventId,
     },
@@ -92,18 +97,18 @@ export function handleRevealReaction(
   const updatedMetadata: ReactionMetadata = {
     attackCard: reaction.attackCard,
     attacker: reaction.attacker,
-    ...reaction.metadata!,
-    blockedTargets: [...reaction.metadata!.blockedTargets, playerId],
+    ...metadata,
+    blockedTargets: [...metadata.blockedTargets, playerId],
   };
 
   // Check if more targets need reactions
-  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
-  if (nextIndex < reaction.metadata!.allTargets.length) {
+  const nextIndex = metadata.currentTargetIndex + 1;
+  if (nextIndex < metadata.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
       updatedMetadata,
       nextIndex,
-      reaction.metadata!.originalCause,
+      metadata.originalCause,
     );
     events = [...events, ...nextEvents];
 
@@ -117,7 +122,7 @@ export function handleRevealReaction(
       const attackEvents = applyAttackToUnblockedTargets(
         midState,
         updatedMetadata,
-        reaction.metadata!.originalCause,
+        metadata.originalCause,
       );
       events = [...events, ...attackEvents];
     }
@@ -127,7 +132,7 @@ export function handleRevealReaction(
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
       updatedMetadata,
-      reaction.metadata!.originalCause,
+      metadata.originalCause,
     );
     events = [...events, ...attackEvents];
   }
@@ -147,6 +152,11 @@ export function handleDeclineReaction(
   // Validation
   if (!isReactionChoice(reaction)) {
     return { ok: false, error: "No pending reaction" };
+  }
+
+  const metadata = reaction.metadata;
+  if (!metadata) {
+    return { ok: false, error: "Missing reaction metadata" };
   }
 
   if (reaction.playerId !== playerId) {
@@ -187,17 +197,17 @@ export function handleDeclineReaction(
   const fullMetadata: ReactionMetadata = {
     attackCard: reaction.attackCard,
     attacker: reaction.attacker,
-    ...reaction.metadata!,
+    ...metadata,
   };
 
   // Check if more targets need reactions
-  const nextIndex = reaction.metadata!.currentTargetIndex + 1;
-  if (nextIndex < reaction.metadata!.allTargets.length) {
+  const nextIndex = metadata.currentTargetIndex + 1;
+  if (nextIndex < metadata.allTargets.length) {
     const nextEvents = processNextTarget(
       state,
       fullMetadata,
       nextIndex,
-      reaction.metadata!.originalCause,
+      metadata.originalCause,
     );
     events = [...events, ...nextEvents];
 
@@ -211,7 +221,7 @@ export function handleDeclineReaction(
       const attackEvents = applyAttackToUnblockedTargets(
         midState,
         fullMetadata,
-        reaction.metadata!.originalCause,
+        metadata.originalCause,
       );
       events = [...events, ...attackEvents];
     }
@@ -221,7 +231,7 @@ export function handleDeclineReaction(
     const attackEvents = applyAttackToUnblockedTargets(
       midState,
       fullMetadata,
-      reaction.metadata!.originalCause,
+      metadata.originalCause,
     );
     events = [...events, ...attackEvents];
   }
