@@ -68,6 +68,90 @@ function LoadingAnimation({ show }: { show: boolean }) {
   );
 }
 
+function prepareHandSectionProps({
+  player,
+  showCards,
+  loading,
+  selectedCardIndices,
+  pendingChoice,
+  isInteractive,
+  isActive,
+  playerId,
+  phase,
+  actions,
+  onCardClick,
+  inverted,
+}: {
+  player: PlayerState;
+  showCards: boolean;
+  loading?: boolean;
+  selectedCardIndices: number[];
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
+  isInteractive: boolean;
+  isActive: boolean;
+  playerId?: PlayerId;
+  phase: Phase;
+  actions?: number;
+  onCardClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
+}) {
+  const baseProps = {
+    hand: player.hand,
+    showCards,
+    loading: loading ?? false,
+    selectedCardIndices,
+    isInteractive,
+    isActive,
+    phase,
+  };
+
+  const optionalProps: Record<string, unknown> = {};
+  if (pendingChoice !== undefined) optionalProps.pendingChoice = pendingChoice;
+  if (playerId !== undefined) optionalProps.playerId = playerId;
+  if (actions !== undefined) optionalProps.actions = actions;
+  if (onCardClick !== undefined) optionalProps.onCardClick = onCardClick;
+  if (inverted !== undefined) optionalProps.inverted = inverted;
+
+  return { ...baseProps, ...optionalProps };
+}
+
+function prepareDeckDiscardProps({
+  player,
+  loading,
+  pendingChoice,
+  isInteractive,
+  onCardClick,
+  inverted,
+}: {
+  player: PlayerState;
+  loading?: boolean;
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
+  isInteractive: boolean;
+  onCardClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
+}) {
+  const baseProps = {
+    deck: player.deck,
+    discard: player.discard,
+    loading: loading ?? false,
+    deckTopRevealed: player.deckTopRevealed ?? false,
+    isInteractive,
+  };
+
+  const optionalProps: Record<string, unknown> = {};
+  if (pendingChoice !== undefined) optionalProps.pendingChoice = pendingChoice;
+  if (onCardClick !== undefined) optionalProps.onCardClick = onCardClick;
+  if (inverted !== undefined) optionalProps.inverted = inverted;
+
+  return { ...baseProps, ...optionalProps };
+}
+
 function HandAndDeckGrid({
   player,
   showCards,
@@ -98,6 +182,30 @@ function HandAndDeckGrid({
   onCardClick?: (card: CardName, index: number) => void;
   inverted?: boolean;
 }) {
+  const handProps = prepareHandSectionProps({
+    player,
+    showCards,
+    loading,
+    selectedCardIndices,
+    pendingChoice,
+    isInteractive,
+    isActive,
+    playerId,
+    phase,
+    actions,
+    onCardClick,
+    inverted,
+  });
+
+  const deckDiscardProps = prepareDeckDiscardProps({
+    player,
+    loading,
+    pendingChoice,
+    isInteractive,
+    onCardClick,
+    inverted,
+  });
+
   return (
     <div
       style={{
@@ -107,35 +215,123 @@ function HandAndDeckGrid({
         alignItems: "stretch",
       }}
     >
-      <HandSection
-        hand={player.hand}
-        showCards={showCards}
-        loading={loading ?? false}
-        selectedCardIndices={selectedCardIndices}
-        {...(pendingChoice !== undefined && { pendingChoice })}
-        isInteractive={isInteractive}
-        isActive={isActive}
-        {...(playerId !== undefined && { playerId })}
-        phase={phase}
-        {...(actions !== undefined && { actions })}
-        {...(onCardClick !== undefined && { onCardClick })}
-        {...(inverted !== undefined && { inverted })}
-      />
-
-      {showCards && (
-        <DeckDiscardSection
-          deck={player.deck}
-          discard={player.discard}
-          loading={loading ?? false}
-          deckTopRevealed={player.deckTopRevealed ?? false}
-          {...(pendingChoice !== undefined && { pendingChoice })}
-          isInteractive={isInteractive}
-          {...(onCardClick !== undefined && { onCardClick })}
-          {...(inverted !== undefined && { inverted })}
-        />
-      )}
+      <HandSection {...handProps} />
+      {showCards && <DeckDiscardSection {...deckDiscardProps} />}
     </div>
   );
+}
+
+function preparePlayerLabelProps({
+  label,
+  playerId,
+  loading,
+  playerStrategy,
+  vpCount,
+  gameState,
+  isActive,
+}: {
+  label: string;
+  playerId?: PlayerId;
+  loading: boolean;
+  playerStrategy?: {
+    gameplan: string;
+    read: string;
+    recommendation: string;
+  };
+  vpCount?: number;
+  gameState?: GameState;
+  isActive: boolean;
+}) {
+  const baseProps = { label, loading, isActive };
+  const optionalProps: Record<string, unknown> = {};
+
+  if (playerId !== undefined) optionalProps.playerId = playerId;
+  if (playerStrategy !== undefined)
+    optionalProps.playerStrategy = playerStrategy;
+  if (vpCount !== undefined) optionalProps.vpCount = vpCount;
+  if (gameState?.phase !== undefined) optionalProps.phase = gameState.phase;
+  if (gameState?.actions !== undefined)
+    optionalProps.actions = gameState.actions;
+  if (gameState?.buys !== undefined) optionalProps.buys = gameState.buys;
+  if (gameState?.coins !== undefined) optionalProps.coins = gameState.coins;
+
+  return { ...baseProps, ...optionalProps };
+}
+
+function prepareInPlayProps({
+  player,
+  loading,
+  hasMadePurchases,
+  onInPlayClick,
+  inverted,
+}: {
+  player: PlayerState;
+  loading: boolean;
+  hasMadePurchases: boolean;
+  onInPlayClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
+}) {
+  const baseProps = {
+    inPlay: player.inPlay,
+    loading,
+    hasMadePurchases,
+  };
+  const optionalProps: Record<string, unknown> = {};
+
+  if (onInPlayClick !== undefined) optionalProps.onInPlayClick = onInPlayClick;
+  if (inverted !== undefined) optionalProps.inverted = inverted;
+
+  return { ...baseProps, ...optionalProps };
+}
+
+function prepareHandDeckGridProps({
+  player,
+  showCards,
+  loading,
+  selectedCardIndices,
+  pendingChoice,
+  isInteractive,
+  isActive,
+  playerId,
+  phase,
+  actions,
+  onCardClick,
+  inverted,
+}: {
+  player: PlayerState;
+  showCards: boolean;
+  loading: boolean;
+  selectedCardIndices: number[];
+  pendingChoice:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
+  isInteractive: boolean;
+  isActive: boolean;
+  playerId?: PlayerId;
+  phase: Phase;
+  actions?: number;
+  onCardClick?: (card: CardName, index: number) => void;
+  inverted?: boolean;
+}) {
+  const baseProps = {
+    player,
+    showCards,
+    loading,
+    selectedCardIndices,
+    isInteractive,
+    isActive,
+    phase,
+  };
+  const optionalProps: Record<string, unknown> = {};
+
+  if (pendingChoice !== undefined) optionalProps.pendingChoice = pendingChoice;
+  if (playerId !== undefined) optionalProps.playerId = playerId;
+  if (actions !== undefined) optionalProps.actions = actions;
+  if (onCardClick !== undefined) optionalProps.onCardClick = onCardClick;
+  if (inverted !== undefined) optionalProps.inverted = inverted;
+
+  return { ...baseProps, ...optionalProps };
 }
 
 function PlayerAreaContent({
@@ -165,6 +361,39 @@ function PlayerAreaContent({
   backgroundColor: string;
   isInteractive: boolean;
 }): React.ReactNode {
+  const playerLabelProps = preparePlayerLabelProps({
+    label,
+    playerId,
+    loading,
+    playerStrategy,
+    vpCount,
+    gameState,
+    isActive,
+  });
+
+  const inPlayProps = prepareInPlayProps({
+    player,
+    loading,
+    hasMadePurchases,
+    onInPlayClick,
+    inverted,
+  });
+
+  const handDeckGridProps = prepareHandDeckGridProps({
+    player,
+    showCards,
+    loading,
+    selectedCardIndices,
+    pendingChoice,
+    isInteractive,
+    isActive,
+    playerId,
+    phase,
+    actions,
+    onCardClick,
+    inverted,
+  });
+
   return (
     <div
       style={{
@@ -179,81 +408,15 @@ function PlayerAreaContent({
     >
       {inverted ? (
         <>
-          <HandAndDeckGrid
-            player={player}
-            showCards={showCards}
-            {...(loading !== undefined && { loading })}
-            selectedCardIndices={selectedCardIndices}
-            {...(pendingChoice !== undefined && { pendingChoice })}
-            isInteractive={isInteractive}
-            isActive={isActive}
-            {...(playerId !== undefined && { playerId })}
-            phase={phase}
-            {...(actions !== undefined && { actions })}
-            {...(onCardClick !== undefined && { onCardClick })}
-            {...(inverted !== undefined && { inverted })}
-          />
-
-          <InPlaySection
-            inPlay={player.inPlay}
-            loading={loading}
-            hasMadePurchases={hasMadePurchases}
-            {...(onInPlayClick !== undefined && { onInPlayClick })}
-            {...(inverted !== undefined && { inverted })}
-          />
-
-          <PlayerLabelSection
-            label={label}
-            {...(playerId !== undefined && { playerId })}
-            loading={loading}
-            {...(playerStrategy !== undefined && { playerStrategy })}
-            {...(vpCount !== undefined && { vpCount })}
-            {...(gameState?.phase !== undefined && { phase: gameState.phase })}
-            {...(gameState?.actions !== undefined && {
-              actions: gameState.actions,
-            })}
-            {...(gameState?.buys !== undefined && { buys: gameState.buys })}
-            {...(gameState?.coins !== undefined && { coins: gameState.coins })}
-            {...(isActive !== undefined && { isActive })}
-          />
+          <HandAndDeckGrid {...handDeckGridProps} />
+          <InPlaySection {...inPlayProps} />
+          <PlayerLabelSection {...playerLabelProps} />
         </>
       ) : (
         <>
-          <PlayerLabelSection
-            label={label}
-            {...(playerId !== undefined && { playerId })}
-            loading={loading}
-            {...(playerStrategy !== undefined && { playerStrategy })}
-            {...(vpCount !== undefined && { vpCount })}
-            {...(gameState?.phase !== undefined && { phase: gameState.phase })}
-            {...(gameState?.actions !== undefined && {
-              actions: gameState.actions,
-            })}
-            {...(gameState?.buys !== undefined && { buys: gameState.buys })}
-            {...(gameState?.coins !== undefined && { coins: gameState.coins })}
-            {...(isActive !== undefined && { isActive })}
-          />
-
-          <InPlaySection
-            inPlay={player.inPlay}
-            loading={loading}
-            hasMadePurchases={hasMadePurchases}
-            {...(onInPlayClick !== undefined && { onInPlayClick })}
-          />
-
-          <HandAndDeckGrid
-            player={player}
-            showCards={showCards}
-            {...(loading !== undefined && { loading })}
-            selectedCardIndices={selectedCardIndices}
-            {...(pendingChoice !== undefined && { pendingChoice })}
-            isInteractive={isInteractive}
-            isActive={isActive}
-            {...(playerId !== undefined && { playerId })}
-            phase={phase}
-            {...(actions !== undefined && { actions })}
-            {...(onCardClick !== undefined && { onCardClick })}
-          />
+          <PlayerLabelSection {...playerLabelProps} />
+          <InPlaySection {...{ ...inPlayProps, inverted: undefined }} />
+          <HandAndDeckGrid {...{ ...handDeckGridProps, inverted: undefined }} />
         </>
       )}
 
@@ -262,25 +425,27 @@ function PlayerAreaContent({
   );
 }
 
-export function PlayerArea({
-  player,
-  label,
-  vpCount,
-  isActive,
-  showCards,
-  selectedCardIndices,
-  onCardClick,
-  onInPlayClick,
-  inverted = false,
-  pendingChoice,
-  phase,
-  actions,
-  loading = false,
-  playerId,
-  turnHistory = [],
-  playerStrategy,
-  gameState,
-}: PlayerAreaProps) {
+function preparePlayerAreaContentProps(props: PlayerAreaProps) {
+  const {
+    player,
+    label,
+    vpCount,
+    isActive,
+    showCards,
+    selectedCardIndices,
+    onCardClick,
+    onInPlayClick,
+    inverted,
+    pendingChoice,
+    phase,
+    actions,
+    loading,
+    playerId,
+    turnHistory,
+    playerStrategy,
+    gameState,
+  } = props;
+
   const isInteractive = !!onCardClick;
   const subPhase = gameState ? getSubPhase(gameState) : null;
   const borderColor = getPhaseBorderColor(isActive, phase, subPhase);
@@ -289,29 +454,36 @@ export function PlayerArea({
     action => action.type === "buy_card",
   );
 
-  return (
-    <PlayerAreaContent
-      player={player}
-      label={label}
-      {...(vpCount !== undefined && { vpCount })}
-      {...(isActive !== undefined && { isActive })}
-      showCards={showCards}
-      selectedCardIndices={selectedCardIndices}
-      {...(onCardClick !== undefined && { onCardClick })}
-      {...(onInPlayClick !== undefined && { onInPlayClick })}
-      {...(inverted !== undefined && { inverted })}
-      {...(pendingChoice !== undefined && { pendingChoice })}
-      {...(playerId !== undefined && { playerId })}
-      phase={phase}
-      subPhase={subPhase}
-      {...(actions !== undefined && { actions })}
-      {...(loading !== undefined && { loading })}
-      hasMadePurchases={hasMadePurchases}
-      {...(playerStrategy !== undefined && { playerStrategy })}
-      borderColor={borderColor}
-      backgroundColor={backgroundColor}
-      isInteractive={isInteractive}
-      {...(gameState !== undefined && { gameState })}
-    />
-  );
+  const baseProps = {
+    player,
+    label,
+    isActive,
+    showCards,
+    selectedCardIndices,
+    phase,
+    loading,
+    hasMadePurchases,
+    borderColor,
+    backgroundColor,
+    isInteractive,
+  };
+
+  const optionalProps: Record<string, unknown> = {};
+  if (vpCount !== undefined) optionalProps.vpCount = vpCount;
+  if (onCardClick !== undefined) optionalProps.onCardClick = onCardClick;
+  if (onInPlayClick !== undefined) optionalProps.onInPlayClick = onInPlayClick;
+  if (inverted !== undefined) optionalProps.inverted = inverted;
+  if (pendingChoice !== undefined) optionalProps.pendingChoice = pendingChoice;
+  if (playerId !== undefined) optionalProps.playerId = playerId;
+  if (actions !== undefined) optionalProps.actions = actions;
+  if (playerStrategy !== undefined)
+    optionalProps.playerStrategy = playerStrategy;
+  if (gameState !== undefined) optionalProps.gameState = gameState;
+
+  return { ...baseProps, ...optionalProps };
+}
+
+export function PlayerArea(props: PlayerAreaProps) {
+  const contentProps = preparePlayerAreaContentProps(props);
+  return <PlayerAreaContent {...contentProps} />;
 }
