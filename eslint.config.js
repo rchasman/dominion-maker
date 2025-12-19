@@ -17,7 +17,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["eslint.config.js"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -137,6 +139,12 @@ export default defineConfig([
   // Test file overrides - relax rules for test globals and structure
   {
     files: ["**/*.test.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.test.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       // Bun test globals aren't typed, causing false positives
       "@typescript-eslint/no-unsafe-call": "off",
