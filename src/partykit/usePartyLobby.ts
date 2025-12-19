@@ -88,7 +88,8 @@ export function usePartyLobby(
     });
 
     socket.addEventListener("message", e => {
-      const msg = JSON.parse(e.data) as LobbyServerMessage;
+      const data = e.data as string;
+      const msg = JSON.parse(data) as LobbyServerMessage;
 
       switch (msg.type) {
         case "lobby_joined":

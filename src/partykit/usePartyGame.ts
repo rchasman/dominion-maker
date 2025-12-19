@@ -121,7 +121,8 @@ export function usePartyGame({
     });
 
     socket.addEventListener("message", e => {
-      const msg = JSON.parse(e.data) as GameServerMessage;
+      const data = e.data as string;
+      const msg = JSON.parse(data) as GameServerMessage;
       handleMessage(msg);
     });
 
@@ -129,6 +130,8 @@ export function usePartyGame({
       socket.close();
       socketRef.current = null;
     };
+    // handleMessage is stable (no dependencies) so we don't need it in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, playerName, clientId, isSpectator]);
 
   const handleMessage = useCallback((msg: GameServerMessage) => {
@@ -185,21 +188,31 @@ export function usePartyGame({
         }));
         break;
 
-      case "player_disconnected":
+      case "player_disconnected": {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- discriminated union narrowing limitation
+        const disconnectedPlayerId = msg.playerId;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- needed for eslint
+        const disconnectedPlayerName = msg.playerName as string;
         setState(s => {
           const newDisconnected = new Map(s.disconnectedPlayers);
-          newDisconnected.set(msg.playerId, msg.playerName);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- discriminated union narrowing limitation
+          newDisconnected.set(disconnectedPlayerId, disconnectedPlayerName);
           return { ...s, disconnectedPlayers: newDisconnected };
         });
         break;
+      }
 
-      case "player_reconnected":
+      case "player_reconnected": {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- discriminated union narrowing limitation
+        const reconnectedPlayerId = msg.playerId;
         setState(s => {
           const newDisconnected = new Map(s.disconnectedPlayers);
-          newDisconnected.delete(msg.playerId);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- discriminated union narrowing limitation
+          newDisconnected.delete(reconnectedPlayerId);
           return { ...s, disconnectedPlayers: newDisconnected };
         });
         break;
+      }
 
       case "error":
         // Transient errors - log but don't show game over modal
