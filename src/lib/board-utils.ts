@@ -125,12 +125,21 @@ const isAggregatable = (entry: LogEntry) =>
     "discard-cards",
     "draw-cards",
     "play-action",
+    "reveal-card",
   ].includes(entry.type);
 
 const canMatchNext = (current: LogEntry, next: LogEntry): boolean => {
   if (next.type !== current.type) return false;
   if (!("playerId" in next) || !("playerId" in current)) return false;
   if (next.playerId !== current.playerId) return false;
+
+  // For reveal-card, check 'from' matches (don't check card - we batch different cards)
+  if (current.type === "reveal-card" && next.type === "reveal-card") {
+    return (
+      ("from" in current && "from" in next && current.from === next.from) ||
+      (!("from" in current) && !("from" in next))
+    );
+  }
 
   // For entries with cards, they must match on card
   if ("card" in next && "card" in current) {
@@ -168,14 +177,30 @@ const aggregateGroup = (
   const eventIds = entries
     .map(e => e.eventId)
     .filter((id): id is string => id !== undefined);
+
+  // Recursively aggregate all children (batches reveals, draws, discards, etc.)
+  const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
+  const aggregatedChildren = aggregateLogEntries(allChildren);
+
+  // Extract cards for draw/discard aggregation
   const allCards = entries.flatMap(e =>
     (e.type === "discard-cards" || e.type === "draw-cards") && e.cards
       ? e.cards
       : [],
   );
-  const allChildren: LogEntry[] = entries.flatMap(e => e.children ?? []);
-  // Don't aggregate children - keep resource changes individual
-  const aggregatedChildren = allChildren;
+
+  if (first.type === "reveal-card") {
+    // Batch reveals: "Silver, Copper" instead of separate entries
+    const cards = entries
+      .map(e => (e.type === "reveal-card" && "card" in e ? e.card : ""))
+      .filter(Boolean);
+    return {
+      ...first,
+      card: cards.join(", "),
+      eventIds,
+      children: aggregatedChildren.length > 0 ? aggregatedChildren : undefined,
+    } as LogEntry & { eventIds?: string[] };
+  }
 
   if (first.type === "play-treasure" || first.type === "unplay-treasure") {
     const totalCoins = entries.reduce(
@@ -276,20 +301,17 @@ export function aggregateLogEntries(
 
     if (isAggregatable(current)) {
       const { entries, count } = collectConsecutive(log, index);
-      return processEntries(index + count, [
-        ...acc,
-        count > 1 ? aggregateGroup(entries) : current,
-      ]);
+      // Always aggregate (even single entries) to recursively process children
+      const aggregated = count > 1 ? aggregateGroup(entries) : aggregateGroup([current]);
+      return processEntries(index + count, [...acc, aggregated]);
     }
 
-    return processEntries(index + 1, [...acc, current]);
+    // For non-aggregatable entries, still recursively process children
+    const processedCurrent = current.children
+      ? { ...current, children: aggregateLogEntries(current.children) }
+      : current;
+    return processEntries(index + 1, [...acc, processedCurrent]);
   };
 
-  const result = processEntries(0, []);
-  const textEntries = result.filter(e => e.type === "text");
-  console.log("[DEBUG] aggregateLogEntries: total entries:", result.length, "text entries:", textEntries.length);
-  if (textEntries.length > 0) {
-    console.log("[DEBUG] Text entries:", textEntries.map(e => e.type === "text" ? e.message : ""));
-  }
-  return result;
+  return processEntries(0, []);
 }
