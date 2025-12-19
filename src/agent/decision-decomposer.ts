@@ -23,19 +23,25 @@ export function decomposeDecisionForAI(
     availableActions.length > 0 &&
     !availableActions.every(a => a.id === "select" || a.id === "skip")
   ) {
-    const roundIndex = (decision.metadata?.currentRoundIndex as number) || 0;
+    const roundIndex =
+      typeof decision.metadata?.currentRoundIndex === "number"
+        ? decision.metadata.currentRoundIndex
+        : 0;
 
     if (roundIndex >= cardOptions.length) {
       return [{ type: "skip_decision" as const }];
     }
 
     const currentCard = cardOptions[roundIndex];
+    if (!currentCard) {
+      return [{ type: "skip_decision" as const }];
+    }
 
     const cardActions = availableActions.map(
       action =>
         ({
           type: action.id as Exclude<Action["type"], "choose_from_options">,
-          card: currentCard ?? null,
+          card: currentCard,
         }) as Action,
     );
 

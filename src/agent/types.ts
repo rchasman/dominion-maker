@@ -72,7 +72,10 @@ export function buildModelsFromSettings({
     instanceCounts: Map<ModelProvider, number>;
   }>(
     (acc, i) => {
-      const modelId = enabled[i % enabled.length]!; // Safe: enabled is non-empty
+      const modelId = enabled[i % enabled.length];
+      if (!modelId) {
+        throw new Error("Model selection failed: no model available");
+      }
       const config = MODELS.find(m => m.id === modelId);
       const currentCount = acc.instanceCounts.get(modelId) ?? 0;
 
@@ -98,7 +101,10 @@ export function buildModelsFromSettings({
         // All models at limit, fall back to cycling through unlimited models
         const fallbackModel =
           modelsWithoutLimits[i % (modelsWithoutLimits.length || 1)] ??
-          enabled[0]!; // Safe: enabled is non-empty
+          enabled[0];
+        if (!fallbackModel) {
+          throw new Error("No fallback model available");
+        }
         return {
           models: [...acc.models, fallbackModel],
           instanceCounts: new Map(acc.instanceCounts).set(
@@ -120,28 +126,35 @@ export function buildModelsFromSettings({
   );
 
   // Shuffle for randomness using functional Fisher-Yates algorithm
-  return models.reduce<ModelProvider[]>((shuffled: ModelProvider[], currentValue: ModelProvider, currentIndex: number) => {
-    if (currentIndex === 0) return [currentValue];
+  return models.reduce<ModelProvider[]>(
+    (
+      shuffled: ModelProvider[],
+      currentValue: ModelProvider,
+      currentIndex: number,
+    ) => {
+      if (currentIndex === 0) return [currentValue];
 
-    const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
-    const newShuffled = [...shuffled];
+      const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+      const newShuffled = [...shuffled];
 
-    // Insert at random position by swapping
-    if (randomIndex === currentIndex) {
-      return [...newShuffled, currentValue];
-    }
+      // Insert at random position by swapping
+      if (randomIndex === currentIndex) {
+        return [...newShuffled, currentValue];
+      }
 
-    const valueAtRandomIndex = newShuffled[randomIndex];
-    if (valueAtRandomIndex === undefined) {
-      // Should never happen, but handle gracefully
-      return [...newShuffled, currentValue];
-    }
+      const valueAtRandomIndex = newShuffled[randomIndex];
+      if (valueAtRandomIndex === undefined) {
+        // Should never happen, but handle gracefully
+        return [...newShuffled, currentValue];
+      }
 
-    return [
-      ...newShuffled.slice(0, randomIndex),
-      currentValue,
-      valueAtRandomIndex,
-      ...newShuffled.slice(randomIndex + 1),
-    ];
-  }, []);
+      return [
+        ...newShuffled.slice(0, randomIndex),
+        currentValue,
+        valueAtRandomIndex,
+        ...newShuffled.slice(randomIndex + 1),
+      ];
+    },
+    [],
+  );
 }

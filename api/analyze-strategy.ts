@@ -131,7 +131,10 @@ function buildPlayerDeckInfo(
   composition: Record<string, number>;
 }> {
   return playerIds.map(playerId => {
-    const player = currentState.players[playerId]!;
+    const player = currentState.players[playerId];
+    if (!player) {
+      throw new Error(`Player ${playerId} not found in game state`);
+    }
     const allCards = [
       ...player.deck,
       ...player.hand,

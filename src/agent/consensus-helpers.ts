@@ -112,7 +112,8 @@ export const checkEarlyConsensus = (
   );
   if (groups.length === 0) return null;
 
-  const leader = groups[0]!;
+  const leader = groups[0];
+  if (!leader) return null;
   const runnerUp = groups[1]?.count ?? 0;
 
   if (leader.count - runnerUp >= aheadByK) {
@@ -312,7 +313,11 @@ export const selectConsensusWinner = (
     throw new Error("All AI actions invalid - models may be confused");
   }
 
-  const winner = validEarlyConsensus || validRankedGroups[0]!; // At least one ranked group must exist
+  const winner = validEarlyConsensus || validRankedGroups[0];
+  if (!winner) {
+    agentLogger.error("No winner found after validation");
+    throw new Error("No valid winner found");
+  }
   const votesConsidered = earlyConsensus
     ? results.length
     : successfulResults.length;

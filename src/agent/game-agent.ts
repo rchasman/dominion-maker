@@ -311,10 +311,16 @@ async function handleBatchConsensus(
       await runModelsInParallel({
         providers: config.providers,
         dataFormat: config.dataFormat,
-        ...(config.humanChoice !== undefined && { humanChoice: config.humanChoice }),
+        ...(config.humanChoice !== undefined && {
+          humanChoice: config.humanChoice,
+        }),
         ...(config.logger !== undefined && { logger: config.logger }),
-        ...(config.strategySummary !== undefined && { strategySummary: config.strategySummary }),
-        ...(config.customStrategy !== undefined && { customStrategy: config.customStrategy }),
+        ...(config.strategySummary !== undefined && {
+          strategySummary: config.strategySummary,
+        }),
+        ...(config.customStrategy !== undefined && {
+          customStrategy: config.customStrategy,
+        }),
         currentState: acc.engine.state,
         aheadByK,
         actionId: `${config.actionId}-r${round}`,
@@ -475,10 +481,16 @@ async function handleMultiActionConsensus(
         {
           providers: config.providers,
           dataFormat: config.dataFormat,
-          ...(config.humanChoice !== undefined && { humanChoice: config.humanChoice }),
+          ...(config.humanChoice !== undefined && {
+            humanChoice: config.humanChoice,
+          }),
           ...(config.logger !== undefined && { logger: config.logger }),
-          ...(config.strategySummary !== undefined && { strategySummary: config.strategySummary }),
-          ...(config.customStrategy !== undefined && { customStrategy: config.customStrategy }),
+          ...(config.strategySummary !== undefined && {
+            strategySummary: config.strategySummary,
+          }),
+          ...(config.customStrategy !== undefined && {
+            customStrategy: config.customStrategy,
+          }),
           currentState: roundState,
           aheadByK,
           actionId: `${config.actionId}-r${roundIndex}`,
@@ -507,10 +519,10 @@ async function handleMultiActionConsensus(
     }, Promise.resolve({}));
 
   const cardActionsWithDefaults = Object.fromEntries(
-    Array.from({ length: numCards }).map((_, i) => [
-      i,
-      i in cardActions ? cardActions[i]! : defaultAction.id,
-    ]),
+    Array.from({ length: numCards }).map((_, i) => {
+      const action = i in cardActions ? cardActions[i] : undefined;
+      return [i, action ?? defaultAction.id];
+    }),
   ) as Record<number, string>;
 
   const cardOrder = Object.entries(cardActionsWithDefaults)
@@ -627,9 +639,10 @@ export async function advanceGameStateWithConsensus(
   // If in buy phase, show detailed supply info
   if (currentState.phase === "buy" && currentState.buys > 0) {
     const buyableCards = legalActions
-      .filter((a) => a.type === "buy_card" && "card" in a && a.card != null)
+      .filter(a => a.type === "buy_card" && "card" in a && a.card != null)
       .map(a => {
-        if (a.type !== "buy_card" || !("card" in a) || a.card == null) return "";
+        if (a.type !== "buy_card" || !("card" in a) || a.card == null)
+          return "";
         const cost = CARDS[a.card]?.cost || 0;
         return `${a.card}($${cost})`;
       })
