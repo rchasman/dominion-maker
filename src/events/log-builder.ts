@@ -246,6 +246,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
       ]);
     }
 
+    // CARD_REVEALED events pass through - batching happens in log display
     return processEvents(index + 1, [...acc, event]);
   };
 
@@ -475,6 +476,14 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
       return cardTrashedToLogEntry(event);
     case "CARD_GAINED":
       return cardGainedToLogEntry(event);
+    case "CARD_REVEALED":
+      return {
+        type: "reveal-card",
+        playerId: event.playerId,
+        card: event.card,
+        from: event.from || "deck",
+        ...(event.id !== undefined && { eventId: event.id }),
+      } as LogEntry;
     case "DECK_SHUFFLED":
       return {
         type: "shuffle-deck",
