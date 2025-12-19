@@ -108,7 +108,7 @@ function getEndPhaseButtonBorder(
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
-  if (pendingChoice && pendingChoice.canSkip) return "1px solid #fbbf24";
+  if (pendingChoice && canSkipDecision(pendingChoice)) return "1px solid #fbbf24";
   if (phase === "action") return "1px solid var(--color-victory)";
   return "1px solid #666";
 }
@@ -120,7 +120,7 @@ function getEndPhaseButtonText(
     | undefined,
   phase: string,
 ): string {
-  if (pendingChoice && pendingChoice.canSkip) return "Skip";
+  if (pendingChoice && canSkipDecision(pendingChoice)) return "Skip";
   if (phase === "action") return "Skip to Buy";
   return "End Turn";
 }
@@ -147,7 +147,9 @@ function ConfirmButton({
 
   return (
     <button
-      onClick={() => onConfirmDecision(complexDecisionData)}
+      onClick={() =>
+        onConfirmDecision(complexDecisionData ?? undefined)
+      }
       disabled={disabled}
       style={{
         padding: "var(--space-2) var(--space-4)",
@@ -286,20 +288,25 @@ function renderSupplyColumn(params: {
         alignContent: "start",
       }}
     >
-      {cards.map(card => (
-        <Card
-          key={card}
-          name={card}
-          size={size}
-          cardId={`supply-${card}`}
-          count={state.supply[card]}
-          onClick={() => onBuyCard?.(card)}
-          disabled={
-            !canInteractWithCard(card, canBuyParams, state, pendingChoice)
-          }
-          highlightMode={getSupplyCardHighlightMode(card, pendingChoice)}
-        />
-      ))}
+      {cards.map(card => {
+        const highlightMode = getSupplyCardHighlightMode(card, pendingChoice);
+        return (
+          <Card
+            key={card}
+            name={card}
+            size={size}
+            cardId={`supply-${card}`}
+            count={state.supply[card]}
+            {...(onBuyCard !== undefined && {
+              onClick: () => onBuyCard(card),
+            })}
+            disabled={
+              !canInteractWithCard(card, canBuyParams, state, pendingChoice)
+            }
+            {...(highlightMode !== undefined && { highlightMode })}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -457,20 +464,25 @@ export function Supply({
           </div>
         </div>
         <div className="kingdom-grid">
-          {sortedKingdom.map(card => (
-            <Card
-              key={card}
-              name={card}
-              size="large"
-              cardId={`supply-${card}`}
-              count={state.supply[card]}
-              onClick={() => onBuyCard?.(card)}
-              disabled={
-                !canInteractWithCard(card, canBuyParams, state, pendingChoice)
-              }
-              highlightMode={getSupplyCardHighlightMode(card, pendingChoice)}
-            />
-          ))}
+          {sortedKingdom.map(card => {
+            const highlightMode = getSupplyCardHighlightMode(card, pendingChoice);
+            return (
+              <Card
+                key={card}
+                name={card}
+                size="large"
+                cardId={`supply-${card}`}
+                count={state.supply[card]}
+                {...(onBuyCard !== undefined && {
+                  onClick: () => onBuyCard(card),
+                })}
+                disabled={
+                  !canInteractWithCard(card, canBuyParams, state, pendingChoice)
+                }
+                {...(highlightMode !== undefined && { highlightMode })}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -532,11 +544,16 @@ export function Supply({
             size="small"
             cardId="supply-Curse"
             count={state.supply["Curse"]}
-            onClick={() => onBuyCard?.("Curse")}
+            {...(onBuyCard !== undefined && {
+              onClick: () => onBuyCard("Curse"),
+            })}
             disabled={
               !canInteractWithCard("Curse", canBuyParams, state, pendingChoice)
             }
-            highlightMode={getSupplyCardHighlightMode("Curse", pendingChoice)}
+            {...(getSupplyCardHighlightMode("Curse", pendingChoice) !==
+              undefined && {
+              highlightMode: getSupplyCardHighlightMode("Curse", pendingChoice)!,
+            })}
           />
         </div>
       </div>
