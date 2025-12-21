@@ -27,5 +27,5 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src", "workflows", "api", "server.ts"]
+  "include": ["src", "workflows", "api", "server.ts", "src/**/*.test.ts"]
 }
