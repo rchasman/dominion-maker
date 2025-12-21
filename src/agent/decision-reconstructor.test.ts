@@ -209,7 +209,7 @@ describe("isBatchDecision", () => {
   });
 
   it("should return false for undefined", () => {
-    expect(isBatchDecision(undefined)).toBe(false);
+    expect(isBatchDecision()).toBe(false);
   });
 
   it("should return false for reaction choice", () => {
@@ -300,7 +300,7 @@ describe("isMultiActionDecision", () => {
   });
 
   it("should return false for undefined", () => {
-    expect(isMultiActionDecision(undefined)).toBe(false);
+    expect(isMultiActionDecision()).toBe(false);
   });
 
   it("should return false for reaction choice", () => {

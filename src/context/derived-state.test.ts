@@ -54,7 +54,7 @@ describe("derived-state utilities", () => {
     });
 
     it("should return false when gameState is undefined", () => {
-      expect(hasPlayableActions(undefined)).toBe(false);
+      expect(hasPlayableActions()).toBe(false);
     });
 
     it("should return false when player does not exist", () => {
@@ -286,7 +286,7 @@ describe("derived-state utilities", () => {
     });
 
     it("should return false when gameState is undefined", () => {
-      expect(hasTreasuresInHand(undefined)).toBe(false);
+      expect(hasTreasuresInHand()).toBe(false);
     });
 
     it("should return false when player does not exist", () => {

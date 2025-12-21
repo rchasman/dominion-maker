@@ -40,7 +40,7 @@ describe("Type guards for PendingChoice", () => {
     });
 
     it("should return false for undefined", () => {
-      expect(isDecisionChoice(undefined)).toBe(false);
+      expect(isDecisionChoice()).toBe(false);
     });
 
     it("should narrow type correctly", () => {
@@ -97,7 +97,7 @@ describe("Type guards for PendingChoice", () => {
     });
 
     it("should return false for undefined", () => {
-      expect(isReactionChoice(undefined)).toBe(false);
+      expect(isReactionChoice()).toBe(false);
     });
 
     it("should narrow type correctly", () => {
