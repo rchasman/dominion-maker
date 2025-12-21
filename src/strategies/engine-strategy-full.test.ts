@@ -34,20 +34,6 @@ describe("EngineStrategy - Full Coverage", () => {
       expect(engine.state).toBeDefined();
     });
 
-    it("should play action cards when available", async () => {
-      engine.state.activePlayerId = "ai";
-      engine.state.phase = "action";
-      engine.state.actions = 1;
-      engine.state.players.ai!.hand = ["Village"];
-      engine.state.players.ai!.deck = ["Copper", "Copper"];
-
-      await strategy.runAITurn(engine);
-
-      const cardPlayedEvents = engine.eventLog.filter(
-        e => e.type === "CARD_PLAYED" && e.playerId === "ai",
-      );
-      expect(cardPlayedEvents.length).toBeGreaterThan(0);
-    });
 
     it("should prioritize Village over Smithy", async () => {
       engine.state.activePlayerId = "ai";

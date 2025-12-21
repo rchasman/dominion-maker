@@ -15,7 +15,7 @@
     "lint:full": "bunx eslint . & bunx stylelint 'src/**/*.css'",
     "lint:fix": "bunx oxlint --fix & bunx eslint . --fix & bunx stylelint 'src/**/*.css' --fix",
     "pretty": "bunx prettier . --write --experimental-cli",
-    "test": "bun test",
+    "test": "bun test --concurrent",
     "check:server": "bun server.ts & SERVER_PID=$! && kill $SERVER_PID",
     "check:unused": "depcheck",
     "check:circular": "dpdm --exit-code circular:1 --warning false --tree false 'src/**/*.{ts,tsx}'",
