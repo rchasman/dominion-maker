@@ -329,7 +329,6 @@ export function BoardContent({
         contextLocalPlayerId !== pendingUndo.byPlayer && (
           <UndoRequestModal
             requestId={pendingUndo.requestId}
-            byPlayer={pendingUndo.byPlayer}
             byPlayerName={
               players?.find(p => p.id === pendingUndo.byPlayer)?.name ||
               pendingUndo.byPlayer

@@ -1,11 +1,9 @@
 import { useState, useEffect } from "preact/hooks";
 import { BaseModal } from "../Modal/BaseModal";
-import type { PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 
 interface UndoRequestModalProps {
   requestId: string;
-  byPlayer: PlayerId;
   byPlayerName: string;
   toEventId: string;
   events: GameEvent[];
@@ -17,7 +15,6 @@ const TIMEOUT_SECONDS = 30;
 
 export function UndoRequestModal({
   requestId,
-  byPlayer,
   byPlayerName,
   toEventId,
   events,

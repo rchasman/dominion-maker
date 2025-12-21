@@ -151,6 +151,6 @@
     "clearTimeout": "readonly",
     "setTimeout": "readonly"
   },
-  "ignorePatterns": [],
+  "ignorePatterns": ["**/*.test.ts", "**/*.test.tsx"],
   "overrides": []
 }

@@ -316,7 +316,6 @@ function TimingBar({
   timingWidth,
   modelNameWidth,
   barAreaWidth,
-  showFormatGlyphs,
 }: TimingBarProps) {
   const state = calculateTimingBarState(timing, {
     maxDuration,

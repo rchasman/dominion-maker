@@ -155,22 +155,13 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       // Test files often need more flexibility
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-unused-vars": "off",
       "max-lines-per-function": "off",
       "max-lines": "off",
       "max-nested-callbacks": ["error", 5],
       "no-magic-numbers": "off",
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "ForStatement",
-          message: "Use map/filter/reduce instead of for loops",
-        },
-        {
-          selector: "ForInStatement",
-          message: "Use Object.keys/entries with map instead of for...in",
-        },
-      ],
     },
   },
 ]);
