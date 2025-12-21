@@ -120,8 +120,8 @@ export function handleRevealReaction(
   const midState = applyEvents(state, baseEvents);
   const attackEvents = applyAttackToUnblockedTargets(
     midState,
-    updatedMetadata,
-    context.originalCause,
+    updatedContext,
+    reaction.metadata!.originalCause,
   );
   return { ok: true, events: [...baseEvents, ...attackEvents] };
 }
@@ -215,7 +215,7 @@ export function handleDeclineReaction(
   const attackEvents = applyAttackToUnblockedTargets(
     midState,
     fullContext,
-    context.originalCause,
+    fullContext.originalCause,
   );
   return { ok: true, events: [...baseEvents, ...attackEvents] };
 }
@@ -245,7 +245,7 @@ function processNextTarget(
         triggerType: "on_attack",
         availableReactions: reactions,
         metadata: {
-          ...reaction.metadata!,
+          ...context,
           currentTargetIndex: nextIndex,
         },
         id: generateEventId(),
@@ -270,7 +270,7 @@ function processNextTarget(
     const nextState = applyEvents(state, [resolvedEvent]);
     const nextEvents = processNextTarget(
       nextState,
-      metadata,
+      context,
       nextIndex + 1,
       rootEventId,
     );
