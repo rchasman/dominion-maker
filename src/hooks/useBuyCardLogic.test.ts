@@ -162,7 +162,7 @@ describe("useBuyCardLogic hook", () => {
         return { ok: true };
       };
 
-      const submitDecision = (choice: DecisionChoice): CommandResult => {
+      const submitDecision = (_choice: DecisionChoice): CommandResult => {
         return { ok: false, error: "Invalid choice" };
       };
 
@@ -196,11 +196,11 @@ describe("useBuyCardLogic hook", () => {
     it("should handle buy card errors gracefully", () => {
       let errorLogged = false;
 
-      const buyCard = (card: CardName): CommandResult => {
+      const buyCard = (_card: CardName): CommandResult => {
         return { ok: false, error: "Can't buy that" };
       };
 
-      const submitDecision = (choice: DecisionChoice): CommandResult => {
+      const submitDecision = (_choice: DecisionChoice): CommandResult => {
         return { ok: true };
       };
 

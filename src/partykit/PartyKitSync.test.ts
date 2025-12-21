@@ -372,12 +372,11 @@ describe("PartyKitSync", () => {
 
   describe("localStorage access safety", () => {
     it("should handle localStorage access errors gracefully", () => {
-      let value: string | null = null;
       let error: Error | null = null;
 
       try {
         // Simulate localStorage.getItem
-        value = "stored-value";
+        const _value = "stored-value";
       } catch (e) {
         error = e as Error;
       }
