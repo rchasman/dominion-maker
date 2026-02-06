@@ -1,12 +1,11 @@
 /**
- * useMultiplayerGameContext - Transforms multiplayer game state into GameContextValue
+ * useMultiplayerGameContext - Syncs multiplayer game state into signals
  *
- * Takes the output from usePartyGame and orchestrates all the logic needed
- * to build a complete GameContextValue for Board consumption.
+ * Takes the output from usePartyGame and writes all values directly
+ * into signals so the Board reads from the same signal atoms.
  */
 
-import { useEffect, useMemo, useState } from "preact/hooks";
-import type { GameContextValue } from "./GameContext";
+import { useEffect } from "preact/hooks";
 import type {
   GameState,
   CardName,
@@ -15,13 +14,8 @@ import type {
 } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { PlayerStrategyData } from "../types/player-strategy";
 import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
-import {
-  hasPlayableActions as computeHasPlayableActions,
-  hasTreasuresInHand as computeHasTreasuresInHand,
-} from "./derived-state";
 import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
 import { useAutoPhaseAdvanceMultiplayer } from "./use-ai-automation";
@@ -32,7 +26,6 @@ import {
   isProcessing$,
   isLoading$,
   modelSettings$,
-  playerStrategies$,
   strategy$,
   chatMessages$,
   sendChat$,
@@ -106,30 +99,11 @@ export function useMultiplayerGameContext({
   isSinglePlayer = false,
   gameMode = "engine",
   onGameModeChange,
-}: UseMultiplayerGameContextOptions): GameContextValue {
-  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
-    {},
-  );
+}: UseMultiplayerGameContextOptions): void {
+  // Strategy analysis - writes to playerStrategies$ signal
+  useStrategyAnalysisFromEvents(game.events, game.gameState);
 
-  // Memoize derived state
-  const hasPlayableActions = useMemo(
-    () => computeHasPlayableActions(game.gameState, game.playerId),
-    [game.gameState, game.playerId],
-  );
-
-  const hasTreasuresInHand = useMemo(
-    () => computeHasTreasuresInHand(game.gameState, game.playerId),
-    [game.gameState, game.playerId],
-  );
-
-  // Strategy analysis - shared hook
-  useStrategyAnalysisFromEvents(
-    game.events,
-    game.gameState,
-    setPlayerStrategies,
-  );
-
-  // Mirror all values into signals so consumers can read from signals directly
+  // Write all state values directly to signals
   useEffect(() => {
     gameState$.value = game.gameState;
   }, [game.gameState]);
@@ -148,9 +122,6 @@ export function useMultiplayerGameContext({
   useEffect(() => {
     modelSettings$.value = DEFAULT_MODEL_SETTINGS;
   }, []);
-  useEffect(() => {
-    playerStrategies$.value = playerStrategies;
-  }, [playerStrategies]);
   useEffect(() => {
     strategy$.value = {
       getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
@@ -188,7 +159,19 @@ export function useMultiplayerGameContext({
     };
   }, [game.sendChat, playerName]);
 
-  // Mirror action callbacks into signals
+  // No-op unplayTreasure for multiplayer
+  const unplayTreasure = (_card: CardName): CommandResult => {
+    return { ok: false, error: "Unplay treasure not supported in multiplayer" };
+  };
+
+  // Handle mode change (for single-player via multiplayer connection)
+  const handleGameModeChange = (mode: GameMode) => {
+    if (onGameModeChange) {
+      onGameModeChange(mode);
+    }
+  };
+
+  // Write action callbacks into signals
   useEffect(() => {
     playAction$.value = game.playAction;
   }, [game.playAction]);
@@ -197,7 +180,7 @@ export function useMultiplayerGameContext({
   }, [game.playTreasure]);
   useEffect(() => {
     unplayTreasure$.value = unplayTreasure;
-  }, [unplayTreasure]);
+  }, []);
   useEffect(() => {
     playAllTreasures$.value = game.playAllTreasures;
   }, [game.playAllTreasures]);
@@ -241,85 +224,12 @@ export function useMultiplayerGameContext({
     getStateAtEvent$.value = game.getStateAtEvent;
   }, [game.getStateAtEvent]);
 
-  // Auto-skip action phase when no playable actions - shared hook
+  // Auto-skip action phase when no playable actions
   useAutoPhaseAdvanceMultiplayer(
     game.gameState,
     game.playerId,
     game.isProcessing,
     isSpectator,
     game.endPhase,
-  );
-
-  // No-op unplayTreasure for multiplayer
-  const unplayTreasure = (_card: CardName): CommandResult => {
-    return { ok: false, error: "Unplay treasure not supported in multiplayer" };
-  };
-
-  // Handle mode change (for single-player via multiplayer connection)
-  const handleGameModeChange = (mode: GameMode) => {
-    if (onGameModeChange) {
-      onGameModeChange(mode);
-    }
-  };
-
-  // Build and return GameContext value
-  return useMemo(
-    () => ({
-      gameState: game.gameState,
-      events: game.events,
-      gameMode: isSinglePlayer ? gameMode : ("multiplayer" as const),
-      isProcessing: !game.isConnected,
-      isLoading: !game.isJoined,
-      modelSettings: DEFAULT_MODEL_SETTINGS,
-      playerStrategies,
-      localPlayerId: game.playerId,
-      localPlayerName: playerName,
-      isSpectator,
-      spectatorCount: game.spectatorCount,
-      players: game.players,
-      chatMessages: game.chatMessages,
-      sendChat: (content: string) => {
-        game.sendChat({
-          id: crypto.randomUUID(),
-          senderName: playerName,
-          content,
-          timestamp: Date.now(),
-        });
-      },
-      hasPlayableActions,
-      hasTreasuresInHand,
-      strategy: {
-        getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
-      } as never,
-      setGameMode: handleGameModeChange,
-      setModelSettings: () => {},
-      startGame: () => game.startGame(),
-      playAction: game.playAction,
-      playTreasure: game.playTreasure,
-      unplayTreasure,
-      playAllTreasures: game.playAllTreasures,
-      buyCard: game.buyCard,
-      endPhase: game.endPhase,
-      submitDecision: game.submitDecision,
-      revealReaction: () => ({ ok: false, error: "Not implemented" }),
-      declineReaction: () => ({ ok: false, error: "Not implemented" }),
-      requestUndo: game.requestUndo,
-      approveUndo: game.approveUndo,
-      denyUndo: game.denyUndo,
-      pendingUndo: game.pendingUndo,
-      getStateAtEvent: game.getStateAtEvent,
-    }),
-    [
-      game,
-      playerStrategies,
-      hasPlayableActions,
-      hasTreasuresInHand,
-      isSinglePlayer,
-      gameMode,
-      handleGameModeChange,
-      isSpectator,
-      playerName,
-      unplayTreasure,
-    ],
   );
 }

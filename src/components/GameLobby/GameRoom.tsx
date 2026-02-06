@@ -51,8 +51,8 @@ export function GameRoom({
     onConnectionError,
   });
 
-  // Build GameContext value from multiplayer game state
-  const contextValue = useMultiplayerGameContext({
+  // Sync multiplayer state into signals
+  useMultiplayerGameContext({
     game,
     playerName,
     isSpectator,
@@ -99,7 +99,7 @@ export function GameRoom({
 
     return (
       <AnimationProvider>
-        <BoardWithProviders gameContext={contextValue} llmLogs={[]}>
+        <BoardWithProviders llmLogs={[]}>
           <Board onBackToHome={handleResign} />
           {isSpectator && <SpectatorBadge />}
           {disconnectedOpponent && (
