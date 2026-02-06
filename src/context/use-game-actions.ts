@@ -1,19 +1,24 @@
 /**
  * Custom hook for game action callbacks
- * Manages all game command dispatching
+ * Writes directly to signals after engine commands.
  */
 
 import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { CardName, GameState } from "../types/game-state";
-import type { GameEvent, DecisionChoice } from "../events/types";
+import type { DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { GameStrategy } from "../types/game-mode";
-import type { PlayerStrategyData } from "../types/player-strategy";
 import { fetchStrategyAnalysis } from "./use-strategy-analysis";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
+import {
+  syncEngineToSignals,
+  gameState$,
+  llmLogs$,
+  playerStrategies$,
+} from "./game-signals";
 import {
   executePlayAction,
   executePlayTreasure,
@@ -23,7 +28,6 @@ import {
   executeEndPhase,
   executeSubmitDecision,
   executeUndo,
-  syncFromEngine,
   getStateAtEvent as getStateAtEventUtil,
 } from "./game-actions";
 
@@ -58,29 +62,13 @@ interface GameActions {
 }
 
 /**
- * Hook to create all game action callbacks
+ * Hook to create all game action callbacks.
+ * All actions write directly to signals via syncEngineToSignals.
  */
-
 export function useGameActions(
   engineRef: MutableRefObject<DominionEngine | null>,
-  gameState: GameState | null,
-  actions: {
-    setEvents: (events: GameEvent[]) => void;
-    setGameState: (state: GameState) => void;
-    setLLMLogs: (setter: (prev: LLMLogEntry[]) => LLMLogEntry[]) => void;
-    strategy: GameStrategy;
-    playerStrategies: PlayerStrategyData;
-    setPlayerStrategies: (strategies: PlayerStrategyData) => void;
-  },
+  strategy: GameStrategy,
 ): GameActions {
-  const {
-    setEvents,
-    setGameState,
-    setLLMLogs,
-    strategy,
-    playerStrategies,
-    setPlayerStrategies,
-  } = actions;
   const playAction = useCallback(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
@@ -90,11 +78,11 @@ export function useGameActions(
 
       const result = executePlayAction(engine, card);
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef],
   );
 
   const playTreasure = useCallback(
@@ -106,11 +94,11 @@ export function useGameActions(
 
       const result = executePlayTreasure(engine, card);
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef],
   );
 
   const unplayTreasure = useCallback(
@@ -122,23 +110,24 @@ export function useGameActions(
 
       const result = executeUnplayTreasure(engine, card);
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef],
   );
 
   const playAllTreasures = useCallback((): CommandResult => {
     const engine = engineRef.current;
-    if (!engine || !gameState) {
+    const gs = gameState$.value;
+    if (!engine || !gs) {
       return { ok: false, error: "No engine" };
     }
 
-    const result = executePlayAllTreasures(engine, gameState);
-    syncFromEngine(engine, setEvents, setGameState);
+    const result = executePlayAllTreasures(engine, gs);
+    syncEngineToSignals(engine);
     return result;
-  }, [engineRef, gameState, setEvents, setGameState]);
+  }, [engineRef]);
 
   const buyCard = useCallback(
     (card: CardName): CommandResult => {
@@ -149,11 +138,11 @@ export function useGameActions(
 
       const result = executeBuyCard(engine, card);
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef],
   );
 
   const endPhase = useCallback((): CommandResult => {
@@ -164,10 +153,10 @@ export function useGameActions(
 
     const result = executeEndPhase(engine);
     if (result.ok) {
-      syncFromEngine(engine, setEvents, setGameState);
+      syncEngineToSignals(engine);
     }
     return result;
-  }, [engineRef, setEvents, setGameState]);
+  }, [engineRef]);
 
   const submitDecision = useCallback(
     (choice: DecisionChoice): CommandResult => {
@@ -178,11 +167,11 @@ export function useGameActions(
 
       const result = executeSubmitDecision(engine, choice);
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, setEvents, setGameState],
+    [engineRef],
   );
 
   const requestUndo = useCallback(
@@ -195,51 +184,44 @@ export function useGameActions(
       executeUndo(engine, toEventId);
       const eventsAfterUndo = engine.eventLog.length;
       const stateAfterUndo = engine.state;
-      syncFromEngine(engine, setEvents, setGameState);
+      syncEngineToSignals(engine);
 
-      setLLMLogs(prev => filterLogsAfterUndo(prev, eventsAfterUndo));
+      llmLogs$.value = filterLogsAfterUndo(llmLogs$.value, eventsAfterUndo);
 
       // Refetch strategy analysis for the new game state after undo
       if (stateAfterUndo.turn >= MIN_TURN_FOR_STRATEGY) {
         fetchStrategyAnalysis(
           stateAfterUndo,
           strategy,
-          playerStrategies,
-          setPlayerStrategies,
+          playerStrategies$.value,
         );
       }
     },
-    [
-      engineRef,
-      setEvents,
-      setGameState,
-      setLLMLogs,
-      strategy,
-      playerStrategies,
-      setPlayerStrategies,
-    ],
+    [engineRef, strategy],
   );
 
   const getStateAtEvent = useCallback(
     (eventId: string): GameState => {
       const engine = engineRef.current;
-      if (!engine || !gameState) {
-        return gameState!;
+      const gs = gameState$.value;
+      if (!engine || !gs) {
+        return gs!;
       }
 
-      return getStateAtEventUtil(engine, eventId, gameState);
+      return getStateAtEventUtil(engine, eventId, gs);
     },
-    [engineRef, gameState],
+    [engineRef],
   );
 
   const revealReaction = useCallback(
     (card: CardName): CommandResult => {
       const engine = engineRef.current;
-      if (!engine || !gameState) {
+      const gs = gameState$.value;
+      if (!engine || !gs) {
         return { ok: false, error: "No engine" };
       }
 
-      const defender = gameState.pendingChoice?.playerId;
+      const defender = gs.pendingChoice?.playerId;
       if (!defender) {
         return { ok: false, error: "No pending reaction" };
       }
@@ -250,20 +232,21 @@ export function useGameActions(
       );
 
       if (result.ok) {
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }
       return result;
     },
-    [engineRef, gameState, setEvents, setGameState],
+    [engineRef],
   );
 
   const declineReaction = useCallback((): CommandResult => {
     const engine = engineRef.current;
-    if (!engine || !gameState) {
+    const gs = gameState$.value;
+    if (!engine || !gs) {
       return { ok: false, error: "No engine" };
     }
 
-    const defender = gameState.pendingChoice?.playerId;
+    const defender = gs.pendingChoice?.playerId;
     if (!defender) {
       return { ok: false, error: "No pending reaction" };
     }
@@ -274,10 +257,10 @@ export function useGameActions(
     );
 
     if (result.ok) {
-      syncFromEngine(engine, setEvents, setGameState);
+      syncEngineToSignals(engine);
     }
     return result;
-  }, [engineRef, gameState, setEvents, setGameState]);
+  }, [engineRef]);
 
   return {
     playAction,
