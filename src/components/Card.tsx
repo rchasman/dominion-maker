@@ -219,6 +219,13 @@ export function Card({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   const cursor = run(() => {
     if (!onClick) return "default";
     if (disabled) return "not-allowed";
@@ -238,7 +245,9 @@ export function Card({
     <>
       <div
         data-card-id={cardId}
+        {...(onClick && { role: "button", tabIndex: 0 })}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onMouseMove={handleMouseMove}

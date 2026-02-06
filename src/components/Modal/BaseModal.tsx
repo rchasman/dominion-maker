@@ -1,11 +1,39 @@
+import { useEffect, useRef } from "preact/hooks";
+
 interface BaseModalProps {
   children: React.ReactNode;
   zIndex?: number;
+  ariaLabel?: string;
+  onClose?: () => void;
 }
 
-export function BaseModal({ children, zIndex = 1000 }: BaseModalProps) {
+export function BaseModal({
+  children,
+  zIndex = 1000,
+  ariaLabel = "Dialog",
+  onClose,
+}: BaseModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape" && onClose) {
+      e.stopPropagation();
+      onClose();
+    }
+  };
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      ref={dialogRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
       style={{
         position: "fixed",
         inset: 0,
@@ -14,6 +42,7 @@ export function BaseModal({ children, zIndex = 1000 }: BaseModalProps) {
         alignItems: "center",
         justifyContent: "center",
         zIndex,
+        outline: "none",
       }}
     >
       <div
