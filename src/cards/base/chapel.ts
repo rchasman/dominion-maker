@@ -3,7 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { isInitialCall } from "../effect-types";
+import { cardsToEvents, isInitialCall } from "../effect-types";
 import { STAGES } from "../stages";
 
 const CHAPEL_MAX_TRASH = 4;
@@ -47,13 +47,7 @@ export const chapel: CardEffect = ({
       return { events: [] };
     }
 
-    // Emit one event per card (preserves atomicity)
-    const events = toTrash.map(card => ({
-      type: "CARD_TRASHED" as const,
-      playerId,
-      card,
-      from: "hand" as const,
-    }));
+    const events = cardsToEvents(toTrash, playerId, "CARD_TRASHED");
 
     // Never create loop - just process and finish
     // AI strategy layer handles multi-round consensus before calling this

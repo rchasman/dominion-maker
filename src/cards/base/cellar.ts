@@ -3,7 +3,11 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents, isInitialCall } from "../effect-types";
+import {
+  cardsToEvents,
+  createDrawEvents,
+  isInitialCall,
+} from "../effect-types";
 import { STAGES } from "../stages";
 
 export const cellar: CardEffect = ({
@@ -47,13 +51,7 @@ export const cellar: CardEffect = ({
       return { events: [] };
     }
 
-    // Emit one event per discarded card
-    const discardEvents = toDiscard.map(card => ({
-      type: "CARD_DISCARDED" as const,
-      playerId,
-      card,
-      from: "hand" as const,
-    }));
+    const discardEvents = cardsToEvents(toDiscard, playerId, "CARD_DISCARDED");
 
     // Calculate updated hand for drawing
     const updatedHand = toDiscard.reduce((hand, card) => {

@@ -3,7 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents } from "../effect-types";
+import { cardsToEvents, createDrawEvents } from "../effect-types";
 import { STAGES } from "../stages";
 
 export const poacher: CardEffect = ({
@@ -51,13 +51,9 @@ export const poacher: CardEffect = ({
 
   // Discard (atomic events)
   if (stage === STAGES.DISCARD) {
-    const discardEvents = decision.selectedCards.map(card => ({
-      type: "CARD_DISCARDED" as const,
-      playerId,
-      card,
-      from: "hand" as const,
-    }));
-    return { events: discardEvents };
+    return {
+      events: cardsToEvents(decision.selectedCards, playerId, "CARD_DISCARDED"),
+    };
   }
 
   return { events: [] };

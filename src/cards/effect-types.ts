@@ -225,6 +225,19 @@ export function createDrawEvents(
 }
 
 /**
+ * Map a list of cards to discard or trash events.
+ * Eliminates the repeated pattern of mapping selectedCards to movement events.
+ */
+export function cardsToEvents(
+  cards: CardName[],
+  playerId: PlayerId,
+  type: "CARD_DISCARDED" | "CARD_TRASHED",
+  from: "hand" | "deck" | "inPlay" = "hand",
+): GameEvent[] {
+  return cards.map(card => ({ type, playerId, card, from }));
+}
+
+/**
  * Empty result (for cards with no immediate effect or fully handled by caller).
  */
 export const EMPTY_RESULT: CardEffectResult = { events: [] };
