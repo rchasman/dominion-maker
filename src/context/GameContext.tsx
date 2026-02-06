@@ -30,6 +30,15 @@ import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
 import { BoardWithProviders } from "../components/Board/BoardWithProviders";
+import {
+  gameState$,
+  events$,
+  gameMode$,
+  isProcessing$,
+  isLoading$,
+  playerStrategies$,
+  modelSettings$,
+} from "./game-signals";
 
 import type { PlayerStrategyData } from "../types/player-strategy";
 
@@ -99,6 +108,29 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     modelSettings,
     playerStrategies,
   });
+
+  // Mirror useState -> signals (Phase 1: additive only, no consumer changes)
+  useEffect(() => {
+    gameState$.value = gameState;
+  }, [gameState]);
+  useEffect(() => {
+    events$.value = events;
+  }, [events]);
+  useEffect(() => {
+    gameMode$.value = gameMode;
+  }, [gameMode]);
+  useEffect(() => {
+    isProcessing$.value = isProcessing;
+  }, [isProcessing]);
+  useEffect(() => {
+    isLoading$.value = storage.isLoading;
+  }, [storage.isLoading]);
+  useEffect(() => {
+    playerStrategies$.value = playerStrategies;
+  }, [playerStrategies]);
+  useEffect(() => {
+    modelSettings$.value = modelSettings;
+  }, [modelSettings]);
 
   // LLM Logger - stable reference that reads current engine when called
   const llmLoggerRef = useRef(
