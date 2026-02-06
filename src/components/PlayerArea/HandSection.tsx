@@ -222,9 +222,9 @@ export function HandSection({
       ref={containerRef}
       className="hand-container"
       style={{
-        position: "relative",
+        display: "grid",
+        gridTemplateRows: "auto 1fr",
         minInlineSize: 0,
-        padding: "var(--space-2)",
         background: "rgb(255 255 255 / 0.05)",
         border: "1px solid var(--color-border)",
         overflow: "hidden",
@@ -232,38 +232,44 @@ export function HandSection({
     >
       <div
         style={{
-          position: "absolute",
-          insetBlockStart: "var(--space-1)",
-          insetInlineStart: "var(--space-2)",
-          fontSize: "0.5625rem",
-          color: "var(--color-text-muted)",
-          fontWeight: 600,
-          textTransform: "uppercase",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "var(--space-1) var(--space-2)",
         }}
       >
-        Hand ({hand.length})
+        <span
+          style={{
+            fontSize: "0.5625rem",
+            color: "var(--color-text-muted)",
+            fontWeight: 600,
+            textTransform: "uppercase",
+          }}
+        >
+          Hand ({hand.length})
+        </span>
+        {pendingChoice &&
+          pendingChoice.playerId === playerId &&
+          pendingChoice.from === "hand" && (
+            <span
+              style={{
+                fontSize: "0.6875rem",
+                color: "#fbbf24",
+                fontWeight: 600,
+                background: "rgba(251, 191, 36, 0.1)",
+                padding: "var(--space-1) var(--space-2)",
+                borderRadius: "0.25rem",
+                border: "1px solid rgba(251, 191, 36, 0.3)",
+              }}
+            >
+              {pendingChoice.prompt}
+            </span>
+          )}
       </div>
-      {pendingChoice &&
-        pendingChoice.playerId === playerId &&
-        pendingChoice.from === "hand" && (
-          <div
-            style={{
-              position: "absolute",
-              insetBlockStart: "var(--space-1)",
-              insetInlineEnd: "var(--space-2)",
-              fontSize: "0.6875rem",
-              color: "#fbbf24",
-              fontWeight: 600,
-              background: "rgba(251, 191, 36, 0.1)",
-              padding: "var(--space-1) var(--space-2)",
-              borderRadius: "0.25rem",
-              border: "1px solid rgba(251, 191, 36, 0.3)",
-            }}
-          >
-            {pendingChoice.prompt}
-          </div>
-        )}
-      <div className="hand-grid">
+      <div
+        className="hand-grid"
+        style={{ padding: "0 var(--space-2) var(--space-2)" }}
+      >
         {loading
           ? Array.from({ length: PLACEHOLDER_HAND_SIZE }).map((_, i) => (
               <div

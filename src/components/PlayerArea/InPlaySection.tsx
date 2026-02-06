@@ -35,8 +35,8 @@ export function InPlaySection({
     <div
       ref={containerRef}
       style={{
-        position: "relative",
-        padding: "var(--space-2)",
+        display: "grid",
+        gridTemplateRows: "auto 1fr",
         marginBlockStart: inverted ? "var(--space-2)" : undefined,
         marginBlockEnd: inverted ? undefined : "var(--space-2)",
         background:
@@ -47,15 +47,13 @@ export function InPlaySection({
           inPlay.length > 0
             ? "1px solid var(--color-border)"
             : "1px dashed var(--color-border)",
-        minBlockSize: "calc(var(--card-height-small) + var(--space-4) + 12px)",
+        minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
         overflow: "hidden",
       }}
     >
       <div
         style={{
-          position: "absolute",
-          insetBlockStart: "var(--space-1)",
-          insetInlineStart: "var(--space-2)",
+          padding: "var(--space-1) var(--space-2)",
           fontSize: "0.5625rem",
           color: "var(--color-text-muted)",
           textTransform: "uppercase",
@@ -69,7 +67,7 @@ export function InPlaySection({
           display: "flex",
           gap: "var(--space-1)",
           flexWrap: "wrap",
-          minBlockSize: "100%",
+          padding: "0 var(--space-2) var(--space-2)",
           justifyContent: "center",
           alignItems: "center",
           alignContent: "center",
