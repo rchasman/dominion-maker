@@ -28,6 +28,7 @@
     "@ai-sdk/devtools": "^0.0.11",
     "@ai-sdk/openai": "3.0.25",
     "@floating-ui/dom": "^1.7.5",
+    "@preact/signals": "^2.7.0",
     "@toon-format/toon": "^2.1.0",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",
