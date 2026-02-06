@@ -1,6 +1,7 @@
 /**
  * Custom hook for AI automation
- * Handles automatic AI turns and decision resolution
+ * Handles automatic AI turns and decision resolution.
+ * Writes directly to signals instead of using setters.
  */
 
 import type { MutableRef as MutableRefObject } from "preact/hooks";
@@ -8,25 +9,24 @@ import { useEffect, useRef } from "preact/hooks";
 import type { DominionEngine } from "../engine";
 import type { GameState, PlayerId } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
-import type { GameEvent } from "../events/types";
 import type { Zone } from "../animation/types";
 import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
-import { syncFromEngine } from "./game-actions";
+import {
+  syncEngineToSignals,
+  events$,
+  gameState$,
+  isProcessing$,
+} from "./game-signals";
 import { useAnimationSafe } from "../animation";
 import { hasPlayableActions as computeHasPlayableActions } from "./derived-state";
 import { isDecisionChoice, isReactionChoice } from "../types/pending-choice";
 
 interface AIAutomationParams {
-  gameState: GameState | null;
-  isProcessing: boolean;
   gameMode: GameMode;
   strategy: GameStrategy;
   engineRef: MutableRefObject<DominionEngine | null>;
-  setIsProcessing: (value: boolean) => void;
-  setEvents: (events: GameEvent[]) => void;
-  setGameState: (state: GameState) => void;
 }
 
 function getOpponentZone(
@@ -39,16 +39,7 @@ function getOpponentZone(
  * Handle automatic AI turns
  */
 export function useAITurnAutomation(params: AIAutomationParams): void {
-  const {
-    gameState,
-    isProcessing,
-    gameMode,
-    strategy,
-    engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
-  } = params;
+  const { gameMode, strategy, engineRef } = params;
 
   const animation = useAnimationSafe();
 
@@ -58,6 +49,8 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
 
   useEffect(() => {
     const engine = engineRef.current;
+    const gameState = gameState$.value;
+    const isProcessing = isProcessing$.value;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
       return;
     }
@@ -99,7 +92,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
         // Check if aborted before starting
         if (signal.aborted) return;
 
-        setIsProcessing(true);
+        isProcessing$.value = true;
         try {
           let lastEventCount = engine.eventLog.length;
 
@@ -110,8 +103,8 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
             if (!animation) {
               // No animations, just update state immediately
               uiLogger.warn("Animation context not available for AI turn");
-              setEvents([...engine.eventLog]);
-              setGameState(state);
+              events$.value = [...engine.eventLog];
+              gameState$.value = state;
               return;
             }
 
@@ -199,18 +192,18 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
             if (signal.aborted) return;
 
             // Update state AFTER all animations complete
-            setEvents([...engine.eventLog]);
-            setGameState(state);
+            events$.value = [...engine.eventLog];
+            gameState$.value = state;
           });
 
           // Check if aborted before final state update
           if (signal.aborted) return;
 
-          syncFromEngine(engine, setEvents, setGameState);
+          syncEngineToSignals(engine);
         } catch (error: unknown) {
           uiLogger.error("AI turn error", { error });
         } finally {
-          setIsProcessing(false);
+          isProcessing$.value = false;
         }
       })();
     }, TIMING.AI_TURN_DELAY);
@@ -219,14 +212,11 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
       clearTimeout(timer);
     };
   }, [
-    gameState,
-    isProcessing,
+    gameState$.value,
+    isProcessing$.value,
     gameMode,
     strategy,
     engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
     animation,
   ]);
 }
@@ -235,16 +225,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
  * Handle automatic AI decision resolution
  */
 export function useAIDecisionAutomation(params: AIAutomationParams): void {
-  const {
-    gameState,
-    isProcessing,
-    gameMode,
-    strategy,
-    engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
-  } = params;
+  const { gameMode, strategy, engineRef } = params;
 
   // Use a stable abort controller that only manages AI decisions
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -252,6 +233,8 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 
   useEffect(() => {
     const engine = engineRef.current;
+    const gameState = gameState$.value;
+    const isProcessing = isProcessing$.value;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
       return;
     }
@@ -304,18 +287,18 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
         // Check if aborted before starting
         if (signal.aborted) return;
 
-        setIsProcessing(true);
+        isProcessing$.value = true;
         try {
           await strategy.resolveAIPendingDecision(engine);
 
           // Check if aborted before state update
           if (signal.aborted) return;
 
-          syncFromEngine(engine, setEvents, setGameState);
+          syncEngineToSignals(engine);
         } catch (error: unknown) {
           uiLogger.error("AI pending decision error", { error });
         } finally {
-          setIsProcessing(false);
+          isProcessing$.value = false;
         }
       })();
     }, TIMING.AI_DECISION_DELAY);
@@ -323,33 +306,19 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     return () => {
       clearTimeout(timer);
     };
-  }, [
-    gameState,
-    isProcessing,
-    gameMode,
-    strategy,
-    engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
-  ]);
+  }, [gameState$.value, isProcessing$.value, gameMode, strategy, engineRef]);
 }
 
 /**
  * Handle automatic phase advancement (single-player with engine)
  */
 export function useAutoPhaseAdvance(
-  gameState: GameState | null,
-  isProcessing: boolean,
   engineRef: MutableRefObject<DominionEngine | null>,
-  actions: {
-    setEvents: (events: GameEvent[]) => void;
-    setGameState: (state: GameState) => void;
-  },
 ): void {
-  const { setEvents, setGameState } = actions;
   useEffect(() => {
     const engine = engineRef.current;
+    const gameState = gameState$.value;
+    const isProcessing = isProcessing$.value;
     if (!gameState || isProcessing || !engine) {
       return;
     }
@@ -358,7 +327,7 @@ export function useAutoPhaseAdvance(
       const timer = setTimeout(() => {
         uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", playerId: "human" }, "human");
-        syncFromEngine(engine, setEvents, setGameState);
+        syncEngineToSignals(engine);
       }, TIMING.AUTO_ADVANCE_DELAY);
 
       return () => {
@@ -367,7 +336,7 @@ export function useAutoPhaseAdvance(
     }
 
     return;
-  }, [gameState, isProcessing, engineRef, setEvents, setGameState]);
+  }, [gameState$.value, isProcessing$.value, engineRef]);
 }
 
 /**
