@@ -1,29 +1,30 @@
 /**
  * Hook for syncing state to localStorage
- * Consolidates all useSyncToLocalStorage calls
+ * Reads directly from signals instead of taking state params.
  */
 
 import { useEffect } from "preact/hooks";
 import { useSyncToLocalStorage } from "../hooks/useSyncToLocalStorage";
-import type { GameEvent } from "../events/types";
-import type { LLMLogEntry } from "../components/LLMLog";
-import type { ModelSettings } from "../agent/game-agent";
-import type { GameMode } from "../types/game-mode";
-import type { PlayerStrategyData } from "../types/player-strategy";
 import { STORAGE_KEYS } from "./storage-utils";
 import { abortOngoingConsensus } from "../agent/game-agent";
+import {
+  events$,
+  gameMode$,
+  llmLogs$,
+  modelSettings$,
+  playerStrategies$,
+} from "./game-signals";
 
 /**
- * Hook to sync all game state to localStorage
+ * Hook to sync all game state from signals to localStorage
  */
-export function useStorageSync(state: {
-  events: GameEvent[];
-  gameMode: GameMode;
-  llmLogs: LLMLogEntry[];
-  modelSettings: ModelSettings;
-  playerStrategies: PlayerStrategyData;
-}): void {
-  const { events, gameMode, llmLogs, modelSettings, playerStrategies } = state;
+export function useStorageSync(): void {
+  const events = events$.value;
+  const gameMode = gameMode$.value;
+  const llmLogs = llmLogs$.value;
+  const currentModelSettings = modelSettings$.value;
+  const playerStrategies = playerStrategies$.value;
+
   useSyncToLocalStorage(STORAGE_KEYS.EVENTS, events, {
     shouldSync: events.length > 0,
   });
@@ -43,10 +44,10 @@ export function useStorageSync(state: {
   useSyncToLocalStorage(
     STORAGE_KEYS.MODEL_SETTINGS,
     {
-      enabledModels: Array.from(modelSettings.enabledModels),
-      consensusCount: modelSettings.consensusCount,
-      customStrategy: modelSettings.customStrategy,
-      dataFormat: modelSettings.dataFormat,
+      enabledModels: Array.from(currentModelSettings.enabledModels),
+      consensusCount: currentModelSettings.consensusCount,
+      customStrategy: currentModelSettings.customStrategy,
+      dataFormat: currentModelSettings.dataFormat,
     },
     {
       shouldSync: true,
