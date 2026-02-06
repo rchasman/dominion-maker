@@ -13,6 +13,7 @@ import { generatePlayerName } from "../lib/name-generator";
 import { generateRoomId } from "../lib/room-id";
 import { STORAGE_KEYS } from "../context/storage-utils";
 import { multiplayerLogger } from "../lib/logger";
+import { run } from "../lib/run";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -29,7 +30,7 @@ export function PartyKitSync() {
 
   // Persistent room ID for this single-player session
   const roomIdRef = useRef<string>(
-    (() => {
+    run(() => {
       try {
         const stored = localStorage.getItem(ROOM_STORAGE_KEY);
         if (stored) return stored;
@@ -39,18 +40,18 @@ export function PartyKitSync() {
         localStorage.setItem(ROOM_STORAGE_KEY, newId);
       } catch {}
       return newId;
-    })(),
+    }),
   );
 
   // Get player name
   const playerNameRef = useRef<string>(
-    (() => {
+    run(() => {
       try {
         const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
         if (stored) return stored;
       } catch {}
       return generatePlayerName();
-    })(),
+    }),
   );
 
   // Connect to PartyKit when game starts
