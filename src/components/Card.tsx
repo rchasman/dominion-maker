@@ -9,6 +9,7 @@ import {
   generateSrcSet,
   CARD_WIDTHS,
 } from "../lib/image-optimization";
+import { DISABLED_OPACITY } from "./Board/constants";
 
 // Lazy load tooltip - only shown on hover
 const CardTooltip = lazy(() =>
@@ -16,7 +17,6 @@ const CardTooltip = lazy(() =>
 );
 
 const TOOLTIP_DELAY_MS = 500;
-const OPACITY_DISABLED = 0.4;
 const OPACITY_DIMMED = 0.5;
 
 interface CardProps {
@@ -233,7 +233,7 @@ export function Card({
   });
 
   const opacity: number = run(() => {
-    if (disabled) return OPACITY_DISABLED;
+    if (disabled) return DISABLED_OPACITY;
     if (dimmed) return OPACITY_DIMMED;
     return 1;
   });

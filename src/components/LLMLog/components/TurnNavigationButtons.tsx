@@ -1,4 +1,4 @@
-const DISABLED_OPACITY = 0.3;
+import { DISABLED_OPACITY } from "../../Board/constants";
 
 interface TurnNavigationButtonsProps {
   currentTurnIndex: number;

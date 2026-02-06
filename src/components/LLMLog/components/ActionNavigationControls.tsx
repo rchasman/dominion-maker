@@ -1,11 +1,11 @@
+import { DISABLED_OPACITY } from "../../Board/constants";
+
 interface ActionNavigationControlsProps {
   hasPrevAction: boolean;
   hasNextAction: boolean;
   onPrev: () => void;
   onNext: () => void;
 }
-
-const DISABLED_OPACITY = 0.3;
 
 export function ActionNavigationControls({
   hasPrevAction,

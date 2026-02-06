@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "preact/hooks";
 import { useGame } from "../../../context/hooks";
 import { getPlayerColor } from "../../../lib/board-utils";
+import { DISABLED_OPACITY } from "../../Board/constants";
 
 const TIME_FORMAT = {
   MINUTE_PAD_LENGTH: 2,
@@ -10,8 +11,6 @@ const TIME_FORMAT = {
 const CHAT_LAYOUT = {
   MAX_HEIGHT_PX: 300,
 } as const;
-
-const DISABLED_OPACITY = 0.4;
 
 interface ChatMessageData {
   id: string;

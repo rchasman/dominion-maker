@@ -26,6 +26,7 @@ export const MAIN_PLAYER_INDEX = 0;
 export const OPPONENT_PLAYER_INDEX = 1;
 
 // Opacity Constants
+export const DISABLED_OPACITY = 0.4;
 export const DEPLETED_RESOURCE_OPACITY = 0.4;
 export const DISABLED_BUTTON_OPACITY = 0.5;
 
