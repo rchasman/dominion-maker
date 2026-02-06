@@ -150,19 +150,14 @@ function ConfirmButton({
 
   return (
     <button
+      className="supply-button"
       onClick={() => onConfirmDecision(complexDecisionData ?? undefined)}
       disabled={disabled}
       style={{
-        padding: "var(--space-2) var(--space-4)",
         background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
-        color: "#fff",
         border: "1px solid #a5b4fc",
         cursor: getButtonCursor(disabled),
         opacity: getButtonOpacity(disabled),
-        fontSize: "0.6875rem",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        fontFamily: "inherit",
       }}
     >
       Confirm
@@ -173,17 +168,12 @@ function ConfirmButton({
 function SkipButton({ onSkipDecision }: { onSkipDecision: () => void }) {
   return (
     <button
+      className="supply-button"
       onClick={onSkipDecision}
       style={{
-        padding: "var(--space-2) var(--space-4)",
         background: "linear-gradient(180deg, #555 0%, #333 100%)",
-        color: "#fff",
         border: "1px solid #666",
         cursor: "pointer",
-        fontSize: "0.6875rem",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        fontFamily: "inherit",
       }}
     >
       Skip
@@ -205,20 +195,16 @@ function PlayTreasuresButton({
 
   return (
     <button
+      className="supply-button"
       onClick={onPlayAllTreasures}
       disabled={disabled}
       style={{
-        padding: "var(--space-2) var(--space-4)",
         background:
           "linear-gradient(180deg, var(--color-gold-darker) 0%, var(--color-gold-dark) 100%)",
         color: "var(--color-bg-primary)",
         border: "1px solid var(--color-gold-bright)",
         cursor: getButtonCursor(disabled),
         opacity: getButtonOpacity(disabled),
-        fontSize: "0.6875rem",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        fontFamily: "inherit",
       }}
     >
       Play Treasures
@@ -244,19 +230,15 @@ function EndPhaseButton({
 
   return (
     <button
+      className="supply-button"
       onClick={onEndPhase}
       disabled={disabled}
       style={{
-        padding: "var(--space-2) var(--space-4)",
         background: getEndPhaseButtonBackground(pendingChoice, phase),
         color: isTurnComplete ? "#a89968" : "#fff",
         border: getEndPhaseButtonBorder(isTurnComplete, pendingChoice, phase),
         cursor: getButtonCursor(disabled),
         opacity: getButtonOpacity(disabled),
-        fontSize: "0.6875rem",
-        fontWeight: 600,
-        textTransform: "uppercase",
-        fontFamily: "inherit",
         animation: isTurnComplete ? "glow 2s ease-in-out infinite" : "none",
       }}
     >
@@ -378,33 +360,24 @@ export function Supply({
     <div
       ref={supplyRef}
       style={{
-        position: "relative",
         display: "grid",
         gridTemplateColumns: "auto auto 1fr auto auto",
-        gridTemplateAreas: '"victory treasure kingdom curse trash"',
+        gridTemplateRows: "1fr auto",
+        gridTemplateAreas:
+          '"victory treasure kingdom curse trash" "actions actions actions actions actions"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
-        paddingBlockEnd: "calc(var(--space-3) + 2.5rem)",
         background: "rgba(70, 70, 95, 0.25)",
         backdropFilter: "blur(12px)",
         borderRadius: "0.5rem",
         alignItems: "start",
-        alignContent: "start",
       }}
     >
       {/* Victory column */}
       <div
         style={{ gridArea: "victory", paddingInlineStart: "var(--space-4)" }}
       >
-        <div
-          style={{
-            fontSize: "0.625rem",
-            color: "var(--color-victory)",
-            marginBlockEnd: "var(--space-2)",
-            textTransform: "uppercase",
-            fontWeight: 600,
-          }}
-        >
+        <div className="supply-label" style={{ color: "var(--color-victory)" }}>
           Victory
         </div>
         {renderSupplyColumn({
@@ -419,15 +392,7 @@ export function Supply({
 
       {/* Treasure column */}
       <div style={{ gridArea: "treasure" }}>
-        <div
-          style={{
-            fontSize: "0.625rem",
-            color: "var(--color-gold)",
-            marginBlockEnd: "var(--space-2)",
-            textTransform: "uppercase",
-            fontWeight: 600,
-          }}
-        >
+        <div className="supply-label" style={{ color: "var(--color-gold)" }}>
           Treasure
         </div>
         {renderSupplyColumn({
@@ -452,12 +417,8 @@ export function Supply({
           }}
         >
           <div
-            style={{
-              fontSize: "0.625rem",
-              color: "var(--color-text-primary)",
-              textTransform: "uppercase",
-              fontWeight: 600,
-            }}
+            className="supply-label"
+            style={{ color: "var(--color-text-primary)", marginBlockEnd: 0 }}
           >
             Kingdom
           </div>
@@ -494,12 +455,9 @@ export function Supply({
         style={{ gridArea: "trash", paddingInlineEnd: "var(--space-4)" }}
       >
         <div
+          className="supply-label"
           style={{
-            fontSize: "0.625rem",
             color: "#ef4444",
-            marginBlockEnd: "var(--space-2)",
-            textTransform: "uppercase",
-            fontWeight: 600,
             display: "flex",
             alignItems: "center",
             gap: "var(--space-2)",
@@ -521,12 +479,9 @@ export function Supply({
       {/* Curse pile */}
       <div style={{ gridArea: "curse" }}>
         <div
+          className="supply-label"
           style={{
-            fontSize: "0.625rem",
             color: "var(--color-curse)",
-            marginBlockEnd: "var(--space-2)",
-            textTransform: "uppercase",
-            fontWeight: 600,
             display: "flex",
             alignItems: "center",
             minHeight: "0.875rem",
@@ -567,12 +522,11 @@ export function Supply({
       {(isPlayerActive || hasPendingDecision) && (
         <div
           style={{
-            position: "absolute",
-            bottom: "var(--space-3)",
-            right: "var(--space-4)",
+            gridArea: "actions",
             display: "flex",
             gap: "var(--space-3)",
             alignItems: "center",
+            justifyContent: "flex-end",
           }}
         >
           {run(() => {
