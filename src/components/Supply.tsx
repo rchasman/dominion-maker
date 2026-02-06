@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useMemo, useRef } from "preact/hooks";
 import type { CardName, GameState } from "../types/game-state";
 import type { PendingChoice } from "../events/types";
 import { CARDS } from "../data/cards";
@@ -13,6 +13,8 @@ import { getPlayerPerspective } from "../lib/player-utils";
 import { isDecisionChoice } from "../types/pending-choice";
 
 const KINGDOM_GRID_COLUMNS = 5;
+const TREASURES: CardName[] = ["Copper", "Silver", "Gold"];
+const VICTORY: CardName[] = ["Estate", "Duchy", "Province"];
 
 interface SupplyProps {
   state: GameState;
@@ -353,17 +355,16 @@ export function Supply({
     }
   }, [animation]);
 
-  const treasures: CardName[] = ["Copper", "Silver", "Gold"];
-  const victory: CardName[] = ["Estate", "Duchy", "Province"];
-
   // Sort kingdom cards by cost, bottom row first (cheapest at bottom-left)
-  const sorted = [...state.kingdomCards].sort(
-    (a, b) => CARDS[a].cost - CARDS[b].cost,
-  );
-  const sortedKingdom = [
-    ...sorted.slice(KINGDOM_GRID_COLUMNS),
-    ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
-  ];
+  const sortedKingdom = useMemo(() => {
+    const sorted = [...state.kingdomCards].sort(
+      (a, b) => CARDS[a].cost - CARDS[b].cost,
+    );
+    return [
+      ...sorted.slice(KINGDOM_GRID_COLUMNS),
+      ...sorted.slice(0, KINGDOM_GRID_COLUMNS),
+    ];
+  }, [state.kingdomCards]);
   const canBuyParams = { canBuy, availableCoins };
 
   const isTurnComplete =
@@ -408,7 +409,7 @@ export function Supply({
           Victory
         </div>
         {renderSupplyColumn({
-          cards: victory,
+          cards: VICTORY,
           size: "small",
           state,
           canBuyParams,
@@ -431,7 +432,7 @@ export function Supply({
           Treasure
         </div>
         {renderSupplyColumn({
-          cards: treasures,
+          cards: TREASURES,
           size: "small",
           state,
           canBuyParams,

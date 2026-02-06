@@ -1,3 +1,4 @@
+import { useMemo } from "preact/hooks";
 import { computeBoardState, type BoardState } from "./boardStateHelpers";
 import { createBoardCallbacks } from "./useBoardCallbacks";
 import { createGameProps } from "./createGameProps";
@@ -30,19 +31,32 @@ export function Board({ onBackToHome }: BoardProps) {
     handleBuyCard,
   } = useBoardSetup();
 
-  if (!game.gameState) return null;
-
-  const boardState: BoardState = computeBoardState({
-    state: game.gameState,
+  const boardState: BoardState | null = useMemo(() => {
+    if (!game.gameState) return null;
+    return computeBoardState({
+      state: game.gameState,
+      previewEventId,
+      isPreviewMode,
+      gameMode: game.gameMode,
+      hasPlayableActions: game.hasPlayableActions,
+      hasTreasuresInHand: game.hasTreasuresInHand,
+      getStateAtEvent: game.getStateAtEvent,
+      localPlayerId: game.localPlayerId,
+      isSpectator: game.isSpectator ?? false,
+    });
+  }, [
+    game.gameState,
     previewEventId,
     isPreviewMode,
-    gameMode: game.gameMode,
-    hasPlayableActions: game.hasPlayableActions,
-    hasTreasuresInHand: game.hasTreasuresInHand,
-    getStateAtEvent: game.getStateAtEvent,
-    localPlayerId: game.localPlayerId,
-    isSpectator: game.isSpectator ?? false, // Fallback to false if undefined (multiplayer mode)
-  });
+    game.gameMode,
+    game.hasPlayableActions,
+    game.hasTreasuresInHand,
+    game.getStateAtEvent,
+    game.localPlayerId,
+    game.isSpectator,
+  ]);
+
+  if (!boardState) return null;
 
   const localPlayerId = boardState.localPlayerId;
 
