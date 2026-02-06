@@ -198,21 +198,13 @@ body {
   }
 }
 
-.hand-container {
-  container-type: inline-size;
-}
-
 .hand-grid {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, var(--card-width-large));
+  grid-auto-columns: minmax(var(--card-width-small), var(--card-width-large));
   gap: 0.375rem;
   justify-content: center;
   overflow-x: auto;
-}
-
-.deck-discard-container {
-  container-type: inline-size;
 }
 
 .deck-discard-wrapper {
@@ -222,6 +214,22 @@ body {
   gap: var(--space-3);
   justify-content: center;
   align-items: start;
+}
+
+.supply-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-block-end: var(--space-2);
+}
+
+.supply-button {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-family: inherit;
+  color: #fff;
 }
 
 /* Game log undo button - show on hover */
