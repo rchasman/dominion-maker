@@ -204,59 +204,6 @@ export function CardDecisionModal({
   } = useCardDecisionState(cards, actions, requiresOrdering, onDataChange);
 
   return (
-    <CardDecisionModalUI
-      cardOrder={cardOrder}
-      cards={cards}
-      actions={actions}
-      cardActions={cardActions}
-      draggedIndex={draggedIndex}
-      requiresOrdering={requiresOrdering}
-      needsOrdering={needsOrdering}
-      cardsToOrder={cardsToOrder}
-      onToggleCardAction={toggleCardAction}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      onSetDraggedIndex={setDraggedIndex}
-      onReorder={handleReorder}
-    />
-  );
-}
-
-interface CardDecisionModalUIProps {
-  cardOrder: number[];
-  cards: CardName[];
-  actions: CardAction[];
-  cardActions: Record<number, CardActionId>;
-  draggedIndex: number | null;
-  requiresOrdering: boolean;
-  needsOrdering: boolean;
-  cardsToOrder: number[];
-  onToggleCardAction: (index: number) => void;
-  onDragStart: (index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (targetIndex: number) => void;
-  onSetDraggedIndex: (index: number | null) => void;
-  onReorder: (newOrder: number[]) => void;
-}
-
-function CardDecisionModalUI({
-  cardOrder,
-  cards,
-  actions,
-  cardActions,
-  draggedIndex,
-  requiresOrdering,
-  needsOrdering,
-  cardsToOrder,
-  onToggleCardAction,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onSetDraggedIndex,
-  onReorder,
-}: CardDecisionModalUIProps) {
-  return (
     <div
       style={{
         position: "absolute",
@@ -268,72 +215,36 @@ function CardDecisionModalUI({
         pointerEvents: "auto",
       }}
     >
-      <ModalContent
-        cardOrder={cardOrder}
-        cards={cards}
-        actions={actions}
-        cardActions={cardActions}
-        draggedIndex={draggedIndex}
-        requiresOrdering={requiresOrdering}
-        needsOrdering={needsOrdering}
-        cardsToOrder={cardsToOrder}
-        onToggleCardAction={onToggleCardAction}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        onSetDraggedIndex={onSetDraggedIndex}
-        onReorder={onReorder}
-      />
-    </div>
-  );
-}
-
-function ModalContent({
-  cardOrder,
-  cards,
-  actions,
-  cardActions,
-  draggedIndex,
-  requiresOrdering,
-  needsOrdering,
-  cardsToOrder,
-  onToggleCardAction,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onSetDraggedIndex,
-  onReorder,
-}: CardDecisionModalUIProps) {
-  return (
-    <div
-      style={{
-        background: "rgba(26, 26, 46, 0.75)",
-        backdropFilter: "blur(12px)",
-        border: "2px solid rgb(205 133 63)",
-        padding: "var(--space-3)",
-        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-        maxHeight: "50vh",
-        overflow: "auto",
-        position: "relative",
-      }}
-    >
-      <ModalLabel />
-      <CardGrid
-        cardOrder={cardOrder}
-        cards={cards}
-        actions={actions}
-        cardActions={cardActions}
-        draggedIndex={draggedIndex}
-        requiresOrdering={requiresOrdering}
-        needsOrdering={needsOrdering}
-        cardsToOrder={cardsToOrder}
-        onToggleCardAction={onToggleCardAction}
-        onDragStart={onDragStart}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        onSetDraggedIndex={onSetDraggedIndex}
-        onReorder={onReorder}
-      />
+      <div
+        style={{
+          background: "rgba(26, 26, 46, 0.75)",
+          backdropFilter: "blur(12px)",
+          border: "2px solid rgb(205 133 63)",
+          padding: "var(--space-3)",
+          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+          maxHeight: "50vh",
+          overflow: "auto",
+          position: "relative",
+        }}
+      >
+        <ModalLabel />
+        <CardGrid
+          cardOrder={cardOrder}
+          cards={cards}
+          actions={actions}
+          cardActions={cardActions}
+          draggedIndex={draggedIndex}
+          requiresOrdering={requiresOrdering}
+          needsOrdering={needsOrdering}
+          cardsToOrder={cardsToOrder}
+          onToggleCardAction={toggleCardAction}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onSetDraggedIndex={setDraggedIndex}
+          onReorder={handleReorder}
+        />
+      </div>
     </div>
   );
 }
@@ -356,6 +267,23 @@ function ModalLabel() {
   );
 }
 
+interface CardGridProps {
+  cardOrder: number[];
+  cards: CardName[];
+  actions: CardAction[];
+  cardActions: Record<number, CardActionId>;
+  draggedIndex: number | null;
+  requiresOrdering: boolean;
+  needsOrdering: boolean;
+  cardsToOrder: number[];
+  onToggleCardAction: (index: number) => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (targetIndex: number) => void;
+  onSetDraggedIndex: (index: number | null) => void;
+  onReorder: (newOrder: number[]) => void;
+}
+
 function CardGrid({
   cardOrder,
   cards,
@@ -371,7 +299,7 @@ function CardGrid({
   onDrop,
   onSetDraggedIndex,
   onReorder,
-}: CardDecisionModalUIProps) {
+}: CardGridProps) {
   return (
     <div
       style={{
