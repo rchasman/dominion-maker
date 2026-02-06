@@ -24,7 +24,7 @@ import {
   renderPlayerPrefix,
   renderReasoning,
 } from "./LogEntry/renderHelpers";
-import { useGame } from "../context/hooks";
+import { gameState$, players$, gameMode$ } from "../context/game-signals";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { run } from "../lib/run";
 
@@ -88,7 +88,9 @@ function TurnHeaderPlayerName({
   playerId: PlayerId;
   isAI?: boolean;
 }) {
-  const { gameState, players, gameMode } = useGame();
+  const gameState = gameState$.value;
+  const players = players$.value;
+  const gameMode = gameMode$.value;
   const playerName = players?.find(p => p.id === playerId)?.name;
   const displayName = run(() => {
     if (playerName) {

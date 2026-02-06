@@ -1,7 +1,7 @@
 import type { CardName, PlayerId } from "../types/game-state";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { getCardColor } from "../lib/card-colors";
-import { useGame } from "../context/hooks";
+import { gameState$, players$ } from "../context/game-signals";
 import { run } from "../lib/run";
 
 export function PlayerName({
@@ -11,7 +11,8 @@ export function PlayerName({
   playerId: PlayerId;
   isAI?: boolean;
 }) {
-  const { gameState, players } = useGame();
+  const gameState = gameState$.value;
+  const players = players$.value;
 
   // Try to get name from players list (multiplayer) or playerInfo (single-player/server)
   const playerName = players?.find(p => p.id === playerId)?.name;
