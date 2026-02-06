@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from "preact/hooks";
-import { useGame } from "../context/hooks";
+import { events$, gameState$, gameMode$ } from "../context/game-signals";
 import PartySocket from "partysocket";
 import type { GameClientMessage } from "./protocol";
 import { generatePlayerName } from "../lib/name-generator";
@@ -23,7 +23,9 @@ const PARTYKIT_HOST =
 const ROOM_STORAGE_KEY = "dominion_singleplayer_sync_room";
 
 export function PartyKitSync() {
-  const { events, gameState, gameMode } = useGame();
+  const events = events$.value;
+  const gameState = gameState$.value;
+  const gameMode = gameMode$.value;
   const socketRef = useRef<PartySocket | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const syncedEventCountRef = useRef(0);
