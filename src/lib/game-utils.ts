@@ -1,5 +1,5 @@
 import type { CardName, PlayerState } from "../types/game-state";
-import { countVP as countVPFromCards } from "./board-utils";
+import { countVP as countVPFromCards, getAllCards } from "./board-utils";
 
 export function shuffle<T>(array: T[]): T[] {
   return [...array].reduceRight<T[]>(
@@ -99,6 +99,6 @@ export function drawCards(
 }
 
 /** Helper to add draw log entries in correct transactional order */
-export function countVP({ deck, hand, discard, inPlay }: PlayerState): number {
-  return countVPFromCards([...deck, ...hand, ...discard, ...inPlay]);
+export function countVP(player: PlayerState): number {
+  return countVPFromCards(getAllCards(player));
 }

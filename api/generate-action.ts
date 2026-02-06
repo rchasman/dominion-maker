@@ -1,6 +1,6 @@
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
-import type { GameState, CardName, PlayerState } from "../src/types/game-state";
+import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import { MODEL_MAP, MODELS } from "../src/config/models";
 import {
@@ -8,7 +8,7 @@ import {
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
 import { CARDS, isTreasureCard } from "../src/data/cards";
-import { countVP } from "../src/lib/board-utils";
+import { countVP, getAllCards } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
 import { getSubPhase } from "../src/lib/state-helpers";
 import { z } from "zod";
@@ -271,13 +271,8 @@ function optimizeStateForAI(state: GameState): unknown {
   });
 
   // Calculate VP and deck composition for both players
-  const getAllCards = (player: PlayerState | null | undefined) =>
-    player
-      ? [...player.deck, ...player.hand, ...player.discard, ...player.inPlay]
-      : [];
-
-  const yourAllCards = getAllCards(activePlayer);
-  const opponentAllCards = getAllCards(opponent);
+  const yourAllCards = activePlayer ? getAllCards(activePlayer) : [];
+  const opponentAllCards = opponent ? getAllCards(opponent) : [];
 
   const yourVP = countVP(yourAllCards);
   const opponentVP = countVP(opponentAllCards);
