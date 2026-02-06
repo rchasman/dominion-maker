@@ -1,52 +1,41 @@
 /**
  * Hook for starting a new game
- * Handles game initialization and state reset
+ * Writes directly to signals instead of using setters.
  */
 
 import { useCallback } from "preact/hooks";
 import { DominionEngine } from "../engine";
 import { getPlayersForMode } from "../types/game-mode";
-import type { GameMode } from "../types/game-mode";
-import type { GameState } from "../types/game-state";
-import type { GameEvent } from "../events/types";
-import type { LLMLogEntry } from "../components/LLMLog";
-import type { PlayerStrategyData } from "../types/player-strategy";
 import { abortOngoingConsensus } from "../agent/game-agent";
 import { uiLogger } from "../lib/logger";
 import { clearGameStateStorage } from "./storage-utils";
+import {
+  syncEngineToSignals,
+  events$,
+  llmLogs$,
+  playerStrategies$,
+  gameMode$,
+} from "./game-signals";
 
 /**
  * Hook to create startGame callback
  */
 export function useStartGame(
-  gameMode: GameMode,
-  actions: {
-    setEngine: (engine: DominionEngine) => void;
-    setEvents: (events: GameEvent[]) => void;
-    setGameState: (state: GameState) => void;
-    setLLMLogs: (logs: LLMLogEntry[]) => void;
-    setPlayerStrategies: (strategies: PlayerStrategyData) => void;
-  },
+  setEngine: (engine: DominionEngine) => void,
 ): () => void {
-  const {
-    setEngine,
-    setEvents,
-    setGameState,
-    setLLMLogs,
-    setPlayerStrategies,
-  } = actions;
   return useCallback(() => {
     abortOngoingConsensus();
     clearGameStateStorage();
 
-    // Clear React state immediately after clearing storage
-    setLLMLogs([]);
-    setPlayerStrategies({});
-    setEvents([]);
+    // Clear signals immediately
+    llmLogs$.value = [];
+    playerStrategies$.value = {};
+    events$.value = [];
 
     const newEngine = new DominionEngine();
     setEngine(newEngine);
 
+    const gameMode = gameMode$.value;
     const players =
       gameMode === "multiplayer"
         ? (["human", "ai"] as const)
@@ -59,17 +48,9 @@ export function useStartGame(
     });
 
     if (result.ok) {
-      setEvents([...newEngine.eventLog]);
-      setGameState(newEngine.state);
+      syncEngineToSignals(newEngine);
     } else {
       uiLogger.error("Failed to start game", { error: result.error });
     }
-  }, [
-    gameMode,
-    setEngine,
-    setEvents,
-    setGameState,
-    setLLMLogs,
-    setPlayerStrategies,
-  ]);
+  }, [setEngine]);
 }
