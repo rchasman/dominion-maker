@@ -3,7 +3,13 @@ import { useCallback } from "preact/hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
 import { formatPlayerName } from "../../lib/board-utils";
-import { useGame } from "../../context/hooks";
+import {
+  players$,
+  pendingUndo$,
+  approveUndo$,
+  denyUndo$,
+  localPlayerId$ as localPlayerId$$,
+} from "../../context/game-signals";
 import { GameSidebar } from "./GameSidebar";
 import { GameOverModal } from "./GameOverModal";
 import { UndoRequestModal } from "./UndoRequestModal";
@@ -149,7 +155,11 @@ export function BoardContent({
     isLocalPlayerAI,
   } = boardState;
 
-  const { players, pendingUndo, approveUndo, denyUndo, localPlayerId: contextLocalPlayerId } = useGame();
+  const players = players$.value;
+  const pendingUndo = pendingUndo$.value;
+  const approveUndo = approveUndo$.value;
+  const denyUndo = denyUndo$.value;
+  const contextLocalPlayerId = localPlayerId$$.value;
   const animation = useAnimationSafe();
 
   // Try to get opponent name from players list (multiplayer)

@@ -2,8 +2,13 @@ import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
 import { ReactionModal } from "../ReactionModal";
 import { formatPlayerName } from "../../lib/board-utils";
-import { useGame } from "../../context/hooks";
 import { getPlayerPerspective } from "../../lib/player-utils";
+import {
+  players$,
+  gameMode$,
+  localPlayerId$ as localPlayerId$$,
+  playerStrategies$,
+} from "../../context/game-signals";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
@@ -39,12 +44,10 @@ export function MainPlayerArea({
   onRevealReaction,
   onDeclineReaction,
 }: MainPlayerAreaProps) {
-  const {
-    players,
-    gameMode,
-    localPlayerId: contextLocalPlayerId,
-    playerStrategies,
-  } = useGame();
+  const players = players$.value;
+  const gameMode = gameMode$.value;
+  const contextLocalPlayerId = localPlayerId$$.value;
+  const playerStrategies = playerStrategies$.value;
   const { localPlayerId } = getPlayerPerspective(
     displayState,
     gameMode,
