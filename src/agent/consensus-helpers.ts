@@ -7,7 +7,7 @@ import type { Action } from "../types/action";
 import { stripReasoning } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelProvider } from "../config/models";
-import { isActionCard, isTreasureCard } from "../data/cards";
+import { getHandComposition } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import { run } from "../lib/run";
 import { agentLogger } from "../lib/logger";
@@ -417,11 +417,7 @@ export const logConsensusStart = (params: ConsensusStartParams): void => {
   const playerState = currentState.players[playerId];
   const hand = playerState?.hand || [];
   const inPlay = playerState?.inPlay || [];
-  const handCounts = {
-    treasures: hand.filter(isTreasureCard).length,
-    actions: hand.filter(isActionCard).length,
-    total: hand.length,
-  };
+  const handCounts = getHandComposition(hand);
 
   logger?.({
     type: "consensus-start",

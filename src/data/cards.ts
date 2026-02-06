@@ -530,3 +530,11 @@ export function isAttackCard(cardName: CardName): boolean {
 export function isReactionCard(cardName: CardName): boolean {
   return CARDS[cardName].types.includes("reaction");
 }
+
+export function getHandComposition(hand: CardName[]) {
+  return {
+    treasures: hand.filter(isTreasureCard).length,
+    actions: hand.filter(isActionCard).length,
+    total: hand.length,
+  };
+}

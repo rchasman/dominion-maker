@@ -5,7 +5,7 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
-import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
+import { CARDS, getHandComposition } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import {
   AVAILABLE_MODELS,
@@ -315,11 +315,7 @@ async function handleBatchConsensus(
     const playerState = acc.engine.state.players[playerId];
     const hand = playerState?.hand || [];
     const inPlay = playerState?.inPlay || [];
-    const handCounts = {
-      treasures: hand.filter(isTreasureCard).length,
-      actions: hand.filter(isActionCard).length,
-      total: hand.length,
-    };
+    const handCounts = getHandComposition(hand);
 
     logVotingResults({
       winner,
@@ -649,11 +645,7 @@ export async function advanceGameStateWithConsensus(
   const playerState = currentState.players[playerId];
   const hand = playerState?.hand || [];
   const inPlay = playerState?.inPlay || [];
-  const handCounts = {
-    treasures: hand.filter(isTreasureCard).length,
-    actions: hand.filter(isActionCard).length,
-    total: hand.length,
-  };
+  const handCounts = getHandComposition(hand);
 
   const totalModels = providers.length;
   const aheadByK = Math.max(
