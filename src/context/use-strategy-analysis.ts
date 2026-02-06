@@ -13,15 +13,15 @@ import type { PlayerStrategyData } from "../types/player-strategy";
 import { api } from "../api/client";
 import { uiLogger } from "../lib/logger";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
+import { playerStrategies$ } from "./game-signals";
 
 /**
- * Fetch strategy analysis from API
+ * Fetch strategy analysis from API and write to playerStrategies$ signal
  */
 export function fetchStrategyAnalysis(
   state: GameState,
   strategy: GameStrategy,
   currentStrategies: PlayerStrategyData,
-  setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
   const hasStrategies = Object.keys(currentStrategies).length > 0;
 
@@ -45,7 +45,7 @@ export function fetchStrategyAnalysis(
 
       const stringifiedStrategies = JSON.stringify(data.strategySummary);
       strategy.setStrategySummary?.(stringifiedStrategies);
-      setPlayerStrategies(data.strategySummary as PlayerStrategyData);
+      playerStrategies$.value = data.strategySummary as PlayerStrategyData;
     })
     .catch((err: unknown) => {
       uiLogger.warn("Failed to fetch strategy analysis:", err);
@@ -58,8 +58,6 @@ export function fetchStrategyAnalysis(
 export function useStrategyAnalysis(
   engineRef: MutableRefObject<DominionEngine | null>,
   strategy: GameStrategy,
-  currentStrategies: PlayerStrategyData,
-  setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
   useEffect(() => {
     const engine = engineRef.current;
@@ -72,17 +70,12 @@ export function useStrategyAnalysis(
       const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
 
       if (hasTurnEnded && state.turn >= MIN_TURN_FOR_STRATEGY) {
-        fetchStrategyAnalysis(
-          state,
-          strategy,
-          currentStrategies,
-          setPlayerStrategies,
-        );
+        fetchStrategyAnalysis(state, strategy, playerStrategies$.value);
       }
     });
 
     return unsubscribe;
-  }, [engineRef, strategy, currentStrategies, setPlayerStrategies]);
+  }, [engineRef, strategy]);
 }
 
 /**
@@ -91,7 +84,6 @@ export function useStrategyAnalysis(
 export function useStrategyAnalysisFromEvents(
   events: GameEvent[],
   gameState: GameState | null,
-  setPlayerStrategies: (strategies: PlayerStrategyData) => void,
 ): void {
   const lastEventCountRef = useRef(0);
 
@@ -120,9 +112,9 @@ export function useStrategyAnalysisFromEvents(
             },
             {},
           );
-          setPlayerStrategies(record);
+          playerStrategies$.value = record;
         }
       })
       .catch(() => {});
-  }, [events, gameState, setPlayerStrategies]);
+  }, [events, gameState]);
 }
