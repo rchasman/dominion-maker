@@ -29,6 +29,15 @@ export const MODELS: ModelConfig[] = [
     outputPrice: 15.0,
   },
   {
+    id: "claude-opus",
+    fullName: "anthropic/claude-opus-4.6",
+    provider: "anthropic",
+    color: "#a78bfa",
+    inputPrice: 5.0,
+    outputPrice: 25.0,
+    maxInstances: 3,
+  },
+  {
     id: "gpt-4o-mini",
     fullName: "openai/gpt-4o-mini",
     provider: "openai",
@@ -156,6 +165,7 @@ export const MODELS: ModelConfig[] = [
 export const MODEL_IDS = [
   "claude-haiku",
   "claude-sonnet",
+  "claude-opus",
   "gpt-4o-mini",
   "gpt-4o",
   "gpt-5.2",
