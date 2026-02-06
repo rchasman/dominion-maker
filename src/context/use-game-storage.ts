@@ -1,16 +1,10 @@
 /**
  * Custom hook for game storage management
- * Handles localStorage persistence and restoration
+ * Writes restored state directly to signals on mount.
  */
 
 import { useState } from "preact/hooks";
-import type { GameEvent } from "../events/types";
-import type { LLMLogEntry } from "../components/LLMLog";
-import type { ModelSettings } from "../agent/game-agent";
 import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
-import type { GameMode } from "../types/game-mode";
-import type { GameState } from "../types/game-state";
-import type { PlayerStrategyData } from "../types/player-strategy";
 import { DominionEngine } from "../engine";
 import { uiLogger } from "../lib/logger";
 import {
@@ -21,48 +15,53 @@ import {
   loadPlayerStrategies,
   STORAGE_KEYS,
 } from "./storage-utils";
+import {
+  gameState$,
+  events$,
+  gameMode$,
+  isLoading$,
+  llmLogs$,
+  modelSettings$,
+  playerStrategies$,
+} from "./game-signals";
 
-interface GameStorageState {
-  gameState: GameState | null;
-  events: GameEvent[];
-  gameMode: GameMode;
-  isLoading: boolean;
-  llmLogs: LLMLogEntry[];
-  modelSettings: ModelSettings;
-  playerStrategies: PlayerStrategyData;
+interface GameStorageResult {
   engineRef: DominionEngine | null;
 }
 
 /**
- * Load all game storage synchronously
- * Returns immediately with restored state or defaults
+ * Load all game storage synchronously and write to signals.
+ * Returns only the engine ref (signals own the state).
  */
-export function useGameStorage(): GameStorageState {
-  const [storage] = useState<GameStorageState>(() => {
+export function useGameStorage(): GameStorageResult {
+  const [storage] = useState<GameStorageResult>(() => {
     try {
       const gameMode = loadGameMode();
-      const llmLogs = loadLLMLogs();
-      const modelSettings = loadModelSettings() ?? DEFAULT_MODEL_SETTINGS;
-      const playerStrategies = loadPlayerStrategies();
+      const restoredLlmLogs = loadLLMLogs();
+      const restoredModelSettings =
+        loadModelSettings() ?? DEFAULT_MODEL_SETTINGS;
+      const restoredPlayerStrategies = loadPlayerStrategies();
+
+      // Write restored config to signals
+      gameMode$.value = gameMode;
+      llmLogs$.value = restoredLlmLogs;
+      modelSettings$.value = restoredModelSettings;
+      playerStrategies$.value = restoredPlayerStrategies;
+      isLoading$.value = false;
 
       const savedEvents = loadEvents();
       if (savedEvents) {
         try {
           const engine = new DominionEngine();
           engine.loadEvents(savedEvents);
-          const restoredState = engine.state;
 
           uiLogger.info(`Restored game from ${savedEvents.length} events`);
-          return {
-            gameState: restoredState,
-            events: savedEvents,
-            gameMode,
-            isLoading: false,
-            llmLogs,
-            modelSettings,
-            playerStrategies,
-            engineRef: engine,
-          };
+
+          // Write restored game state to signals
+          gameState$.value = engine.state;
+          events$.value = savedEvents;
+
+          return { engineRef: engine };
         } catch (eventError: unknown) {
           uiLogger.error(
             "Failed to restore events, clearing only event storage",
@@ -75,28 +74,12 @@ export function useGameStorage(): GameStorageState {
         }
       }
 
-      return {
-        gameState: null,
-        events: [],
-        gameMode,
-        isLoading: false,
-        llmLogs,
-        modelSettings,
-        playerStrategies,
-        engineRef: null,
-      };
+      return { engineRef: null };
     } catch (error: unknown) {
       uiLogger.error("Failed to restore game storage", { error });
-      return {
-        gameState: null,
-        events: [],
-        gameMode: "engine",
-        isLoading: false,
-        llmLogs: [],
-        modelSettings: DEFAULT_MODEL_SETTINGS,
-        playerStrategies: [],
-        engineRef: null,
-      };
+      // Signals already have sensible defaults
+      isLoading$.value = false;
+      return { engineRef: null };
     }
   });
 
