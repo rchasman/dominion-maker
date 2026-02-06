@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "preact/hooks";
 import {
-  useTypedGame,
   useCardSelection,
   usePreviewMode,
   useComplexDecision,
@@ -10,9 +9,62 @@ import {
 import { useBoardHandlers } from "./useBoardHandlers";
 import { preloadKingdomCards } from "../../lib/image-preload";
 import type { CardName } from "../../types/game-state";
+import type { CommandResult } from "../../commands/types";
+import {
+  gameState$,
+  events$,
+  endPhase$,
+  playAllTreasures$,
+  submitDecision$,
+  revealReaction$,
+  declineReaction$,
+  hasPlayableActions$,
+  hasTreasuresInHand$,
+  gameMode$,
+  setGameMode$,
+  startGame$,
+  isProcessing$,
+  modelSettings$,
+  setModelSettings$,
+  requestUndo$,
+  getStateAtEvent$,
+  playerStrategies$,
+  localPlayerId$,
+  isSpectator$,
+} from "../../context/game-signals";
+
+const uninitializedCommand = (): CommandResult => ({
+  ok: false,
+  error: "Game not initialized",
+});
 
 export function useBoardSetup() {
-  const game = useTypedGame();
+  const game = {
+    gameState: gameState$.value,
+    events: events$.value,
+    endPhase: endPhase$.value ?? uninitializedCommand,
+    playAllTreasures: playAllTreasures$.value ?? uninitializedCommand,
+    submitDecision: submitDecision$.value ?? uninitializedCommand,
+    revealReaction: revealReaction$.value ?? uninitializedCommand,
+    declineReaction: declineReaction$.value ?? uninitializedCommand,
+    hasPlayableActions: hasPlayableActions$.value,
+    hasTreasuresInHand: hasTreasuresInHand$.value,
+    gameMode: gameMode$.value,
+    setGameMode: setGameMode$.value ?? undefined,
+    startGame: startGame$.value ?? undefined,
+    isProcessing: isProcessing$.value,
+    modelSettings: modelSettings$.value,
+    setModelSettings: setModelSettings$.value ?? undefined,
+    requestUndo: requestUndo$.value ?? (() => {}),
+    getStateAtEvent:
+      getStateAtEvent$.value ??
+      (() => {
+        throw new Error("getStateAtEvent not initialized");
+      }),
+    playerStrategies: playerStrategies$.value,
+    localPlayerId: localPlayerId$.value,
+    isSpectator: isSpectator$.value,
+  };
   const {
     selectedCardIndices,
     clearSelection,
