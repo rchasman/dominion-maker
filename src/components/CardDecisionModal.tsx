@@ -128,11 +128,14 @@ function useCardDecisionState(
     (target: number) => {
       if (draggedIndex === null || draggedIndex === target) return;
       setCardOrder(prev => {
-        const order = [...prev];
-        const dIdx = order.indexOf(draggedIndex);
-        const tIdx = order.indexOf(target);
-        order.splice(dIdx, 1);
-        order.splice(tIdx, 0, draggedIndex);
+        const dIdx = prev.indexOf(draggedIndex);
+        const tIdx = prev.indexOf(target);
+        const without = [...prev.slice(0, dIdx), ...prev.slice(dIdx + 1)];
+        const order = [
+          ...without.slice(0, tIdx),
+          draggedIndex,
+          ...without.slice(tIdx),
+        ];
         const newCardOrder = requiresOrdering
           ? getCardsToOrder(order, cardActions)
           : undefined;

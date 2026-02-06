@@ -54,6 +54,10 @@ export default defineConfig([
             "Use spread [item, ...arr] instead of unshift() for immutability",
         },
         {
+          selector: "CallExpression[callee.property.name='splice']",
+          message: "Use slice/spread instead of splice() for immutability",
+        },
+        {
           selector: "CallExpression[callee.name='require']",
           message: "Use ES modules (import) instead of require()",
         },

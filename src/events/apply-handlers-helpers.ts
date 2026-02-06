@@ -67,8 +67,10 @@ export function applyCardPlayed(
   if (!playerState) return state;
   const handIndex = playerState.hand.indexOf(event.card);
   if (handIndex === -1) return state;
-  const newHand = [...playerState.hand];
-  newHand.splice(handIndex, 1);
+  const newHand = [
+    ...playerState.hand.slice(0, handIndex),
+    ...playerState.hand.slice(handIndex + 1),
+  ];
 
   // Determine action type for turnHistory based on card type
   const cardDef = CARDS[event.card];
