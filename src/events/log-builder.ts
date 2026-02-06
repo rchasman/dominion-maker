@@ -81,6 +81,7 @@ function reorderBuyCardChildren(logs: LogEntry[]): LogEntry[] {
  * Aggregates consecutive identical card operations (draw/discard/trash).
  */
 export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
+  const eventIndex = new Map(events.map(e => [e.id, e]));
   const aggregatedEvents = aggregateCardEvents(events);
 
   const { rootLogs } = aggregatedEvents.reduce<{
@@ -108,7 +109,7 @@ export function buildLogFromEvents(events: GameEvent[]): LogEntry[] {
           const checkParent = acc.logMap.get(startParentId);
           if (checkParent) return checkParent;
 
-          const parentEvent = events.find(e => e.id === startParentId);
+          const parentEvent = eventIndex.get(startParentId);
           if (!parentEvent || !parentEvent.causedBy) return undefined;
 
           return findVisibleParent(parentEvent.causedBy);
