@@ -1,30 +1,26 @@
 /**
- * BoardWithProviders - Reusable wrapper for Board with all required providers
+ * BoardWithProviders - Reusable wrapper for Board with LLMLogsContext
  *
- * Provides GameContext and LLMLogsContext.
+ * Game state is read from signals directly; no GameContext needed.
+ * LLMLogsContext is still provided for the sidebar component.
  * AnimationProvider must be provided by the parent (SinglePlayerApp or GameRoom).
  */
 import type { ComponentChildren } from "preact";
-import type { GameContextValue } from "../../context/GameContextTypes";
-import { GameContext, LLMLogsContext } from "../../context/GameContextTypes";
+import { LLMLogsContext } from "../../context/GameContextTypes";
 import type { LLMLogEntry } from "../LLMLog";
 
 interface BoardWithProvidersProps {
-  gameContext: GameContextValue;
   llmLogs: LLMLogEntry[];
   children: ComponentChildren;
 }
 
 export function BoardWithProviders({
-  gameContext,
   llmLogs,
   children,
 }: BoardWithProvidersProps) {
   return (
-    <GameContext.Provider value={gameContext}>
-      <LLMLogsContext.Provider value={llmLogs}>
-        {children}
-      </LLMLogsContext.Provider>
-    </GameContext.Provider>
+    <LLMLogsContext.Provider value={llmLogs}>
+      {children}
+    </LLMLogsContext.Provider>
   );
 }
