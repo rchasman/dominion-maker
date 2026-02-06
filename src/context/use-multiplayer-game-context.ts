@@ -5,7 +5,7 @@
  * to build a complete GameContextValue for Board consumption.
  */
 
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { GameContextValue } from "./GameContext";
 import type {
   GameState,
@@ -24,6 +24,13 @@ import {
 import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
 import { useAutoPhaseAdvanceMultiplayer } from "./use-ai-automation";
+import {
+  chatMessages$,
+  sendChat$,
+  localPlayerId$,
+  spectatorCount$,
+  isSpectator$,
+} from "./game-signals";
 
 interface MultiplayerGameState {
   gameState: GameState | null;
@@ -90,6 +97,33 @@ export function useMultiplayerGameContext({
     game.gameState,
     setPlayerStrategies,
   );
+
+  // Mirror multiplayer-specific values into signals
+  useEffect(() => {
+    localPlayerId$.value = game.playerId;
+  }, [game.playerId]);
+  useEffect(() => {
+    chatMessages$.value = game.chatMessages;
+  }, [game.chatMessages]);
+  useEffect(() => {
+    sendChat$.value = (content: string) => {
+      game.sendChat({
+        id: crypto.randomUUID(),
+        senderName: playerName,
+        content,
+        timestamp: Date.now(),
+      });
+    };
+    return () => {
+      sendChat$.value = null;
+    };
+  }, [game.sendChat, playerName]);
+  useEffect(() => {
+    spectatorCount$.value = game.spectatorCount;
+  }, [game.spectatorCount]);
+  useEffect(() => {
+    isSpectator$.value = isSpectator;
+  }, [isSpectator]);
 
   // Auto-skip action phase when no playable actions - shared hook
   useAutoPhaseAdvanceMultiplayer(

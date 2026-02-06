@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "preact/hooks";
-import { useGame } from "../../../context/hooks";
+import { useState, useRef, useEffect } from "preact/hooks";
+import type { ChatMessageData } from "../../../partykit/protocol";
+import { chatMessages$, sendChat$ } from "../../../context/game-signals";
 import { getPlayerColor } from "../../../lib/board-utils";
 import { DISABLED_OPACITY } from "../../Board/constants";
 
@@ -11,13 +12,6 @@ const TIME_FORMAT = {
 const CHAT_LAYOUT = {
   MAX_HEIGHT_PX: 300,
 } as const;
-
-interface ChatMessageData {
-  id: string;
-  senderName: string;
-  content: string;
-  timestamp: number;
-}
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
@@ -229,7 +223,8 @@ function ChatInput({
 const EXPANDED_KEY = "dominion-chat-expanded";
 
 export function ChatAccordion() {
-  const { chatMessages = [], sendChat } = useGame();
+  const sendChat = sendChat$.value;
+  const chatMessages = chatMessages$.value;
 
   const [isExpanded, setIsExpanded] = useState(() => {
     const stored = localStorage.getItem(EXPANDED_KEY);
@@ -241,13 +236,11 @@ export function ChatAccordion() {
     localStorage.setItem(EXPANDED_KEY, String(isExpanded));
   }, [isExpanded]);
 
-  const handleSend = useCallback(
-    (content: string) => {
-      if (!sendChat) return;
-      sendChat(content.trim());
-    },
-    [sendChat],
-  );
+  const handleSend = (content: string) => {
+    const send = sendChat$.value;
+    if (!send) return;
+    send(content.trim());
+  };
 
   // Don't render if no sendChat (not in multiplayer context)
   if (!sendChat) return null;

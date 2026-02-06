@@ -12,6 +12,7 @@ import type { GameEvent } from "../events/types";
 import type { GameMode } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ModelSettings } from "../agent/types";
+import type { ChatMessageData } from "../partykit/protocol";
 import {
   hasPlayableActions as computeHasPlayableActions,
   hasTreasuresInHand as computeHasTreasuresInHand,
@@ -22,10 +23,17 @@ import { DEFAULT_MODEL_SETTINGS } from "../agent/types";
 export const gameState$ = signal<GameState | null>(null);
 export const events$ = signal<GameEvent[]>([]);
 export const gameMode$ = signal<GameMode>("engine");
+export const localPlayerId$ = signal<string | null>(null);
 export const isProcessing$ = signal(false);
 export const isLoading$ = signal(false);
 export const playerStrategies$ = signal<PlayerStrategyData>({});
 export const modelSettings$ = signal<ModelSettings>(DEFAULT_MODEL_SETTINGS);
+
+// Multiplayer-specific signals (defaults match single-player: no chat/spectators)
+export const chatMessages$ = signal<ChatMessageData[]>([]);
+export const sendChat$ = signal<((message: string) => void) | null>(null);
+export const spectatorCount$ = signal(0);
+export const isSpectator$ = signal(false);
 
 // Derived signals (match the same logic as GameContext useMemo calls)
 export const hasPlayableActions$ = computed(() =>

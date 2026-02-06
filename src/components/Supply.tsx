@@ -8,7 +8,7 @@ import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
 import { canSkipDecision } from "../lib/decision-utils";
 import { useAnimationSafe } from "../animation";
-import { useGame } from "../context/hooks";
+import { gameMode$, localPlayerId$ } from "../context/game-signals";
 import { getPlayerPerspective } from "../lib/player-utils";
 import { isDecisionChoice } from "../types/pending-choice";
 
@@ -328,15 +328,14 @@ export function Supply({
   complexDecisionData,
 }: SupplyProps) {
   const animation = useAnimationSafe();
-  const { gameMode, localPlayerId: contextLocalPlayerId } = useGame();
   const supplyRef = useRef<HTMLDivElement>(null);
   const trashRef = useRef<HTMLDivElement>(null);
 
-  // Derive local player ID from context and state
+  // Derive local player ID from signals and state
   const { localPlayerId } = getPlayerPerspective(
     state,
-    gameMode,
-    contextLocalPlayerId,
+    gameMode$.value,
+    localPlayerId$.value,
   );
 
   // Register supply and trash as animation zones
