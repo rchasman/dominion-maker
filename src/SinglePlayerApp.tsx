@@ -6,7 +6,7 @@
 
 import { lazy, Suspense, useEffect } from "preact/compat";
 import { GameProvider } from "./context/GameContext";
-import { useGame } from "./context/hooks";
+import { gameState$, isLoading$, startGame$ } from "./context/game-signals";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { PartyKitSync } from "./partykit/PartyKitSync";
 import { STORAGE_KEYS } from "./context/storage-utils";
@@ -38,14 +38,16 @@ export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
 }
 
 function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
-  const { gameState, isLoading, startGame } = useGame();
+  const gameState = gameState$.value;
+  const isLoading = isLoading$.value;
+  const startGame = startGame$.value;
 
   if (isLoading) {
     return <BoardSkeleton />;
   }
 
   if (!gameState) {
-    startGame();
+    startGame?.();
     return null;
   }
 
