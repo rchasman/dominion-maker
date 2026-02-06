@@ -2,8 +2,11 @@ import type { GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
-import { useLLMLogs } from "../../context/hooks";
-import { spectatorCount$, isSpectator$ } from "../../context/game-signals";
+import {
+  llmLogs$,
+  spectatorCount$,
+  isSpectator$,
+} from "../../context/game-signals";
 import { getPlayerColor } from "../../lib/board-utils";
 import { getSubPhase } from "../../lib/state-helpers";
 import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
@@ -167,7 +170,7 @@ export function GameSidebar({
   onBackToHome,
   onRequestUndo,
 }: GameSidebarProps) {
-  const { llmLogs } = useLLMLogs();
+  const llmLogs = llmLogs$.value;
   const spectatorCount = spectatorCount$.value;
   const isSpectator = isSpectator$.value;
 

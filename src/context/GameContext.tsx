@@ -23,7 +23,6 @@ import { useStrategyAnalysis } from "./use-strategy-analysis";
 import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
-import { LLMLogsContext } from "./GameContextTypes";
 import {
   gameMode$,
   isProcessing$,
@@ -171,12 +170,5 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
 
   useAutoPhaseAdvance(engineRef);
 
-  // LLM logs still need a context for the sidebar component
-  const llmLogs = llmLogs$.value;
-
-  return (
-    <LLMLogsContext.Provider value={llmLogs}>
-      {children}
-    </LLMLogsContext.Provider>
-  );
+  return <>{children}</>;
 }

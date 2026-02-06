@@ -8,7 +8,6 @@ import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
-import { BoardWithProviders } from "../Board/BoardWithProviders";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
@@ -99,25 +98,23 @@ export function GameRoom({
 
     return (
       <AnimationProvider>
-        <BoardWithProviders llmLogs={[]}>
-          <Board onBackToHome={handleResign} />
-          {isSpectator && <SpectatorBadge />}
-          {disconnectedOpponent && (
-            <DisconnectModal
-              playerName={disconnectedOpponent.playerName}
-              onLeave={handleResign}
-            />
-          )}
-          {game.gameEndReason && !isSinglePlayer && (
-            <GameOverNotification
-              message={game.gameEndReason}
-              onClose={() => {
-                localStorage.removeItem("dominion_active_game");
-                onBack();
-              }}
-            />
-          )}
-        </BoardWithProviders>
+        <Board onBackToHome={handleResign} />
+        {isSpectator && <SpectatorBadge />}
+        {disconnectedOpponent && (
+          <DisconnectModal
+            playerName={disconnectedOpponent.playerName}
+            onLeave={handleResign}
+          />
+        )}
+        {game.gameEndReason && !isSinglePlayer && (
+          <GameOverNotification
+            message={game.gameEndReason}
+            onClose={() => {
+              localStorage.removeItem("dominion_active_game");
+              onBack();
+            }}
+          />
+        )}
       </AnimationProvider>
     );
   }
