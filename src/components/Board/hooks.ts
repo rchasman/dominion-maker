@@ -1,5 +1,4 @@
 import { useState, useCallback, type StateUpdater } from "preact/hooks";
-import { useGame } from "../../context/hooks";
 import { useBuyCardLogic } from "../../hooks/useBuyCardLogic";
 import type { CardName, GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
@@ -9,6 +8,37 @@ import type { ModelSettings } from "../../agent/types";
 import type { DecisionChoice } from "../../events/types";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { uiLogger } from "../../lib/logger";
+import {
+  gameState$,
+  events$,
+  playAction$,
+  playTreasure$,
+  unplayTreasure$,
+  buyCard$,
+  endPhase$,
+  playAllTreasures$,
+  submitDecision$,
+  revealReaction$,
+  declineReaction$,
+  hasPlayableActions$,
+  hasTreasuresInHand$,
+  gameMode$,
+  setGameMode$,
+  startGame$,
+  isProcessing$,
+  modelSettings$,
+  setModelSettings$,
+  requestUndo$,
+  getStateAtEvent$,
+  playerStrategies$,
+  localPlayerId$,
+  isSpectator$,
+} from "../../context/game-signals";
+
+const uninitializedCommand = (): CommandResult => ({
+  ok: false,
+  error: "Game not initialized",
+});
 
 interface TypedGameContext {
   gameState: GameState | null;
@@ -38,33 +68,35 @@ interface TypedGameContext {
 }
 
 export function useTypedGame(): TypedGameContext {
-  const context = useGame();
-
   return {
-    gameState: context.gameState,
-    events: context.events,
-    playAction: context.playAction,
-    playTreasure: context.playTreasure,
-    unplayTreasure: context.unplayTreasure,
-    buyCard: context.buyCard,
-    endPhase: context.endPhase,
-    playAllTreasures: context.playAllTreasures,
-    submitDecision: context.submitDecision,
-    revealReaction: context.revealReaction,
-    declineReaction: context.declineReaction,
-    hasPlayableActions: context.hasPlayableActions,
-    hasTreasuresInHand: context.hasTreasuresInHand,
-    gameMode: context.gameMode,
-    setGameMode: context.setGameMode,
-    startGame: context.startGame,
-    isProcessing: context.isProcessing,
-    modelSettings: context.modelSettings,
-    setModelSettings: context.setModelSettings,
-    requestUndo: context.requestUndo,
-    getStateAtEvent: context.getStateAtEvent,
-    playerStrategies: context.playerStrategies,
-    localPlayerId: context.localPlayerId,
-    isSpectator: context.isSpectator,
+    gameState: gameState$.value,
+    events: events$.value,
+    playAction: playAction$.value ?? uninitializedCommand,
+    playTreasure: playTreasure$.value ?? uninitializedCommand,
+    unplayTreasure: unplayTreasure$.value ?? uninitializedCommand,
+    buyCard: buyCard$.value ?? uninitializedCommand,
+    endPhase: endPhase$.value ?? uninitializedCommand,
+    playAllTreasures: playAllTreasures$.value ?? uninitializedCommand,
+    submitDecision: submitDecision$.value ?? uninitializedCommand,
+    revealReaction: revealReaction$.value ?? uninitializedCommand,
+    declineReaction: declineReaction$.value ?? uninitializedCommand,
+    hasPlayableActions: hasPlayableActions$.value,
+    hasTreasuresInHand: hasTreasuresInHand$.value,
+    gameMode: gameMode$.value,
+    setGameMode: setGameMode$.value ?? undefined,
+    startGame: startGame$.value ?? undefined,
+    isProcessing: isProcessing$.value,
+    modelSettings: modelSettings$.value,
+    setModelSettings: setModelSettings$.value ?? undefined,
+    requestUndo: requestUndo$.value ?? (() => {}),
+    getStateAtEvent:
+      getStateAtEvent$.value ??
+      (() => {
+        throw new Error("getStateAtEvent not initialized");
+      }),
+    playerStrategies: playerStrategies$.value,
+    localPlayerId: localPlayerId$.value,
+    isSpectator: isSpectator$.value,
   };
 }
 
@@ -167,40 +199,32 @@ interface CardActionsHook {
 }
 
 export function useCardActions(): CardActionsHook {
-  const { playAction, playTreasure, unplayTreasure } = useTypedGame();
+  const handlePlayAction = useCallback((card: CardName) => {
+    const fn = playAction$.value ?? uninitializedCommand;
+    const result = fn(card);
+    if (!result.ok) {
+      uiLogger.error("Failed to play action:", result.error);
+    }
+    return result;
+  }, []);
 
-  const handlePlayAction = useCallback(
-    (card: CardName) => {
-      const result = playAction(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play action:", result.error);
-      }
-      return result;
-    },
-    [playAction],
-  );
+  const handlePlayTreasure = useCallback((card: CardName) => {
+    const fn = playTreasure$.value ?? uninitializedCommand;
+    const result = fn(card);
+    if (!result.ok) {
+      uiLogger.error("Failed to play treasure:", result.error);
+    }
+    return result;
+  }, []);
 
-  const handlePlayTreasure = useCallback(
-    (card: CardName) => {
-      const result = playTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to play treasure:", result.error);
-      }
-      return result;
-    },
-    [playTreasure],
-  );
-
-  const handleUnplayTreasure = useCallback(
-    (card: CardName) => {
-      const result = unplayTreasure(card);
-      if (!result.ok) {
-        uiLogger.error("Failed to unplay treasure:", result.error);
-      }
-      return result;
-    },
-    [unplayTreasure],
-  );
+  const handleUnplayTreasure = useCallback((card: CardName) => {
+    const fn = unplayTreasure$.value ?? uninitializedCommand;
+    const result = fn(card);
+    if (!result.ok) {
+      uiLogger.error("Failed to unplay treasure:", result.error);
+    }
+    return result;
+  }, []);
 
   return {
     handlePlayAction,
@@ -215,11 +239,9 @@ export function useCardActions(): CardActionsHook {
  * Board (single-player) and Lobby (multiplayer) modes.
  */
 export function useBuyCardHandler(): (card: CardName) => CommandResult {
-  const { buyCard, submitDecision, gameState } = useTypedGame();
-
   return useBuyCardLogic({
-    buyCard,
-    submitDecision,
-    pendingChoice: gameState?.pendingChoice,
+    buyCard: buyCard$.value ?? uninitializedCommand,
+    submitDecision: submitDecision$.value ?? uninitializedCommand,
+    pendingChoice: gameState$.value?.pendingChoice,
   });
 }
