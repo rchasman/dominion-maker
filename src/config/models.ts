@@ -11,7 +11,7 @@ export interface ModelConfig {
   maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)
 }
 
-export const MODELS: ModelConfig[] = [
+export const MODELS = [
   {
     id: "claude-haiku",
     fullName: "anthropic/claude-haiku-4.5",
@@ -159,29 +159,11 @@ export const MODELS: ModelConfig[] = [
     outputPrice: 0.34,
     speed: 412,
   },
-];
+] as const satisfies readonly ModelConfig[];
 
-// Derived exports
-export const MODEL_IDS = [
-  "claude-haiku",
-  "claude-sonnet",
-  "claude-opus",
-  "gpt-4o-mini",
-  "gpt-4o",
-  "gpt-5.2",
-  "gpt-5.2-pro",
-  "gpt-oss-20b",
-  "gpt-oss-120b",
-  "gemini-2.5-flash-lite",
-  "gemini-3-flash",
-  "ministral-3b",
-  "grok-4-fast",
-  "grok-code-fast-1",
-  "cerebras-llama-3.3-70b",
-  "groq-llama-3.3-70b",
-  "groq-llama-4-scout",
-] as const;
-export type ModelProvider = (typeof MODEL_IDS)[number];
+// Derived exports — MODEL_IDS and ModelProvider stay in sync with MODELS automatically
+export type ModelProvider = (typeof MODELS)[number]["id"];
+export const MODEL_IDS: ModelProvider[] = MODELS.map(m => m.id);
 
 export const MODEL_MAP: Record<string, string> = Object.fromEntries(
   MODELS.map(m => [m.id, m.fullName]),
