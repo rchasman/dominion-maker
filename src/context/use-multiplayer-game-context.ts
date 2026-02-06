@@ -17,6 +17,7 @@ import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { GameMode } from "../types/game-mode";
+import type { PendingUndoRequest } from "../engine/engine";
 import {
   hasPlayableActions as computeHasPlayableActions,
   hasTreasuresInHand as computeHasTreasuresInHand,
@@ -25,11 +26,38 @@ import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
 import { useAutoPhaseAdvanceMultiplayer } from "./use-ai-automation";
 import {
+  gameState$,
+  events$,
+  gameMode$,
+  isProcessing$,
+  isLoading$,
+  modelSettings$,
+  playerStrategies$,
+  strategy$,
   chatMessages$,
   sendChat$,
   localPlayerId$,
+  localPlayerName$,
   spectatorCount$,
   isSpectator$,
+  players$,
+  playAction$,
+  playTreasure$,
+  unplayTreasure$,
+  playAllTreasures$,
+  buyCard$,
+  endPhase$,
+  submitDecision$,
+  revealReaction$,
+  declineReaction$,
+  requestUndo$,
+  approveUndo$,
+  denyUndo$,
+  pendingUndo$,
+  startGame$,
+  setGameMode$,
+  setModelSettings$,
+  getStateAtEvent$,
 } from "./game-signals";
 
 interface MultiplayerGameState {
@@ -54,6 +82,9 @@ interface MultiplayerGameState {
   endPhase: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
   requestUndo: (toEventId: string) => void;
+  approveUndo: (requestId: string) => void;
+  denyUndo: (requestId: string) => void;
+  pendingUndo: PendingUndoRequest | null;
   getStateAtEvent: (eventId: string) => GameState;
   startGame: () => void;
   sendChat: (message: string) => void;
@@ -98,10 +129,48 @@ export function useMultiplayerGameContext({
     setPlayerStrategies,
   );
 
-  // Mirror multiplayer-specific values into signals
+  // Mirror all values into signals so consumers can read from signals directly
+  useEffect(() => {
+    gameState$.value = game.gameState;
+  }, [game.gameState]);
+  useEffect(() => {
+    events$.value = game.events;
+  }, [game.events]);
+  useEffect(() => {
+    gameMode$.value = isSinglePlayer ? gameMode : "multiplayer";
+  }, [isSinglePlayer, gameMode]);
+  useEffect(() => {
+    isProcessing$.value = !game.isConnected;
+  }, [game.isConnected]);
+  useEffect(() => {
+    isLoading$.value = !game.isJoined;
+  }, [game.isJoined]);
+  useEffect(() => {
+    modelSettings$.value = DEFAULT_MODEL_SETTINGS;
+  }, []);
+  useEffect(() => {
+    playerStrategies$.value = playerStrategies;
+  }, [playerStrategies]);
+  useEffect(() => {
+    strategy$.value = {
+      getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
+    } as never;
+  }, [isSinglePlayer, gameMode]);
   useEffect(() => {
     localPlayerId$.value = game.playerId;
   }, [game.playerId]);
+  useEffect(() => {
+    localPlayerName$.value = playerName;
+  }, [playerName]);
+  useEffect(() => {
+    isSpectator$.value = isSpectator;
+  }, [isSpectator]);
+  useEffect(() => {
+    spectatorCount$.value = game.spectatorCount;
+  }, [game.spectatorCount]);
+  useEffect(() => {
+    players$.value = game.players.map(p => ({ id: p.playerId, name: p.name }));
+  }, [game.players]);
   useEffect(() => {
     chatMessages$.value = game.chatMessages;
   }, [game.chatMessages]);
@@ -118,12 +187,59 @@ export function useMultiplayerGameContext({
       sendChat$.value = null;
     };
   }, [game.sendChat, playerName]);
+
+  // Mirror action callbacks into signals
   useEffect(() => {
-    spectatorCount$.value = game.spectatorCount;
-  }, [game.spectatorCount]);
+    playAction$.value = game.playAction;
+  }, [game.playAction]);
   useEffect(() => {
-    isSpectator$.value = isSpectator;
-  }, [isSpectator]);
+    playTreasure$.value = game.playTreasure;
+  }, [game.playTreasure]);
+  useEffect(() => {
+    unplayTreasure$.value = unplayTreasure;
+  }, [unplayTreasure]);
+  useEffect(() => {
+    playAllTreasures$.value = game.playAllTreasures;
+  }, [game.playAllTreasures]);
+  useEffect(() => {
+    buyCard$.value = game.buyCard;
+  }, [game.buyCard]);
+  useEffect(() => {
+    endPhase$.value = game.endPhase;
+  }, [game.endPhase]);
+  useEffect(() => {
+    submitDecision$.value = game.submitDecision;
+  }, [game.submitDecision]);
+  useEffect(() => {
+    revealReaction$.value = () => ({ ok: false, error: "Not implemented" });
+  }, []);
+  useEffect(() => {
+    declineReaction$.value = () => ({ ok: false, error: "Not implemented" });
+  }, []);
+  useEffect(() => {
+    requestUndo$.value = game.requestUndo;
+  }, [game.requestUndo]);
+  useEffect(() => {
+    approveUndo$.value = game.approveUndo ?? null;
+  }, [game.approveUndo]);
+  useEffect(() => {
+    denyUndo$.value = game.denyUndo ?? null;
+  }, [game.denyUndo]);
+  useEffect(() => {
+    pendingUndo$.value = game.pendingUndo ?? null;
+  }, [game.pendingUndo]);
+  useEffect(() => {
+    startGame$.value = () => game.startGame();
+  }, [game.startGame]);
+  useEffect(() => {
+    setGameMode$.value = handleGameModeChange;
+  }, [handleGameModeChange]);
+  useEffect(() => {
+    setModelSettings$.value = () => {};
+  }, []);
+  useEffect(() => {
+    getStateAtEvent$.value = game.getStateAtEvent;
+  }, [game.getStateAtEvent]);
 
   // Auto-skip action phase when no playable actions - shared hook
   useAutoPhaseAdvanceMultiplayer(

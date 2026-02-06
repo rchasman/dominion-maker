@@ -38,6 +38,21 @@ import {
   isLoading$,
   playerStrategies$,
   modelSettings$,
+  strategy$,
+  playAction$,
+  playTreasure$,
+  unplayTreasure$,
+  playAllTreasures$,
+  buyCard$,
+  endPhase$,
+  submitDecision$,
+  revealReaction$,
+  declineReaction$,
+  requestUndo$,
+  getStateAtEvent$,
+  startGame$,
+  setGameMode$,
+  setModelSettings$,
 } from "./game-signals";
 
 import type { PlayerStrategyData } from "../types/player-strategy";
@@ -109,7 +124,7 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     playerStrategies,
   });
 
-  // Mirror useState -> signals (Phase 1: additive only, no consumer changes)
+  // Mirror useState -> signals so consumers can read from signals directly
   useEffect(() => {
     gameState$.value = gameState;
   }, [gameState]);
@@ -237,6 +252,53 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     setEvents,
     setGameState,
   });
+
+  // Mirror strategy and action callbacks -> signals
+  useEffect(() => {
+    strategy$.value = strategy;
+  }, [strategy]);
+  useEffect(() => {
+    setGameMode$.value = setGameMode;
+  }, [setGameMode]);
+  useEffect(() => {
+    setModelSettings$.value = setModelSettings;
+  }, [setModelSettings]);
+  useEffect(() => {
+    startGame$.value = startGame;
+  }, [startGame]);
+  useEffect(() => {
+    playAction$.value = playAction;
+  }, [playAction]);
+  useEffect(() => {
+    playTreasure$.value = playTreasure;
+  }, [playTreasure]);
+  useEffect(() => {
+    unplayTreasure$.value = unplayTreasure;
+  }, [unplayTreasure]);
+  useEffect(() => {
+    playAllTreasures$.value = playAllTreasures;
+  }, [playAllTreasures]);
+  useEffect(() => {
+    buyCard$.value = buyCard;
+  }, [buyCard]);
+  useEffect(() => {
+    endPhase$.value = endPhase;
+  }, [endPhase]);
+  useEffect(() => {
+    submitDecision$.value = submitDecision;
+  }, [submitDecision]);
+  useEffect(() => {
+    revealReaction$.value = revealReaction;
+  }, [revealReaction]);
+  useEffect(() => {
+    declineReaction$.value = declineReaction;
+  }, [declineReaction]);
+  useEffect(() => {
+    requestUndo$.value = requestUndo;
+  }, [requestUndo]);
+  useEffect(() => {
+    getStateAtEvent$.value = getStateAtEvent;
+  }, [getStateAtEvent]);
 
   const contextValue: GameContextValue = useMemo(
     () => ({
