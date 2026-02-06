@@ -253,6 +253,7 @@ export function Card({
         onMouseMove={handleMouseMove}
         style={{
           position: "relative",
+          aspectRatio: "5 / 8",
           cursor,
           opacity,
           transform,
