@@ -23,6 +23,7 @@ import {
   executeEndPhase,
   executeSubmitDecision,
   executeUndo,
+  syncFromEngine,
   getStateAtEvent as getStateAtEventUtil,
 } from "./game-actions";
 
@@ -89,8 +90,7 @@ export function useGameActions(
 
       const result = executePlayAction(engine, card);
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -106,8 +106,7 @@ export function useGameActions(
 
       const result = executePlayTreasure(engine, card);
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -123,8 +122,7 @@ export function useGameActions(
 
       const result = executeUnplayTreasure(engine, card);
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -138,8 +136,7 @@ export function useGameActions(
     }
 
     const result = executePlayAllTreasures(engine, gameState);
-    setEvents([...engine.eventLog]);
-    setGameState(engine.state);
+    syncFromEngine(engine, setEvents, setGameState);
     return result;
   }, [engineRef, gameState, setEvents, setGameState]);
 
@@ -152,8 +149,7 @@ export function useGameActions(
 
       const result = executeBuyCard(engine, card);
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -168,8 +164,7 @@ export function useGameActions(
 
     const result = executeEndPhase(engine);
     if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
+      syncFromEngine(engine, setEvents, setGameState);
     }
     return result;
   }, [engineRef, setEvents, setGameState]);
@@ -183,8 +178,7 @@ export function useGameActions(
 
       const result = executeSubmitDecision(engine, choice);
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -201,8 +195,7 @@ export function useGameActions(
       executeUndo(engine, toEventId);
       const eventsAfterUndo = engine.eventLog.length;
       const stateAfterUndo = engine.state;
-      setEvents([...engine.eventLog]);
-      setGameState(stateAfterUndo);
+      syncFromEngine(engine, setEvents, setGameState);
 
       setLLMLogs(prev => filterLogsAfterUndo(prev, eventsAfterUndo));
 
@@ -257,8 +250,7 @@ export function useGameActions(
       );
 
       if (result.ok) {
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }
       return result;
     },
@@ -282,8 +274,7 @@ export function useGameActions(
     );
 
     if (result.ok) {
-      setEvents([...engine.eventLog]);
-      setGameState(engine.state);
+      syncFromEngine(engine, setEvents, setGameState);
     }
     return result;
   }, [engineRef, gameState, setEvents, setGameState]);

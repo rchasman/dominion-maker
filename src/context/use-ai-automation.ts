@@ -13,6 +13,7 @@ import type { Zone } from "../animation/types";
 import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
 import { TIMING } from "./game-constants";
+import { syncFromEngine } from "./game-actions";
 import { useAnimationSafe } from "../animation";
 import { hasPlayableActions as computeHasPlayableActions } from "./derived-state";
 import { isDecisionChoice, isReactionChoice } from "../types/pending-choice";
@@ -205,8 +206,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
           // Check if aborted before final state update
           if (signal.aborted) return;
 
-          setEvents([...engine.eventLog]);
-          setGameState(engine.state);
+          syncFromEngine(engine, setEvents, setGameState);
         } catch (error: unknown) {
           uiLogger.error("AI turn error", { error });
         } finally {
@@ -311,8 +311,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
           // Check if aborted before state update
           if (signal.aborted) return;
 
-          setEvents([...engine.eventLog]);
-          setGameState(engine.state);
+          syncFromEngine(engine, setEvents, setGameState);
         } catch (error: unknown) {
           uiLogger.error("AI pending decision error", { error });
         } finally {
@@ -359,8 +358,7 @@ export function useAutoPhaseAdvance(
       const timer = setTimeout(() => {
         uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", playerId: "human" }, "human");
-        setEvents([...engine.eventLog]);
-        setGameState(engine.state);
+        syncFromEngine(engine, setEvents, setGameState);
       }, TIMING.AUTO_ADVANCE_DELAY);
 
       return () => {
