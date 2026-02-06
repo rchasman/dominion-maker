@@ -1,25 +1,19 @@
 /**
- * Single-Player Game Context - Event-Sourced using DominionEngine
+ * Single-Player Game Provider - Event-Sourced using DominionEngine
  *
- * Uses the same event-sourced engine as multiplayer for consistency.
- * Strategies (engine/llm/hybrid) work with the event system.
+ * Initializes the engine, runs effects, and wires up signals.
+ * No useState for game state - signals are the primary state owner.
  */
 
-import { useState, useEffect, useRef, useMemo } from "preact/hooks";
+import { useEffect, useRef, useMemo } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import type { GameState } from "../types/game-state";
 import type { DominionEngine } from "../engine";
-import type { GameEvent } from "../events/types";
-import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { LLMLogEntry } from "../components/LLMLog";
+import type { GameMode, GameStrategy } from "../types/game-mode";
 import { abortOngoingConsensus, type ModelSettings } from "../agent/game-agent";
 import { EngineStrategy } from "../strategies/engine-strategy";
 import { MakerStrategy } from "../strategies/maker-strategy";
 import { useGameActions } from "./use-game-actions";
-import {
-  hasPlayableActions as computeHasPlayableActions,
-  hasTreasuresInHand as computeHasTreasuresInHand,
-} from "./derived-state";
 import {
   useAITurnAutomation,
   useAIDecisionAutomation,
@@ -29,16 +23,13 @@ import { useStrategyAnalysis } from "./use-strategy-analysis";
 import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
-import { BoardWithProviders } from "../components/Board/BoardWithProviders";
+import { LLMLogsContext } from "./GameContextTypes";
 import {
-  gameState$,
-  events$,
   gameMode$,
   isProcessing$,
-  isLoading$,
-  playerStrategies$,
   modelSettings$,
   strategy$,
+  llmLogs$,
   playAction$,
   playTreasure$,
   unplayTreasure$,
@@ -54,14 +45,6 @@ import {
   setGameMode$,
   setModelSettings$,
 } from "./game-signals";
-
-import type { PlayerStrategyData } from "../types/player-strategy";
-
-export {
-  GameContext,
-  LLMLogsContext,
-  type GameContextValue,
-} from "./GameContextTypes";
 
 /**
  * Create LLM log entry with metadata
@@ -83,76 +66,34 @@ function createLLMLogEntry(
 
 export function GameProvider({ children }: { children: ComponentChildren }) {
   const storage = useGameStorage();
-  const engineRef = useRef<DominionEngine | null>(null);
+  const engineRef = useRef<DominionEngine | null>(storage.engineRef);
   const setEngine = (engine: DominionEngine | null) => {
     engineRef.current = engine;
   };
 
-  const [gameState, setGameState] = useState<GameState | null>(
-    storage.gameState,
-  );
-  const [events, setEvents] = useState<GameEvent[]>(storage.events);
-  const [gameMode, setGameModeInternal] = useState<GameMode>(storage.gameMode);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [llmLogs, setLLMLogs] = useState<LLMLogEntry[]>(storage.llmLogs);
-  const [modelSettings, setModelSettings] = useState<ModelSettings>(
-    storage.modelSettings,
-  );
-  const [playerStrategies, setPlayerStrategies] = useState<PlayerStrategyData>(
-    storage.playerStrategies,
-  );
+  // Read signal values for reactive effects
+  const gameMode = gameMode$.value;
+  const currentModelSettings = modelSettings$.value;
 
   const setGameMode = (mode: GameMode) => {
     abortOngoingConsensus();
-    setIsProcessing(false);
-    setGameModeInternal(mode);
+    isProcessing$.value = false;
+    gameMode$.value = mode;
   };
 
-  // Sync engine ref with storage on mount
-  useEffect(() => {
-    if (storage.engineRef) {
-      engineRef.current = storage.engineRef;
-    }
-  }, [storage.engineRef, engineRef]);
+  const setModelSettingsFn = (settings: Partial<ModelSettings>) => {
+    modelSettings$.value = { ...modelSettings$.value, ...settings };
+  };
 
-  // Sync to localStorage
-  useStorageSync({
-    events,
-    gameMode,
-    llmLogs,
-    modelSettings,
-    playerStrategies,
-  });
-
-  // Mirror useState -> signals so consumers can read from signals directly
-  useEffect(() => {
-    gameState$.value = gameState;
-  }, [gameState]);
-  useEffect(() => {
-    events$.value = events;
-  }, [events]);
-  useEffect(() => {
-    gameMode$.value = gameMode;
-  }, [gameMode]);
-  useEffect(() => {
-    isProcessing$.value = isProcessing;
-  }, [isProcessing]);
-  useEffect(() => {
-    isLoading$.value = storage.isLoading;
-  }, [storage.isLoading]);
-  useEffect(() => {
-    playerStrategies$.value = playerStrategies;
-  }, [playerStrategies]);
-  useEffect(() => {
-    modelSettings$.value = modelSettings;
-  }, [modelSettings]);
+  // Sync to localStorage (reads from signals)
+  useStorageSync();
 
   // LLM Logger - stable reference that reads current engine when called
   const llmLoggerRef = useRef(
     (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
       const engine = engineRef.current;
       const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
-      setLLMLogs(prev => [...prev, logEntry]);
+      llmLogs$.value = [...llmLogs$.value, logEntry];
     },
   );
 
@@ -162,8 +103,8 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
       return new EngineStrategy();
     }
     // Create MakerStrategy without logger initially
-    return new MakerStrategy("openai", undefined, modelSettings);
-  }, [gameMode, modelSettings]);
+    return new MakerStrategy("openai", undefined, currentModelSettings);
+  }, [gameMode, currentModelSettings]);
 
   // Set logger on strategy after creation (outside of render)
   useEffect(() => {
@@ -175,35 +116,18 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     }
   }, [strategy]);
 
+  // Write strategy and config actions to signals
+  strategy$.value = strategy;
+  setGameMode$.value = setGameMode;
+  setModelSettings$.value = setModelSettingsFn;
+
   // Strategy analysis
-  useStrategyAnalysis(
-    engineRef,
-    strategy,
-    playerStrategies,
-    setPlayerStrategies,
-  );
-
-  // Derived state
-  const hasPlayableActionsValue = useMemo(
-    () => computeHasPlayableActions(gameState),
-    [gameState],
-  );
-
-  const hasTreasuresInHandValue = useMemo(
-    () => computeHasTreasuresInHand(gameState),
-    [gameState],
-  );
+  useStrategyAnalysis(engineRef, strategy);
 
   // Start new game
-  const startGame = useStartGame(gameMode, {
-    setEngine,
-    setEvents,
-    setGameState,
-    setLLMLogs,
-    setPlayerStrategies,
-  });
+  const startGame = useStartGame(setEngine);
 
-  // Game actions
+  // Game actions (writes to signals directly)
   const {
     playAction,
     playTreasure,
@@ -216,148 +140,43 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     declineReaction,
     requestUndo,
     getStateAtEvent,
-  } = useGameActions(engineRef, gameState, {
-    setEvents,
-    setGameState,
-    setLLMLogs,
-    strategy,
-    playerStrategies,
-    setPlayerStrategies,
-  });
+  } = useGameActions(engineRef, strategy);
 
-  // AI Automation
+  // Write action callbacks to signals
+  startGame$.value = startGame;
+  playAction$.value = playAction;
+  playTreasure$.value = playTreasure;
+  unplayTreasure$.value = unplayTreasure;
+  playAllTreasures$.value = playAllTreasures;
+  buyCard$.value = buyCard;
+  endPhase$.value = endPhase;
+  submitDecision$.value = submitDecision;
+  revealReaction$.value = revealReaction;
+  declineReaction$.value = declineReaction;
+  requestUndo$.value = requestUndo;
+  getStateAtEvent$.value = getStateAtEvent;
+
+  // AI Automation (reads from signals directly)
   useAITurnAutomation({
-    gameState,
-    isProcessing,
     gameMode,
     strategy,
     engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
   });
 
   useAIDecisionAutomation({
-    gameState,
-    isProcessing,
     gameMode,
     strategy,
     engineRef,
-    setIsProcessing,
-    setEvents,
-    setGameState,
   });
 
-  useAutoPhaseAdvance(gameState, isProcessing, engineRef, {
-    setEvents,
-    setGameState,
-  });
+  useAutoPhaseAdvance(engineRef);
 
-  // Mirror strategy and action callbacks -> signals
-  useEffect(() => {
-    strategy$.value = strategy;
-  }, [strategy]);
-  useEffect(() => {
-    setGameMode$.value = setGameMode;
-  }, [setGameMode]);
-  useEffect(() => {
-    setModelSettings$.value = setModelSettings;
-  }, [setModelSettings]);
-  useEffect(() => {
-    startGame$.value = startGame;
-  }, [startGame]);
-  useEffect(() => {
-    playAction$.value = playAction;
-  }, [playAction]);
-  useEffect(() => {
-    playTreasure$.value = playTreasure;
-  }, [playTreasure]);
-  useEffect(() => {
-    unplayTreasure$.value = unplayTreasure;
-  }, [unplayTreasure]);
-  useEffect(() => {
-    playAllTreasures$.value = playAllTreasures;
-  }, [playAllTreasures]);
-  useEffect(() => {
-    buyCard$.value = buyCard;
-  }, [buyCard]);
-  useEffect(() => {
-    endPhase$.value = endPhase;
-  }, [endPhase]);
-  useEffect(() => {
-    submitDecision$.value = submitDecision;
-  }, [submitDecision]);
-  useEffect(() => {
-    revealReaction$.value = revealReaction;
-  }, [revealReaction]);
-  useEffect(() => {
-    declineReaction$.value = declineReaction;
-  }, [declineReaction]);
-  useEffect(() => {
-    requestUndo$.value = requestUndo;
-  }, [requestUndo]);
-  useEffect(() => {
-    getStateAtEvent$.value = getStateAtEvent;
-  }, [getStateAtEvent]);
-
-  const contextValue: GameContextValue = useMemo(
-    () => ({
-      gameState,
-      events,
-      gameMode,
-      isProcessing,
-      isLoading: storage.isLoading,
-      modelSettings,
-      playerStrategies,
-      hasPlayableActions: hasPlayableActionsValue,
-      hasTreasuresInHand: hasTreasuresInHandValue,
-      strategy,
-      setGameMode,
-      setModelSettings,
-      startGame,
-      playAction,
-      playTreasure,
-      unplayTreasure,
-      playAllTreasures,
-      buyCard,
-      endPhase,
-      submitDecision,
-      revealReaction,
-      declineReaction,
-      requestUndo,
-      getStateAtEvent,
-    }),
-    [
-      gameState,
-      events,
-      gameMode,
-      isProcessing,
-      storage.isLoading,
-      modelSettings,
-      playerStrategies,
-      hasPlayableActionsValue,
-      hasTreasuresInHandValue,
-      strategy,
-      setGameMode,
-      setModelSettings,
-      startGame,
-      playAction,
-      playTreasure,
-      unplayTreasure,
-      playAllTreasures,
-      buyCard,
-      endPhase,
-      submitDecision,
-      revealReaction,
-      declineReaction,
-      requestUndo,
-      getStateAtEvent,
-    ],
-  );
+  // LLM logs still need a context for the sidebar component
+  const llmLogs = llmLogs$.value;
 
   return (
-    <BoardWithProviders gameContext={contextValue} llmLogs={llmLogs}>
+    <LLMLogsContext.Provider value={llmLogs}>
       {children}
-    </BoardWithProviders>
+    </LLMLogsContext.Provider>
   );
 }
