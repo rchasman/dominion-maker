@@ -155,19 +155,6 @@ export function executeSubmitDecision(
 }
 
 /**
- * Sync React state from engine after a command.
- * Copies the event log (to trigger re-render) and snapshots engine.state.
- */
-export function syncFromEngine(
-  engine: DominionEngine,
-  setEvents: (events: GameEvent[]) => void,
-  setGameState: (state: GameState) => void,
-): void {
-  setEvents([...engine.eventLog]);
-  setGameState(engine.state);
-}
-
-/**
  * Undo to a specific event
  */
 export function executeUndo(engine: DominionEngine, toEventId: string): void {

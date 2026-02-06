@@ -1,12 +1,12 @@
 /**
  * Signal atoms for game state
  *
- * These signals mirror the existing useState values from GameProvider and
- * useMultiplayerGameContext. Every field in GameContextValue has a signal
- * so consumers can migrate off useGame() one at a time.
+ * Signals are the PRIMARY state owner for the game. All hooks write directly
+ * to these signals; no useState -> useEffect -> signal mirroring.
  */
 
-import { signal, computed } from "@preact/signals";
+import { signal, computed, batch } from "@preact/signals";
+import type { DominionEngine } from "../engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
@@ -14,6 +14,7 @@ import type { CommandResult } from "../commands/types";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ModelSettings } from "../agent/types";
+import type { LLMLogEntry } from "../components/LLMLog";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
 import {
@@ -52,9 +53,9 @@ export const hasTreasuresInHand$ = computed(() =>
 export const playAction$ = signal<((card: CardName) => CommandResult) | null>(
   null,
 );
-export const playTreasure$ = signal<
-  ((card: CardName) => CommandResult) | null
->(null);
+export const playTreasure$ = signal<((card: CardName) => CommandResult) | null>(
+  null,
+);
 export const unplayTreasure$ = signal<
   ((card: CardName) => CommandResult) | null
 >(null);
@@ -87,9 +88,14 @@ export const setGameMode$ = signal<((mode: GameMode) => void) | null>(null);
 export const setModelSettings$ = signal<
   ((settings: Partial<ModelSettings>) => void) | null
 >(null);
-export const getStateAtEvent$ = signal<
-  ((eventId: string) => GameState) | null
->(null);
+export const getStateAtEvent$ = signal<((eventId: string) => GameState) | null>(
+  null,
+);
+
+// ---------------------------------------------------------------------------
+// LLM logs signal
+// ---------------------------------------------------------------------------
+export const llmLogs$ = signal<LLMLogEntry[]>([]);
 
 // ---------------------------------------------------------------------------
 // Multiplayer-specific signals (defaults match single-player)
@@ -100,3 +106,17 @@ export const spectatorCount$ = signal(0);
 export const isSpectator$ = signal(false);
 export const localPlayerName$ = signal<string | undefined>();
 export const players$ = signal<Array<{ id: string; name: string }>>([]);
+
+// ---------------------------------------------------------------------------
+// Engine → signals sync helper
+// ---------------------------------------------------------------------------
+/**
+ * Atomically sync engine state into signals.
+ * This is the single source of truth for state updates after engine commands.
+ */
+export function syncEngineToSignals(engine: DominionEngine): void {
+  batch(() => {
+    events$.value = [...engine.eventLog];
+    gameState$.value = engine.state;
+  });
+}
