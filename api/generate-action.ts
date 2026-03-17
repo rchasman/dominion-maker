@@ -89,12 +89,11 @@ const ActionSchema = z
         "decline_reaction",
       ])
       .describe("The type of action to perform"),
-    card: CardNameSchema.nullish().describe(
-      "The card to act on (not needed for skip_decision or end_phase)",
+    card: CardNameSchema.nullable().describe(
+      "The card to act on (null for skip_decision or end_phase)",
     ),
     reasoning: z
       .string()
-      .optional()
       .describe("Explanation for why this action was chosen"),
   })
   .describe("A single atomic game action");
