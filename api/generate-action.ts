@@ -1,4 +1,4 @@
-import { generateObject, gateway, wrapLanguageModel } from "ai";
+import { generateText, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
@@ -35,43 +35,6 @@ const DEFAULT_PROVINCE_COUNT = 8;
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
-// Zod schemas for runtime validation (server-side only)
-const CardNameSchema = z.enum([
-  "Copper",
-  "Silver",
-  "Gold",
-  "Estate",
-  "Duchy",
-  "Province",
-  "Curse",
-  "Cellar",
-  "Chapel",
-  "Moat",
-  "Harbinger",
-  "Merchant",
-  "Vassal",
-  "Village",
-  "Workshop",
-  "Bureaucrat",
-  "Gardens",
-  "Militia",
-  "Moneylender",
-  "Poacher",
-  "Remodel",
-  "Smithy",
-  "Throne Room",
-  "Bandit",
-  "Council Room",
-  "Festival",
-  "Laboratory",
-  "Library",
-  "Market",
-  "Mine",
-  "Sentry",
-  "Witch",
-  "Artisan",
-]);
-
 const ActionSchema = z
   .object({
     type: z
@@ -89,14 +52,80 @@ const ActionSchema = z
         "decline_reaction",
       ])
       .describe("The type of action to perform"),
-    card: CardNameSchema.nullable().describe(
-      "The card to act on (null for skip_decision or end_phase)",
-    ),
+    card: z
+      .string()
+      .describe(
+        "The card name to act on, or empty string for skip_decision/end_phase",
+      ),
     reasoning: z
       .string()
       .describe("Explanation for why this action was chosen"),
   })
   .describe("A single atomic game action");
+
+// Repair malformed structured output from models that don't follow the schema
+// Handles: {"answer": "{...}"} wrapping (GLM-5), direct JSON without schema compliance
+type ActionOutput = z.infer<typeof ActionSchema>;
+function tryParseRecord(record: Record<string, unknown>): ActionOutput | null {
+  // Add defaults for fields models often omit
+  if (!("reasoning" in record)) record.reasoning = "";
+  // Coerce reasoning to string — some models return it as a nested object
+  if (typeof record.reasoning === "object" && record.reasoning !== null) {
+    record.reasoning = JSON.stringify(record.reasoning);
+  }
+  if (!("card" in record) || record.card === null) record.card = "";
+  const result = ActionSchema.safeParse(record);
+  return result.success ? result.data : null;
+}
+
+// Extract JSON from model response that may contain prose and markdown code blocks
+function extractJson(rawText: string): string | null {
+  // Try raw text as-is first
+  const trimmed = rawText.trim();
+  if (trimmed.startsWith("{")) return trimmed;
+
+  // Extract from ```json ... ``` or ``` ... ``` code blocks
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (codeBlockMatch?.[1]) return codeBlockMatch[1].trim();
+
+  // Last resort: find first { ... } in the text
+  const braceStart = trimmed.indexOf("{");
+  const braceEnd = trimmed.lastIndexOf("}");
+  if (braceStart !== -1 && braceEnd > braceStart) {
+    return trimmed.slice(braceStart, braceEnd + 1);
+  }
+
+  return null;
+}
+
+// Parse action from raw text, handling model quirks like wrapping or missing fields
+function parseActionFromText(rawText: string): ActionOutput | null {
+  const jsonStr = extractJson(rawText);
+  if (!jsonStr) return null;
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || typeof parsed !== "object") return null;
+
+    // Direct match
+    if ("type" in parsed) return tryParseRecord(parsed);
+
+    // Unwrap {"answer": "..."} wrapping (GLM-5 pattern)
+    if (typeof parsed.answer === "string") {
+      return tryParseRecord(JSON.parse(parsed.answer));
+    }
+
+    // Unwrap any single-key wrapper with a stringified JSON value
+    const values = Object.values(parsed);
+    if (values.length === 1 && typeof values[0] === "string") {
+      return tryParseRecord(JSON.parse(values[0] as string));
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 // Debug logging for deployment
 if (!env.AI_GATEWAY_API_KEY) {
@@ -169,19 +198,13 @@ function getDevToolsMiddleware(
 }
 
 // Get provider options for AI Gateway routing
-function getProviderOptions(providerId: string) {
+function getProviderOptions(providerId: string): Record<string, unknown> {
   const modelConfig = MODELS.find(m => m.id === providerId);
   if (!modelConfig) return {};
 
-  // Cerebras and Groq need explicit provider routing
-  if (modelConfig.provider === "cerebras" || modelConfig.provider === "groq") {
-    return {
-      providerOptions: {
-        gateway: {
-          only: [modelConfig.provider],
-        },
-      },
-    };
+  // Providers hosting third-party models need explicit routing
+  if (modelConfig.provider === "groq") {
+    return { gateway: { only: [modelConfig.provider] } };
   }
 
   return {};
@@ -436,36 +459,47 @@ async function processGenerationRequest(
     ...(humanChoice ? { humanChoice } : {}),
   });
 
-  // Use generateObject with structured output for all models
+  const systemPrompt = buildSystemPrompt(currentState.supply);
+
+  // Universal path: generateText + JSON parse works with every model
   try {
-    const result = await generateObject({
+    const result = await generateText({
       model,
-      schema: ActionSchema,
-      system: buildSystemPrompt(currentState.supply),
+      system: systemPrompt,
       prompt: userMessage,
       maxRetries: 0,
-      ...getProviderOptions(provider),
+      providerOptions: getProviderOptions(provider),
     });
 
-    return res.status(HTTP_OK).json({ action: result.object, strategySummary });
-  } catch (err) {
-    const error = err as Error & { text?: string; response?: unknown };
-    apiLogger.error(`${provider} structured output failed: ${error.message}`);
-
-    if (error.text) {
-      apiLogger.error(
-        `${provider} raw response text: ${error.text.slice(
-          0,
-          ERROR_TEXT_PREVIEW_LONG,
-        )}`,
-      );
+    const jsonStr = extractJson(result.text);
+    if (!jsonStr) {
+      apiLogger.error(`${provider} no JSON found in response (${result.text.length} chars): ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`);
+      return res.status(HTTP_INTERNAL_ERROR).json({
+        error: "No JSON in response",
+        provider,
+        rawText: result.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
+      });
     }
 
+    const parsed = parseActionFromText(result.text);
+    if (parsed) {
+      return res.status(HTTP_OK).json({ action: parsed, strategySummary });
+    }
+
+    // JSON was found but didn't match schema — log both raw and extracted
+    apiLogger.error(`${provider} JSON schema mismatch — extracted: ${jsonStr.slice(0, ERROR_TEXT_PREVIEW_LONG)}`);
     return res.status(HTTP_INTERNAL_ERROR).json({
-      error: "Structured output generation failed",
+      error: "JSON parse failed",
+      provider,
+      rawText: result.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
+    });
+  } catch (err) {
+    const error = err as Error;
+    apiLogger.error(`${provider} generation failed: ${error.message}`);
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: "Generation failed",
       provider,
       message: error.message,
-      rawText: error.text?.slice(0, ERROR_TEXT_PREVIEW_SHORT),
     });
   }
 }

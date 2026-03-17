@@ -46,6 +46,9 @@ ${buildCardDefinitionsTable(supply)}
 
 Task: Given CURRENT STATE and strategic context, determine the single best action. Derive valid actions from turn phases, card types, and current resources.
 
+OUTPUT: Respond with ONLY a JSON object, no other text. Put your reasoning inside the "reasoning" field:
+{"type": "<action_type>", "card": "<card_name or empty string>", "reasoning": "<why>"}
+
 CRITICAL BUY PHASE RULE: Check you.currentTreasuresInHand first. If it contains cards, you MUST output {type: "play_treasure", card: <one from currentTreasuresInHand>}. Only when currentTreasuresInHand is empty can you buy or end phase.
 
 VALIDATION: Only reference cards that exist in your zones:
