@@ -45,8 +45,6 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Grok 4 Fast";
     case "grok-code-fast-1":
       return "Grok Code Fast 1";
-    case "cerebras-llama-3.3-70b":
-      return "Cerebras Llama 3.3 70B";
     case "groq-llama-3.3-70b":
       return "Groq Llama 3.3 70B";
     case "groq-llama-4-scout":
@@ -63,7 +61,6 @@ const getModelDisplayName = (model: ModelProvider): string => {
 };
 
 const providerDisplayNames: Record<string, string> = {
-  cerebras: "Cerebras",
   groq: "Groq",
   together: "Together.ai",
   sambanova: "SambaNova",
@@ -72,12 +69,13 @@ const providerDisplayNames: Record<string, string> = {
   google: "Google",
   mistral: "Mistral",
   xai: "xAI",
+  zhipu: "Zhipu AI",
+  alibaba: "Alibaba",
   meta: "Meta",
   amazon: "Amazon",
 };
 
 const providerOrder = [
-  "cerebras",
   "groq",
   "together",
   "sambanova",

@@ -31,7 +31,6 @@ describe("Model Configuration", () => {
       expect(getProviderColor("google")).toBe("#93c5fd");
       expect(getProviderColor("mistral")).toBe("#fda4af");
       expect(getProviderColor("xai")).toBe("#fbbf24");
-      expect(getProviderColor("cerebras")).toBe("#f472b6");
       expect(getProviderColor("groq")).toBe("#fb923c");
     });
 
@@ -88,8 +87,6 @@ describe("Model Configuration", () => {
       );
       expect(modelWithSpeed?.speed).toBe(496);
 
-      const cerebrasModel = MODELS.find(m => m.id === "cerebras-llama-3.3-70b");
-      expect(cerebrasModel?.speed).toBe(2130);
     });
 
     it("should have maxInstances for specific models", () => {
