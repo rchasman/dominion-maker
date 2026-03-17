@@ -38,28 +38,20 @@ export const MODELS = [
     maxInstances: 3,
   },
   {
-    id: "gpt-4o-mini",
-    fullName: "openai/gpt-4o-mini",
-    provider: "openai",
-    color: "#86efac",
-    inputPrice: 0.15,
-    outputPrice: 0.6,
-  },
-  {
-    id: "gpt-4o",
-    fullName: "openai/gpt-4o",
-    provider: "openai",
-    color: "#86efac",
-    inputPrice: 3.0,
-    outputPrice: 10.0,
-  },
-  {
-    id: "gpt-5.2",
-    fullName: "openai/gpt-5.2",
+    id: "gpt-5.3-chat",
+    fullName: "openai/gpt-5.3-chat",
     provider: "openai",
     color: "#86efac",
     inputPrice: 1.75,
     outputPrice: 14.0,
+  },
+  {
+    id: "gpt-5.1-codex-mini",
+    fullName: "openai/gpt-5.1-codex-mini",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 0.25,
+    outputPrice: 2.0,
   },
   {
     id: "gpt-5.2-pro",
@@ -104,6 +96,14 @@ export const MODELS = [
     outputPrice: 3.0,
   },
   {
+    id: "gemini-3.1-flash-lite",
+    fullName: "google/gemini-3.1-flash-lite-preview",
+    provider: "google",
+    color: "#93c5fd",
+    inputPrice: 0.08,
+    outputPrice: 0.3,
+  },
+  {
     id: "ministral-3b",
     fullName: "mistral/ministral-3b",
     provider: "mistral",
@@ -127,6 +127,26 @@ export const MODELS = [
     color: "#fbbf24",
     inputPrice: 0.2,
     outputPrice: 0.6,
+  },
+
+  // Zhipu AI
+  {
+    id: "glm-5-turbo",
+    fullName: "zai/glm-5-turbo",
+    provider: "zhipu",
+    color: "#34d399",
+    inputPrice: 1.0,
+    outputPrice: 3.2,
+  },
+
+  // Alibaba
+  {
+    id: "qwen-3.5-flash",
+    fullName: "alibaba/qwen3.5-flash",
+    provider: "alibaba",
+    color: "#f9a8d4",
+    inputPrice: 0.1,
+    outputPrice: 0.4,
   },
 
   // Ultra-fast Cerebras models (2000+ tokens/s)

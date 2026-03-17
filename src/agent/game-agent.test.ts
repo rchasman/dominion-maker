@@ -38,7 +38,7 @@ describe("game-agent", () => {
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should have moved to buy phase
@@ -72,7 +72,7 @@ describe("game-agent", () => {
       try {
         await expect(
           advanceGameStateWithConsensus(engine, "player1", {
-            providers: ["gpt-4o-mini"],
+            providers: ["gpt-5.3-chat"],
           }),
         ).rejects.toThrow();
       } finally {
@@ -106,7 +106,7 @@ describe("game-agent", () => {
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
           strategySummary: "Test strategy",
         });
 
@@ -142,7 +142,7 @@ describe("game-agent", () => {
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
           customStrategy: "Always buy Silver",
         });
 
@@ -197,7 +197,7 @@ describe("game-agent", () => {
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should have completed turn
@@ -222,7 +222,7 @@ describe("game-agent", () => {
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should do nothing
@@ -255,7 +255,7 @@ describe("game-agent", () => {
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should do nothing
@@ -285,7 +285,7 @@ describe("game-agent", () => {
       try {
         // Should not throw, but should stop trying after error
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should still be player1's turn (error prevented progress)
@@ -328,7 +328,7 @@ describe("game-agent", () => {
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
           onStateChange,
         });
 
@@ -363,7 +363,7 @@ describe("game-agent", () => {
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-4o-mini"],
+          providers: ["gpt-5.3-chat"],
         });
 
         // Should have stopped due to MAX_TURN_STEPS (20)

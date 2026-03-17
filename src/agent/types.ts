@@ -15,10 +15,14 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   enabledModels: new Set([
-    "gpt-4o-mini", // $0.00028/move - cheapest
-    "ministral-3b", // $0.0023/move - 2nd cheapest
-    "gpt-oss-20b", // $0.0065/move - 3rd cheapest
-    "groq-llama-4-scout", // $0.0077/move - 4th cheapest
+    "ministral-3b",
+    "gpt-oss-20b",
+    "gemini-3.1-flash-lite",
+    "qwen-3.5-flash",
+    "groq-llama-4-scout",
+    "glm-5-turbo",
+    "gpt-5.1-codex-mini",
+    "gpt-5.3-chat",
   ]),
   consensusCount: 12,
   customStrategy: "",
@@ -29,18 +33,19 @@ export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
 
 // Default: cheapest model instances for cost-effective consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
-  "gpt-4o-mini",
-  "gpt-4o-mini",
-  "gpt-4o-mini",
-  "gpt-4o-mini",
-  "gpt-4o-mini",
-  "ministral-3b",
   "ministral-3b",
   "ministral-3b",
   "gpt-oss-20b",
   "gpt-oss-20b",
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-flash-lite",
+  "qwen-3.5-flash",
+  "qwen-3.5-flash",
   "groq-llama-4-scout",
   "groq-llama-4-scout",
+  "glm-5-turbo",
+  "gpt-5.1-codex-mini",
+  "gpt-5.3-chat",
 ];
 
 // Build models array from settings by shuffling and duplicating enabled models

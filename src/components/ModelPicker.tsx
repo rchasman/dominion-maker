@@ -23,12 +23,10 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Claude Haiku";
     case "claude-sonnet":
       return "Claude Sonnet";
-    case "gpt-4o-mini":
-      return "GPT-4o Mini";
-    case "gpt-4o":
-      return "GPT-4o";
-    case "gpt-5.2":
-      return "GPT-5.2";
+    case "gpt-5.3-chat":
+      return "GPT-5.3 Chat";
+    case "gpt-5.1-codex-mini":
+      return "GPT-5.1 Codex Mini";
     case "gpt-5.2-pro":
       return "GPT-5.2 Pro (max 3)";
     case "gpt-oss-20b":
@@ -39,6 +37,8 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Gemini 2.5 Flash Lite";
     case "gemini-3-flash":
       return "Gemini 3 Flash";
+    case "gemini-3.1-flash-lite":
+      return "Gemini 3.1 Flash Lite";
     case "ministral-3b":
       return "Ministral 3B";
     case "grok-4-fast":
@@ -51,6 +51,10 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Groq Llama 3.3 70B";
     case "groq-llama-4-scout":
       return "Groq Llama 4 Scout";
+    case "glm-5-turbo":
+      return "GLM-5 Turbo";
+    case "qwen-3.5-flash":
+      return "Qwen 3.5 Flash";
     default: {
       const _exhaustive: never = model;
       return String(_exhaustive);

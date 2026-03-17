@@ -57,7 +57,7 @@ describe("Consensus System", () => {
 
     try {
       await advanceGameStateWithConsensus(engine, "player1", {
-        providers: ["gpt-4o-mini"],
+        providers: ["gpt-5.3-chat"],
         logger,
       });
 
@@ -159,7 +159,7 @@ describe("Consensus System", () => {
 
     try {
       await advanceGameStateWithConsensus(engine, "player1", {
-        providers: ["gpt-4o-mini"],
+        providers: ["gpt-5.3-chat"],
       });
 
       // Verify multi-round consensus ran 4 times (all cards)

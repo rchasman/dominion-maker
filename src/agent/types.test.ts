@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { buildModelsFromSettings, DEFAULT_MODEL_SETTINGS } from "./types";
+import { ALL_FAST_MODELS, buildModelsFromSettings, DEFAULT_MODEL_SETTINGS } from "./types";
 import type { ModelProvider } from "../config/models";
 
 describe("buildModelsFromSettings", () => {
@@ -9,20 +9,20 @@ describe("buildModelsFromSettings", () => {
       consensusCount: 12,
     });
 
-    expect(result.length).toBe(12);
+    expect(result.length).toBe(ALL_FAST_MODELS.length);
     // Should fall back to default models
     expect(result.every(m => typeof m === "string")).toBe(true);
   });
 
   it("should cycle through enabled models to reach consensusCount", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-4o-mini", "ministral-3b"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.3-chat", "ministral-3b"] as ModelProvider[]),
       consensusCount: 6,
     });
 
     expect(result.length).toBe(6);
     // Should contain both models
-    const hasGpt = result.some(m => m === "gpt-4o-mini");
+    const hasGpt = result.some(m => m === "gpt-5.3-chat");
     const hasMinistral = result.some(m => m === "ministral-3b");
     expect(hasGpt).toBe(true);
     expect(hasMinistral).toBe(true);
@@ -33,7 +33,7 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.2-pro",
-        "gpt-4o-mini",
+        "gpt-5.3-chat",
       ] as ModelProvider[]),
       consensusCount: 10,
     });
@@ -49,14 +49,14 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.2-pro",
-        "gpt-4o-mini",
+        "gpt-5.3-chat",
       ] as ModelProvider[]),
       consensusCount: 8,
     });
 
     expect(result.length).toBe(8);
     const gpt52ProCount = result.filter(m => m === "gpt-5.2-pro").length;
-    const gptMiniCount = result.filter(m => m === "gpt-4o-mini").length;
+    const gptMiniCount = result.filter(m => m === "gpt-5.3-chat").length;
 
     // gpt-5.2-pro should be capped at 3
     expect(gpt52ProCount).toBeLessThanOrEqual(3);
@@ -67,12 +67,12 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle single model with unlimited instances", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-4o-mini"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.3-chat"] as ModelProvider[]),
       consensusCount: 15,
     });
 
     expect(result.length).toBe(15);
-    expect(result.every(m => m === "gpt-4o-mini")).toBe(true);
+    expect(result.every(m => m === "gpt-5.3-chat")).toBe(true);
   });
 
   it("should handle single model with maxInstances limit", () => {
@@ -91,7 +91,7 @@ describe("buildModelsFromSettings", () => {
   it("should shuffle results for randomness", () => {
     const result1 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-4o-mini",
+        "gpt-5.3-chat",
         "ministral-3b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
@@ -100,7 +100,7 @@ describe("buildModelsFromSettings", () => {
 
     const result2 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-4o-mini",
+        "gpt-5.3-chat",
         "ministral-3b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
@@ -129,12 +129,12 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle consensusCount of 1", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-4o-mini"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.3-chat"] as ModelProvider[]),
       consensusCount: 1,
     });
 
     expect(result.length).toBe(1);
-    expect(result[0]).toBe("gpt-4o-mini");
+    expect(result[0]).toBe("gpt-5.3-chat");
   });
 
   it("should handle multiple models with various maxInstances", () => {
@@ -142,7 +142,7 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.2-pro", // maxInstances: 3
-        "gpt-4o-mini", // unlimited
+        "gpt-5.3-chat", // unlimited
         "groq-llama-4-scout", // unlimited
       ] as ModelProvider[]),
       consensusCount: 20,

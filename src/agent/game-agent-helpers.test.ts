@@ -833,7 +833,7 @@ describe("generateActionViaBackend", () => {
     };
 
     const result = await generateActionViaBackend({
-      provider: "gpt-4o-mini",
+      provider: "gpt-5.3-chat",
       currentState: state,
     });
 
@@ -870,7 +870,7 @@ describe("generateActionViaBackend", () => {
 
     await expect(
       generateActionViaBackend({
-        provider: "gpt-4o-mini",
+        provider: "gpt-5.3-chat",
         currentState: state,
       }),
     ).rejects.toThrow();

@@ -32,7 +32,7 @@ export class MakerStrategy implements GameStrategy {
     this.modelSettings = modelSettings || {
       enabledModels: new Set([
         "claude-haiku",
-        "gpt-4o-mini",
+        "gpt-5.3-chat",
         "gemini-2.5-flash-lite",
         "ministral-3b",
       ]),

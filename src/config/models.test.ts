@@ -12,7 +12,7 @@ describe("Model Configuration", () => {
   describe("getModelColor", () => {
     it("should return color for valid model ID", () => {
       expect(getModelColor("claude-haiku")).toBe("#a78bfa");
-      expect(getModelColor("gpt-4o-mini")).toBe("#86efac");
+      expect(getModelColor("gpt-5.3-chat")).toBe("#86efac");
       expect(getModelColor("gemini-2.5-flash-lite")).toBe("#93c5fd");
     });
 
@@ -49,7 +49,7 @@ describe("Model Configuration", () => {
       expect(getModelFullName("claude-haiku")).toBe(
         "anthropic/claude-haiku-4.5",
       );
-      expect(getModelFullName("gpt-4o")).toBe("openai/gpt-4o");
+      expect(getModelFullName("gpt-5.3-chat")).toBe("openai/gpt-5.3-chat");
       expect(getModelFullName("gemini-3-flash")).toBe("google/gemini-3-flash");
     });
 
