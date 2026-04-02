@@ -11,8 +11,8 @@ const HTTP_NO_CONTENT = 204;
 const HTTP_NOT_FOUND = 404;
 const HTTP_OK = 200;
 
-// Server Configuration
-const SERVER_PORT = 5174;
+// Server Configuration — PORT is injected by portless, fallback to 5174
+const SERVER_PORT = Number(process.env.PORT) || 5174;
 const EXIT_CODE_SUCCESS = 0;
 
 // Type definitions for Bun server

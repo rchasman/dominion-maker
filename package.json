@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --parallel dev:api dev:web",
-    "dev:api": "bun --watch server.ts",
-    "dev:web": "vite",
+    "dev:api": "portless api.dominion --app-port 5174 --force bun --watch server.ts",
+    "dev:web": "portless dominion --force vite",
     "dev:party": "npx partykit dev",
     "dev:multi": "bun run --parallel dev:api dev:web dev:party",
     "build": "vite build",
