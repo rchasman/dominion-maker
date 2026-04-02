@@ -16,7 +16,7 @@ import { agentLogger } from "../lib/logger";
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
 
 // Constants
-export const MODEL_TIMEOUT_MS = 5000;
+export const MODEL_TIMEOUT_MS = 30_000;
 export const PERCENTAGE_MULTIPLIER = 100;
 
 // Types for consensus voting system
