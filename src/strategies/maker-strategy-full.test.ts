@@ -55,7 +55,7 @@ describe("MakerStrategy - Full Coverage", () => {
     it("should accept all constructor parameters", () => {
       const logger: LLMLogger = () => {};
       const modelSettings: ModelSettings = {
-        enabledModels: new Set(["gpt-5.3-chat"]),
+        enabledModels: new Set(["gpt-5-mini"]),
         consensusCount: 6,
         dataFormat: "json",
       };
@@ -218,7 +218,7 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set([
           "claude-haiku",
-          "gpt-5.3-chat",
+          "gpt-5-mini",
           "gemini-2.5-flash-lite",
         ]),
         consensusCount: 8,
@@ -230,7 +230,7 @@ describe("MakerStrategy - Full Coverage", () => {
 
     it("should support single model", () => {
       const modelSettings: ModelSettings = {
-        enabledModels: new Set(["ministral-3b"]),
+        enabledModels: new Set(["gpt-oss-20b"]),
         consensusCount: 4,
         dataFormat: "mixed",
       };

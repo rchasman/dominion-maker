@@ -64,13 +64,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b", "gpt-oss-20b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b", "gpt-oss-20b"],
       count: 3,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["groq-llama-4-scout"],
+      voters: ["gemini-2.5-flash-lite"],
       count: 1,
     });
 
@@ -85,7 +85,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -113,7 +113,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat"],
+      voters: ["gpt-5-mini"],
       count: 1,
     });
 
@@ -128,13 +128,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b", "groq-llama-4-scout"],
+      voters: ["gpt-oss-20b", "gemini-2.5-flash-lite"],
       count: 2,
     });
 
@@ -148,7 +148,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -171,12 +171,12 @@ describe("handleModelSuccess", () => {
     const startTime = performance.now();
 
     const result = handleModelSuccess(action, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
     });
 
-    expect(result.provider).toBe("gpt-5.3-chat");
+    expect(result.provider).toBe("gpt-5-mini");
     expect(result.result).toEqual(action);
     expect(result.error).toBeNull();
     expect(result.duration).toBeGreaterThanOrEqual(0);
@@ -188,7 +188,7 @@ describe("handleModelSuccess", () => {
     const mockLogger = mock(() => {});
 
     handleModelSuccess(action, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
       logger: mockLogger as any,
@@ -207,12 +207,12 @@ describe("handleModelError", () => {
     const startTime = performance.now();
 
     const result = handleModelError(error, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
     });
 
-    expect(result.provider).toBe("gpt-5.3-chat");
+    expect(result.provider).toBe("gpt-5-mini");
     expect(result.result).toBeNull();
     expect(result.error).toBe(error);
     expect(result.duration).toBeGreaterThanOrEqual(0);
@@ -224,7 +224,7 @@ describe("handleModelError", () => {
     const mockLogger = mock(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
       logger: mockLogger as any,
@@ -242,7 +242,7 @@ describe("handleModelError", () => {
     const mockLogger = mock(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
       logger: mockLogger as any,
@@ -260,7 +260,7 @@ describe("handleModelError", () => {
     const mockLogger = mock(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5.3-chat",
+      provider: "gpt-5-mini",
       index: 0,
       modelStart: startTime,
       logger: mockLogger as any,
@@ -390,13 +390,13 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b", "gpt-oss-20b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b", "gpt-oss-20b"],
       count: 3,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["groq-llama-4-scout"],
+      voters: ["gemini-2.5-flash-lite"],
       count: 1,
     });
 
@@ -407,13 +407,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
-        result: { type: "play_action" as const, card: "Village" as const },
-        error: null,
-        duration: 100,
-      },
-      {
-        provider: "ministral-3b" as const,
+        provider: "gpt-5-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -425,7 +419,13 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "groq-llama-4-scout" as const,
+        provider: "gpt-oss-20b" as const,
+        result: { type: "play_action" as const, card: "Village" as const },
+        error: null,
+        duration: 100,
+      },
+      {
+        provider: "gemini-2.5-flash-lite" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
         duration: 100,
@@ -449,7 +449,7 @@ describe("selectConsensusWinner", () => {
     const earlyWinner: VoteGroup = {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat", "ministral-3b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b"],
       count: 2,
     };
     voteGroups.set("action1", earlyWinner);
@@ -460,13 +460,13 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
+        provider: "gpt-5-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
       },
       {
-        provider: "ministral-3b" as const,
+        provider: "gpt-oss-20b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -489,7 +489,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Market" }, // Invalid
-      voters: ["gpt-5.3-chat", "ministral-3b"],
+      voters: ["gpt-5-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -505,13 +505,13 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
+        provider: "gpt-5-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
       },
       {
-        provider: "ministral-3b" as const,
+        provider: "gpt-oss-20b" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
@@ -541,13 +541,13 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
+        provider: "gpt-5-mini" as const,
         result: null,
         error: new Error("Failed"),
         duration: 100,
       },
       {
-        provider: "ministral-3b" as const,
+        provider: "gpt-oss-20b" as const,
         result: null,
         error: new Error("Failed"),
         duration: 100,
@@ -564,7 +564,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Market" }, // Invalid
-      voters: ["gpt-5.3-chat"],
+      voters: ["gpt-5-mini"],
       count: 1,
     });
 
@@ -574,7 +574,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
+        provider: "gpt-5-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
@@ -591,13 +591,13 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.3-chat"],
+      voters: ["gpt-5-mini"],
       count: 1,
     });
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["ministral-3b"],
+      voters: ["gpt-oss-20b"],
       count: 1,
     });
 
@@ -608,13 +608,13 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5.3-chat" as const,
+        provider: "gpt-5-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
       },
       {
-        provider: "ministral-3b" as const,
+        provider: "gpt-oss-20b" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
         duration: 100,

@@ -12,7 +12,7 @@ describe("Model Configuration", () => {
   describe("getModelColor", () => {
     it("should return color for valid model ID", () => {
       expect(getModelColor("claude-haiku")).toBe("#a78bfa");
-      expect(getModelColor("gpt-5.3-chat")).toBe("#86efac");
+      expect(getModelColor("gpt-5-mini")).toBe("#86efac");
       expect(getModelColor("gemini-2.5-flash-lite")).toBe("#93c5fd");
     });
 
@@ -29,9 +29,10 @@ describe("Model Configuration", () => {
       expect(getProviderColor("anthropic")).toBe("#a78bfa");
       expect(getProviderColor("openai")).toBe("#86efac");
       expect(getProviderColor("google")).toBe("#93c5fd");
-      expect(getProviderColor("mistral")).toBe("#fda4af");
       expect(getProviderColor("xai")).toBe("#fbbf24");
-      expect(getProviderColor("groq")).toBe("#fb923c");
+      expect(getProviderColor("deepseek")).toBe("#60a5fa");
+      expect(getProviderColor("zhipu")).toBe("#34d399");
+      expect(getProviderColor("alibaba")).toBe("#f97316");
     });
 
     it("should return fallback color for invalid provider", () => {
@@ -48,7 +49,7 @@ describe("Model Configuration", () => {
       expect(getModelFullName("claude-haiku")).toBe(
         "anthropic/claude-haiku-4.5",
       );
-      expect(getModelFullName("gpt-5.3-chat")).toBe("openai/gpt-5.3-chat");
+      expect(getModelFullName("gpt-5-mini")).toBe("openai/gpt-5-mini");
       expect(getModelFullName("gemini-3-flash")).toBe("google/gemini-3-flash");
     });
 
@@ -81,16 +82,8 @@ describe("Model Configuration", () => {
       }
     });
 
-    it("should have speed data for specific models", () => {
-      const modelWithSpeed = MODELS.find(
-        m => m.id === "gemini-2.5-flash-lite",
-      );
-      expect(modelWithSpeed?.speed).toBe(496);
-
-    });
-
     it("should have maxInstances for specific models", () => {
-      const proModel = MODELS.find(m => m.id === "gpt-5.2-pro");
+      const proModel = MODELS.find(m => m.id === "gpt-5.4");
       expect(proModel?.maxInstances).toBe(3);
     });
   });

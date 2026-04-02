@@ -23,35 +23,41 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Claude Haiku";
     case "claude-sonnet":
       return "Claude Sonnet";
-    case "gpt-5.3-chat":
-      return "GPT-5.3 Chat";
-    case "gpt-5.1-codex-mini":
-      return "GPT-5.1 Codex Mini";
-    case "gpt-5.2-pro":
-      return "GPT-5.2 Pro (max 3)";
+    case "claude-opus":
+      return "Claude Opus (max 3)";
+    case "gpt-5-nano":
+      return "GPT-5 Nano";
     case "gpt-oss-20b":
       return "GPT OSS 20B";
+    case "gpt-5-mini":
+      return "GPT-5 Mini";
     case "gpt-oss-120b":
       return "GPT OSS 120B";
+    case "gpt-5":
+      return "GPT-5";
+    case "gpt-5.2":
+      return "GPT-5.2";
+    case "gpt-5.4-nano":
+      return "GPT-5.4 Nano";
+    case "gpt-5.4-mini":
+      return "GPT-5.4 Mini";
+    case "gpt-5.4":
+      return "GPT-5.4 (max 3)";
     case "gemini-2.5-flash-lite":
       return "Gemini 2.5 Flash Lite";
-    case "gemini-3-flash":
-      return "Gemini 3 Flash";
     case "gemini-3.1-flash-lite":
       return "Gemini 3.1 Flash Lite";
-    case "ministral-3b":
-      return "Ministral 3B";
+    case "gemini-3-flash":
+      return "Gemini 3 Flash";
     case "grok-4-fast":
       return "Grok 4 Fast";
-    case "grok-code-fast-1":
-      return "Grok Code Fast 1";
-    case "groq-llama-3.3-70b":
-      return "Groq Llama 3.3 70B";
-    case "groq-llama-4-scout":
-      return "Groq Llama 4 Scout";
-    case "glm-5-turbo":
-      return "GLM-5 Turbo";
-    case "qwen-3.5-flash":
+    case "deepseek-v3.2":
+      return "DeepSeek V3.2";
+    case "glm-4.6v-flash":
+      return "GLM-4.6V Flash (free)";
+    case "glm-5":
+      return "GLM-5";
+    case "qwen3.5-flash":
       return "Qwen 3.5 Flash";
     default: {
       const _exhaustive: never = model;
@@ -61,31 +67,23 @@ const getModelDisplayName = (model: ModelProvider): string => {
 };
 
 const providerDisplayNames: Record<string, string> = {
-  groq: "Groq",
-  together: "Together.ai",
-  sambanova: "SambaNova",
   anthropic: "Anthropic",
   openai: "OpenAI",
   google: "Google",
-  mistral: "Mistral",
   xai: "xAI",
+  deepseek: "DeepSeek",
   zhipu: "Zhipu AI",
   alibaba: "Alibaba",
-  meta: "Meta",
-  amazon: "Amazon",
 };
 
 const providerOrder = [
-  "groq",
-  "together",
-  "sambanova",
-  "google",
-  "mistral",
-  "xai",
-  "meta",
-  "amazon",
-  "anthropic",
   "openai",
+  "google",
+  "anthropic",
+  "xai",
+  "deepseek",
+  "zhipu",
+  "alibaba",
 ];
 
 const groupModelsByProvider = (

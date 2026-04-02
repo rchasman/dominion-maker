@@ -12,6 +12,7 @@ export interface ModelConfig {
 }
 
 export const MODELS = [
+  // Anthropic
   {
     id: "claude-haiku",
     fullName: "anthropic/claude-haiku-4.5",
@@ -22,7 +23,7 @@ export const MODELS = [
   },
   {
     id: "claude-sonnet",
-    fullName: "anthropic/claude-sonnet-4.5",
+    fullName: "anthropic/claude-sonnet-4.6",
     provider: "anthropic",
     color: "#a78bfa",
     inputPrice: 3.0,
@@ -37,47 +38,83 @@ export const MODELS = [
     outputPrice: 25.0,
     maxInstances: 3,
   },
+
+  // OpenAI
   {
-    id: "gpt-5.3-chat",
-    fullName: "openai/gpt-5.3-chat",
+    id: "gpt-5-nano",
+    fullName: "openai/gpt-5-nano",
     provider: "openai",
     color: "#86efac",
-    inputPrice: 1.75,
-    outputPrice: 14.0,
-  },
-  {
-    id: "gpt-5.1-codex-mini",
-    fullName: "openai/gpt-5.1-codex-mini",
-    provider: "openai",
-    color: "#86efac",
-    inputPrice: 0.25,
-    outputPrice: 2.0,
-  },
-  {
-    id: "gpt-5.2-pro",
-    fullName: "openai/gpt-5.2-pro",
-    provider: "openai",
-    color: "#86efac",
-    inputPrice: 21.0,
-    outputPrice: 168.0,
-    maxInstances: 3,
+    inputPrice: 0.05,
+    outputPrice: 0.4,
   },
   {
     id: "gpt-oss-20b",
     fullName: "openai/gpt-oss-20b",
     provider: "openai",
     color: "#86efac",
-    inputPrice: 0.08,
-    outputPrice: 0.16,
+    inputPrice: 0.05,
+    outputPrice: 0.2,
+  },
+  {
+    id: "gpt-5-mini",
+    fullName: "openai/gpt-5-mini",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 0.25,
+    outputPrice: 2.0,
   },
   {
     id: "gpt-oss-120b",
     fullName: "openai/gpt-oss-120b",
     provider: "openai",
     color: "#86efac",
-    inputPrice: 0.25,
-    outputPrice: 0.69,
+    inputPrice: 0.15,
+    outputPrice: 0.6,
   },
+  {
+    id: "gpt-5",
+    fullName: "openai/gpt-5",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 1.25,
+    outputPrice: 10.0,
+  },
+  {
+    id: "gpt-5.2",
+    fullName: "openai/gpt-5.2",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 1.75,
+    outputPrice: 14.0,
+  },
+  {
+    id: "gpt-5.4-nano",
+    fullName: "openai/gpt-5.4-nano",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 0.2,
+    outputPrice: 1.25,
+  },
+  {
+    id: "gpt-5.4-mini",
+    fullName: "openai/gpt-5.4-mini",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 0.75,
+    outputPrice: 4.5,
+  },
+  {
+    id: "gpt-5.4",
+    fullName: "openai/gpt-5.4",
+    provider: "openai",
+    color: "#86efac",
+    inputPrice: 2.5,
+    outputPrice: 15.0,
+    maxInstances: 3,
+  },
+
+  // Google
   {
     id: "gemini-2.5-flash-lite",
     fullName: "google/gemini-2.5-flash-lite",
@@ -85,7 +122,14 @@ export const MODELS = [
     color: "#93c5fd",
     inputPrice: 0.1,
     outputPrice: 0.4,
-    speed: 496,
+  },
+  {
+    id: "gemini-3.1-flash-lite",
+    fullName: "google/gemini-3.1-flash-lite-preview",
+    provider: "google",
+    color: "#93c5fd",
+    inputPrice: 0.25,
+    outputPrice: 1.5,
   },
   {
     id: "gemini-3-flash",
@@ -95,44 +139,39 @@ export const MODELS = [
     inputPrice: 0.5,
     outputPrice: 3.0,
   },
-  {
-    id: "gemini-3.1-flash-lite",
-    fullName: "google/gemini-3.1-flash-lite-preview",
-    provider: "google",
-    color: "#93c5fd",
-    inputPrice: 0.08,
-    outputPrice: 0.3,
-  },
-  {
-    id: "ministral-3b",
-    fullName: "mistral/ministral-3b",
-    provider: "mistral",
-    color: "#fda4af",
-    inputPrice: 0.04,
-    outputPrice: 0.04,
-    speed: 351,
-  },
+
+  // xAI
   {
     id: "grok-4-fast",
     fullName: "xai/grok-4.1-fast-non-reasoning",
     provider: "xai",
     color: "#fbbf24",
-    inputPrice: 5.0,
-    outputPrice: 25.0,
-  },
-  {
-    id: "grok-code-fast-1",
-    fullName: "xai/grok-code-fast-1",
-    provider: "xai",
-    color: "#fbbf24",
     inputPrice: 0.2,
-    outputPrice: 0.6,
+    outputPrice: 0.5,
+  },
+
+  // DeepSeek
+  {
+    id: "deepseek-v3.2",
+    fullName: "deepseek/deepseek-v3.2",
+    provider: "deepseek",
+    color: "#60a5fa",
+    inputPrice: 0.28,
+    outputPrice: 0.42,
   },
 
   // Zhipu AI
   {
-    id: "glm-5-turbo",
-    fullName: "zai/glm-5-turbo",
+    id: "glm-4.6v-flash",
+    fullName: "zai/glm-4.6v-flash",
+    provider: "zhipu",
+    color: "#34d399",
+    inputPrice: 0,
+    outputPrice: 0,
+  },
+  {
+    id: "glm-5",
+    fullName: "zai/glm-5",
     provider: "zhipu",
     color: "#34d399",
     inputPrice: 1.0,
@@ -141,32 +180,12 @@ export const MODELS = [
 
   // Alibaba
   {
-    id: "qwen-3.5-flash",
+    id: "qwen3.5-flash",
     fullName: "alibaba/qwen3.5-flash",
     provider: "alibaba",
-    color: "#f9a8d4",
+    color: "#f97316",
     inputPrice: 0.1,
     outputPrice: 0.4,
-  },
-
-  // Fast Groq models (low latency)
-  {
-    id: "groq-llama-3.3-70b",
-    fullName: "meta/llama-3.3-70b",
-    provider: "groq",
-    color: "#fb923c",
-    inputPrice: 0.15,
-    outputPrice: 0.75,
-    speed: 347,
-  },
-  {
-    id: "groq-llama-4-scout",
-    fullName: "meta/llama-4-scout",
-    provider: "groq",
-    color: "#fb923c",
-    inputPrice: 0.11,
-    outputPrice: 0.34,
-    speed: 412,
   },
 ] as const satisfies readonly ModelConfig[];
 

@@ -16,14 +16,14 @@ describe("buildModelsFromSettings", () => {
 
   it("should cycle through enabled models to reach consensusCount", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.3-chat", "ministral-3b"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5-mini", "gpt-oss-20b"] as ModelProvider[]),
       consensusCount: 6,
     });
 
     expect(result.length).toBe(6);
     // Should contain both models
-    const hasGpt = result.some(m => m === "gpt-5.3-chat");
-    const hasMinistral = result.some(m => m === "ministral-3b");
+    const hasGpt = result.some(m => m === "gpt-5-mini");
+    const hasMinistral = result.some(m => m === "gpt-oss-20b");
     expect(hasGpt).toBe(true);
     expect(hasMinistral).toBe(true);
   });
@@ -32,14 +32,14 @@ describe("buildModelsFromSettings", () => {
     // gpt-5.2-pro has maxInstances: 3
     const result = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5.2-pro",
-        "gpt-5.3-chat",
+        "gpt-5.4",
+        "gpt-5-mini",
       ] as ModelProvider[]),
       consensusCount: 10,
     });
 
     expect(result.length).toBe(10);
-    const gpt52ProCount = result.filter(m => m === "gpt-5.2-pro").length;
+    const gpt52ProCount = result.filter(m => m === "gpt-5.4").length;
     // Should not exceed maxInstances of 3
     expect(gpt52ProCount).toBeLessThanOrEqual(3);
   });
@@ -48,15 +48,15 @@ describe("buildModelsFromSettings", () => {
     // gpt-5.2-pro has maxInstances: 3
     const result = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5.2-pro",
-        "gpt-5.3-chat",
+        "gpt-5.4",
+        "gpt-5-mini",
       ] as ModelProvider[]),
       consensusCount: 8,
     });
 
     expect(result.length).toBe(8);
-    const gpt52ProCount = result.filter(m => m === "gpt-5.2-pro").length;
-    const gptMiniCount = result.filter(m => m === "gpt-5.3-chat").length;
+    const gpt52ProCount = result.filter(m => m === "gpt-5.4").length;
+    const gptMiniCount = result.filter(m => m === "gpt-5-mini").length;
 
     // gpt-5.2-pro should be capped at 3
     expect(gpt52ProCount).toBeLessThanOrEqual(3);
@@ -67,22 +67,22 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle single model with unlimited instances", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.3-chat"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5-mini"] as ModelProvider[]),
       consensusCount: 15,
     });
 
     expect(result.length).toBe(15);
-    expect(result.every(m => m === "gpt-5.3-chat")).toBe(true);
+    expect(result.every(m => m === "gpt-5-mini")).toBe(true);
   });
 
   it("should handle single model with maxInstances limit", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.2-pro"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4"] as ModelProvider[]),
       consensusCount: 5,
     });
 
     expect(result.length).toBe(5);
-    const gpt52ProCount = result.filter(m => m === "gpt-5.2-pro").length;
+    const gpt52ProCount = result.filter(m => m === "gpt-5.4").length;
     // When there's only one model and no unlimited models, fallback uses that same model
     // So it won't be capped - this is the actual behavior
     expect(gpt52ProCount).toBe(5);
@@ -91,8 +91,8 @@ describe("buildModelsFromSettings", () => {
   it("should shuffle results for randomness", () => {
     const result1 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5.3-chat",
-        "ministral-3b",
+        "gpt-5-mini",
+        "gpt-oss-20b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
       consensusCount: 12,
@@ -100,8 +100,8 @@ describe("buildModelsFromSettings", () => {
 
     const result2 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5.3-chat",
-        "ministral-3b",
+        "gpt-5-mini",
+        "gpt-oss-20b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
       consensusCount: 12,
@@ -129,27 +129,27 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle consensusCount of 1", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.3-chat"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5-mini"] as ModelProvider[]),
       consensusCount: 1,
     });
 
     expect(result.length).toBe(1);
-    expect(result[0]).toBe("gpt-5.3-chat");
+    expect(result[0]).toBe("gpt-5-mini");
   });
 
   it("should handle multiple models with various maxInstances", () => {
     // Mix of limited and unlimited models
     const result = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5.2-pro", // maxInstances: 3
-        "gpt-5.3-chat", // unlimited
-        "groq-llama-4-scout", // unlimited
+        "gpt-5.4", // maxInstances: 3
+        "gpt-5-mini", // unlimited
+        "gemini-2.5-flash-lite", // unlimited
       ] as ModelProvider[]),
       consensusCount: 20,
     });
 
     expect(result.length).toBe(20);
-    const gpt52ProCount = result.filter(m => m === "gpt-5.2-pro").length;
+    const gpt52ProCount = result.filter(m => m === "gpt-5.4").length;
     expect(gpt52ProCount).toBeLessThanOrEqual(3);
 
     // Rest should be distributed among unlimited models
@@ -160,12 +160,12 @@ describe("buildModelsFromSettings", () => {
   it("should handle edge case with no unlimited models and all limited exhausted", () => {
     // Only limited model, consensus larger than limit
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.2-pro"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4"] as ModelProvider[]),
       consensusCount: 10,
     });
 
     expect(result.length).toBe(10);
     // When only limited model available, fallback uses that same model (ignoring limit)
-    expect(result.every(m => m === "gpt-5.2-pro")).toBe(true);
+    expect(result.every(m => m === "gpt-5.4")).toBe(true);
   });
 });

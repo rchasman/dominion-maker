@@ -228,10 +228,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const middleware = createDevToolsMiddleware();
     const model = middleware
       ? wrapLanguageModel({
-          model: gateway("gpt-5.3-chat"),
+          model: gateway("gpt-5.2"),
           middleware,
         })
-      : gateway("gpt-5.3-chat");
+      : gateway("gpt-5.2");
 
     // Generate analysis one player at a time, build record
     const strategySummary = Object.fromEntries(
