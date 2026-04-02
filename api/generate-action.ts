@@ -1,4 +1,4 @@
-import { generateText, gateway, wrapLanguageModel } from "ai";
+import { generateText, gateway, wrapLanguageModel, extractJsonMiddleware } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
@@ -198,15 +198,7 @@ function getDevToolsMiddleware(
 }
 
 // Get provider options for AI Gateway routing
-function getProviderOptions(providerId: string): Record<string, unknown> {
-  const modelConfig = MODELS.find(m => m.id === providerId);
-  if (!modelConfig) return {};
-
-  // Providers hosting third-party models need explicit routing
-  if (modelConfig.provider === "groq") {
-    return { gateway: { only: [modelConfig.provider] } };
-  }
-
+function getProviderOptions(_providerId: string): Record<string, unknown> {
   return {};
 }
 
@@ -434,13 +426,12 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
-  const middleware = getDevToolsMiddleware(actionId);
-  const model = middleware
-    ? wrapLanguageModel({
-        model: gateway(modelName),
-        middleware,
-      })
-    : gateway(modelName);
+  const devTools = getDevToolsMiddleware(actionId);
+  // extractJsonMiddleware strips markdown code fences (```json...```) from model responses
+  const model = wrapLanguageModel({
+    model: gateway(modelName),
+    middleware: [extractJsonMiddleware(), ...(devTools ? [devTools] : [])],
+  });
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
   const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
