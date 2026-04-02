@@ -49,6 +49,10 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Gemini 3.1 Flash Lite";
     case "gemini-3-flash":
       return "Gemini 3 Flash";
+    case "gemini-3-pro":
+      return "Gemini 3 Pro (max 3)";
+    case "gemini-3.1-pro":
+      return "Gemini 3.1 Pro (max 3)";
     case "grok-4-fast":
       return "Grok 4 Fast";
     case "deepseek-v3.2":

@@ -139,6 +139,24 @@ export const MODELS = [
     inputPrice: 0.5,
     outputPrice: 3.0,
   },
+  {
+    id: "gemini-3-pro",
+    fullName: "google/gemini-3-pro-preview",
+    provider: "google",
+    color: "#93c5fd",
+    inputPrice: 2.0,
+    outputPrice: 12.0,
+    maxInstances: 3,
+  },
+  {
+    id: "gemini-3.1-pro",
+    fullName: "google/gemini-3.1-pro-preview",
+    provider: "google",
+    color: "#93c5fd",
+    inputPrice: 2.0,
+    outputPrice: 12.0,
+    maxInstances: 3,
+  },
 
   // xAI
   {
