@@ -519,6 +519,17 @@ export function isTreasureCard(cardName: CardName): boolean {
   return CARDS[cardName].types.includes("treasure");
 }
 
+/** Pure coin-adding treasures with no decisions, triggers, or side effects */
+export function isSimpleTreasure(cardName: CardName): boolean {
+  const card = CARDS[cardName];
+  return (
+    card.types.includes("treasure") &&
+    card.coins !== undefined &&
+    !card.decisions &&
+    !card.triggers
+  );
+}
+
 export function isVictoryCard(cardName: CardName): boolean {
   return CARDS[cardName].types.includes("victory");
 }

@@ -5,6 +5,7 @@ import {
   FIRST_GAME_KINGDOM,
   isActionCard,
   isTreasureCard,
+  isSimpleTreasure,
   isVictoryCard,
   isAttackCard,
   isReactionCard,
@@ -322,6 +323,28 @@ describe("isTreasureCard", () => {
     );
     treasures.forEach(card => {
       expect(isTreasureCard(card as CardName)).toBe(true);
+    });
+  });
+});
+
+describe("isSimpleTreasure", () => {
+  it("should return true for basic treasures (Copper, Silver, Gold)", () => {
+    expect(isSimpleTreasure("Copper")).toBe(true);
+    expect(isSimpleTreasure("Silver")).toBe(true);
+    expect(isSimpleTreasure("Gold")).toBe(true);
+  });
+
+  it("should return false for non-treasure cards", () => {
+    expect(isSimpleTreasure("Village")).toBe(false);
+    expect(isSimpleTreasure("Estate")).toBe(false);
+  });
+
+  it("should match all current treasures since base set has no complex treasures", () => {
+    const treasures = Object.keys(CARDS).filter(card =>
+      CARDS[card as CardName].types.includes("treasure"),
+    );
+    treasures.forEach(card => {
+      expect(isSimpleTreasure(card as CardName)).toBe(true);
     });
   });
 });

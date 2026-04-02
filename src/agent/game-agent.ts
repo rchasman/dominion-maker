@@ -5,7 +5,7 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { DominionEngine } from "../engine";
 import type { ModelProvider } from "../config/models";
-import { CARDS, getHandComposition } from "../data/cards";
+import { CARDS, getHandComposition, isSimpleTreasure } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import {
   AVAILABLE_MODELS,
@@ -578,6 +578,32 @@ export async function advanceGameStateWithConsensus(
   }
 
   const legalActions = getLegalActions(currentState);
+
+  // Shortcut: auto-play simple treasures in buy phase (pure coin-adders with no
+  // decisions or triggers — consensus on each one wastes N model calls per card).
+  // Complex treasures (future sets with choices/effects) still go through consensus.
+  if (currentState.phase === "buy" && !currentState.pendingChoice) {
+    const simpleTreasureActions = legalActions.filter(
+      a => a.type === "play_treasure" && "card" in a && a.card && isSimpleTreasure(a.card),
+    );
+    if (simpleTreasureActions.length > 0) {
+      const cardNames = simpleTreasureActions
+        .map(a => ("card" in a ? a.card : null))
+        .filter(Boolean);
+      agentLogger.info(
+        `Auto-playing ${simpleTreasureActions.length} treasures: ${cardNames.join(", ")}`,
+      );
+
+      logger?.({
+        type: "consensus-skipped",
+        message: `Auto-playing ${simpleTreasureActions.length} treasures`,
+        data: { cards: cardNames, turn: currentState.turn },
+      });
+
+      simpleTreasureActions.map(action => executeActionWithEngine(engine, action, playerId));
+      return;
+    }
+  }
 
   // Shortcut: if only one legal action, execute it directly without consensus
   if (legalActions.length === 1) {
