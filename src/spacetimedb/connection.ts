@@ -3,6 +3,7 @@
  *
  * Manages a single DbConnection to SpacetimeDB maincloud.
  * Token stored in localStorage for identity persistence across sessions.
+ * Does NOT subscribe to tables — hooks manage their own subscriptions.
  */
 import { DbConnection, tables } from "./module_bindings";
 
@@ -38,7 +39,7 @@ export function connect(
       .withUri(SPACETIMEDB_HOST)
       .withDatabaseName(DATABASE_NAME)
       .withToken(storedToken)
-      .onConnect((ctx, identity, token) => {
+      .onConnect((_ctx, _identity, token) => {
         connection = conn;
         connectionPromise = null;
 
@@ -46,13 +47,8 @@ export function connect(
           localStorage.setItem(TOKEN_KEY, token);
         }
 
-        ctx
-          .subscriptionBuilder()
-          .onApplied(() => {
-            onConnected?.(conn);
-            resolve(conn);
-          })
-          .subscribeToAll();
+        onConnected?.(conn);
+        resolve(conn);
       })
       .onConnectError((_ctx, err) => {
         connectionPromise = null;

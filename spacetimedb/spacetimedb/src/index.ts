@@ -49,6 +49,11 @@ const gamePlayer = table(
         algorithm: "btree" as const,
         columns: ["gameId" as const],
       },
+      {
+        accessor: "byIdentity",
+        algorithm: "btree" as const,
+        columns: ["identity" as const],
+      },
     ],
   },
   {
@@ -140,11 +145,8 @@ export const onConnect = spacetimedb.clientConnected((ctx) => {
     ctx.db.lobbyPlayer.identity.update({ ...existing, connected: true });
   }
 
-  for (const gp of ctx.db.gamePlayer.iter()) {
-    if (
-      gp.identity.toHexString() === ctx.sender.toHexString() &&
-      !gp.connected
-    ) {
+  for (const gp of ctx.db.gamePlayer.byIdentity.filter(ctx.sender)) {
+    if (!gp.connected) {
       ctx.db.gamePlayer.rowId.update({ ...gp, connected: true });
     }
   }
@@ -156,11 +158,8 @@ export const onDisconnect = spacetimedb.clientDisconnected((ctx) => {
     ctx.db.lobbyPlayer.identity.update({ ...existing, connected: false });
   }
 
-  for (const gp of ctx.db.gamePlayer.iter()) {
-    if (
-      gp.identity.toHexString() === ctx.sender.toHexString() &&
-      gp.connected
-    ) {
+  for (const gp of ctx.db.gamePlayer.byIdentity.filter(ctx.sender)) {
+    if (gp.connected) {
       ctx.db.gamePlayer.rowId.update({ ...gp, connected: false });
     }
   }
@@ -409,9 +408,7 @@ export const push_state = spacetimedb.reducer(
 export const mark_command_processed = spacetimedb.reducer(
   { commandId: t.u64() },
   (ctx, { commandId }) => {
-    const cmd = ctx.db.gameCommand.id.find(commandId);
-    if (!cmd) return;
-    ctx.db.gameCommand.id.update({ ...cmd, processed: true });
+    ctx.db.gameCommand.id.delete(commandId);
   },
 );
 

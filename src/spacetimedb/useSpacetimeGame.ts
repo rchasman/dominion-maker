@@ -6,7 +6,8 @@
  */
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { connect, getConnection } from "./connection";
-import type { DbConnection } from "./module_bindings";
+import type { DbConnection, SubscriptionHandle } from "./module_bindings";
+import { tables } from "./module_bindings";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
@@ -123,6 +124,8 @@ export function useSpacetimeGame({
   const eventsRef = useRef<GameEvent[]>([]);
   const isSpectatorRef = useRef(false);
   const playerIdRef = useRef<string | null>(null);
+  const subscriptionRef = useRef<SubscriptionHandle | null>(null);
+  const callbacksRef = useRef<Array<() => void>>([]);
 
   const [state, setState] = useState<SpacetimeGameState>({
     isConnected: false,
@@ -157,22 +160,18 @@ export function useSpacetimeGame({
     const activePlayers = gamePlayers.filter((gp) => !gp.isSpectator);
     const spectators = gamePlayers.filter((gp) => gp.isSpectator);
 
-    const playerList: PlayerInfo[] = activePlayers.map((gp) => ({
-      name: gp.name,
-      playerId: gp.playerId,
-    }));
-
-    const disconnected = new Map(
-      activePlayers
-        .filter((gp) => !gp.connected)
-        .map((gp) => [gp.playerId, gp.name] as const),
-    );
-
     setState((s) => ({
       ...s,
-      players: playerList,
+      players: activePlayers.map((gp) => ({
+        name: gp.name,
+        playerId: gp.playerId,
+      })),
       spectatorCount: spectators.length,
-      disconnectedPlayers: disconnected,
+      disconnectedPlayers: new Map(
+        activePlayers
+          .filter((gp) => !gp.connected)
+          .map((gp) => [gp.playerId, gp.name] as const),
+      ),
     }));
   }, [roomId]);
 
@@ -180,16 +179,17 @@ export function useSpacetimeGame({
     const conn = connRef.current;
     if (!conn) return;
 
-    const messages = [...conn.db.chatMessage.byGameId.filter(roomId)]
-      .sort((a, b) => Number(a.timestamp - b.timestamp))
-      .map((m) => ({
-        id: m.id.toString(),
-        senderName: m.senderName,
-        content: m.content,
-        timestamp: Number(m.timestamp),
-      }));
-
-    setState((s) => ({ ...s, chatMessages: messages }));
+    setState((s) => ({
+      ...s,
+      chatMessages: [...conn.db.chatMessage.byGameId.filter(roomId)]
+        .sort((a, b) => Number(a.timestamp - b.timestamp))
+        .map((m) => ({
+          id: m.id.toString(),
+          senderName: m.senderName,
+          content: m.content,
+          timestamp: Number(m.timestamp),
+        })),
+    }));
   }, [roomId]);
 
   useEffect(() => {
@@ -199,56 +199,69 @@ export function useSpacetimeGame({
       if (!identity) return;
       setState((s) => ({ ...s, isConnected: true }));
 
-      const myPlayer = [...conn.db.gamePlayer.byGameId.filter(roomId)].find(
-        (gp) => gp.identity.toHexString() === identity.toHexString(),
-      );
+      // Targeted subscription — only this game's data
+      subscriptionRef.current = conn
+        .subscriptionBuilder()
+        .onApplied(() => {
+          const myPlayer = [...conn.db.gamePlayer.byGameId.filter(roomId)].find(
+            (gp) => gp.identity.toHexString() === identity.toHexString(),
+          );
 
-      if (myPlayer) {
-        setState((s) => ({
-          ...s,
-          isJoined: true,
-          playerId: myPlayer.playerId,
-          isSpectator: myPlayer.isSpectator,
-          isHost: false,
-        }));
-      } else if (isSpectator) {
-        conn.reducers.joinGameAsSpectator({ gameId: roomId, name: playerName });
-        setState((s) => ({
-          ...s,
-          isJoined: true,
-          playerId: null,
-          isSpectator: true,
-        }));
-      } else {
-        setState((s) => ({
-          ...s,
-          isJoined: true,
-          playerId: clientId,
-          isSpectator: false,
-        }));
-      }
+          if (myPlayer) {
+            setState((s) => ({
+              ...s,
+              isJoined: true,
+              playerId: myPlayer.playerId,
+              isSpectator: myPlayer.isSpectator,
+              isHost: false,
+            }));
+          } else if (isSpectator) {
+            conn.reducers.joinGameAsSpectator({ gameId: roomId, name: playerName });
+            setState((s) => ({
+              ...s,
+              isJoined: true,
+              playerId: null,
+              isSpectator: true,
+            }));
+          } else {
+            setState((s) => ({
+              ...s,
+              isJoined: true,
+              playerId: clientId,
+              isSpectator: false,
+            }));
+          }
 
-      conn.db.gameSnapshot.onInsert((_ctx, snapshot) => {
-        if (snapshot.gameId !== roomId) return;
-        updateFromSnapshot(snapshot);
-      });
-      conn.db.gameSnapshot.onUpdate((_ctx, _old, snapshot) => {
-        if (snapshot.gameId !== roomId) return;
-        updateFromSnapshot(snapshot);
-      });
+          const snapshot = conn.db.gameSnapshot.gameId.find(roomId);
+          if (snapshot) {
+            updateFromSnapshot(snapshot);
+          }
+          refreshPlayers();
+          refreshChat();
+        })
+        .subscribe([
+          tables.gameSnapshot,
+          tables.game,
+          tables.gamePlayer,
+          tables.chatMessage,
+        ]);
 
-      conn.db.game.onUpdate((_ctx, _old, g) => {
-        if (g.id !== roomId) return;
-        if (g.status === "ended") {
+      // Register callbacks with cleanup tracking
+      const onSnapshotInsert = (_ctx: unknown, snapshot: { gameId: string; stateJson: string; eventsJson: string }) => {
+        if (snapshot.gameId === roomId) updateFromSnapshot(snapshot);
+      };
+      const onSnapshotUpdate = (_ctx: unknown, _old: unknown, snapshot: { gameId: string; stateJson: string; eventsJson: string }) => {
+        if (snapshot.gameId === roomId) updateFromSnapshot(snapshot);
+      };
+      const onGameUpdate = (_ctx: unknown, _old: unknown, g: { id: string; status: string }) => {
+        if (g.id === roomId && g.status === "ended") {
           setState((s) => ({ ...s, gameEndReason: "Game ended" }));
         }
-      });
-
-      conn.db.gamePlayer.onInsert(() => refreshPlayers());
-      conn.db.gamePlayer.onUpdate(() => refreshPlayers());
-      conn.db.gamePlayer.onDelete(() => refreshPlayers());
-
-      conn.db.chatMessage.onInsert((_ctx, msg) => {
+      };
+      const onPlayerInsert = () => refreshPlayers();
+      const onPlayerUpdate = () => refreshPlayers();
+      const onPlayerDelete = () => refreshPlayers();
+      const onChatInsert = (_ctx: unknown, msg: { gameId: string; id: bigint; senderName: string; content: string; timestamp: bigint }) => {
         if (msg.gameId !== roomId) return;
         setState((s) => ({
           ...s,
@@ -262,20 +275,41 @@ export function useSpacetimeGame({
             },
           ],
         }));
-      });
+      };
 
-      const snapshot = conn.db.gameSnapshot.gameId.find(roomId);
-      if (snapshot) {
-        updateFromSnapshot(snapshot);
-      }
-      refreshPlayers();
-      refreshChat();
+      conn.db.gameSnapshot.onInsert(onSnapshotInsert);
+      conn.db.gameSnapshot.onUpdate(onSnapshotUpdate);
+      conn.db.game.onUpdate(onGameUpdate);
+      conn.db.gamePlayer.onInsert(onPlayerInsert);
+      conn.db.gamePlayer.onUpdate(onPlayerUpdate);
+      conn.db.gamePlayer.onDelete(onPlayerDelete);
+      conn.db.chatMessage.onInsert(onChatInsert);
+
+      callbacksRef.current = [
+        () => conn.db.gameSnapshot.removeOnInsert(onSnapshotInsert),
+        () => conn.db.gameSnapshot.removeOnUpdate(onSnapshotUpdate),
+        () => conn.db.game.removeOnUpdate(onGameUpdate),
+        () => conn.db.gamePlayer.removeOnInsert(onPlayerInsert),
+        () => conn.db.gamePlayer.removeOnUpdate(onPlayerUpdate),
+        () => conn.db.gamePlayer.removeOnDelete(onPlayerDelete),
+        () => conn.db.chatMessage.removeOnInsert(onChatInsert),
+      ];
     }).catch((err) => {
       setState((s) => ({ ...s, error: String(err) }));
       onConnectionError?.();
     });
 
     return () => {
+      for (const cleanup of callbacksRef.current) {
+        cleanup();
+      }
+      callbacksRef.current = [];
+
+      if (subscriptionRef.current?.isActive()) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+
       setState((s) => ({ ...s, isConnected: false }));
     };
   }, [roomId, playerName, clientId, isSpectator, refreshPlayers, refreshChat, onConnectionError]);
@@ -313,7 +347,6 @@ export function useSpacetimeGame({
     }
   }, [isSinglePlayer, state.isJoined, state.gameState, roomId, clientId, gameMode]);
 
-  // Shared command helper — guards spectator, resolves playerId
   const gameCommand = useCallback(
     (type: string, extra?: Record<string, unknown>): CommandResult => {
       if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };

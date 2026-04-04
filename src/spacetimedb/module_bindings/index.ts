@@ -108,6 +108,9 @@ const tablesSchema = __schema({
       { accessor: 'byGameId', name: 'game_player_game_id_idx_btree', algorithm: 'btree', columns: [
         'gameId',
       ] },
+      { accessor: 'byIdentity', name: 'game_player_identity_idx_btree', algorithm: 'btree', columns: [
+        'identity',
+      ] },
       { accessor: 'rowId', name: 'game_player_row_id_idx_btree', algorithm: 'btree', columns: [
         'rowId',
       ] },
