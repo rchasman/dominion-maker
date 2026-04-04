@@ -7,6 +7,8 @@
 
 export type PlayerId = string;
 
+export type GameStatus = "waiting" | "active" | "ended";
+
 export interface PlayerInfo {
   name: string;
   playerId: PlayerId;

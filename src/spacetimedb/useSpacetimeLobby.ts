@@ -13,6 +13,7 @@ import type {
   LobbyPlayer,
   GameRequest,
   ActiveGame,
+  GameStatus,
 } from "../types/multiplayer";
 
 type RequestState = "none" | "sent" | "received";
@@ -90,7 +91,7 @@ export function useSpacetimeLobby(
 
     setActiveGames(
       [...conn.db.game.iter()]
-        .filter((g) => g.status === "active" || g.status === "waiting")
+        .filter((g) => (g.status as GameStatus) !== "ended")
         .map((g) => {
           const gamePlayers = [...conn.db.gamePlayer.byGameId.filter(g.id)];
           const activePlayers = gamePlayers.filter((gp) => !gp.isSpectator);
@@ -136,7 +137,11 @@ export function useSpacetimeLobby(
   useEffect(() => {
     if (!playerName.trim()) return;
 
+    let cancelled = false;
+
     connect((conn) => {
+      if (cancelled) return;
+
       connRef.current = conn;
       const identity = conn.identity;
       if (!identity) return;
@@ -201,10 +206,12 @@ export function useSpacetimeLobby(
         () => conn.db.gamePlayer.removeOnDelete(onPlayerDelete),
       ];
     }).catch((err) => {
-      setError(String(err));
+      if (!cancelled) setError(String(err));
     });
 
     return () => {
+      cancelled = true;
+
       for (const cleanup of callbacksRef.current) {
         cleanup();
       }

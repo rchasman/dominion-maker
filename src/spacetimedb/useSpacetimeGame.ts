@@ -7,7 +7,12 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { connect, getConnection } from "./connection";
 import type { DbConnection, SubscriptionHandle } from "./module_bindings";
-import { tables } from "./module_bindings";
+import type {
+  GameSnapshot,
+  Game as GameRow,
+  GamePlayer as GamePlayerRow,
+  ChatMessage as ChatMessageRow,
+} from "./module_bindings/types";
 import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
@@ -15,6 +20,7 @@ import type {
   PlayerId,
   PlayerInfo,
   ChatMessageData,
+  GameStatus,
 } from "../types/multiplayer";
 import { projectState } from "../events/project";
 import type { GameMode } from "../types/game-mode";
@@ -193,16 +199,22 @@ export function useSpacetimeGame({
   }, [roomId]);
 
   useEffect(() => {
+    let cancelled = false;
+
     connect((conn) => {
+      if (cancelled) return;
+
       connRef.current = conn;
       const identity = conn.identity;
       if (!identity) return;
       setState((s) => ({ ...s, isConnected: true }));
 
-      // Targeted subscription — only this game's data
+      // SQL-filtered subscriptions — only this game's data
       subscriptionRef.current = conn
         .subscriptionBuilder()
         .onApplied(() => {
+          if (cancelled) return;
+
           const myPlayer = [...conn.db.gamePlayer.byGameId.filter(roomId)].find(
             (gp) => gp.identity.toHexString() === identity.toHexString(),
           );
@@ -240,28 +252,34 @@ export function useSpacetimeGame({
           refreshChat();
         })
         .subscribe([
-          tables.gameSnapshot,
-          tables.game,
-          tables.gamePlayer,
-          tables.chatMessage,
+          `SELECT * FROM game_snapshot WHERE game_id = '${roomId}'`,
+          `SELECT * FROM game WHERE id = '${roomId}'`,
+          `SELECT * FROM game_player WHERE game_id = '${roomId}'`,
+          `SELECT * FROM chat_message WHERE game_id = '${roomId}'`,
         ]);
 
-      // Register callbacks with cleanup tracking
-      const onSnapshotInsert = (_ctx: unknown, snapshot: { gameId: string; stateJson: string; eventsJson: string }) => {
+      // Callbacks with gameId guards to avoid no-op re-renders from other games
+      const onSnapshotInsert = (_ctx: unknown, snapshot: GameSnapshot) => {
         if (snapshot.gameId === roomId) updateFromSnapshot(snapshot);
       };
-      const onSnapshotUpdate = (_ctx: unknown, _old: unknown, snapshot: { gameId: string; stateJson: string; eventsJson: string }) => {
+      const onSnapshotUpdate = (_ctx: unknown, _old: GameSnapshot, snapshot: GameSnapshot) => {
         if (snapshot.gameId === roomId) updateFromSnapshot(snapshot);
       };
-      const onGameUpdate = (_ctx: unknown, _old: unknown, g: { id: string; status: string }) => {
-        if (g.id === roomId && g.status === "ended") {
+      const onGameUpdate = (_ctx: unknown, _old: GameRow, g: GameRow) => {
+        if (g.id === roomId && (g.status as GameStatus) === "ended") {
           setState((s) => ({ ...s, gameEndReason: "Game ended" }));
         }
       };
-      const onPlayerInsert = () => refreshPlayers();
-      const onPlayerUpdate = () => refreshPlayers();
-      const onPlayerDelete = () => refreshPlayers();
-      const onChatInsert = (_ctx: unknown, msg: { gameId: string; id: bigint; senderName: string; content: string; timestamp: bigint }) => {
+      const onPlayerInsert = (_ctx: unknown, gp: GamePlayerRow) => {
+        if (gp.gameId === roomId) refreshPlayers();
+      };
+      const onPlayerUpdate = (_ctx: unknown, _old: GamePlayerRow, gp: GamePlayerRow) => {
+        if (gp.gameId === roomId) refreshPlayers();
+      };
+      const onPlayerDelete = (_ctx: unknown, gp: GamePlayerRow) => {
+        if (gp.gameId === roomId) refreshPlayers();
+      };
+      const onChatInsert = (_ctx: unknown, msg: ChatMessageRow) => {
         if (msg.gameId !== roomId) return;
         setState((s) => ({
           ...s,
@@ -295,11 +313,14 @@ export function useSpacetimeGame({
         () => conn.db.chatMessage.removeOnInsert(onChatInsert),
       ];
     }).catch((err) => {
+      if (cancelled) return;
       setState((s) => ({ ...s, error: String(err) }));
       onConnectionError?.();
     });
 
     return () => {
+      cancelled = true;
+
       for (const cleanup of callbacksRef.current) {
         cleanup();
       }
@@ -314,10 +335,7 @@ export function useSpacetimeGame({
     };
   }, [roomId, playerName, clientId, isSpectator, refreshPlayers, refreshChat, onConnectionError]);
 
-  function updateFromSnapshot(snapshot: {
-    stateJson: string;
-    eventsJson: string;
-  }) {
+  function updateFromSnapshot(snapshot: Pick<GameSnapshot, "stateJson" | "eventsJson">) {
     const gameState = JSON.parse(snapshot.stateJson) as GameState;
     const events = JSON.parse(snapshot.eventsJson) as GameEvent[];
     eventsRef.current = events;
