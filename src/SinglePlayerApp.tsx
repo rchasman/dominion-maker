@@ -8,7 +8,7 @@ import { lazy, Suspense, useEffect } from "preact/compat";
 import { GameProvider } from "./context/GameContext";
 import { gameState$, isLoading$, startGame$ } from "./context/game-signals";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
-import { PartyKitSync } from "./partykit/PartyKitSync";
+import { SpacetimeSync } from "./spacetimedb/SpacetimeSync";
 import { STORAGE_KEYS } from "./context/storage-utils";
 import { AnimationProvider } from "./animation";
 
@@ -53,7 +53,7 @@ function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
 
   return (
     <>
-      <PartyKitSync />
+      <SpacetimeSync />
       <Suspense fallback={<BoardSkeleton />}>
         <Board onBackToHome={onBackToHome} />
       </Suspense>

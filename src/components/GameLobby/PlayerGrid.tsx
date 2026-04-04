@@ -7,7 +7,7 @@ import type {
   GameRequest,
   ActiveGame,
   PlayerId,
-} from "../../partykit/protocol";
+} from "../../types/multiplayer";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor } from "../../lib/board-utils";
 import { run } from "../../lib/run";

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "preact/hooks";
-import type { ChatMessageData } from "../../../partykit/protocol";
+import type { ChatMessageData } from "../../../types/multiplayer";
 import { chatMessages$, sendChat$ } from "../../../context/game-signals";
 import { getPlayerColor } from "../../../lib/board-utils";
 import { DISABLED_OPACITY } from "../../Board/constants";

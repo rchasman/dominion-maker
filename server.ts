@@ -5,6 +5,7 @@ import strategyReactHandler from "./api/strategy-react";
 import patrickChatHandler from "./api/patrick-chat";
 import { serverLogger } from "./src/lib/logger";
 import { run } from "./src/lib/run";
+import { startEngineClient, stopEngineClient } from "./src/spacetimedb/engine-client";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -163,15 +164,20 @@ const server = Bun.serve({
 
 serverLogger.info(`API server running at http://localhost:${server.port}`);
 
+// Start SpacetimeDB engine client for multiplayer game processing
+startEngineClient();
+
 // Graceful shutdown handling
 process.on("SIGTERM", () => {
   serverLogger.info("SIGTERM received, shutting down gracefully");
+  stopEngineClient();
   server.stop();
   process.exit(EXIT_CODE_SUCCESS);
 });
 
 process.on("SIGINT", () => {
   serverLogger.info("SIGINT received, shutting down gracefully");
+  stopEngineClient();
   server.stop();
   process.exit(EXIT_CODE_SUCCESS);
 });

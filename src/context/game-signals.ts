@@ -15,7 +15,7 @@ import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ModelSettings } from "../agent/types";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { ChatMessageData } from "../partykit/protocol";
+import type { ChatMessageData } from "../types/multiplayer";
 import type { PendingUndoRequest } from "../engine/engine";
 import {
   hasPlayableActions as computeHasPlayableActions,

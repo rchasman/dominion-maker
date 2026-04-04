@@ -42,7 +42,7 @@ export default defineConfig({
               return "preact-vendor";
             }
             // Split vendor by usage pattern
-            if (id.includes("partysocket")) {
+            if (id.includes("spacetimedb")) {
               return "multiplayer-vendor";
             }
             if (id.includes("@floating-ui")) {

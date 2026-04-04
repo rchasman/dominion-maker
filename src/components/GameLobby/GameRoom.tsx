@@ -5,7 +5,7 @@
  * Shows waiting room or game board based on game state.
  */
 import { useMemo } from "preact/hooks";
-import { usePartyGame } from "../../partykit/usePartyGame";
+import { useSpacetimeGame } from "../../spacetimedb/useSpacetimeGame";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
@@ -40,7 +40,7 @@ export function GameRoom({
   onConnectionError,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({
+  const game = useSpacetimeGame({
     roomId,
     playerName,
     clientId,

@@ -6,7 +6,7 @@
  * Also shows active games that spectators can join.
  */
 import { useState, useEffect } from "preact/hooks";
-import { usePartyLobby } from "../../partykit/usePartyLobby";
+import { useSpacetimeLobby } from "../../spacetimedb/useSpacetimeLobby";
 import { PlayerGrid } from "./PlayerGrid";
 import { GameRoom } from "./GameRoom";
 import { generatePlayerName } from "../../lib/name-generator";
@@ -102,7 +102,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   }, [hasAutoReconnected, roomId]);
 
   // Connect immediately with auto-generated name
-  const lobby = usePartyLobby(playerName, clientId);
+  const lobby = useSpacetimeLobby(playerName, clientId);
 
   // Navigate to game when matched (only trigger once per match)
   useEffect(() => {
