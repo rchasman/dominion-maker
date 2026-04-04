@@ -5,6 +5,8 @@
  * listens for game commands, runs them through DominionEngine,
  * and pushes state updates back.
  */
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 import { DbConnection } from "./module_bindings";
 import { DominionEngine } from "../engine/engine";
 import type { GameCommand } from "../commands/types";
@@ -12,7 +14,25 @@ import { engineLogger } from "../lib/logger";
 
 const SPACETIMEDB_HOST = process.env.SPACETIMEDB_HOST || "wss://maincloud.spacetimedb.com";
 const DATABASE_NAME = process.env.SPACETIMEDB_DATABASE || "dominion-maker-20811";
-const TOKEN_KEY = "SPACETIMEDB_ENGINE_TOKEN";
+const TOKEN_FILE = join(import.meta.dir, "../../.spacetimedb-engine-token");
+
+function loadToken(): string | undefined {
+  if (process.env.SPACETIMEDB_ENGINE_TOKEN) return process.env.SPACETIMEDB_ENGINE_TOKEN;
+  try {
+    return readFileSync(TOKEN_FILE, "utf-8").trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveToken(token: string): void {
+  try {
+    writeFileSync(TOKEN_FILE, token, "utf-8");
+    engineLogger.info("Engine token persisted to .spacetimedb-engine-token");
+  } catch {
+    engineLogger.warn("Could not persist engine token to file");
+  }
+}
 
 // Active game engines
 const engines = new Map<string, DominionEngine>();
@@ -21,17 +41,15 @@ const gameVersions = new Map<string, bigint>();
 let conn: DbConnection | null = null;
 
 export function startEngineClient(): void {
-  const storedToken = process.env[TOKEN_KEY] || undefined;
-
   conn = DbConnection.builder()
     .withUri(SPACETIMEDB_HOST)
     .withDatabaseName(DATABASE_NAME)
-    .withToken(storedToken)
+    .withToken(loadToken())
     .onConnect((ctx, _identity, token) => {
       engineLogger.info("Engine client connected to SpacetimeDB");
 
       if (token) {
-        engineLogger.info("Engine token received — store as SPACETIMEDB_ENGINE_TOKEN env var for persistence");
+        saveToken(token);
       }
 
       // Subscribe to all tables

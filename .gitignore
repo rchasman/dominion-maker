@@ -33,4 +33,6 @@ dist-ssr
 
 # AI SDK DevTools
 .devtools/
-.partykit/
+
+# SpacetimeDB
+.spacetimedb-engine-token
