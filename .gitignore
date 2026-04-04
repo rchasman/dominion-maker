@@ -36,3 +36,5 @@ dist-ssr
 
 # SpacetimeDB
 .spacetimedb-engine-token
+spacetimedb/spacetime.local.json
+spacetimedb/spacetimedb/node_modules
