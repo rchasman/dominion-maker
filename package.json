@@ -7,8 +7,7 @@
     "dev": "bun run --parallel dev:api dev:web",
     "dev:api": "portless api.dominion --app-port 5174 --force bun --watch server.ts",
     "dev:web": "portless dominion --force vite",
-    "dev:party": "npx partykit dev",
-    "dev:multi": "bun run --parallel dev:api dev:web dev:party",
+    "dev:multi": "bun run --parallel dev:api dev:web",
     "build": "vite build",
     "build:analyze": "ANALYZE=true vite build",
     "type": "tsc --incremental --noEmit",
@@ -40,9 +39,8 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.143",
-    "partykit": "^0.0.115",
-    "partysocket": "^1.1.16",
     "preact": "^10.29.0",
+    "spacetimedb": "^2.1.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
