@@ -7,33 +7,12 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { connect, getConnection, disconnect } from "./connection";
 import type { DbConnection } from "./module_bindings";
-import type { Identity } from "spacetimedb";
-
-type PlayerId = string;
-
-export interface LobbyPlayer {
-  id: string; // identity hex
-  name: string;
-  clientId: string;
-}
-
-export interface GameRequest {
-  id: string; // bigint as string for compat
-  fromId: PlayerId;
-  toId: PlayerId;
-}
-
-export interface ActiveGame {
-  roomId: string;
-  players: Array<{
-    name: string;
-    isBot?: boolean;
-    id?: string;
-    isConnected?: boolean;
-  }>;
-  spectatorCount: number;
-  isSinglePlayer: boolean;
-}
+import type {
+  PlayerId,
+  LobbyPlayer,
+  GameRequest,
+  ActiveGame,
+} from "../types/multiplayer";
 
 type RequestState = "none" | "sent" | "received";
 
@@ -162,7 +141,8 @@ export function useSpacetimeLobby(
 
     connect((conn) => {
       connRef.current = conn;
-      const identity = (conn as unknown as { identity: Identity }).identity;
+      const identity = conn.identity;
+      if (!identity) return;
       myIdentityRef.current = identity;
       const hexId = identity.toHexString();
       setMyId(hexId);

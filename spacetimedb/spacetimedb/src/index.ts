@@ -290,7 +290,9 @@ export const accept_request = spacetimedb.reducer(
           r.fromIdentity.toHexString() === fromHex ||
           r.toIdentity.toHexString() === fromHex),
     );
-    toCancel.map((r) => ctx.db.gameRequest.id.delete(r.id));
+    for (const r of toCancel) {
+      ctx.db.gameRequest.id.delete(r.id);
+    }
 
     const gameId = generate_game_id(ctx.timestamp);
     const p1 = ctx.db.lobbyPlayer.identity.find(request.fromIdentity);

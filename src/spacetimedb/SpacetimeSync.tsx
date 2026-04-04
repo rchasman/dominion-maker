@@ -73,7 +73,7 @@ export function SpacetimeSync() {
     return () => {
       setIsJoined(false);
     };
-  }, [gameState]);
+  }, [!!gameState]);
 
   // Reset sync counter when new game starts
   useEffect(() => {

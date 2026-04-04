@@ -115,16 +115,6 @@ function initializeGame(gameId: string): void {
 
   const result = engine.startGame(playerIds);
   if (result.ok) {
-    // Update game status to active
-    const game = conn.db.game.id.find(gameId);
-    if (game) {
-      conn.reducers.submitCommand({
-        gameId,
-        playerId: "__engine__",
-        commandJson: JSON.stringify({ type: "__SET_ACTIVE__" }),
-      });
-    }
-
     pushState(gameId, engine);
     engineLogger.info(`Game ${gameId} started with players: ${playerIds.join(", ")}`);
   } else {
@@ -140,20 +130,9 @@ function processCommand(
 ): void {
   if (!conn) return;
 
-  // Mark as processed immediately to prevent reprocessing
   conn.reducers.markCommandProcessed({ commandId });
 
-  // Internal engine commands
-  const parsed = JSON.parse(commandJson) as Record<string, unknown>;
-  if (parsed.type === "__SET_ACTIVE__") {
-    const game = conn.db.game.id.find(gameId);
-    if (game && game.status === "waiting") {
-      // We can't directly update from engine client — use the game flow
-    }
-    return;
-  }
-
-  const command = parsed as GameCommand;
+  const command = JSON.parse(commandJson) as GameCommand;
   const engine = getOrCreateEngine(gameId);
 
   // Handle START_GAME commands
@@ -204,9 +183,9 @@ function processAllPendingCommands(): void {
 
   if (pending.length > 0) {
     engineLogger.info(`Processing ${pending.length} pending commands`);
-    pending.map(cmd =>
-      processCommand(cmd.id, cmd.gameId, cmd.playerId, cmd.commandJson),
-    );
+    for (const cmd of pending) {
+      processCommand(cmd.id, cmd.gameId, cmd.playerId, cmd.commandJson);
+    }
   }
 }
 

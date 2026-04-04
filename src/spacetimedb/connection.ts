@@ -42,12 +42,10 @@ export function connect(
         connection = conn;
         connectionPromise = null;
 
-        // Persist token for reconnection
         if (token) {
           localStorage.setItem(TOKEN_KEY, token);
         }
 
-        // Subscribe to all public tables
         ctx
           .subscriptionBuilder()
           .onApplied(() => {

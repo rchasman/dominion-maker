@@ -18,7 +18,6 @@ import type {
 import { projectState } from "../events/project";
 import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
-import type { Identity } from "spacetimedb";
 
 interface UseSpacetimeGameOptions {
   roomId: string;
@@ -65,9 +64,6 @@ interface SpacetimeGameActions {
   sendChat: (message: ChatMessageData) => void;
 }
 
-/**
- * Compute pending undo request from event log
- */
 function computePendingUndo(events: GameEvent[]): PendingUndoRequest | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
@@ -153,7 +149,6 @@ export function useSpacetimeGame({
     playerIdRef.current = state.playerId;
   }, [state.playerId]);
 
-  // Refresh game players from table
   const refreshPlayers = useCallback(() => {
     const conn = connRef.current;
     if (!conn) return;
@@ -167,10 +162,11 @@ export function useSpacetimeGame({
       playerId: gp.playerId,
     }));
 
-    const disconnected = new Map<PlayerId, string>();
-    activePlayers
-      .filter((gp) => !gp.connected)
-      .map((gp) => disconnected.set(gp.playerId, gp.name));
+    const disconnected = new Map(
+      activePlayers
+        .filter((gp) => !gp.connected)
+        .map((gp) => [gp.playerId, gp.name] as const),
+    );
 
     setState((s) => ({
       ...s,
@@ -180,7 +176,6 @@ export function useSpacetimeGame({
     }));
   }, [roomId]);
 
-  // Refresh chat messages from table
   const refreshChat = useCallback(() => {
     const conn = connRef.current;
     if (!conn) return;
@@ -200,10 +195,10 @@ export function useSpacetimeGame({
   useEffect(() => {
     connect((conn) => {
       connRef.current = conn;
-      const identity = (conn as unknown as { identity: Identity }).identity;
-      setIsConnected(true);
+      const identity = conn.identity;
+      if (!identity) return;
+      setState((s) => ({ ...s, isConnected: true }));
 
-      // Find my player entry
       const myPlayer = [...conn.db.gamePlayer.byGameId.filter(roomId)].find(
         (gp) => gp.identity.toHexString() === identity.toHexString(),
       );
@@ -214,10 +209,9 @@ export function useSpacetimeGame({
           isJoined: true,
           playerId: myPlayer.playerId,
           isSpectator: myPlayer.isSpectator,
-          isHost: false, // TODO: check host
+          isHost: false,
         }));
       } else if (isSpectator) {
-        // Join as spectator
         conn.reducers.joinGameAsSpectator({ gameId: roomId, name: playerName });
         setState((s) => ({
           ...s,
@@ -226,7 +220,6 @@ export function useSpacetimeGame({
           isSpectator: true,
         }));
       } else {
-        // Already joined via lobby matchmaking
         setState((s) => ({
           ...s,
           isJoined: true,
@@ -235,7 +228,6 @@ export function useSpacetimeGame({
         }));
       }
 
-      // Watch for game state updates
       conn.db.gameSnapshot.onInsert((_ctx, snapshot) => {
         if (snapshot.gameId !== roomId) return;
         updateFromSnapshot(snapshot);
@@ -245,7 +237,6 @@ export function useSpacetimeGame({
         updateFromSnapshot(snapshot);
       });
 
-      // Watch for game status changes
       conn.db.game.onUpdate((_ctx, _old, g) => {
         if (g.id !== roomId) return;
         if (g.status === "ended") {
@@ -253,12 +244,10 @@ export function useSpacetimeGame({
         }
       });
 
-      // Watch player changes
       conn.db.gamePlayer.onInsert(() => refreshPlayers());
       conn.db.gamePlayer.onUpdate(() => refreshPlayers());
       conn.db.gamePlayer.onDelete(() => refreshPlayers());
 
-      // Watch chat
       conn.db.chatMessage.onInsert((_ctx, msg) => {
         if (msg.gameId !== roomId) return;
         setState((s) => ({
@@ -275,7 +264,6 @@ export function useSpacetimeGame({
         }));
       });
 
-      // Load initial state
       const snapshot = conn.db.gameSnapshot.gameId.find(roomId);
       if (snapshot) {
         updateFromSnapshot(snapshot);
@@ -288,13 +276,9 @@ export function useSpacetimeGame({
     });
 
     return () => {
-      setIsConnected(false);
+      setState((s) => ({ ...s, isConnected: false }));
     };
   }, [roomId, playerName, clientId, isSpectator, refreshPlayers, refreshChat, onConnectionError]);
-
-  function setIsConnected(connected: boolean) {
-    setState((s) => ({ ...s, isConnected: connected }));
-  }
 
   function updateFromSnapshot(snapshot: {
     stateJson: string;
@@ -312,13 +296,8 @@ export function useSpacetimeGame({
     }));
   }
 
-  // Auto-start single-player games
   useEffect(() => {
-    if (
-      isSinglePlayer &&
-      state.isJoined &&
-      !state.gameState
-    ) {
+    if (isSinglePlayer && state.isJoined && !state.gameState) {
       const conn = getConnection();
       if (!conn) return;
 
@@ -334,7 +313,16 @@ export function useSpacetimeGame({
     }
   }, [isSinglePlayer, state.isJoined, state.gameState, roomId, clientId, gameMode]);
 
-  // Actions
+  // Shared command helper — guards spectator, resolves playerId
+  const gameCommand = useCallback(
+    (type: string, extra?: Record<string, unknown>): CommandResult => {
+      if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
+      const pid = playerIdRef.current || clientId;
+      return sendCommand(roomId, pid, { type, playerId: pid, ...extra });
+    },
+    [roomId, clientId],
+  );
+
   const startGame = useCallback(
     (kingdomCards?: CardName[]) => {
       if (isSinglePlayer) {
@@ -354,135 +342,70 @@ export function useSpacetimeGame({
     [roomId, clientId, isSinglePlayer, gameMode],
   );
 
-  const changeGameMode = useCallback(
-    (_newGameMode: string) => {
-      // Mode changes handled client-side for now
-    },
-    [],
-  );
+  const changeGameMode = useCallback((_newGameMode: string) => {}, []);
 
   const playAction = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-      return sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "PLAY_ACTION",
-        playerId: playerIdRef.current || clientId,
-        card,
-      });
-    },
-    [roomId, clientId],
+    (card: CardName): CommandResult => gameCommand("PLAY_ACTION", { card }),
+    [gameCommand],
   );
 
   const playTreasure = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-      return sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "PLAY_TREASURE",
-        playerId: playerIdRef.current || clientId,
-        card,
-      });
-    },
-    [roomId, clientId],
+    (card: CardName): CommandResult => gameCommand("PLAY_TREASURE", { card }),
+    [gameCommand],
   );
 
-  const playAllTreasures = useCallback((): CommandResult => {
-    if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-    return sendCommand(roomId, playerIdRef.current || clientId, {
-      type: "PLAY_ALL_TREASURES",
-      playerId: playerIdRef.current || clientId,
-    });
-  }, [roomId, clientId]);
+  const playAllTreasures = useCallback(
+    (): CommandResult => gameCommand("PLAY_ALL_TREASURES"),
+    [gameCommand],
+  );
 
   const buyCard = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-      return sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "BUY_CARD",
-        playerId: playerIdRef.current || clientId,
-        card,
-      });
-    },
-    [roomId, clientId],
+    (card: CardName): CommandResult => gameCommand("BUY_CARD", { card }),
+    [gameCommand],
   );
 
-  const endPhase = useCallback((): CommandResult => {
-    if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-    return sendCommand(roomId, playerIdRef.current || clientId, {
-      type: "END_PHASE",
-      playerId: playerIdRef.current || clientId,
-    });
-  }, [roomId, clientId]);
+  const endPhase = useCallback(
+    (): CommandResult => gameCommand("END_PHASE"),
+    [gameCommand],
+  );
 
   const submitDecision = useCallback(
-    (choice: DecisionChoice): CommandResult => {
-      if (isSpectatorRef.current) return { ok: false, error: "Spectators cannot act" };
-      return sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "SUBMIT_DECISION",
-        playerId: playerIdRef.current || clientId,
-        choice,
-      });
-    },
-    [roomId, clientId],
+    (choice: DecisionChoice): CommandResult => gameCommand("SUBMIT_DECISION", { choice }),
+    [gameCommand],
   );
 
   const requestUndo = useCallback(
     (toEventId: string, reason?: string) => {
-      sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "REQUEST_UNDO",
-        playerId: playerIdRef.current || clientId,
-        toEventId,
-        ...(reason !== undefined && { reason }),
-      });
+      gameCommand("REQUEST_UNDO", { toEventId, ...(reason !== undefined && { reason }) });
     },
-    [roomId, clientId],
+    [gameCommand],
   );
 
   const approveUndo = useCallback(
-    (requestId: string) => {
-      sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "APPROVE_UNDO",
-        playerId: playerIdRef.current || clientId,
-        requestId,
-      });
-    },
-    [roomId, clientId],
+    (requestId: string) => { gameCommand("APPROVE_UNDO", { requestId }); },
+    [gameCommand],
   );
 
   const denyUndo = useCallback(
-    (requestId: string) => {
-      sendCommand(roomId, playerIdRef.current || clientId, {
-        type: "DENY_UNDO",
-        playerId: playerIdRef.current || clientId,
-        requestId,
-      });
-    },
-    [roomId, clientId],
+    (requestId: string) => { gameCommand("DENY_UNDO", { requestId }); },
+    [gameCommand],
   );
 
   const resign = useCallback(() => {
-    const conn = getConnection();
-    if (conn) {
-      conn.reducers.resignGame({ gameId: roomId });
-    }
+    getConnection()?.reducers.resignGame({ gameId: roomId });
   }, [roomId]);
 
   const leave = useCallback(() => {
-    const conn = getConnection();
-    if (conn) {
-      conn.reducers.leaveGame({ gameId: roomId });
-    }
+    getConnection()?.reducers.leaveGame({ gameId: roomId });
   }, [roomId]);
 
   const sendChatMsg = useCallback(
     (message: ChatMessageData) => {
-      const conn = getConnection();
-      if (conn) {
-        conn.reducers.sendChat({
-          gameId: roomId,
-          senderName: message.senderName,
-          content: message.content,
-        });
-      }
+      getConnection()?.reducers.sendChat({
+        gameId: roomId,
+        senderName: message.senderName,
+        content: message.content,
+      });
     },
     [roomId],
   );
