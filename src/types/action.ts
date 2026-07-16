@@ -30,16 +30,29 @@ export type Action =
     };
 
 /**
+ * Omit that distributes over union members, preserving each variant's
+ * own fields (plain Omit collapses a union to its shared keys).
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
+/** An Action's core signature: the action without its reasoning field */
+export type ActionSignature = DistributiveOmit<Action, "reasoning">;
+
+/**
  * Strip reasoning field from an action to get its core signature.
  * Also normalizes card field (removes if null/undefined) so equivalent
  * actions produce identical signatures.
  */
-export function stripReasoning(action: Action): Omit<Action, "reasoning"> {
+export function stripReasoning(action: Action): ActionSignature {
+  if (action.type === "choose_from_options") {
+    const { reasoning, ...rest } = action;
+    void reasoning;
+    return rest;
+  }
   const { reasoning, ...rest } = action;
   void reasoning;
-  if (action.type === "choose_from_options") {
-    return rest as Omit<Action, "reasoning">;
-  }
   const { card } = action;
-  return card != null ? { ...rest, card } : (rest as Omit<Action, "reasoning">);
+  return card != null ? { ...rest, card } : rest;
 }

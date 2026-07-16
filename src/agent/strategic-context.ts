@@ -153,8 +153,6 @@ interface PlayerStrategyAnalysis {
   recommendation: string;
 }
 
-const _JSON_INDENT_SPACES = 2;
-
 /**
  * Builds structured game facts encoded in TOON format
  * Only includes strategic insights - removes data already present in game state

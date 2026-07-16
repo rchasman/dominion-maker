@@ -217,18 +217,18 @@ describe("storage-utils", () => {
   });
 
   describe("loadPlayerStrategies", () => {
-    it("should return empty array when no strategies are stored", () => {
-      expect(loadPlayerStrategies()).toEqual([]);
+    it("should return empty record when no strategies are stored", () => {
+      expect(loadPlayerStrategies()).toEqual({});
     });
 
-    it("should return empty array when storage is null", () => {
+    it("should return empty record when storage is null", () => {
       localStorage.removeItem(STORAGE_KEYS.STRATEGIES);
-      expect(loadPlayerStrategies()).toEqual([]);
+      expect(loadPlayerStrategies()).toEqual({});
     });
 
-    it("should return empty array when stored value is invalid JSON", () => {
+    it("should return empty record when stored value is invalid JSON", () => {
       localStorage.setItem(STORAGE_KEYS.STRATEGIES, "not-json");
-      expect(loadPlayerStrategies()).toEqual([]);
+      expect(loadPlayerStrategies()).toEqual({});
     });
 
     it("should return parsed strategies when stored as array", () => {

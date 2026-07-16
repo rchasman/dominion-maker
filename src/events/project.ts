@@ -8,12 +8,16 @@ import { buildLogFromEvents } from "./log-builder";
  * This is the base state before any events are applied.
  */
 export function createEmptyState(): GameState {
+  // Supply starts empty and is populated by GAME_INITIALIZED.
+  // Typed via string-keyed record (as on GameInitializedEvent) so the
+  // empty object satisfies Record<CardName, number> structurally.
+  const emptySupply: Record<string, number> = {};
   return {
     turn: 0,
     phase: "action",
     activePlayerId: "human",
     players: {},
-    supply: {},
+    supply: emptySupply,
     trash: [],
     kingdomCards: [],
     actions: 0,

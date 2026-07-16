@@ -48,7 +48,7 @@ function applyGameSetupEvent(
       playerInfo: state.playerInfo || {},
       turn: 0,
       phase: "action",
-      activePlayerId: event.players[0],
+      activePlayerId: event.players[0] ?? state.activePlayerId,
       actions: 1,
       buys: 1,
       coins: 0,
@@ -108,11 +108,6 @@ function applyGameSetupEvent(
  * This is the core state transition function - pure and deterministic.
  */
 export function applyEvent(state: GameState, event: GameEvent): GameState {
-  // DRAW events are expanded in applyEvents, not applied directly
-  if (event.type === "DRAW") {
-    return state;
-  }
-
   // Try game setup events
   const setupResult = applyGameSetupEvent(state, event);
   if (setupResult) return setupResult;
@@ -145,19 +140,7 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
   const gameEndResult = applyGameEndEvent(state, event);
   if (gameEndResult) return gameEndResult;
 
-  // Undo events don't modify state
-  if (
-    event.type === "UNDO_REQUESTED" ||
-    event.type === "UNDO_APPROVED" ||
-    event.type === "UNDO_DENIED" ||
-    event.type === "UNDO_EXECUTED"
-  ) {
-    return state;
-  }
-
-  // Exhaustiveness check
-  const exhaustive: never = event;
-  void exhaustive;
+  // Remaining events (undo bookkeeping, etc.) don't modify state
   return state;
 }
 

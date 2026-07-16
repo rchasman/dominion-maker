@@ -15,7 +15,11 @@ const colors = {
 };
 
 class SimpleLogger {
-  constructor(private name: string) {}
+  private name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
 
   private log(level: LogLevel, ...args: unknown[]) {
     const TIMESTAMP_START = 11;

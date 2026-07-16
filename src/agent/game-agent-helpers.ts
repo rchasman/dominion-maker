@@ -176,11 +176,11 @@ export async function generateActionViaBackend(
       currentState,
       ...(humanChoice !== undefined ? { humanChoice } : {}),
       legalActions,
-      strategySummary,
-      customStrategy,
+      ...(strategySummary !== undefined && { strategySummary }),
+      ...(customStrategy !== undefined && { customStrategy }),
     },
     {
-      fetch: { signal },
+      fetch: { ...(signal !== undefined && { signal }) },
     },
   );
   void actionId; // Used for logging/tracking, not sent to API

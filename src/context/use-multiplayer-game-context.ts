@@ -13,6 +13,7 @@ import type {
   DecisionChoice,
 } from "../types/game-state";
 import type { GameEvent } from "../events/types";
+import type { ChatMessageData } from "../partykit/protocol";
 import type { CommandResult } from "../commands/types";
 import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
@@ -62,12 +63,7 @@ interface MultiplayerGameState {
   isJoined: boolean;
   spectatorCount: number;
   players: Array<{ name: string; playerId: PlayerId }>;
-  chatMessages: Array<{
-    id: string;
-    senderName: string;
-    content: string;
-    timestamp: number;
-  }>;
+  chatMessages: ChatMessageData[];
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
   playAllTreasures: () => CommandResult;
@@ -80,7 +76,7 @@ interface MultiplayerGameState {
   pendingUndo: PendingUndoRequest | null;
   getStateAtEvent: (eventId: string) => GameState;
   startGame: () => void;
-  sendChat: (message: string) => void;
+  sendChat: (message: ChatMessageData) => void;
 }
 
 interface UseMultiplayerGameContextOptions {

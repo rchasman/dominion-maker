@@ -42,10 +42,9 @@ const FIXED_PLAYER_COLORS: Record<string, number> = {
  */
 export function getPlayerColor(playerId: PlayerId): string {
   // Check if this is a fixed player ID
-  if (playerId in FIXED_PLAYER_COLORS) {
-    const index = FIXED_PLAYER_COLORS[playerId];
-    return PLAYER_COLORS[index];
-  }
+  const fixedIndex = FIXED_PLAYER_COLORS[playerId];
+  const fixedColor = fixedIndex !== undefined && PLAYER_COLORS[fixedIndex];
+  if (fixedColor) return fixedColor;
 
   // For dynamic player names, use hash-based color selection
   const hash = playerId.split("").reduce((acc, char) => {

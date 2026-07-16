@@ -38,13 +38,12 @@ export function useStartGame(
     const gameMode = gameMode$.value;
     const players =
       gameMode === "multiplayer"
-        ? (["human", "ai"] as const)
+        ? ["human", "ai"]
         : getPlayersForMode(gameMode);
 
     const result = newEngine.dispatch({
       type: "START_GAME",
       players,
-      kingdomCards: undefined,
     });
 
     if (result.ok) {

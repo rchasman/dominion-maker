@@ -43,8 +43,8 @@ export function getPlayerPerspective(
   }
 
   return {
-    localPlayerId: playerIds[0],
-    opponentPlayerId: playerIds[1],
+    localPlayerId: playerIds[0] ?? "human",
+    opponentPlayerId: playerIds[1] ?? "ai",
     allPlayerIds: playerIds,
   };
 }

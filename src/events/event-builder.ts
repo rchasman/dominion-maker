@@ -35,22 +35,21 @@ export class EventBuilder {
    * The first event added becomes the root cause (no causedBy).
    * Subsequent events are caused by the root event.
    *
-   * @param event - Event to add (without id or causedBy)
+   * @param event - Event to add (id and causedBy are filled in here)
    * @param causedBy - Optional override for causedBy (defaults to root event ID for non-root events)
    * @returns The event with generated ID for reference
    */
-  add<T extends Omit<GameEvent, "id" | "causedBy">>(
-    event: T,
-    causedBy?: string,
-  ): GameEvent {
+  add<T extends GameEvent>(event: T, causedBy?: string): GameEvent {
     const isFirstEvent = this.events.length === 0;
+    // Allow explicit causedBy even for first event (for decision chains)
     const determinedCausedBy =
       causedBy || (isFirstEvent ? undefined : this.rootEventId);
-    const eventWithMetadata: GameEvent = {
+    const eventWithMetadata = {
       ...event,
       id: isFirstEvent ? this.rootEventId : generateEventId(),
-      // Allow explicit causedBy even for first event (for decision chains)
-      causedBy: determinedCausedBy,
+      ...(determinedCausedBy !== undefined && {
+        causedBy: determinedCausedBy,
+      }),
     } as GameEvent;
 
     this.events = [...this.events, eventWithMetadata];
@@ -63,10 +62,7 @@ export class EventBuilder {
    * @param events - Events to add
    * @param causedBy - Optional override for causedBy (defaults to root event ID)
    */
-  addAll<T extends Omit<GameEvent, "id" | "causedBy">>(
-    events: T[],
-    causedBy?: string,
-  ): void {
+  addAll<T extends GameEvent>(events: T[], causedBy?: string): void {
     events.map(event => this.add(event, causedBy));
   }
 

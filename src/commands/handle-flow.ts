@@ -24,7 +24,8 @@ export function handleStartGame(
 ): CommandResult {
   void state;
 
-  if (players.length === 0) {
+  const [firstPlayer] = players;
+  if (firstPlayer === undefined) {
     return { ok: false, error: "Cannot start game with no players" };
   }
 
@@ -81,7 +82,6 @@ export function handleStartGame(
 
   // Start turn 1
   const turnStartId = generateEventId();
-  const firstPlayer = players[0];
 
   // Add initial resources as explicit events for log clarity
   return {
@@ -250,7 +250,7 @@ export function handleRequestUndo(
     requestId,
     byPlayer: playerId,
     toEventId,
-    reason,
+    ...(reason !== undefined && { reason }),
   });
 
   return { ok: true, events: builder.build() };

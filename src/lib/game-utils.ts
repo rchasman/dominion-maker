@@ -6,10 +6,11 @@ export function shuffle<T>(array: T[]): T[] {
     (result, _, currentIndex) => {
       if (currentIndex === 0) return result;
       const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
-      [result[currentIndex], result[randomIndex]] = [
-        result[randomIndex],
-        result[currentIndex],
-      ];
+      const current = result[currentIndex];
+      const random = result[randomIndex];
+      if (current === undefined || random === undefined) return result;
+      result[currentIndex] = random;
+      result[randomIndex] = current;
       return result;
     },
     [...array],

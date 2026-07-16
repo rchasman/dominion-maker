@@ -3,8 +3,13 @@ import { uiLogger } from "../lib/logger";
  * Shared agent types to avoid circular dependencies
  */
 
-import type { ModelProvider } from "../config/models";
+import type { ModelConfig, ModelProvider } from "../config/models";
 import { MODEL_IDS, MODELS } from "../config/models";
+
+// Widen the `as const` MODELS entries to ModelConfig so optional fields
+// (maxInstances, speed) are accessible on every entry
+const findModelConfig = (modelId: ModelProvider): ModelConfig | undefined =>
+  MODELS.find(m => m.id === modelId);
 
 // Model settings for consensus
 export interface ModelSettings {
@@ -61,10 +66,9 @@ export function buildModelsFromSettings({
   }
 
   // Separate models with maxInstances from those without
-  const modelsWithoutLimits = enabled.filter(modelId => {
-    const config = MODELS.find(m => m.id === modelId);
-    return config?.maxInstances === undefined;
-  });
+  const modelsWithoutLimits = enabled.filter(
+    modelId => findModelConfig(modelId)?.maxInstances === undefined,
+  );
 
   // Fill array by cycling through all enabled models
   const { models } = Array.from(
@@ -79,14 +83,14 @@ export function buildModelsFromSettings({
       if (!modelId) {
         throw new Error("Model selection failed: no model available");
       }
-      const config = MODELS.find(m => m.id === modelId);
+      const config = findModelConfig(modelId);
       const currentCount = acc.instanceCounts.get(modelId) ?? 0;
 
       // Check if model has reached its limit
       if (config?.maxInstances && currentCount >= config.maxInstances) {
         // Try to find another model that hasn't reached its limit
         const availableModel = enabled.find(id => {
-          const cfg = MODELS.find(m => m.id === id);
+          const cfg = findModelConfig(id);
           const count = acc.instanceCounts.get(id) ?? 0;
           return !cfg?.maxInstances || count < cfg.maxInstances;
         });

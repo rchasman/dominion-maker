@@ -62,15 +62,20 @@ const SHUFFLE_THRESHOLD = 0.5;
  * Generate two unique random AI names
  */
 export function generateAINames(): [string, string] {
-  const shuffled = [...AI_NAMES].sort(() => Math.random() - SHUFFLE_THRESHOLD);
-  return [shuffled[0], shuffled[1]];
+  const [first, second] = [...AI_NAMES].sort(
+    () => Math.random() - SHUFFLE_THRESHOLD,
+  );
+  if (first === undefined || second === undefined) {
+    throw new Error("AI name pool must contain at least two names");
+  }
+  return [first, second];
 }
 
 /**
  * Get a specific AI name by index (deterministic for testing)
  */
 export function getAIName(index: number): string {
-  return AI_NAMES[index % AI_NAMES.length];
+  return AI_NAMES[index % AI_NAMES.length] ?? AI_NAMES[0];
 }
 
 /**

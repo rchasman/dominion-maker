@@ -175,7 +175,6 @@ export class DominionEngine {
       return {
         ok: false,
         error: "An undo request is already pending",
-        events: [],
       };
     }
 

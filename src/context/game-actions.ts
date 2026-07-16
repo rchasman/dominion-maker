@@ -104,7 +104,9 @@ export function executePlayAllTreasures(
     return errorOccurred;
   }, false);
 
-  return { ok: !hasError, events: [] };
+  return hasError
+    ? { ok: false, error: "Failed to play one or more treasures" }
+    : { ok: true, events: [] };
 }
 
 /**

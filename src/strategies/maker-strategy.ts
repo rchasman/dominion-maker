@@ -18,9 +18,9 @@ import { isDecisionChoice } from "../types/pending-choice";
  * MAKER: Uses multi-model consensus voting for AI turns
  */
 export class MakerStrategy implements GameStrategy {
-  private logger?: LLMLogger;
+  private logger: LLMLogger | undefined;
   private modelSettings: ModelSettings;
-  private strategySummary?: string;
+  private strategySummary: string | undefined;
 
   constructor(
     _provider?: unknown,
@@ -37,7 +37,6 @@ export class MakerStrategy implements GameStrategy {
         "gpt-oss-20b",
       ]),
       consensusCount: 8,
-      dataFormat: "mixed",
     };
     this.strategySummary = strategySummary;
   }
@@ -68,7 +67,6 @@ export class MakerStrategy implements GameStrategy {
       ...(this.modelSettings.customStrategy !== undefined && {
         customStrategy: this.modelSettings.customStrategy,
       }),
-      dataFormat: this.modelSettings.dataFormat,
     });
   }
 
@@ -101,7 +99,6 @@ export class MakerStrategy implements GameStrategy {
       ...(this.modelSettings.customStrategy !== undefined && {
         customStrategy: this.modelSettings.customStrategy,
       }),
-      dataFormat: this.modelSettings.dataFormat,
     });
   }
 

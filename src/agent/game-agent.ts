@@ -39,6 +39,7 @@ import {
   isMultiActionDecision,
   isBatchDecision,
   simulateCardSelection,
+  type EngineSnapshot,
 } from "./decision-reconstructor";
 
 // Constants
@@ -276,8 +277,8 @@ async function handleBatchConsensus(
 
   const runBatchRound = async (
     round: number,
-    acc: { cards: CardName[]; engine: DominionEngine },
-  ): Promise<{ cards: CardName[]; engine: DominionEngine }> => {
+    acc: { cards: CardName[]; engine: EngineSnapshot },
+  ): Promise<{ cards: CardName[]; engine: EngineSnapshot }> => {
     if (round >= (max ?? 1)) return acc;
 
     const legalActions = getLegalActions(acc.engine.state);

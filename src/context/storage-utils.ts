@@ -111,13 +111,13 @@ export function loadModelSettings(): ModelSettings | null {
 export function loadPlayerStrategies(): PlayerStrategyData {
   const savedStrategies = localStorage.getItem(STORAGE_KEYS.STRATEGIES);
   if (!savedStrategies) {
-    return [];
+    return {};
   }
 
   try {
     return JSON.parse(savedStrategies) as PlayerStrategyData;
   } catch {
-    return [];
+    return {};
   }
 }
 

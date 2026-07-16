@@ -71,7 +71,11 @@ describe("game-actions", () => {
       const result = executePlayAllTreasures(engine, engine.state);
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
-      expect(result.events).toBeDefined();
+      if (result.ok) {
+        expect(result.events).toBeDefined();
+      } else {
+        expect(result.error).toBeDefined();
+      }
     });
 
     it("should return error when no human player", () => {

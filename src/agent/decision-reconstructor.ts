@@ -9,6 +9,13 @@ import { isDecisionChoice } from "../types/pending-choice";
  */
 
 /**
+ * Read-only view of the engine used during consensus simulation.
+ * The simulated "engine" is a plain object carrying only game state,
+ * not a real DominionEngine instance.
+ */
+export type EngineSnapshot = Pick<DominionEngine, "state">;
+
+/**
  * Simulate a card selection without emitting events.
  * Used to provide context for multi-round consensus voting.
  *
@@ -16,9 +23,9 @@ import { isDecisionChoice } from "../types/pending-choice";
  * allowing the next consensus round to see "what if I already selected this card".
  */
 export function simulateCardSelection(
-  engine: DominionEngine,
+  engine: EngineSnapshot,
   card: CardName,
-): DominionEngine {
+): EngineSnapshot {
   const state = { ...engine.state };
   const decision = state.pendingChoice;
 

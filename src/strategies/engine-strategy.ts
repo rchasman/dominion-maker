@@ -133,9 +133,11 @@ export class EngineStrategy implements GameStrategy {
       const actionCards = hand.filter(isActionCard);
       if (actionCards.length === 0) break;
 
-      const sortedActions = sortActionsByPriority(actionCards);
+      const [topAction] = sortActionsByPriority(actionCards);
+      if (!topAction) break;
+
       const result = engine.dispatch(
-        { type: "PLAY_ACTION", playerId: "ai", card: sortedActions[0] },
+        { type: "PLAY_ACTION", playerId: "ai", card: topAction },
         "ai",
       );
 
@@ -201,7 +203,7 @@ export class EngineStrategy implements GameStrategy {
     }
   }
 
-  resolveAIPendingDecision(engine: DominionEngine): void {
+  async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
     const decision = engine.state.pendingChoice;
     if (!decision || decision.playerId !== "ai") return;
     if (!isDecisionChoice(decision)) return;

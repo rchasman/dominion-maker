@@ -489,7 +489,7 @@ export function handleSkipDecision(
       type: "DECISION_SKIPPED",
       playerId,
       cardBeingPlayed,
-      stage,
+      ...(stage !== undefined && { stage }),
     },
     state.pendingChoiceEventId || undefined,
   );

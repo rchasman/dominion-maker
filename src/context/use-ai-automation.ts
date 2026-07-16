@@ -7,7 +7,7 @@
 import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useEffect, useRef } from "preact/hooks";
 import type { DominionEngine } from "../engine";
-import type { GameState, PlayerId } from "../types/game-state";
+import type { CardName, GameState, PlayerId } from "../types/game-state";
 import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { Zone } from "../animation/types";
 import { isAIControlled } from "../lib/game-mode-utils";
@@ -124,7 +124,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
                 let cardElement: Element | null = null;
                 let toZone: Zone | null = null;
                 let duration = 200;
-                let cardName: string | null = null;
+                let cardName: CardName | null = null;
 
                 if (
                   event.type === "CARD_PLAYED" &&
