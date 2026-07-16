@@ -28,10 +28,12 @@ interface SupplyProps {
   onPlayAllTreasures?: () => void;
   onEndPhase?: () => void;
   selectedCardIndices?: number[];
-  onConfirmDecision?: (complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  }) => void;
+  onConfirmDecision?: (
+    complexDecisionData: {
+      cardActions: Record<number, string>;
+      cardOrder?: number[];
+    } | null,
+  ) => void;
   onSkipDecision?: () => void;
   complexDecisionData?: {
     cardActions: Record<number, string>;
@@ -86,10 +88,7 @@ function getButtonCursor(disabled: boolean): string {
 }
 
 function getEndPhaseButtonBackground(
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined,
+  pendingChoice: PendingChoice | null | undefined,
   phase: string,
 ): string {
   if (pendingChoice && canSkipDecision(pendingChoice)) {
@@ -103,10 +102,7 @@ function getEndPhaseButtonBackground(
 
 function getEndPhaseButtonBorder(
   isTurnComplete: boolean,
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined,
+  pendingChoice: PendingChoice | null | undefined,
   phase: string,
 ): string {
   if (isTurnComplete) return "1px solid #a89968";
@@ -117,10 +113,7 @@ function getEndPhaseButtonBorder(
 }
 
 function getEndPhaseButtonText(
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined,
+  pendingChoice: PendingChoice | null | undefined,
   phase: string,
 ): string {
   if (pendingChoice && canSkipDecision(pendingChoice)) return "Skip";
@@ -134,10 +127,12 @@ function ConfirmButton({
   selectedCardIndices,
   minRequired,
 }: {
-  onConfirmDecision: (complexDecisionData?: {
-    cardActions: Record<number, string>;
-    cardOrder?: number[];
-  }) => void;
+  onConfirmDecision: (
+    complexDecisionData: {
+      cardActions: Record<number, string>;
+      cardOrder?: number[];
+    } | null,
+  ) => void;
   complexDecisionData:
     | { cardActions: Record<number, string>; cardOrder?: number[] }
     | null
@@ -151,7 +146,7 @@ function ConfirmButton({
   return (
     <button
       className="supply-button"
-      onClick={() => onConfirmDecision(complexDecisionData ?? undefined)}
+      onClick={() => onConfirmDecision(complexDecisionData ?? null)}
       disabled={disabled}
       style={{
         background: "linear-gradient(180deg, #818cf8 0%, #6366f1 100%)",
@@ -186,10 +181,7 @@ function PlayTreasuresButton({
   pendingChoice,
 }: {
   onPlayAllTreasures: () => void;
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined;
+  pendingChoice: PendingChoice | null | undefined;
 }) {
   const disabled = !!(pendingChoice && !canSkipDecision(pendingChoice));
 
@@ -219,10 +211,7 @@ function EndPhaseButton({
   isTurnComplete,
 }: {
   onEndPhase: () => void;
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined;
+  pendingChoice: PendingChoice | null | undefined;
   phase: string;
   isTurnComplete: boolean;
 }) {

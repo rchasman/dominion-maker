@@ -104,7 +104,7 @@ export function EventDevtools({
       selectedState={selectedState}
       prevState={prevState}
       listRef={listRef}
-      onToggle={onToggle}
+      {...(onToggle !== undefined && { onToggle })}
       onFilterChange={setFilter}
       onToggleDiff={() => setShowDiff(!showDiff)}
       handlers={handlers}

@@ -23,6 +23,7 @@ import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
 import type { ComplexDecisionData } from "./hooks";
 import { useAnimationSafe } from "../../animation";
+import { isDecisionChoice } from "../../types/pending-choice";
 import { run } from "../../lib/run";
 
 const ANIMATION_DURATION = {
@@ -61,13 +62,13 @@ interface BoardContentProps {
   onNewGame: () => void;
   onBackToHome?: () => void;
   onRequestUndo: (eventId: string) => void;
-  onScrub: (eventId: string) => void;
-  onCardClick?: (card: CardName, index: number) => void;
-  onInPlayClick?: (card: CardName) => void;
-  onPlayAllTreasures?: () => void;
-  onEndPhase?: () => void;
-  onConfirmDecision?: (data: ComplexDecisionData | null) => void;
-  onSkipDecision?: () => void;
+  onScrub: (eventId: string | null) => void;
+  onCardClick?: ((card: CardName, index: number) => void) | undefined;
+  onInPlayClick?: ((card: CardName) => void) | undefined;
+  onPlayAllTreasures?: (() => void) | undefined;
+  onEndPhase?: (() => void) | undefined;
+  onConfirmDecision?: ((data: ComplexDecisionData | null) => void) | undefined;
+  onSkipDecision?: (() => void) | undefined;
   onRevealReaction?: (card: CardName) => void;
   onDeclineReaction?: () => void;
   onComplexDecisionChange: (data: ComplexDecisionData) => void;
@@ -75,15 +76,15 @@ interface BoardContentProps {
 
 interface SupplyAreaProps {
   displayState: GameState;
-  onBuyCard?: (card: CardName) => void;
+  onBuyCard?: ((card: CardName) => void) | undefined;
   canBuy: boolean;
   isPlayerActive: boolean;
   hasTreasuresInHand: boolean;
-  onPlayAllTreasures?: () => void;
-  onEndPhase?: () => void;
+  onPlayAllTreasures?: (() => void) | undefined;
+  onEndPhase?: (() => void) | undefined;
   selectedCardIndices: number[];
-  onConfirmDecision?: (data: ComplexDecisionData | null) => void;
-  onSkipDecision?: () => void;
+  onConfirmDecision?: ((data: ComplexDecisionData | null) => void) | undefined;
+  onSkipDecision?: (() => void) | undefined;
   complexDecisionData: ComplexDecisionData | null;
 }
 
@@ -103,13 +104,17 @@ function SupplyArea({
   return (
     <Supply
       state={displayState}
-      onBuyCard={onBuyCard}
+      {...(onBuyCard !== undefined && { onBuyCard })}
       canBuy={canBuy}
       availableCoins={displayState.coins}
-      pendingChoice={displayState.pendingChoice}
+      pendingChoice={
+        isDecisionChoice(displayState.pendingChoice)
+          ? displayState.pendingChoice
+          : null
+      }
       isPlayerActive={isPlayerActive}
       hasTreasuresInHand={hasTreasuresInHand}
-      onPlayAllTreasures={onPlayAllTreasures}
+      {...(onPlayAllTreasures !== undefined && { onPlayAllTreasures })}
       {...(onEndPhase !== undefined && { onEndPhase })}
       selectedCardIndices={selectedCardIndices}
       {...(onConfirmDecision !== undefined && { onConfirmDecision })}

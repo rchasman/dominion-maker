@@ -334,6 +334,7 @@ function TimingBar({
   };
 
   const barColor = getBarColor(barState);
+  const modelNameTitle = getModelNameTitle(state.isAborted, state.isFailed);
   const fontWeight =
     state.isPending || state.isFastest || state.isSlowest || state.isFailed
       ? LAYOUT.FONT_WEIGHT.BOLD
@@ -379,10 +380,7 @@ function TimingBar({
           getModelColor(timing.provider),
         )}
         opacity={getModelNameOpacity(state.isPending, state.isAborted)}
-        {...(getModelNameTitle(state.isAborted, state.isFailed) !==
-          undefined && {
-          title: getModelNameTitle(state.isAborted, state.isFailed),
-        })}
+        {...(modelNameTitle !== undefined && { title: modelNameTitle })}
         strikethrough={state.isFailed || state.isAborted}
         isHelp={state.isAborted || state.isFailed}
       />
@@ -416,7 +414,7 @@ function buildTimingsFromLiveStatuses(
 
   return statusArray
     .map(status => {
-      const isAborted = status.aborted;
+      const isAborted = status.aborted === true;
       const showAsAborted = isAborted && !hasAnyNonAbortedPending;
       const actualDuration = status.completed
         ? status.duration || 0

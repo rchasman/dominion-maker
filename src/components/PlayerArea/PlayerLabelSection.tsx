@@ -29,18 +29,20 @@ function renderMarkdown(text: string): ComponentChildren {
 
 interface PlayerLabelSectionProps {
   label: string;
-  playerId?: string;
+  playerId?: string | undefined;
   loading: boolean;
-  playerStrategy?: {
-    gameplan: string;
-    read: string;
-    recommendation: string;
-  };
-  vpCount?: number;
-  phase?: string;
-  actions?: number;
-  buys?: number;
-  coins?: number;
+  playerStrategy?:
+    | {
+        gameplan: string;
+        read: string;
+        recommendation: string;
+      }
+    | undefined;
+  vpCount?: number | undefined;
+  phase?: string | undefined;
+  actions?: number | undefined;
+  buys?: number | undefined;
+  coins?: number | undefined;
   isActive?: boolean;
 }
 

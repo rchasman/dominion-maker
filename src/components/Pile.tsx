@@ -50,7 +50,8 @@ export function Pile({
     y: number;
   } | null>(null);
 
-  if (cards.length === 0) {
+  const topCard = cards[cards.length - 1];
+  if (topCard === undefined) {
     return <EmptyPile />;
   }
 
@@ -67,7 +68,7 @@ export function Pile({
         onMouseLeave={() => setTooltipPosition(null)}
       >
         <Card
-          name={cards[cards.length - 1]}
+          name={topCard}
           size={size}
           disabled={disabled}
           disableTooltip={true}

@@ -8,7 +8,7 @@ interface InPlaySectionProps {
   inPlay: CardName[];
   loading: boolean;
   hasMadePurchases: boolean;
-  onInPlayClick?: (card: CardName, index: number) => void;
+  onInPlayClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean;
 }
 

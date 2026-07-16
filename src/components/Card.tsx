@@ -269,7 +269,7 @@ export function Card({
         {renderCardImage({
           imageUrl,
           fallbackUrl,
-          showBack,
+          showBack: showBack ?? false,
           name,
           cardWidth,
           size,

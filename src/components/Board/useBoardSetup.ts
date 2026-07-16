@@ -51,10 +51,10 @@ export function useBoardSetup() {
     hasTreasuresInHand: hasTreasuresInHand$.value,
     gameMode: gameMode$.value,
     setGameMode: setGameMode$.value ?? undefined,
-    startGame: startGame$.value ?? undefined,
+    startGame: startGame$.value ?? (() => {}),
     isProcessing: isProcessing$.value,
     modelSettings: modelSettings$.value,
-    setModelSettings: setModelSettings$.value ?? undefined,
+    setModelSettings: setModelSettings$.value ?? (() => {}),
     requestUndo: requestUndo$.value ?? (() => {}),
     getStateAtEvent:
       getStateAtEvent$.value ??

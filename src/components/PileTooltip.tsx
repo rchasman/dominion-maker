@@ -1,3 +1,4 @@
+import type { JSX } from "preact";
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
 import { countCards } from "../lib/card-array-utils";

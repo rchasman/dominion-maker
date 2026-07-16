@@ -77,7 +77,11 @@ export function MainPlayerArea({
         selectedCardIndices={isPreviewMode ? [] : selectedCardIndices}
         onCardClick={onCardClick}
         onInPlayClick={onInPlayClick}
-        pendingChoice={displayState.pendingChoice}
+        pendingChoice={
+          isDecisionChoice(displayState.pendingChoice)
+            ? displayState.pendingChoice
+            : null
+        }
         phase={displayState.phase}
         actions={displayState.actions}
         playerId={localPlayerId}

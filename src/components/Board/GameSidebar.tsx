@@ -78,7 +78,7 @@ function ResizeHandle({
 interface TurnStatusIndicatorProps {
   isProcessing: boolean;
   isLocalPlayerTurn: boolean;
-  subPhase: string;
+  subPhase: string | null;
   activePlayerId: string;
 }
 

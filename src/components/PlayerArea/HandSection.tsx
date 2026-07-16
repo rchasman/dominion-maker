@@ -12,13 +12,16 @@ interface HandSectionProps {
   showCards: boolean;
   loading: boolean;
   selectedCardIndices: number[];
-  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
+  pendingChoice?:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   isInteractive: boolean;
   isActive: boolean;
-  playerId?: PlayerId;
+  playerId?: PlayerId | undefined;
   phase: Phase;
-  actions?: number;
-  onCardClick?: (card: CardName, index: number) => void;
+  actions?: number | undefined;
+  onCardClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean;
 }
 
@@ -145,7 +148,7 @@ function HandCardRenderer({
   playerId: string | undefined;
   phase: Phase;
   actions: number | undefined;
-  onCardClick?: (card: CardName, index: number) => void;
+  onCardClick: ((card: CardName, index: number) => void) | undefined;
   inverted: boolean;
 }) {
   const isSelected =
@@ -292,13 +295,13 @@ export function HandSection({
                 card={card}
                 index={i}
                 selectedCardIndices={selectedCardIndices}
-                {...(pendingChoice !== undefined && { pendingChoice })}
+                pendingChoice={pendingChoice}
                 isInteractive={isInteractive}
                 isActive={isActive}
-                {...(playerId !== undefined && { playerId })}
+                playerId={playerId}
                 phase={phase}
-                {...(actions !== undefined && { actions })}
-                {...(onCardClick !== undefined && { onCardClick })}
+                actions={actions}
+                onCardClick={onCardClick}
                 inverted={inverted}
               />
             ))}

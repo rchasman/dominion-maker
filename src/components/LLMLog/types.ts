@@ -103,11 +103,11 @@ export interface ModelStatus {
   provider: ModelProvider;
   index: number;
   startTime: number;
-  duration?: number;
-  success?: boolean;
+  duration?: number | undefined;
+  success?: boolean | undefined;
   completed: boolean;
-  aborted?: boolean;
-  action?: Action;
+  aborted?: boolean | undefined;
+  action?: Action | undefined;
 }
 
 export interface PendingData {

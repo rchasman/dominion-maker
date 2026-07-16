@@ -29,7 +29,7 @@ function submitComplexDecision(
   return submitDecision({
     selectedCards: [],
     cardActions: data.cardActions,
-    cardOrder: data.cardOrder,
+    ...(data.cardOrder !== undefined && { cardOrder: data.cardOrder }),
   });
 }
 
@@ -44,7 +44,9 @@ function submitSimpleDecision(
     return { ok: false, error: "No main player" };
   }
 
-  const selectedCards = selectedCardIndices.map(i => mainPlayer.hand[i]);
+  const selectedCards = selectedCardIndices
+    .map(i => mainPlayer.hand[i])
+    .filter((card): card is CardName => card !== undefined);
   return submitDecision({ selectedCards });
 }
 

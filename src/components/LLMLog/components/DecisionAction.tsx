@@ -63,7 +63,7 @@ export function DecisionAction({
           currentDecision.votingEntry.data as unknown as ConsensusVotingData
         }
         {...(currentDecision.timingEntry?.data !== undefined && {
-          timingData: currentDecision.timingEntry.data as TimingData,
+          timingData: currentDecision.timingEntry.data as unknown as TimingData,
         })}
         {...(currentDecision.modelStatuses !== undefined && {
           modelStatuses: currentDecision.modelStatuses,

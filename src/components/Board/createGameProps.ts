@@ -8,7 +8,7 @@ export function createGameProps(gameContext: {
   events: GameEvent[];
   isProcessing: boolean;
   gameMode: GameMode;
-  setGameMode: (mode: GameMode) => void;
+  setGameMode: ((mode: GameMode) => void) | undefined;
   modelSettings: ModelSettings;
   setModelSettings: (settings: ModelSettings) => void;
   playerStrategies: PlayerStrategyData;
@@ -22,9 +22,10 @@ export function createGameProps(gameContext: {
     events: gameContext.events,
     isProcessing: gameContext.isProcessing,
     gameMode: gameContext.gameMode,
-    ...(gameContext.gameMode !== "multiplayer" && {
-      setGameMode: gameContext.setGameMode,
-    }),
+    ...(gameContext.gameMode !== "multiplayer" &&
+      gameContext.setGameMode !== undefined && {
+        setGameMode: gameContext.setGameMode,
+      }),
     modelSettings: gameContext.modelSettings,
     setModelSettings: gameContext.setModelSettings,
     playerStrategies: gameContext.playerStrategies,

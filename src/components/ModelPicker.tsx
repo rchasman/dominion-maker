@@ -160,7 +160,9 @@ const ModelCheckbox = ({
   color,
   onToggle,
 }: ModelCheckboxProps) => {
-  const modelConfig = MODELS.find(m => m.id === model);
+  const modelConfig: ModelConfig | undefined = MODELS.find(
+    (m: ModelConfig) => m.id === model,
+  );
 
   return (
     <label

@@ -19,9 +19,14 @@ function swapInOrder(
   idx1: number,
   idx2: number,
 ): number[] {
-  const newOrder = [...cardOrder];
-  [newOrder[idx1], newOrder[idx2]] = [newOrder[idx2], newOrder[idx1]];
-  return newOrder;
+  const value1 = cardOrder[idx1];
+  const value2 = cardOrder[idx2];
+  if (value1 === undefined || value2 === undefined) return cardOrder;
+  return cardOrder.map((value, index) => {
+    if (index === idx1) return value2;
+    if (index === idx2) return value1;
+    return value;
+  });
 }
 
 export function ActionIndicator({

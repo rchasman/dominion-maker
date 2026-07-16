@@ -56,7 +56,8 @@ export function Board({ onBackToHome }: BoardProps) {
     game.isSpectator,
   ]);
 
-  if (!boardState) return null;
+  const gameState = game.gameState;
+  if (!boardState || !gameState) return null;
 
   const localPlayerId = boardState.localPlayerId;
 
@@ -90,7 +91,7 @@ export function Board({ onBackToHome }: BoardProps) {
     playAllTreasures: game.playAllTreasures,
     endPhase: game.endPhase,
     hasTreasuresInHand: game.hasTreasuresInHand,
-    gameState: game.gameState,
+    gameState,
   });
 
   return (
@@ -103,7 +104,7 @@ export function Board({ onBackToHome }: BoardProps) {
       showDevtools={showDevtools}
       onToggleDevtools={() => setShowDevtools(!showDevtools)}
       onNewGame={onNewGame}
-      onBackToHome={onBackToHome}
+      {...(onBackToHome !== undefined && { onBackToHome })}
       onRequestUndo={handleRequestUndo}
       onScrub={enterPreview}
       onCardClick={callbacks.onCardClick}

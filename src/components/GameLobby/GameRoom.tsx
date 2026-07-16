@@ -24,7 +24,6 @@ interface GameRoomProps {
   onGameModeChange?: (mode: GameMode) => void;
   onBack: () => void;
   onResign?: () => void;
-  onConnectionError?: () => void;
 }
 
 export function GameRoom({
@@ -37,7 +36,6 @@ export function GameRoom({
   onGameModeChange,
   onBack,
   onResign,
-  onConnectionError,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
   const game = usePartyGame({
@@ -47,12 +45,13 @@ export function GameRoom({
     isSpectator,
     isSinglePlayer,
     gameMode,
-    onConnectionError,
   });
 
   // Sync multiplayer state into signals
+  // usePartyGame has no processing concept; the context derives spinners from
+  // isConnected, so a constant false preserves the previous (absent) value.
   useMultiplayerGameContext({
-    game,
+    game: { ...game, isProcessing: false },
     playerName,
     isSpectator,
     isSinglePlayer,

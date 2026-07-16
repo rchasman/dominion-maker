@@ -43,9 +43,12 @@ interface DeckDiscardSectionProps {
   discard: CardName[];
   loading: boolean;
   deckTopRevealed: boolean;
-  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
+  pendingChoice?:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   isInteractive: boolean;
-  onCardClick?: (card: CardName, index: number) => void;
+  onCardClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean;
 }
 
@@ -157,8 +160,9 @@ export function DeckDiscardSection({
     },
   );
 
+  const topDeckCard = deck[deck.length - 1];
   const knownDeckCards: CardName[] =
-    deckTopRevealed && deck.length > 0 ? [deck[deck.length - 1]] : [];
+    deckTopRevealed && topDeckCard !== undefined ? [topDeckCard] : [];
 
   return (
     <div

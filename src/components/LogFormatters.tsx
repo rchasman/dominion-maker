@@ -21,7 +21,9 @@ export function PlayerName({
     if (playerName) {
       return isAI ? `${playerName} (AI)` : playerName;
     }
-    return formatPlayerName(playerId, isAI || false, { gameState });
+    return formatPlayerName(playerId, isAI || false, {
+      ...(gameState !== null && { gameState }),
+    });
   });
 
   return (

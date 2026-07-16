@@ -39,9 +39,17 @@ describe("Board/helpers", () => {
         pendingChoice: {
           choiceType: "reaction",
           playerId: "human",
-          attackCard: "Militia",
-          attacker: "ai",
-        } as any,
+          triggeringPlayerId: "ai",
+          triggeringCard: "Militia",
+          triggerType: "on_attack",
+          availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["human"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "militia-attack",
+          },
+        },
       };
 
       const hint = getHintText({
@@ -62,9 +70,17 @@ describe("Board/helpers", () => {
         pendingChoice: {
           choiceType: "reaction",
           playerId: "ai",
-          attackCard: "Militia",
-          attacker: "human",
-        } as any,
+          triggeringPlayerId: "human",
+          triggeringCard: "Militia",
+          triggerType: "on_attack",
+          availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["ai"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "militia-attack",
+          },
+        },
       };
 
       const hint = getHintText({
@@ -196,9 +212,17 @@ describe("Board/helpers", () => {
         pendingChoice: {
           choiceType: "reaction",
           playerId: "human",
-          attackCard: "Witch",
-          attacker: "ai",
-        } as any,
+          triggeringPlayerId: "ai",
+          triggeringCard: "Witch",
+          triggerType: "on_attack",
+          availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["human"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "witch-attack",
+          },
+        },
       };
 
       const hint = getHintText({

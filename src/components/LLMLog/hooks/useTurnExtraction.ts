@@ -1,4 +1,5 @@
 import { useMemo } from "preact/hooks";
+import type { ModelProvider } from "../../../config/models";
 import type { Action } from "../../../types/action";
 import type { LLMLogEntry, Turn, PendingData } from "../types";
 
@@ -6,7 +7,7 @@ const LOOKBACK_RANGE = 5;
 
 function extractCardName(prompt: string): string | null {
   const cardMatch = prompt.match(/^(\w+)(?:\s+attack)?:/i);
-  return cardMatch ? cardMatch[1] : null;
+  return cardMatch?.[1] ?? null;
 }
 
 function createSubPhaseLabel(decisionType: unknown, prompt: string): string {
@@ -124,7 +125,7 @@ function handleConsensusModelPending(
 ): void {
   if (!state.buildingTurn) return;
   const data = entry.data || {};
-  const provider = data.provider as string;
+  const provider = data.provider as ModelProvider;
   const modelIndex = data.index as number;
   const startTime = data.startTime as number;
   if (modelIndex !== undefined) {

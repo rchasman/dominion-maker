@@ -40,7 +40,7 @@ interface LogEntryProps {
   parentPrefix?: string;
   viewer?: "human" | "ai";
   gameMode?: GameMode;
-  rootPlayerId?: PlayerId;
+  rootPlayerId?: PlayerId | undefined;
 }
 
 function getInitials(name: string): string {
@@ -96,7 +96,9 @@ function TurnHeaderPlayerName({
     if (playerName) {
       return isAI ? `${playerName} (AI)` : playerName;
     }
-    return formatPlayerName(playerId, isAI || false, { gameState });
+    return formatPlayerName(playerId, isAI || false, {
+      ...(gameState !== null && { gameState }),
+    });
   });
 
   // Only use initials in multiplayer mode
@@ -564,11 +566,16 @@ function LogEntryContent({
   depth?: number;
   viewer?: "human" | "ai";
   gameMode?: GameMode;
-  rootPlayerId?: PlayerId;
+  rootPlayerId?: PlayerId | undefined;
 }) {
   const renderer = ENTRY_RENDERERS[entry.type];
   return renderer ? (
-    renderer(entry, { depth, viewer, gameMode, rootPlayerId })
+    renderer(entry, {
+      depth,
+      viewer,
+      ...(gameMode !== undefined && { gameMode }),
+      ...(rootPlayerId !== undefined && { rootPlayerId }),
+    })
   ) : (
     <span>{JSON.stringify(entry)}</span>
   );
@@ -579,7 +586,7 @@ type RenderContext = {
   viewer: "human" | "ai";
   gameMode: GameMode | undefined;
   parentPrefix: string;
-  rootPlayerId?: PlayerId;
+  rootPlayerId: PlayerId | undefined;
 };
 
 function renderChildren(

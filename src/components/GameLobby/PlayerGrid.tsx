@@ -312,7 +312,7 @@ export function PlayerGrid({
                     ? () => {}
                     : () => handleClick(player)
                 }
-                color={assignedColor}
+                {...(assignedColor !== undefined && { color: assignedColor })}
               />
             </div>
           );

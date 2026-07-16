@@ -1,7 +1,13 @@
-import { useState, useCallback, type StateUpdater } from "preact/hooks";
+import {
+  useState,
+  useCallback,
+  type Dispatch,
+  type StateUpdater,
+} from "preact/hooks";
 import { useBuyCardLogic } from "../../hooks/useBuyCardLogic";
 import type { CardName } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
+import { isDecisionChoice } from "../../types/pending-choice";
 import { uiLogger } from "../../lib/logger";
 import {
   gameState$,
@@ -22,7 +28,7 @@ interface CardSelectionHook {
   toggleCardSelection: (index: number) => void;
   addCardSelection: (index: number) => void;
   clearSelection: () => void;
-  setSelectedCardIndices: StateUpdater<number[]>;
+  setSelectedCardIndices: Dispatch<StateUpdater<number[]>>;
 }
 
 export function useCardSelection(): CardSelectionHook {
@@ -53,7 +59,7 @@ export function useCardSelection(): CardSelectionHook {
 
 interface PreviewModeHook {
   previewEventId: string | null;
-  enterPreview: (eventId: string) => void;
+  enterPreview: (eventId: string | null) => void;
   exitPreview: () => void;
   isPreviewMode: boolean;
 }
@@ -61,7 +67,7 @@ interface PreviewModeHook {
 export function usePreviewMode(): PreviewModeHook {
   const [previewEventId, setPreviewEventId] = useState<string | null>(null);
 
-  const enterPreview = useCallback((eventId: string) => {
+  const enterPreview = useCallback((eventId: string | null) => {
     setPreviewEventId(eventId);
   }, []);
 
@@ -156,9 +162,10 @@ export function useCardActions(): CardActionsHook {
  * Board (single-player) and Lobby (multiplayer) modes.
  */
 export function useBuyCardHandler(): (card: CardName) => CommandResult {
+  const pendingChoice = gameState$.value?.pendingChoice;
   return useBuyCardLogic({
     buyCard: buyCard$.value ?? uninitializedCommand,
     submitDecision: submitDecision$.value ?? uninitializedCommand,
-    pendingChoice: gameState$.value?.pendingChoice,
+    pendingChoice: isDecisionChoice(pendingChoice) ? pendingChoice : null,
   });
 }

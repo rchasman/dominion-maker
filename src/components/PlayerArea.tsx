@@ -19,25 +19,30 @@ import {
 interface PlayerAreaProps {
   player: PlayerState;
   label: string;
-  vpCount?: number;
+  vpCount?: number | undefined;
   isActive: boolean;
   showCards: boolean; // If false, show card counts instead of actual cards
   selectedCardIndices: number[];
-  onCardClick?: (card: CardName, index: number) => void;
-  onInPlayClick?: (card: CardName, index: number) => void;
+  onCardClick?: ((card: CardName, index: number) => void) | undefined;
+  onInPlayClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean; // If true, in-play appears at bottom (for top player)
-  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
+  pendingChoice?:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   phase: Phase;
-  actions?: number;
+  actions?: number | undefined;
   loading?: boolean;
-  playerId?: PlayerId;
+  playerId?: PlayerId | undefined;
   turnHistory?: Array<{ type: string; card?: CardName | null }>;
-  playerStrategy?: {
-    gameplan: string;
-    read: string;
-    recommendation: string;
-  };
-  gameState?: GameState;
+  playerStrategy?:
+    | {
+        gameplan: string;
+        read: string;
+        recommendation: string;
+      }
+    | undefined;
+  gameState?: GameState | undefined;
 }
 
 function getBorderStyle(
@@ -83,13 +88,16 @@ function HandAndDeckGrid({
   showCards: boolean;
   loading?: boolean;
   selectedCardIndices: number[];
-  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }> | null;
+  pendingChoice?:
+    | Extract<PendingChoice, { choiceType: "decision" }>
+    | null
+    | undefined;
   isInteractive: boolean;
   isActive: boolean;
-  playerId?: PlayerId;
+  playerId?: PlayerId | undefined;
   phase: Phase;
-  actions?: number;
-  onCardClick?: (card: CardName, index: number) => void;
+  actions?: number | undefined;
+  onCardClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean;
 }) {
   return (

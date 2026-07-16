@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import type {
   GameState,
   LogEntry as LogEntryType,
@@ -87,7 +88,7 @@ interface GameLogSectionProps {
   onRequestUndo?: (eventId: string) => void;
   gameMode: GameMode;
   gameLogHeight: number;
-  turnStatusIndicator: React.ComponentChildren;
+  turnStatusIndicator: ComponentChildren;
 }
 
 export function GameLogSection({

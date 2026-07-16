@@ -18,7 +18,7 @@ export function ReactionModal({
   onDecline,
 }: ReactionModalProps) {
   return (
-    <BaseModal isOpen={true} onClose={() => {}}>
+    <BaseModal onClose={() => {}}>
       <div style={{ padding: "20px", textAlign: "center" }}>
         <h3 style={{ marginBottom: "16px", fontSize: "18px", fontWeight: 600 }}>
           {triggeringPlayerId} played {triggeringCard}

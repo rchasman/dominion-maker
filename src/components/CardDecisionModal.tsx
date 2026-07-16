@@ -38,7 +38,7 @@ interface CardRowProps {
   cardOrder: number[];
   onToggleCardAction: (index: number) => void;
   onDragStart: (index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (targetIndex: number) => void;
   onSetDraggedIndex: (index: number | null) => void;
   onReorder: (newOrder: number[]) => void;
@@ -52,7 +52,7 @@ interface UseCardDecisionState {
   cardsToOrder: number[];
   toggleCardAction: (index: number) => void;
   handleDragStart: (index: number) => void;
-  handleDragOver: (e: React.DragEvent) => void;
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (targetIndex: number) => void;
   setDraggedIndex: (index: number | null) => void;
   handleReorder: (newOrder: number[]) => void;
@@ -62,14 +62,14 @@ function getInitialCardActions(
   cards: CardName[],
   actions: CardAction[],
 ): Record<number, CardActionId> {
-  const defaultAction = actions.find(a => a.isDefault);
-  const firstActionId = actions[0]?.id ?? "keep_card";
-  return cards.reduce(
+  const initialActionId = actions.find(a => a.isDefault)?.id ?? actions[0]?.id;
+  if (initialActionId === undefined) return {};
+  return cards.reduce<Record<number, CardActionId>>(
     (acc, _, index) => ({
       ...acc,
-      [index]: defaultAction?.id ?? firstActionId,
+      [index]: initialActionId,
     }),
-    {} as Record<number, CardActionId>,
+    {},
   );
 }
 
@@ -103,8 +103,8 @@ function useCardDecisionState(
       setCardActions(prev => {
         const nextIdx =
           (actions.findIndex(a => a.id === prev[index]) + 1) % actions.length;
-        const nextActionId =
-          actions[nextIdx]?.id ?? actions[0]?.id ?? "keep_card";
+        const nextActionId = actions[nextIdx]?.id ?? actions[0]?.id;
+        if (nextActionId === undefined) return prev;
         const newActions = { ...prev, [index]: nextActionId };
         const newCardOrder = requiresOrdering
           ? getCardsToOrder(cardOrder, newActions)
@@ -278,7 +278,7 @@ interface CardGridProps {
   cardsToOrder: number[];
   onToggleCardAction: (index: number) => void;
   onDragStart: (index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (targetIndex: number) => void;
   onSetDraggedIndex: (index: number | null) => void;
   onReorder: (newOrder: number[]) => void;
@@ -312,6 +312,7 @@ function CardGrid({
     >
       {cardOrder.map(cardIndex => {
         const card = cards[cardIndex];
+        if (card === undefined) return null;
         const action = actions.find(a => a.id === cardActions[cardIndex]);
         const isDragging = draggedIndex === cardIndex;
 
@@ -355,6 +356,7 @@ function CardRow({
   onSetDraggedIndex,
   onReorder,
 }: CardRowProps) {
+  const highlightMode = getHighlightMode(action?.id);
   const shouldShowReorderButtons =
     requiresOrdering &&
     action?.id === "topdeck_card" &&
@@ -371,7 +373,9 @@ function CardRow({
       <div
         draggable={requiresOrdering}
         onDragStart={e => {
-          e.dataTransfer.effectAllowed = "move";
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = "move";
+          }
           onDragStart(cardIndex);
         }}
         onDragOver={onDragOver}
@@ -389,9 +393,7 @@ function CardRow({
           name={card}
           size="large"
           onClick={() => onToggleCardAction(cardIndex)}
-          {...(getHighlightMode(action?.id) !== undefined && {
-            highlightMode: getHighlightMode(action?.id),
-          })}
+          {...(highlightMode !== undefined && { highlightMode })}
         />
       </div>
       <ActionIndicator
