@@ -49,6 +49,22 @@ export function removeCards(
 }
 
 /**
+ * Count occurrences of each card in an array.
+ *
+ * @example
+ * countCards(["Estate", "Estate", "Copper"])
+ * // Returns: { Estate: 2, Copper: 1 }
+ */
+export function countCards<T extends string>(
+  cards: readonly T[],
+): Record<T, number> {
+  return cards.reduce(
+    (acc, card) => ({ ...acc, [card]: (acc[card] ?? 0) + 1 }),
+    {} as Record<T, number>,
+  );
+}
+
+/**
  * Remove a single card from an array (first occurrence).
  *
  * @param fromEnd - If true, removes from end (for deck top), otherwise from start

@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import type { LogEntry, CardName } from "../types/game-state";
 import { CARDS } from "../data/cards";
+import { countCards } from "../lib/card-array-utils";
 
 // Extended event type for aggregated card operations
 type AggregatedCardEvent = (
@@ -207,14 +208,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
   ): AggregatedCardEvent => {
     const first = groupEvents[0]!;
     const cards = groupEvents.map(e => e.card);
-    const initial: Record<string, number> = {};
-    const cardCounts = cards.reduce(
-      (acc, card) => ({
-        ...acc,
-        [card]: (acc[card] || 0) + 1,
-      }),
-      initial,
-    );
+    const cardCounts: Record<string, number> = countCards(cards);
 
     return {
       ...first,

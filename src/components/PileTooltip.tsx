@@ -1,5 +1,6 @@
 import type { CardName } from "../types/game-state";
 import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
+import { countCards } from "../lib/card-array-utils";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
 import {
@@ -290,13 +291,7 @@ export function PileTooltip({
   if (cards.length === 0) return null;
 
   // Group cards by name and count
-  const cardCounts = cards.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<CardName, number>,
-  );
+  const cardCounts = countCards(cards);
 
   const uniqueCards = Object.keys(cardCounts) as CardName[];
 

@@ -18,12 +18,12 @@ import type { ComponentChildren } from "preact";
 import type { GameMode } from "../types/game-mode";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
 import {
-  getCardCounts,
   renderCardCounts,
   getAggregatedCount,
   renderPlayerPrefix,
   renderReasoning,
 } from "./LogEntry/renderHelpers";
+import { countCards } from "../lib/card-array-utils";
 import { gameState$, players$, gameMode$ } from "../context/game-signals";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { run } from "../lib/run";
@@ -200,9 +200,7 @@ function renderDrawCards(
     const aggregated = entry as typeof entry & {
       cardCounts?: Record<string, number>;
     };
-    const cardCounts = aggregated.cardCounts
-      ? new Map(Object.entries(aggregated.cardCounts))
-      : getCardCounts(entry.cards);
+    const cardCounts = aggregated.cardCounts ?? countCards(entry.cards);
 
     const parts = renderCardCounts(cardCounts);
 
@@ -272,9 +270,7 @@ function renderDiscardCards(
     const aggregated = entry as typeof entry & {
       cardCounts?: Record<string, number>;
     };
-    const cardCounts = aggregated.cardCounts
-      ? new Map(Object.entries(aggregated.cardCounts))
-      : getCardCounts(entry.cards);
+    const cardCounts = aggregated.cardCounts ?? countCards(entry.cards);
 
     const parts = renderCardCounts(cardCounts);
 
@@ -302,7 +298,7 @@ function renderTrashCard(
   const playerPrefix = renderPlayerPrefix(entry.playerId, depth, rootPlayerId);
 
   if (entry.cards) {
-    const cardCounts = getCardCounts(entry.cards);
+    const cardCounts = countCards(entry.cards);
     const parts = renderCardCounts(cardCounts);
 
     return (
@@ -400,13 +396,7 @@ function renderRevealCard(
   const validCards = cards.filter(c => c && c.trim());
 
   // Count duplicates for "x2" notation
-  const cardCounts = validCards.reduce<Record<string, number>>(
-    (acc, card) => ({
-      ...acc,
-      [card]: (acc[card] || 0) + 1,
-    }),
-    {},
-  );
+  const cardCounts = countCards(validCards);
 
   const uniqueCards = Object.keys(cardCounts);
 

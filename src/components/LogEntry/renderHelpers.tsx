@@ -7,19 +7,11 @@ import { CardNameSpan, PlayerName } from "../LogFormatters";
 import { getCardColor } from "../../lib/card-colors";
 import type { ComponentChildren } from "preact";
 
-// Helper to convert card array to count map using reduce
-export function getCardCounts(cards: CardName[]): Map<string, number> {
-  return cards.reduce((counts, card) => {
-    counts.set(card, (counts.get(card) || 0) + 1);
-    return counts;
-  }, new Map<string, number>());
-}
-
 // Helper to render card counts as React nodes
 export function renderCardCounts(
-  cardCounts: Map<string, number>,
+  cardCounts: Record<string, number>,
 ): ComponentChildren[] {
-  return Array.from(cardCounts.entries()).flatMap(([card, count], idx) => {
+  return Object.entries(cardCounts).flatMap(([card, count], idx) => {
     const cardNode =
       count > 1 ? (
         <span key={idx}>
