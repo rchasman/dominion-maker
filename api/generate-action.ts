@@ -2,7 +2,7 @@ import { generateText, gateway, wrapLanguageModel, extractJsonMiddleware } from 
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
-import { MODEL_MAP, MODELS } from "../src/config/models";
+import { MODEL_MAP } from "../src/config/models";
 import {
   buildStrategicContext,
   formatTurnHistoryForAnalysis,
@@ -22,9 +22,6 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_METHOD_NOT_ALLOWED = 405;
 const HTTP_OK = 200;
 const HTTP_INTERNAL_ERROR = 500;
-
-// Formatting Constants
-const _JSON_INDENT_SPACES = 2;
 
 // Error message display limits
 const ERROR_TEXT_PREVIEW_LONG = 500;
