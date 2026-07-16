@@ -25,42 +25,34 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Claude Sonnet";
     case "claude-opus":
       return "Claude Opus (max 3)";
-    case "gpt-5-nano":
-      return "GPT-5 Nano";
     case "gpt-oss-20b":
       return "GPT OSS 20B";
-    case "gpt-5-mini":
-      return "GPT-5 Mini";
     case "gpt-oss-120b":
       return "GPT OSS 120B";
-    case "gpt-5":
-      return "GPT-5";
-    case "gpt-5.2":
-      return "GPT-5.2";
     case "gpt-5.4-nano":
       return "GPT-5.4 Nano";
     case "gpt-5.4-mini":
       return "GPT-5.4 Mini";
     case "gpt-5.4":
       return "GPT-5.4 (max 3)";
-    case "gemini-2.5-flash-lite":
-      return "Gemini 2.5 Flash Lite";
+    case "gpt-5.6-terra":
+      return "GPT-5.6 Terra (max 3)";
     case "gemini-3.1-flash-lite":
       return "Gemini 3.1 Flash Lite";
-    case "gemini-3-flash":
-      return "Gemini 3 Flash";
-    case "gemini-3-pro":
-      return "Gemini 3 Pro (max 3)";
+    case "gemini-3.5-flash":
+      return "Gemini 3.5 Flash";
     case "gemini-3.1-pro":
       return "Gemini 3.1 Pro (max 3)";
     case "grok-4-fast":
       return "Grok 4 Fast";
-    case "deepseek-v3.2":
-      return "DeepSeek V3.2";
-    case "glm-4.6v-flash":
-      return "GLM-4.6V Flash (free)";
-    case "glm-5":
-      return "GLM-5";
+    case "grok-4.5":
+      return "Grok 4.5 (max 3)";
+    case "deepseek-v4-pro":
+      return "DeepSeek V4 Pro";
+    case "glm-4.7-flash":
+      return "GLM-4.7 Flash";
+    case "glm-5.2":
+      return "GLM-5.2";
     case "qwen3.5-flash":
       return "Qwen 3.5 Flash";
     default: {

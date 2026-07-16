@@ -32,8 +32,8 @@ export class MakerStrategy implements GameStrategy {
     this.modelSettings = modelSettings || {
       enabledModels: new Set([
         "claude-haiku",
-        "gpt-5-mini",
-        "gemini-2.5-flash-lite",
+        "gpt-5.4-mini",
+        "gemini-3.1-flash-lite",
         "gpt-oss-20b",
       ]),
       consensusCount: 8,

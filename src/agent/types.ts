@@ -20,14 +20,12 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   enabledModels: new Set([
-    "gpt-5-nano",
     "gpt-oss-20b",
-    "gpt-5-mini",
     "gpt-5.4-nano",
-    "gemini-2.5-flash-lite",
+    "gpt-5.4-mini",
     "gemini-3.1-flash-lite",
-    "deepseek-v3.2",
-    "glm-4.6v-flash",
+    "deepseek-v4-pro",
+    "glm-4.7-flash",
     "qwen3.5-flash",
   ]),
   consensusCount: 12,
@@ -39,17 +37,17 @@ export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
 
 // Default: cheapest model instances for cost-effective consensus (duplicates allowed)
 export const ALL_FAST_MODELS: ModelProvider[] = [
-  "gpt-5-nano",
-  "gpt-5-nano",
-  "gpt-oss-20b",
-  "gpt-oss-20b",
-  "gpt-5-mini",
   "gpt-5.4-nano",
-  "gemini-2.5-flash-lite",
-  "gemini-2.5-flash-lite",
+  "gpt-5.4-nano",
+  "gpt-oss-20b",
+  "gpt-oss-20b",
+  "gpt-5.4-mini",
+  "gpt-5.4-nano",
   "gemini-3.1-flash-lite",
-  "deepseek-v3.2",
-  "glm-4.6v-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-flash-lite",
+  "deepseek-v4-pro",
+  "glm-4.7-flash",
   "qwen3.5-flash",
 ];
 

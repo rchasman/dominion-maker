@@ -212,14 +212,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const playerDecks = buildPlayerDeckInfo(playerIds, currentState);
 
-    // Use GPT-5.2 for high-quality strategy analysis
+    // Use GPT-5.4 for high-quality strategy analysis
     const middleware = createDevToolsMiddleware();
     const model = middleware
       ? wrapLanguageModel({
-          model: gateway("gpt-5.2"),
+          model: gateway("openai/gpt-5.4"),
           middleware,
         })
-      : gateway("gpt-5.2");
+      : gateway("openai/gpt-5.4");
 
     // Generate analysis one player at a time, build record
     const strategySummary = Object.fromEntries(
