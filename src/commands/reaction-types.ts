@@ -56,7 +56,7 @@
  */
 
 import type { CardName, PlayerId } from "../types/game-state";
-import type { ReactionTrigger } from "../data/cards";
+import type { ReactionTrigger } from "../types/card-types";
 
 /**
  * Complete context needed for reaction orchestration.

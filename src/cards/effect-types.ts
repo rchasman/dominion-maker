@@ -7,7 +7,8 @@ import type {
 } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import { shuffle } from "../lib/game-utils";
-import { CARDS, type ReactionTrigger } from "../data/cards";
+import { CARDS } from "../data/cards";
+import type { ReactionTrigger } from "../types/card-types";
 import { run } from "../lib/run";
 import {
   getStringArrayFromMetadata,

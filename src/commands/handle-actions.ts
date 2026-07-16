@@ -1,12 +1,8 @@
 import type { GameState, CardName } from "../types/game-state";
 import type { CommandResult } from "./types";
 import type { GameEvent, PlayerId } from "../events/types";
-import {
-  CARDS,
-  isTreasureCard,
-  type TriggerType,
-  type TriggerContext,
-} from "../data/cards";
+import { CARDS, isTreasureCard } from "../data/cards";
+import type { TriggerType, TriggerContext } from "../types/card-types";
 import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";

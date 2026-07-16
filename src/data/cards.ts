@@ -1,31 +1,11 @@
 import type { CardName } from "../types/game-state";
+import type {
+  CardType,
+  ReactionTrigger,
+  TriggerType,
+  TriggerContext,
+} from "../types/card-types";
 import type { GameEvent } from "../events/types";
-
-export type CardType =
-  | "treasure"
-  | "victory"
-  | "curse"
-  | "action"
-  | "attack"
-  | "reaction";
-
-export type ReactionTrigger =
-  | "on_attack"
-  | "on_gain"
-  | "on_trash"
-  | "on_discard";
-
-export type TriggerType =
-  | "treasure_played"
-  | "card_gained"
-  | "card_trashed"
-  | "card_discarded";
-
-export type TriggerContext = {
-  card: CardName;
-  isFirstOfType?: boolean;
-  treasuresInPlay?: CardName[];
-};
 
 export type CardTrigger = {
   on: TriggerType;
