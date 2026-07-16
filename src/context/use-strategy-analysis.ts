@@ -16,11 +16,25 @@ import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 import { playerStrategies$ } from "./game-signals";
 
 /**
- * Fetch strategy analysis from API and write to playerStrategies$ signal
+ * True when a turn just ended and the game is past the analysis threshold
+ */
+function turnEndedPastThreshold(
+  newEvents: GameEvent[],
+  state: GameState,
+): boolean {
+  return (
+    newEvents.some(e => e.type === "TURN_ENDED") &&
+    state.turn >= MIN_TURN_FOR_STRATEGY
+  );
+}
+
+/**
+ * Fetch strategy analysis from API and write to playerStrategies$ signal.
+ * Multiplayer has no GameStrategy, so strategy is optional.
  */
 export function fetchStrategyAnalysis(
   state: GameState,
-  strategy: GameStrategy,
+  strategy: GameStrategy | undefined,
   currentStrategies: PlayerStrategyData,
 ): void {
   const hasStrategies = Object.keys(currentStrategies).length > 0;
@@ -44,8 +58,8 @@ export function fetchStrategyAnalysis(
       }
 
       const stringifiedStrategies = JSON.stringify(data.strategySummary);
-      strategy.setStrategySummary?.(stringifiedStrategies);
-      playerStrategies$.value = data.strategySummary as PlayerStrategyData;
+      strategy?.setStrategySummary?.(stringifiedStrategies);
+      playerStrategies$.value = data.strategySummary;
     })
     .catch((err: unknown) => {
       uiLogger.warn("Failed to fetch strategy analysis:", err);
@@ -67,9 +81,7 @@ export function useStrategyAnalysis(
     }
 
     const unsubscribe = engine.subscribe((newEvents, state) => {
-      const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
-
-      if (hasTurnEnded && state.turn >= MIN_TURN_FOR_STRATEGY) {
+      if (turnEndedPastThreshold(newEvents, state)) {
         fetchStrategyAnalysis(state, strategy, playerStrategies$.value);
       }
     });
@@ -93,28 +105,9 @@ export function useStrategyAnalysisFromEvents(
     const newEvents = events.slice(lastEventCountRef.current);
     lastEventCountRef.current = events.length;
 
-    const hasTurnEnded = newEvents.some(e => e.type === "TURN_ENDED");
-    if (!hasTurnEnded || gameState.turn < MIN_TURN_FOR_STRATEGY) return;
+    if (!turnEndedPastThreshold(newEvents, gameState)) return;
 
-    // Multiplayer doesn't use GameStrategy, so we pass empty object
-    api.api["analyze-strategy"]
-      .post({ currentState: gameState })
-      .then(({ data }) => {
-        if (data?.strategySummary?.length) {
-          const record = data.strategySummary.reduce<PlayerStrategyData>(
-            (acc, item) => {
-              acc[item.id] = {
-                gameplan: item.gameplan,
-                read: item.read,
-                recommendation: item.recommendation,
-              };
-              return acc;
-            },
-            {},
-          );
-          playerStrategies$.value = record;
-        }
-      })
-      .catch(() => {});
+    // Multiplayer has no GameStrategy to notify
+    fetchStrategyAnalysis(gameState, undefined, playerStrategies$.value);
   }, [events, gameState]);
 }

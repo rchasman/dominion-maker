@@ -3,6 +3,7 @@
 // Production uses Vercel serverless functions
 
 import type { Action } from "../types/action";
+import type { PlayerStrategyData } from "../types/player-strategy";
 
 interface GenerateActionRequest {
   provider: string;
@@ -21,21 +22,11 @@ interface GenerateActionResponse {
 
 interface AnalyzeStrategyRequest {
   currentState: unknown;
-  previousAnalysis?: Array<{
-    id: string;
-    gameplan: string;
-    read: string;
-    recommendation: string;
-  }>;
+  previousAnalysis?: PlayerStrategyData;
 }
 
 interface AnalyzeStrategyResponse {
-  strategySummary?: Array<{
-    id: string;
-    gameplan: string;
-    read: string;
-    recommendation: string;
-  }>;
+  strategySummary?: PlayerStrategyData;
   error?: number;
   message?: string;
 }
