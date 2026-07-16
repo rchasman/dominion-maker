@@ -1,4 +1,9 @@
-import { generateText, gateway, wrapLanguageModel, extractJsonMiddleware } from "ai";
+import {
+  generateText,
+  gateway,
+  wrapLanguageModel,
+  extractJsonMiddleware,
+} from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState, CardName } from "../src/types/game-state";
@@ -9,6 +14,7 @@ import {
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
 import { CARDS, isTreasureCard } from "../src/data/cards";
+import { countCards } from "../src/lib/card-array-utils";
 import { countVP, getAllCards } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
 import { getSubPhase } from "../src/lib/state-helpers";
@@ -215,17 +221,6 @@ function parseRequestBody(req: VercelRequest): RequestBody {
   ) as RequestBody;
 }
 
-// Convert card array to counts for token efficiency
-function cardArrayToCounts(cards: string[]): Record<string, number> {
-  return cards.reduce(
-    (counts, card) => {
-      counts[card] = (counts[card] || 0) + 1;
-      return counts;
-    },
-    {} as Record<string, number>,
-  );
-}
-
 // Transform game state to use counts instead of arrays for AI consumption
 // Nests all "your" state together for clearer AI reasoning
 function optimizeStateForAI(state: GameState): unknown {
@@ -297,16 +292,16 @@ function optimizeStateForAI(state: GameState): unknown {
     currentCoins: state.coins,
     currentVictoryPoints: yourVP,
     currentDeckComposition: yourDeckCounts,
-    currentHand: activePlayer ? cardArrayToCounts(activePlayer.hand) : {},
-    currentDiscard: activePlayer ? cardArrayToCounts(activePlayer.discard) : {},
-    currentInPlay: activePlayer ? cardArrayToCounts(activePlayer.inPlay) : {},
+    currentHand: activePlayer ? countCards(activePlayer.hand) : {},
+    currentDiscard: activePlayer ? countCards(activePlayer.discard) : {},
+    currentInPlay: activePlayer ? countCards(activePlayer.inPlay) : {},
     // Add revealed deck cards when applicable
     ...(activePlayer?.deckTopRevealed && activePlayer.deck.length > 0
       ? { deckTopCards: activePlayer.deck }
       : {}),
     // Buy phase helper: treasures you can still play (always show in buy phase)
     ...(state.phase === "buy"
-      ? { currentTreasuresInHand: cardArrayToCounts(treasuresInHand) }
+      ? { currentTreasuresInHand: countCards(treasuresInHand) }
       : {}),
   };
 
@@ -315,8 +310,8 @@ function optimizeStateForAI(state: GameState): unknown {
     ? {
         currentVictoryPoints: opponentVP,
         currentDeckComposition: opponentDeckCounts,
-        currentDiscard: cardArrayToCounts(opponent.discard),
-        currentInPlay: cardArrayToCounts(opponent.inPlay),
+        currentDiscard: countCards(opponent.discard),
+        currentInPlay: countCards(opponent.inPlay),
       }
     : null;
 
@@ -445,7 +440,9 @@ async function processGenerationRequest(
 
     const jsonStr = extractJson(result.text);
     if (!jsonStr) {
-      apiLogger.error(`${provider} no JSON found in response (${result.text.length} chars): ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`);
+      apiLogger.error(
+        `${provider} no JSON found in response (${result.text.length} chars): ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      );
       return res.status(HTTP_INTERNAL_ERROR).json({
         error: "No JSON in response",
         provider,
@@ -459,7 +456,9 @@ async function processGenerationRequest(
     }
 
     // JSON was found but didn't match schema — log both raw and extracted
-    apiLogger.error(`${provider} JSON schema mismatch — extracted: ${jsonStr.slice(0, ERROR_TEXT_PREVIEW_LONG)}`);
+    apiLogger.error(
+      `${provider} JSON schema mismatch — extracted: ${jsonStr.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+    );
     return res.status(HTTP_INTERNAL_ERROR).json({
       error: "JSON parse failed",
       provider,
