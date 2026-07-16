@@ -11,7 +11,7 @@
     "dev:multi": "bun run --parallel dev:api dev:web dev:party",
     "build": "vite build",
     "build:analyze": "ANALYZE=true vite build",
-    "type": "tsc --incremental --noEmit",
+    "type": "tsc -b",
     "lint": "bun run --parallel lint:fast lint:css",
     "lint:css": "bunx stylelint 'src/**/*.css'",
     "lint:fast": "bunx oxlint",
