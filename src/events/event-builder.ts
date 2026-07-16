@@ -1,4 +1,5 @@
-import type { GameEvent } from "./types";
+import type { GameEvent, PendingChoice } from "./types";
+import type { CardName } from "../types/game-state";
 import { generateEventId } from "./id-generator";
 
 /**
@@ -126,4 +127,34 @@ export function linkEvents(
     id: generateEventId(),
     causedBy,
   })) as GameEvent[];
+}
+
+/**
+ * Wrap a card effect's pendingChoice into a DECISION_REQUIRED event,
+ * merging extra metadata into the decision's existing metadata.
+ *
+ * @param pendingChoice - Decision produced by a card effect
+ * @param options.causedBy - Event ID that caused this decision
+ * @param options.cardBeingPlayed - Overrides the decision's cardBeingPlayed
+ * @param options.metadata - Merged over the decision's existing metadata
+ */
+export function decisionRequiredEvent(
+  pendingChoice: Extract<PendingChoice, { choiceType: "decision" }>,
+  options: {
+    causedBy: string;
+    cardBeingPlayed?: CardName;
+    metadata: Record<string, unknown>;
+  },
+): GameEvent {
+  const { causedBy, cardBeingPlayed, metadata } = options;
+  return {
+    type: "DECISION_REQUIRED",
+    decision: {
+      ...pendingChoice,
+      ...(cardBeingPlayed !== undefined && { cardBeingPlayed }),
+      metadata: { ...pendingChoice.metadata, ...metadata },
+    },
+    id: generateEventId(),
+    causedBy,
+  };
 }

@@ -4,7 +4,11 @@ import type { GameEvent, DecisionChoice, PlayerId } from "../events/types";
 import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
-import { EventBuilder, linkEvents } from "../events/event-builder";
+import {
+  EventBuilder,
+  linkEvents,
+  decisionRequiredEvent,
+} from "../events/event-builder";
 import { getAvailableReactions } from "../cards/effect-types";
 
 type DecisionContext = {
@@ -49,19 +53,13 @@ function handleThroneRoomExecution(
   if (result.pendingChoice) {
     return [
       ...newEvents,
-      {
-        type: "DECISION_REQUIRED",
-        decision: {
-          ...result.pendingChoice,
-          metadata: {
-            ...result.pendingChoice.metadata,
-            throneRoomTarget,
-            throneRoomExecutionsRemaining: executionsRemaining - 1,
-          },
-        },
-        id: generateEventId(),
+      decisionRequiredEvent(result.pendingChoice, {
         causedBy: ctx.rootEventId,
-      },
+        metadata: {
+          throneRoomTarget,
+          throneRoomExecutionsRemaining: executionsRemaining - 1,
+        },
+      }),
     ];
   }
 
@@ -82,19 +80,10 @@ function handleThroneRoomExecution(
   if (secondResult.pendingChoice) {
     return [
       ...withSecond,
-      {
-        type: "DECISION_REQUIRED",
-        decision: {
-          ...secondResult.pendingChoice,
-          metadata: {
-            ...secondResult.pendingChoice.metadata,
-            throneRoomTarget,
-            throneRoomExecutionsRemaining: 0,
-          },
-        },
-        id: generateEventId(),
+      decisionRequiredEvent(secondResult.pendingChoice, {
         causedBy: ctx.rootEventId,
-      },
+        metadata: { throneRoomTarget, throneRoomExecutionsRemaining: 0 },
+      }),
     ];
   }
   return withSecond;
@@ -306,18 +295,10 @@ function applyAttackToResolvedTargets(
   if (result.pendingChoice) {
     return [
       ...eventsWithAttack,
-      {
-        type: "DECISION_REQUIRED",
-        decision: {
-          ...result.pendingChoice,
-          metadata: {
-            ...result.pendingChoice.metadata,
-            originalCause: ctx.originalCause || ctx.rootEventId,
-          },
-        },
-        id: generateEventId(),
+      decisionRequiredEvent(result.pendingChoice, {
         causedBy: ctx.originalCause || ctx.rootEventId,
-      },
+        metadata: { originalCause: ctx.originalCause || ctx.rootEventId },
+      }),
     ];
   }
 
@@ -397,19 +378,11 @@ function handleCardEffectContinuation(
   if (result.pendingChoice) {
     return [
       ...newEvents,
-      {
-        type: "DECISION_REQUIRED",
-        decision: {
-          ...result.pendingChoice,
-          cardBeingPlayed: ctx.cardBeingPlayed,
-          metadata: {
-            ...result.pendingChoice.metadata,
-            originalCause: ctx.originalCause || ctx.rootEventId,
-          },
-        },
-        id: generateEventId(),
+      decisionRequiredEvent(result.pendingChoice, {
         causedBy: ctx.rootEventId,
-      },
+        cardBeingPlayed: ctx.cardBeingPlayed,
+        metadata: { originalCause: ctx.originalCause || ctx.rootEventId },
+      }),
     ];
   }
   return newEvents;

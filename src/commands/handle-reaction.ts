@@ -7,6 +7,7 @@ import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { CommandResult } from "./types";
 import type { GameEvent } from "../events/types";
 import { generateEventId } from "../events/id-generator";
+import { decisionRequiredEvent } from "../events/event-builder";
 import { applyEvents } from "../events/apply";
 import { getCardEffect } from "../cards/base";
 import { getAvailableReactions } from "../cards/effect-types";
@@ -320,19 +321,11 @@ function applyAttackToUnblockedTargets(
   // Handle pending choice from attack effect (e.g., Militia requiring discards)
   const pendingChoiceEvent: GameEvent[] = result.pendingChoice
     ? [
-        {
-          type: "DECISION_REQUIRED",
-          decision: {
-            ...result.pendingChoice,
-            cardBeingPlayed: context.triggeringCard,
-            metadata: {
-              ...result.pendingChoice.metadata,
-              originalCause: rootEventId,
-            },
-          },
-          id: generateEventId(),
+        decisionRequiredEvent(result.pendingChoice, {
           causedBy: rootEventId,
-        },
+          cardBeingPlayed: context.triggeringCard,
+          metadata: { originalCause: rootEventId },
+        }),
       ]
     : [];
 

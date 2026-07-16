@@ -6,7 +6,7 @@ import type { TriggerType, TriggerContext } from "../types/card-types";
 import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
-import { EventBuilder } from "../events/event-builder";
+import { EventBuilder, decisionRequiredEvent } from "../events/event-builder";
 import { createResourceEvents } from "./handle-helpers";
 import { validators, validateCommand } from "./validators";
 import { orchestrateAttack } from "./attack-orchestration";
@@ -113,19 +113,11 @@ export function handlePlayAction(
     // Handle normal decision if present
     const decisionEvent = result.pendingChoice
       ? [
-          {
-            type: "DECISION_REQUIRED" as const,
-            decision: {
-              ...result.pendingChoice,
-              cardBeingPlayed: card,
-              metadata: {
-                ...result.pendingChoice.metadata,
-                originalCause: rootEventId,
-              },
-            },
-            id: generateEventId(),
+          decisionRequiredEvent(result.pendingChoice, {
             causedBy: rootEventId,
-          },
+            cardBeingPlayed: card,
+            metadata: { originalCause: rootEventId },
+          }),
         ]
       : [];
 

@@ -15,6 +15,7 @@ import type { GameEvent, PlayerId } from "../events/types";
 import type { CardEffect } from "../cards/effect-types";
 import { getAvailableReactions } from "../cards/effect-types";
 import { generateEventId } from "../events/id-generator";
+import { decisionRequiredEvent } from "../events/event-builder";
 import { applyEvents } from "../events/apply";
 import { run } from "../lib/run";
 
@@ -138,19 +139,11 @@ export function orchestrateAttack(
 
   const pendingChoiceEvent: GameEvent[] = attackResult.pendingChoice
     ? [
-        {
-          type: "DECISION_REQUIRED",
-          decision: {
-            ...attackResult.pendingChoice,
-            cardBeingPlayed: attackCard,
-            metadata: {
-              ...attackResult.pendingChoice.metadata,
-              originalCause: rootEventId,
-            },
-          },
-          id: generateEventId(),
+        decisionRequiredEvent(attackResult.pendingChoice, {
           causedBy: rootEventId,
-        },
+          cardBeingPlayed: attackCard,
+          metadata: { originalCause: rootEventId },
+        }),
       ]
     : [];
 
