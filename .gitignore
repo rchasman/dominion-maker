@@ -35,3 +35,4 @@ dist-ssr
 .devtools/
 .partykit/
 tsconfig.tsbuildinfo
+.beads/
