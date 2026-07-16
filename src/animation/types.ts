@@ -1,17 +1,10 @@
 import type { CardName } from "../types/game-state";
+import type { Zone as GameZone } from "../events/types";
 
-// Zone names - use suffix for opponent zones
-export type Zone =
-  | "hand"
-  | "hand-opponent"
-  | "inPlay"
-  | "inPlay-opponent"
-  | "deck"
-  | "deck-opponent"
-  | "discard"
-  | "discard-opponent"
-  | "supply"
-  | "trash";
+// Rendering zones: the logical game zones, plus -opponent variants for
+// the per-player zones so animations can target the opponent's side
+type PerPlayerZone = "hand" | "inPlay" | "deck" | "discard";
+export type Zone = GameZone | `${PerPlayerZone}-opponent`;
 
 export interface CardAnimation {
   id: string;
