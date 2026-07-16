@@ -3,7 +3,8 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { peekDraw, isActionCard } from "../effect-types";
+import { peekDraw } from "../effect-types";
+import { isActionCard } from "../../data/cards";
 import type { GameEvent } from "../../events/types";
 import { STAGES } from "../stages";
 

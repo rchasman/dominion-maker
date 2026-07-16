@@ -372,31 +372,6 @@ export function generateDecisionFromSpec(params: {
 }
 
 // ============================================
-// CARD TYPE CHECKING UTILITIES
-// ============================================
-
-/**
- * Check if a card is an Action card.
- */
-export function isActionCard(card: CardName): boolean {
-  return CARDS[card].types.includes("action");
-}
-
-/**
- * Check if a card is a Treasure card.
- */
-export function isTreasureCard(card: CardName): boolean {
-  return CARDS[card].types.includes("treasure");
-}
-
-/**
- * Check if a card is a Victory card.
- */
-export function isVictoryCard(card: CardName): boolean {
-  return CARDS[card].types.includes("victory");
-}
-
-// ============================================
 // ATTACK AND REACTION HELPERS
 // ============================================
 

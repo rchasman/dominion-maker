@@ -6,9 +6,6 @@ import {
   getGainableTreasures,
   getOpponents,
   createSimpleCardEffect,
-  isActionCard,
-  isTreasureCard,
-  isVictoryCard,
   isInitialCall,
   createCardSelectionDecision,
 } from "./effect-types";
@@ -265,47 +262,6 @@ describe("createDrawEvents - Event Generation", () => {
     const events = createDrawEvents("human", playerState, 3);
 
     expect(events.length).toBe(0);
-  });
-});
-
-describe("Card Type Checking Functions", () => {
-  beforeEach(() => resetEventCounter());
-
-  it("isActionCard should identify action cards", () => {
-    expect(isActionCard("Village")).toBe(true);
-    expect(isActionCard("Smithy")).toBe(true);
-    expect(isActionCard("Militia")).toBe(true);
-    expect(isActionCard("Throne Room")).toBe(true);
-  });
-
-  it("isActionCard should reject non-action cards", () => {
-    expect(isActionCard("Copper")).toBe(false);
-    expect(isActionCard("Silver")).toBe(false);
-    expect(isActionCard("Estate")).toBe(false);
-    expect(isActionCard("Duchy")).toBe(false);
-  });
-
-  it("isTreasureCard should identify treasures", () => {
-    expect(isTreasureCard("Copper")).toBe(true);
-    expect(isTreasureCard("Silver")).toBe(true);
-    expect(isTreasureCard("Gold")).toBe(true);
-  });
-
-  it("isTreasureCard should reject non-treasures", () => {
-    expect(isTreasureCard("Village")).toBe(false);
-    expect(isTreasureCard("Estate")).toBe(false);
-  });
-
-  it("isVictoryCard should identify victory cards", () => {
-    expect(isVictoryCard("Estate")).toBe(true);
-    expect(isVictoryCard("Duchy")).toBe(true);
-    expect(isVictoryCard("Province")).toBe(true);
-    expect(isVictoryCard("Gardens")).toBe(true);
-  });
-
-  it("isVictoryCard should reject non-victory cards", () => {
-    expect(isVictoryCard("Copper")).toBe(false);
-    expect(isVictoryCard("Village")).toBe(false);
   });
 });
 

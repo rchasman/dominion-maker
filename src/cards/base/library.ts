@@ -4,7 +4,8 @@
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import type { GameEvent } from "../../events/types";
-import { createDrawEvents, peekDraw, isActionCard } from "../effect-types";
+import { createDrawEvents, peekDraw } from "../effect-types";
+import { isActionCard } from "../../data/cards";
 import { CARD_ACTIONS } from "../card-actions";
 import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
 

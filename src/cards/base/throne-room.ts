@@ -3,7 +3,7 @@
  */
 
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { isActionCard } from "../effect-types";
+import { isActionCard } from "../../data/cards";
 import { STAGES } from "../stages";
 
 export const throneRoom: CardEffect = ({
