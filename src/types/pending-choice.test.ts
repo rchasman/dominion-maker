@@ -40,7 +40,7 @@ describe("Type guards for PendingChoice", () => {
     });
 
     it("should return false for undefined", () => {
-      expect(isDecisionChoice()).toBe(false);
+      expect(isDecisionChoice(undefined)).toBe(false);
     });
 
     it("should narrow type correctly", () => {
@@ -97,7 +97,7 @@ describe("Type guards for PendingChoice", () => {
     });
 
     it("should return false for undefined", () => {
-      expect(isReactionChoice()).toBe(false);
+      expect(isReactionChoice(undefined)).toBe(false);
     });
 
     it("should narrow type correctly", () => {
@@ -162,7 +162,7 @@ describe("Type guards for PendingChoice", () => {
       expect(isDecisionChoice(choice)).toBe(true);
       if (isDecisionChoice(choice)) {
         expect(choice.actions).toHaveLength(3);
-        expect(choice.actions?.[2].isDefault).toBe(true);
+        expect(choice.actions?.[2]?.isDefault).toBe(true);
       }
     });
 
@@ -235,7 +235,7 @@ describe("Type guards for PendingChoice", () => {
         triggeringPlayerId: "ai",
         triggeringCard: "Witch",
         triggerType: "on_attack",
-        availableReactions: ["Moat", "Lighthouse"],
+        availableReactions: ["Moat", "Chapel"],
         metadata: {
           allTargets: ["human"],
           currentTargetIndex: 0,
@@ -248,7 +248,7 @@ describe("Type guards for PendingChoice", () => {
       if (isReactionChoice(choice)) {
         expect(choice.availableReactions).toHaveLength(2);
         expect(choice.availableReactions).toContain("Moat");
-        expect(choice.availableReactions).toContain("Lighthouse");
+        expect(choice.availableReactions).toContain("Chapel");
       }
     });
   });
@@ -259,8 +259,8 @@ describe("Type guards for PendingChoice", () => {
         choiceType: "decision",
         playerId: "test-player",
         prompt: "Test prompt",
-        cardOptions: ["Card1", "Card2"],
-        cardBeingPlayed: "TestCard",
+        cardOptions: ["Copper", "Silver"],
+        cardBeingPlayed: "Sentry",
         from: "supply",
         min: 1,
         max: 3,
@@ -283,9 +283,9 @@ describe("Type guards for PendingChoice", () => {
         choiceType: "reaction",
         playerId: "test-player",
         triggeringPlayerId: "other-player",
-        triggeringCard: "Attack",
+        triggeringCard: "Militia",
         triggerType: "on_attack",
-        availableReactions: ["Defense"],
+        availableReactions: ["Moat"],
         metadata: {
           allTargets: ["test-player"],
           currentTargetIndex: 0,

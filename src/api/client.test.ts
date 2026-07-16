@@ -2,6 +2,10 @@ import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
 import { api } from "./client";
 import type { Action } from "../types/action";
 
+// bun's mock() lacks fetch's static properties (preconnect), so cast for assignment
+const mockFetch = (impl: () => Promise<Response>) =>
+  mock(impl) as unknown as typeof fetch;
+
 describe("api.api.analyze-strategy", () => {
   let originalFetch: typeof global.fetch;
 
@@ -16,17 +20,16 @@ describe("api.api.analyze-strategy", () => {
   describe("post method", () => {
     it("successfully calls analyze-strategy endpoint with valid response", async () => {
       const mockResponse = {
-        strategySummary: [
-          {
-            id: "test-1",
+        strategySummary: {
+          "test-1": {
             gameplan: "Buy gold",
             read: "Opponent weak",
             recommendation: "Attack now",
           },
-        ],
+        },
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify(mockResponse), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -53,17 +56,16 @@ describe("api.api.analyze-strategy", () => {
     it("includes request body in fetch call", async () => {
       const requestBody = {
         currentState: { score: 100 },
-        previousAnalysis: [
-          {
-            id: "prev-1",
+        previousAnalysis: {
+          "prev-1": {
             gameplan: "Save money",
             read: "Strong position",
             recommendation: "Wait",
           },
-        ],
+        },
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -81,7 +83,7 @@ describe("api.api.analyze-strategy", () => {
 
     it("handles error response with error message", async () => {
       const errorMessage = "Analysis failed";
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(
           JSON.stringify({
             error: 500,
@@ -103,7 +105,7 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("handles error response without message", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(
           JSON.stringify({
             error: 400,
@@ -125,7 +127,7 @@ describe("api.api.analyze-strategy", () => {
 
     it("handles network error during fetch", async () => {
       const errorMessage = "Network connection failed";
-      global.fetch = mock(async () => {
+      global.fetch = mockFetch(async () => {
         throw new Error(errorMessage);
       });
 
@@ -138,7 +140,7 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("handles timeout error", async () => {
-      global.fetch = mock(async () => {
+      global.fetch = mockFetch(async () => {
         throw new Error("Request timeout");
       });
 
@@ -151,7 +153,7 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("merges custom fetch options", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -170,7 +172,7 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("returns data as null on non-ok response with JSON parse error", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(
           JSON.stringify({
             error: 502,
@@ -211,8 +213,8 @@ describe("api.api.analyze-strategy", () => {
         },
       };
 
-      global.fetch = mock(async () =>
-        new Response(JSON.stringify({ strategySummary: [] }), {
+      global.fetch = mockFetch(async () =>
+        new Response(JSON.stringify({ strategySummary: {} }), {
           status: 200,
         }),
       );
@@ -221,36 +223,33 @@ describe("api.api.analyze-strategy", () => {
         currentState: complexState,
       });
 
-      expect(result.data).toEqual({ strategySummary: [] });
+      expect(result.data).toEqual({ strategySummary: {} });
       expect(result.error).toBe(null);
     });
 
     it("handles multiple previous analysis entries", async () => {
       const requestBody = {
         currentState: {},
-        previousAnalysis: [
-          {
-            id: "1",
+        previousAnalysis: {
+          "1": {
             gameplan: "Plan A",
             read: "Strong",
             recommendation: "Act",
           },
-          {
-            id: "2",
+          "2": {
             gameplan: "Plan B",
             read: "Weak",
             recommendation: "Wait",
           },
-          {
-            id: "3",
+          "3": {
             gameplan: "Plan C",
             read: "Neutral",
             recommendation: "Adapt",
           },
-        ],
+        },
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -282,16 +281,15 @@ describe("api.api.generate-action", () => {
   describe("post method", () => {
     it("successfully calls generate-action endpoint with valid response", async () => {
       const mockAction: Action = {
-        type: "play-card",
-        card: "gold",
-        player: "p1",
+        type: "play_action",
+        card: "Village",
       };
 
       const mockResponse = {
         action: mockAction,
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify(mockResponse), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -326,7 +324,7 @@ describe("api.api.generate-action", () => {
         customStrategy: "Aggressive strategy",
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -344,7 +342,7 @@ describe("api.api.generate-action", () => {
 
     it("handles error response with error message", async () => {
       const errorMessage = "Failed to generate action";
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(
           JSON.stringify({
             error: 500,
@@ -367,7 +365,7 @@ describe("api.api.generate-action", () => {
     });
 
     it("handles error response without message", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(
           JSON.stringify({
             error: 400,
@@ -390,7 +388,7 @@ describe("api.api.generate-action", () => {
 
     it("handles network error during fetch", async () => {
       const errorMessage = "Network unavailable";
-      global.fetch = mock(async () => {
+      global.fetch = mockFetch(async () => {
         throw new Error(errorMessage);
       });
 
@@ -404,7 +402,7 @@ describe("api.api.generate-action", () => {
     });
 
     it("handles timeout error", async () => {
-      global.fetch = mock(async () => {
+      global.fetch = mockFetch(async () => {
         throw new Error("API timeout");
       });
 
@@ -418,7 +416,7 @@ describe("api.api.generate-action", () => {
     });
 
     it("merges custom fetch options", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -443,7 +441,7 @@ describe("api.api.generate-action", () => {
         humanChoice: { selectedCards: ["gold", "silver", "copper", "estate"] },
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -471,7 +469,7 @@ describe("api.api.generate-action", () => {
         ],
       };
 
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -488,7 +486,7 @@ describe("api.api.generate-action", () => {
     });
 
     it("handles response without action field", async () => {
-      global.fetch = mock(async () =>
+      global.fetch = mockFetch(async () =>
         new Response(JSON.stringify({}), {
           status: 200,
         }),
@@ -507,7 +505,7 @@ describe("api.api.generate-action", () => {
       const providers = ["openai", "anthropic", "custom"];
 
       for (const provider of providers) {
-        global.fetch = mock(async () =>
+        global.fetch = mockFetch(async () =>
           new Response(JSON.stringify({}), {
             status: 200,
           }),

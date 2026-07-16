@@ -3,7 +3,12 @@ import { getCardEffect } from "./base";
 import { applyEvents } from "../events/apply";
 import { resetEventCounter } from "../events/id-generator";
 import { handleCommand } from "../commands/handle";
-import type { GameState, CardName } from "../types/game-state";
+import type {
+  GameState,
+  CardName,
+  DecisionChoice,
+} from "../types/game-state";
+import type { GameEvent } from "../events/types";
 import type { CardEffectContext } from "./effect-types";
 import { isDecisionChoice } from "../types/pending-choice";
 
@@ -15,7 +20,8 @@ import { isDecisionChoice } from "../types/pending-choice";
 function createEmptyState(): GameState {
   return {
     players: {},
-    supply: {},
+    supply: {} as Record<CardName, number>,
+    activeEffects: [],
     kingdomCards: [],
     playerOrder: [],
     turn: 0,
@@ -94,7 +100,7 @@ function createTestState(
 function executeCard(
   cardName: CardName,
   state: GameState,
-  decision?: unknown,
+  decision?: DecisionChoice,
   stage?: string,
 ): GameState {
   const effect = getCardEffect(cardName);
@@ -104,8 +110,8 @@ function executeCard(
     state,
     playerId: "human",
     card: cardName,
-    decision,
-    stage,
+    ...(decision !== undefined ? { decision } : {}),
+    ...(stage !== undefined ? { stage } : {}),
   };
 
   const result = effect(ctx);
@@ -718,6 +724,7 @@ describe("Attack Cards", () => {
 
       if (!result.ok) console.log("ERROR:", result.error);
       expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("Command failed");
 
       const coinsEvent = result.events.find(
         (e: GameEvent) => e.type === "COINS_MODIFIED",
@@ -879,7 +886,8 @@ describe("Attack Cards", () => {
         e => e.type === "CARD_GAINED" && e.card === "Silver",
       );
       expect(gainEvent).toBeDefined();
-      if (!gainEvent) throw new Error("No gain event");
+      if (!gainEvent || gainEvent.type !== "CARD_GAINED")
+        throw new Error("No gain event");
       expect(gainEvent.to).toBe("deck");
     });
 

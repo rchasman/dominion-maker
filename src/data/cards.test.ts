@@ -9,14 +9,13 @@ import {
   isVictoryCard,
   isAttackCard,
   isReactionCard,
-  type CardDefinition,
 } from "./cards";
 import type { CardName } from "../types/game-state";
 
 describe("CARDS - data integrity", () => {
   it("should have all required properties for each card", () => {
     Object.entries(CARDS).forEach(([name, card]) => {
-      expect(card.name).toBe(name);
+      expect(card.name).toBe(name as CardName);
       expect(typeof card.cost).toBe("number");
       expect(Array.isArray(card.types)).toBe(true);
       expect(card.types.length).toBeGreaterThan(0);
@@ -156,7 +155,7 @@ describe("CARDS - specific cards", () => {
   it("should define Merchant with trigger", () => {
     expect(CARDS.Merchant.triggers).toBeDefined();
     expect(CARDS.Merchant.triggers?.length).toBe(1);
-    expect(CARDS.Merchant.triggers?.[0].on).toBe("treasure_played");
+    expect(CARDS.Merchant.triggers?.[0]?.on).toBe("treasure_played");
   });
 
 });
@@ -497,6 +496,6 @@ describe("Card type combinations", () => {
       card.types.includes("reaction"),
     );
     expect(reactionCards.length).toBe(1);
-    expect(reactionCards[0].name).toBe("Moat");
+    expect(reactionCards[0]!.name).toBe("Moat");
   });
 });

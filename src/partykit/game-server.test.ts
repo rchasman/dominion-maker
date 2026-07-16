@@ -94,7 +94,6 @@ describe("GameServer", () => {
   describe("human connection count", () => {
     it("should count spectators as human", () => {
       const connections = [{ isSpectator: true }];
-      const botPlayers = new Set<string>();
 
       const humanCount = connections.filter(conn => {
         if (conn.isSpectator) return true;
@@ -214,7 +213,7 @@ describe("GameServer", () => {
     });
 
     it("should not auto-start with 1 player", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const isStarted = false;
       const shouldAutoStart = playerCount === 2 && !isStarted;
 
@@ -274,7 +273,7 @@ describe("GameServer", () => {
 
   describe("spectator restrictions", () => {
     it("should block spectators when less than 2 players", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const canSpectate = playerCount >= 2;
 
       expect(canSpectate).toBe(false);
@@ -290,7 +289,7 @@ describe("GameServer", () => {
 
   describe("game validation", () => {
     it("should require host to start game", () => {
-      const connectionId = "conn-2";
+      const connectionId: string = "conn-2";
       const hostConnectionId = "conn-1";
       const canStart = connectionId === hostConnectionId;
 
@@ -313,14 +312,14 @@ describe("GameServer", () => {
     });
 
     it("should require at least 2 players", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const canStart = playerCount >= 2;
 
       expect(canStart).toBe(false);
     });
 
     it("should require exactly 1 player for single-player", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const canStartSinglePlayer = playerCount === 1;
 
       expect(canStartSinglePlayer).toBe(true);
@@ -410,7 +409,7 @@ describe("GameServer", () => {
     });
 
     it("should end game when player resigns and only 1 remains", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const isStarted = true;
       const shouldEnd = playerCount < 2 && isStarted;
 
@@ -438,7 +437,7 @@ describe("GameServer", () => {
     });
 
     it("should not schedule timeout when players remain", () => {
-      const playerCount = 1;
+      const playerCount: number = 1;
       const spectatorCount = 3;
       const shouldScheduleTimeout = playerCount === 0 && spectatorCount > 0;
 
@@ -536,7 +535,7 @@ describe("GameServer", () => {
     });
 
     it("should not allow non-host to change mode", () => {
-      const connectionId = "conn-2";
+      const connectionId: string = "conn-2";
       const hostConnectionId = "conn-1";
       const canChange = connectionId === hostConnectionId;
 

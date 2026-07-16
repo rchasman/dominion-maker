@@ -110,7 +110,7 @@ describe("LLMLog/utils/groupVoters", () => {
     it("should include color property for each voter", () => {
       const result = groupVotersWithColors(["TestModel"]);
       expect(result[0]).toHaveProperty("color");
-      expect(typeof result[0].color).toBe("string");
+      expect(typeof result[0]!.color).toBe("string");
     });
 
     it("should handle many voters efficiently", () => {

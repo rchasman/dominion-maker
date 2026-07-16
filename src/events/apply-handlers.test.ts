@@ -15,7 +15,7 @@ import type { GameEvent } from "./types";
 function createEmptyState(): GameState {
   return {
     players: {},
-    supply: {},
+    supply: {} as GameState["supply"],
     kingdomCards: [],
     playerOrder: [],
     turn: 0,
@@ -62,7 +62,7 @@ function createBasicGameState(): GameState {
       Estate: 8,
       Duchy: 8,
       Province: 8,
-    },
+    } as GameState["supply"],
     turn: 1,
     activePlayerId: "human",
   };
@@ -101,7 +101,7 @@ describe("apply-handlers", () => {
           type: "EFFECT_REGISTERED",
           playerId: "human",
           effectType: "cost_reduction",
-          source: "Bridge",
+          source: "Merchant",
           parameters: { amount: 1 },
         },
       ];
@@ -255,7 +255,7 @@ describe("apply-handlers", () => {
         type: "EFFECT_REGISTERED",
         playerId: "human",
         effectType: "cost_reduction",
-        source: "Bridge",
+        source: "Merchant",
         parameters: { amount: 1 },
       };
 
@@ -275,7 +275,7 @@ describe("apply-handlers", () => {
         card: "Silver",
         baseCost: 3,
         modifiedCost: 2,
-        modifiers: [{ source: "Bridge", delta: -1 }],
+        modifiers: [{ source: "Merchant", delta: -1 }],
       };
 
       const result = applyResourceEvent(state, event);
@@ -348,7 +348,7 @@ describe("apply-handlers", () => {
 
       expect(result).not.toBeNull();
       expect(result).toBe(state);
-      expect(result.log.length).toBe(initialLogLength);
+      expect(result!.log.length).toBe(initialLogLength);
     });
 
     it("applies REACTION_PLAYED event", () => {
@@ -621,7 +621,7 @@ describe("apply-handlers", () => {
       const event: GameEvent = {
         type: "DECISION_RESOLVED",
         playerId: "human",
-        choice: { cards: ["Copper"] },
+        choice: { selectedCards: ["Copper"] },
       };
 
       const result = applyDecisionEvent(state, event);

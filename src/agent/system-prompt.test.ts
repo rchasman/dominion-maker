@@ -1,10 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import { buildCardDefinitionsTable, buildSystemPrompt } from "./system-prompt";
-import type { CardName } from "../types/game-state";
 
 describe("buildCardDefinitionsTable", () => {
   it("should build table with cards in supply", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
       Gold: 30,
@@ -22,7 +21,7 @@ describe("buildCardDefinitionsTable", () => {
   });
 
   it("should include card costs", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
     };
@@ -35,7 +34,7 @@ describe("buildCardDefinitionsTable", () => {
   });
 
   it("should include card types", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Village: 10,
       Smithy: 10,
     };
@@ -47,7 +46,7 @@ describe("buildCardDefinitionsTable", () => {
   });
 
   it("should include card effects", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Village: 10,
     };
 
@@ -58,7 +57,7 @@ describe("buildCardDefinitionsTable", () => {
   });
 
   it("should only include cards in supply", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
     };
@@ -72,7 +71,7 @@ describe("buildCardDefinitionsTable", () => {
   });
 
   it("should handle empty supply", () => {
-    const supply: Record<CardName, number> = {};
+    const supply: Record<string, number> = {};
 
     const table = buildCardDefinitionsTable(supply);
 
@@ -83,7 +82,7 @@ describe("buildCardDefinitionsTable", () => {
 
 describe("buildSystemPrompt", () => {
   it("should include game rules", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
     };
@@ -96,7 +95,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include turn phases", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -108,7 +107,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include resource information", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -120,7 +119,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include starting deck composition", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Estate: 8,
     };
@@ -133,7 +132,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include card definitions table", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
       Village: 10,
@@ -148,7 +147,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include critical buy phase rule", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -160,7 +159,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include validation rules", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -173,7 +172,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include strategy override rules", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -185,7 +184,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include default decision framework", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
       Gold: 30,
@@ -199,7 +198,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include copper trap warning", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -211,7 +210,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include skip buy advice", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Estate: 8,
     };
@@ -223,7 +222,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include victory timing advice", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Province: 8,
       Duchy: 8,
       Estate: 8,
@@ -237,7 +236,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include dilution math explanation", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -249,7 +248,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include action card evaluation", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Village: 10,
       Smithy: 10,
     };
@@ -263,7 +262,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include topdeck vs trash clarification", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -275,7 +274,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should work with minimal supply", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
     };
 
@@ -286,7 +285,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should work with full game supply", () => {
-    const supply: Record<CardName, number> = {
+    const supply: Record<string, number> = {
       Copper: 46,
       Silver: 40,
       Gold: 30,

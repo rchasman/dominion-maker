@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { getPhaseBorderColor, getPhaseBackground } from "./phase-styles";
-import type { Phase, TurnSubPhase } from "../../types/game-state";
+import type { Phase } from "../../types/game-state";
 
 describe("PlayerArea/phase-styles", () => {
   describe("getPhaseBorderColor", () => {

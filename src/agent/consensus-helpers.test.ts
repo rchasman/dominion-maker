@@ -9,7 +9,7 @@ import {
   MODEL_TIMEOUT_MS,
 } from "./consensus-helpers";
 import type { Action } from "../types/action";
-import type { VoteGroup } from "./consensus-helpers";
+import type { LLMLogger, VoteGroup } from "./consensus-helpers";
 
 describe("createActionSignature", () => {
   it("should create signature for action with card", () => {
@@ -64,20 +64,20 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b", "gpt-oss-20b"],
       count: 3,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gemini-2.5-flash-lite"],
+      voters: ["gemini-3.1-flash-lite"],
       count: 1,
     });
 
     const winner = checkEarlyConsensus(voteGroups, 2);
 
     expect(winner).not.toBeNull();
-    expect(winner?.action.card).toBe("Village");
+    expect(winner?.action).toEqual({ type: "play_action", card: "Village" });
   });
 
   it("should return null when leader not ahead by K votes", () => {
@@ -85,7 +85,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -113,7 +113,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini"],
+      voters: ["gpt-5.4-mini"],
       count: 1,
     });
 
@@ -128,13 +128,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b", "gemini-2.5-flash-lite"],
+      voters: ["gpt-oss-20b", "gemini-3.1-flash-lite"],
       count: 2,
     });
 
@@ -148,7 +148,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -161,7 +161,7 @@ describe("checkEarlyConsensus", () => {
     const winner = checkEarlyConsensus(voteGroups, 1);
 
     expect(winner).not.toBeNull();
-    expect(winner?.action.card).toBe("Village");
+    expect(winner?.action).toEqual({ type: "play_action", card: "Village" });
   });
 });
 
@@ -171,12 +171,12 @@ describe("handleModelSuccess", () => {
     const startTime = performance.now();
 
     const result = handleModelSuccess(action, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
     });
 
-    expect(result.provider).toBe("gpt-5-mini");
+    expect(result.provider).toBe("gpt-5.4-mini");
     expect(result.result).toEqual(action);
     expect(result.error).toBeNull();
     expect(result.duration).toBeGreaterThanOrEqual(0);
@@ -185,19 +185,19 @@ describe("handleModelSuccess", () => {
   it("should call logger with success data", () => {
     const action: Action = { type: "end_phase" };
     const startTime = performance.now();
-    const mockLogger = mock(() => {});
+    const mockLogger = mock<LLMLogger>(() => {});
 
     handleModelSuccess(action, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
-      logger: mockLogger as any,
+      logger: mockLogger,
     });
 
     expect(mockLogger).toHaveBeenCalled();
-    const call = mockLogger.mock.calls[0][0];
+    const call = mockLogger.mock.calls[0]![0];
     expect(call.type).toBe("consensus-model-complete");
-    expect(call.data.success).toBe(true);
+    expect(call.data?.success).toBe(true);
   });
 });
 
@@ -207,12 +207,12 @@ describe("handleModelError", () => {
     const startTime = performance.now();
 
     const result = handleModelError(error, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
     });
 
-    expect(result.provider).toBe("gpt-5-mini");
+    expect(result.provider).toBe("gpt-5.4-mini");
     expect(result.result).toBeNull();
     expect(result.error).toBe(error);
     expect(result.duration).toBeGreaterThanOrEqual(0);
@@ -221,53 +221,53 @@ describe("handleModelError", () => {
   it("should detect timeout errors", () => {
     const error = new Error("Timeout");
     const startTime = performance.now() - MODEL_TIMEOUT_MS - 100;
-    const mockLogger = mock(() => {});
+    const mockLogger = mock<LLMLogger>(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
-      logger: mockLogger as any,
+      logger: mockLogger,
     });
 
     expect(mockLogger).toHaveBeenCalled();
-    const call = mockLogger.mock.calls[0][0];
+    const call = mockLogger.mock.calls[0]![0];
     expect(call.message).toContain("timed out");
-    expect(call.data.timeout).toBe(true);
+    expect(call.data?.timeout).toBe(true);
   });
 
   it("should detect abort errors", () => {
     const error = { name: "AbortError", message: "Aborted" };
     const startTime = performance.now();
-    const mockLogger = mock(() => {});
+    const mockLogger = mock<LLMLogger>(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
-      logger: mockLogger as any,
+      logger: mockLogger,
     });
 
     expect(mockLogger).toHaveBeenCalled();
-    const call = mockLogger.mock.calls[0][0];
+    const call = mockLogger.mock.calls[0]![0];
     expect(call.message).toContain("aborted");
-    expect(call.data.aborted).toBe(true);
+    expect(call.data?.aborted).toBe(true);
   });
 
   it("should handle generic errors", () => {
     const error = new Error("Network error");
     const startTime = performance.now();
-    const mockLogger = mock(() => {});
+    const mockLogger = mock<LLMLogger>(() => {});
 
     handleModelError(error, {
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       index: 0,
       modelStart: startTime,
-      logger: mockLogger as any,
+      logger: mockLogger,
     });
 
     expect(mockLogger).toHaveBeenCalled();
-    const call = mockLogger.mock.calls[0][0];
+    const call = mockLogger.mock.calls[0]![0];
     expect(call.message).toContain("failed");
   });
 });
@@ -390,13 +390,13 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b", "gpt-oss-20b"],
       count: 3,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gemini-2.5-flash-lite"],
+      voters: ["gemini-3.1-flash-lite"],
       count: 1,
     });
 
@@ -407,7 +407,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -425,7 +425,7 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gemini-2.5-flash-lite" as const,
+        provider: "gemini-3.1-flash-lite" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
         duration: 100,
@@ -439,7 +439,7 @@ describe("selectConsensusWinner", () => {
       legalActions,
     );
 
-    expect(winner.action.card).toBe("Village");
+    expect(winner.action).toEqual({ type: "play_action", card: "Village" });
     expect(winner.count).toBe(3);
     expect(votesConsidered).toBe(4);
   });
@@ -449,7 +449,7 @@ describe("selectConsensusWinner", () => {
     const earlyWinner: VoteGroup = {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
       count: 2,
     };
     voteGroups.set("action1", earlyWinner);
@@ -460,7 +460,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -480,7 +480,7 @@ describe("selectConsensusWinner", () => {
       legalActions,
     );
 
-    expect(winner.action.card).toBe("Village");
+    expect(winner.action).toEqual({ type: "play_action", card: "Village" });
     expect(validEarlyConsensus).toBe(true);
   });
 
@@ -489,7 +489,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Market" }, // Invalid
-      voters: ["gpt-5-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
       count: 2,
     });
     voteGroups.set("action2", {
@@ -505,7 +505,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
@@ -532,7 +532,7 @@ describe("selectConsensusWinner", () => {
     );
 
     // Should pick Village even though Market has more votes
-    expect(winner.action.card).toBe("Village");
+    expect(winner.action).toEqual({ type: "play_action", card: "Village" });
   });
 
   it("should throw error when all models fail", () => {
@@ -541,7 +541,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: null,
         error: new Error("Failed"),
         duration: 100,
@@ -564,7 +564,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Market" }, // Invalid
-      voters: ["gpt-5-mini"],
+      voters: ["gpt-5.4-mini"],
       count: 1,
     });
 
@@ -574,7 +574,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
@@ -591,7 +591,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5-mini"],
+      voters: ["gpt-5.4-mini"],
       count: 1,
     });
     voteGroups.set("action1", {
@@ -608,7 +608,7 @@ describe("selectConsensusWinner", () => {
 
     const results = [
       {
-        provider: "gpt-5-mini" as const,
+        provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,

@@ -17,6 +17,7 @@ describe("simulateCardSelection", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Copper", "Estate", "Duchy"],
@@ -42,6 +43,7 @@ describe("simulateCardSelection", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Copper", "Copper"],
@@ -67,6 +69,7 @@ describe("simulateCardSelection", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Estate"],
@@ -102,8 +105,16 @@ describe("simulateCardSelection", () => {
     engine.state.pendingChoice = {
       choiceType: "reaction",
       playerId: "player1",
-      prompt: "Reveal reaction?",
+      triggeringPlayerId: "player2",
+      triggeringCard: "Militia",
+      triggerType: "on_attack",
       availableReactions: ["Moat"],
+      metadata: {
+        allTargets: ["player1"],
+        currentTargetIndex: 0,
+        blockedTargets: [],
+        originalCause: "Militia",
+      },
     };
 
     const simulated = simulateCardSelection(engine, "Copper");
@@ -119,6 +130,7 @@ describe("simulateCardSelection", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: [],
@@ -143,6 +155,7 @@ describe("simulateCardSelection", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Estate"],
@@ -150,11 +163,15 @@ describe("simulateCardSelection", () => {
       from: "hand",
     };
 
-    const originalOptions = [...(engine.state.pendingChoice.cardOptions || [])];
+    const original = engine.state.pendingChoice as Extract<
+      PendingChoice,
+      { choiceType: "decision" }
+    >;
+    const originalOptions = [...original.cardOptions];
     simulateCardSelection(engine, "Copper");
 
     // Original should be unchanged
-    expect(engine.state.pendingChoice?.cardOptions).toEqual(originalOptions);
+    expect(original.cardOptions).toEqual(originalOptions);
   });
 });
 
@@ -164,6 +181,7 @@ describe("isBatchDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash up to 4 cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper"],
@@ -179,6 +197,7 @@ describe("isBatchDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash a card",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 1,
       cardOptions: ["Copper"],
@@ -194,8 +213,9 @@ describe("isBatchDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash a card",
+      cardBeingPlayed: "Chapel",
       min: 0,
-      max: undefined,
+      // max omitted (single card)
       cardOptions: ["Copper"],
       stage: "trash",
       from: "hand",
@@ -209,18 +229,26 @@ describe("isBatchDecision", () => {
   });
 
   it("should return false for undefined", () => {
-    expect(isBatchDecision()).toBe(false);
+    expect(isBatchDecision(undefined)).toBe(false);
   });
 
   it("should return false for reaction choice", () => {
     const reaction: Extract<PendingChoice, { choiceType: "reaction" }> = {
       choiceType: "reaction",
       playerId: "player1",
-      prompt: "Reveal reaction?",
+      triggeringPlayerId: "player2",
+      triggeringCard: "Militia",
+      triggerType: "on_attack",
       availableReactions: ["Moat"],
+      metadata: {
+        allTargets: ["player1"],
+        currentTargetIndex: 0,
+        blockedTargets: [],
+        originalCause: "Militia",
+      },
     };
 
-    expect(isBatchDecision(reaction as any)).toBe(false);
+    expect(isBatchDecision(reaction)).toBe(false);
   });
 });
 
@@ -230,16 +258,16 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Choose action for each card",
+      cardBeingPlayed: "Sentry",
       min: 0,
       max: 1,
       cardOptions: ["Copper", "Silver"],
       actions: [
-        { id: "topdeck_card", label: "Topdeck", isDefault: false },
-        { id: "trash_card", label: "Trash", isDefault: false },
-        { id: "discard_card", label: "Discard", isDefault: true },
+        { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+        { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+        { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
       ],
       stage: "topdeck",
-      from: "deck",
     };
 
     expect(isMultiActionDecision(decision)).toBe(true);
@@ -250,12 +278,13 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Select cards",
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 2,
       cardOptions: ["Copper"],
       actions: [
-        { id: "select", label: "Select", isDefault: false },
-        { id: "skip", label: "Skip", isDefault: true },
+        { id: "select", label: "Select", color: "#10B981", isDefault: false },
+        { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
       stage: "trash",
       from: "hand",
@@ -269,6 +298,7 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Trash cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 4,
       cardOptions: ["Copper"],
@@ -284,6 +314,7 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Choose cards",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 2,
       cardOptions: ["Copper"],
@@ -300,18 +331,26 @@ describe("isMultiActionDecision", () => {
   });
 
   it("should return false for undefined", () => {
-    expect(isMultiActionDecision()).toBe(false);
+    expect(isMultiActionDecision(undefined)).toBe(false);
   });
 
   it("should return false for reaction choice", () => {
     const reaction: Extract<PendingChoice, { choiceType: "reaction" }> = {
       choiceType: "reaction",
       playerId: "player1",
-      prompt: "Reveal reaction?",
+      triggeringPlayerId: "player2",
+      triggeringCard: "Militia",
+      triggerType: "on_attack",
       availableReactions: ["Moat"],
+      metadata: {
+        allTargets: ["player1"],
+        currentTargetIndex: 0,
+        blockedTargets: [],
+        originalCause: "Militia",
+      },
     };
 
-    expect(isMultiActionDecision(reaction as any)).toBe(false);
+    expect(isMultiActionDecision(reaction)).toBe(false);
   });
 
   it("should handle actions with only skip", () => {
@@ -319,10 +358,11 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Skip?",
+      cardBeingPlayed: "Chapel",
       min: 0,
       max: 1,
       cardOptions: [],
-      actions: [{ id: "skip", label: "Skip", isDefault: true }],
+      actions: [{ id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true }],
       stage: "trash",
       from: "hand",
     };
@@ -335,13 +375,14 @@ describe("isMultiActionDecision", () => {
       choiceType: "decision",
       playerId: "player1",
       prompt: "Choose action",
+      cardBeingPlayed: "Sentry",
       min: 0,
       max: 1,
       cardOptions: ["Copper"],
       actions: [
-        { id: "select", label: "Select", isDefault: false },
-        { id: "trash_card", label: "Trash", isDefault: false },
-        { id: "skip", label: "Skip", isDefault: true },
+        { id: "select", label: "Select", color: "#10B981", isDefault: false },
+        { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+        { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
       stage: "trash",
       from: "hand",

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { vassal } from "./vassal";
-import type { GameState } from "../../types/game-state";
+import type { GameState, CardName } from "../../types/game-state";
 import { resetEventCounter } from "../../events/id-generator";
 
 function createTestState(): GameState {
@@ -28,7 +28,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as GameState["supply"],
     trash: [],
     log: [],
     turnHistory: [],
@@ -192,11 +192,11 @@ describe("Vassal", () => {
   });
 
   it("should handle various action cards", () => {
-    const actionCards = ["Smithy", "Market", "Militia", "Throne Room"];
+    const actionCards: CardName[] = ["Smithy", "Market", "Militia", "Throne Room"];
 
     actionCards.forEach(card => {
       const state = createTestState();
-      state.players["human"]!.deck = [card as any];
+      state.players["human"]!.deck = [card];
 
       const result = vassal({
         state,
@@ -225,11 +225,11 @@ describe("Vassal", () => {
   });
 
   it("should handle treasure card discards", () => {
-    const treasures = ["Copper", "Silver", "Gold"];
+    const treasures: CardName[] = ["Copper", "Silver", "Gold"];
 
     treasures.forEach(treasure => {
       const state = createTestState();
-      state.players["human"]!.deck = [treasure as any];
+      state.players["human"]!.deck = [treasure];
 
       const result = vassal({
         state,
@@ -248,11 +248,11 @@ describe("Vassal", () => {
   });
 
   it("should handle victory card discards", () => {
-    const victories = ["Estate", "Duchy", "Province"];
+    const victories: CardName[] = ["Estate", "Duchy", "Province"];
 
     victories.forEach(victory => {
       const state = createTestState();
-      state.players["human"]!.deck = [victory as any];
+      state.players["human"]!.deck = [victory];
 
       const result = vassal({
         state,

@@ -33,7 +33,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -43,10 +43,20 @@ describe("getLegalActions", () => {
         pendingChoice: {
           choiceType: "reaction",
           playerId: "player1",
-          prompt: "Reveal a reaction?",
+          triggeringPlayerId: "player2",
+          triggeringCard: "Militia",
+          triggerType: "on_attack",
           availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["player1"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "Militia",
+          },
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -75,7 +85,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -86,6 +96,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Trash cards",
+          cardBeingPlayed: "Chapel",
           min: 0,
           max: 1,
           cardOptions: ["Copper", "Estate"],
@@ -93,6 +104,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -119,7 +132,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -130,6 +143,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Trash exactly 1 card",
+          cardBeingPlayed: "Chapel",
           min: 1,
           max: 1,
           cardOptions: ["Copper", "Estate"],
@@ -137,6 +151,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -163,7 +179,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -174,6 +190,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Discard cards",
+          cardBeingPlayed: "Cellar",
           min: 0,
           max: 2,
           cardOptions: ["Copper", "Silver"],
@@ -181,6 +198,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -207,7 +226,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: { Silver: 10, Estate: 8 },
+        supply: { Silver: 10, Estate: 8 } as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -218,6 +237,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Gain a card",
+          cardBeingPlayed: "Workshop",
           min: 0,
           max: 1,
           cardOptions: ["Silver", "Estate"],
@@ -225,6 +245,8 @@ describe("getLegalActions", () => {
           from: "supply",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -251,7 +273,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -262,6 +284,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Topdeck a card",
+          cardBeingPlayed: "Harbinger",
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
@@ -269,6 +292,8 @@ describe("getLegalActions", () => {
           from: "discard",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -294,7 +319,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -305,6 +330,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Choose an action to play",
+          cardBeingPlayed: "Throne Room",
           min: 0,
           max: 1,
           cardOptions: ["Village", "Smithy"],
@@ -312,6 +338,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -338,7 +366,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -349,6 +377,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Trash a treasure",
+          cardBeingPlayed: "Bandit",
           min: 1,
           max: 1,
           cardOptions: ["Copper", "Silver"],
@@ -356,6 +385,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -382,7 +413,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -393,6 +424,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Discard down to 3",
+          cardBeingPlayed: "Militia",
           min: 1,
           max: 1,
           cardOptions: ["Copper"],
@@ -400,6 +432,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -424,7 +458,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -435,6 +469,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Topdeck a victory card",
+          cardBeingPlayed: "Bureaucrat",
           min: 0,
           max: 1,
           cardOptions: ["Estate"],
@@ -442,6 +477,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -459,7 +496,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -470,6 +507,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Trash cards",
+          cardBeingPlayed: "Chapel",
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
@@ -477,6 +515,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -501,7 +541,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -512,6 +552,7 @@ describe("getLegalActions", () => {
           choiceType: "decision",
           playerId: "player1",
           prompt: "Unknown stage",
+          cardBeingPlayed: "Chapel",
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
@@ -519,6 +560,8 @@ describe("getLegalActions", () => {
           from: "hand",
         },
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -545,7 +588,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -554,6 +597,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -581,7 +626,7 @@ describe("getLegalActions", () => {
         actions: 0,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -590,6 +635,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -620,7 +667,7 @@ describe("getLegalActions", () => {
           Silver: 10,
           Estate: 8,
           Copper: 46,
-        },
+        } as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -629,6 +676,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -662,7 +711,7 @@ describe("getLegalActions", () => {
           Silver: 10, // costs 3
           Estate: 8, // costs 2
           Copper: 46, // costs 0
-        },
+        } as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -671,6 +720,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -700,7 +751,7 @@ describe("getLegalActions", () => {
         supply: {
           Silver: 0, // out of stock
           Estate: 8,
-        },
+        } as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -709,6 +760,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -737,7 +790,7 @@ describe("getLegalActions", () => {
         supply: {
           Silver: 10,
           Estate: 8,
-        },
+        } as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -746,6 +799,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -774,7 +829,7 @@ describe("getLegalActions", () => {
         actions: 1,
         buys: 1,
         coins: 0,
-        supply: {},
+        supply: {} as Record<string, number>,
         trash: [],
         log: [],
         gameOver: false,
@@ -783,6 +838,8 @@ describe("getLegalActions", () => {
         kingdomCards: [],
         pendingChoice: null,
         pendingChoiceEventId: null,
+        activeEffects: [],
+        playerOrder: ["player1", "player2"],
       };
 
       const actions = getLegalActions(state);
@@ -821,7 +878,7 @@ describe("generateActionViaBackend", () => {
       actions: 0,
       buys: 1,
       coins: 0,
-      supply: {},
+      supply: {} as Record<string, number>,
       trash: [],
       log: [],
       gameOver: false,
@@ -830,10 +887,12 @@ describe("generateActionViaBackend", () => {
       kingdomCards: [],
       pendingChoice: null,
       pendingChoiceEventId: null,
+      activeEffects: [],
+      playerOrder: ["player1", "player2"],
     };
 
     const result = await generateActionViaBackend({
-      provider: "gpt-5-mini",
+      provider: "gpt-5.4-mini",
       currentState: state,
     });
 
@@ -857,7 +916,7 @@ describe("generateActionViaBackend", () => {
       actions: 0,
       buys: 1,
       coins: 0,
-      supply: {},
+      supply: {} as Record<string, number>,
       trash: [],
       log: [],
       gameOver: false,
@@ -866,11 +925,13 @@ describe("generateActionViaBackend", () => {
       kingdomCards: [],
       pendingChoice: null,
       pendingChoiceEventId: null,
+      activeEffects: [],
+      playerOrder: ["player1", "player2"],
     };
 
     await expect(
       generateActionViaBackend({
-        provider: "gpt-5-mini",
+        provider: "gpt-5.4-mini",
         currentState: state,
       }),
     ).rejects.toThrow();

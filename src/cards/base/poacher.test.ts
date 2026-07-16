@@ -28,7 +28,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as GameState["supply"],
     trash: [],
     log: [],
     turnHistory: [],
@@ -54,7 +54,7 @@ describe("Poacher", () => {
       Copper: 10,
       Silver: 10,
       Gold: 10,
-    };
+    } as GameState["supply"];
 
     const result = poacher({
       state,
@@ -77,7 +77,7 @@ describe("Poacher", () => {
       Copper: 0,
       Silver: 0,
       Gold: 10,
-    };
+    } as GameState["supply"];
 
     const result = poacher({
       state,
@@ -97,7 +97,7 @@ describe("Poacher", () => {
     state.supply = {
       Copper: 0,
       Silver: 10,
-    };
+    } as GameState["supply"];
     state.pendingChoice = {
       choiceType: "decision",
       playerId: "human",
@@ -131,7 +131,7 @@ describe("Poacher", () => {
       Copper: 0,
       Estate: 0,
       Duchy: 0,
-    };
+    } as GameState["supply"];
     state.pendingChoice = {
       choiceType: "decision",
       playerId: "human",
@@ -166,7 +166,7 @@ describe("Poacher", () => {
       Duchy: 0,
       Province: 0,
       Silver: 0,
-    };
+    } as GameState["supply"];
 
     const result = poacher({
       state,
@@ -186,7 +186,7 @@ describe("Poacher", () => {
     state.supply = {
       Copper: 0,
       Estate: 0,
-    };
+    } as GameState["supply"];
 
     const result = poacher({
       state,
@@ -234,7 +234,7 @@ describe("Poacher", () => {
       Copper: 0,
       Estate: 0,
       Duchy: 0,
-    };
+    } as GameState["supply"];
 
     const result = poacher({
       state,

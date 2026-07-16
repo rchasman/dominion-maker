@@ -11,6 +11,7 @@ import {
 } from "./effect-types";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameState, PlayerState, CardName } from "../types/game-state";
+import type { GameEvent } from "../events/types";
 
 /**
  * Helper function tests for effect-types.ts
@@ -47,7 +48,8 @@ function createBasicState(): GameState {
       Market: 5,
       Festival: 3,
       Workshop: 10,
-    },
+    } as Record<CardName, number>,
+    activeEffects: [],
     kingdomCards: [],
     playerOrder: ["human", "ai"],
     turn: 1,
@@ -294,7 +296,7 @@ describe("getGainableCards - Cost Filtering", () => {
 
   it("should return empty array when all supply empty", () => {
     const state = createBasicState();
-    state.supply = {};
+    state.supply = {} as Record<CardName, number>;
 
     const cards = getGainableCards(state, 10);
 
@@ -602,7 +604,7 @@ describe("Decision Helper Functions", () => {
   beforeEach(() => resetEventCounter());
 
   it("isInitialCall should detect initial calls", () => {
-    expect(isInitialCall()).toBe(true);
+    expect(isInitialCall(undefined, undefined)).toBe(true);
     expect(isInitialCall(undefined, "trash")).toBe(true);
     expect(isInitialCall(undefined, "gain")).toBe(true);
   });

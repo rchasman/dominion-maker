@@ -36,7 +36,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as GameState["supply"],
     trash: [],
     log: [],
     turnHistory: [],

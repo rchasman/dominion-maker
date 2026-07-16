@@ -2,9 +2,35 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameState } from "../types/game-state";
-import type { ReactionChoice } from "../types/pending-choice";
+import type { PendingChoice } from "../types/pending-choice";
+import type {
+  AttackResolvedEvent,
+  ReactionOpportunityEvent,
+} from "../events/types";
+
+type ReactionPendingChoice = Extract<PendingChoice, { choiceType: "reaction" }>;
+
+/**
+ * The handlers defensively guard against reactions persisted without metadata
+ * (see handleRevealReaction/handleDeclineReaction). Build such a value without
+ * weakening the fixture's type.
+ */
+function reactionWithoutMetadata(
+  fields: Omit<ReactionPendingChoice, "metadata">,
+): PendingChoice {
+  return fields as PendingChoice;
+}
 
 function createMockState(): GameState {
+  // Partial supply satisfies Record<CardName, number> structurally via a
+  // string-keyed record (same idiom as events/project.ts).
+  const supply: Record<string, number> = {
+    Village: 10,
+    Witch: 10,
+    Moat: 10,
+    Copper: 40,
+    Estate: 8,
+  };
   return {
     players: {
       p1: {
@@ -29,13 +55,7 @@ function createMockState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {
-      Village: 10,
-      Witch: 10,
-      Moat: 10,
-      Copper: 40,
-      Estate: 8,
-    },
+    supply,
     kingdomCards: ["Village", "Witch", "Moat"],
     playerOrder: ["p1", "p2", "p3"],
     turn: 1,
@@ -66,6 +86,7 @@ describe("handle-reaction - handleRevealReaction", () => {
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
@@ -77,28 +98,31 @@ describe("handle-reaction - handleRevealReaction", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
+      cardBeingPlayed: "Copper",
       min: 0,
       max: 0,
     };
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
   test("should return error when metadata is missing", () => {
     const state = createMockState();
-    state.pendingChoice = {
+    state.pendingChoice = reactionWithoutMetadata({
       choiceType: "reaction",
       playerId: "p1",
       triggeringCard: "Witch",
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-    } as ReactionChoice;
+    });
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Missing reaction metadata");
   });
 
@@ -122,6 +146,7 @@ describe("handle-reaction - handleRevealReaction", () => {
 
     const result = handleRevealReaction(state, "p3", "Moat");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your reaction to reveal");
   });
 
@@ -143,8 +168,10 @@ describe("handle-reaction - handleRevealReaction", () => {
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleRevealReaction(state, "p1", "Horse");
+    // Village is a valid card but not among the available reactions
+    const result = handleRevealReaction(state, "p1", "Village");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Card not available to reveal");
   });
 
@@ -168,8 +195,8 @@ describe("handle-reaction - handleRevealReaction", () => {
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     const revealedEvent = result.events.find(
       e => e.type === "REACTION_REVEALED",
@@ -180,7 +207,7 @@ describe("handle-reaction - handleRevealReaction", () => {
     expect(playedEvent).toBeDefined();
 
     const resolvedEvent = result.events.find(
-      e => e.type === "ATTACK_RESOLVED",
+      (e): e is AttackResolvedEvent => e.type === "ATTACK_RESOLVED",
     );
     expect(resolvedEvent).toBeDefined();
     expect(resolvedEvent?.blocked).toBe(true);
@@ -207,12 +234,12 @@ describe("handle-reaction - handleRevealReaction", () => {
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have REACTION_OPPORTUNITY for next target
     const nextOpportunity = result.events.find(
-      e => e.type === "REACTION_OPPORTUNITY",
+      (e): e is ReactionOpportunityEvent => e.type === "REACTION_OPPORTUNITY",
     );
     expect(nextOpportunity).toBeDefined();
     expect(nextOpportunity?.playerId).toBe("p3");
@@ -238,12 +265,12 @@ describe("handle-reaction - handleRevealReaction", () => {
 
     const result = handleRevealReaction(state, "p3", "Moat");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should NOT have REACTION_OPPORTUNITY (no more targets)
     const nextOpportunity = result.events.find(
-      e => e.type === "REACTION_OPPORTUNITY",
+      (e): e is ReactionOpportunityEvent => e.type === "REACTION_OPPORTUNITY",
     );
     expect(nextOpportunity).toBeUndefined();
   });
@@ -260,6 +287,7 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
@@ -271,28 +299,31 @@ describe("handle-reaction - handleDeclineReaction", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
+      cardBeingPlayed: "Copper",
       min: 0,
       max: 0,
     };
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
   test("should return error when metadata is missing", () => {
     const state = createMockState();
-    state.pendingChoice = {
+    state.pendingChoice = reactionWithoutMetadata({
       choiceType: "reaction",
       playerId: "p1",
       triggeringCard: "Witch",
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-    } as ReactionChoice;
+    });
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Missing reaction metadata");
   });
 
@@ -316,6 +347,7 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p3");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your reaction to decline");
   });
 
@@ -339,8 +371,8 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     const declinedEvent = result.events.find(
       e => e.type === "REACTION_DECLINED",
@@ -348,7 +380,7 @@ describe("handle-reaction - handleDeclineReaction", () => {
     expect(declinedEvent).toBeDefined();
 
     const resolvedEvent = result.events.find(
-      e => e.type === "ATTACK_RESOLVED",
+      (e): e is AttackResolvedEvent => e.type === "ATTACK_RESOLVED",
     );
     expect(resolvedEvent).toBeDefined();
     expect(resolvedEvent?.blocked).toBe(false);
@@ -375,12 +407,12 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have REACTION_OPPORTUNITY for next target
     const nextOpportunity = result.events.find(
-      e => e.type === "REACTION_OPPORTUNITY",
+      (e): e is ReactionOpportunityEvent => e.type === "REACTION_OPPORTUNITY",
     );
     expect(nextOpportunity).toBeDefined();
     expect(nextOpportunity?.playerId).toBe("p3");
@@ -406,12 +438,12 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p3");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should NOT have REACTION_OPPORTUNITY (no more targets)
     const nextOpportunity = result.events.find(
-      e => e.type === "REACTION_OPPORTUNITY",
+      (e): e is ReactionOpportunityEvent => e.type === "REACTION_OPPORTUNITY",
     );
     expect(nextOpportunity).toBeUndefined();
   });
@@ -437,8 +469,8 @@ describe("handle-reaction - handleDeclineReaction", () => {
 
     const result = handleDeclineReaction(state, "p1");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have auto-resolved for p3 (no reaction opportunity)
     const attackResolved = result.events.filter(
@@ -473,6 +505,7 @@ describe("handle-reaction - Edge cases", () => {
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -496,12 +529,12 @@ describe("handle-reaction - Edge cases", () => {
 
     const result = handleRevealReaction(state, "p1", "Moat");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should not have next REACTION_OPPORTUNITY
     const nextOpportunity = result.events.find(
-      e => e.type === "REACTION_OPPORTUNITY",
+      (e): e is ReactionOpportunityEvent => e.type === "REACTION_OPPORTUNITY",
     );
     expect(nextOpportunity).toBeUndefined();
   });

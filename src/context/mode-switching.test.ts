@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "../engine/engine";
 import { getPlayersForMode } from "../types/game-mode";
+import type { CardName } from "../types/basic-types";
 
 describe("Mode switching during active game", () => {
   it("should handle player ID lookup with actual game state players", () => {
@@ -21,9 +22,9 @@ describe("Mode switching during active game", () => {
     expect(actualPlayerIds).not.toContain("ai2");
 
     // Board should be able to access these players
-    const mainPlayer = engine.state.players[actualPlayerIds[0]];
+    const mainPlayer = engine.state.players[actualPlayerIds[0]!];
     expect(mainPlayer).toBeDefined();
-    expect(mainPlayer.deck).toBeDefined();
+    expect(mainPlayer!.deck).toBeDefined();
   });
 
   it("should preserve game state when switching from hybrid to engine", () => {
@@ -111,7 +112,7 @@ describe("Mode switching during active game", () => {
     it("should preserve kingdom cards when restarting game", () => {
       const engine = new DominionEngine();
 
-      const kingdomCards = [
+      const kingdomCards: CardName[] = [
         "Village",
         "Smithy",
         "Market",
@@ -122,7 +123,7 @@ describe("Mode switching during active game", () => {
         "Mine",
         "Workshop",
         "Cellar",
-      ] as const;
+      ];
 
       engine.startGame(getPlayersForMode("hybrid"), kingdomCards);
       const initialKingdom = engine.state.kingdomCards;

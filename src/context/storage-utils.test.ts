@@ -9,6 +9,12 @@ import {
   clearGameStateStorage,
   STORAGE_KEYS,
 } from "./storage-utils";
+import type { GameEvent } from "../events/types";
+import type { LLMLogEntry } from "../components/LLMLog";
+import type {
+  PlayerStrategy,
+  PlayerStrategyData,
+} from "../types/player-strategy";
 
 // Mock localStorage for tests
 const mockStorage: Record<string, string> = {};
@@ -100,9 +106,9 @@ describe("storage-utils", () => {
     });
 
     it("should return parsed events when stored", () => {
-      const testEvents = [
-        { type: "START_GAME", id: "event-1", playerId: "human" },
-        { type: "TURN_STARTED", id: "event-2", playerId: "human" },
+      const testEvents: GameEvent[] = [
+        { type: "TURN_STARTED", id: "event-1", playerId: "human", turn: 1 },
+        { type: "TURN_ENDED", id: "event-2", playerId: "human", turn: 1 },
       ];
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(testEvents));
       expect(loadEvents()).toEqual(testEvents);
@@ -135,11 +141,12 @@ describe("storage-utils", () => {
     });
 
     it("should return parsed logs when stored", () => {
-      const testLogs = [
+      const testLogs: LLMLogEntry[] = [
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
       ];
@@ -150,7 +157,7 @@ describe("storage-utils", () => {
 
     it("should return null when stored as null string (JSON.parse behavior)", () => {
       mockLocalStorage.setItem(STORAGE_KEYS.LLM_LOGS, "null");
-      const result = loadLLMLogs();
+      const result = loadLLMLogs() as LLMLogEntry[] | null;
       // JSON.parse("null") returns null literal, though TypeScript casts it to array
       // This is a limitation of the implementation - in practice, this shouldn't happen
       expect(result).toBe(null);
@@ -169,7 +176,7 @@ describe("storage-utils", () => {
 
     it("should return parsed settings with enabledModels as Set", () => {
       const testSettings = {
-        enabledModels: ["openai", "anthropic"],
+        enabledModels: ["claude-haiku", "claude-sonnet"],
         consensusCount: 3,
         customStrategy: "test-strategy",
       };
@@ -178,7 +185,10 @@ describe("storage-utils", () => {
       expect(settings).not.toBeNull();
       if (settings) {
         expect(settings.enabledModels instanceof Set).toBe(true);
-        expect(Array.from(settings.enabledModels)).toEqual(["openai", "anthropic"]);
+        expect(Array.from(settings.enabledModels)).toEqual([
+          "claude-haiku",
+          "claude-sonnet",
+        ]);
         expect(settings.consensusCount).toBe(3);
         expect(settings.customStrategy).toBe("test-strategy");
       }
@@ -232,14 +242,13 @@ describe("storage-utils", () => {
     });
 
     it("should return parsed strategies when stored as array", () => {
-      const testStrategies = [
-        {
-          id: "human",
+      const testStrategies: PlayerStrategyData = {
+        human: {
           gameplan: "Buy villages",
           read: "Build engine",
           recommendation: "Keep smithies",
         },
-      ];
+      };
       localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify(testStrategies));
       const strategies = loadPlayerStrategies();
       expect(strategies).toEqual(testStrategies);
@@ -247,12 +256,16 @@ describe("storage-utils", () => {
 
     it("should handle empty strategies array", () => {
       localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify([]));
-      expect(loadPlayerStrategies()).toEqual([]);
+      // JSON.parse("[]") returns an array despite the Record return type
+      const result = loadPlayerStrategies() as
+        | PlayerStrategyData
+        | PlayerStrategy[];
+      expect(result).toEqual([]);
     });
 
     it("should return null when stored value is null string", () => {
       mockLocalStorage.setItem(STORAGE_KEYS.STRATEGIES, "null");
-      const result = loadPlayerStrategies();
+      const result = loadPlayerStrategies() as PlayerStrategyData | null;
       // JSON.parse("null") returns null, not an array
       expect(result).toEqual(null);
     });

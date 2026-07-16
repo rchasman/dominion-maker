@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import type { LobbyPlayer, GameRequest, LobbyServerMessage } from "./protocol";
 
 /**
@@ -182,7 +182,6 @@ describe("usePartyLobby", () => {
 
     it("should return 'none' when myId is null", () => {
       const myId: string | null = null;
-      const targetId = "p2";
 
       const state = myId ? "check-requests" : "none";
 
@@ -220,7 +219,6 @@ describe("usePartyLobby", () => {
 
     it("should return undefined when myId is null", () => {
       const myId: string | null = null;
-      const targetId = "p2";
 
       const incomingRequest = myId ? "check-requests" : undefined;
 
@@ -331,7 +329,7 @@ describe("usePartyLobby", () => {
     });
 
     it("should use production host for non-localhost", () => {
-      const hostname = "example.com";
+      const hostname: string = "example.com";
       const host =
         hostname === "localhost"
           ? "localhost:1999"

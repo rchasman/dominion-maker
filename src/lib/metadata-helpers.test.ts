@@ -5,7 +5,6 @@ import {
   getNumberFromMetadata,
   getStringFromMetadata,
 } from "./metadata-helpers";
-import type { CardName } from "../types/game-state";
 
 describe("metadata-helpers", () => {
   describe("getCardNamesFromMetadata", () => {

@@ -4,6 +4,7 @@ import { applyEvents } from "../events/apply";
 import { resetEventCounter } from "../events/id-generator";
 import { handleCommand } from "../commands/handle";
 import type { GameState, CardName } from "../types/game-state";
+import type { GameEvent } from "../events/types";
 
 /**
  * Edge case tests for all cards
@@ -75,6 +76,7 @@ function createTestState(
     trash: [],
     log: [],
     turnHistory: [],
+    activeEffects: [],
   };
 }
 
@@ -242,7 +244,7 @@ describe("Edge Cases - Supply Constraints", () => {
 
   it("Workshop with empty supply does nothing", () => {
     const state = createTestState([]);
-    state.supply = {};
+    state.supply = {} as Record<CardName, number>;
     const effect = getCardEffect("Workshop");
     expect(effect).toBeDefined();
     if (!effect) return;
@@ -456,8 +458,6 @@ describe("Edge Cases - Decision Cancellation", () => {
       state,
       playerId: "human",
       card: "Cellar",
-      decision: undefined,
-      stage: undefined,
     });
 
     if (result.pendingChoice) {

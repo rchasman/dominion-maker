@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { canPlayCard, canBuyCards } from "./game-rules";
-import type { GameState } from "../types/game-state";
 
 describe("game-rules", () => {
   describe("canPlayCard", () => {

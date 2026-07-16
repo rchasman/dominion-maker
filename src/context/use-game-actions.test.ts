@@ -25,13 +25,15 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
       ];
@@ -44,24 +46,27 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
         {
           id: "log-3",
           timestamp: 3000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 10 },
         },
       ];
       const filtered = filterLogsAfterUndo(logs, 5);
-      expect(filtered).toEqual([logs[0], logs[1]]);
+      expect(filtered).toEqual([logs[0]!, logs[1]!]);
     });
 
     it("should handle logs with undefined eventCount", () => {
@@ -69,20 +74,22 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: undefined },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
       ];
       const filtered = filterLogsAfterUndo(logs, 3);
       // log-1 passes (undefined eventCount), log-2 fails (5 > 3)
       expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe("log-1");
+      expect(filtered[0]!.id).toBe("log-1");
     });
 
     it("should handle logs with missing data object", () => {
@@ -90,20 +97,22 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: {},
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
       ];
       const filtered = filterLogsAfterUndo(logs, 3);
       // log-1 passes (eventCount undefined in empty data), log-2 fails (5 > 3)
       expect(filtered.length).toBe(1);
-      expect(filtered[0].id).toBe("log-1");
+      expect(filtered[0]!.id).toBe("log-1");
     });
 
     it("should return empty array when eventsAfterUndo is 0", () => {
@@ -111,7 +120,8 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
       ];
@@ -124,18 +134,20 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 5 },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 6 },
         },
       ];
       const filtered = filterLogsAfterUndo(logs, 5);
-      expect(filtered).toEqual([logs[0]]);
+      expect(filtered).toEqual([logs[0]!]);
     });
 
     it("should handle empty logs array", () => {
@@ -149,26 +161,29 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 2 },
         },
         {
           id: "log-3",
           timestamp: 3000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 3 },
         },
       ];
       const filtered = filterLogsAfterUndo(logs, 10);
-      expect(filtered[0].id).toBe("log-1");
-      expect(filtered[1].id).toBe("log-2");
-      expect(filtered[2].id).toBe("log-3");
+      expect(filtered[0]!.id).toBe("log-1");
+      expect(filtered[1]!.id).toBe("log-2");
+      expect(filtered[2]!.id).toBe("log-3");
     });
 
     it("should handle non-numeric eventCount values gracefully", () => {
@@ -176,13 +191,15 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
-          data: { eventCount: "invalid" as any },
+          type: "state-change",
+          message: "game started",
+          data: { eventCount: "invalid" },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
       ];
@@ -243,25 +260,29 @@ describe("use-game-actions helper utilities", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "START_GAME",
+          type: "state-change",
+          message: "game started",
           data: { eventCount: 1 },
         },
         {
           id: "log-2",
           timestamp: 2000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 5 },
         },
         {
           id: "log-3",
           timestamp: 3000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 8 },
         },
         {
           id: "log-4",
           timestamp: 4000,
-          type: "TURN_ENDED",
+          type: "state-change",
+          message: "turn ended",
           data: { eventCount: 10 },
         },
       ];

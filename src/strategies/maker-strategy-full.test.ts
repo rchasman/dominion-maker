@@ -36,7 +36,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -57,7 +56,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["gpt-5-mini"]),
         consensusCount: 6,
-        dataFormat: "json",
       };
       strategy = new MakerStrategy(
         undefined,
@@ -167,6 +165,8 @@ describe("MakerStrategy - Full Coverage", () => {
 
     it("should accept engine parameter", () => {
       engine.state.pendingChoice = {
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         playerId: "ai",
         stage: "discard",
         prompt: "Discard",
@@ -188,7 +188,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "json",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -198,7 +197,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "text",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -208,7 +206,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -222,7 +219,6 @@ describe("MakerStrategy - Full Coverage", () => {
           "gemini-2.5-flash-lite",
         ]),
         consensusCount: 8,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -232,7 +228,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["gpt-oss-20b"]),
         consensusCount: 4,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -242,7 +237,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 12,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -252,7 +246,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "mixed",
         customStrategy: "Buy Gold early",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
@@ -263,8 +256,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "mixed",
-        customStrategy: undefined,
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -276,7 +267,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 4,
-        dataFormat: "mixed",
       };
       const logger: LLMLogger = () => {};
       strategy = new MakerStrategy(undefined, logger, modelSettings, "Custom");
@@ -314,7 +304,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(),
         consensusCount: 4,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -324,7 +313,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 0,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();
@@ -334,7 +322,6 @@ describe("MakerStrategy - Full Coverage", () => {
       const modelSettings: ModelSettings = {
         enabledModels: new Set(["claude-haiku"]),
         consensusCount: 100,
-        dataFormat: "mixed",
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);
       expect(strategy).toBeDefined();

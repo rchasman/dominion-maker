@@ -35,7 +35,7 @@ function createTestState(): GameState {
       Estate: 8,
       Duchy: 8,
       Province: 8,
-    },
+    } as GameState["supply"],
     kingdomCards: [],
     playerOrder: ["human", "ai"],
     turn: 1,

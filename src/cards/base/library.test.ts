@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { library } from "./library";
-import type { GameState } from "../../types/game-state";
+import type { GameState, CardName } from "../../types/game-state";
+import { CARD_ACTIONS } from "../card-actions";
 import { resetEventCounter } from "../../events/id-generator";
 
 function createTestState(): GameState {
@@ -28,7 +29,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as Record<CardName, number>,
     trash: [],
     log: [],
     turnHistory: [],
@@ -134,8 +135,8 @@ describe("Library", () => {
       prompt: "Library: Choose which Actions to skip",
       cardOptions: ["Village", "Smithy", "Market"],
       actions: [
-        { type: "draw_card", label: "Draw", isDefault: true },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.draw_card, isDefault: true },
+        CARD_ACTIONS.discard_card,
       ],
       cardBeingPlayed: "Library",
       metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy", "Market"] },
@@ -146,6 +147,7 @@ describe("Library", () => {
       playerId: "human",
       card: "Library",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "draw_card", // Draw Village
           "1": "discard_card", // Discard Smithy
@@ -176,8 +178,8 @@ describe("Library", () => {
       prompt: "Library: Choose which Actions to skip",
       cardOptions: ["Village", "Smithy"],
       actions: [
-        { type: "draw_card", label: "Draw", isDefault: true },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.draw_card, isDefault: true },
+        CARD_ACTIONS.discard_card,
       ],
       cardBeingPlayed: "Library",
       metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy"] },
@@ -188,6 +190,7 @@ describe("Library", () => {
       playerId: "human",
       card: "Library",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "discard_card",
           "1": "discard_card",
@@ -210,8 +213,8 @@ describe("Library", () => {
       prompt: "Library: Choose which Actions to skip",
       cardOptions: ["Village", "Smithy"],
       actions: [
-        { type: "draw_card", label: "Draw", isDefault: true },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.draw_card, isDefault: true },
+        CARD_ACTIONS.discard_card,
       ],
       cardBeingPlayed: "Library",
       metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy"] },
@@ -222,6 +225,7 @@ describe("Library", () => {
       playerId: "human",
       card: "Library",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "draw_card",
           "1": "draw_card",
@@ -269,8 +273,8 @@ describe("Library", () => {
       prompt: "Library: Choose which Actions to skip",
       cardOptions: ["Village"],
       actions: [
-        { type: "draw_card", label: "Draw", isDefault: true },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.draw_card, isDefault: true },
+        CARD_ACTIONS.discard_card,
       ],
       cardBeingPlayed: "Library",
       metadata: { cardsNeeded: 6, peekedCards: ["Village"] },
@@ -281,6 +285,7 @@ describe("Library", () => {
       playerId: "human",
       card: "Library",
       decision: {
+        selectedCards: [],
         cardActions: {
           "10": "draw_card", // Out of bounds
         },

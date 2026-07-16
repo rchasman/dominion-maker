@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { getCardColor } from "./card-colors";
-import type { CardName } from "../types/game-state";
 
 describe("card-colors", () => {
   describe("getCardColor", () => {

@@ -289,7 +289,7 @@ describe("Protocol Types", () => {
     it("should accept submit_decision message", () => {
       const msg: GameClientMessage = {
         type: "submit_decision",
-        choice: { type: "cards", cards: ["Copper"] },
+        choice: { selectedCards: ["Copper"] },
       };
       expect(msg.type).toBe("submit_decision");
     });

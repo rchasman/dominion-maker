@@ -41,6 +41,7 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_DISCARDED",
           playerId: "human",
           card: "Estate",
+          from: "hand",
           id: generateEventId(),
         },
       ];
@@ -60,12 +61,14 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_TRASHED",
           playerId: "human",
           card: "Copper",
+          from: "hand",
           id: generateEventId(),
         },
         {
           type: "CARD_TRASHED",
           playerId: "human",
           card: "Estate",
+          from: "hand",
           id: generateEventId(),
         },
       ];
@@ -124,7 +127,8 @@ describe("Log Builder Edge Cases", () => {
         {
           type: "CARD_PLAYED",
           playerId: "human",
-          card: "Estate" as any,
+          card: "Estate",
+          sourceIndex: 0,
           id: generateEventId(),
         },
       ];
@@ -268,6 +272,7 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_GAINED",
           playerId: "human",
           card: "Estate",
+          to: "discard",
           id: generateEventId(),
         },
       ];
@@ -289,12 +294,14 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_PLAYED",
           playerId: "human",
           card: "Workshop",
+          sourceIndex: 0,
           id: causeId,
         },
         {
           type: "CARD_GAINED",
           playerId: "human",
           card: "Silver",
+          to: "discard",
           causedBy: causeId,
           id: generateEventId(),
         },
@@ -324,6 +331,7 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_GAINED",
           playerId: "human",
           card: "Silver",
+          to: "discard",
           id: generateEventId(),
         },
       ];
@@ -348,10 +356,13 @@ describe("Log Builder Edge Cases", () => {
           type: "CARD_PLAYED",
           playerId: "human",
           card: "Smithy",
+          sourceIndex: 0,
           id: rootId,
         },
         {
           type: "DECISION_RESOLVED",
+          playerId: "human",
+          choice: { selectedCards: [] },
           id: invisibleId,
           causedBy: rootId,
         },
@@ -411,6 +422,7 @@ describe("Log Builder Edge Cases", () => {
           type: "GAME_ENDED",
           scores: { human: 10, ai: 10 },
           winnerId: null,
+          reason: "provinces_empty",
           id: generateEventId(),
         },
       ];
@@ -458,12 +470,21 @@ describe("Log Builder Edge Cases", () => {
       const events: GameEvent[] = [
         {
           type: "DECISION_RESOLVED",
+          playerId: "human",
+          choice: { selectedCards: [] },
           id: generateEventId(),
         },
         {
           type: "DECISION_REQUIRED",
-          playerId: "human",
-          choice: "discard",
+          decision: {
+            choiceType: "decision",
+            playerId: "human",
+            prompt: "Test",
+            cardOptions: [],
+            cardBeingPlayed: "Cellar",
+            min: 0,
+            max: 1,
+          },
           id: generateEventId(),
         },
       ];

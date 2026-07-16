@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "../engine/engine";
 import { GAME_MODE_CONFIG } from "../types/game-mode";
+import type { CardName } from "../types/basic-types";
 
 describe("Mode switching preserves game state", () => {
   it("should keep player IDs unchanged when switching modes", () => {
@@ -61,7 +62,7 @@ describe("Mode switching preserves game state", () => {
   it("should preserve kingdom cards when switching modes", () => {
     const engine = new DominionEngine();
 
-    const kingdomCards = [
+    const kingdomCards: CardName[] = [
       "Village",
       "Smithy",
       "Market",
@@ -72,7 +73,7 @@ describe("Mode switching preserves game state", () => {
       "Mine",
       "Workshop",
       "Cellar",
-    ] as const;
+    ];
 
     engine.startGame(["human", "ai"], kingdomCards);
 

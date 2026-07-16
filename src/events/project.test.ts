@@ -23,7 +23,7 @@ describe("project", () => {
       expect(state.phase).toBe("action");
       expect(state.activePlayerId).toBe("human");
       expect(state.players).toEqual({});
-      expect(state.supply).toEqual({});
+      expect(state.supply).toEqual({} as GameState["supply"]);
       expect(state.trash).toEqual([]);
       expect(state.kingdomCards).toEqual([]);
       expect(state.actions).toBe(0);
@@ -71,7 +71,10 @@ describe("project", () => {
       expect(state.players.human).toBeDefined();
       expect(state.players.ai).toBeDefined();
       expect(state.kingdomCards).toEqual(["Village", "Smithy"]);
-      expect(state.supply).toEqual({ Copper: 46, Estate: 8 });
+      expect(state.supply).toEqual({
+        Copper: 46,
+        Estate: 8,
+      } as GameState["supply"]);
     });
 
     it("projects state from multiple events", () => {

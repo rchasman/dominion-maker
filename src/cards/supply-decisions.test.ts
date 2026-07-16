@@ -336,7 +336,7 @@ describe("Supply Decision E2E Tests", () => {
       const engine = createTestEngine(["Workshop"]);
 
       // Empty ALL supply cards
-      Object.keys(engine.state.supply).forEach(card => {
+      (Object.keys(engine.state.supply) as CardName[]).forEach(card => {
         engine.state.supply[card] = 0;
       });
 

@@ -7,10 +7,23 @@ import {
   handleBuyCard,
 } from "./handle-actions";
 import { resetEventCounter } from "../events/id-generator";
-import { applyEvents } from "../events/apply";
 import type { GameState } from "../types/game-state";
+import type { CostModifiedEvent } from "../events/types";
 
 function createMockState(): GameState {
+  // Partial supply satisfies Record<CardName, number> structurally via a
+  // string-keyed record (same idiom as events/project.ts).
+  const supply: Record<string, number> = {
+    Village: 10,
+    Smithy: 10,
+    Copper: 40,
+    Silver: 40,
+    Gold: 30,
+    Estate: 8,
+    Duchy: 8,
+    Province: 8,
+    Witch: 10,
+  };
   return {
     players: {
       p1: {
@@ -28,17 +41,7 @@ function createMockState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {
-      Village: 10,
-      Smithy: 10,
-      Copper: 40,
-      Silver: 40,
-      Gold: 30,
-      Estate: 8,
-      Duchy: 8,
-      Province: 8,
-      Witch: 10,
-    },
+    supply,
     kingdomCards: ["Village", "Smithy", "Witch"],
     playerOrder: ["p1", "p2"],
     turn: 1,
@@ -67,6 +70,7 @@ describe("handle-actions - handlePlayAction", () => {
     const state = createMockState();
     const result = handlePlayAction(state, "nonexistent", "Village");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -77,6 +81,7 @@ describe("handle-actions - handlePlayAction", () => {
     // Play Village (which has an effect)
     const result = handlePlayAction(state, "p1", "Village");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -88,8 +93,8 @@ describe("handle-actions - handlePlayAction", () => {
 
     const result = handlePlayAction(state, "p1", "Witch");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have ATTACK_DECLARED
     const attackDeclared = result.events.find(
@@ -105,6 +110,7 @@ describe("handle-actions - handlePlayAction", () => {
 
     const result = handlePlayAction(state, "p1", "Village");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 });
@@ -119,6 +125,7 @@ describe("handle-actions - handlePlayTreasure", () => {
     state.phase = "buy";
     const result = handlePlayTreasure(state, "nonexistent", "Copper");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -130,6 +137,7 @@ describe("handle-actions - handlePlayTreasure", () => {
     // Mock a treasure with 0 coins (hypothetically)
     const result = handlePlayTreasure(state, "p1", "Copper");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -141,8 +149,8 @@ describe("handle-actions - handlePlayTreasure", () => {
 
     const result = handlePlayTreasure(state, "p1", "Silver");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have coin events including Merchant bonus
     const coinEvents = result.events.filter(e => e.type === "COINS_MODIFIED");
@@ -160,6 +168,7 @@ describe("handle-actions - handlePlayAllTreasures", () => {
     state.phase = "buy";
     const result = handlePlayAllTreasures(state, "nonexistent");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -168,6 +177,7 @@ describe("handle-actions - handlePlayAllTreasures", () => {
     state.phase = "action";
     const result = handlePlayAllTreasures(state, "p1");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not in buy phase");
   });
 
@@ -178,8 +188,9 @@ describe("handle-actions - handlePlayAllTreasures", () => {
 
     const result = handlePlayAllTreasures(state, "p1");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    expect(result.events?.length).toBe(0);
+    expect(result.events.length).toBe(0);
   });
 
   test("should play all treasures in hand", () => {
@@ -189,8 +200,8 @@ describe("handle-actions - handlePlayAllTreasures", () => {
 
     const result = handlePlayAllTreasures(state, "p1");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have CARD_PLAYED events for each treasure
     const playedEvents = result.events.filter(e => e.type === "CARD_PLAYED");
@@ -208,6 +219,7 @@ describe("handle-actions - handleUnplayTreasure", () => {
     state.phase = "action";
     const result = handleUnplayTreasure(state, "p1", "Copper");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not in buy phase");
   });
 
@@ -216,6 +228,7 @@ describe("handle-actions - handleUnplayTreasure", () => {
     state.phase = "buy";
     const result = handleUnplayTreasure(state, "p1", "Village");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not a treasure card");
   });
 
@@ -224,6 +237,7 @@ describe("handle-actions - handleUnplayTreasure", () => {
     state.phase = "buy";
     const result = handleUnplayTreasure(state, "nonexistent", "Copper");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -236,8 +250,8 @@ describe("handle-actions - handleUnplayTreasure", () => {
 
     const result = handleUnplayTreasure(state, "p1", "Silver");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     const returnedEvent = result.events.find(
       e => e.type === "CARD_RETURNED_TO_HAND",
@@ -257,6 +271,7 @@ describe("handle-actions - handleUnplayTreasure", () => {
 
     const result = handleUnplayTreasure(state, "p1", "Copper");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 });
@@ -273,20 +288,24 @@ describe("handle-actions - handleBuyCard", () => {
     state.coins = 5;
     state.activeEffects = [
       {
+        type: "EFFECT_REGISTERED",
+        playerId: "p1",
         effectType: "cost_reduction",
-        source: "Bridge",
-        duration: "until_cleanup",
+        // No base-set card grants cost_reduction; any CardName works as source
+        source: "Workshop",
         parameters: { amount: 1 },
       },
     ];
 
     const result = handleBuyCard(state, "p1", "Silver");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should have COST_MODIFIED event
-    const costModified = result.events.find(e => e.type === "COST_MODIFIED");
+    const costModified = result.events.find(
+      (e): e is CostModifiedEvent => e.type === "COST_MODIFIED",
+    );
     expect(costModified).toBeDefined();
     expect(costModified?.baseCost).toBe(3);
     expect(costModified?.modifiedCost).toBe(2);
@@ -300,11 +319,13 @@ describe("handle-actions - handleBuyCard", () => {
 
     const result = handleBuyCard(state, "p1", "Silver");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
     // Should NOT have COST_MODIFIED event
-    const costModified = result.events.find(e => e.type === "COST_MODIFIED");
+    const costModified = result.events.find(
+      (e): e is CostModifiedEvent => e.type === "COST_MODIFIED",
+    );
     expect(costModified).toBeUndefined();
 
     const cardGained = result.events.find(e => e.type === "CARD_GAINED");
@@ -318,25 +339,31 @@ describe("handle-actions - handleBuyCard", () => {
     state.coins = 8;
     state.activeEffects = [
       {
+        type: "EFFECT_REGISTERED",
+        playerId: "p1",
         effectType: "cost_reduction",
-        source: "Bridge",
-        duration: "until_cleanup",
+        // No base-set card grants cost_reduction; any CardName works as source
+        source: "Workshop",
         parameters: { amount: 1 },
       },
       {
+        type: "EFFECT_REGISTERED",
+        playerId: "p1",
         effectType: "cost_reduction",
-        source: "Bridge",
-        duration: "until_cleanup",
+        // No base-set card grants cost_reduction; any CardName works as source
+        source: "Workshop",
         parameters: { amount: 1 },
       },
     ];
 
     const result = handleBuyCard(state, "p1", "Province");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
-    const costModified = result.events.find(e => e.type === "COST_MODIFIED");
+    const costModified = result.events.find(
+      (e): e is CostModifiedEvent => e.type === "COST_MODIFIED",
+    );
     expect(costModified).toBeDefined();
     expect(costModified?.baseCost).toBe(8);
     expect(costModified?.modifiedCost).toBe(6);
@@ -349,19 +376,23 @@ describe("handle-actions - handleBuyCard", () => {
     state.coins = 5;
     state.activeEffects = [
       {
+        type: "EFFECT_REGISTERED",
+        playerId: "p1",
         effectType: "cost_reduction",
-        source: "Bridge",
-        duration: "until_cleanup",
+        // No base-set card grants cost_reduction; any CardName works as source
+        source: "Workshop",
         parameters: { amount: 10 },
       },
     ];
 
     const result = handleBuyCard(state, "p1", "Silver");
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
-    if (!result.events) throw new Error("Expected events");
 
-    const costModified = result.events.find(e => e.type === "COST_MODIFIED");
+    const costModified = result.events.find(
+      (e): e is CostModifiedEvent => e.type === "COST_MODIFIED",
+    );
     expect(costModified).toBeDefined();
     expect(costModified?.baseCost).toBe(3);
     expect(costModified?.modifiedCost).toBe(0);
@@ -379,6 +410,7 @@ describe("handle-actions - Edge cases", () => {
 
     const result = handlePlayAction(state, "p1", "Village");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -389,6 +421,7 @@ describe("handle-actions - Edge cases", () => {
 
     const result = handlePlayTreasure(state, "p1", "Copper");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -399,6 +432,7 @@ describe("handle-actions - Edge cases", () => {
 
     const result = handleUnplayTreasure(state, "p1", "Copper");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 
@@ -409,6 +443,7 @@ describe("handle-actions - Edge cases", () => {
 
     const result = handlePlayAllTreasures(state, "p1");
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Player not found");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { DominionEngine } from "../engine";
-import type { CardName } from "../types/game-state";
+import type { DecisionChoice, GameState } from "../types/game-state";
 import {
   executePlayAction,
   executePlayTreasure,
@@ -21,13 +21,11 @@ describe("game-actions", () => {
     engine.dispatch({
       type: "START_GAME",
       players: ["human", "ai"],
-      kingdomCards: undefined,
     });
   });
 
   describe("executePlayAction", () => {
     it("should dispatch PLAY_ACTION command to engine", () => {
-      const initialActionCount = engine.state.actions;
       const result = executePlayAction(engine, "Village");
 
       expect(result).toBeDefined();
@@ -79,24 +77,25 @@ describe("game-actions", () => {
     });
 
     it("should return error when no human player", () => {
-      const invalidState = {
+      const invalidState: GameState = {
         ...engine.state,
         players: {
-          ai: engine.state.players.ai,
+          ai: engine.state.players.ai!,
         },
       };
-      const result = executePlayAllTreasures(engine, invalidState as any);
+      const result = executePlayAllTreasures(engine, invalidState);
       expect(result.ok).toBe(false);
+      if (result.ok) throw new Error("expected error result");
       expect(result.error).toBeDefined();
     });
 
     it("should handle empty hand", () => {
-      const stateWithEmptyHand = {
+      const stateWithEmptyHand: GameState = {
         ...engine.state,
         players: {
           ...engine.state.players,
           human: {
-            ...engine.state.players.human,
+            ...engine.state.players.human!,
             hand: [],
           },
         },
@@ -106,12 +105,12 @@ describe("game-actions", () => {
     });
 
     it("should dispatch multiple PLAY_TREASURE commands in order", () => {
-      const stateWithTreasures = {
+      const stateWithTreasures: GameState = {
         ...engine.state,
         players: {
           ...engine.state.players,
           human: {
-            ...engine.state.players.human,
+            ...engine.state.players.human!,
             hand: ["Copper", "Silver"],
           },
         },
@@ -155,7 +154,7 @@ describe("game-actions", () => {
 
   describe("executeSubmitDecision", () => {
     it("should dispatch SUBMIT_DECISION command to engine", () => {
-      const choice = { selectedCards: ["Copper"] };
+      const choice: DecisionChoice = { selectedCards: ["Copper"] };
       const result = executeSubmitDecision(engine, choice);
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
@@ -177,7 +176,8 @@ describe("game-actions", () => {
 
       // Get an event ID
       if (engine.eventLog.length > initialEventCount) {
-        const eventIdToUndoTo = engine.eventLog[initialEventCount].id;
+        const eventIdToUndoTo = engine.eventLog[initialEventCount]!.id;
+        if (!eventIdToUndoTo) throw new Error("expected event to have an id");
         executeUndo(engine, eventIdToUndoTo);
         expect(engine.eventLog.length).toBeLessThanOrEqual(engine.eventLog.length);
       }
@@ -201,7 +201,8 @@ describe("game-actions", () => {
     it("should return state when event exists", () => {
       const fallbackState = engine.state;
       if (engine.eventLog.length > 0) {
-        const validEventId = engine.eventLog[0].id;
+        const validEventId = engine.eventLog[0]!.id;
+        if (!validEventId) throw new Error("expected event to have an id");
         const state = getStateAtEvent(engine, validEventId, fallbackState);
         expect(state).toBeDefined();
       }
@@ -217,7 +218,7 @@ describe("game-actions", () => {
       expect(playTreasureResult).toBeDefined();
 
       const playAllResult = executePlayAllTreasures(engine, engine.state);
-      expect(playAllResult.success === undefined || typeof playAllResult.success === "boolean").toBe(true);
+      expect(typeof playAllResult.ok).toBe("boolean");
 
       const buyResult = executeBuyCard(engine, "Estate");
       expect(buyResult).toBeDefined();

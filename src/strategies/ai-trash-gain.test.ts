@@ -41,7 +41,7 @@ function selectCardsToGain(options: CardName[], numToGain: number): CardName[] {
 
 describe("AI Strategy - Trash decisions", () => {
   it("should trash Estates before Silvers", () => {
-    const hand = ["Estate", "Estate", "Silver", "Copper"];
+    const hand: CardName[] = ["Estate", "Estate", "Silver", "Copper"];
     const selected = selectCardsToTrash(hand, 3);
 
     expect(selected.length).toBe(3);
@@ -52,7 +52,7 @@ describe("AI Strategy - Trash decisions", () => {
   });
 
   it("should trash all Curses first", () => {
-    const hand = ["Curse", "Curse", "Estate", "Copper", "Silver"];
+    const hand: CardName[] = ["Curse", "Curse", "Estate", "Copper", "Silver"];
     const selected = selectCardsToTrash(hand, 3);
 
     expect(selected.length).toBe(3);
@@ -62,7 +62,7 @@ describe("AI Strategy - Trash decisions", () => {
   });
 
   it("should trash cheapest cards when no priority cards", () => {
-    const hand = ["Silver", "Gold", "Village", "Smithy"];
+    const hand: CardName[] = ["Silver", "Gold", "Village", "Smithy"];
     const selected = selectCardsToTrash(hand, 2);
 
     expect(selected.length).toBe(2);
@@ -74,7 +74,7 @@ describe("AI Strategy - Trash decisions", () => {
   });
 
   it("should handle multiple copies of priority cards", () => {
-    const hand = ["Estate", "Estate", "Estate", "Copper", "Copper"];
+    const hand: CardName[] = ["Estate", "Estate", "Estate", "Copper", "Copper"];
     const selected = selectCardsToTrash(hand, 4);
 
     expect(selected.length).toBe(4);
@@ -86,7 +86,7 @@ describe("AI Strategy - Trash decisions", () => {
 
 describe("AI Strategy - Gain decisions", () => {
   it("should gain most expensive card available", () => {
-    const options = ["Copper", "Silver", "Estate", "Village", "Smithy"];
+    const options: CardName[] = ["Copper", "Silver", "Estate", "Village", "Smithy"];
     const selected = selectCardsToGain(options, 1);
 
     expect(selected.length).toBe(1);
@@ -95,7 +95,7 @@ describe("AI Strategy - Gain decisions", () => {
   });
 
   it("should gain Gold over Silver", () => {
-    const options = ["Copper", "Silver", "Gold"];
+    const options: CardName[] = ["Copper", "Silver", "Gold"];
     const selected = selectCardsToGain(options, 1);
 
     expect(selected.length).toBe(1);
@@ -103,7 +103,7 @@ describe("AI Strategy - Gain decisions", () => {
   });
 
   it("should handle gaining multiple cards", () => {
-    const options = ["Copper", "Silver", "Gold", "Province"];
+    const options: CardName[] = ["Copper", "Silver", "Gold", "Province"];
     const selected = selectCardsToGain(options, 2);
 
     expect(selected.length).toBe(2);

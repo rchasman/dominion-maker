@@ -1,9 +1,11 @@
 import { describe, it, expect } from "bun:test";
 import { getHintText } from "./helpers";
-import type { GameState, PlayerId } from "../../types/game-state";
+import type { GameState } from "../../types/game-state";
 
 describe("Board/helpers", () => {
   describe("getHintText", () => {
+    const emptySupply: Record<string, number> = {};
+
     const baseState: GameState = {
       turn: 1,
       phase: "action",
@@ -17,19 +19,27 @@ describe("Board/helpers", () => {
           hand: [],
           discard: [],
           inPlay: [],
+          inPlaySourceIndices: [],
         },
         ai: {
           deck: [],
           hand: [],
           discard: [],
           inPlay: [],
+          inPlaySourceIndices: [],
         },
       },
-      supply: {},
+      supply: emptySupply,
       trash: [],
+      kingdomCards: [],
       pendingChoice: null,
+      pendingChoiceEventId: null,
       gameOver: false,
+      winnerId: null,
       log: [],
+      turnHistory: [],
+      playerOrder: ["human", "ai"],
+      activeEffects: [],
     };
 
     it("should show reaction prompt when pending reaction for local player even on opponent turn", () => {
@@ -176,7 +186,7 @@ describe("Board/helpers", () => {
         players: {
           ...baseState.players,
           human: {
-            ...baseState.players.human,
+            ...baseState.players.human!,
             inPlay: ["Copper", "Silver"],
           },
         },

@@ -174,7 +174,7 @@ describe("Full mode integration", () => {
 
     // Game should be over
     expect(engine.state.gameOver).toBe(true);
-    expect(["ai1", "ai2"]).toContain(engine.state.winnerId);
+    expect(["ai1", "ai2"]).toContain(engine.state.winnerId!);
   });
 
   it("should not allow human or ai players to act in full mode", () => {

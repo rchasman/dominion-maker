@@ -7,7 +7,13 @@ describe("EventDevtools/utils", () => {
     const events: GameEvent[] = [
       { id: "event-1", type: "TURN_STARTED", turn: 1, playerId: "human" },
       { id: "event-2", type: "PHASE_CHANGED", phase: "action" },
-      { id: "event-3", type: "CARD_PLAYED", playerId: "human", card: "Village" },
+      {
+        id: "event-3",
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+      },
     ];
 
     it("should return scrubberIndex when provided", () => {
@@ -58,6 +64,7 @@ describe("EventDevtools/utils", () => {
         type: "CARD_PLAYED",
         playerId: "ai",
         card: "Smithy",
+        sourceIndex: 0,
       };
       expect(formatEvent(event)).toBe("ai played Smithy");
     });
@@ -68,6 +75,7 @@ describe("EventDevtools/utils", () => {
         type: "CARD_DISCARDED",
         playerId: "human",
         card: "Copper",
+        from: "hand",
       };
       expect(formatEvent(event)).toBe("human discarded Copper");
     });
@@ -161,11 +169,12 @@ describe("EventDevtools/utils", () => {
         id: "13",
         type: "DECISION_REQUIRED",
         decision: {
-          type: "decision",
+          choiceType: "decision",
           playerId: "human",
           prompt:
             "This is a very long prompt that should be truncated to prevent overflow",
-          cards: ["Copper"],
+          cardOptions: ["Copper"],
+          cardBeingPlayed: "Cellar",
           min: 0,
           max: 1,
         },
@@ -177,6 +186,7 @@ describe("EventDevtools/utils", () => {
       const event: GameEvent = {
         id: "14",
         type: "DECISION_RESOLVED",
+        playerId: "human",
         choice: {
           selectedCards: ["Copper", "Estate"],
         },
@@ -188,6 +198,7 @@ describe("EventDevtools/utils", () => {
       const event: GameEvent = {
         id: "15",
         type: "DECISION_RESOLVED",
+        playerId: "human",
         choice: {
           selectedCards: [],
         },
@@ -201,6 +212,7 @@ describe("EventDevtools/utils", () => {
         type: "GAME_ENDED",
         winnerId: "human",
         scores: { human: 25, ai: 18 },
+        reason: "provinces_empty",
       };
       expect(formatEvent(event)).toBe("Winner: human");
     });

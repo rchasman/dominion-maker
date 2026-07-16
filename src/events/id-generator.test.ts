@@ -159,10 +159,10 @@ describe("id-generator", () => {
     });
 
     it("handles events with only invalid IDs", () => {
-      const events = [
+      const events: { id?: string }[] = [
         { id: "custom-1" },
         { id: "test-2" },
-        { id: undefined },
+        {},
       ];
 
       syncEventCounter(events);

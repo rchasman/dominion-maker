@@ -463,7 +463,7 @@ describe("EventBuilder", () => {
           type: "DECISION_RESOLVED",
           playerId: "human",
           choice: {
-            cards: ["Copper"],
+            selectedCards: ["Copper"],
           },
         },
         parentEventId,
@@ -490,13 +490,11 @@ describe("linkEvents", () => {
   });
 
   it("links events with generated IDs and causedBy", () => {
-    const events = linkEvents(
-      [
-        { type: "ACTIONS_MODIFIED", delta: 1 },
-        { type: "BUYS_MODIFIED", delta: 1 },
-      ],
-      "evt-root",
-    );
+    const input: GameEvent[] = [
+      { type: "ACTIONS_MODIFIED", delta: 1 },
+      { type: "BUYS_MODIFIED", delta: 1 },
+    ];
+    const events = linkEvents(input, "evt-root");
 
     expect(events.length).toBe(2);
     expect(events[0]!.id).toBe("evt-1");
@@ -506,14 +504,12 @@ describe("linkEvents", () => {
   });
 
   it("generates unique IDs for each event", () => {
-    const events = linkEvents(
-      [
-        { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
-        { type: "CARD_DRAWN", playerId: "human", card: "Silver" },
-        { type: "CARD_DRAWN", playerId: "human", card: "Gold" },
-      ],
-      "evt-smithy",
-    );
+    const input: GameEvent[] = [
+      { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
+      { type: "CARD_DRAWN", playerId: "human", card: "Silver" },
+      { type: "CARD_DRAWN", playerId: "human", card: "Gold" },
+    ];
+    const events = linkEvents(input, "evt-smithy");
 
     const ids = events.map(e => e.id);
     const uniqueIds = new Set(ids);
@@ -528,10 +524,8 @@ describe("linkEvents", () => {
   });
 
   it("handles single event", () => {
-    const events = linkEvents(
-      [{ type: "ACTIONS_MODIFIED", delta: 1 }],
-      "evt-root",
-    );
+    const input: GameEvent[] = [{ type: "ACTIONS_MODIFIED", delta: 1 }];
+    const events = linkEvents(input, "evt-root");
 
     expect(events.length).toBe(1);
     expect(events[0]!.id).toBe("evt-1");
@@ -539,17 +533,15 @@ describe("linkEvents", () => {
   });
 
   it("preserves event data", () => {
-    const events = linkEvents(
-      [
-        {
-          type: "CARD_GAINED",
-          playerId: "human",
-          card: "Silver",
-          to: "discard",
-        },
-      ],
-      "evt-root",
-    );
+    const input: GameEvent[] = [
+      {
+        type: "CARD_GAINED",
+        playerId: "human",
+        card: "Silver",
+        to: "discard",
+      },
+    ];
+    const events = linkEvents(input, "evt-root");
 
     expect(events[0]!.type).toBe("CARD_GAINED");
     expect((events[0] as any).playerId).toBe("human");
@@ -558,14 +550,10 @@ describe("linkEvents", () => {
   });
 
   it("can be used with different causedBy values", () => {
-    const events1 = linkEvents(
-      [{ type: "ACTIONS_MODIFIED", delta: 1 }],
-      "evt-1",
-    );
-    const events2 = linkEvents(
-      [{ type: "BUYS_MODIFIED", delta: 1 }],
-      "evt-2",
-    );
+    const input1: GameEvent[] = [{ type: "ACTIONS_MODIFIED", delta: 1 }];
+    const events1 = linkEvents(input1, "evt-1");
+    const input2: GameEvent[] = [{ type: "BUYS_MODIFIED", delta: 1 }];
+    const events2 = linkEvents(input2, "evt-2");
 
     expect(events1[0]!.causedBy).toBe("evt-1");
     expect(events2[0]!.causedBy).toBe("evt-2");

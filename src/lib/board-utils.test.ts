@@ -2,6 +2,12 @@ import { describe, it, expect } from "bun:test";
 import { aggregateLogEntries } from "./board-utils";
 import type { LogEntry } from "../types/game-state";
 
+// Narrowing helpers: `card`/`playerId` only exist on some LogEntry variants
+const cardOf = (entry: LogEntry | undefined) =>
+  entry && "card" in entry ? entry.card : undefined;
+const playerIdOf = (entry: LogEntry | undefined) =>
+  entry && "playerId" in entry ? entry.playerId : undefined;
+
 describe("aggregateLogEntries", () => {
   describe("Test Suite 1: Root-Level Aggregation", () => {
     it("consecutive play-treasure (same card) → aggregate with summed coins", () => {
@@ -138,7 +144,7 @@ describe("aggregateLogEntries", () => {
       const result = aggregateLogEntries(log);
       expect(result.length).toBe(1);
       expect(result[0]?.type).toBe("reveal-card");
-      expect(result[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0])).toBe("Silver, Gold");
       expect((result[0] as any).eventIds).toEqual(["evt-1", "evt-2"]);
     });
 
@@ -295,7 +301,7 @@ describe("aggregateLogEntries", () => {
       expect(result.length).toBe(1);
       expect(result[0]?.children?.length).toBe(1);
       expect(result[0]?.children?.[0]?.type).toBe("reveal-card");
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
     });
 
     it("parent with draw-cards children → children get batched", () => {
@@ -408,7 +414,7 @@ describe("aggregateLogEntries", () => {
       expect(result.length).toBe(1);
       expect(result[0]?.children?.length).toBe(2);
       expect(result[0]?.children?.[0]?.type).toBe("reveal-card");
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
       expect(result[0]?.children?.[1]?.type).toBe("trash-card");
     });
 
@@ -440,7 +446,7 @@ describe("aggregateLogEntries", () => {
       const result = aggregateLogEntries(log);
       expect(result.length).toBe(1);
       expect(result[0]?.children?.length).toBe(1);
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
     });
 
     it("non-aggregatable parent still recursively processes children", () => {
@@ -587,7 +593,7 @@ describe("aggregateLogEntries", () => {
       ];
       const result = aggregateLogEntries(log);
       expect(result.length).toBe(1);
-      expect(result[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0])).toBe("Silver, Gold");
     });
 
     it("reveal-card: different 'from' → no match", () => {
@@ -689,7 +695,7 @@ describe("aggregateLogEntries", () => {
       const result = aggregateLogEntries(log);
       expect(result.length).toBe(1);
       expect(result[0]?.children?.length).toBe(1);
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
     });
 
     it("all entries same type → fully aggregated", () => {
@@ -852,7 +858,7 @@ describe("aggregateLogEntries", () => {
       ];
       const result = aggregateLogEntries(log);
       expect(result[0]?.children?.length).toBe(1);
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
       expect((result[0]?.children?.[0] as any).eventIds).toEqual([
         "evt-2",
         "evt-3",
@@ -887,7 +893,7 @@ describe("aggregateLogEntries", () => {
       const result = aggregateLogEntries(log);
       expect(result[0]?.children?.length).toBe(1);
       expect(result[0]?.children?.[0]?.type).toBe("reveal-card");
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Copper");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Copper");
     });
 
     it("two CARD_REVEALED of same card → show as 'Card, Card' (both listed)", () => {
@@ -917,7 +923,7 @@ describe("aggregateLogEntries", () => {
       ];
       const result = aggregateLogEntries(log);
       expect(result[0]?.children?.length).toBe(1);
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Silver");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Silver");
     });
 
     it("CARD_REVEALED from different 'from' sources → don't batch", () => {
@@ -1032,10 +1038,10 @@ describe("aggregateLogEntries", () => {
       ];
       const result = aggregateLogEntries(log);
       expect(result[0]?.children?.length).toBe(2);
-      expect(result[0]?.children?.[0]?.card).toBe("Silver, Gold");
-      expect(result[0]?.children?.[0]?.playerId).toBe("ai1");
-      expect(result[0]?.children?.[1]?.card).toBe("Copper, Estate");
-      expect(result[0]?.children?.[1]?.playerId).toBe("ai2");
+      expect(cardOf(result[0]?.children?.[0])).toBe("Silver, Gold");
+      expect(playerIdOf(result[0]?.children?.[0])).toBe("ai1");
+      expect(cardOf(result[0]?.children?.[1])).toBe("Copper, Estate");
+      expect(playerIdOf(result[0]?.children?.[1])).toBe("ai2");
     });
 
     it("reveals interrupted by non-reveal entry → separate batches", () => {

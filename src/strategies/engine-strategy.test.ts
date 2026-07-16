@@ -36,7 +36,7 @@ describe("EngineStrategy - Militia discard", () => {
   beforeEach(() => {});
 
   it("should select 2 cards when AI has multiple Estates", () => {
-    const hand = ["Estate", "Estate", "Estate", "Copper", "Copper"];
+    const hand: CardName[] = ["Estate", "Estate", "Estate", "Copper", "Copper"];
     const selected = selectCardsToDiscard(hand, 2);
 
     expect(selected.length).toBe(2);
@@ -44,7 +44,7 @@ describe("EngineStrategy - Militia discard", () => {
   });
 
   it("should select 3 cards with priority order", () => {
-    const hand = ["Estate", "Estate", "Copper", "Copper", "Silver", "Gold"];
+    const hand: CardName[] = ["Estate", "Estate", "Copper", "Copper", "Silver", "Gold"];
     const selected = selectCardsToDiscard(hand, 3);
 
     expect(selected.length).toBe(3);
@@ -54,7 +54,7 @@ describe("EngineStrategy - Militia discard", () => {
   });
 
   it("should select all priority cards then expensive cards", () => {
-    const hand = ["Gold", "Silver", "Village", "Smithy"];
+    const hand: CardName[] = ["Gold", "Silver", "Village", "Smithy"];
     const selected = selectCardsToDiscard(hand, 2);
 
     expect(selected.length).toBe(2);
@@ -64,7 +64,7 @@ describe("EngineStrategy - Militia discard", () => {
   });
 
   it("should handle exactly 1 card to discard", () => {
-    const hand = ["Estate", "Copper", "Silver", "Gold"];
+    const hand: CardName[] = ["Estate", "Copper", "Silver", "Gold"];
     const selected = selectCardsToDiscard(hand, 1);
 
     expect(selected.length).toBe(1);

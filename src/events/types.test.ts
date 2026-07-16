@@ -192,7 +192,6 @@ describe("types - causality helpers", () => {
         type: "TURN_STARTED",
         turn: 1,
         playerId: "human",
-        causedBy: undefined,
       };
 
       expect(isRootCauseEvent(event)).toBe(true);
@@ -474,7 +473,7 @@ describe("types - causality helpers", () => {
           id: `evt-${i}`,
           type: "ACTIONS_MODIFIED",
           delta: 1,
-          causedBy: i > 1 ? `evt-${i - 1}` : undefined,
+          ...(i > 1 ? { causedBy: `evt-${i - 1}` } : {}),
         });
       }
 

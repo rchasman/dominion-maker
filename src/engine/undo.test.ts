@@ -138,7 +138,12 @@ describe("Undo System - removeEventChain Utility", () => {
   it("should keep events up to and including target", () => {
     const events: GameEvent[] = [
       { type: "TURN_STARTED", turn: 1, playerId: "human", id: "evt-1" },
-      { type: "CARD_PLAYED", playerId: "human", card: "Village", id: "evt-2" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+        id: "evt-2" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
       {
         type: "CARD_DRAWN",
@@ -147,7 +152,12 @@ describe("Undo System - removeEventChain Utility", () => {
         id: "evt-4",
         causedBy: "evt-2",
       },
-      { type: "CARD_PLAYED", playerId: "human", card: "Smithy", id: "evt-5" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Smithy",
+        sourceIndex: 0,
+        id: "evt-5" },
     ];
 
     // Undo to Village (keep turn start, village, effects, remove Smithy)
@@ -244,7 +254,12 @@ describe("Undo System - Causality Utilities", () => {
   it("should use removeEventChain to keep events up to target", () => {
     const events: GameEvent[] = [
       { type: "TURN_STARTED", turn: 1, playerId: "human", id: "evt-1" },
-      { type: "CARD_PLAYED", playerId: "human", card: "Village", id: "evt-2" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+        id: "evt-2" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
       {
         type: "CARD_DRAWN",
@@ -254,7 +269,12 @@ describe("Undo System - Causality Utilities", () => {
         causedBy: "evt-2",
       },
       { type: "ACTIONS_MODIFIED", delta: 2, id: "evt-5", causedBy: "evt-2" },
-      { type: "CARD_PLAYED", playerId: "human", card: "Smithy", id: "evt-6" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Smithy",
+        sourceIndex: 0,
+        id: "evt-6" },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-7", causedBy: "evt-6" },
     ];
 
@@ -276,7 +296,12 @@ describe("Undo System - Causality Utilities", () => {
   it("should handle undo to event not found (keeps all)", () => {
     const events: GameEvent[] = [
       { type: "TURN_STARTED", turn: 1, playerId: "human", id: "evt-1" },
-      { type: "CARD_PLAYED", playerId: "human", card: "Village", id: "evt-2" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+        id: "evt-2" },
       { type: "ACTIONS_MODIFIED", delta: 2, id: "evt-3", causedBy: "evt-2" },
     ];
 
@@ -344,7 +369,12 @@ describe("Undo System - Edge Cases", () => {
   it("should handle events with missing IDs", () => {
     const events: GameEvent[] = [
       { type: "TURN_STARTED", turn: 1, playerId: "human" }, // No ID
-      { type: "CARD_PLAYED", playerId: "human", card: "Village", id: "evt-2" },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+        id: "evt-2" },
     ];
 
     const result = removeEventChain("evt-2", events);

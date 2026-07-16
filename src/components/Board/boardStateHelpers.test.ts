@@ -1,10 +1,14 @@
 import { describe, it, expect } from "bun:test";
 import { computeBoardState } from "./boardStateHelpers";
 import type { GameState } from "../../types/game-state";
-import type { GameMode } from "../../types/game-mode";
 
 describe("Board/boardStateHelpers", () => {
   describe("computeBoardState", () => {
+    const supply: Record<string, number> = {
+      Village: 10,
+      Copper: 46,
+    };
+
     const baseState: GameState = {
       turn: 1,
       phase: "action",
@@ -18,25 +22,30 @@ describe("Board/boardStateHelpers", () => {
           hand: ["Copper", "Estate", "Village"],
           discard: ["Estate"],
           inPlay: [],
+          inPlaySourceIndices: [],
         },
         ai: {
           deck: ["Silver"],
           hand: ["Copper"],
           discard: [],
           inPlay: [],
+          inPlaySourceIndices: [],
         },
       },
-      supply: {
-        Village: { count: 10, cost: 3 },
-        Copper: { count: 46, cost: 0 },
-      },
+      supply,
       trash: [],
+      kingdomCards: [],
       pendingChoice: null,
+      pendingChoiceEventId: null,
       gameOver: false,
+      winnerId: null,
       log: [],
+      turnHistory: [],
+      playerOrder: ["human", "ai"],
+      activeEffects: [],
     };
 
-    const mockGetStateAtEvent = (eventId: string) => baseState;
+    const mockGetStateAtEvent = (_eventId: string) => baseState;
 
     it("should compute board state using live state when not in preview mode", () => {
       const result = computeBoardState({
@@ -94,12 +103,14 @@ describe("Board/boardStateHelpers", () => {
             hand: ["Province"],
             discard: ["Duchy"],
             inPlay: [],
+            inPlaySourceIndices: [],
           },
           ai: {
             deck: ["Estate"],
             hand: ["Estate", "Estate"],
             discard: [],
             inPlay: [],
+            inPlaySourceIndices: [],
           },
         },
       };
@@ -259,8 +270,8 @@ describe("Board/boardStateHelpers", () => {
       const invalidState: GameState = {
         ...baseState,
         players: {
-          human: baseState.players.human,
-        } as any,
+          human: baseState.players.human!,
+        },
       };
 
       expect(() =>

@@ -8,23 +8,36 @@ describe("player-access", () => {
     hand: ["Estate"],
     discard: ["Silver"],
     inPlay: [],
-    actions: 1,
-    buys: 1,
-    coins: 0,
+    inPlaySourceIndices: [],
     deckTopRevealed: false,
   });
 
-  const createMockState = (): GameState => ({
-    players: {
+  const emptySupply: Record<string, number> = {};
+
+  const createMockState = (
+    players: GameState["players"] = {
       human: createMockPlayer(),
       ai: createMockPlayer(),
-    },
+    }
+  ): GameState => ({
+    players,
     activePlayerId: "human",
     phase: "action",
     turn: 1,
-    supply: {},
+    actions: 1,
+    buys: 1,
+    coins: 0,
+    supply: emptySupply,
     trash: [],
+    kingdomCards: [],
     pendingChoice: null,
+    pendingChoiceEventId: null,
+    gameOver: false,
+    winnerId: null,
+    log: [],
+    turnHistory: [],
+    playerOrder: Object.keys(players),
+    activeEffects: [],
   });
 
   describe("getPlayer", () => {
@@ -37,7 +50,7 @@ describe("player-access", () => {
 
     it("throws error when player does not exist", () => {
       const state = createMockState();
-      expect(() => getPlayer(state, "nonexistent" as any)).toThrow(
+      expect(() => getPlayer(state, "nonexistent")).toThrow(
         "Player nonexistent not found in game state",
       );
     });
@@ -56,9 +69,7 @@ describe("player-access", () => {
       expect(player).toHaveProperty("hand");
       expect(player).toHaveProperty("discard");
       expect(player).toHaveProperty("inPlay");
-      expect(player).toHaveProperty("actions");
-      expect(player).toHaveProperty("buys");
-      expect(player).toHaveProperty("coins");
+      expect(player).toHaveProperty("inPlaySourceIndices");
     });
   });
 
@@ -71,19 +82,11 @@ describe("player-access", () => {
 
     it("returns false when player does not exist", () => {
       const state = createMockState();
-      expect(hasPlayer(state, "nonexistent" as any)).toBe(false);
+      expect(hasPlayer(state, "nonexistent")).toBe(false);
     });
 
     it("handles empty players object", () => {
-      const state: GameState = {
-        players: {},
-        activePlayerId: "human",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
+      const state: GameState = createMockState({});
       expect(hasPlayer(state, "human")).toBe(false);
     });
 
@@ -91,7 +94,7 @@ describe("player-access", () => {
       const state = createMockState();
       expect(hasPlayer(state, "human")).toBe(true);
       expect(hasPlayer(state, "ai")).toBe(true);
-      expect(hasPlayer(state, "other" as any)).toBe(false);
+      expect(hasPlayer(state, "other")).toBe(false);
     });
   });
 });

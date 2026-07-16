@@ -3,6 +3,7 @@ import { DominionEngine, createGame } from "./engine";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameCommand } from "../commands/types";
 import type { GameEvent } from "../events/types";
+import type { CardName } from "../types/game-state";
 
 /**
  * Engine integration tests
@@ -133,6 +134,7 @@ describe("DominionEngine - Command Dispatch", () => {
     const result = engine.dispatch(command);
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failed result");
     expect(result.error).toBeDefined();
   });
 });
@@ -503,7 +505,6 @@ describe("DominionEngine - Helper Methods", () => {
     engine.playAction("human", "Cellar");
 
     const result = engine.submitDecision("human", {
-      type: "cards",
       selectedCards: [],
     });
 
@@ -520,7 +521,7 @@ describe("DominionEngine - Helper Methods", () => {
     engine.playAction("human", "Cellar");
 
     // Submit the first decision to clear pending state
-    engine.submitDecision("human", { type: "cards", selectedCards: [] });
+    engine.submitDecision("human", { selectedCards: [] });
 
     // Create another decision for skip test
     engine.state.players.human!.hand = ["Cellar", "Copper"];
@@ -563,6 +564,7 @@ describe("DominionEngine - Undo System", () => {
     const result = engine.requestUndo("ai", eventId);
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failed result");
     expect(result.error).toBe("An undo request is already pending");
   });
 
@@ -572,6 +574,7 @@ describe("DominionEngine - Undo System", () => {
 
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -587,6 +590,7 @@ describe("DominionEngine - Undo System", () => {
 
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -608,6 +612,7 @@ describe("DominionEngine - Undo System", () => {
     });
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failed result");
     expect(result.error).toBe("No pending undo request");
   });
 
@@ -625,6 +630,7 @@ describe("DominionEngine - Undo System", () => {
     });
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failed result");
     expect(result.error).toBe("Request ID mismatch");
   });
 
@@ -635,6 +641,7 @@ describe("DominionEngine - Undo System", () => {
     const eventCountBefore = engine.eventLog.length;
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -752,6 +759,7 @@ describe("DominionEngine - Auto-advance Phase", () => {
       from: "hand",
       prompt: "test",
       cardOptions: [],
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 1,
       stage: "test",
@@ -833,7 +841,13 @@ describe("DominionEngine - Event Loading", () => {
     });
 
     const events: GameEvent[] = [
-      { type: "GAME_STARTED", id: "evt-1", playerOrder: ["human", "ai"] },
+      {
+        type: "GAME_INITIALIZED",
+        id: "evt-1",
+        players: ["human", "ai"],
+        kingdomCards: [],
+        supply: {},
+      },
     ];
 
     engine.loadEvents(events);
@@ -850,7 +864,13 @@ describe("DominionEngine - Event Loading", () => {
     });
 
     const events: GameEvent[] = [
-      { type: "GAME_STARTED", id: "evt-1", playerOrder: ["human", "ai"] },
+      {
+        type: "GAME_INITIALIZED",
+        id: "evt-1",
+        players: ["human", "ai"],
+        kingdomCards: [],
+        supply: {},
+      },
     ];
 
     engine.loadEventsSilently(events);
@@ -868,8 +888,7 @@ describe("DominionEngine - Event Loading", () => {
     const externalEvents: GameEvent[] = [
       {
         type: "COINS_MODIFIED",
-        newValue: 5,
-        cause: { type: "card_ability", card: "Copper" },
+        delta: 5,
       },
     ];
 
@@ -885,8 +904,7 @@ describe("DominionEngine - Event Loading", () => {
     const externalEvents: GameEvent[] = [
       {
         type: "COINS_MODIFIED",
-        newValue: 5,
-        cause: { type: "card_ability", card: "Copper" },
+        delta: 5,
       },
     ];
 
@@ -912,7 +930,7 @@ describe("DominionEngine - createGame Helper", () => {
   });
 
   it("should create game with custom kingdom cards", () => {
-    const kingdomCards = [
+    const kingdomCards: CardName[] = [
       "Village",
       "Smithy",
       "Market",
@@ -973,6 +991,7 @@ describe("DominionEngine - Edge Cases", () => {
 
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -985,6 +1004,7 @@ describe("DominionEngine - Edge Cases", () => {
     const result = engine.approveUndo("ai", requestId);
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failed result");
     expect(result.error).toBe("Target event not found");
   });
 
@@ -994,6 +1014,7 @@ describe("DominionEngine - Edge Cases", () => {
 
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -1015,6 +1036,7 @@ describe("DominionEngine - Edge Cases", () => {
 
     const eventId = engine.eventLog[2]?.id || "";
     const request = engine.requestUndo("human", eventId);
+    if (!request.ok) throw new Error("expected ok result");
     const requestEvent = request.events.find(e => e.type === "UNDO_REQUESTED");
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
@@ -1059,7 +1081,7 @@ describe("DominionEngine - Edge Cases", () => {
 
   it("should handle startGame with custom kingdom and seed", () => {
     const engine = new DominionEngine();
-    const kingdomCards = [
+    const kingdomCards: CardName[] = [
       "Village",
       "Smithy",
       "Market",

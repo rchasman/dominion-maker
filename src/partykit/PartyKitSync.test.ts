@@ -135,7 +135,7 @@ describe("PartyKitSync", () => {
       const isJoined = true;
       const gameState = { test: "state" };
       const socketReady = true;
-      const syncedEventCount = 5;
+      const syncedEventCount: number = 5;
       const shouldStart =
         isJoined && !!gameState && socketReady && syncedEventCount === 0;
 
@@ -328,7 +328,7 @@ describe("PartyKitSync", () => {
     });
 
     it("should use production host for non-localhost", () => {
-      const hostname = "example.com";
+      const hostname: string = "example.com";
       const host =
         hostname === "localhost"
           ? "localhost:1999"
@@ -340,7 +340,7 @@ describe("PartyKitSync", () => {
 
   describe("room ID generation on reset", () => {
     it("should generate new room ID when game resets", () => {
-      const oldRoomId = "room-old";
+      const oldRoomId: string = "room-old";
       const newRoomId = "room-new";
 
       // Simulate reset
@@ -376,7 +376,7 @@ describe("PartyKitSync", () => {
 
       try {
         // Simulate localStorage.getItem
-        const _value = "stored-value";
+        void "stored-value";
       } catch (e) {
         error = e as Error;
       }

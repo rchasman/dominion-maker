@@ -36,7 +36,7 @@ function createMockGameState(
       Gold: 30,
       Silver: 40,
       Copper: 46,
-    },
+    } as Record<string, number>,
     trash: [],
     log: [],
     gameOver: false,
@@ -45,6 +45,8 @@ function createMockGameState(
     kingdomCards: [],
     pendingChoice: null,
     pendingChoiceEventId: null,
+    activeEffects: [],
+    playerOrder: playerIds,
   };
 }
 

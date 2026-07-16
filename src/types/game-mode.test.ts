@@ -57,8 +57,8 @@ describe("GAME_MODE_CONFIG", () => {
     });
 
     it("should identify all players as AI in full mode", () => {
-      expect(config.isAIPlayer(players[0])).toBe(true);
-      expect(config.isAIPlayer(players[1])).toBe(true);
+      expect(config.isAIPlayer(players[0]!)).toBe(true);
+      expect(config.isAIPlayer(players[1]!)).toBe(true);
 
       // In full mode, even "human" is AI-controlled (when switching from hybrid)
       expect(config.isAIPlayer("human")).toBe(true);

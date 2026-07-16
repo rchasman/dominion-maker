@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { EngineStrategy } from "./engine-strategy";
 import { DominionEngine } from "../engine";
 import { resetEventCounter } from "../events/id-generator";
+import type { GameEvent } from "../events/types";
 
 describe("EngineStrategy - Full Coverage", () => {
   let strategy: EngineStrategy;
@@ -45,7 +46,8 @@ describe("EngineStrategy - Full Coverage", () => {
       await strategy.runAITurn(engine);
 
       const cardPlayed = engine.eventLog.find(
-        e => e.type === "CARD_PLAYED" && e.playerId === "ai",
+        (e): e is Extract<GameEvent, { type: "CARD_PLAYED" }> =>
+          e.type === "CARD_PLAYED" && e.playerId === "ai",
       );
       if (cardPlayed) {
         expect(cardPlayed.card).toBe("Village");
@@ -126,7 +128,8 @@ describe("EngineStrategy - Full Coverage", () => {
       await strategy.runAITurn(engine);
 
       const cardPlayed = engine.eventLog.find(
-        e => e.type === "CARD_PLAYED" && e.playerId === "ai",
+        (e): e is Extract<GameEvent, { type: "CARD_PLAYED" }> =>
+          e.type === "CARD_PLAYED" && e.playerId === "ai",
       );
       if (cardPlayed) {
         expect(cardPlayed.card).toBe("Festival");
@@ -143,7 +146,8 @@ describe("EngineStrategy - Full Coverage", () => {
       await strategy.runAITurn(engine);
 
       const cardPlayed = engine.eventLog.find(
-        e => e.type === "CARD_PLAYED" && e.playerId === "ai",
+        (e): e is Extract<GameEvent, { type: "CARD_PLAYED" }> =>
+          e.type === "CARD_PLAYED" && e.playerId === "ai",
       );
       if (cardPlayed) {
         expect(cardPlayed.card).toBe("Market");
@@ -160,7 +164,8 @@ describe("EngineStrategy - Full Coverage", () => {
       await strategy.runAITurn(engine);
 
       const cardPlayed = engine.eventLog.find(
-        e => e.type === "CARD_PLAYED" && e.playerId === "ai",
+        (e): e is Extract<GameEvent, { type: "CARD_PLAYED" }> =>
+          e.type === "CARD_PLAYED" && e.playerId === "ai",
       );
       if (cardPlayed) {
         expect(cardPlayed.card).toBe("Village");
@@ -181,6 +186,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard 3 cards",
         min: 3,
         max: 3,
@@ -197,6 +204,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "opponent_discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard down to 3",
         min: 1,
         max: 1,
@@ -212,6 +221,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard 1",
         min: 1,
         max: 1,
@@ -227,6 +238,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard 2",
         min: 2,
         max: 2,
@@ -242,6 +255,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "trash",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Trash up to 3",
         min: 0,
         max: 3,
@@ -257,6 +272,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "trash",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Trash cards",
         min: 0,
         max: 2,
@@ -272,6 +289,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "trash",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Trash 1",
         min: 1,
         max: 1,
@@ -287,6 +306,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "trash",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Trash 2",
         min: 2,
         max: 2,
@@ -301,6 +322,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "gain",
+        choiceType: "decision",
+        cardBeingPlayed: "Workshop",
         prompt: "Gain a card",
         min: 1,
         max: 1,
@@ -315,6 +338,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "gain",
+        choiceType: "decision",
+        cardBeingPlayed: "Workshop",
         prompt: "Gain a card",
         min: 1,
         max: 1,
@@ -328,7 +353,9 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "unknown" as any,
+        stage: "unknown",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Choose",
         min: 1,
         max: 2,
@@ -342,7 +369,9 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "unknown" as any,
+        stage: "unknown",
+        choiceType: "decision",
+        cardBeingPlayed: "Chapel",
         prompt: "Optional",
         min: 0,
         max: 2,
@@ -364,6 +393,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "human",
         stage: "discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard",
         min: 1,
         max: 1,
@@ -393,6 +424,8 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         stage: "discard",
+        choiceType: "decision",
+        cardBeingPlayed: "Militia",
         prompt: "Discard",
         min: 1,
         max: 1,

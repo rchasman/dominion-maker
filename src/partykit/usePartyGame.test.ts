@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import type {
   GameServerMessage,
   GameClientMessage,
   PlayerId,
   ChatMessageData,
 } from "./protocol";
+import type { CardName } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { PendingUndoRequest } from "../engine/engine";
 
@@ -20,9 +21,10 @@ describe("usePartyGame", () => {
       const events: GameEvent[] = [
         {
           id: "e1",
-          type: "GAME_STARTED",
-          timestamp: Date.now(),
-          playerIds: ["p1", "p2"],
+          type: "GAME_INITIALIZED",
+          players: ["p1", "p2"],
+          kingdomCards: [],
+          supply: {},
         },
       ];
 
@@ -30,7 +32,7 @@ describe("usePartyGame", () => {
       let pendingRequest: PendingUndoRequest | null = null;
 
       for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i];
+        const event = events[i]!;
         if (
           event.type === "UNDO_EXECUTED" ||
           event.type === "UNDO_DENIED"
@@ -58,7 +60,6 @@ describe("usePartyGame", () => {
         {
           id: "e1",
           type: "UNDO_REQUESTED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p1",
           toEventId: "e0",
@@ -66,9 +67,7 @@ describe("usePartyGame", () => {
         {
           id: "e2",
           type: "UNDO_EXECUTED",
-          timestamp: Date.now(),
-          requestId: "req1",
-          byPlayer: "p1",
+          fromEventId: "e1",
           toEventId: "e0",
         },
       ];
@@ -76,7 +75,7 @@ describe("usePartyGame", () => {
       let pendingRequest: PendingUndoRequest | null = null;
 
       for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i];
+        const event = events[i]!;
         if (
           event.type === "UNDO_EXECUTED" ||
           event.type === "UNDO_DENIED"
@@ -94,7 +93,6 @@ describe("usePartyGame", () => {
         {
           id: "e1",
           type: "UNDO_REQUESTED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p1",
           toEventId: "e0",
@@ -102,7 +100,6 @@ describe("usePartyGame", () => {
         {
           id: "e2",
           type: "UNDO_DENIED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p2",
         },
@@ -111,7 +108,7 @@ describe("usePartyGame", () => {
       let pendingRequest: PendingUndoRequest | null = null;
 
       for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i];
+        const event = events[i]!;
         if (
           event.type === "UNDO_EXECUTED" ||
           event.type === "UNDO_DENIED"
@@ -129,7 +126,6 @@ describe("usePartyGame", () => {
         {
           id: "e1",
           type: "UNDO_REQUESTED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p1",
           toEventId: "e0",
@@ -139,7 +135,7 @@ describe("usePartyGame", () => {
       let pendingRequest: PendingUndoRequest | null = null;
 
       for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i];
+        const event = events[i]!;
         if (event.type === "UNDO_REQUESTED") {
           pendingRequest = {
             requestId: event.requestId,
@@ -162,7 +158,6 @@ describe("usePartyGame", () => {
         {
           id: "e1",
           type: "UNDO_REQUESTED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p1",
           toEventId: "e0",
@@ -170,7 +165,6 @@ describe("usePartyGame", () => {
         {
           id: "e2",
           type: "UNDO_APPROVED",
-          timestamp: Date.now(),
           requestId: "req1",
           byPlayer: "p2",
         },
@@ -180,7 +174,7 @@ describe("usePartyGame", () => {
       let requestIndex = -1;
 
       for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i];
+        const event = events[i]!;
         if (event.type === "UNDO_REQUESTED") {
           requestIndex = i;
           pendingRequest = {
@@ -196,7 +190,7 @@ describe("usePartyGame", () => {
 
       if (pendingRequest && requestIndex >= 0) {
         for (let j = requestIndex + 1; j < events.length; j++) {
-          const laterEvent = events[j];
+          const laterEvent = events[j]!;
           if (
             laterEvent.type === "UNDO_APPROVED" &&
             laterEvent.requestId === pendingRequest.requestId
@@ -488,11 +482,11 @@ describe("usePartyGame", () => {
     it("should create submit_decision message", () => {
       const msg: GameClientMessage = {
         type: "submit_decision",
-        choice: { type: "cards", cards: ["Copper"] },
+        choice: { selectedCards: ["Copper"] },
       };
 
       expect(msg.type).toBe("submit_decision");
-      expect(msg.choice.type).toBe("cards");
+      expect(msg.choice.selectedCards).toEqual(["Copper"]);
     });
 
     it("should create request_undo message", () => {
@@ -585,7 +579,7 @@ describe("usePartyGame", () => {
     });
 
     it("should include kingdomCards when provided", () => {
-      const kingdomCards = ["Village", "Smithy"];
+      const kingdomCards: CardName[] = ["Village", "Smithy"];
       const msg: GameClientMessage = {
         type: "start_game",
         kingdomCards,
@@ -679,7 +673,7 @@ describe("usePartyGame", () => {
     });
 
     it("should use production host for non-localhost", () => {
-      const hostname = "example.com";
+      const hostname: string = "example.com";
       const host =
         hostname === "localhost"
           ? "localhost:1999"

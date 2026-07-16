@@ -4,6 +4,16 @@ import type { GameEvent } from "./types";
 import { resetEventCounter } from "./id-generator";
 import type { LogEntry } from "../types/game-state";
 
+/** Read `card` off a LogEntry union member (undefined when absent). */
+function entryCard(entry: LogEntry | undefined): string | undefined {
+  return entry && "card" in entry ? entry.card : undefined;
+}
+
+/** Read `playerId` off a LogEntry union member (undefined when absent). */
+function entryPlayerId(entry: LogEntry | undefined): string | undefined {
+  return entry && "playerId" in entry ? entry.playerId : undefined;
+}
+
 describe("buildLogFromEvents", () => {
   beforeEach(() => {
     resetEventCounter();
@@ -23,7 +33,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("play-treasure");
-      expect(log[0]?.card).toBe("Copper");
+      expect(entryCard(log[0])).toBe("Copper");
       expect((log[0] as any).coins).toBe(1);
     });
 
@@ -40,7 +50,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("play-action");
-      expect(log[0]?.card).toBe("Village");
+      expect(entryCard(log[0])).toBe("Village");
     });
 
     it("CARD_DRAWN → draw-cards entry (single card, count=1)", () => {
@@ -84,7 +94,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("trash-card");
-      expect(log[0]?.card).toBe("Copper");
+      expect(entryCard(log[0])).toBe("Copper");
     });
 
     it("CARD_GAINED (no causedBy) → buy-card with gain-card child", () => {
@@ -100,7 +110,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("buy-card");
-      expect(log[0]?.card).toBe("Silver");
+      expect(entryCard(log[0])).toBe("Silver");
       expect(log[0]?.children?.length).toBe(1);
       expect(log[0]?.children?.[0]?.type).toBe("gain-card");
     });
@@ -143,7 +153,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("reveal-card");
-      expect(log[0]?.card).toBe("Silver");
+      expect(entryCard(log[0])).toBe("Silver");
       expect((log[0] as any).from).toBe("deck");
     });
 
@@ -154,7 +164,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("shuffle-deck");
-      expect(log[0]?.playerId).toBe("human");
+      expect(entryPlayerId(log[0])).toBe("human");
     });
 
     it("TURN_STARTED → turn-start entry", () => {
@@ -165,7 +175,7 @@ describe("buildLogFromEvents", () => {
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("turn-start");
       expect((log[0] as any).turn).toBe(1);
-      expect(log[0]?.playerId).toBe("human");
+      expect(entryPlayerId(log[0])).toBe("human");
     });
 
     it("PHASE_CHANGED → phase-change entry", () => {
@@ -264,9 +274,10 @@ describe("buildLogFromEvents", () => {
             choiceType: "decision",
             playerId: "human",
             prompt: "Test",
-            options: [],
-            minSelections: 0,
-            maxSelections: 1,
+            cardOptions: [],
+            cardBeingPlayed: "Cellar",
+            min: 0,
+            max: 1,
           },
           id: "evt-1",
         },
@@ -369,9 +380,10 @@ describe("buildLogFromEvents", () => {
             choiceType: "decision",
             playerId: "human",
             prompt: "Test",
-            options: [],
-            minSelections: 0,
-            maxSelections: 1,
+            cardOptions: [],
+            cardBeingPlayed: "Cellar",
+            min: 0,
+            max: 1,
           },
           id: "evt-1",
         },
@@ -469,9 +481,10 @@ describe("buildLogFromEvents", () => {
             choiceType: "decision",
             playerId: "human",
             prompt: "Gain a card",
-            options: [],
-            minSelections: 0,
-            maxSelections: 1,
+            cardOptions: [],
+            cardBeingPlayed: "Workshop",
+            min: 0,
+            max: 1,
           },
           id: "evt-2",
           causedBy: "evt-1",
@@ -479,7 +492,7 @@ describe("buildLogFromEvents", () => {
         {
           type: "DECISION_RESOLVED",
           playerId: "human",
-          choice: { type: "card", cards: ["Silver"] },
+          choice: { selectedCards: ["Silver"] },
           id: "evt-3",
           causedBy: "evt-2",
         },
@@ -542,8 +555,8 @@ describe("buildLogFromEvents", () => {
       ];
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(2);
-      expect(log[0]?.playerId).toBe("human");
-      expect(log[1]?.playerId).toBe("ai");
+      expect(entryPlayerId(log[0])).toBe("human");
+      expect(entryPlayerId(log[1])).toBe("ai");
     });
 
     it("CARD_DRAWN with different causedBy → separate entries", () => {
@@ -782,7 +795,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("reveal-card");
-      expect(log[0]?.card).toBe("Silver");
+      expect(entryCard(log[0])).toBe("Silver");
       expect((log[0] as any).from).toBe("deck");
     });
 
@@ -806,9 +819,9 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(2);
       expect(log[0]?.type).toBe("reveal-card");
-      expect(log[0]?.card).toBe("Silver");
+      expect(entryCard(log[0])).toBe("Silver");
       expect(log[1]?.type).toBe("reveal-card");
-      expect(log[1]?.card).toBe("Gold");
+      expect(entryCard(log[1])).toBe("Gold");
     });
 
     it("CARD_REVEALED with causedBy nests under parent", () => {
@@ -888,12 +901,12 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("play-action");
-      expect(log[0]?.card).toBe("Bandit");
+      expect(entryCard(log[0])).toBe("Bandit");
       expect(log[0]?.children?.length).toBe(2);
       expect(log[0]?.children?.[0]?.type).toBe("reveal-card");
-      expect(log[0]?.children?.[0]?.card).toBe("Silver");
+      expect(entryCard(log[0]?.children?.[0])).toBe("Silver");
       expect(log[0]?.children?.[1]?.type).toBe("reveal-card");
-      expect(log[0]?.children?.[1]?.card).toBe("Gold");
+      expect(entryCard(log[0]?.children?.[1])).toBe("Gold");
     });
 
     it("multiple opponents revealing cards under attack", () => {
@@ -968,7 +981,6 @@ describe("buildLogFromEvents", () => {
           type: "CARD_DRAWN",
           playerId: "human",
           card: "Copper",
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);
@@ -983,7 +995,6 @@ describe("buildLogFromEvents", () => {
           playerId: "human",
           card: "Estate",
           from: "hand",
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);
@@ -998,7 +1009,6 @@ describe("buildLogFromEvents", () => {
           playerId: "human",
           card: "Copper",
           from: "hand",
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);
@@ -1019,7 +1029,7 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.type).toBe("unplay-treasure");
-      expect(log[0]?.card).toBe("Copper");
+      expect(entryCard(log[0])).toBe("Copper");
       expect((log[0] as any).coins).toBe(1);
     });
 
@@ -1072,7 +1082,6 @@ describe("buildLogFromEvents", () => {
           winnerId: "human",
           scores: { human: 10, ai: 5 },
           reason: "provinces_empty",
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);
@@ -1092,7 +1101,6 @@ describe("buildLogFromEvents", () => {
           type: "TURN_ENDED",
           playerId: "human",
           turn: 1,
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);
@@ -1112,7 +1120,6 @@ describe("buildLogFromEvents", () => {
         {
           type: "PHASE_CHANGED",
           phase: "buy",
-          id: undefined,
         },
       ];
       const log = buildLogFromEvents(events);

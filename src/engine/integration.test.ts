@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { DominionEngine } from "./engine";
 import { resetEventCounter } from "../events/id-generator";
+import type { GameEvent } from "../events/types";
 
 /**
  * Integration tests for full game scenarios

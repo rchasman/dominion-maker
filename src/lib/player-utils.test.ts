@@ -1,7 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { getPlayerPerspective } from "./player-utils";
 import type { GameState, PlayerState } from "../types/game-state";
-import type { GameMode } from "../types/game-mode";
 
 describe("player-utils", () => {
   const createMockPlayer = (): PlayerState => ({
@@ -9,10 +8,34 @@ describe("player-utils", () => {
     hand: [],
     discard: [],
     inPlay: [],
+    inPlaySourceIndices: [],
+    deckTopRevealed: false,
+  });
+
+  const emptySupply: Record<string, number> = {};
+
+  const createMockState = (
+    players: GameState["players"],
+    activePlayerId: string
+  ): GameState => ({
+    players,
+    activePlayerId,
+    phase: "action",
+    turn: 1,
     actions: 1,
     buys: 1,
     coins: 0,
-    deckTopRevealed: false,
+    supply: emptySupply,
+    trash: [],
+    kingdomCards: [],
+    pendingChoice: null,
+    pendingChoiceEventId: null,
+    gameOver: false,
+    winnerId: null,
+    log: [],
+    turnHistory: [],
+    playerOrder: Object.keys(players),
+    activeEffects: [],
   });
 
   describe("getPlayerPerspective", () => {
@@ -24,60 +47,40 @@ describe("player-utils", () => {
     });
 
     it("returns players from state when state is provided", () => {
-      const state: GameState = {
-        players: { human: createMockPlayer(), ai: createMockPlayer() },
-        activePlayerId: "human",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
-      const result = getPlayerPerspective(state, "single-player", null);
+      const state: GameState = createMockState(
+        { human: createMockPlayer(), ai: createMockPlayer() },
+        "human"
+      );
+      const result = getPlayerPerspective(state, "engine", null);
       expect(result.allPlayerIds).toContain("human");
       expect(result.allPlayerIds).toContain("ai");
     });
 
     it("reorders players in multiplayer when localPlayerId is second", () => {
-      const state: GameState = {
-        players: { player0: createMockPlayer(), player1: createMockPlayer() },
-        activePlayerId: "player0",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
+      const state: GameState = createMockState(
+        { player0: createMockPlayer(), player1: createMockPlayer() },
+        "player0"
+      );
       const result = getPlayerPerspective(state, "multiplayer", "player1");
       expect(result.localPlayerId).toBe("player1");
       expect(result.opponentPlayerId).toBe("player0");
     });
 
     it("keeps player order when localPlayerId is first in multiplayer", () => {
-      const state: GameState = {
-        players: { player0: createMockPlayer(), player1: createMockPlayer() },
-        activePlayerId: "player0",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
+      const state: GameState = createMockState(
+        { player0: createMockPlayer(), player1: createMockPlayer() },
+        "player0"
+      );
       const result = getPlayerPerspective(state, "multiplayer", "player0");
       expect(result.localPlayerId).toBe("player0");
       expect(result.opponentPlayerId).toBe("player1");
     });
 
     it("does not reorder players in engine mode", () => {
-      const state: GameState = {
-        players: { human: createMockPlayer(), ai: createMockPlayer() },
-        activePlayerId: "human",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
+      const state: GameState = createMockState(
+        { human: createMockPlayer(), ai: createMockPlayer() },
+        "human"
+      );
       const result = getPlayerPerspective(state, "engine", "ai");
       expect(result.localPlayerId).toBe("human");
       expect(result.opponentPlayerId).toBe("ai");
@@ -94,15 +97,10 @@ describe("player-utils", () => {
     });
 
     it("handles multiplayer without localPlayerId (no reordering)", () => {
-      const state: GameState = {
-        players: { player0: createMockPlayer(), player1: createMockPlayer() },
-        activePlayerId: "player0",
-        phase: "action",
-        turn: 1,
-        supply: {},
-        trash: [],
-        pendingChoice: null,
-      };
+      const state: GameState = createMockState(
+        { player0: createMockPlayer(), player1: createMockPlayer() },
+        "player0"
+      );
       const result = getPlayerPerspective(state, "multiplayer", null);
       expect(result.localPlayerId).toBe("player0");
       expect(result.opponentPlayerId).toBe("player1");

@@ -82,10 +82,9 @@ describe("stripReasoning", () => {
       expect("reasoning" in result).toBe(false);
     });
 
-    it("should preserve undefined card field but remove reasoning", () => {
+    it("should preserve omitted card field but remove reasoning", () => {
       const action: Action = {
         type: "end_phase",
-        card: undefined,
         reasoning: "Moving to next phase",
       };
 
@@ -93,7 +92,6 @@ describe("stripReasoning", () => {
 
       expect(result).toEqual({
         type: "end_phase",
-        card: undefined,
       });
       expect("reasoning" in result).toBe(false);
     });
@@ -177,7 +175,7 @@ describe("stripReasoning", () => {
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
     });
 
-    it("should treat null and undefined card differently", () => {
+    it("should treat null and omitted card differently", () => {
       const action1: Action = {
         type: "skip_decision",
         card: null,
@@ -185,15 +183,14 @@ describe("stripReasoning", () => {
 
       const action2: Action = {
         type: "skip_decision",
-        card: undefined,
       };
 
       const result1 = stripReasoning(action1);
       const result2 = stripReasoning(action2);
 
-      // Both preserve their card field (null or undefined)
+      // result1 preserves its null card; result2 has no card field
       expect(result1).toEqual({ type: "skip_decision", card: null });
-      expect(result2).toEqual({ type: "skip_decision", card: undefined });
+      expect(result2).toEqual({ type: "skip_decision" });
       // They have the same shape but different values
       expect(result1.type).toBe(result2.type);
     });

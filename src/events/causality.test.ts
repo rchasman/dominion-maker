@@ -13,6 +13,7 @@ describe("Causality Tracking", () => {
       type: "CARD_PLAYED",
       playerId: "human",
       card: "Village",
+      sourceIndex: 0,
       id: "evt-1",
     };
 
@@ -33,6 +34,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Market",
+        sourceIndex: 0,
         id: "evt-1",
       },
       {
@@ -85,6 +87,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Festival",
+        sourceIndex: 0,
         id: "evt-1",
       },
       {
@@ -103,6 +106,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Market",
+        sourceIndex: 0,
         id: "evt-4",
       },
       {
@@ -138,6 +142,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Village",
+        sourceIndex: 0,
         id: "evt-1",
       },
       {
@@ -158,6 +163,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Village",
+        sourceIndex: 0,
         id: "evt-4",
         causedBy: "evt-1", // Second play caused by Throne Room
       },
@@ -192,6 +198,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Copper",
+        sourceIndex: 0,
         id: "evt-1", // ROOT
       },
       {
@@ -204,6 +211,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Silver",
+        sourceIndex: 0,
         id: "evt-3", // ROOT
       },
       {
@@ -216,6 +224,7 @@ describe("Causality Tracking", () => {
         type: "CARD_PLAYED",
         playerId: "human",
         card: "Gold",
+        sourceIndex: 0,
         id: "evt-5", // ROOT
       },
       {
@@ -248,8 +257,8 @@ describe("Causality Tracking", () => {
 
     // CRITICAL: Cannot undo to evt-2 or evt-4 (the COINS_MODIFIED events)
     // because they're not root causes - they're effects!
-    const evt2IsUndoable = isRootCauseEvent(events[1]);
-    const evt4IsUndoable = isRootCauseEvent(events[3]);
+    const evt2IsUndoable = isRootCauseEvent(events[1]!);
+    const evt4IsUndoable = isRootCauseEvent(events[3]!);
 
     expect(evt2IsUndoable).toBe(false);
     expect(evt4IsUndoable).toBe(false);

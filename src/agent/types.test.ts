@@ -16,13 +16,13 @@ describe("buildModelsFromSettings", () => {
 
   it("should cycle through enabled models to reach consensusCount", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5-mini", "gpt-oss-20b"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4-mini", "gpt-oss-20b"] as ModelProvider[]),
       consensusCount: 6,
     });
 
     expect(result.length).toBe(6);
     // Should contain both models
-    const hasGpt = result.some(m => m === "gpt-5-mini");
+    const hasGpt = result.some(m => m === "gpt-5.4-mini");
     const hasMinistral = result.some(m => m === "gpt-oss-20b");
     expect(hasGpt).toBe(true);
     expect(hasMinistral).toBe(true);
@@ -33,7 +33,7 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4",
-        "gpt-5-mini",
+        "gpt-5.4-mini",
       ] as ModelProvider[]),
       consensusCount: 10,
     });
@@ -49,14 +49,14 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4",
-        "gpt-5-mini",
+        "gpt-5.4-mini",
       ] as ModelProvider[]),
       consensusCount: 8,
     });
 
     expect(result.length).toBe(8);
     const gpt52ProCount = result.filter(m => m === "gpt-5.4").length;
-    const gptMiniCount = result.filter(m => m === "gpt-5-mini").length;
+    const gptMiniCount = result.filter(m => m === "gpt-5.4-mini").length;
 
     // gpt-5.2-pro should be capped at 3
     expect(gpt52ProCount).toBeLessThanOrEqual(3);
@@ -67,12 +67,12 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle single model with unlimited instances", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5-mini"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4-mini"] as ModelProvider[]),
       consensusCount: 15,
     });
 
     expect(result.length).toBe(15);
-    expect(result.every(m => m === "gpt-5-mini")).toBe(true);
+    expect(result.every(m => m === "gpt-5.4-mini")).toBe(true);
   });
 
   it("should handle single model with maxInstances limit", () => {
@@ -91,7 +91,7 @@ describe("buildModelsFromSettings", () => {
   it("should shuffle results for randomness", () => {
     const result1 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5-mini",
+        "gpt-5.4-mini",
         "gpt-oss-20b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
@@ -100,7 +100,7 @@ describe("buildModelsFromSettings", () => {
 
     const result2 = buildModelsFromSettings({
       enabledModels: new Set([
-        "gpt-5-mini",
+        "gpt-5.4-mini",
         "gpt-oss-20b",
         "gpt-oss-20b",
       ] as ModelProvider[]),
@@ -112,8 +112,6 @@ describe("buildModelsFromSettings", () => {
     expect(result2.length).toBe(12);
 
     // Results should potentially be in different order (shuffle)
-    // This might occasionally fail due to randomness, but very unlikely
-    const sameOrder = result1.every((m, i) => m === result2[i]);
     // We can't guarantee they're different due to randomness,
     // but we can verify they're both valid arrays
     expect(result1).toBeInstanceOf(Array);
@@ -129,12 +127,12 @@ describe("buildModelsFromSettings", () => {
 
   it("should handle consensusCount of 1", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5-mini"] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4-mini"] as ModelProvider[]),
       consensusCount: 1,
     });
 
     expect(result.length).toBe(1);
-    expect(result[0]).toBe("gpt-5-mini");
+    expect(result[0]).toBe("gpt-5.4-mini");
   });
 
   it("should handle multiple models with various maxInstances", () => {
@@ -142,8 +140,8 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4", // maxInstances: 3
-        "gpt-5-mini", // unlimited
-        "gemini-2.5-flash-lite", // unlimited
+        "gpt-5.4-mini", // unlimited
+        "gemini-3.1-flash-lite", // unlimited
       ] as ModelProvider[]),
       consensusCount: 20,
     });

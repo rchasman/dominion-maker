@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { sentry } from "./sentry";
-import type { GameState } from "../../types/game-state";
+import type { GameState, CardName } from "../../types/game-state";
+import { CARD_ACTIONS } from "../card-actions";
 import { resetEventCounter } from "../../events/id-generator";
 
 function createTestState(): GameState {
@@ -28,7 +29,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as Record<CardName, number>,
     trash: [],
     log: [],
     turnHistory: [],
@@ -93,9 +94,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate", "Copper"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -108,6 +109,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "trash_card",
           "1": "trash_card",
@@ -130,9 +132,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate", "Copper"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -145,6 +147,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "discard_card",
           "1": "discard_card",
@@ -166,9 +169,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate", "Silver"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -181,6 +184,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "topdeck_card",
           "1": "topdeck_card",
@@ -206,9 +210,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate", "Copper"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -221,6 +225,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "trash_card",
           "1": "topdeck_card",
@@ -250,9 +255,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate", "Silver"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -265,6 +270,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "0": "topdeck_card",
           "1": "topdeck_card",
@@ -315,9 +321,9 @@ describe("Sentry", () => {
       prompt: "Sentry: Choose what to do with each card",
       cardOptions: ["Estate"],
       actions: [
-        { type: "topdeck_card", label: "Topdeck", isDefault: true },
-        { type: "trash_card", label: "Trash" },
-        { type: "discard_card", label: "Discard" },
+        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+        CARD_ACTIONS.trash_card,
+        CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
       orderingPrompt: "Cards to topdeck will return in this order (first = top)",
@@ -330,6 +336,7 @@ describe("Sentry", () => {
       playerId: "human",
       card: "Sentry",
       decision: {
+        selectedCards: [],
         cardActions: {
           "5": "trash_card", // Out of bounds
         },

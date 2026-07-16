@@ -32,7 +32,9 @@ describe("EventDevtools - scrubbing", () => {
     // This test verifies that isPinned state is not needed
     // The scrubbing logic should work based on scrubberIndex alone
 
-    let scrubberIndex: number | null = null;
+    // Widened initializer: assignments happen inside closures, which TS
+    // flow analysis cannot see from the outer scope
+    let scrubberIndex = null as number | null;
 
     // Mock handleScrubberChange - should only need to set scrubberIndex
     const handleScrubberChange = (index: number) => {

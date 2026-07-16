@@ -53,17 +53,17 @@ describe("Consensus System", () => {
         });
       }
       return originalFetch(url);
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       await advanceGameStateWithConsensus(engine, "player1", {
-        providers: ["gpt-5-mini"],
+        providers: ["gpt-5.4-mini"],
         logger,
       });
 
       // Find the consensus-voting log entry
       const votingEntry = logEntries.find(
-        (e: GameEvent) => e.type === "consensus-voting",
+        e => e.type === "consensus-voting",
       );
       expect(votingEntry).toBeDefined();
 
@@ -155,11 +155,11 @@ describe("Consensus System", () => {
         });
       }
       return originalFetch(url);
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       await advanceGameStateWithConsensus(engine, "player1", {
-        providers: ["gpt-5-mini"],
+        providers: ["gpt-5.4-mini"],
       });
 
       // Verify multi-round consensus ran 4 times (all cards)

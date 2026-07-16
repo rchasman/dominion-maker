@@ -13,12 +13,12 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver", "Gold"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", isDefault: false },
-          { id: "trash_card", label: "Trash", isDefault: false },
-          { id: "discard_card", label: "Discard", isDefault: true },
+          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         metadata: { currentRoundIndex: 0 },
       };
 
@@ -40,12 +40,12 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver", "Gold"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", isDefault: false },
-          { id: "trash_card", label: "Trash", isDefault: false },
-          { id: "discard_card", label: "Discard", isDefault: true },
+          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         metadata: { currentRoundIndex: 1 },
       };
 
@@ -67,11 +67,11 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", isDefault: false },
-          { id: "trash_card", label: "Trash", isDefault: false },
+          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         metadata: { currentRoundIndex: 5 }, // Out of bounds
       };
 
@@ -89,11 +89,11 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", isDefault: false },
-          { id: "discard_card", label: "Discard", isDefault: true },
+          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         // No metadata
       };
 
@@ -114,10 +114,10 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: [], // Empty options
         actions: [
-          { id: "topdeck_card", label: "Topdeck", isDefault: false },
+          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         metadata: { currentRoundIndex: 0 },
       };
 
@@ -135,11 +135,11 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper"],
         actions: [
-          { id: "select", label: "Select", isDefault: false },
-          { id: "skip", label: "Skip", isDefault: true },
+          { id: "select", label: "Select", color: "#10B981", isDefault: false },
+          { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
         ],
         stage: "topdeck",
-        from: "deck",
+        cardBeingPlayed: "Sentry",
         metadata: { currentRoundIndex: 0 },
       };
 
@@ -156,6 +156,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Trash up to 4 cards",
+        cardBeingPlayed: "Chapel",
         min: 0,
         max: 4,
         cardOptions: ["Copper", "Copper", "Estate"],
@@ -176,6 +177,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Discard cards",
+        cardBeingPlayed: "Cellar",
         min: 0,
         max: 3,
         cardOptions: ["Copper", "Silver", "Gold"],
@@ -197,6 +199,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Gain cards",
+        cardBeingPlayed: "Workshop",
         min: 0,
         max: 2,
         cardOptions: ["Silver", "Estate"],
@@ -217,6 +220,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Topdeck cards",
+        cardBeingPlayed: "Harbinger",
         min: 0,
         max: 2,
         cardOptions: ["Copper", "Silver"],
@@ -237,6 +241,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Discard exactly 2 cards",
+        cardBeingPlayed: "Militia",
         min: 2,
         max: 2,
         cardOptions: ["Copper", "Silver", "Gold"],
@@ -258,6 +263,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Discard down to 3",
+        cardBeingPlayed: "Militia",
         min: 1,
         max: 2,
         cardOptions: ["Copper", "Estate"],
@@ -277,6 +283,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Trash a treasure",
+        cardBeingPlayed: "Bandit",
         min: 1,
         max: 1, // Single card decision - not decomposed
         cardOptions: ["Copper", "Silver"],
@@ -295,6 +302,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Topdeck a victory card",
+        cardBeingPlayed: "Bureaucrat",
         min: 0,
         max: 1, // Single card decision - not decomposed
         cardOptions: ["Estate", "Duchy"],
@@ -313,6 +321,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Unknown stage",
+        cardBeingPlayed: "Chapel",
         min: 0,
         max: 2,
         cardOptions: ["Copper"],
@@ -332,6 +341,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Trash a card",
+        cardBeingPlayed: "Chapel",
         min: 0,
         max: 1,
         cardOptions: ["Copper", "Silver"],
@@ -350,8 +360,9 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Gain a card",
+        cardBeingPlayed: "Workshop",
         min: 0,
-        max: undefined,
+        // max omitted (single card)
         cardOptions: ["Silver", "Estate"],
         stage: "gain",
         from: "supply",
@@ -369,6 +380,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "Trash cards",
+        cardBeingPlayed: "Chapel",
         min: 0,
         max: 4,
         cardOptions: [],
@@ -386,6 +398,7 @@ describe("decomposeDecisionForAI", () => {
         choiceType: "decision",
         playerId: "player1",
         prompt: "No cards to select",
+        cardBeingPlayed: "Chapel",
         min: 0,
         max: 0,
         cardOptions: ["Copper"],

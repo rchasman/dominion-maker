@@ -52,9 +52,7 @@ describe("game-utils", () => {
         hand: ["Estate"],
         discard: ["Duchy"],
         inPlay: [],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
     });
@@ -203,9 +201,7 @@ describe("game-utils", () => {
         hand: [],
         discard: [],
         inPlay: [],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -218,9 +214,7 @@ describe("game-utils", () => {
         hand: [],
         discard: [],
         inPlay: ["Gardens"],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -233,9 +227,7 @@ describe("game-utils", () => {
         hand: ["Gardens"],
         discard: [],
         inPlay: ["Gardens"],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -248,9 +240,7 @@ describe("game-utils", () => {
         hand: [],
         discard: [],
         inPlay: [],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -263,9 +253,7 @@ describe("game-utils", () => {
         hand: ["Duchy"],
         discard: ["Province"],
         inPlay: ["Estate"],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -278,9 +266,7 @@ describe("game-utils", () => {
         hand: ["Estate"],
         discard: [],
         inPlay: [],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);
@@ -293,9 +279,7 @@ describe("game-utils", () => {
         hand: [],
         discard: [],
         inPlay: ["Gardens"],
-        actions: 1,
-        buys: 1,
-        coins: 0,
+        inPlaySourceIndices: [],
         deckTopRevealed: false,
       };
       const vp = countVP(player);

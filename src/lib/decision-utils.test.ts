@@ -9,7 +9,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -21,7 +22,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 1,
         max: 2,
       };
@@ -33,7 +35,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         max: 2,
       };
       expect(canSkipDecision(decision)).toBe(false);
@@ -43,7 +46,16 @@ describe("decision-utils", () => {
       const decision: GameState["pendingChoice"] = {
         choiceType: "reaction",
         playerId: "human",
-        cards: ["Moat"],
+        triggeringPlayerId: "ai",
+        triggeringCard: "Militia",
+        triggerType: "on_attack",
+        availableReactions: ["Moat"],
+        metadata: {
+          allTargets: ["human"],
+          currentTargetIndex: 0,
+          blockedTargets: [],
+          originalCause: "event-1",
+        },
       };
       expect(canSkipDecision(decision)).toBe(false);
     });
@@ -58,7 +70,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 2,
         max: 2,
       };
@@ -72,7 +85,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -86,7 +100,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -100,7 +115,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver", "Gold"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver", "Gold"],
         min: 0,
         max: 2,
       };
@@ -114,7 +130,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper", "Silver"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper", "Silver"],
         min: 0,
       };
       const result = shouldSelectCard(1, [], pendingChoice);
@@ -125,7 +142,16 @@ describe("decision-utils", () => {
       const pendingChoice: GameState["pendingChoice"] = {
         choiceType: "reaction",
         playerId: "human",
-        cards: ["Moat"],
+        triggeringPlayerId: "ai",
+        triggeringCard: "Militia",
+        triggerType: "on_attack",
+        availableReactions: ["Moat"],
+        metadata: {
+          allTargets: ["human"],
+          currentTargetIndex: 0,
+          blockedTargets: [],
+          originalCause: "event-1",
+        },
       };
       const result = shouldSelectCard(0, [], pendingChoice);
       expect(result.canAdd).toBe(true);
@@ -142,7 +168,8 @@ describe("decision-utils", () => {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose cards",
-        cards: ["Copper"],
+        cardBeingPlayed: "Cellar",
+        cardOptions:["Copper"],
         min: 0,
         max: 1,
       };

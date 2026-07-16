@@ -5,6 +5,13 @@ import type { GameState } from "../types/game-state";
 import type { GameCommand } from "./types";
 
 function createMockState(): GameState {
+  // Partial supply satisfies Record<CardName, number> structurally via a
+  // string-keyed record (same idiom as events/project.ts).
+  const supply: Record<string, number> = {
+    Village: 10,
+    Copper: 40,
+    Estate: 8,
+  };
   return {
     players: {
       p1: {
@@ -22,11 +29,7 @@ function createMockState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {
-      Village: 10,
-      Copper: 40,
-      Estate: 8,
-    },
+    supply,
     kingdomCards: ["Village"],
     playerOrder: ["p1", "p2"],
     turn: 1,
@@ -62,6 +65,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Undo approval handled by engine");
   });
 
@@ -76,6 +80,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Undo approval handled by engine");
   });
 
@@ -91,6 +96,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p2");
 
     expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your turn");
   });
 
@@ -102,6 +108,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
+      // Copper has no card effect, so the handler emits only the base event
+      cardBeingPlayed: "Copper",
       min: 0,
       max: 0,
     };
@@ -169,6 +177,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p2");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -182,6 +191,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command);
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -196,6 +206,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -212,6 +223,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -244,6 +256,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -261,6 +274,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -274,6 +288,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -285,6 +300,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
+      // Copper has no card effect, so the handler emits only the base event
+      cardBeingPlayed: "Copper",
       min: 0,
       max: 0,
     };
@@ -297,6 +314,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -308,6 +326,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
+      // Copper has no card effect, so the handler emits only the base event
+      cardBeingPlayed: "Copper",
       min: 0,
       max: 0,
     };
@@ -319,6 +339,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p1");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
@@ -355,6 +376,7 @@ describe("handle - handleCommand", () => {
     const result = handleCommand(state, command, "p2");
 
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 });

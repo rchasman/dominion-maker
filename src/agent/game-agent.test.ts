@@ -34,15 +34,17 @@ describe("game-agent", () => {
       const originalFetch = global.fetch;
       global.fetch = mock(() => {
         throw new Error("Should not call API when only one legal action");
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should have moved to buy phase
-        expect(engine.state.phase).toBe("buy");
+        // (re-read state via a fresh reference; TS narrowed the assigned path)
+        const state = engine.state;
+        expect(state.phase).toBe("buy");
       } finally {
         global.fetch = originalFetch;
       }
@@ -67,12 +69,12 @@ describe("game-agent", () => {
           ok: false,
           json: () => Promise.resolve({ error: { value: "API error" } }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await expect(
           advanceGameStateWithConsensus(engine, "player1", {
-            providers: ["gpt-5-mini"],
+            providers: ["gpt-5.4-mini"],
           }),
         ).rejects.toThrow();
       } finally {
@@ -91,7 +93,7 @@ describe("game-agent", () => {
 
       let capturedStrategy: string | undefined;
       const originalFetch = global.fetch;
-      global.fetch = mock((url: string, options: any) => {
+      global.fetch = mock((_url: string, options: any) => {
         const body = JSON.parse(options?.body || "{}");
         capturedStrategy = body.strategySummary;
 
@@ -102,11 +104,11 @@ describe("game-agent", () => {
               action: { type: "play_action", card: "Village" },
             }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
           strategySummary: "Test strategy",
         });
 
@@ -127,7 +129,7 @@ describe("game-agent", () => {
 
       let capturedCustomStrategy: string | undefined;
       const originalFetch = global.fetch;
-      global.fetch = mock((url: string, options: any) => {
+      global.fetch = mock((_url: string, options: any) => {
         const body = JSON.parse(options?.body || "{}");
         capturedCustomStrategy = body.customStrategy;
 
@@ -138,11 +140,11 @@ describe("game-agent", () => {
               action: { type: "play_action", card: "Village" },
             }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await advanceGameStateWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
           customStrategy: "Always buy Silver",
         });
 
@@ -165,7 +167,7 @@ describe("game-agent", () => {
 
       const originalFetch = global.fetch;
       let callCount = 0;
-      global.fetch = mock((url: string, options: any) => {
+      global.fetch = mock((_url: string, options: any) => {
         callCount++;
         const body = JSON.parse(options?.body || "{}");
 
@@ -193,11 +195,11 @@ describe("game-agent", () => {
           ok: true,
           json: () => Promise.resolve({ action: { type: "end_phase" } }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should have completed turn
@@ -218,11 +220,11 @@ describe("game-agent", () => {
       const originalFetch = global.fetch;
       global.fetch = mock(() => {
         throw new Error("Should not call API when game is over");
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should do nothing
@@ -241,6 +243,7 @@ describe("game-agent", () => {
         choiceType: "decision",
         playerId: "player2", // Opponent's decision
         prompt: "Discard cards",
+        cardBeingPlayed: "Militia",
         min: 0,
         max: 2,
         cardOptions: ["Copper"],
@@ -251,11 +254,11 @@ describe("game-agent", () => {
       const originalFetch = global.fetch;
       global.fetch = mock(() => {
         throw new Error("Should not call API when opponent has decision");
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should do nothing
@@ -280,12 +283,12 @@ describe("game-agent", () => {
           ok: false,
           json: () => Promise.resolve({ error: { value: "API error" } }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         // Should not throw, but should stop trying after error
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should still be player1's turn (error prevented progress)
@@ -310,7 +313,7 @@ describe("game-agent", () => {
       };
 
       const originalFetch = global.fetch;
-      global.fetch = mock((url: string, options: any) => {
+      global.fetch = mock((_url: string, options: any) => {
         const body = JSON.parse(options?.body || "{}");
 
         if (body.currentState.phase === "action") {
@@ -324,11 +327,11 @@ describe("game-agent", () => {
           ok: true,
           json: () => Promise.resolve({ action: { type: "end_phase" } }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
           onStateChange,
         });
 
@@ -359,11 +362,11 @@ describe("game-agent", () => {
           json: () =>
             Promise.resolve({ action: { type: "play_action", card: "Village" } }),
         });
-      }) as typeof fetch;
+      }) as unknown as typeof fetch;
 
       try {
         await runAITurnWithConsensus(engine, "player1", {
-          providers: ["gpt-5-mini"],
+          providers: ["gpt-5.4-mini"],
         });
 
         // Should have stopped due to MAX_TURN_STEPS (20)

@@ -16,15 +16,18 @@ describe("useBuyCardLogic hook", () => {
 
       const buyCard = (card: CardName): CommandResult => {
         buyCardCalled.push(card);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (choice: DecisionChoice): CommandResult => {
         submitDecisionCalled.push(choice);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
-      const pendingChoice = null;
+      const pendingChoice = null as Extract<
+        PendingChoice,
+        { choiceType: "decision" }
+      > | null;
 
       // Simulate the hook's logic
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -46,22 +49,23 @@ describe("useBuyCardLogic hook", () => {
 
       const buyCard = (card: CardName): CommandResult => {
         buyCardCalled.push(card);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (choice: DecisionChoice): CommandResult => {
         submitDecisionCalled.push(choice);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "decision",
+        prompt: "Gain a card costing up to $4",
+        cardOptions: [],
         cardBeingPlayed: "Workshop",
         from: "supply",
-        count: 1,
-        optional: false,
+        min: 1,
+        max: 1,
       };
 
       // Simulate the hook's logic
@@ -84,22 +88,23 @@ describe("useBuyCardLogic hook", () => {
 
       const buyCard = (card: CardName): CommandResult => {
         buyCardCalled.push(card);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (choice: DecisionChoice): CommandResult => {
         submitDecisionCalled.push(choice);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "decision",
+        prompt: "Trash a card from your hand",
+        cardOptions: [],
         cardBeingPlayed: "Remodel",
         from: "hand",
-        count: 1,
-        optional: false,
+        min: 1,
+        max: 1,
       };
 
       // Simulate the hook's logic
@@ -122,19 +127,27 @@ describe("useBuyCardLogic hook", () => {
 
       const buyCard = (card: CardName): CommandResult => {
         buyCardCalled.push(card);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (choice: DecisionChoice): CommandResult => {
         submitDecisionCalled.push(choice);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "reaction",
-        card: "Moat",
+        triggeringPlayerId: "ai",
+        triggeringCard: "Militia",
+        triggerType: "on_attack",
+        availableReactions: ["Moat"],
+        metadata: {
+          allTargets: ["human"],
+          currentTargetIndex: 0,
+          blockedTargets: [],
+          originalCause: "event-1",
+        },
       };
 
       // Simulate the hook's logic
@@ -158,8 +171,8 @@ describe("useBuyCardLogic hook", () => {
     it("should handle submission errors gracefully", () => {
       let errorLogged = false;
 
-      const buyCard = (card: CardName): CommandResult => {
-        return { ok: true };
+      const buyCard = (_card: CardName): CommandResult => {
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (_choice: DecisionChoice): CommandResult => {
@@ -167,13 +180,14 @@ describe("useBuyCardLogic hook", () => {
       };
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "decision",
+        prompt: "Gain a Treasure costing up to $3 more",
+        cardOptions: [],
         cardBeingPlayed: "Mine",
         from: "supply",
-        count: 1,
-        optional: false,
+        min: 1,
+        max: 1,
       };
 
       // Simulate the hook's logic with error handling
@@ -201,10 +215,13 @@ describe("useBuyCardLogic hook", () => {
       };
 
       const submitDecision = (_choice: DecisionChoice): CommandResult => {
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
-      const pendingChoice = null;
+      const pendingChoice = null as Extract<
+        PendingChoice,
+        { choiceType: "decision" }
+      > | null;
 
       // Simulate the hook's logic with error handling
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -226,23 +243,24 @@ describe("useBuyCardLogic hook", () => {
     it("should pass card to submitDecision with selectedCards array", () => {
       const submittedChoices: DecisionChoice[] = [];
 
-      const buyCard = (card: CardName): CommandResult => {
-        return { ok: true };
+      const buyCard = (_card: CardName): CommandResult => {
+        return { ok: true, events: [] };
       };
 
       const submitDecision = (choice: DecisionChoice): CommandResult => {
         submittedChoices.push(choice);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "decision",
+        prompt: "Gain a card to your hand costing up to $5",
+        cardOptions: [],
         cardBeingPlayed: "Artisan",
         from: "supply",
-        count: 2,
-        optional: false,
+        min: 1,
+        max: 2,
       };
 
       // Simulate the hook's logic
@@ -265,14 +283,28 @@ describe("useBuyCardLogic hook", () => {
 
   describe("pendingChoice type handling", () => {
     it("should only check 'from' property for decision choices", () => {
-      const buyCard = (): CommandResult => ({ ok: true });
-      const submitDecision = (): CommandResult => ({ ok: true });
+      const buyCard = (_card: CardName): CommandResult => ({
+        ok: true,
+        events: [],
+      });
+      const submitDecision = (_choice: DecisionChoice): CommandResult => ({
+        ok: true,
+        events: [],
+      });
 
       const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> = {
-        id: "choice-1",
         playerId: "human",
         choiceType: "reaction",
-        card: "Moat",
+        triggeringPlayerId: "ai",
+        triggeringCard: "Militia",
+        triggerType: "on_attack",
+        availableReactions: ["Moat"],
+        metadata: {
+          allTargets: ["human"],
+          currentTargetIndex: 0,
+          blockedTargets: [],
+          originalCause: "event-1",
+        },
       };
 
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -291,11 +323,18 @@ describe("useBuyCardLogic hook", () => {
     });
 
     it("should handle undefined pendingChoice", () => {
-      const buyCard = (): CommandResult => ({ ok: true });
-      const submitDecision = (): CommandResult => ({ ok: true });
+      const buyCard = (_card: CardName): CommandResult => ({
+        ok: true,
+        events: [],
+      });
+      const submitDecision = (_choice: DecisionChoice): CommandResult => ({
+        ok: true,
+        events: [],
+      });
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> | undefined =
-        undefined;
+      const pendingChoice = undefined as
+        | Extract<PendingChoice, { choiceType: "decision" }>
+        | undefined;
 
       const handleBuyCard = (card: CardName): CommandResult => {
         if (pendingChoice?.from === "supply") {
@@ -309,12 +348,19 @@ describe("useBuyCardLogic hook", () => {
     });
 
     it("should handle null pendingChoice", () => {
-      const buyCard = (): CommandResult => ({ ok: true });
-      const submitDecision = (): CommandResult => ({ ok: true });
+      const buyCard = (_card: CardName): CommandResult => ({
+        ok: true,
+        events: [],
+      });
+      const submitDecision = (_choice: DecisionChoice): CommandResult => ({
+        ok: true,
+        events: [],
+      });
 
-      const pendingChoice:
-        | Extract<PendingChoice, { choiceType: "decision" }>
-        | null = null;
+      const pendingChoice = null as Extract<
+        PendingChoice,
+        { choiceType: "decision" }
+      > | null;
 
       const handleBuyCard = (card: CardName): CommandResult => {
         if (pendingChoice?.from === "supply") {
@@ -334,10 +380,8 @@ describe("useBuyCardLogic hook", () => {
 
       const buyCard = (card: CardName): CommandResult => {
         cardsPassed.push(card);
-        return { ok: true };
+        return { ok: true, events: [] };
       };
-
-      const submitDecision = (): CommandResult => ({ ok: true });
 
       const testCards: CardName[] = [
         "Copper",

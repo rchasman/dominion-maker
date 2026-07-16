@@ -13,7 +13,7 @@ import { getSubPhase } from "../lib/state-helpers";
 function createEmptyState(): GameState {
   return {
     players: {},
-    supply: {},
+    supply: {} as Record<CardName, number>,
     kingdomCards: [],
     playerOrder: [],
     turn: 0,
@@ -60,7 +60,7 @@ function createBasicGameState(): GameState {
       Estate: 8,
       Duchy: 8,
       Province: 8,
-    },
+    } as Record<CardName, number>,
     turn: 1,
     activePlayerId: "human",
   };
@@ -84,7 +84,10 @@ describe("Event Application - Game Setup", () => {
 
     expect(newState.players.human!).toBeDefined();
     expect(newState.players.ai).toBeDefined();
-    expect(newState.supply).toEqual({ Copper: 46, Estate: 8 });
+    expect(newState.supply).toEqual({ Copper: 46, Estate: 8 } as Record<
+      CardName,
+      number
+    >);
     expect(newState.kingdomCards).toEqual(["Village", "Smithy"]);
     expect(newState.playerOrder).toEqual(["human", "ai"]);
     expect(newState.activePlayerId).toBe("human");
@@ -235,6 +238,7 @@ describe("Event Application - Card Movement", () => {
       type: "CARD_PLAYED",
       playerId: "human",
       card: "Village",
+      sourceIndex: 0,
     };
 
     const newState = applyEvent(state, event);
@@ -399,7 +403,8 @@ describe("Event Application - Card Movement", () => {
     const event: GameEvent = {
       type: "CARD_REVEALED",
       playerId: "human",
-      cards: ["Copper", "Silver"],
+      card: "Copper",
+      from: "deck",
     };
 
     const newState = applyEvent(state, event);
@@ -679,6 +684,8 @@ describe("Event Application - Decisions", () => {
 
     const event: GameEvent = {
       type: "DECISION_RESOLVED",
+      playerId: "human",
+      choice: { selectedCards: [] },
     };
 
     const newState = applyEvent(state, event);
@@ -701,6 +708,7 @@ describe("Event Application - Game End", () => {
       type: "GAME_ENDED",
       winnerId: "human",
       scores: { human: 10, ai: 5 },
+      reason: "provinces_empty",
     };
 
     const newState = applyEvent(state, event);
@@ -722,7 +730,7 @@ describe("Event Application - Multiple Events", () => {
     state.actions = 1;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", playerId: "human", card: "Village" },
+      { type: "CARD_PLAYED", playerId: "human", card: "Village", sourceIndex: 0 },
       { type: "ACTIONS_MODIFIED", delta: -1 },
       { type: "CARD_DRAWN", playerId: "human", card: "Silver" },
       { type: "ACTIONS_MODIFIED", delta: 2 },
@@ -746,7 +754,7 @@ describe("Event Application - Multiple Events", () => {
     state.coins = 0;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", playerId: "human", card: "Market" },
+      { type: "CARD_PLAYED", playerId: "human", card: "Market", sourceIndex: 0 },
       { type: "ACTIONS_MODIFIED", delta: -1 },
       { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
       { type: "ACTIONS_MODIFIED", delta: 1 },
@@ -879,6 +887,7 @@ describe("Event Application - Source Index Tracking", () => {
       type: "CARD_PLAYED",
       playerId: "human",
       card: "Smithy",
+      sourceIndex: 1,
     });
 
     expect(newState.players.human!.inPlay).toEqual(["Smithy"]);
@@ -889,6 +898,7 @@ describe("Event Application - Source Index Tracking", () => {
       type: "CARD_PLAYED",
       playerId: "human",
       card: "Market",
+      sourceIndex: 1,
     });
 
     expect(newState.players.human!.inPlay).toEqual(["Smithy", "Market"]);
@@ -923,8 +933,9 @@ describe("Event Application - Undo Events", () => {
 
     const event: GameEvent = {
       type: "UNDO_REQUESTED",
-      requestedBy: "human",
-      targetEventId: "evt-5",
+      requestId: "req-1",
+      byPlayer: "human",
+      toEventId: "evt-5",
     };
 
     const newState = applyEvent(state, event);
@@ -938,7 +949,8 @@ describe("Event Application - Undo Events", () => {
 
     const event: GameEvent = {
       type: "UNDO_APPROVED",
-      approvedBy: "ai",
+      requestId: "req-1",
+      byPlayer: "ai",
     };
 
     const newState = applyEvent(state, event);
@@ -951,7 +963,8 @@ describe("Event Application - Undo Events", () => {
 
     const event: GameEvent = {
       type: "UNDO_DENIED",
-      deniedBy: "ai",
+      requestId: "req-1",
+      byPlayer: "ai",
     };
 
     const newState = applyEvent(state, event);
@@ -964,7 +977,8 @@ describe("Event Application - Undo Events", () => {
 
     const event: GameEvent = {
       type: "UNDO_EXECUTED",
-      targetEventId: "evt-5",
+      fromEventId: "evt-9",
+      toEventId: "evt-5",
     };
 
     const newState = applyEvent(state, event);

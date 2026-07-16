@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { cellar } from "./cellar";
 import type { GameState } from "../../types/game-state";
+import type { GameEvent } from "../../events/types";
 import { resetEventCounter } from "../../events/id-generator";
 import { applyEvents } from "../../events/apply";
 
@@ -29,7 +30,7 @@ function createTestState(): GameState {
         inPlaySourceIndices: [],
       },
     },
-    supply: {},
+    supply: {} as GameState["supply"],
     trash: [],
     log: [],
     turnHistory: [],

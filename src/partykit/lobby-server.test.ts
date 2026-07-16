@@ -485,7 +485,7 @@ describe("LobbyServer", () => {
     });
 
     it("should return 405 for non-POST requests", () => {
-      const method = "GET";
+      const method: string = "GET";
       const statusCode = method === "POST" ? 200 : 405;
 
       expect(statusCode).toBe(405);

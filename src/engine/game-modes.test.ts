@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { DominionEngine } from "./engine";
 import { GAME_MODE_CONFIG, getPlayersForMode } from "../types/game-mode";
+import type { CardName } from "../types/game-state";
 
 describe("Game initialization with different modes", () => {
   describe("engine mode", () => {
@@ -22,7 +23,7 @@ describe("Game initialization with different modes", () => {
 
       engine.startGame(players);
 
-      expect(engine.state.activePlayerId).toBe(players[0]);
+      expect(engine.state.activePlayerId).toBe(players[0]!);
     });
 
     it("should correctly identify AI player during turns", () => {
@@ -94,7 +95,7 @@ describe("Game initialization with different modes", () => {
 
       engine.startGame(players);
 
-      expect(engine.state.activePlayerId).toBe(players[0]);
+      expect(engine.state.activePlayerId).toBe(players[0]!);
     });
 
     it("should identify all players as AI in full mode", () => {
@@ -105,8 +106,8 @@ describe("Game initialization with different modes", () => {
       engine.startGame(players);
 
       // ALL players should be identified as AI in full mode
-      expect(config.isAIPlayer(players[0])).toBe(true);
-      expect(config.isAIPlayer(players[1])).toBe(true);
+      expect(config.isAIPlayer(players[0]!)).toBe(true);
+      expect(config.isAIPlayer(players[1]!)).toBe(true);
 
       // Even "human" becomes AI-controlled in full mode
       expect(config.isAIPlayer("human")).toBe(true);
@@ -219,7 +220,7 @@ describe("Game initialization with different modes", () => {
         "full",
       ];
 
-      const kingdomCards = [
+      const kingdomCards: CardName[] = [
         "Cellar",
         "Chapel",
         "Moat",
@@ -233,7 +234,7 @@ describe("Game initialization with different modes", () => {
       ];
 
       engines.forEach((engine, i) => {
-        engine.startGame(getPlayersForMode(modes[i]), kingdomCards, 42);
+        engine.startGame(getPlayersForMode(modes[i]!), kingdomCards, 42);
       });
 
       // All should have same supply when using same kingdom cards

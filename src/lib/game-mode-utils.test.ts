@@ -1,6 +1,5 @@
 import { describe, it, expect } from "bun:test";
 import { isAIControlled } from "./game-mode-utils";
-import type { GameMode } from "../types/game-mode";
 
 describe("game-mode-utils", () => {
   describe("isAIControlled", () => {
