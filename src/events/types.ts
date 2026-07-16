@@ -3,14 +3,12 @@ import type {
   Phase,
   PendingChoice,
   DecisionChoice,
+  PlayerId,
 } from "../types/game-state";
 import { multiplayerLogger } from "../lib/logger";
 
-export type { PendingChoice, DecisionChoice };
+export type { PendingChoice, DecisionChoice, PlayerId };
 export { isDecisionChoice, isReactionChoice } from "../types/game-state";
-
-// PlayerId - string for multiplayer flexibility (can be custom peer IDs or Player enum values)
-export type PlayerId = string;
 
 // Zones where cards can exist
 export type Zone = "hand" | "deck" | "discard" | "inPlay" | "supply" | "trash";

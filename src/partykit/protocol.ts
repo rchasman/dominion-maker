@@ -3,10 +3,10 @@
  *
  * Shared types between server and client for type-safe messaging.
  */
-import type { GameState, CardName } from "../types/game-state";
+import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 
-export type PlayerId = string; // ClientId strings
+export type { PlayerId };
 
 export interface PlayerInfo {
   name: string;
