@@ -15,7 +15,7 @@ const GARDENS_VP_DIVISOR = 10;
  * Player colors for consistent visual identification
  * Ordered by distinctiveness for 2-player games
  */
-const PLAYER_COLORS = [
+export const PLAYER_COLORS = [
   "#3b82f6", // Blue - Player 1
   "#ef4444", // Red - Player 2
   "#10b981", // Green - Player 3

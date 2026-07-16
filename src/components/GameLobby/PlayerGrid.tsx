@@ -9,7 +9,7 @@ import type {
   PlayerId,
 } from "../../partykit/protocol";
 import { PlayerAvatar } from "./PlayerAvatar";
-import { getPlayerColor } from "../../lib/board-utils";
+import { getPlayerColor, PLAYER_COLORS } from "../../lib/board-utils";
 import { run } from "../../lib/run";
 
 const CIRCLE_LAYOUT = {
@@ -52,17 +52,6 @@ const FONT_WEIGHT_OTHER = 400;
 
 type RequestState = "none" | "sent" | "received";
 
-// Lobby color palette - evenly distributed around the circle
-const LOBBY_COLORS = [
-  "#3b82f6", // Blue
-  "#ef4444", // Red
-  "#10b981", // Green
-  "#f59e0b", // Amber
-  "#8b5cf6", // Purple
-  "#ec4899", // Pink
-  "#14b8a6", // Teal
-  "#f97316", // Orange
-] as const;
 
 interface PlayerGridProps {
   players: LobbyPlayer[];
@@ -135,14 +124,14 @@ export function PlayerGrid({
     usedColors: Set<string>,
   ): string | undefined => {
     const attemptedIndices = Array.from(
-      { length: LOBBY_COLORS.length },
-      (_, i) => (initialIndex + i) % LOBBY_COLORS.length,
+      { length: PLAYER_COLORS.length },
+      (_, i) => (initialIndex + i) % PLAYER_COLORS.length,
     );
     const availableIndex = attemptedIndices.find(
-      idx => !usedColors.has(LOBBY_COLORS[idx] ?? ""),
+      idx => !usedColors.has(PLAYER_COLORS[idx] ?? ""),
     );
     return availableIndex !== undefined
-      ? LOBBY_COLORS[availableIndex]
+      ? PLAYER_COLORS[availableIndex]
       : undefined;
   };
 
@@ -153,7 +142,7 @@ export function PlayerGrid({
     (acc, player) => {
       // Use clientId for stable color across name changes
       const initialColorIndex =
-        hashPlayerId(player.clientId) % LOBBY_COLORS.length;
+        hashPlayerId(player.clientId) % PLAYER_COLORS.length;
       const color = findAvailableColor(initialColorIndex, acc.usedColors);
 
       if (!color) {
