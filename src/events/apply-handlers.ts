@@ -88,6 +88,12 @@ export function applyCardMovementEvent(
   return applyCardReposition(state, event);
 }
 
+const RESOURCE_EVENTS = {
+  ACTIONS_MODIFIED: { key: "actions", logType: "get-actions" },
+  BUYS_MODIFIED: { key: "buys", logType: "get-buys" },
+  COINS_MODIFIED: { key: "coins", logType: "get-coins" },
+} as const;
+
 /**
  * Apply resource modification events
  */
@@ -95,53 +101,19 @@ export function applyResourceEvent(
   state: GameState,
   event: GameEvent,
 ): GameState | null {
-  if (event.type === "ACTIONS_MODIFIED") {
-    const newActions = Math.max(0, state.actions + event.delta);
+  if (
+    event.type === "ACTIONS_MODIFIED" ||
+    event.type === "BUYS_MODIFIED" ||
+    event.type === "COINS_MODIFIED"
+  ) {
+    const { key, logType } = RESOURCE_EVENTS[event.type];
     const logEntry =
       event.delta > 0
-        ? {
-            type: "get-actions" as const,
-            playerId: state.activePlayerId,
-            count: event.delta,
-          }
+        ? { type: logType, playerId: state.activePlayerId, count: event.delta }
         : null;
     return {
       ...state,
-      actions: newActions,
-      log: logEntry ? [...state.log, logEntry] : state.log,
-    };
-  }
-
-  if (event.type === "BUYS_MODIFIED") {
-    const newBuys = Math.max(0, state.buys + event.delta);
-    const logEntry =
-      event.delta > 0
-        ? {
-            type: "get-buys" as const,
-            playerId: state.activePlayerId,
-            count: event.delta,
-          }
-        : null;
-    return {
-      ...state,
-      buys: newBuys,
-      log: logEntry ? [...state.log, logEntry] : state.log,
-    };
-  }
-
-  if (event.type === "COINS_MODIFIED") {
-    const newCoins = Math.max(0, state.coins + event.delta);
-    const logEntry =
-      event.delta > 0
-        ? {
-            type: "get-coins" as const,
-            playerId: state.activePlayerId,
-            count: event.delta,
-          }
-        : null;
-    return {
-      ...state,
-      coins: newCoins,
+      [key]: Math.max(0, state[key] + event.delta),
       log: logEntry ? [...state.log, logEntry] : state.log,
     };
   }
