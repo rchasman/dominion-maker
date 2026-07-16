@@ -6,65 +6,24 @@
  */
 import type * as Party from "partykit/server";
 import { DominionEngine } from "../engine/engine";
-import type { GameState, CardName } from "../types/game-state";
-import type { GameEvent, DecisionChoice } from "../events/types";
+import type { CardName } from "../types/game-state";
+import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameUpdateMessage, ChatMessageData, PlayerId } from "./protocol";
+import type {
+  GameClientMessage,
+  GameServerMessage,
+  GameUpdateMessage,
+  ChatMessageData,
+  PlayerId,
+} from "./protocol";
 
 interface PlayerConnection {
   id: string;
   name: string;
   clientId: string;
   isSpectator: boolean;
-  isBot?: boolean;
+  isBot?: boolean | undefined;
 }
-
-type ClientMessage =
-  | { type: "join"; name: string; clientId?: string; isBot?: boolean }
-  | { type: "spectate"; name: string; clientId?: string }
-  | { type: "start_game"; kingdomCards?: CardName[]; botPlayerIds?: PlayerId[] }
-  | {
-      type: "start_singleplayer";
-      botName?: string;
-      kingdomCards?: CardName[];
-      gameMode?: string;
-    }
-  | { type: "change_game_mode"; gameMode: string }
-  | { type: "sync_events"; events: GameEvent[] }
-  | { type: "play_action"; card: CardName }
-  | { type: "play_treasure"; card: CardName }
-  | { type: "play_all_treasures" }
-  | { type: "buy_card"; card: CardName }
-  | { type: "end_phase" }
-  | { type: "submit_decision"; choice: DecisionChoice }
-  | { type: "request_undo"; toEventId: string; reason?: string }
-  | { type: "approve_undo"; requestId: string }
-  | { type: "deny_undo"; requestId: string }
-  | { type: "resign" }
-  | { type: "leave" }
-  | { type: "chat"; message: ChatMessageData };
-
-type ServerMessage =
-  | {
-      type: "joined";
-      playerId: PlayerId | null;
-      isSpectator: boolean;
-      isHost: boolean;
-    }
-  | {
-      type: "player_list";
-      players: Array<{ name: string; playerId }>;
-    }
-  | { type: "spectator_count"; count: number }
-  | { type: "game_started"; state: GameState; events: GameEvent[] }
-  | { type: "events"; events: GameEvent[]; state: GameState }
-  | { type: "full_state"; state: GameState; events: GameEvent[] }
-  | { type: "player_disconnected"; playerName: string; playerId }
-  | { type: "player_reconnected"; playerName: string; playerId }
-  | { type: "error"; message: string }
-  | { type: "game_ended"; reason: string }
-  | { type: "chat"; message: ChatMessageData }
-  | { type: "chat_history"; messages: ChatMessageData[] };
 
 const MAX_PLAYERS = 2;
 
@@ -84,7 +43,11 @@ export default class GameServer implements Party.Server {
   > = {}; // Track player info separately from engine state
   private spectatorTimeoutId: ReturnType<typeof setTimeout> | null = null; // Timeout for kicking spectators
 
-  constructor(readonly room: Party.Room) {}
+  readonly room: Party.Room;
+
+  constructor(room: Party.Room) {
+    this.room = room;
+  }
 
   onConnect(conn: Party.Connection) {
     this.connections.set(conn.id, {
@@ -150,7 +113,7 @@ export default class GameServer implements Party.Server {
   }
 
   onMessage(message: string, sender: Party.Connection) {
-    const msg = JSON.parse(message) as ClientMessage;
+    const msg = JSON.parse(message) as GameClientMessage;
     const conn = this.connections.get(sender.id);
     if (!conn) return;
 
@@ -356,8 +319,9 @@ export default class GameServer implements Party.Server {
 
     const playerIds = players.map(p => p.clientId);
 
-    this.engine = new DominionEngine();
-    this.engine.startGame(playerIds);
+    const engine = new DominionEngine();
+    this.engine = engine;
+    engine.startGame(playerIds);
     this.isStarted = true;
 
     // Populate playerInfo with real player data
@@ -377,7 +341,7 @@ export default class GameServer implements Party.Server {
       Object.keys(this.playerInfo),
     );
 
-    this.engine.subscribe((events, state) => {
+    engine.subscribe((events, state) => {
       const stateWithPlayerInfo = {
         ...state,
         playerInfo: this.playerInfo,
@@ -389,7 +353,7 @@ export default class GameServer implements Party.Server {
         this.broadcast({
           type: "full_state",
           state: stateWithPlayerInfo,
-          events: [...this.engine.eventLog],
+          events: [...engine.eventLog],
         });
       } else {
         this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
@@ -401,13 +365,13 @@ export default class GameServer implements Party.Server {
     });
 
     const stateWithPlayerInfo = {
-      ...this.engine.state,
+      ...engine.state,
       playerInfo: this.playerInfo,
     };
     this.broadcast({
       type: "game_started",
       state: stateWithPlayerInfo,
-      events: [...this.engine.eventLog],
+      events: [...engine.eventLog],
     });
 
     this.updateLobby();
@@ -465,8 +429,9 @@ export default class GameServer implements Party.Server {
 
     const playerIds = [humanPlayer.clientId, botClientId];
 
-    this.engine = new DominionEngine();
-    this.engine.startGame(playerIds, kingdomCards);
+    const engine = new DominionEngine();
+    this.engine = engine;
+    engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
     // Populate playerInfo with real player data
@@ -484,7 +449,7 @@ export default class GameServer implements Party.Server {
       connected: true,
     };
 
-    this.engine.subscribe((events, state) => {
+    engine.subscribe((events, state) => {
       const stateWithPlayerInfo = {
         ...state,
         playerInfo: this.playerInfo,
@@ -496,7 +461,7 @@ export default class GameServer implements Party.Server {
         this.broadcast({
           type: "full_state",
           state: stateWithPlayerInfo,
-          events: [...this.engine.eventLog],
+          events: [...engine.eventLog],
         });
       } else {
         this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
@@ -508,13 +473,13 @@ export default class GameServer implements Party.Server {
     });
 
     const stateWithPlayerInfo = {
-      ...this.engine.state,
+      ...engine.state,
       playerInfo: this.playerInfo,
     };
     this.broadcast({
       type: "game_started",
       state: stateWithPlayerInfo,
-      events: [...this.engine.eventLog],
+      events: [...engine.eventLog],
     });
 
     this.broadcastPlayerList();
@@ -662,8 +627,9 @@ export default class GameServer implements Party.Server {
       ?.filter(clientId => playerIds.includes(clientId))
       .map(clientId => this.botPlayers.add(clientId));
 
-    this.engine = new DominionEngine();
-    this.engine.startGame(playerIds, kingdomCards);
+    const engine = new DominionEngine();
+    this.engine = engine;
+    engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
     // Populate playerInfo with real player data
@@ -677,7 +643,7 @@ export default class GameServer implements Party.Server {
       };
     }
 
-    this.engine.subscribe((events, state) => {
+    engine.subscribe((events, state) => {
       const stateWithPlayerInfo = {
         ...state,
         playerInfo: this.playerInfo,
@@ -689,7 +655,7 @@ export default class GameServer implements Party.Server {
         this.broadcast({
           type: "full_state",
           state: stateWithPlayerInfo,
-          events: [...this.engine.eventLog],
+          events: [...engine.eventLog],
         });
       } else {
         this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
@@ -701,13 +667,13 @@ export default class GameServer implements Party.Server {
     });
 
     const stateWithPlayerInfo = {
-      ...this.engine.state,
+      ...engine.state,
       playerInfo: this.playerInfo,
     };
     this.broadcast({
       type: "game_started",
       state: stateWithPlayerInfo,
-      events: [...this.engine.eventLog],
+      events: [...engine.eventLog],
     });
 
     this.updateLobby();
@@ -716,7 +682,7 @@ export default class GameServer implements Party.Server {
   private handleGameCommand(
     conn: Party.Connection,
     player: PlayerConnection,
-    msg: ClientMessage,
+    msg: GameClientMessage,
   ) {
     if (!this.engine || !this.isStarted) {
       this.send(conn, { type: "error", message: "Game not started" });
@@ -928,13 +894,6 @@ export default class GameServer implements Party.Server {
     }, 300000); // 5 minutes
   }
 
-  private clearSpectatorTimeout() {
-    if (this.spectatorTimeoutId) {
-      clearTimeout(this.spectatorTimeoutId);
-      this.spectatorTimeoutId = null;
-    }
-  }
-
   private broadcastPlayerList() {
     const players = this.getPlayers().map(p => ({
       name: p.name,
@@ -950,11 +909,11 @@ export default class GameServer implements Party.Server {
     });
   }
 
-  private send(conn: Party.Connection, msg: ServerMessage) {
+  private send(conn: Party.Connection, msg: GameServerMessage) {
     conn.send(JSON.stringify(msg));
   }
 
-  private broadcast(msg: ServerMessage) {
+  private broadcast(msg: GameServerMessage) {
     this.room.broadcast(JSON.stringify(msg));
   }
 

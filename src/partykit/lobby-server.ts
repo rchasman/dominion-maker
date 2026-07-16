@@ -12,6 +12,7 @@ import type {
   ActiveGame,
   LobbyClientMessage,
   LobbyServerMessage,
+  GameUpdateMessage,
   PlayerId,
 } from "./protocol";
 import { generateRoomId } from "../lib/room-id";
@@ -29,7 +30,11 @@ export default class LobbyServer implements Party.Server {
   private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> =
     new Map();
 
-  constructor(readonly room: Party.Room) {}
+  readonly room: Party.Room;
+
+  constructor(room: Party.Room) {
+    this.room = room;
+  }
 
   onConnect(_conn: Party.Connection) {
     // Player not yet joined until they send join_lobby
@@ -78,7 +83,7 @@ export default class LobbyServer implements Party.Server {
 
   async onRequest(req: Party.Request): Promise<Response> {
     if (req.method === "POST") {
-      const body = await req.json();
+      const body = (await req.json()) as GameUpdateMessage;
 
       if (body.type === "game_update") {
         if (body.isActive) {

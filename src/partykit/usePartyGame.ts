@@ -28,44 +28,40 @@ const PARTYKIT_HOST =
  * Compute pending undo request from event log
  */
 function computePendingUndo(events: GameEvent[]): PendingUndoRequest | null {
-  // Find the most recent UNDO_REQUESTED event
-  let pendingRequest: PendingUndoRequest | null = null;
+  // Find the most recent undo lifecycle event (request, denial, or execution)
+  const lastIndex = events.reduce(
+    (acc, e, i) =>
+      e.type === "UNDO_REQUESTED" ||
+      e.type === "UNDO_DENIED" ||
+      e.type === "UNDO_EXECUTED"
+        ? i
+        : acc,
+    -1,
+  );
+  const request = lastIndex === -1 ? undefined : events[lastIndex];
 
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-
-    if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
-      // If we hit a completion event first, no pending request
-      return null;
-    }
-
-    if (event.type === "UNDO_REQUESTED") {
-      // Found the pending request
-      pendingRequest = {
-        requestId: event.requestId,
-        byPlayer: event.byPlayer,
-        toEventId: event.toEventId,
-        reason: event.reason,
-        approvals: new Set<PlayerId>(),
-        needed: 1, // In 2-player, only 1 approval needed
-      };
-
-      // Count approvals after this request
-      for (let j = i + 1; j < events.length; j++) {
-        const laterEvent = events[j];
-        if (
-          laterEvent.type === "UNDO_APPROVED" &&
-          laterEvent.requestId === event.requestId
-        ) {
-          pendingRequest.approvals.add(laterEvent.byPlayer);
-        }
-      }
-
-      return pendingRequest;
-    }
+  // No request, or the most recent request was already completed
+  if (!request || request.type !== "UNDO_REQUESTED") {
+    return null;
   }
 
-  return null;
+  // Collect approvals after this request
+  const approvals = events
+    .slice(lastIndex + 1)
+    .flatMap(e =>
+      e.type === "UNDO_APPROVED" && e.requestId === request.requestId
+        ? [e.byPlayer]
+        : [],
+    );
+
+  return {
+    requestId: request.requestId,
+    byPlayer: request.byPlayer,
+    toEventId: request.toEventId,
+    ...(request.reason !== undefined && { reason: request.reason }),
+    approvals: new Set<PlayerId>(approvals),
+    needed: 1, // In 2-player, only 1 approval needed
+  };
 }
 
 interface UsePartyGameOptions {
@@ -238,26 +234,20 @@ export function usePartyGame({
         break;
 
       case "player_disconnected": {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- discriminated union narrowing limitation
-        const disconnectedPlayerId = msg.playerId;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- needed for eslint
-        const disconnectedPlayerName = msg.playerName as string;
+        const { playerId, playerName } = msg;
         setState(s => {
           const newDisconnected = new Map(s.disconnectedPlayers);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- discriminated union narrowing limitation
-          newDisconnected.set(disconnectedPlayerId, disconnectedPlayerName);
+          newDisconnected.set(playerId, playerName);
           return { ...s, disconnectedPlayers: newDisconnected };
         });
         break;
       }
 
       case "player_reconnected": {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- discriminated union narrowing limitation
-        const reconnectedPlayerId = msg.playerId;
+        const { playerId } = msg;
         setState(s => {
           const newDisconnected = new Map(s.disconnectedPlayers);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- discriminated union narrowing limitation
-          newDisconnected.delete(reconnectedPlayerId);
+          newDisconnected.delete(playerId);
           return { ...s, disconnectedPlayers: newDisconnected };
         });
         break;

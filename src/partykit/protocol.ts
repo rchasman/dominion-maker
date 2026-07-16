@@ -96,6 +96,7 @@ export type GameClientMessage =
       gameMode?: string;
     }
   | { type: "change_game_mode"; gameMode: string }
+  | { type: "sync_events"; events: GameEvent[] }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }
   | { type: "play_all_treasures" }
@@ -123,8 +124,8 @@ export type GameServerMessage =
   | { type: "events"; events: GameEvent[]; state: GameState }
   | { type: "full_state"; state: GameState; events: GameEvent[] }
   | { type: "player_resigned"; playerName: string }
-  | { type: "player_disconnected"; playerName: string; playerId }
-  | { type: "player_reconnected"; playerName: string; playerId }
+  | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
+  | { type: "player_reconnected"; playerName: string; playerId: PlayerId }
   | { type: "error"; message: string }
   | { type: "game_ended"; reason: string }
   | { type: "chat"; message: ChatMessageData }
