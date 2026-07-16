@@ -1,5 +1,6 @@
 import { generateText, gateway, wrapLanguageModel, extractJsonMiddleware } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
+import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState, CardName } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import { MODEL_MAP } from "../src/config/models";
@@ -195,22 +196,6 @@ function getDevToolsMiddleware(
 }
 
 // Get provider options for AI Gateway routing
-function getProviderOptions(_providerId: string): Record<string, unknown> {
-  return {};
-}
-
-interface VercelRequest {
-  method?: string;
-  body?: unknown;
-  text?: () => Promise<string>;
-}
-
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  send: (data: string) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
-}
 
 interface RequestBody {
   provider: string;
@@ -456,7 +441,6 @@ async function processGenerationRequest(
       system: systemPrompt,
       prompt: userMessage,
       maxRetries: 0,
-      providerOptions: getProviderOptions(provider),
     });
 
     const jsonStr = extractJson(result.text);

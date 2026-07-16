@@ -1,5 +1,6 @@
 import { generateText, gateway } from "ai";
 import { apiLogger } from "../src/lib/logger";
+import type { VercelRequest, VercelResponse } from "./_http";
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
@@ -8,16 +9,6 @@ const HTTP_INTERNAL_ERROR = 500;
 interface ChatRequest {
   message: string;
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
-}
-
-interface VercelRequest {
-  body?: ChatRequest;
-}
-
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
 }
 
 const PATRICK_SYSTEM = `You are a legendary Dominion strategy analyst with the passion and insight of a top-tier competitive card game commentator.
@@ -46,7 +37,8 @@ export default async function handler(
   try {
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    const { message, conversationHistory = [] } = req.body || {};
+    const { message, conversationHistory = [] } = (req.body ??
+      {}) as Partial<ChatRequest>;
 
     if (!message?.trim()) {
       res.status(HTTP_BAD_REQUEST).json({ error: "Message required" });

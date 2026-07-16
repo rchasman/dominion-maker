@@ -1,5 +1,6 @@
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
+import type { VercelRequest, VercelResponse } from "./_http";
 import { z } from "zod";
 import type { GameState, CardName } from "../src/types/game-state";
 import {
@@ -81,19 +82,6 @@ const PlayerAnalysisSchema = z.object({
     .string()
     .describe("1-2 sentences on what to do next and why - be decisive"),
 });
-
-interface VercelRequest {
-  method?: string;
-  body?: unknown;
-  text?: () => Promise<string>;
-}
-
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  send: (data: string) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
-}
 
 interface CardCounts {
   counts: Record<string, number>;

@@ -42,7 +42,7 @@ export function fetchStrategyAnalysis(
   api.api["analyze-strategy"]
     .post({
       currentState: state,
-      previousAnalysis: hasStrategies ? currentStrategies : undefined,
+      ...(hasStrategies && { previousAnalysis: currentStrategies }),
     })
     .then(({ data, error }) => {
       if (error) {

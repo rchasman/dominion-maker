@@ -5,6 +5,7 @@ import strategyReactHandler from "./api/strategy-react";
 import patrickChatHandler from "./api/patrick-chat";
 import { serverLogger } from "./src/lib/logger";
 import { run } from "./src/lib/run";
+import type { VercelRequest, VercelResponse } from "./api/_http";
 
 // HTTP Status Codes
 const HTTP_NO_CONTENT = 204;
@@ -37,18 +38,6 @@ declare const Bun: {
   serve(options: BunServeOptions): BunServer;
 };
 
-interface VercelRequest {
-  method?: string;
-  body?: unknown;
-  text?: () => Promise<string>;
-}
-
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  send: (data: string) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
-}
 
 const server = Bun.serve({
   port: SERVER_PORT,

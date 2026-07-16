@@ -1,5 +1,6 @@
 import { generateText, gateway } from "ai";
 import { apiLogger } from "../src/lib/logger";
+import type { VercelRequest, VercelResponse } from "./_http";
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
@@ -10,15 +11,6 @@ interface StrategyReactionRequest {
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
-interface VercelRequest {
-  body?: StrategyReactionRequest;
-}
-
-interface VercelResponse {
-  status: (code: number) => VercelResponse;
-  json: (data: unknown) => VercelResponse;
-  setHeader: (key: string, value: string) => VercelResponse;
-}
 
 const STRATEGY_REACTOR_SYSTEM = `You are a legendary strategy game analyst reacting to Dominion strategies in the style of top-tier competitive card game players and deckbuilding innovators.
 
@@ -45,7 +37,8 @@ export default async function handler(
   try {
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    const { strategy, conversationHistory = [] } = req.body || {};
+    const { strategy, conversationHistory = [] } = (req.body ??
+      {}) as Partial<StrategyReactionRequest>;
 
     if (!strategy?.trim()) {
       res.status(HTTP_BAD_REQUEST).json({ error: "Strategy required" });
