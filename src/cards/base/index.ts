@@ -76,10 +76,3 @@ export const CARD_EFFECTS: Partial<Record<CardName, CardEffect>> = {
 export function getCardEffect(card: CardName): CardEffect | undefined {
   return CARD_EFFECTS[card];
 }
-
-/**
- * Check if a card has an event-based effect implemented.
- */
-export function hasCardEffect(card: CardName): boolean {
-  return card in CARD_EFFECTS;
-}

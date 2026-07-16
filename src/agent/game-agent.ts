@@ -8,7 +8,6 @@ import type { ModelProvider } from "../config/models";
 import { CARDS, getHandComposition, isSimpleTreasure } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import {
-  AVAILABLE_MODELS,
   ALL_FAST_MODELS,
   DEFAULT_MODEL_SETTINGS,
   buildModelsFromSettings,
@@ -48,12 +47,7 @@ const CONSENSUS_AHEAD_BY_K_DIVISOR = 3;
 const MAX_TURN_STEPS = 20;
 
 // Re-export for convenience
-export {
-  AVAILABLE_MODELS,
-  ALL_FAST_MODELS,
-  DEFAULT_MODEL_SETTINGS,
-  buildModelsFromSettings,
-};
+export { DEFAULT_MODEL_SETTINGS, buildModelsFromSettings };
 export type { ModelSettings, ModelProvider };
 
 // Global abort controller for canceling ongoing consensus operations

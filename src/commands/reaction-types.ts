@@ -93,23 +93,3 @@ export interface ReactionContext {
 export interface AttackReactionContext extends ReactionContext {
   triggerType: "on_attack";
 }
-
-/**
- * Helper to create initial reaction context for an attack.
- */
-export function createAttackReactionContext(
-  triggeringCard: CardName,
-  triggeringPlayerId: PlayerId,
-  targets: PlayerId[],
-  originalCause: string,
-): AttackReactionContext {
-  return {
-    triggeringCard,
-    triggeringPlayerId,
-    triggerType: "on_attack",
-    allTargets: targets,
-    currentTargetIndex: 0,
-    blockedTargets: [],
-    originalCause,
-  };
-}

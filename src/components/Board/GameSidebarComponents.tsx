@@ -2,7 +2,7 @@ import { lazy, Suspense } from "preact/compat";
 import type { GameMode } from "../../types/game-mode";
 import { GAME_MODE_CONFIG } from "../../types/game-mode";
 import type { ModelSettings } from "../../agent/game-agent";
-import type { LLMLogEntry } from "../../context/llm-log-context";
+import type { LLMLogEntry } from "../LLMLog";
 import {
   FONT_WEIGHT_NORMAL,
   FONT_WEIGHT_BOLD,

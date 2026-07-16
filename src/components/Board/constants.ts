@@ -14,20 +14,8 @@ export const PREVIEW_TEXT_COLOR = "white";
 export const PREVIEW_FONT_SIZE = "0.875rem";
 export const PREVIEW_FONT_WEIGHT = 600;
 
-// Decision Constants
-export const DEFAULT_DECISION_MAX = 1;
-
-// Timing Constants
-export const AI_TURN_DELAY_MS = 500;
-export const AUTO_ADVANCE_DELAY_MS = 300;
-
-// Array Indices
-export const MAIN_PLAYER_INDEX = 0;
-export const OPPONENT_PLAYER_INDEX = 1;
-
 // Opacity Constants
 export const DISABLED_OPACITY = 0.4;
-export const DEPLETED_RESOURCE_OPACITY = 0.4;
 export const DISABLED_BUTTON_OPACITY = 0.5;
 
 // Percentage Constants

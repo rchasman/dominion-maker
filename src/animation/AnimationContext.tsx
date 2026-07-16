@@ -13,15 +13,6 @@ interface AnimationContextValue {
 
 const AnimationContext = createContext<AnimationContextValue | null>(null);
 
-export function useAnimation(): AnimationContextValue {
-  const context = useContext(AnimationContext);
-  if (!context) {
-    throw new Error("useAnimation must be used within AnimationProvider");
-  }
-  return context;
-}
-
-// Safe version that returns null if outside provider (for gradual adoption)
 export function useAnimationSafe(): AnimationContextValue | null {
   return useContext(AnimationContext);
 }
