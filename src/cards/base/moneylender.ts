@@ -2,23 +2,15 @@
  * Moneylender - Trash a Copper from your hand for +$3
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createMultiStageCard } from "../effect-types";
 import { STAGES } from "../stages";
 
-export const moneylender: CardEffect = ({
-  state,
-  playerId,
-  decision,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+export const moneylender = createMultiStageCard({
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
+    if (!playerState.hand.includes("Copper")) return { events: [] };
 
-  const hasCopperInHand = playerState.hand.includes("Copper");
-
-  if (!hasCopperInHand) return { events: [] };
-
-  // Request confirmation (or auto-trash for AI)
-  if (!decision) {
     return {
       events: [],
       pendingChoice: {
@@ -33,17 +25,16 @@ export const moneylender: CardEffect = ({
         stage: STAGES.TRASH,
       },
     };
-  }
+  },
 
-  // Execute trash + coins
-  if (decision.selectedCards.includes("Copper")) {
+  trash: ({ playerId, decision }) => {
+    if (!decision?.selectedCards.includes("Copper")) return { events: [] };
+
     return {
       events: [
         { type: "CARD_TRASHED", playerId, card: "Copper", from: "hand" },
         { type: "COINS_MODIFIED", delta: 3 },
       ],
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

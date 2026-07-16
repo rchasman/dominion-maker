@@ -2,21 +2,14 @@
  * Harbinger - +1 Card, +1 Action. Look through discard, may put a card on deck
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents } from "../effect-types";
+import { createMultiStageCard, createDrawEvents } from "../effect-types";
 import { STAGES } from "../stages";
 
-export const harbinger: CardEffect = ({
-  state,
-  playerId,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+export const harbinger = createMultiStageCard({
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
 
-  // Initial: +1 Card, +1 Action
-  if (!decision || stage === undefined) {
     const drawEvents = createDrawEvents(playerId, playerState, 1);
     const actionEvents = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
     const events = [...drawEvents, ...actionEvents];
@@ -41,15 +34,12 @@ export const harbinger: CardEffect = ({
         stage: STAGES.TOPDECK,
       },
     };
-  }
+  },
 
-  // Put card on deck
-  if (stage === STAGES.TOPDECK) {
-    if (decision.selectedCards.length === 0) {
-      return { events: [] };
-    }
-    const selectedCard = decision.selectedCards[0];
+  topdeck: ({ playerId, decision }) => {
+    const selectedCard = decision?.selectedCards[0];
     if (!selectedCard) return { events: [] };
+
     return {
       events: [
         {
@@ -60,7 +50,5 @@ export const harbinger: CardEffect = ({
         },
       ],
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

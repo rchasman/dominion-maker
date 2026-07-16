@@ -2,29 +2,18 @@
  * Vassal - +$2. Discard top card. If it's an Action, you may play it
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { peekDraw } from "../effect-types";
+import { createMultiStageCard, peekDraw } from "../effect-types";
 import { isActionCard } from "../../data/cards";
 import type { GameEvent } from "../../events/types";
 import { STAGES } from "../stages";
 
-export const vassal: CardEffect = ({
-  state,
-  playerId,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+export const vassal = createMultiStageCard({
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
 
-  // Initial: +$2, reveal and discard top card
-  if (!decision || stage === undefined) {
     const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
     const { cards: revealed } = peekDraw(playerState, 1);
-
-    if (revealed.length === 0) {
-      return { events: coinEvents };
-    }
 
     const topCard = revealed[0];
     if (!topCard) {
@@ -60,16 +49,13 @@ export const vassal: CardEffect = ({
     }
 
     return { events: [...coinEvents, ...discardEvents] };
-  }
+  },
 
-  // Play the action from discard
-  if (stage === STAGES.PLAY_ACTION) {
+  play_action: ({ playerId, decision }) => {
     // Coins already emitted in initial stage
-    if (decision.selectedCards.length === 0) {
-      return { events: [] };
-    }
-    const cardToPlay = decision.selectedCards[0];
+    const cardToPlay = decision?.selectedCards[0];
     if (!cardToPlay) return { events: [] };
+
     return {
       events: [
         {
@@ -80,7 +66,5 @@ export const vassal: CardEffect = ({
         },
       ],
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

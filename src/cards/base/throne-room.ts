@@ -2,26 +2,17 @@
  * Throne Room - Choose an action from hand, play it twice
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
+import { createMultiStageCard } from "../effect-types";
 import { isActionCard } from "../../data/cards";
 import { STAGES } from "../stages";
 
-export const throneRoom: CardEffect = ({
-  state,
-  playerId,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+export const throneRoom = createMultiStageCard({
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
 
-  // Initial: Choose an action to play twice
-  if (!decision || stage === undefined) {
     const actions = playerState.hand.filter(isActionCard);
-
-    if (actions.length === 0) {
-      return { events: [] };
-    }
+    if (actions.length === 0) return { events: [] };
 
     return {
       events: [],
@@ -37,11 +28,10 @@ export const throneRoom: CardEffect = ({
         stage: STAGES.CHOOSE_ACTION,
       },
     };
-  }
+  },
 
-  // Store chosen card for engine to execute twice
-  if (stage === STAGES.CHOOSE_ACTION) {
-    const cardToPlay = decision.selectedCards[0];
+  choose_action: ({ playerId, decision }) => {
+    const cardToPlay = decision?.selectedCards[0];
 
     // Don't emit CARD_PLAYED here - instead create a special decision
     // that tells the engine to execute this card twice
@@ -63,7 +53,5 @@ export const throneRoom: CardEffect = ({
         },
       },
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

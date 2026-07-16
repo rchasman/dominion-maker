@@ -272,6 +272,7 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Workshop",
+      stage: "gain",
       metadata: {
         originalCause: "evt-original",
       },

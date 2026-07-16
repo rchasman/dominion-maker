@@ -97,6 +97,7 @@ describe("Moneylender", () => {
       playerId: "human",
       card: "Moneylender",
       decision: { selectedCards: ["Copper"] },
+      stage: "trash",
     });
 
     expect(result.events).toContainEqual({

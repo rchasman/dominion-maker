@@ -2,26 +2,22 @@
  * Poacher - +1 Card, +1 Action, +$1. Discard 1 card per empty supply pile
  */
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { cardsToEvents, createDrawEvents } from "../effect-types";
+import {
+  createMultiStageCard,
+  cardsToEvents,
+  createDrawEvents,
+} from "../effect-types";
 import { STAGES } from "../stages";
 
-export const poacher: CardEffect = ({
-  state,
-  playerId,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+export const poacher = createMultiStageCard({
+  initial: ({ state, playerId }) => {
+    const playerState = state.players[playerId];
+    if (!playerState) return { events: [] };
 
-  // Count empty supply piles
-  const emptyPiles = Object.values(state.supply).filter(
-    count => count === 0,
-  ).length;
+    const emptyPiles = Object.values(state.supply).filter(
+      count => count === 0,
+    ).length;
 
-  // Initial: +1 Card, +1 Action, +$1
-  if (!decision || stage === undefined) {
     const drawEvents = createDrawEvents(playerId, playerState, 1);
     const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
     const coinEvent = { type: "COINS_MODIFIED" as const, delta: 1 };
@@ -47,14 +43,12 @@ export const poacher: CardEffect = ({
         stage: STAGES.DISCARD,
       },
     };
-  }
+  },
 
-  // Discard (atomic events)
-  if (stage === STAGES.DISCARD) {
+  discard: ({ playerId, decision }) => {
+    if (!decision) return { events: [] };
     return {
       events: cardsToEvents(decision.selectedCards, playerId, "CARD_DISCARDED"),
     };
-  }
-
-  return { events: [] };
-};
+  },
+});

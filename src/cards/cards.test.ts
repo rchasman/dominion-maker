@@ -1207,6 +1207,7 @@ describe("Complex Card Interactions", () => {
         decision: {
           selectedCards: ["Copper"],
         },
+        stage: "trash",
       });
 
       const trashEvent = result.events.find(
