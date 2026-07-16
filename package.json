@@ -31,9 +31,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.97",
     "@ai-sdk/devtools": "^0.0.15",
-    "@ai-sdk/openai": "^3.0.85",
     "@floating-ui/dom": "^1.8.0",
     "@preact/signals": "^2.9.4",
     "@toon-format/toon": "^2.3.0",

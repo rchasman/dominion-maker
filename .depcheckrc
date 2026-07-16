@@ -5,7 +5,7 @@
     "typescript-eslint",
     "globals",
     "oxlint-tsgolint",
-    "@ai-sdk/*",
+    "@ai-sdk/devtools",
     "@floating-ui/react",
     "babel-plugin-react-compiler",
     "stylelint-config-standard",
