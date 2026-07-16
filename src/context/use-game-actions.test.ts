@@ -9,13 +9,14 @@ describe("use-game-actions helper utilities", () => {
      */
     const filterLogsAfterUndo = (
       logs: LLMLogEntry[],
-      eventsAfterUndo: number
+      eventsAfterUndo: number,
     ): LLMLogEntry[] => {
       return logs.filter(log => {
         const logEventCount = log.data?.eventCount;
         return (
           logEventCount === undefined ||
-          (typeof logEventCount === "number" && logEventCount <= eventsAfterUndo)
+          (typeof logEventCount === "number" &&
+            logEventCount <= eventsAfterUndo)
         );
       });
     };
@@ -244,13 +245,14 @@ describe("use-game-actions helper utilities", () => {
     it("should correctly filter logs based on undo event count", () => {
       const filterLogsAfterUndo = (
         logs: LLMLogEntry[],
-        eventsAfterUndo: number
+        eventsAfterUndo: number,
       ): LLMLogEntry[] => {
         return logs.filter(log => {
           const logEventCount = log.data?.eventCount;
           return (
             logEventCount === undefined ||
-            (typeof logEventCount === "number" && logEventCount <= eventsAfterUndo)
+            (typeof logEventCount === "number" &&
+              logEventCount <= eventsAfterUndo)
           );
         });
       };

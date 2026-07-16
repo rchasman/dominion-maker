@@ -86,7 +86,13 @@ describe("AI Strategy - Trash decisions", () => {
 
 describe("AI Strategy - Gain decisions", () => {
   it("should gain most expensive card available", () => {
-    const options: CardName[] = ["Copper", "Silver", "Estate", "Village", "Smithy"];
+    const options: CardName[] = [
+      "Copper",
+      "Silver",
+      "Estate",
+      "Village",
+      "Smithy",
+    ];
     const selected = selectCardsToGain(options, 1);
 
     expect(selected.length).toBe(1);

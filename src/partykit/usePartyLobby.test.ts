@@ -294,12 +294,8 @@ describe("usePartyLobby", () => {
     it("should reset state on disconnect", () => {
       let isConnected = true;
       let myId: string | null = "player-123";
-      let players: LobbyPlayer[] = [
-        { id: "p1", name: "P1", clientId: "c1" },
-      ];
-      let requests: GameRequest[] = [
-        { id: "req1", fromId: "p1", toId: "p2" },
-      ];
+      let players: LobbyPlayer[] = [{ id: "p1", name: "P1", clientId: "c1" }];
+      let requests: GameRequest[] = [{ id: "req1", fromId: "p1", toId: "p2" }];
       let activeGames = [{ roomId: "room1" }];
 
       // Simulate disconnect cleanup

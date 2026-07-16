@@ -141,7 +141,9 @@ describe("Attack Cards Initial Events Bug", () => {
 
       const newState = applyEvents(state, playResult.events);
       expect(newState.players.human?.discard).toContain("Gold");
-      expect(newState.players.human?.discard.filter(c => c === "Gold").length).toBe(1);
+      expect(
+        newState.players.human?.discard.filter(c => c === "Gold").length,
+      ).toBe(1);
     });
 
     it("should not duplicate Gold gain when processing opponent decisions", () => {
@@ -202,7 +204,9 @@ describe("Attack Cards Initial Events Bug", () => {
 
       // Total should be exactly 1 Gold gain
       expect(allGoldGainEvents.length).toBe(1);
-      expect(currentState.players.human?.discard.filter(c => c === "Gold").length).toBe(1);
+      expect(
+        currentState.players.human?.discard.filter(c => c === "Gold").length,
+      ).toBe(1);
     });
   });
 
@@ -221,14 +225,15 @@ describe("Attack Cards Initial Events Bug", () => {
 
       // Should have exactly 1 CARD_GAINED event for Silver to deck
       const silverGainEvents = playResult.events.filter(
-        e =>
-          e.type === "CARD_GAINED" && e.card === "Silver" && e.to === "deck",
+        e => e.type === "CARD_GAINED" && e.card === "Silver" && e.to === "deck",
       );
       expect(silverGainEvents.length).toBe(1);
 
       const newState = applyEvents(state, playResult.events);
       expect(newState.players.human?.deck).toContain("Silver");
-      expect(newState.players.human?.deck.filter(c => c === "Silver").length).toBe(1);
+      expect(
+        newState.players.human?.deck.filter(c => c === "Silver").length,
+      ).toBe(1);
     });
 
     it("should not duplicate Silver gain when processing opponent decisions", () => {
@@ -291,7 +296,9 @@ describe("Attack Cards Initial Events Bug", () => {
 
       // Total should be exactly 1 Silver gain
       expect(allSilverGainEvents.length).toBe(1);
-      expect(currentState.players.human?.deck.filter(c => c === "Silver").length).toBe(1);
+      expect(
+        currentState.players.human?.deck.filter(c => c === "Silver").length,
+      ).toBe(1);
     });
   });
 });

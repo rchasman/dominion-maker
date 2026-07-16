@@ -92,15 +92,7 @@ describe("LLMLog/utils/groupVoters", () => {
     });
 
     it("should count multiple occurrences correctly", () => {
-      const result = groupVotersWithColors([
-        "A",
-        "B",
-        "A",
-        "C",
-        "B",
-        "B",
-        "A",
-      ]);
+      const result = groupVotersWithColors(["A", "B", "A", "C", "B", "B", "A"]);
       expect(result).toHaveLength(3);
       expect(result.find(v => v.name === "A")?.count).toBe(3);
       expect(result.find(v => v.name === "B")?.count).toBe(3);

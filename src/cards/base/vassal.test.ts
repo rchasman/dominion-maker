@@ -192,7 +192,12 @@ describe("Vassal", () => {
   });
 
   it("should handle various action cards", () => {
-    const actionCards: CardName[] = ["Smithy", "Market", "Militia", "Throne Room"];
+    const actionCards: CardName[] = [
+      "Smithy",
+      "Market",
+      "Militia",
+      "Throne Room",
+    ];
 
     actionCards.forEach(card => {
       const state = createTestState();

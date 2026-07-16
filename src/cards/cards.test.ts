@@ -3,11 +3,7 @@ import { getCardEffect } from "./base";
 import { applyEvents } from "../events/apply";
 import { resetEventCounter } from "../events/id-generator";
 import { handleCommand } from "../commands/handle";
-import type {
-  GameState,
-  CardName,
-  DecisionChoice,
-} from "../types/game-state";
+import type { GameState, CardName, DecisionChoice } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { CardEffectContext } from "./effect-types";
 import { isDecisionChoice } from "../types/pending-choice";

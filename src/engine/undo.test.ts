@@ -143,7 +143,8 @@ describe("Undo System - removeEventChain Utility", () => {
         playerId: "human",
         card: "Village",
         sourceIndex: 0,
-        id: "evt-2" },
+        id: "evt-2",
+      },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
       {
         type: "CARD_DRAWN",
@@ -157,7 +158,8 @@ describe("Undo System - removeEventChain Utility", () => {
         playerId: "human",
         card: "Smithy",
         sourceIndex: 0,
-        id: "evt-5" },
+        id: "evt-5",
+      },
     ];
 
     // Undo to Village (keep turn start, village, effects, remove Smithy)
@@ -259,7 +261,8 @@ describe("Undo System - Causality Utilities", () => {
         playerId: "human",
         card: "Village",
         sourceIndex: 0,
-        id: "evt-2" },
+        id: "evt-2",
+      },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-3", causedBy: "evt-2" },
       {
         type: "CARD_DRAWN",
@@ -274,7 +277,8 @@ describe("Undo System - Causality Utilities", () => {
         playerId: "human",
         card: "Smithy",
         sourceIndex: 0,
-        id: "evt-6" },
+        id: "evt-6",
+      },
       { type: "ACTIONS_MODIFIED", delta: -1, id: "evt-7", causedBy: "evt-6" },
     ];
 
@@ -301,7 +305,8 @@ describe("Undo System - Causality Utilities", () => {
         playerId: "human",
         card: "Village",
         sourceIndex: 0,
-        id: "evt-2" },
+        id: "evt-2",
+      },
       { type: "ACTIONS_MODIFIED", delta: 2, id: "evt-3", causedBy: "evt-2" },
     ];
 
@@ -374,7 +379,8 @@ describe("Undo System - Edge Cases", () => {
         playerId: "human",
         card: "Village",
         sourceIndex: 0,
-        id: "evt-2" },
+        id: "evt-2",
+      },
     ];
 
     const result = removeEventChain("evt-2", events);

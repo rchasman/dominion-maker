@@ -136,8 +136,7 @@ export function UndoRequestModal({
               padding: "var(--space-4) var(--space-8)",
               fontSize: "0.875rem",
               fontWeight: 600,
-              background:
-                "linear-gradient(180deg, #10b981 0%, #059669 100%)",
+              background: "linear-gradient(180deg, #10b981 0%, #059669 100%)",
               color: "#fff",
               border: "2px solid #10b981",
               cursor: "pointer",
@@ -157,8 +156,7 @@ export function UndoRequestModal({
               padding: "var(--space-4) var(--space-8)",
               fontSize: "0.875rem",
               fontWeight: 600,
-              background:
-                "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)",
+              background: "linear-gradient(180deg, #dc2626 0%, #991b1b 100%)",
               color: "#fff",
               border: "2px solid #dc2626",
               cursor: "pointer",

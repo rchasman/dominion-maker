@@ -92,7 +92,10 @@ export function getLegalActions(state: GameState): Action[] {
       );
     }
 
-    if (decision.stage === "choose_action" || decision.stage === "play_action") {
+    if (
+      decision.stage === "choose_action" ||
+      decision.stage === "play_action"
+    ) {
       return withSkipOption(
         options.map(card => ({ type: "play_action" as const, card })),
         canSkip,

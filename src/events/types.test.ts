@@ -729,7 +729,12 @@ describe("types - causality helpers", () => {
       const result = removeEventChain("evt-1", events);
 
       expect(result.length).toBe(4);
-      expect(result.map(e => e.id)).toEqual(["evt-1", "evt-2", "evt-3", "evt-4"]);
+      expect(result.map(e => e.id)).toEqual([
+        "evt-1",
+        "evt-2",
+        "evt-3",
+        "evt-4",
+      ]);
     });
 
     it("stops at next root event", () => {

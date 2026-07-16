@@ -194,8 +194,9 @@ describe("Militia Double Coins Bug", () => {
 
     allCoinsEvents.push(
       ...playResult.events
-        .filter((e): e is { type: "COINS_MODIFIED"; delta: number } =>
-          e.type === "COINS_MODIFIED",
+        .filter(
+          (e): e is { type: "COINS_MODIFIED"; delta: number } =>
+            e.type === "COINS_MODIFIED",
         )
         .map(e => ({ delta: e.delta })),
     );
@@ -225,8 +226,9 @@ describe("Militia Double Coins Bug", () => {
 
     allCoinsEvents.push(
       ...discard1Result.events
-        .filter((e): e is { type: "COINS_MODIFIED"; delta: number } =>
-          e.type === "COINS_MODIFIED",
+        .filter(
+          (e): e is { type: "COINS_MODIFIED"; delta: number } =>
+            e.type === "COINS_MODIFIED",
         )
         .map(e => ({ delta: e.delta })),
     );
@@ -252,8 +254,9 @@ describe("Militia Double Coins Bug", () => {
 
     allCoinsEvents.push(
       ...discard2Result.events
-        .filter((e): e is { type: "COINS_MODIFIED"; delta: number } =>
-          e.type === "COINS_MODIFIED",
+        .filter(
+          (e): e is { type: "COINS_MODIFIED"; delta: number } =>
+            e.type === "COINS_MODIFIED",
         )
         .map(e => ({ delta: e.delta })),
     );

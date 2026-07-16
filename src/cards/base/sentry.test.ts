@@ -58,7 +58,10 @@ describe("Sentry", () => {
       card: "Sentry",
     });
 
-    expect(result.events).toContainEqual({ type: "ACTIONS_MODIFIED", delta: 1 });
+    expect(result.events).toContainEqual({
+      type: "ACTIONS_MODIFIED",
+      delta: 1,
+    });
     expect(result.pendingChoice).toBeUndefined();
   });
 
@@ -74,7 +77,10 @@ describe("Sentry", () => {
       card: "Sentry",
     });
 
-    expect(result.events).toContainEqual({ type: "ACTIONS_MODIFIED", delta: 1 });
+    expect(result.events).toContainEqual({
+      type: "ACTIONS_MODIFIED",
+      delta: 1,
+    });
     const peekEvents = result.events.filter(e => e.type === "CARD_PEEKED");
     expect(peekEvents.length).toBe(2);
     // Check that both cards were peeked
@@ -99,7 +105,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate", "Copper"] },
     };
@@ -137,7 +144,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate", "Copper"] },
     };
@@ -155,7 +163,9 @@ describe("Sentry", () => {
       },
     });
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(2);
     expect(discardEvents[0]?.card).toBe("Estate");
     expect(discardEvents[1]?.card).toBe("Copper");
@@ -174,7 +184,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate", "Silver"] },
     };
@@ -215,7 +226,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate", "Copper"] },
     };
@@ -260,7 +272,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate", "Silver"] },
     };
@@ -326,7 +339,8 @@ describe("Sentry", () => {
         CARD_ACTIONS.discard_card,
       ],
       requiresOrdering: true,
-      orderingPrompt: "Cards to topdeck will return in this order (first = top)",
+      orderingPrompt:
+        "Cards to topdeck will return in this order (first = top)",
       cardBeingPlayed: "Sentry",
       metadata: { revealedCards: ["Estate"] },
     };

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { ALL_FAST_MODELS, buildModelsFromSettings, DEFAULT_MODEL_SETTINGS } from "./types";
+import {
+  ALL_FAST_MODELS,
+  buildModelsFromSettings,
+  DEFAULT_MODEL_SETTINGS,
+} from "./types";
 import type { ModelProvider } from "../config/models";
 
 describe("buildModelsFromSettings", () => {
@@ -16,7 +20,10 @@ describe("buildModelsFromSettings", () => {
 
   it("should cycle through enabled models to reach consensusCount", () => {
     const result = buildModelsFromSettings({
-      enabledModels: new Set(["gpt-5.4-mini", "gpt-oss-20b"] as ModelProvider[]),
+      enabledModels: new Set([
+        "gpt-5.4-mini",
+        "gpt-oss-20b",
+      ] as ModelProvider[]),
       consensusCount: 6,
     });
 
@@ -31,10 +38,7 @@ describe("buildModelsFromSettings", () => {
   it("should respect maxInstances limits", () => {
     // gpt-5.2-pro has maxInstances: 3
     const result = buildModelsFromSettings({
-      enabledModels: new Set([
-        "gpt-5.4",
-        "gpt-5.4-mini",
-      ] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4", "gpt-5.4-mini"] as ModelProvider[]),
       consensusCount: 10,
     });
 
@@ -47,10 +51,7 @@ describe("buildModelsFromSettings", () => {
   it("should fall back to unlimited models when all limited models exhausted", () => {
     // gpt-5.2-pro has maxInstances: 3
     const result = buildModelsFromSettings({
-      enabledModels: new Set([
-        "gpt-5.4",
-        "gpt-5.4-mini",
-      ] as ModelProvider[]),
+      enabledModels: new Set(["gpt-5.4", "gpt-5.4-mini"] as ModelProvider[]),
       consensusCount: 8,
     });
 

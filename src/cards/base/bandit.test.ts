@@ -88,7 +88,9 @@ describe("Bandit", () => {
     const revealedCards = revealEvents.map(e => e.card).sort();
     expect(revealedCards).toEqual(["Copper", "Estate"]);
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(2);
     expect(result.pendingChoice).toBeUndefined();
   });
@@ -108,7 +110,9 @@ describe("Bandit", () => {
     expect(trashEvents[0]?.card).toBe("Silver");
     expect(trashEvents[0]?.playerId).toBe("ai1");
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(1);
     expect(discardEvents[0]?.card).toBe("Estate");
   });
@@ -160,7 +164,9 @@ describe("Bandit", () => {
     expect(trashEvents.length).toBe(1);
     expect(trashEvents[0]?.card).toBe("Silver");
 
-    const discardEvents = result2.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result2.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(1);
     expect(discardEvents[0]?.card).toBe("Gold");
   });
@@ -180,7 +186,9 @@ describe("Bandit", () => {
     expect(trashEvents.length).toBe(1);
     expect(trashEvents[0]?.card).toBe("Silver");
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(3); // Estate from ai1, both Coppers from ai2
   });
 
@@ -233,7 +241,9 @@ describe("Bandit", () => {
     const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
     expect(trashEvents.length).toBe(0);
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(2);
   });
 
@@ -264,6 +274,8 @@ describe("Bandit", () => {
 
     expect(result1.pendingChoice).toBeDefined();
     expect(result1.pendingChoice?.playerId).toBe("ai1");
-    expect(result1.pendingChoice?.metadata?.remainingOpponents).toEqual(["ai2"]);
+    expect(result1.pendingChoice?.metadata?.remainingOpponents).toEqual([
+      "ai2",
+    ]);
   });
 });

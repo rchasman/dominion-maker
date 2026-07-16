@@ -730,7 +730,12 @@ describe("Event Application - Multiple Events", () => {
     state.actions = 1;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", playerId: "human", card: "Village", sourceIndex: 0 },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+      },
       { type: "ACTIONS_MODIFIED", delta: -1 },
       { type: "CARD_DRAWN", playerId: "human", card: "Silver" },
       { type: "ACTIONS_MODIFIED", delta: 2 },
@@ -754,7 +759,12 @@ describe("Event Application - Multiple Events", () => {
     state.coins = 0;
 
     const events: GameEvent[] = [
-      { type: "CARD_PLAYED", playerId: "human", card: "Market", sourceIndex: 0 },
+      {
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Market",
+        sourceIndex: 0,
+      },
       { type: "ACTIONS_MODIFIED", delta: -1 },
       { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
       { type: "ACTIONS_MODIFIED", delta: 1 },

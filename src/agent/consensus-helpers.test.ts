@@ -376,9 +376,7 @@ describe("isActionValid", () => {
 
   it("should reject wrong action type", () => {
     const action: Action = { type: "buy_card", card: "Silver" };
-    const legalActions: Action[] = [
-      { type: "play_treasure", card: "Silver" },
-    ];
+    const legalActions: Action[] = [{ type: "play_treasure", card: "Silver" }];
 
     expect(isActionValid(action, legalActions)).toBe(false);
   });
@@ -454,9 +452,7 @@ describe("selectConsensusWinner", () => {
     };
     voteGroups.set("action1", earlyWinner);
 
-    const legalActions: Action[] = [
-      { type: "play_action", card: "Village" },
-    ];
+    const legalActions: Action[] = [{ type: "play_action", card: "Village" }];
 
     const results = [
       {

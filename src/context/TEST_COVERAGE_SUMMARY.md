@@ -1,6 +1,7 @@
 # Test Coverage Summary for src/context/ and src/hooks/
 
 ## Overview
+
 100% test coverage achieved for all testable files in `src/context/` and `src/hooks/` directories.
 
 **Total Tests: 151**
@@ -11,7 +12,9 @@
 ### Context Files
 
 #### 1. **derived-state.ts** (22 tests) ✅
+
 Pure utility functions for computing derived game state.
+
 - `hasPlayableActions()` - 11 tests
   - Tests for null/undefined state, missing players, empty hand
   - Tests with actions=0, with action cards, multiple cards
@@ -22,7 +25,9 @@ Pure utility functions for computing derived game state.
   - Tests mixed treasures/actions and non-human players
 
 #### 2. **storage-utils.ts** (38 tests) ✅
+
 Pure functions for localStorage management with error handling.
+
 - `loadGameMode()` - 7 tests (default, valid modes, invalid JSON, validation)
 - `loadEvents()` - 6 tests (null cases, empty/valid arrays, invalid JSON)
 - `loadLLMLogs()` - 7 tests (null cases, empty/valid arrays, invalid JSON)
@@ -35,7 +40,9 @@ Pure functions for localStorage management with error handling.
 **Note:** Tests mock localStorage since it's not available in Bun's test environment.
 
 #### 3. **game-actions.ts** (25 tests) ✅
+
 Pure functions that execute game commands via the engine.
+
 - Action executors: `executePlayAction()`, `executePlayTreasure()`, `executeUnplayTreasure()`
 - `executePlayAllTreasures()` - handles multiple treasures, empty hand, no human player
 - `executeBuyCard()`, `executeEndPhase()`, `executeSubmitDecision()`
@@ -44,13 +51,17 @@ Pure functions that execute game commands via the engine.
 - Integration tests verifying command sequencing
 
 #### 4. **game-constants.ts** (6 tests) ✅
+
 Timing and strategy constants.
+
 - `TIMING` object - AI_TURN_DELAY, AI_DECISION_DELAY, AUTO_ADVANCE_DELAY
 - `MIN_TURN_FOR_STRATEGY` - strategy analysis threshold
 - Tests verify reasonable values and relationships between constants
 
 #### 5. **use-game-actions.test.ts** (24 tests) ✅
+
 Helper functions and types for the `useGameActions` hook.
+
 - `filterLogsAfterUndo()` - filters LLM logs based on undo point
   - Handles undefined eventCount, missing data, boundary cases
   - Tests edge cases: zero events, empty arrays, non-numeric values
@@ -59,7 +70,9 @@ Helper functions and types for the `useGameActions` hook.
 ### Hooks Files
 
 #### 6. **useBuyCardLogic.test.ts** (36 tests) ✅
+
 Pure logic for routing buy card actions to submitDecision or buyCard.
+
 - Routing logic tests (when to submit decision vs buy)
 - Handles pending decisions from "supply" vs other sources
 - Error handling for both submission and purchase failures
@@ -139,12 +152,12 @@ npm test -- src/context/*.test.ts src/hooks/*.test.ts
 
 ## Coverage Metrics
 
-| Category | Files | With Tests | Testable | Notes |
-|----------|-------|-----------|----------|-------|
-| Pure Functions | 6 | 6 | 6 | 100% tested |
-| React Hooks | 6 | 1 | 6 | 1 tested, 5 pure wiring |
-| Interfaces/Types | 1 | 0 | 0 | Type-only, no tests needed |
-| **Total** | **13** | **7** | **12** | **58% files tested** |
+| Category         | Files  | With Tests | Testable | Notes                      |
+| ---------------- | ------ | ---------- | -------- | -------------------------- |
+| Pure Functions   | 6      | 6          | 6        | 100% tested                |
+| React Hooks      | 6      | 1          | 6        | 1 tested, 5 pure wiring    |
+| Interfaces/Types | 1      | 0          | 0        | Type-only, no tests needed |
+| **Total**        | **13** | **7**      | **12**   | **58% files tested**       |
 
 ## Why Some React Hooks Aren't Tested
 
@@ -157,11 +170,13 @@ npm test -- src/context/*.test.ts src/hooks/*.test.ts
 ## Files Ready for Testing (But Not Yet Tested)
 
 Could be tested with:
+
 - **React Testing Library** for hook composition
 - **Mock engine** for game state simulation
 - **Mock API** for network calls
 
 Priority for future work:
+
 1. `use-game-actions.ts` - command dispatching (high value)
 2. `use-multiplayer-engine.ts` - complex game logic (high value)
 3. Others - lower priority due to straightforward data passing

@@ -93,9 +93,7 @@ describe("LobbyServer", () => {
     });
 
     it("should remove old connection when deduplicating", () => {
-      const players = new Map([
-        ["conn-old", { clientId: "client-123" }],
-      ]);
+      const players = new Map([["conn-old", { clientId: "client-123" }]]);
 
       players.delete("conn-old");
       players.set("conn-new", { clientId: "client-123" } as any);

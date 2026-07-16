@@ -41,9 +41,7 @@ describe("room-id", () => {
     });
 
     it("generates unique IDs with high probability", () => {
-      const ids = new Set(
-        Array.from({ length: 100 }, () => generateRoomId()),
-      );
+      const ids = new Set(Array.from({ length: 100 }, () => generateRoomId()));
       expect(ids.size).toBeGreaterThan(95);
     });
   });

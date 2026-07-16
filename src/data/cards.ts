@@ -328,7 +328,9 @@ export function isTreasureCard(cardName: CardName): boolean {
 export function isSimpleTreasure(cardName: CardName): boolean {
   const card = CARDS[cardName];
   return (
-    card.types.includes("treasure") && card.coins !== undefined && !card.triggers
+    card.types.includes("treasure") &&
+    card.coins !== undefined &&
+    !card.triggers
   );
 }
 

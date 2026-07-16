@@ -14,9 +14,7 @@ describe("state-helpers", () => {
 
   const emptySupply: Record<string, number> = {};
 
-  const createMockState = (
-    overrides: Partial<GameState> = {}
-  ): GameState => ({
+  const createMockState = (overrides: Partial<GameState> = {}): GameState => ({
     players: { human: createMockPlayer() },
     activePlayerId: "human",
     phase: "action",

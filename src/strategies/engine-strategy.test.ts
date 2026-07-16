@@ -44,7 +44,14 @@ describe("EngineStrategy - Militia discard", () => {
   });
 
   it("should select 3 cards with priority order", () => {
-    const hand: CardName[] = ["Estate", "Estate", "Copper", "Copper", "Silver", "Gold"];
+    const hand: CardName[] = [
+      "Estate",
+      "Estate",
+      "Copper",
+      "Copper",
+      "Silver",
+      "Gold",
+    ];
     const selected = selectCardsToDiscard(hand, 3);
 
     expect(selected.length).toBe(3);

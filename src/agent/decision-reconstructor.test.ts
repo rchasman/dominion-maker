@@ -263,9 +263,24 @@ describe("isMultiActionDecision", () => {
       max: 1,
       cardOptions: ["Copper", "Silver"],
       actions: [
-        { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
-        { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
-        { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
+        {
+          id: "topdeck_card",
+          label: "Topdeck",
+          color: "#10B981",
+          isDefault: false,
+        },
+        {
+          id: "trash_card",
+          label: "Trash",
+          color: "#EF4444",
+          isDefault: false,
+        },
+        {
+          id: "discard_card",
+          label: "Discard",
+          color: "#9CA3AF",
+          isDefault: true,
+        },
       ],
       stage: "topdeck",
     };
@@ -362,7 +377,9 @@ describe("isMultiActionDecision", () => {
       min: 0,
       max: 1,
       cardOptions: [],
-      actions: [{ id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true }],
+      actions: [
+        { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
+      ],
       stage: "trash",
       from: "hand",
     };
@@ -381,7 +398,12 @@ describe("isMultiActionDecision", () => {
       cardOptions: ["Copper"],
       actions: [
         { id: "select", label: "Select", color: "#10B981", isDefault: false },
-        { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+        {
+          id: "trash_card",
+          label: "Trash",
+          color: "#EF4444",
+          isDefault: false,
+        },
         { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
       stage: "trash",

@@ -54,11 +54,7 @@ describe("game-agent", () => {
       const engine = new DominionEngine();
       engine.startGame(["player1", "player2"]);
 
-      engine.state.players["player1"]!.hand = [
-        "Village",
-        "Smithy",
-        "Copper",
-      ];
+      engine.state.players["player1"]!.hand = ["Village", "Smithy", "Copper"];
       engine.state.activePlayerId = "player1";
       engine.state.phase = "action";
       engine.state.actions = 1;
@@ -360,7 +356,9 @@ describe("game-agent", () => {
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({ action: { type: "play_action", card: "Village" } }),
+            Promise.resolve({
+              action: { type: "play_action", card: "Village" },
+            }),
         });
       }) as unknown as typeof fetch;
 

@@ -162,8 +162,7 @@ describe("GameServer", () => {
       const botPlayers = new Set<string>();
 
       const isFullMode =
-        players.length > 0 &&
-        players.every(p => botPlayers.has(p.clientId));
+        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
 
       expect(isFullMode).toBe(false);
     });
@@ -622,10 +621,7 @@ describe("GameServer", () => {
 
   describe("undo handling", () => {
     it("should send full_state when undo executed", () => {
-      const events = [
-        { type: "UNDO_REQUESTED" },
-        { type: "UNDO_EXECUTED" },
-      ];
+      const events = [{ type: "UNDO_REQUESTED" }, { type: "UNDO_EXECUTED" }];
 
       const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
 

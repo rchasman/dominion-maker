@@ -180,7 +180,10 @@ describe("storage-utils", () => {
         consensusCount: 3,
         customStrategy: "test-strategy",
       };
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, JSON.stringify(testSettings));
+      localStorage.setItem(
+        STORAGE_KEYS.MODEL_SETTINGS,
+        JSON.stringify(testSettings),
+      );
       const settings = loadModelSettings();
       expect(settings).not.toBeNull();
       if (settings) {
@@ -199,7 +202,10 @@ describe("storage-utils", () => {
         enabledModels: ["openai"],
         consensusCount: 2,
       };
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, JSON.stringify(testSettings));
+      localStorage.setItem(
+        STORAGE_KEYS.MODEL_SETTINGS,
+        JSON.stringify(testSettings),
+      );
       const settings = loadModelSettings();
       expect(settings).not.toBeNull();
       if (settings) {
@@ -212,7 +218,10 @@ describe("storage-utils", () => {
         enabledModels: [],
         consensusCount: 1,
       };
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, JSON.stringify(testSettings));
+      localStorage.setItem(
+        STORAGE_KEYS.MODEL_SETTINGS,
+        JSON.stringify(testSettings),
+      );
       const settings = loadModelSettings();
       expect(settings).not.toBeNull();
       if (settings) {
@@ -249,7 +258,10 @@ describe("storage-utils", () => {
           recommendation: "Keep smithies",
         },
       };
-      localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify(testStrategies));
+      localStorage.setItem(
+        STORAGE_KEYS.STRATEGIES,
+        JSON.stringify(testStrategies),
+      );
       const strategies = loadPlayerStrategies();
       expect(strategies).toEqual(testStrategies);
     });
@@ -317,8 +329,12 @@ describe("storage-utils", () => {
       expect(localStorage.getItem(STORAGE_KEYS.LLM_LOGS)).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.STRATEGIES)).toBeNull();
       // Mode and settings should still be there
-      expect(localStorage.getItem(STORAGE_KEYS.MODE)).toBe(JSON.stringify("hybrid"));
-      expect(localStorage.getItem(STORAGE_KEYS.MODEL_SETTINGS)).toBe(JSON.stringify({}));
+      expect(localStorage.getItem(STORAGE_KEYS.MODE)).toBe(
+        JSON.stringify("hybrid"),
+      );
+      expect(localStorage.getItem(STORAGE_KEYS.MODEL_SETTINGS)).toBe(
+        JSON.stringify({}),
+      );
     });
 
     it("should be safe to call when storage is empty", () => {

@@ -33,10 +33,7 @@ describe("usePartyGame", () => {
 
       for (let i = events.length - 1; i >= 0; i--) {
         const event = events[i]!;
-        if (
-          event.type === "UNDO_EXECUTED" ||
-          event.type === "UNDO_DENIED"
-        ) {
+        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
           pendingRequest = null;
           break;
         }
@@ -76,10 +73,7 @@ describe("usePartyGame", () => {
 
       for (let i = events.length - 1; i >= 0; i--) {
         const event = events[i]!;
-        if (
-          event.type === "UNDO_EXECUTED" ||
-          event.type === "UNDO_DENIED"
-        ) {
+        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
           pendingRequest = null;
           break;
         }
@@ -109,10 +103,7 @@ describe("usePartyGame", () => {
 
       for (let i = events.length - 1; i >= 0; i--) {
         const event = events[i]!;
-        if (
-          event.type === "UNDO_EXECUTED" ||
-          event.type === "UNDO_DENIED"
-        ) {
+        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
           pendingRequest = null;
           break;
         }

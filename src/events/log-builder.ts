@@ -62,11 +62,7 @@ function reorderBuyCardChildren(logs: LogEntry[]): LogEntry[] {
 
       return {
         ...log,
-        children: [
-          ...spending,
-          ...others,
-          ...(gainCard ? [gainCard] : []),
-        ],
+        children: [...spending, ...others, ...(gainCard ? [gainCard] : [])],
       };
     }
     if (log.children) {

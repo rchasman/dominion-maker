@@ -391,10 +391,16 @@ function renderText(entry: Extract<LogEntryType, { type: "text" }>) {
 }
 
 function renderRevealCard(
-  entry: LogEntryType & { type: "reveal-card"; playerId: string; card: CardName | string; from: string },
+  entry: LogEntryType & {
+    type: "reveal-card";
+    playerId: string;
+    card: CardName | string;
+    from: string;
+  },
 ) {
   // Handle both single card and batched cards (comma-separated string)
-  const cards = typeof entry.card === "string" ? entry.card.split(", ") : [entry.card];
+  const cards =
+    typeof entry.card === "string" ? entry.card.split(", ") : [entry.card];
   const validCards = cards.filter(c => c && c.trim());
 
   // Count duplicates for "x2" notation
@@ -540,7 +546,14 @@ const ENTRY_RENDERERS = {
   text: (entry: LogEntryType) =>
     renderText(entry as Extract<LogEntryType, { type: "text" }>),
   "reveal-card": (entry: LogEntryType) =>
-    renderRevealCard(entry as LogEntryType & { type: "reveal-card"; playerId: string; card: CardName | string; from: string }),
+    renderRevealCard(
+      entry as LogEntryType & {
+        type: "reveal-card";
+        playerId: string;
+        card: CardName | string;
+        from: string;
+      },
+    ),
   "get-actions": (entry: LogEntryType) =>
     renderGetActions(entry as Extract<LogEntryType, { type: "get-actions" }>),
   "get-buys": (entry: LogEntryType) =>
@@ -700,7 +713,8 @@ export function LogEntry({
 
   // Set rootPlayerId at depth 0 from entry's playerId (if available)
   const effectiveRootPlayerId =
-    rootPlayerId || (depth === 0 && "playerId" in entry ? entry.playerId : undefined);
+    rootPlayerId ||
+    (depth === 0 && "playerId" in entry ? entry.playerId : undefined);
 
   const ctx: RenderContext = {
     depth,

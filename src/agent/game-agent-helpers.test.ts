@@ -606,7 +606,10 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "play_action", card: "Village" });
       expect(actions).toContainEqual({ type: "play_action", card: "Smithy" });
       expect(actions).toContainEqual({ type: "end_phase" });
-      expect(actions).not.toContainEqual({ type: "play_action", card: "Copper" });
+      expect(actions).not.toContainEqual({
+        type: "play_action",
+        card: "Copper",
+      });
     });
 
     it("should only return end_phase when no actions available", () => {

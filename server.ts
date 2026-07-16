@@ -38,7 +38,6 @@ declare const Bun: {
   serve(options: BunServeOptions): BunServer;
 };
 
-
 const server = Bun.serve({
   port: SERVER_PORT,
   async fetch(req: BunRequest) {

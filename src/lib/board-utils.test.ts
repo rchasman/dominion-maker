@@ -227,9 +227,7 @@ describe("aggregateLogEntries", () => {
           card: "Estate",
           vp: 1,
           eventId: "evt-1",
-          children: [
-            { type: "gain-card", playerId: "human", card: "Estate" },
-          ],
+          children: [{ type: "gain-card", playerId: "human", card: "Estate" }],
         },
         {
           type: "buy-card",
@@ -237,9 +235,7 @@ describe("aggregateLogEntries", () => {
           card: "Estate",
           vp: 1,
           eventId: "evt-2",
-          children: [
-            { type: "gain-card", playerId: "human", card: "Estate" },
-          ],
+          children: [{ type: "gain-card", playerId: "human", card: "Estate" }],
         },
       ];
       const result = aggregateLogEntries(log);
@@ -1228,9 +1224,7 @@ describe("aggregateLogEntries", () => {
     describe("countVP", () => {
       it("handles Gardens (variable VP) correctly", () => {
         const { countVP } = require("./board-utils");
-        const cards = Array(20)
-          .fill("Copper")
-          .concat(["Gardens"]) as any[];
+        const cards = Array(20).fill("Copper").concat(["Gardens"]) as any[];
         const result = countVP(cards);
         expect(result).toBe(2);
       });

@@ -139,7 +139,10 @@ describe("Library", () => {
         CARD_ACTIONS.discard_card,
       ],
       cardBeingPlayed: "Library",
-      metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy", "Market"] },
+      metadata: {
+        cardsNeeded: 6,
+        peekedCards: ["Village", "Smithy", "Market"],
+      },
     };
 
     const result = library({
@@ -158,7 +161,9 @@ describe("Library", () => {
     });
 
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
 
     expect(drawEvents.length).toBe(2);
     expect(drawEvents.some(e => e.card === "Village")).toBe(true);
@@ -199,7 +204,9 @@ describe("Library", () => {
       stage: "decision" as any, // Any non-undefined stage to process decision
     });
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(2);
     expect(discardEvents.every(e => e.from === "deck")).toBe(true);
   });

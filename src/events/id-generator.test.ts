@@ -141,7 +141,11 @@ describe("id-generator", () => {
     });
 
     it("syncs to large event numbers", () => {
-      const events = [{ id: "evt-1000" }, { id: "evt-500" }, { id: "evt-2000" }];
+      const events = [
+        { id: "evt-1000" },
+        { id: "evt-500" },
+        { id: "evt-2000" },
+      ];
 
       syncEventCounter(events);
 

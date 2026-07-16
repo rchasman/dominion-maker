@@ -1,8 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import {
-  hasPlayableActions,
-  hasTreasuresInHand,
-} from "./derived-state";
+import { hasPlayableActions, hasTreasuresInHand } from "./derived-state";
 import type { CardName, GameState, PlayerState } from "../types/game-state";
 
 describe("derived-state utilities", () => {
@@ -17,7 +14,7 @@ describe("derived-state utilities", () => {
   const emptySupply: Record<string, number> = {};
 
   const createMockGameState = (
-    overrides: Partial<GameState> = {}
+    overrides: Partial<GameState> = {},
   ): GameState => ({
     gameOver: false,
     turn: 1,

@@ -10,7 +10,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -23,7 +23,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 1,
         max: 2,
       };
@@ -36,7 +36,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         max: 2,
       };
       expect(canSkipDecision(decision)).toBe(false);
@@ -71,7 +71,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 2,
         max: 2,
       };
@@ -86,7 +86,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -101,7 +101,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 0,
         max: 2,
       };
@@ -116,7 +116,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver", "Gold"],
+        cardOptions: ["Copper", "Silver", "Gold"],
         min: 0,
         max: 2,
       };
@@ -131,7 +131,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper", "Silver"],
+        cardOptions: ["Copper", "Silver"],
         min: 0,
       };
       const result = shouldSelectCard(1, [], pendingChoice);
@@ -169,7 +169,7 @@ describe("decision-utils", () => {
         playerId: "human",
         prompt: "Choose cards",
         cardBeingPlayed: "Cellar",
-        cardOptions:["Copper"],
+        cardOptions: ["Copper"],
         min: 0,
         max: 1,
       };

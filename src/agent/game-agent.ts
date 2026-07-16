@@ -579,7 +579,11 @@ export async function advanceGameStateWithConsensus(
   // Complex treasures (future sets with choices/effects) still go through consensus.
   if (currentState.phase === "buy" && !currentState.pendingChoice) {
     const simpleTreasureActions = legalActions.filter(
-      a => a.type === "play_treasure" && "card" in a && a.card && isSimpleTreasure(a.card),
+      a =>
+        a.type === "play_treasure" &&
+        "card" in a &&
+        a.card &&
+        isSimpleTreasure(a.card),
     );
     if (simpleTreasureActions.length > 0) {
       const cardNames = simpleTreasureActions
@@ -595,7 +599,9 @@ export async function advanceGameStateWithConsensus(
         data: { cards: cardNames, turn: currentState.turn },
       });
 
-      simpleTreasureActions.map(action => executeActionWithEngine(engine, action, playerId));
+      simpleTreasureActions.map(action =>
+        executeActionWithEngine(engine, action, playerId),
+      );
       return;
     }
   }

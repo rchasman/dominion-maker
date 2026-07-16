@@ -179,7 +179,9 @@ describe("game-actions", () => {
         const eventIdToUndoTo = engine.eventLog[initialEventCount]!.id;
         if (!eventIdToUndoTo) throw new Error("expected event to have an id");
         executeUndo(engine, eventIdToUndoTo);
-        expect(engine.eventLog.length).toBeLessThanOrEqual(engine.eventLog.length);
+        expect(engine.eventLog.length).toBeLessThanOrEqual(
+          engine.eventLog.length,
+        );
       }
     });
 

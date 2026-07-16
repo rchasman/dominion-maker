@@ -179,7 +179,9 @@ describe("EventDevtools/utils", () => {
           max: 1,
         },
       };
-      expect(formatEvent(event)).toBe("Decision: This is a very long prompt tha...");
+      expect(formatEvent(event)).toBe(
+        "Decision: This is a very long prompt tha...",
+      );
     });
 
     it("should format DECISION_RESOLVED event with selected cards", () => {

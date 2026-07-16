@@ -1106,7 +1106,10 @@ describe("Command System - Cellar Causality", () => {
     expect(decision1Result.ok).toBe(true);
 
     // Cellar now processes batch and auto-draws in one decision
-    const discardEvents = filterEvents(decision1Result.events, "CARD_DISCARDED");
+    const discardEvents = filterEvents(
+      decision1Result.events,
+      "CARD_DISCARDED",
+    );
     const drawEvents = filterEvents(decision1Result.events, "CARD_DRAWN");
 
     expect(discardEvents.length).toBe(1); // Discarded 1

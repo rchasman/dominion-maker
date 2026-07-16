@@ -157,7 +157,6 @@ describe("CARDS - specific cards", () => {
     expect(CARDS.Merchant.triggers?.length).toBe(1);
     expect(CARDS.Merchant.triggers?.[0]?.on).toBe("treasure_played");
   });
-
 });
 
 describe("KINGDOM_CARDS", () => {
@@ -417,9 +416,9 @@ describe("Card triggers", () => {
     expect(trigger?.condition?.({ card: "Silver", isFirstOfType: true })).toBe(
       true,
     );
-    expect(
-      trigger?.condition?.({ card: "Silver", isFirstOfType: false }),
-    ).toBe(false);
+    expect(trigger?.condition?.({ card: "Silver", isFirstOfType: false })).toBe(
+      false,
+    );
     expect(trigger?.condition?.({ card: "Gold", isFirstOfType: true })).toBe(
       false,
     );

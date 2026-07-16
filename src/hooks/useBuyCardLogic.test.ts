@@ -57,16 +57,17 @@ describe("useBuyCardLogic hook", () => {
         return { ok: true, events: [] };
       };
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        playerId: "human",
-        choiceType: "decision",
-        prompt: "Gain a card costing up to $4",
-        cardOptions: [],
-        cardBeingPlayed: "Workshop",
-        from: "supply",
-        min: 1,
-        max: 1,
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> =
+        {
+          playerId: "human",
+          choiceType: "decision",
+          prompt: "Gain a card costing up to $4",
+          cardOptions: [],
+          cardBeingPlayed: "Workshop",
+          from: "supply",
+          min: 1,
+          max: 1,
+        };
 
       // Simulate the hook's logic
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -96,16 +97,17 @@ describe("useBuyCardLogic hook", () => {
         return { ok: true, events: [] };
       };
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        playerId: "human",
-        choiceType: "decision",
-        prompt: "Trash a card from your hand",
-        cardOptions: [],
-        cardBeingPlayed: "Remodel",
-        from: "hand",
-        min: 1,
-        max: 1,
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> =
+        {
+          playerId: "human",
+          choiceType: "decision",
+          prompt: "Trash a card from your hand",
+          cardOptions: [],
+          cardBeingPlayed: "Remodel",
+          from: "hand",
+          min: 1,
+          max: 1,
+        };
 
       // Simulate the hook's logic
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -135,20 +137,21 @@ describe("useBuyCardLogic hook", () => {
         return { ok: true, events: [] };
       };
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> = {
-        playerId: "human",
-        choiceType: "reaction",
-        triggeringPlayerId: "ai",
-        triggeringCard: "Militia",
-        triggerType: "on_attack",
-        availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "event-1",
-        },
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> =
+        {
+          playerId: "human",
+          choiceType: "reaction",
+          triggeringPlayerId: "ai",
+          triggeringCard: "Militia",
+          triggerType: "on_attack",
+          availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["human"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "event-1",
+          },
+        };
 
       // Simulate the hook's logic
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -179,16 +182,17 @@ describe("useBuyCardLogic hook", () => {
         return { ok: false, error: "Invalid choice" };
       };
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        playerId: "human",
-        choiceType: "decision",
-        prompt: "Gain a Treasure costing up to $3 more",
-        cardOptions: [],
-        cardBeingPlayed: "Mine",
-        from: "supply",
-        min: 1,
-        max: 1,
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> =
+        {
+          playerId: "human",
+          choiceType: "decision",
+          prompt: "Gain a Treasure costing up to $3 more",
+          cardOptions: [],
+          cardBeingPlayed: "Mine",
+          from: "supply",
+          min: 1,
+          max: 1,
+        };
 
       // Simulate the hook's logic with error handling
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -252,16 +256,17 @@ describe("useBuyCardLogic hook", () => {
         return { ok: true, events: [] };
       };
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> = {
-        playerId: "human",
-        choiceType: "decision",
-        prompt: "Gain a card to your hand costing up to $5",
-        cardOptions: [],
-        cardBeingPlayed: "Artisan",
-        from: "supply",
-        min: 1,
-        max: 2,
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "decision" }> =
+        {
+          playerId: "human",
+          choiceType: "decision",
+          prompt: "Gain a card to your hand costing up to $5",
+          cardOptions: [],
+          cardBeingPlayed: "Artisan",
+          from: "supply",
+          min: 1,
+          max: 2,
+        };
 
       // Simulate the hook's logic
       const handleBuyCard = (card: CardName): CommandResult => {
@@ -292,20 +297,21 @@ describe("useBuyCardLogic hook", () => {
         events: [],
       });
 
-      const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> = {
-        playerId: "human",
-        choiceType: "reaction",
-        triggeringPlayerId: "ai",
-        triggeringCard: "Militia",
-        triggerType: "on_attack",
-        availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "event-1",
-        },
-      };
+      const pendingChoice: Extract<PendingChoice, { choiceType: "reaction" }> =
+        {
+          playerId: "human",
+          choiceType: "reaction",
+          triggeringPlayerId: "ai",
+          triggeringCard: "Militia",
+          triggerType: "on_attack",
+          availableReactions: ["Moat"],
+          metadata: {
+            allTargets: ["human"],
+            currentTargetIndex: 0,
+            blockedTargets: [],
+            originalCause: "event-1",
+          },
+        };
 
       const handleBuyCard = (card: CardName): CommandResult => {
         if (

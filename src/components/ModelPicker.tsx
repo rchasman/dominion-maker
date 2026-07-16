@@ -207,13 +207,9 @@ const ModelCheckbox = ({
               alignItems: "center",
             }}
           >
-            <span style={{ color: "#86efac" }}>
-              ${modelConfig.inputPrice}
-            </span>
+            <span style={{ color: "#86efac" }}>${modelConfig.inputPrice}</span>
             <span style={{ color: "var(--color-text-tertiary)" }}>/</span>
-            <span style={{ color: "#fb923c" }}>
-              ${modelConfig.outputPrice}
-            </span>
+            <span style={{ color: "#fb923c" }}>${modelConfig.outputPrice}</span>
             {modelConfig.speed && (
               <>
                 <span style={{ color: "var(--color-text-tertiary)" }}>•</span>

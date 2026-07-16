@@ -62,7 +62,10 @@ describe("Poacher", () => {
       card: "Poacher",
     });
 
-    expect(result.events).toContainEqual({ type: "ACTIONS_MODIFIED", delta: 1 });
+    expect(result.events).toContainEqual({
+      type: "ACTIONS_MODIFIED",
+      delta: 1,
+    });
     expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 1 });
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
     expect(drawEvents.length).toBe(1);
@@ -118,7 +121,9 @@ describe("Poacher", () => {
       stage: "discard",
     });
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(1);
     expect(discardEvents[0]?.card).toBe("Estate");
     expect(discardEvents[0]?.from).toBe("hand");
@@ -152,7 +157,9 @@ describe("Poacher", () => {
       stage: "discard",
     });
 
-    const discardEvents = result.events.filter(e => e.type === "CARD_DISCARDED");
+    const discardEvents = result.events.filter(
+      e => e.type === "CARD_DISCARDED",
+    );
     expect(discardEvents.length).toBe(3);
   });
 
@@ -195,7 +202,10 @@ describe("Poacher", () => {
     });
 
     expect(result.pendingChoice).toBeUndefined();
-    expect(result.events).toContainEqual({ type: "ACTIONS_MODIFIED", delta: 1 });
+    expect(result.events).toContainEqual({
+      type: "ACTIONS_MODIFIED",
+      delta: 1,
+    });
     expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 1 });
   });
 

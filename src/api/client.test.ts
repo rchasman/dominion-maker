@@ -29,11 +29,12 @@ describe("api.api.analyze-strategy", () => {
         },
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify(mockResponse), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify(mockResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
       );
 
       const result = await api.api["analyze-strategy"].post({
@@ -65,10 +66,11 @@ describe("api.api.analyze-strategy", () => {
         },
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       await api.api["analyze-strategy"].post(requestBody);
@@ -83,17 +85,18 @@ describe("api.api.analyze-strategy", () => {
 
     it("handles error response with error message", async () => {
       const errorMessage = "Analysis failed";
-      global.fetch = mockFetch(async () =>
-        new Response(
-          JSON.stringify({
-            error: 500,
-            message: errorMessage,
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 500,
+              message: errorMessage,
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
       );
 
       const result = await api.api["analyze-strategy"].post({
@@ -105,16 +108,17 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("handles error response without message", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(
-          JSON.stringify({
-            error: 400,
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 400,
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
       );
 
       const result = await api.api["analyze-strategy"].post({
@@ -153,10 +157,11 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("merges custom fetch options", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       const customHeaders = { Authorization: "Bearer token" };
@@ -172,16 +177,17 @@ describe("api.api.analyze-strategy", () => {
     });
 
     it("returns data as null on non-ok response with JSON parse error", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(
-          JSON.stringify({
-            error: 502,
-            message: "Bad Gateway",
-          }),
-          {
-            status: 502,
-          },
-        ),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 502,
+              message: "Bad Gateway",
+            }),
+            {
+              status: 502,
+            },
+          ),
       );
 
       const result = await api.api["analyze-strategy"].post({
@@ -213,10 +219,11 @@ describe("api.api.analyze-strategy", () => {
         },
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({ strategySummary: {} }), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({ strategySummary: {} }), {
+            status: 200,
+          }),
       );
 
       const result = await api.api["analyze-strategy"].post({
@@ -249,10 +256,11 @@ describe("api.api.analyze-strategy", () => {
         },
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       await api.api["analyze-strategy"].post(requestBody);
@@ -289,11 +297,12 @@ describe("api.api.generate-action", () => {
         action: mockAction,
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify(mockResponse), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify(mockResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
       );
 
       const result = await api.api["generate-action"].post({
@@ -324,10 +333,11 @@ describe("api.api.generate-action", () => {
         customStrategy: "Aggressive strategy",
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       await api.api["generate-action"].post(requestBody);
@@ -342,17 +352,18 @@ describe("api.api.generate-action", () => {
 
     it("handles error response with error message", async () => {
       const errorMessage = "Failed to generate action";
-      global.fetch = mockFetch(async () =>
-        new Response(
-          JSON.stringify({
-            error: 500,
-            message: errorMessage,
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 500,
+              message: errorMessage,
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
       );
 
       const result = await api.api["generate-action"].post({
@@ -365,16 +376,17 @@ describe("api.api.generate-action", () => {
     });
 
     it("handles error response without message", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(
-          JSON.stringify({
-            error: 400,
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          },
-        ),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              error: 400,
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
       );
 
       const result = await api.api["generate-action"].post({
@@ -416,10 +428,11 @@ describe("api.api.generate-action", () => {
     });
 
     it("merges custom fetch options", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       const customHeaders = { Authorization: "Bearer token123" };
@@ -441,10 +454,11 @@ describe("api.api.generate-action", () => {
         humanChoice: { selectedCards: ["gold", "silver", "copper", "estate"] },
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       await api.api["generate-action"].post(requestBody);
@@ -469,10 +483,11 @@ describe("api.api.generate-action", () => {
         ],
       };
 
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       await api.api["generate-action"].post(requestBody);
@@ -486,10 +501,11 @@ describe("api.api.generate-action", () => {
     });
 
     it("handles response without action field", async () => {
-      global.fetch = mockFetch(async () =>
-        new Response(JSON.stringify({}), {
-          status: 200,
-        }),
+      global.fetch = mockFetch(
+        async () =>
+          new Response(JSON.stringify({}), {
+            status: 200,
+          }),
       );
 
       const result = await api.api["generate-action"].post({
@@ -505,10 +521,11 @@ describe("api.api.generate-action", () => {
       const providers = ["openai", "anthropic", "custom"];
 
       for (const provider of providers) {
-        global.fetch = mockFetch(async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
+        global.fetch = mockFetch(
+          async () =>
+            new Response(JSON.stringify({}), {
+              status: 200,
+            }),
         );
 
         await api.api["generate-action"].post({

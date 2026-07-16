@@ -111,7 +111,7 @@ describe("game-utils", () => {
         discard: ["Silver", "Gold"],
       };
       const result = drawCards(player, 2);
-      const shuffleEvent = result.events.find((e) => e.type === "shuffle");
+      const shuffleEvent = result.events.find(e => e.type === "shuffle");
       expect(shuffleEvent).toBeDefined();
     });
 
@@ -122,7 +122,7 @@ describe("game-utils", () => {
         discard: ["Silver", "Gold"],
       };
       const result = drawCards(player, 2);
-      const drawEvents = result.events.filter((e) => e.type === "draw");
+      const drawEvents = result.events.filter(e => e.type === "draw");
       expect(drawEvents.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -173,10 +173,14 @@ describe("game-utils", () => {
       };
       const result = drawCards(player, 3);
       const drawEventsBefore = result.events.filter(
-        (e, i) => e.type === "draw" && i < result.events.findIndex((e) => e.type === "shuffle"),
+        (e, i) =>
+          e.type === "draw" &&
+          i < result.events.findIndex(e => e.type === "shuffle"),
       );
       const drawEventsAfter = result.events.filter(
-        (e, i) => e.type === "draw" && i > result.events.findIndex((e) => e.type === "shuffle"),
+        (e, i) =>
+          e.type === "draw" &&
+          i > result.events.findIndex(e => e.type === "shuffle"),
       );
       expect(drawEventsBefore.length).toBe(1);
       expect(drawEventsAfter.length).toBe(1);

@@ -296,7 +296,8 @@ export function aggregateLogEntries(
     if (isAggregatable(current)) {
       const { entries, count } = collectConsecutive(log, index);
       // Always aggregate (even single entries) to recursively process children
-      const aggregated = count > 1 ? aggregateGroup(entries) : aggregateGroup([current]);
+      const aggregated =
+        count > 1 ? aggregateGroup(entries) : aggregateGroup([current]);
       return processEntries(index + count, [...acc, aggregated]);
     }
 

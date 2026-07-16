@@ -35,7 +35,6 @@ describe("EngineStrategy - Full Coverage", () => {
       expect(engine.state).toBeDefined();
     });
 
-
     it("should prioritize Village over Smithy", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.phase = "action";

@@ -52,7 +52,6 @@ const FONT_WEIGHT_OTHER = 400;
 
 type RequestState = "none" | "sent" | "received";
 
-
 interface PlayerGridProps {
   players: LobbyPlayer[];
   activeGames: ActiveGame[];

@@ -954,9 +954,9 @@ describe("buildLogFromEvents", () => {
       const log = buildLogFromEvents(events);
       expect(log.length).toBe(1);
       expect(log[0]?.children?.length).toBe(4);
-      expect(log[0]?.children?.filter(c => c.type === "reveal-card").length).toBe(
-        4,
-      );
+      expect(
+        log[0]?.children?.filter(c => c.type === "reveal-card").length,
+      ).toBe(4);
     });
 
     it("CARD_REVEALED preserves eventId", () => {

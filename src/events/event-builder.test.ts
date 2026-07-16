@@ -167,7 +167,12 @@ describe("EventBuilder", () => {
     it("respects causedBy override for all events", () => {
       const builder = new EventBuilder();
 
-      builder.add({ type: "CARD_PLAYED", playerId: "human", card: "Village", sourceIndex: 0 });
+      builder.add({
+        type: "CARD_PLAYED",
+        playerId: "human",
+        card: "Village",
+        sourceIndex: 0,
+      });
       const lastId = builder.getLastId();
 
       builder.addAll(
@@ -421,7 +426,10 @@ describe("EventBuilder", () => {
 
       const action = builder.add({ type: "ACTIONS_MODIFIED", delta: 2 });
 
-      builder.add({ type: "CARD_DRAWN", playerId: "human", card: "Copper" }, action.id);
+      builder.add(
+        { type: "CARD_DRAWN", playerId: "human", card: "Copper" },
+        action.id,
+      );
 
       const events = builder.build();
 

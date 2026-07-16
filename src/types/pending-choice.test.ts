@@ -155,7 +155,12 @@ describe("Type guards for PendingChoice", () => {
         actions: [
           { id: "trash_card", label: "Trash", color: "red" },
           { id: "discard_card", label: "Discard", color: "gray" },
-          { id: "topdeck_card", label: "Return", color: "blue", isDefault: true },
+          {
+            id: "topdeck_card",
+            label: "Return",
+            color: "blue",
+            isDefault: true,
+          },
         ],
       };
 

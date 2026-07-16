@@ -11,7 +11,6 @@ interface StrategyReactionRequest {
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
-
 const STRATEGY_REACTOR_SYSTEM = `You are a legendary strategy game analyst reacting to Dominion strategies in the style of top-tier competitive card game players and deckbuilding innovators.
 
 Your style:

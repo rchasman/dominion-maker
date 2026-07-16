@@ -13,9 +13,24 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver", "Gold"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
-          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
-          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
+          {
+            id: "topdeck_card",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: false,
+          },
+          {
+            id: "trash_card",
+            label: "Trash",
+            color: "#EF4444",
+            isDefault: false,
+          },
+          {
+            id: "discard_card",
+            label: "Discard",
+            color: "#9CA3AF",
+            isDefault: true,
+          },
         ],
         stage: "topdeck",
         cardBeingPlayed: "Sentry",
@@ -40,9 +55,24 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver", "Gold"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
-          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
-          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
+          {
+            id: "topdeck_card",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: false,
+          },
+          {
+            id: "trash_card",
+            label: "Trash",
+            color: "#EF4444",
+            isDefault: false,
+          },
+          {
+            id: "discard_card",
+            label: "Discard",
+            color: "#9CA3AF",
+            isDefault: true,
+          },
         ],
         stage: "topdeck",
         cardBeingPlayed: "Sentry",
@@ -67,8 +97,18 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
-          { id: "trash_card", label: "Trash", color: "#EF4444", isDefault: false },
+          {
+            id: "topdeck_card",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: false,
+          },
+          {
+            id: "trash_card",
+            label: "Trash",
+            color: "#EF4444",
+            isDefault: false,
+          },
         ],
         stage: "topdeck",
         cardBeingPlayed: "Sentry",
@@ -89,8 +129,18 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: ["Copper", "Silver"],
         actions: [
-          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
-          { id: "discard_card", label: "Discard", color: "#9CA3AF", isDefault: true },
+          {
+            id: "topdeck_card",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: false,
+          },
+          {
+            id: "discard_card",
+            label: "Discard",
+            color: "#9CA3AF",
+            isDefault: true,
+          },
         ],
         stage: "topdeck",
         cardBeingPlayed: "Sentry",
@@ -114,7 +164,12 @@ describe("decomposeDecisionForAI", () => {
         max: 1,
         cardOptions: [], // Empty options
         actions: [
-          { id: "topdeck_card", label: "Topdeck", color: "#10B981", isDefault: false },
+          {
+            id: "topdeck_card",
+            label: "Topdeck",
+            color: "#10B981",
+            isDefault: false,
+          },
         ],
         stage: "topdeck",
         cardBeingPlayed: "Sentry",
