@@ -1,5 +1,6 @@
 import type { ModelSettings } from "../../../agent/types";
 import { ModelPicker } from "../../ModelPicker";
+import { run } from "../../../lib/run";
 import { useState, useEffect, useRef } from "preact/hooks";
 
 interface ModelSettingsPanelProps {
@@ -205,7 +206,7 @@ export function ModelSettingsPanel({
 
     // Set new timeout
     typingTimeoutRef.current = window.setTimeout(() => {
-      void (async () => {
+      void run(async () => {
         setIsReacting(true);
 
         try {
@@ -245,7 +246,7 @@ export function ModelSettingsPanel({
         } finally {
           setIsReacting(false);
         }
-      })();
+      });
     }, TYPING_DEBOUNCE_MS);
 
     return () => {

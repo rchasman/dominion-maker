@@ -12,6 +12,7 @@ import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { Zone } from "../animation/types";
 import { isAIControlled } from "../lib/game-mode-utils";
 import { uiLogger } from "../lib/logger";
+import { run } from "../lib/run";
 import { TIMING } from "./game-constants";
 import {
   syncEngineToSignals,
@@ -88,7 +89,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     if (!signal) return;
 
     const timer = setTimeout(() => {
-      void (async () => {
+      void run(async () => {
         // Check if aborted before starting
         if (signal.aborted) return;
 
@@ -205,7 +206,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
         } finally {
           isProcessing$.value = false;
         }
-      })();
+      });
     }, TIMING.AI_TURN_DELAY);
 
     return () => {
@@ -262,15 +263,16 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 
     // It IS an AI action - check if we need a new abort controller
     // Include event log length so undo triggers re-processing of the same decision
-    const currentAIDecisionId = isReactionChoice(gameState.pendingChoice)
-      ? `reaction-${gameState.pendingChoice.playerId}-${
-          gameState.turn
-        }-${gameMode}-${engine.eventLog.length}`
-      : isDecisionChoice(gameState.pendingChoice)
-        ? `decision-${gameState.pendingChoice.playerId}-${
-            gameState.pendingChoice.cardBeingPlayed
-          }-${gameState.turn}-${gameMode}-${engine.eventLog.length}`
-        : `unknown-${gameState.turn}-${engine.eventLog.length}`;
+    const currentAIDecisionId = run(() => {
+      const choice = gameState.pendingChoice;
+      if (isReactionChoice(choice)) {
+        return `reaction-${choice.playerId}-${gameState.turn}-${gameMode}-${engine.eventLog.length}`;
+      }
+      if (isDecisionChoice(choice)) {
+        return `decision-${choice.playerId}-${choice.cardBeingPlayed}-${gameState.turn}-${gameMode}-${engine.eventLog.length}`;
+      }
+      return `unknown-${gameState.turn}-${engine.eventLog.length}`;
+    });
 
     if (currentAIDecisionId !== lastAIDecisionRef.current) {
       // New AI decision, create new abort controller
@@ -283,7 +285,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     if (!signal) return;
 
     const timer = setTimeout(() => {
-      void (async () => {
+      void run(async () => {
         // Check if aborted before starting
         if (signal.aborted) return;
 
@@ -300,7 +302,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
         } finally {
           isProcessing$.value = false;
         }
-      })();
+      });
     }, TIMING.AI_DECISION_DELAY);
 
     return () => {
