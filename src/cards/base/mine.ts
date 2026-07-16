@@ -2,38 +2,33 @@
  * Mine - Trash a Treasure from hand, gain a Treasure costing up to $3 more to hand
  */
 
-import {
-  createMultiStageCard,
-  generateDecisionFromSpec,
-} from "../effect-types";
-import { CARDS } from "../../data/cards";
+import { createMultiStageCard, getGainableTreasures } from "../effect-types";
+import { CARDS, isTreasureCard } from "../../data/cards";
 import { STAGES } from "../stages";
+
+const COST_BONUS = 3;
 
 export const mine = createMultiStageCard({
   initial: ({ state, playerId }) => {
     const playerState = state.players[playerId];
     if (!playerState) return { events: [] };
 
-    const cardDef = CARDS.Mine;
-    const trashSpec = cardDef.decisions?.trash;
-
-    if (!trashSpec) return { events: [] };
-
-    // Check if player has treasures
-    const treasures = playerState.hand.filter(c =>
-      CARDS[c].types.includes("treasure"),
-    );
+    const treasures = playerState.hand.filter(isTreasureCard);
     if (treasures.length === 0) return { events: [] };
 
     return {
       events: [],
-      pendingChoice: generateDecisionFromSpec({
-        spec: trashSpec,
-        card: "Mine",
+      pendingChoice: {
+        choiceType: "decision",
         playerId,
-        state,
+        from: "hand",
+        prompt: "Mine: Trash a Treasure from your hand",
+        cardOptions: treasures,
+        min: 1,
+        max: 1,
+        cardBeingPlayed: "Mine",
         stage: STAGES.TRASH,
-      }),
+      },
     };
   },
 
@@ -41,6 +36,9 @@ export const mine = createMultiStageCard({
     if (!decision) return { events: [] };
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
+
+    const maxCost = CARDS[toTrash].cost + COST_BONUS;
+    const gainOptions = getGainableTreasures(state, maxCost);
 
     const events = [
       {
@@ -51,36 +49,21 @@ export const mine = createMultiStageCard({
       },
     ];
 
-    const cardDef = CARDS.Mine;
-    const gainSpec = cardDef.decisions?.gain;
-    if (!gainSpec) return { events };
-
-    // Store the trashed card in a temporary state for gain decision
-    if (!state.pendingChoice) return { events };
-    if (state.pendingChoice.choiceType !== "decision") return { events };
-
-    const stateWithMetadata = {
-      ...state,
-      pendingChoice: {
-        ...state.pendingChoice,
-        metadata: { ...state.pendingChoice.metadata, trashedCard: toTrash },
-      },
-    };
-
-    const gainDecision = generateDecisionFromSpec({
-      spec: gainSpec,
-      card: "Mine",
-      playerId,
-      state: stateWithMetadata,
-      stage: STAGES.GAIN,
-    });
-
-    // Check if there are any options
-    if (gainDecision.cardOptions.length === 0) return { events };
+    if (gainOptions.length === 0) return { events };
 
     return {
       events,
-      pendingChoice: gainDecision,
+      pendingChoice: {
+        choiceType: "decision",
+        playerId,
+        from: "supply",
+        prompt: `Mine: Gain a Treasure costing up to $${maxCost} to your hand`,
+        cardOptions: gainOptions,
+        min: 1,
+        max: 1,
+        cardBeingPlayed: "Mine",
+        stage: STAGES.GAIN,
+      },
     };
   },
 

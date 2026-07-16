@@ -324,53 +324,6 @@ export function createCardSelectionDecision(params: {
   };
 }
 
-/**
- * Generate a PendingChoice (decision) from a DecisionSpec (DSL).
- * Evaluates dynamic properties (functions) using the provided context.
- */
-export function generateDecisionFromSpec(params: {
-  spec: import("../data/cards").DecisionSpec;
-  card: CardName;
-  playerId: PlayerId;
-  state: GameState;
-  stage: string;
-}): Extract<PendingChoice, { choiceType: "decision" }> {
-  const { spec, card, playerId, state, stage } = params;
-  const ctx: import("../data/cards").DecisionContext = {
-    state,
-    playerId,
-    stage,
-  };
-
-  const prompt =
-    typeof spec.prompt === "function" ? spec.prompt(ctx) : spec.prompt;
-  const cardOptions =
-    typeof spec.cardOptions === "function"
-      ? spec.cardOptions(ctx)
-      : spec.cardOptions;
-  const min = typeof spec.min === "function" ? spec.min(ctx) : spec.min;
-  const max = typeof spec.max === "function" ? spec.max(ctx) : spec.max;
-  const metadata = run(() => {
-    if (!spec.metadata) return;
-    return typeof spec.metadata === "function"
-      ? spec.metadata(ctx)
-      : spec.metadata;
-  });
-
-  return {
-    choiceType: "decision",
-    playerId,
-    from: spec.from,
-    prompt,
-    cardOptions,
-    min,
-    max,
-    cardBeingPlayed: card,
-    stage,
-    ...(metadata !== undefined && { metadata }),
-  };
-}
-
 // ============================================
 // ATTACK AND REACTION HELPERS
 // ============================================
