@@ -249,30 +249,14 @@ export const handleModelResult = (
   onComplete();
 };
 
-// Validate if an action is legal
+// Validate if an action is legal — structural signature membership, so it
+// covers every Action variant (including reactions) without enumeration
 export const isActionValid = (
   action: Action,
   legalActions: Action[],
 ): boolean => {
-  return legalActions.some(legal => {
-    if (legal.type !== action.type) return false;
-
-    // All actions with card field (atomic)
-    if (
-      action.type === "play_action" ||
-      action.type === "play_treasure" ||
-      action.type === "buy_card" ||
-      action.type === "gain_card" ||
-      action.type === "discard_card" ||
-      action.type === "trash_card" ||
-      action.type === "topdeck_card"
-    ) {
-      return "card" in legal && legal.card === action.card;
-    }
-
-    // Actions without card field
-    return action.type === "end_phase" || action.type === "skip_decision";
-  });
+  const signature = createActionSignature(action);
+  return legalActions.some(legal => createActionSignature(legal) === signature);
 };
 
 // Select consensus winner from voting results
