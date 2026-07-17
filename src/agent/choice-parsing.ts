@@ -1,15 +1,15 @@
 import { z } from "zod";
-import type { RepairTextFunction } from "ai";
 import type { Action } from "../types/action";
 import { hasCardField } from "../lib/action-utils";
 import { encodeToon } from "../lib/toon";
-import { run } from "../lib/run";
 
 /**
  * The numbered-choice reply protocol for the AI turn agent, in one module:
  * formatting the numbered LEGAL ACTIONS list, the reply-format instruction,
- * the reply schema, the text-repair hook for generateObject, and the
- * mapping from a validated reply back to the chosen legal action.
+ * the reply schema for generateObject, and the mapping from a validated
+ * reply back to the chosen legal action. Malformed replies are not
+ * repaired — the endpoint's corrective retry handles them, which keeps
+ * every failure visible in the logs.
  */
 
 /** Number the legal actions so the model can answer with a single index */
@@ -50,85 +50,3 @@ export function choiceToAction(
   }
   return { ...legal, reasoning: reply.reasoning };
 }
-
-/** Extract JSON from model response that may contain prose and markdown code blocks */
-function extractJson(rawText: string): string | null {
-  // Try raw text as-is first
-  const trimmed = rawText.trim();
-  if (trimmed.startsWith("{")) return trimmed;
-
-  // Extract from ```json ... ``` or ``` ... ``` code blocks
-  const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-  if (codeBlockMatch?.[1]) return codeBlockMatch[1].trim();
-
-  // Last resort: find first { ... } in the text
-  const braceStart = trimmed.indexOf("{");
-  const braceEnd = trimmed.lastIndexOf("}");
-  if (braceStart !== -1 && braceEnd > braceStart) {
-    return trimmed.slice(braceStart, braceEnd + 1);
-  }
-
-  return null;
-}
-
-function coerceReasoning(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return "";
-  return JSON.stringify(value);
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-/**
- * Text-repair hook for generateObject. Repairs the quirks small models
- * produce: markdown fences, prose around the JSON, {"answer": "{...}"}-style
- * wrappers, choice as a numeric string, and missing or non-string reasoning.
- * Returns null when the reply is beyond repair so the SDK surfaces the
- * original error.
- */
-export async function repairModelReply(options: {
-  text: string;
-}): Promise<string | null> {
-  const jsonStr = extractJson(options.text);
-  if (!jsonStr) return null;
-
-  try {
-    const outer = asRecord(JSON.parse(jsonStr));
-    if (!outer) return null;
-
-    // Unwrap {"answer": "{...}"} and single-key wrappers holding stringified JSON
-    const record = run(() => {
-      if ("choice" in outer) return outer;
-      if (typeof outer.answer === "string") {
-        return asRecord(JSON.parse(outer.answer));
-      }
-      const values = Object.values(outer);
-      if (values.length === 1 && typeof values[0] === "string") {
-        return asRecord(JSON.parse(values[0]));
-      }
-      return outer;
-    });
-    if (!record) return null;
-
-    const coercedChoice =
-      typeof record.choice === "string" &&
-      Number.isFinite(Number(record.choice))
-        ? Number(record.choice)
-        : record.choice;
-
-    return JSON.stringify({
-      ...record,
-      reasoning: coerceReasoning(record.reasoning),
-      choice: coercedChoice,
-    });
-  } catch {
-    return null;
-  }
-}
-
-// Compile-time check that the signature stays assignable to the SDK's hook
-repairModelReply satisfies RepairTextFunction;

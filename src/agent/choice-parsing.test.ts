@@ -4,7 +4,6 @@ import {
   replyFormatInstruction,
   choiceSchema,
   choiceToAction,
-  repairModelReply,
 } from "./choice-parsing";
 import type { Action } from "../types/action";
 
@@ -52,7 +51,7 @@ describe("choiceSchema", () => {
     );
   });
 
-  it("rejects string choices and missing reasoning (repair handles those)", () => {
+  it("rejects string choices and missing reasoning (corrective retry handles those)", () => {
     expect(schema.safeParse({ reasoning: "x", choice: "2" }).success).toBe(
       false,
     );
@@ -73,89 +72,5 @@ describe("choiceToAction", () => {
     expect(() => choiceToAction({ reasoning: "x", choice: 7 }, LEGAL)).toThrow(
       "out of range",
     );
-  });
-});
-
-describe("repairModelReply", () => {
-  it("passes through an already-valid reply", async () => {
-    const repaired = await repairModelReply({
-      text: '{"reasoning": "why", "choice": 2}',
-    });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "why", choice: 2 });
-  });
-
-  it("extracts JSON from markdown code fences", async () => {
-    const repaired = await repairModelReply({
-      text: 'Here is my move:\n```json\n{"reasoning": "x", "choice": 2}\n```',
-    });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "x", choice: 2 });
-  });
-
-  it("extracts JSON embedded in prose", async () => {
-    const repaired = await repairModelReply({
-      text: 'I will buy Silver. {"reasoning": "x", "choice": 2} That is best.',
-    });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "x", choice: 2 });
-  });
-
-  it("unwraps the answer-wrapper pattern", async () => {
-    const repaired = await repairModelReply({
-      text: '{"answer": "{\\"reasoning\\": \\"x\\", \\"choice\\": 2}"}',
-    });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "x", choice: 2 });
-  });
-
-  it("unwraps a single-key wrapper holding stringified JSON", async () => {
-    const repaired = await repairModelReply({
-      text: '{"output": "{\\"reasoning\\": \\"x\\", \\"choice\\": 3}"}',
-    });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "x", choice: 3 });
-  });
-
-  it("coerces a numeric-string choice to a number", async () => {
-    const repaired = await repairModelReply({
-      text: '{"reasoning": "x", "choice": "2"}',
-    });
-
-    expect(JSON.parse(repaired!).choice).toBe(2);
-  });
-
-  it("fills missing reasoning with an empty string", async () => {
-    const repaired = await repairModelReply({ text: '{"choice": 1}' });
-
-    expect(JSON.parse(repaired!)).toEqual({ reasoning: "", choice: 1 });
-  });
-
-  it("stringifies object reasoning", async () => {
-    const repaired = await repairModelReply({
-      text: '{"reasoning": {"why": "economy"}, "choice": 2}',
-    });
-
-    expect(JSON.parse(repaired!).reasoning).toBe('{"why":"economy"}');
-  });
-
-  it("leaves a non-numeric choice for schema validation to reject", async () => {
-    const repaired = await repairModelReply({
-      text: '{"reasoning": "x", "choice": "abc"}',
-    });
-
-    expect(JSON.parse(repaired!).choice).toBe("abc");
-  });
-
-  it("returns null when there is no JSON at all", async () => {
-    expect(await repairModelReply({ text: "I would buy Silver." })).toBeNull();
-  });
-
-  it("returns null for malformed JSON", async () => {
-    expect(await repairModelReply({ text: '{"choice": 2' })).toBeNull();
-  });
-
-  it("returns null for non-object JSON", async () => {
-    expect(await repairModelReply({ text: '["choice", 2]' })).toBeNull();
   });
 });

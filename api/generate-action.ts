@@ -13,7 +13,6 @@ import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
   choiceSchema,
   choiceToAction,
-  repairModelReply,
   formatLegalActions,
   replyFormatInstruction,
 } from "../src/agent/choice-parsing";
@@ -341,10 +340,11 @@ async function processGenerationRequest(
 
   const systemPrompt = buildSystemPrompt(currentState.supply);
 
-  // generateObject + repairModelReply covers every roster model (verified
+  // generateObject covers every roster model with no text repair (verified
   // live across all 17, 2026-07 — gpt-oss-20b was removed for leaking
   // harmony markers under JSON response_format). On an invalid reply the
-  // model gets one corrective retry carrying the validation error.
+  // model gets one corrective retry carrying the validation error, so any
+  // model that habitually misformats shows up as retry warns in the logs.
   const schema = choiceSchema(legalActions.length);
   const attempt = async (messages: ModelMessage[]) => {
     const { object } = await generateObject({
@@ -352,7 +352,6 @@ async function processGenerationRequest(
       instructions: systemPrompt,
       messages,
       schema,
-      experimental_repairText: repairModelReply,
       maxRetries: 0,
     });
     return choiceToAction(object, legalActions);
