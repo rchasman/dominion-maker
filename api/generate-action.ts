@@ -352,7 +352,7 @@ async function processGenerationRequest(
     const attempt = async (messages: ModelMessage[]) => {
       const result = await generateText({
         model,
-        system: systemPrompt,
+        instructions: systemPrompt,
         messages,
         maxRetries: 0,
       });

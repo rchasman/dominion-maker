@@ -245,7 +245,7 @@ Provide strategic analysis for playerId: ${playerId}.`;
 
           const result = await generateObject({
             model,
-            system: buildStrategyAnalysisPrompt(
+            instructions: buildStrategyAnalysisPrompt(
               currentState.supply,
               !!previousPlayerAnalysis,
             ),
