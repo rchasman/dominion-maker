@@ -9,7 +9,6 @@ interface GenerateActionRequest {
   provider: string;
   currentState: unknown;
   humanChoice?: { selectedCards: string[] };
-  legalActions?: unknown[];
   strategySummary?: string;
   customStrategy?: string;
 }

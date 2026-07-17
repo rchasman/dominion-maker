@@ -175,8 +175,10 @@ describe("game-agent", () => {
           });
         }
 
-        // Second call: play treasure
-        if (body.legalActions.some((a: any) => a.type === "play_treasure")) {
+        // Second call: play treasure while any remain in hand
+        const hand: string[] =
+          body.currentState.players[body.currentState.activePlayerId].hand;
+        if (body.currentState.phase === "buy" && hand.includes("Copper")) {
           return Promise.resolve({
             ok: true,
             json: () =>

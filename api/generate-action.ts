@@ -1,15 +1,16 @@
-import {
-  generateText,
-  gateway,
-  wrapLanguageModel,
-  extractJsonMiddleware,
-} from "ai";
+import { generateText, gateway, wrapLanguageModel } from "ai";
+import type { ModelMessage } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState, CardName } from "../src/types/game-state";
 import type { Action } from "../src/types/action";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
-import { parseModelChoice } from "../src/agent/choice-parsing";
+import {
+  parseModelChoice,
+  formatLegalActions,
+  replyFormatInstruction,
+} from "../src/agent/choice-parsing";
+import { getLegalActions } from "../src/agent/legal-actions";
 import { projectPendingChoiceForAI } from "../src/agent/pending-choice-projection";
 import { MODEL_MAP } from "../src/config/models";
 import {
@@ -117,7 +118,6 @@ interface RequestBody {
   provider: string;
   currentState: GameState;
   humanChoice?: { selectedCards: string[] };
-  legalActions?: Action[];
   strategySummary?: string;
   customStrategy?: string;
   actionId?: string; // For grouping consensus votes in devtools
@@ -240,16 +240,6 @@ function optimizeStateForAI(state: GameState): unknown {
   };
 }
 
-// Number the legal actions so the model can answer with a single index
-function formatLegalActions(legalActions: Action[]): string {
-  const numbered = legalActions.map((action, index) => ({
-    choice: index + 1,
-    type: action.type,
-    card: "card" in action ? (action.card ?? "") : "",
-  }));
-  return encodeToon(numbered);
-}
-
 // Build user message with context
 function buildUserMessage(params: {
   strategicContext: string;
@@ -283,7 +273,7 @@ function buildUserMessage(params: {
 
   const legalActionsSection = [
     `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatLegalActions(legalActions)}`,
-    `Reply with ONLY: {"reasoning": "<1-2 sentences why>", "choice": <1-${legalActions.length}>}`,
+    replyFormatInstruction(legalActions.length),
   ];
 
   const sections = [
@@ -307,7 +297,6 @@ async function processGenerationRequest(
     provider: bodyProvider,
     currentState,
     humanChoice,
-    legalActions,
     strategySummary,
     customStrategy,
     actionId,
@@ -320,10 +309,13 @@ async function processGenerationRequest(
       .json({ error: "Missing required fields: provider, currentState" });
   }
 
-  if (!legalActions || legalActions.length === 0) {
+  // Derive legal actions server-side so the numbering the model sees and
+  // the index mapping below can never disagree with the game state
+  const legalActions = getLegalActions(currentState);
+  if (legalActions.length === 0) {
     return res
       .status(HTTP_BAD_REQUEST)
-      .json({ error: "legalActions must be a non-empty list" });
+      .json({ error: "No legal actions for the current state" });
   }
 
   const modelName = MODEL_MAP[provider];
@@ -332,11 +324,9 @@ async function processGenerationRequest(
   }
 
   const devTools = getDevToolsMiddleware(actionId);
-  // extractJsonMiddleware strips markdown code fences (```json...```) from model responses
-  const model = wrapLanguageModel({
-    model: gateway(modelName),
-    middleware: [extractJsonMiddleware(), ...(devTools ? [devTools] : [])],
-  });
+  const model = devTools
+    ? wrapLanguageModel({ model: gateway(modelName), middleware: [devTools] })
+    : gateway(modelName);
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
   const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
@@ -359,53 +349,52 @@ async function processGenerationRequest(
 
   // Universal path: generateText + JSON parse works with every model
   try {
-    const result = await generateText({
-      model,
-      system: systemPrompt,
-      prompt: userMessage,
-      maxRetries: 0,
-    });
+    const attempt = async (messages: ModelMessage[]) => {
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        messages,
+        maxRetries: 0,
+      });
+      return {
+        text: result.text,
+        parsed: parseModelChoice(result.text, legalActions),
+      };
+    };
 
-    const parsed = parseModelChoice(result.text, legalActions);
-    if (parsed.ok) {
+    const first = await attempt([{ role: "user", content: userMessage }]);
+    if (first.parsed.ok) {
       return res
         .status(HTTP_OK)
-        .json({ action: parsed.action, strategySummary });
+        .json({ action: first.parsed.action, strategySummary });
     }
 
     // Invalid reply — give the model one corrective retry with the error
     apiLogger.warn(
-      `${provider} invalid reply (${parsed.error}), retrying — raw: ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      `${provider} invalid reply (${first.parsed.error}), retrying — raw: ${first.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
     );
 
-    const retryResult = await generateText({
-      model,
-      system: systemPrompt,
-      messages: [
-        { role: "user", content: userMessage },
-        { role: "assistant", content: result.text },
-        {
-          role: "user",
-          content: `Your previous reply was invalid: ${parsed.error}. Reply with ONLY the JSON object {"reasoning": "<why>", "choice": <number>} where choice is a number from 1 to ${legalActions.length} selecting one LEGAL ACTION from the list above.`,
-        },
-      ],
-      maxRetries: 0,
-    });
-
-    const retryParsed = parseModelChoice(retryResult.text, legalActions);
-    if (retryParsed.ok) {
+    const retry = await attempt([
+      { role: "user", content: userMessage },
+      { role: "assistant", content: first.text },
+      {
+        role: "user",
+        content: `Your previous reply was invalid: ${first.parsed.error}. ${replyFormatInstruction(legalActions.length)}`,
+      },
+    ]);
+    if (retry.parsed.ok) {
       return res
         .status(HTTP_OK)
-        .json({ action: retryParsed.action, strategySummary });
+        .json({ action: retry.parsed.action, strategySummary });
     }
 
     apiLogger.error(
-      `${provider} invalid reply after retry (${retryParsed.error}) — raw: ${retryResult.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      `${provider} invalid reply after retry (${retry.parsed.error}) — raw: ${retry.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
     );
     return res.status(HTTP_INTERNAL_ERROR).json({
       error: "Model reply did not select a legal action",
       provider,
-      rawText: retryResult.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
+      rawText: retry.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
     });
   } catch (err) {
     const error = err as Error;

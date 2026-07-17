@@ -14,8 +14,8 @@ import {
   type ModelSettings,
 } from "./types";
 import { agentLogger } from "../lib/logger";
+import { getLegalActions } from "./legal-actions";
 import {
-  getLegalActions,
   generateActionViaBackend,
   executeActionWithEngine,
 } from "./game-agent-helpers";
