@@ -73,7 +73,7 @@ describe("buildStrategicContext", () => {
 
       // Default strategy is included
       expect(context).toContain("Build Economy");
-      expect(context).toContain("Silver > Copper");
+      expect(context).toContain("Gold > Silver, never Copper");
     });
 
     it("should be compact without game state duplication", () => {
@@ -221,7 +221,7 @@ describe("buildStrategicContext", () => {
       // Default strategy is always included
       expect(context).toContain("aiStrategyGameplan:");
       expect(context).toContain("Build Economy");
-      expect(context).toContain("Silver > Copper");
+      expect(context).toContain("Gold > Silver, never Copper");
 
       // No game state facts
       expect(context).not.toContain("yourVictoryPoints:");

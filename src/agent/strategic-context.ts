@@ -35,10 +35,11 @@ const SUMMARIES_PER_TURN = 2;
  * Provides reasoning primitives, not conclusions - let the AI derive good moves
  */
 export const DEFAULT_STRATEGY = {
-  gameplan: "Build Economy → Add Draw/Actions → Score VP",
-  read: "Early game: Silver/Gold improve average hand. Action cards that draw (+Cards) or give +Actions let you play more per turn. Weak cards (Copper, early Estates) dilute deck and reduce hand quality.",
+  gameplan:
+    "No analysis yet — default to Big Money+: Build Economy → Add Draw/Actions → Score VP",
+  read: "Early game: Silver/Gold improve average hand because every buy recurs when your discard reshuffles into your deck. Action cards that draw (+Cards) or give +Actions let you play more per turn; 1-2 terminal draw cards (like Smithy) beat treasure-only. Weak cards (Copper, early Estates) dilute deck and reduce hand quality.",
   recommendation:
-    "Each buy: ask 'does this make my average hand stronger?' Silver > Copper always. Province > Duchy > Estate. Skip VP until you can hit $8 consistently or game is ending.",
+    "Each buy: ask 'does this make my average hand stronger?' Buy the best treasure you can afford (Gold > Silver, never Copper), add 1-2 draw or trashing actions if the supply has them, and buy Province whenever you have $8. Skip other VP until the game is ending.",
 };
 
 function extractRecentTurns(
