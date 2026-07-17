@@ -1,5 +1,10 @@
 import { describe, it, expect } from "bun:test";
-import { parseModelChoice, extractJson } from "./choice-parsing";
+import {
+  parseModelChoice,
+  extractJson,
+  formatLegalActions,
+  replyFormatInstruction,
+} from "./choice-parsing";
 import type { Action } from "../types/action";
 
 const LEGAL: Action[] = [
@@ -100,44 +105,14 @@ describe("parseModelChoice", () => {
     if (result.ok) expect(result.action.type).toBe("end_phase");
   });
 
-  it("accepts a legacy {type, card} reply that matches a legal action", () => {
+  it("rejects an action-shaped reply with a corrective error", () => {
     const result = parseModelChoice(
       '{"type": "buy_card", "card": "Silver", "reasoning": "econ"}',
       LEGAL,
     );
 
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.action.type).toBe("buy_card");
-      expect(result.action.reasoning).toBe("econ");
-    }
-  });
-
-  it("matches legacy card names case-insensitively", () => {
-    const result = parseModelChoice(
-      '{"type": "buy_card", "card": "silver"}',
-      LEGAL,
-    );
-
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.action).toHaveProperty("card", "Silver");
-  });
-
-  it("accepts a legacy cardless action like end_phase", () => {
-    const result = parseModelChoice('{"type": "end_phase", "card": ""}', LEGAL);
-
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.action.type).toBe("end_phase");
-  });
-
-  it("rejects a legacy action that is not legal", () => {
-    const result = parseModelChoice(
-      '{"type": "buy_card", "card": "Gold"}',
-      LEGAL,
-    );
-
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain("LEGAL ACTION");
+    if (!result.ok) expect(result.error).toContain("select one by its number");
   });
 
   it("rejects replies with no JSON at all", () => {
@@ -161,5 +136,26 @@ describe("extractJson", () => {
 
   it("returns null when there is no JSON object", () => {
     expect(extractJson("no json here")).toBeNull();
+  });
+});
+
+describe("formatLegalActions", () => {
+  it("numbers actions 1-based with type and card columns", () => {
+    const table = formatLegalActions(LEGAL);
+
+    expect(table).toContain("choice\ttype\tcard");
+    expect(table).toContain("1\tplay_treasure\tCopper");
+    expect(table).toContain("2\tbuy_card\tSilver");
+    expect(table).toContain("3\tend_phase");
+  });
+});
+
+describe("replyFormatInstruction", () => {
+  it("states the reply shape and the valid choice range", () => {
+    const instruction = replyFormatInstruction(3);
+
+    expect(instruction).toContain('"reasoning"');
+    expect(instruction).toContain('"choice"');
+    expect(instruction).toContain("1-3");
   });
 });

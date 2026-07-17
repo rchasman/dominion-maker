@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { buildCardDefinitionsTable, buildSystemPrompt } from "./system-prompt";
 
+const MINIMAL_SUPPLY: Record<string, number> = { Copper: 46 };
+
 describe("buildCardDefinitionsTable", () => {
   it("should build table with cards in supply", () => {
     const supply: Record<string, number> = {
@@ -108,11 +110,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include turn phases", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("Action");
     expect(prompt).toContain("Buy");
@@ -120,11 +118,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include resource information", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("currentActions");
     expect(prompt).toContain("currentBuys");
@@ -160,11 +154,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include critical buy phase rule", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("CRITICAL BUY PHASE RULE");
     expect(prompt).toContain("currentTreasuresInHand");
@@ -172,22 +162,14 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should state the correct game-end conditions", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("Province pile is empty");
     expect(prompt).toContain("any 3 supply piles are empty");
   });
 
   it("should explain deck cycling via the discard reshuffle", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain(
       "discard pile is shuffled to become your new deck",
@@ -209,21 +191,13 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should announce the TOON data format", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("TOON-encoded");
   });
 
   it("should frame the task as picking a numbered legal action", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("LEGAL ACTIONS");
     expect(prompt).toContain("pick exactly one entry by its number");
@@ -231,11 +205,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should require reasoning-first JSON output", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain('{"reasoning"');
     expect(prompt).toContain('"choice"');
@@ -245,11 +215,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include a worked example with a correct reply", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("EXAMPLE");
     expect(prompt).toContain("Correct reply:");
@@ -257,11 +223,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should explain pendingChoice decisions and constraints", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("DECISIONS");
     expect(prompt).toContain("pendingChoice");
@@ -269,11 +231,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include strategy override rules", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("STRATEGY OVERRIDE RULES");
     expect(prompt).toContain("strategyOverride");
@@ -295,11 +253,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include copper trap warning", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("Copper trap");
     expect(prompt).toContain("You START with 7 Copper"); // Capitalized "You"
@@ -333,11 +287,7 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include dilution math explanation", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("Dilution math");
     expect(prompt).toContain("10-card deck");
@@ -359,22 +309,14 @@ describe("buildSystemPrompt", () => {
   });
 
   it("should include topdeck vs trash clarification", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toContain("topdeck = put on top of your deck");
     expect(prompt).toContain("trash = remove from the game forever");
   });
 
   it("should work with minimal supply", () => {
-    const supply: Record<string, number> = {
-      Copper: 46,
-    };
-
-    const prompt = buildSystemPrompt(supply);
+    const prompt = buildSystemPrompt(MINIMAL_SUPPLY);
 
     expect(prompt).toBeTruthy();
     expect(prompt.length).toBeGreaterThan(100);

@@ -1,16 +1,34 @@
 import type { Action } from "../types/action";
+import { hasCardField } from "../lib/action-utils";
+import { encodeToon } from "../lib/toon";
 
 /**
- * Parsing of AI turn-agent replies. The agent is asked to answer with
- * {"reasoning": "...", "choice": <n>} selecting one numbered LEGAL ACTION,
- * but small models are unreliable — this module also repairs common quirks:
- * markdown fences, {"answer": "..."} wrapping, and the legacy
- * {type, card} shape (accepted only when it matches a legal action).
+ * The numbered-choice reply protocol for the AI turn agent, in one module:
+ * formatting the numbered LEGAL ACTIONS list, the reply-format instruction,
+ * and parsing the model's {"reasoning": "...", "choice": <n>} reply back
+ * into the chosen legal action. Small models are unreliable, so parsing
+ * also repairs common quirks: markdown fences, prose around the JSON, and
+ * {"answer": "{...}"}-style wrappers.
  */
 
 export type ParsedChoice =
   | { ok: true; action: Action }
   | { ok: false; error: string };
+
+/** Number the legal actions so the model can answer with a single index */
+export function formatLegalActions(legalActions: Action[]): string {
+  const numbered = legalActions.map((action, index) => ({
+    choice: index + 1,
+    type: action.type,
+    card: hasCardField(action) ? action.card : "",
+  }));
+  return encodeToon(numbered);
+}
+
+/** The one sentence telling the model how to reply — kept next to the parser */
+export function replyFormatInstruction(choiceCount: number): string {
+  return `Reply with ONLY: {"reasoning": "<1-2 sentences why>", "choice": <1-${choiceCount}>}`;
+}
 
 /** Extract JSON from model response that may contain prose and markdown code blocks */
 export function extractJson(rawText: string): string | null {
@@ -38,15 +56,19 @@ function coerceReasoning(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function actionCard(action: Action): string {
-  return "card" in action ? (action.card ?? "") : "";
-}
-
 /** Resolve a 1-based choice number against the legal actions list */
-function resolveChoice(
+function resolveRecord(
   record: Record<string, unknown>,
   legalActions: Action[],
 ): ParsedChoice {
+  if (!("choice" in record)) {
+    return {
+      ok: false,
+      error:
+        'reply did not contain a "choice" number — do not describe an action, select one by its number',
+    };
+  }
+
   const rawChoice = record.choice;
   const choice =
     typeof rawChoice === "number" ? rawChoice : Number(String(rawChoice));
@@ -57,55 +79,18 @@ function resolveChoice(
       error: `"choice" must be an integer, got ${JSON.stringify(rawChoice)}`,
     };
   }
-  if (choice < 1 || choice > legalActions.length) {
+
+  const legal = legalActions[choice - 1];
+  if (!legal) {
     return {
       ok: false,
       error: `"choice" ${choice} is out of range — LEGAL ACTIONS are numbered 1 to ${legalActions.length}`,
     };
   }
 
-  const legal = legalActions[choice - 1];
-  if (!legal) {
-    return { ok: false, error: `no legal action at choice ${choice}` };
-  }
   return {
     ok: true,
     action: { ...legal, reasoning: coerceReasoning(record.reasoning) },
-  };
-}
-
-/** Legacy repair path: match a {type, card} reply against the legal actions */
-function resolveLegacyAction(
-  record: Record<string, unknown>,
-  legalActions: Action[],
-): ParsedChoice {
-  const type = record.type;
-  const card = typeof record.card === "string" ? record.card : "";
-
-  const match = legalActions.find(
-    a => a.type === type && actionCard(a).toLowerCase() === card.toLowerCase(),
-  );
-  if (!match) {
-    return {
-      ok: false,
-      error: `action {type: ${String(type)}, card: ${card || "none"}} does not match any LEGAL ACTION`,
-    };
-  }
-  return {
-    ok: true,
-    action: { ...match, reasoning: coerceReasoning(record.reasoning) },
-  };
-}
-
-function resolveRecord(
-  record: Record<string, unknown>,
-  legalActions: Action[],
-): ParsedChoice {
-  if ("choice" in record) return resolveChoice(record, legalActions);
-  if ("type" in record) return resolveLegacyAction(record, legalActions);
-  return {
-    ok: false,
-    error: 'reply had neither a "choice" number nor a recognizable action',
   };
 }
 
@@ -128,19 +113,17 @@ export function parseModelChoice(
     }
     const record = parsed as Record<string, unknown>;
 
-    if ("choice" in record || "type" in record) {
-      return resolveRecord(record, legalActions);
-    }
+    if (!("choice" in record)) {
+      // Unwrap {"answer": "..."} wrapping (GLM pattern)
+      if (typeof record.answer === "string") {
+        return resolveRecord(JSON.parse(record.answer), legalActions);
+      }
 
-    // Unwrap {"answer": "..."} wrapping (GLM pattern)
-    if (typeof record.answer === "string") {
-      return resolveRecord(JSON.parse(record.answer), legalActions);
-    }
-
-    // Unwrap any single-key wrapper with a stringified JSON value
-    const values = Object.values(record);
-    if (values.length === 1 && typeof values[0] === "string") {
-      return resolveRecord(JSON.parse(values[0]), legalActions);
+      // Unwrap any single-key wrapper with a stringified JSON value
+      const values = Object.values(record);
+      if (values.length === 1 && typeof values[0] === "string") {
+        return resolveRecord(JSON.parse(values[0]), legalActions);
+      }
     }
 
     return resolveRecord(record, legalActions);

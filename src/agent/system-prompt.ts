@@ -1,5 +1,6 @@
 import { CARDS } from "../data/cards";
 import { encodeToon } from "../lib/toon";
+import { formatLegalActions } from "./choice-parsing";
 import type { CardName } from "../types/game-state";
 
 export function buildCardDefinitionsTable(
@@ -24,22 +25,18 @@ export function buildCardDefinitionsTable(
   return encodeToon(cardData);
 }
 
-// Worked example built with the same encoder as the real LEGAL ACTIONS list,
+// Worked example built by the same formatter as the real LEGAL ACTIONS list,
 // so the format shown to the model never drifts from what it receives
-function buildExampleSection(): string {
-  const exampleActions = encodeToon([
-    { choice: 1, type: "buy_card", card: "Silver" },
-    { choice: 2, type: "buy_card", card: "Copper" },
-    { choice: 3, type: "buy_card", card: "Estate" },
-    { choice: 4, type: "end_phase", card: "" },
-  ]);
-
-  return `EXAMPLE (buy phase, $3 available, all treasures already played):
+const EXAMPLE_SECTION = `EXAMPLE (buy phase, $3 available, all treasures already played):
 LEGAL ACTIONS — you MUST choose exactly one by number:
-${exampleActions}
+${formatLegalActions([
+  { type: "buy_card", card: "Silver" },
+  { type: "buy_card", card: "Copper" },
+  { type: "buy_card", card: "Estate" },
+  { type: "end_phase" },
+])}
 Correct reply:
 {"reasoning": "With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.", "choice": 1}`;
-}
 
 export function buildSystemPrompt(supply: Record<CardName, number>): string {
   return `You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.
@@ -67,7 +64,7 @@ YOUR TASK: Given CURRENT STATE and strategic context, pick the single best actio
 OUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice:
 {"reasoning": "<1-2 sentences why>", "choice": <number from LEGAL ACTIONS>}
 
-${buildExampleSection()}
+${EXAMPLE_SECTION}
 
 CRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.
 
