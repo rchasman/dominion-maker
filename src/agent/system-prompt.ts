@@ -1,6 +1,6 @@
 import { CARDS } from "../data/cards";
 import { encodeToon } from "../lib/toon";
-import { formatLegalActions } from "./choice-parsing";
+import { formatLegalActions, replyShape } from "./choice-parsing";
 import type { CardName } from "../types/game-state";
 
 export function buildCardDefinitionsTable(
@@ -59,10 +59,10 @@ RULES:
 CARD DEFINITIONS (this game's supply — "strategy" is standard advice for that card):
 ${buildCardDefinitionsTable(supply)}
 
-YOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message ends with LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.
+YOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.
 
 OUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice:
-{"reasoning": "<1-2 sentences why>", "choice": <number from LEGAL ACTIONS>}
+${replyShape("<number from LEGAL ACTIONS>")}
 
 ${EXAMPLE_SECTION}
 

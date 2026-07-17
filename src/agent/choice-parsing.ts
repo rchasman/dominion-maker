@@ -22,9 +22,14 @@ export function formatLegalActions(legalActions: Action[]): string {
   return encodeToon(numbered);
 }
 
+/** The reply shape template — every prompt layer that teaches it builds from this */
+export function replyShape(choicePlaceholder: string): string {
+  return `{"reasoning": "<1-2 sentences why>", "choice": ${choicePlaceholder}}`;
+}
+
 /** The one sentence telling the model how to reply — kept next to the schema */
 export function replyFormatInstruction(choiceCount: number): string {
-  return `Reply with ONLY: {"reasoning": "<1-2 sentences why>", "choice": <1-${choiceCount}>}`;
+  return `Reply with ONLY: ${replyShape(`<1-${choiceCount}>`)}`;
 }
 
 /** Reply schema for generateObject — reasoning FIRST so models think before deciding */
@@ -35,7 +40,7 @@ export function choiceSchema(choiceCount: number) {
   });
 }
 
-export type ChoiceReply = z.infer<ReturnType<typeof choiceSchema>>;
+type ChoiceReply = z.infer<ReturnType<typeof choiceSchema>>;
 
 /** Map a schema-validated reply back to the chosen legal action */
 export function choiceToAction(
