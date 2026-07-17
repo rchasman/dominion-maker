@@ -226,7 +226,7 @@ describe("MakerStrategy - Full Coverage", () => {
 
     it("should support single model", () => {
       const modelSettings: ModelSettings = {
-        enabledModels: new Set(["gpt-oss-20b"]),
+        enabledModels: new Set(["gpt-oss-120b"]),
         consensusCount: 4,
       };
       strategy = new MakerStrategy(undefined, undefined, modelSettings);

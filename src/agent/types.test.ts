@@ -22,7 +22,7 @@ describe("buildModelsFromSettings", () => {
     const result = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4-mini",
-        "gpt-oss-20b",
+        "gpt-oss-120b",
       ] as ModelProvider[]),
       consensusCount: 6,
     });
@@ -30,7 +30,7 @@ describe("buildModelsFromSettings", () => {
     expect(result.length).toBe(6);
     // Should contain both models
     const hasGpt = result.some(m => m === "gpt-5.4-mini");
-    const hasMinistral = result.some(m => m === "gpt-oss-20b");
+    const hasMinistral = result.some(m => m === "gpt-oss-120b");
     expect(hasGpt).toBe(true);
     expect(hasMinistral).toBe(true);
   });
@@ -93,8 +93,8 @@ describe("buildModelsFromSettings", () => {
     const result1 = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4-mini",
-        "gpt-oss-20b",
-        "gpt-oss-20b",
+        "gpt-oss-120b",
+        "gpt-oss-120b",
       ] as ModelProvider[]),
       consensusCount: 12,
     });
@@ -102,8 +102,8 @@ describe("buildModelsFromSettings", () => {
     const result2 = buildModelsFromSettings({
       enabledModels: new Set([
         "gpt-5.4-mini",
-        "gpt-oss-20b",
-        "gpt-oss-20b",
+        "gpt-oss-120b",
+        "gpt-oss-120b",
       ] as ModelProvider[]),
       consensusCount: 12,
     });

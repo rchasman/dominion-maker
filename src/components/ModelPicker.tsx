@@ -25,8 +25,6 @@ const getModelDisplayName = (model: ModelProvider): string => {
       return "Claude Sonnet";
     case "claude-opus":
       return "Claude Opus (max 3)";
-    case "gpt-oss-20b":
-      return "GPT OSS 20B";
     case "gpt-oss-120b":
       return "GPT OSS 120B";
     case "gpt-5.4-nano":

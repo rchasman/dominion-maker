@@ -64,7 +64,7 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b", "gpt-oss-120b"],
       count: 3,
     });
     voteGroups.set("action2", {
@@ -85,13 +85,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b"],
+      voters: ["gpt-oss-120b"],
       count: 1,
     });
 
@@ -128,13 +128,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b", "gemini-3.1-flash-lite"],
+      voters: ["gpt-oss-120b", "gemini-3.1-flash-lite"],
       count: 2,
     });
 
@@ -148,13 +148,13 @@ describe("checkEarlyConsensus", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b"],
+      voters: ["gpt-oss-120b"],
       count: 1,
     });
 
@@ -388,7 +388,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b", "gpt-oss-120b"],
       count: 3,
     });
     voteGroups.set("action2", {
@@ -411,13 +411,13 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -447,7 +447,7 @@ describe("selectConsensusWinner", () => {
     const earlyWinner: VoteGroup = {
       signature: "action1",
       action: { type: "play_action", card: "Village" },
-      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b"],
       count: 2,
     };
     voteGroups.set("action1", earlyWinner);
@@ -462,7 +462,7 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -485,13 +485,13 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Market" }, // Invalid
-      voters: ["gpt-5.4-mini", "gpt-oss-20b"],
+      voters: ["gpt-5.4-mini", "gpt-oss-120b"],
       count: 2,
     });
     voteGroups.set("action2", {
       signature: "action2",
       action: { type: "play_action", card: "Village" }, // Valid
-      voters: ["gpt-oss-20b"],
+      voters: ["gpt-oss-120b"],
       count: 1,
     });
 
@@ -507,13 +507,13 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
         duration: 100,
@@ -543,7 +543,7 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: null,
         error: new Error("Failed"),
         duration: 100,
@@ -593,7 +593,7 @@ describe("selectConsensusWinner", () => {
     voteGroups.set("action1", {
       signature: "action1",
       action: { type: "play_action", card: "Smithy" },
-      voters: ["gpt-oss-20b"],
+      voters: ["gpt-oss-120b"],
       count: 1,
     });
 
@@ -610,7 +610,7 @@ describe("selectConsensusWinner", () => {
         duration: 100,
       },
       {
-        provider: "gpt-oss-20b" as const,
+        provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
         duration: 100,

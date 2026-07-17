@@ -41,14 +41,6 @@ export const MODELS = [
 
   // OpenAI
   {
-    id: "gpt-oss-20b",
-    fullName: "openai/gpt-oss-20b",
-    provider: "openai",
-    color: "#86efac",
-    inputPrice: 0.05,
-    outputPrice: 0.2,
-  },
-  {
     id: "gpt-oss-120b",
     fullName: "openai/gpt-oss-120b",
     provider: "openai",

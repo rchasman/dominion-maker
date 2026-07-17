@@ -20,7 +20,7 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   enabledModels: new Set([
-    "gpt-oss-20b",
+    "grok-4-fast",
     "gpt-5.4-nano",
     "gpt-5.4-mini",
     "gemini-3.1-flash-lite",
@@ -39,8 +39,8 @@ export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
 export const ALL_FAST_MODELS: ModelProvider[] = [
   "gpt-5.4-nano",
   "gpt-5.4-nano",
-  "gpt-oss-20b",
-  "gpt-oss-20b",
+  "glm-4.7-flash",
+  "grok-4-fast",
   "gpt-5.4-mini",
   "gpt-5.4-nano",
   "gemini-3.1-flash-lite",

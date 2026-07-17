@@ -34,7 +34,7 @@ export class MakerStrategy implements GameStrategy {
         "claude-haiku",
         "gpt-5.4-mini",
         "gemini-3.1-flash-lite",
-        "gpt-oss-20b",
+        "glm-4.7-flash",
       ]),
       consensusCount: 8,
     };
