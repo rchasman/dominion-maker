@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { RepairTextFunction } from "ai";
 import type { Action } from "../types/action";
 import { hasCardField } from "../lib/action-utils";
 import { encodeToon } from "../lib/toon";
@@ -76,13 +77,18 @@ function coerceReasoning(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 /**
- * Text-repair hook for generateObject (RepairTextFunction-compatible,
- * typed structurally so this module stays free of the "ai" dependency).
- * Repairs the quirks small models produce: markdown fences, prose around
- * the JSON, {"answer": "{...}"}-style wrappers, choice as a numeric
- * string, and missing or non-string reasoning. Returns null when the
- * reply is beyond repair so the SDK surfaces the original error.
+ * Text-repair hook for generateObject. Repairs the quirks small models
+ * produce: markdown fences, prose around the JSON, {"answer": "{...}"}-style
+ * wrappers, choice as a numeric string, and missing or non-string reasoning.
+ * Returns null when the reply is beyond repair so the SDK surfaces the
+ * original error.
  */
 export async function repairModelReply(options: {
   text: string;
@@ -91,28 +97,20 @@ export async function repairModelReply(options: {
   if (!jsonStr) return null;
 
   try {
-    const parsed: unknown = JSON.parse(jsonStr);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
+    const outer = asRecord(JSON.parse(jsonStr));
+    if (!outer) return null;
 
     // Unwrap {"answer": "{...}"} and single-key wrappers holding stringified JSON
-    const record = run((): Record<string, unknown> | null => {
-      const outer = parsed as Record<string, unknown>;
+    const record = run(() => {
       if ("choice" in outer) return outer;
+      if (typeof outer.answer === "string") {
+        return asRecord(JSON.parse(outer.answer));
+      }
       const values = Object.values(outer);
-      const wrapped = run(() => {
-        if (typeof outer.answer === "string") return outer.answer;
-        if (values.length === 1 && typeof values[0] === "string") {
-          return values[0];
-        }
-        return null;
-      });
-      if (wrapped === null) return outer;
-      const inner: unknown = JSON.parse(wrapped);
-      return inner && typeof inner === "object" && !Array.isArray(inner)
-        ? (inner as Record<string, unknown>)
-        : null;
+      if (values.length === 1 && typeof values[0] === "string") {
+        return asRecord(JSON.parse(values[0]));
+      }
+      return outer;
     });
     if (!record) return null;
 
@@ -131,3 +129,6 @@ export async function repairModelReply(options: {
     return null;
   }
 }
+
+// Compile-time check that the signature stays assignable to the SDK's hook
+repairModelReply satisfies RepairTextFunction;
