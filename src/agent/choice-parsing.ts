@@ -1,19 +1,15 @@
+import { z } from "zod";
 import type { Action } from "../types/action";
 import { hasCardField } from "../lib/action-utils";
 import { encodeToon } from "../lib/toon";
+import { run } from "../lib/run";
 
 /**
  * The numbered-choice reply protocol for the AI turn agent, in one module:
  * formatting the numbered LEGAL ACTIONS list, the reply-format instruction,
- * and parsing the model's {"reasoning": "...", "choice": <n>} reply back
- * into the chosen legal action. Small models are unreliable, so parsing
- * also repairs common quirks: markdown fences, prose around the JSON, and
- * {"answer": "{...}"}-style wrappers.
+ * the reply schema, the text-repair hook for generateObject, and the
+ * mapping from a validated reply back to the chosen legal action.
  */
-
-export type ParsedChoice =
-  | { ok: true; action: Action }
-  | { ok: false; error: string };
 
 /** Number the legal actions so the model can answer with a single index */
 export function formatLegalActions(legalActions: Action[]): string {
@@ -25,13 +21,37 @@ export function formatLegalActions(legalActions: Action[]): string {
   return encodeToon(numbered);
 }
 
-/** The one sentence telling the model how to reply — kept next to the parser */
+/** The one sentence telling the model how to reply — kept next to the schema */
 export function replyFormatInstruction(choiceCount: number): string {
   return `Reply with ONLY: {"reasoning": "<1-2 sentences why>", "choice": <1-${choiceCount}>}`;
 }
 
+/** Reply schema for generateObject — reasoning FIRST so models think before deciding */
+export function choiceSchema(choiceCount: number) {
+  return z.object({
+    reasoning: z.string(),
+    choice: z.number().int().min(1).max(choiceCount),
+  });
+}
+
+export type ChoiceReply = z.infer<ReturnType<typeof choiceSchema>>;
+
+/** Map a schema-validated reply back to the chosen legal action */
+export function choiceToAction(
+  reply: ChoiceReply,
+  legalActions: Action[],
+): Action {
+  const legal = legalActions[reply.choice - 1];
+  if (!legal) {
+    throw new Error(
+      `choice ${reply.choice} out of range 1-${legalActions.length}`,
+    );
+  }
+  return { ...legal, reasoning: reply.reasoning };
+}
+
 /** Extract JSON from model response that may contain prose and markdown code blocks */
-export function extractJson(rawText: string): string | null {
+function extractJson(rawText: string): string | null {
   // Try raw text as-is first
   const trimmed = rawText.trim();
   if (trimmed.startsWith("{")) return trimmed;
@@ -56,78 +76,58 @@ function coerceReasoning(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** Resolve a 1-based choice number against the legal actions list */
-function resolveRecord(
-  record: Record<string, unknown>,
-  legalActions: Action[],
-): ParsedChoice {
-  if (!("choice" in record)) {
-    return {
-      ok: false,
-      error:
-        'reply did not contain a "choice" number — do not describe an action, select one by its number',
-    };
-  }
-
-  const rawChoice = record.choice;
-  const choice =
-    typeof rawChoice === "number" ? rawChoice : Number(String(rawChoice));
-
-  if (!Number.isInteger(choice)) {
-    return {
-      ok: false,
-      error: `"choice" must be an integer, got ${JSON.stringify(rawChoice)}`,
-    };
-  }
-
-  const legal = legalActions[choice - 1];
-  if (!legal) {
-    return {
-      ok: false,
-      error: `"choice" ${choice} is out of range — LEGAL ACTIONS are numbered 1 to ${legalActions.length}`,
-    };
-  }
-
-  return {
-    ok: true,
-    action: { ...legal, reasoning: coerceReasoning(record.reasoning) },
-  };
-}
-
 /**
- * Parse a model reply into one of the provided legal actions.
- * Handles wrapper quirks: {"answer": "{...}"} (GLM pattern) and
- * single-key wrappers holding stringified JSON.
+ * Text-repair hook for generateObject (RepairTextFunction-compatible,
+ * typed structurally so this module stays free of the "ai" dependency).
+ * Repairs the quirks small models produce: markdown fences, prose around
+ * the JSON, {"answer": "{...}"}-style wrappers, choice as a numeric
+ * string, and missing or non-string reasoning. Returns null when the
+ * reply is beyond repair so the SDK surfaces the original error.
  */
-export function parseModelChoice(
-  rawText: string,
-  legalActions: Action[],
-): ParsedChoice {
-  const jsonStr = extractJson(rawText);
-  if (!jsonStr) return { ok: false, error: "no JSON object found in reply" };
+export async function repairModelReply(options: {
+  text: string;
+}): Promise<string | null> {
+  const jsonStr = extractJson(options.text);
+  if (!jsonStr) return null;
 
   try {
     const parsed: unknown = JSON.parse(jsonStr);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { ok: false, error: "reply was not a JSON object" };
-    }
-    const record = parsed as Record<string, unknown>;
-
-    if (!("choice" in record)) {
-      // Unwrap {"answer": "..."} wrapping (GLM pattern)
-      if (typeof record.answer === "string") {
-        return resolveRecord(JSON.parse(record.answer), legalActions);
-      }
-
-      // Unwrap any single-key wrapper with a stringified JSON value
-      const values = Object.values(record);
-      if (values.length === 1 && typeof values[0] === "string") {
-        return resolveRecord(JSON.parse(values[0]), legalActions);
-      }
+      return null;
     }
 
-    return resolveRecord(record, legalActions);
+    // Unwrap {"answer": "{...}"} and single-key wrappers holding stringified JSON
+    const record = run((): Record<string, unknown> | null => {
+      const outer = parsed as Record<string, unknown>;
+      if ("choice" in outer) return outer;
+      const values = Object.values(outer);
+      const wrapped = run(() => {
+        if (typeof outer.answer === "string") return outer.answer;
+        if (values.length === 1 && typeof values[0] === "string") {
+          return values[0];
+        }
+        return null;
+      });
+      if (wrapped === null) return outer;
+      const inner: unknown = JSON.parse(wrapped);
+      return inner && typeof inner === "object" && !Array.isArray(inner)
+        ? (inner as Record<string, unknown>)
+        : null;
+    });
+    if (!record) return null;
+
+    const coercedChoice =
+      typeof record.choice === "string" &&
+      Number.isFinite(Number(record.choice))
+        ? Number(record.choice)
+        : record.choice;
+
+    return JSON.stringify({
+      ...record,
+      reasoning: coerceReasoning(record.reasoning),
+      choice: coercedChoice,
+    });
   } catch {
-    return { ok: false, error: "reply was not valid JSON" };
+    return null;
   }
 }

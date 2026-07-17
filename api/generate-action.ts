@@ -1,4 +1,9 @@
-import { generateText, gateway, wrapLanguageModel } from "ai";
+import {
+  generateObject,
+  gateway,
+  wrapLanguageModel,
+  NoObjectGeneratedError,
+} from "ai";
 import type { ModelMessage } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
@@ -6,7 +11,9 @@ import type { GameState, CardName } from "../src/types/game-state";
 import type { Action } from "../src/types/action";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
-  parseModelChoice,
+  choiceSchema,
+  choiceToAction,
+  repairModelReply,
   formatLegalActions,
   replyFormatInstruction,
 } from "../src/agent/choice-parsing";
@@ -347,59 +354,59 @@ async function processGenerationRequest(
 
   const systemPrompt = buildSystemPrompt(currentState.supply);
 
-  // Universal path: generateText + own parsing works with every model.
-  // Do NOT migrate this to generateObject/Output.object: forced JSON
-  // response_format breaks gpt-oss models via the gateway (harmony channel
-  // markers leak into the output — verified 0/3 vs 3/3 here, 2026-07).
-  try {
-    const attempt = async (messages: ModelMessage[]) => {
-      const result = await generateText({
-        model,
-        instructions: systemPrompt,
-        messages,
-        maxRetries: 0,
-      });
-      return {
-        text: result.text,
-        parsed: parseModelChoice(result.text, legalActions),
-      };
-    };
-
-    const first = await attempt([{ role: "user", content: userMessage }]);
-    if (first.parsed.ok) {
-      return res
-        .status(HTTP_OK)
-        .json({ action: first.parsed.action, strategySummary });
-    }
-
-    // Invalid reply — give the model one corrective retry with the error
-    apiLogger.warn(
-      `${provider} invalid reply (${first.parsed.error}), retrying — raw: ${first.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
-    );
-
-    const retry = await attempt([
-      { role: "user", content: userMessage },
-      { role: "assistant", content: first.text },
-      {
-        role: "user",
-        content: `Your previous reply was invalid: ${first.parsed.error}. ${replyFormatInstruction(legalActions.length)}`,
-      },
-    ]);
-    if (retry.parsed.ok) {
-      return res
-        .status(HTTP_OK)
-        .json({ action: retry.parsed.action, strategySummary });
-    }
-
-    apiLogger.error(
-      `${provider} invalid reply after retry (${retry.parsed.error}) — raw: ${retry.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
-    );
-    return res.status(HTTP_INTERNAL_ERROR).json({
-      error: "Model reply did not select a legal action",
-      provider,
-      rawText: retry.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
+  // generateObject + repairModelReply covers every roster model (verified
+  // live across all 17, 2026-07 — gpt-oss-20b was removed for leaking
+  // harmony markers under JSON response_format). On an invalid reply the
+  // model gets one corrective retry carrying the validation error.
+  const schema = choiceSchema(legalActions.length);
+  const attempt = async (messages: ModelMessage[]) => {
+    const { object } = await generateObject({
+      model,
+      instructions: systemPrompt,
+      messages,
+      schema,
+      experimental_repairText: repairModelReply,
+      maxRetries: 0,
     });
+    return choiceToAction(object, legalActions);
+  };
+
+  try {
+    try {
+      const action = await attempt([{ role: "user", content: userMessage }]);
+      return res.status(HTTP_OK).json({ action, strategySummary });
+    } catch (err) {
+      if (!NoObjectGeneratedError.isInstance(err)) throw err;
+
+      const reason = (
+        (err.cause as Error | undefined)?.message ?? err.message
+      ).slice(0, ERROR_TEXT_PREVIEW_SHORT);
+      apiLogger.warn(
+        `${provider} invalid reply (${reason}), retrying — raw: ${err.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      );
+
+      const action = await attempt([
+        { role: "user", content: userMessage },
+        { role: "assistant", content: err.text ?? "" },
+        {
+          role: "user",
+          content: `Your previous reply was invalid: ${reason}. ${replyFormatInstruction(legalActions.length)}`,
+        },
+      ]);
+      return res.status(HTTP_OK).json({ action, strategySummary });
+    }
   } catch (err) {
+    if (NoObjectGeneratedError.isInstance(err)) {
+      apiLogger.error(
+        `${provider} invalid reply after retry — raw: ${err.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      );
+      return res.status(HTTP_INTERNAL_ERROR).json({
+        error: "Model reply did not select a legal action",
+        provider,
+        rawText: err.text?.slice(0, ERROR_TEXT_PREVIEW_SHORT) ?? "",
+      });
+    }
+
     const error = err as Error;
     apiLogger.error(`${provider} generation failed: ${error.message}`);
     return res.status(HTTP_INTERNAL_ERROR).json({
