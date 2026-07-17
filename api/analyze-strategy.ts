@@ -8,7 +8,8 @@ import {
   STRATEGY_ANALYSIS_TURNS,
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { run } from "../src/lib/run";
+import { countVP, getAllCards } from "../src/lib/board-utils";
+import { countCards } from "../src/lib/card-array-utils";
 import { env } from "../src/lib/env";
 import { encodeToon } from "../src/lib/toon";
 import { buildCardDefinitionsTable } from "../src/agent/system-prompt";
@@ -20,15 +21,6 @@ const HTTP_STATUS = {
   BAD_REQUEST: 400,
   METHOD_NOT_ALLOWED: 405,
   INTERNAL_SERVER_ERROR: 500,
-} as const;
-
-// Game constants
-const VP_VALUES = {
-  ESTATE: 1,
-  DUCHY: 3,
-  PROVINCE: 6,
-  CURSE: -1,
-  GARDENS_DIVISOR: 10,
 } as const;
 
 // Create devtools middleware per request for independent tracking (development only)
@@ -83,31 +75,6 @@ const PlayerAnalysisSchema = z.object({
     .describe("1-2 sentences on what to do next and why - be decisive"),
 });
 
-interface CardCounts {
-  counts: Record<string, number>;
-  vp: number;
-}
-
-// Calculate VP and card counts using reduce
-function calculatePlayerStats(allCards: string[]): CardCounts {
-  return allCards.reduce<CardCounts>(
-    (acc, card) => {
-      const newCounts = { ...acc.counts, [card]: (acc.counts[card] || 0) + 1 };
-      const vpDelta = run(() => {
-        if (card === "Estate") return VP_VALUES.ESTATE;
-        if (card === "Duchy") return VP_VALUES.DUCHY;
-        if (card === "Province") return VP_VALUES.PROVINCE;
-        if (card === "Curse") return VP_VALUES.CURSE;
-        if (card === "Gardens")
-          return Math.floor(allCards.length / VP_VALUES.GARDENS_DIVISOR);
-        return 0;
-      });
-      return { counts: newCounts, vp: acc.vp + vpDelta };
-    },
-    { counts: {}, vp: 0 },
-  );
-}
-
 // Build player deck information as structured data for TOON encoding
 function buildPlayerDeckInfo(
   playerIds: string[],
@@ -123,20 +90,13 @@ function buildPlayerDeckInfo(
     if (!player) {
       throw new Error(`Player ${playerId} not found in game state`);
     }
-    const allCards = [
-      ...player.deck,
-      ...player.hand,
-      ...player.discard,
-      ...player.inPlay,
-    ];
-
-    const { counts, vp } = calculatePlayerStats(allCards);
+    const allCards = getAllCards(player);
 
     return {
       id: playerId,
-      vp,
+      vp: countVP(allCards),
       totalCards: allCards.length,
-      composition: counts,
+      composition: countCards(allCards),
     };
   });
 }
