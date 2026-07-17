@@ -347,7 +347,10 @@ async function processGenerationRequest(
 
   const systemPrompt = buildSystemPrompt(currentState.supply);
 
-  // Universal path: generateText + JSON parse works with every model
+  // Universal path: generateText + own parsing works with every model.
+  // Do NOT migrate this to generateObject/Output.object: forced JSON
+  // response_format breaks gpt-oss models via the gateway (harmony channel
+  // markers leak into the output — verified 0/3 vs 3/3 here, 2026-07).
   try {
     const attempt = async (messages: ModelMessage[]) => {
       const result = await generateText({
