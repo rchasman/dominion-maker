@@ -185,21 +185,8 @@ function optimizeStateForAI(state: GameState): unknown {
   const yourVP = countVP(yourAllCards);
   const opponentVP = countVP(opponentAllCards);
 
-  const yourDeckCounts = yourAllCards.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  const opponentDeckCounts = opponentAllCards.reduce(
-    (acc, card) => {
-      acc[card] = (acc[card] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  const yourDeckCounts = countCards(yourAllCards);
+  const opponentDeckCounts = countCards(opponentAllCards);
 
   // Build "you" object with all your state nested together
   const you: Record<string, unknown> = {
@@ -371,20 +358,31 @@ async function processGenerationRequest(
     return choiceToAction(object, legalActions);
   };
 
+  const generationFailed = (error: Error) => {
+    apiLogger.error(`${provider} generation failed: ${error.message}`);
+    return res.status(HTTP_INTERNAL_ERROR).json({
+      error: "Generation failed",
+      provider,
+      message: error.message,
+    });
+  };
+
   try {
+    const action = await attempt([{ role: "user", content: userMessage }]);
+    return res.status(HTTP_OK).json({ action, strategySummary });
+  } catch (err) {
+    if (!NoObjectGeneratedError.isInstance(err)) {
+      return generationFailed(err as Error);
+    }
+
+    const reason = (
+      (err.cause as Error | undefined)?.message ?? err.message
+    ).slice(0, ERROR_TEXT_PREVIEW_SHORT);
+    apiLogger.warn(
+      `${provider} invalid reply (${reason}), retrying — raw: ${err.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+    );
+
     try {
-      const action = await attempt([{ role: "user", content: userMessage }]);
-      return res.status(HTTP_OK).json({ action, strategySummary });
-    } catch (err) {
-      if (!NoObjectGeneratedError.isInstance(err)) throw err;
-
-      const reason = (
-        (err.cause as Error | undefined)?.message ?? err.message
-      ).slice(0, ERROR_TEXT_PREVIEW_SHORT);
-      apiLogger.warn(
-        `${provider} invalid reply (${reason}), retrying — raw: ${err.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
-      );
-
       const action = await attempt([
         { role: "user", content: userMessage },
         { role: "assistant", content: err.text ?? "" },
@@ -394,26 +392,20 @@ async function processGenerationRequest(
         },
       ]);
       return res.status(HTTP_OK).json({ action, strategySummary });
-    }
-  } catch (err) {
-    if (NoObjectGeneratedError.isInstance(err)) {
+    } catch (retryErr) {
+      if (!NoObjectGeneratedError.isInstance(retryErr)) {
+        return generationFailed(retryErr as Error);
+      }
+
       apiLogger.error(
-        `${provider} invalid reply after retry — raw: ${err.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+        `${provider} invalid reply after retry — raw: ${retryErr.text?.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
       );
       return res.status(HTTP_INTERNAL_ERROR).json({
         error: "Model reply did not select a legal action",
         provider,
-        rawText: err.text?.slice(0, ERROR_TEXT_PREVIEW_SHORT) ?? "",
+        rawText: retryErr.text?.slice(0, ERROR_TEXT_PREVIEW_SHORT) ?? "",
       });
     }
-
-    const error = err as Error;
-    apiLogger.error(`${provider} generation failed: ${error.message}`);
-    return res.status(HTTP_INTERNAL_ERROR).json({
-      error: "Generation failed",
-      provider,
-      message: error.message,
-    });
   }
 }
 
