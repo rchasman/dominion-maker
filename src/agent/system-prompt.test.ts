@@ -56,6 +56,19 @@ describe("buildCardDefinitionsTable", () => {
     expect(table).toContain("+1 Card"); // Village effect
   });
 
+  it("should include per-card strategy notes", () => {
+    const supply: Record<string, number> = {
+      Chapel: 10,
+      Witch: 10,
+    };
+
+    const table = buildCardDefinitionsTable(supply);
+
+    expect(table).toContain("strategy");
+    expect(table).toContain("thin your deck"); // Chapel note
+    expect(table).toContain("Top-tier attack"); // Witch note
+  });
+
   it("should only include cards in supply", () => {
     const supply: Record<string, number> = {
       Copper: 46,
@@ -158,17 +171,101 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("play_treasure");
   });
 
-  it("should include validation rules", () => {
+  it("should state the correct game-end conditions", () => {
     const supply: Record<string, number> = {
       Copper: 46,
     };
 
     const prompt = buildSystemPrompt(supply);
 
-    expect(prompt).toContain("VALIDATION");
-    expect(prompt).toContain("play_action");
-    expect(prompt).toContain("buy_card");
-    expect(prompt).toContain("you.currentHand");
+    expect(prompt).toContain("Province pile is empty");
+    expect(prompt).toContain("any 3 supply piles are empty");
+  });
+
+  it("should explain deck cycling via the discard reshuffle", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain(
+      "discard pile is shuffled to become your new deck",
+    );
+    expect(prompt).toContain("PERMANENTLY"); // trashing
+  });
+
+  it("should explain attacks and reactions", () => {
+    const supply: Record<string, number> = {
+      Moat: 10,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain("REACTIONS");
+    expect(prompt).toContain("Moat");
+    expect(prompt).toContain("block the attack");
+    expect(prompt).toContain("Revealing is FREE");
+  });
+
+  it("should announce the TOON data format", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain("TOON-encoded");
+  });
+
+  it("should frame the task as picking a numbered legal action", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain("LEGAL ACTIONS");
+    expect(prompt).toContain("pick exactly one entry by its number");
+    expect(prompt).toContain("Never invent an action");
+  });
+
+  it("should require reasoning-first JSON output", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain('{"reasoning"');
+    expect(prompt).toContain('"choice"');
+    expect(prompt.indexOf('"reasoning"')).toBeLessThan(
+      prompt.indexOf('"choice"'),
+    );
+  });
+
+  it("should include a worked example with a correct reply", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain("EXAMPLE");
+    expect(prompt).toContain("Correct reply:");
+    expect(prompt).toContain('"choice": 1');
+  });
+
+  it("should explain pendingChoice decisions and constraints", () => {
+    const supply: Record<string, number> = {
+      Copper: 46,
+    };
+
+    const prompt = buildSystemPrompt(supply);
+
+    expect(prompt).toContain("DECISIONS");
+    expect(prompt).toContain("pendingChoice");
+    expect(prompt).toContain("constraint");
   });
 
   it("should include strategy override rules", () => {
@@ -268,9 +365,8 @@ describe("buildSystemPrompt", () => {
 
     const prompt = buildSystemPrompt(supply);
 
-    expect(prompt).toContain("topdeck_card");
-    expect(prompt).toContain("top of deck");
-    expect(prompt).toContain("Trash removes forever");
+    expect(prompt).toContain("topdeck = put on top of your deck");
+    expect(prompt).toContain("trash = remove from the game forever");
   });
 
   it("should work with minimal supply", () => {
