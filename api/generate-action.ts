@@ -285,7 +285,7 @@ function buildUserMessage(params: {
 async function processGenerationRequest(
   body: RequestBody,
   res: VercelResponse,
-): Promise<VercelResponse | null> {
+): Promise<VercelResponse> {
   const {
     provider: bodyProvider,
     currentState,
@@ -429,14 +429,7 @@ export default async function handler(
 
   try {
     const body = parseRequestBody(req);
-    const result = await processGenerationRequest(body, res);
-    if (result) return result;
-
-    // If no result returned, this shouldn't happen - return error
-    return res.status(HTTP_INTERNAL_ERROR).json({
-      error: HTTP_INTERNAL_ERROR,
-      message: "Internal error: no response generated",
-    });
+    return await processGenerationRequest(body, res);
   } catch (err) {
     // Try to parse body for provider name in error logging
     const provider = run(() => {
@@ -448,7 +441,7 @@ export default async function handler(
     });
 
     // Log and return error
-    const error = err as Error & { cause?: unknown; text?: string };
+    const error = err as Error;
     apiLogger.error(`${provider} failed: ${error.message}`);
 
     return res.status(HTTP_INTERNAL_ERROR).json({
