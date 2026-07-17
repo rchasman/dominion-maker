@@ -72,16 +72,44 @@ describe("projectPendingChoiceForAI", () => {
     expect(projected.source).toBe("supply");
   });
 
-  it("surfaces the current card for multi-round decisions", () => {
+  it("surfaces the current card for multi-round custom-action decisions", () => {
     const projected = projectPendingChoiceForAI(
       decision({
         cardOptions: ["Copper", "Gold"],
+        actions: [
+          { id: "trash_card", label: "Trash", color: "#ef4444" },
+          { id: "topdeck_card", label: "Topdeck", color: "#3b82f6" },
+        ],
         metadata: { currentRoundIndex: 1 },
       }),
     );
 
     expect(projected.deciding).toBe("Gold");
     expect(projected.progress).toBe("card 2 of 2");
+  });
+
+  it("defaults multi-round decisions without metadata to the first card", () => {
+    const projected = projectPendingChoiceForAI(
+      decision({
+        cardOptions: ["Copper", "Gold"],
+        actions: [
+          { id: "trash_card", label: "Trash", color: "#ef4444" },
+          { id: "topdeck_card", label: "Topdeck", color: "#3b82f6" },
+        ],
+      }),
+    );
+
+    expect(projected.deciding).toBe("Copper");
+    expect(projected.progress).toBe("card 1 of 2");
+  });
+
+  it("omits round progress for plain selection decisions", () => {
+    const projected = projectPendingChoiceForAI(
+      decision({ cardOptions: ["Copper", "Gold"], min: 0, max: 2 }),
+    );
+
+    expect(projected).not.toHaveProperty("deciding");
+    expect(projected).not.toHaveProperty("progress");
   });
 
   it("includes the ordering prompt when present", () => {

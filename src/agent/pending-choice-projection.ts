@@ -1,5 +1,7 @@
 import type { PendingChoice } from "../types/pending-choice";
 import { isReactionChoice } from "../types/pending-choice";
+import { canSkipDecision } from "../lib/decision-utils";
+import { hasCustomActions, getCurrentRoundIndex } from "./decision-decomposer";
 import { run } from "../lib/run";
 
 /**
@@ -26,7 +28,7 @@ export function projectPendingChoiceForAI(
     if (min === max) {
       return `select exactly ${min} card${min === 1 ? "" : "s"}`;
     }
-    if (min === 0) {
+    if (canSkipDecision(choice)) {
       return `select up to ${max} card${max === 1 ? "" : "s"} (skipping is allowed)`;
     }
     return `select between ${min} and ${max} cards`;
@@ -34,14 +36,16 @@ export function projectPendingChoiceForAI(
 
   // Multi-action decisions (like Sentry) are voted one card at a time —
   // tell the model which card is currently being decided
-  const roundIndex = choice.metadata?.currentRoundIndex;
-  const multiRoundSection =
-    typeof roundIndex === "number" && choice.cardOptions[roundIndex]
-      ? {
-          deciding: choice.cardOptions[roundIndex],
-          progress: `card ${roundIndex + 1} of ${choice.cardOptions.length}`,
-        }
-      : {};
+  const multiRoundSection = run(() => {
+    if (!hasCustomActions(choice)) return {};
+    const roundIndex = getCurrentRoundIndex(choice);
+    const deciding = choice.cardOptions[roundIndex];
+    if (!deciding) return {};
+    return {
+      deciding,
+      progress: `card ${roundIndex + 1} of ${choice.cardOptions.length}`,
+    };
+  });
 
   return {
     choiceType: "decision",

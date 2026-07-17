@@ -1,6 +1,27 @@
 import type { PendingChoice } from "../types/game-state";
 import type { Action } from "../types/action";
 
+type DecisionChoice = Extract<PendingChoice, { choiceType: "decision" }>;
+
+/**
+ * Decisions with custom per-card actions (like Sentry: topdeck/trash/discard)
+ * are resolved one card at a time via multi-round consensus.
+ */
+export function hasCustomActions(decision: DecisionChoice): boolean {
+  return (
+    !!decision.actions &&
+    decision.actions.length > 0 &&
+    !decision.actions.every(a => a.id === "select" || a.id === "skip")
+  );
+}
+
+/** Which card a multi-round decision is currently deciding (round 0 if unset) */
+export function getCurrentRoundIndex(decision: DecisionChoice): number {
+  return typeof decision.metadata?.currentRoundIndex === "number"
+    ? decision.metadata.currentRoundIndex
+    : 0;
+}
+
 /**
  * Decompose batch decisions into atomic actions for AI consensus voting.
  * Only used for AI - humans work with batch decisions directly.
@@ -11,22 +32,13 @@ import type { Action } from "../types/action";
  * For multi-action decisions (like Sentry), returns actions for the NEXT card
  * based on currentRoundIndex in metadata.
  */
-export function decomposeDecisionForAI(
-  decision: Extract<PendingChoice, { choiceType: "decision" }>,
-): Action[] {
-  const { min, max, cardOptions, stage, actions: availableActions } = decision;
+export function decomposeDecisionForAI(decision: DecisionChoice): Action[] {
+  const { min, max, cardOptions, stage } = decision;
 
   // Decision with custom actions (like Sentry: topdeck/trash/discard per card)
   // Multi-round consensus: vote on ONE card at a time
-  if (
-    availableActions &&
-    availableActions.length > 0 &&
-    !availableActions.every(a => a.id === "select" || a.id === "skip")
-  ) {
-    const roundIndex =
-      typeof decision.metadata?.currentRoundIndex === "number"
-        ? decision.metadata.currentRoundIndex
-        : 0;
+  if (hasCustomActions(decision)) {
+    const roundIndex = getCurrentRoundIndex(decision);
 
     if (roundIndex >= cardOptions.length) {
       return [{ type: "skip_decision" as const }];
@@ -37,7 +49,7 @@ export function decomposeDecisionForAI(
       return [{ type: "skip_decision" as const }];
     }
 
-    const cardActions = availableActions.map(action => {
+    const cardActions = (decision.actions ?? []).map(action => {
       const cardAction: Action = {
         type: action.id as Exclude<Action["type"], "choose_from_options">,
         card: currentCard,
