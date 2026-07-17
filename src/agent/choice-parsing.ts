@@ -3,14 +3,8 @@ import type { Action } from "../types/action";
 import { hasCardField } from "../lib/action-utils";
 import { encodeToon } from "../lib/toon";
 
-/**
- * The numbered-choice reply protocol for the AI turn agent, in one module:
- * formatting the numbered LEGAL ACTIONS list, the reply-format instruction,
- * the reply schema for generateObject, and the mapping from a validated
- * reply back to the chosen legal action. Malformed replies are not
- * repaired — the endpoint's corrective retry handles them, which keeps
- * every failure visible in the logs.
- */
+// The numbered-choice reply protocol, one home. No text repair by design —
+// invalid replies go through the endpoint's corrective retry so failures stay visible
 
 /** Number the legal actions so the model can answer with a single index */
 export function formatLegalActions(legalActions: Action[]): string {

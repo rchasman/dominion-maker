@@ -1,9 +1,5 @@
-/**
- * Derive the legal actions for a game state. Shared by the client
- * (consensus vote validation, logging) and the generate-action endpoint,
- * which numbers this list for the model and maps its choice back — both
- * sides MUST derive it from the same state for the numbering to agree.
- */
+// Shared by client and generate-action endpoint — both MUST derive from the
+// same state or the numbered-choice mapping disagrees
 
 import type { GameState, CardName } from "../types/game-state";
 import type { Action } from "../types/action";

@@ -428,8 +428,7 @@ async function handleMultiActionConsensus(
         return acc;
       }
 
-      // The AI-facing round presentation ("deciding card 2 of 5") is
-      // rendered by projectPendingChoiceForAI from currentRoundIndex
+      // projectPendingChoiceForAI renders round progress from currentRoundIndex
       const roundState: GameState = {
         ...engine.state,
         pendingChoice: isDecisionChoice(engine.state.pendingChoice)

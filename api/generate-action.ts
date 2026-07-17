@@ -302,8 +302,7 @@ async function processGenerationRequest(
       .json({ error: "Missing required fields: provider, currentState" });
   }
 
-  // Derive legal actions server-side so the numbering the model sees and
-  // the index mapping below can never disagree with the game state
+  // Derived server-side so the numbering can never disagree with the state
   const legalActions = getLegalActions(currentState);
   if (legalActions.length === 0) {
     return res
@@ -340,11 +339,8 @@ async function processGenerationRequest(
 
   const systemPrompt = buildSystemPrompt(currentState.supply);
 
-  // generateObject covers every roster model with no text repair (verified
-  // live across all 17, 2026-07 — gpt-oss-20b was removed for leaking
-  // harmony markers under JSON response_format). On an invalid reply the
-  // model gets one corrective retry carrying the validation error, so any
-  // model that habitually misformats shows up as retry warns in the logs.
+  // No text repair by design — invalid replies get one corrective retry and
+  // habitual misformatters surface as warns (roster live-verified 2026-07)
   const schema = choiceSchema(legalActions.length);
   const attempt = async (messages: ModelMessage[]) => {
     const { object } = await generateObject({

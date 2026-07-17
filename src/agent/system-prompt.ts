@@ -25,8 +25,7 @@ export function buildCardDefinitionsTable(
   return encodeToon(cardData);
 }
 
-// Worked example built by the same formatter as the real LEGAL ACTIONS list,
-// so the format shown to the model never drifts from what it receives
+// Built by the same formatter as the real list so the example never drifts
 const EXAMPLE_SECTION = `EXAMPLE (buy phase, $3 available, all treasures already played):
 LEGAL ACTIONS — you MUST choose exactly one by number:
 ${formatLegalActions([
@@ -38,12 +37,8 @@ ${formatLegalActions([
 Correct reply:
 {"reasoning": "With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.", "choice": 1}`;
 
-// The OUTPUT FORMAT prose, worked example, and replyFormatInstruction are
-// load-bearing, NOT belt-and-braces on top of response_format (verified live
-// per-model, 2026-07): without the prose qwen3.5-flash 500s inside its serving
-// provider — an infra-shaped error that bypasses the corrective retry — and
-// without the example gpt-oss-120b emits truncated JSON, deepseek-v4-pro
-// replies with a bare number, and glm-5.2 drops the required reasoning field.
+// OUTPUT FORMAT prose + example + replyFormatInstruction are load-bearing over
+// response_format — trimming breaks qwen/gpt-oss-120b/deepseek/glm-5.2 (live-verified 2026-07)
 export function buildSystemPrompt(supply: Record<CardName, number>): string {
   return `You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.
 

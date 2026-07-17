@@ -4,11 +4,7 @@ import { canSkipDecision } from "../lib/decision-utils";
 import { hasCustomActions, getCurrentRoundIndex } from "./decision-decomposer";
 import { run } from "../lib/run";
 
-/**
- * Project a PendingChoice into an AI-facing shape: keeps what the model
- * needs to decide (prompt, options, how many to pick) and drops UI
- * concerns (button labels, colors, defaults) and internal metadata.
- */
+/** AI-facing PendingChoice: what the model needs to decide, minus UI fields */
 export function projectPendingChoiceForAI(
   choice: PendingChoice,
 ): Record<string, unknown> {
