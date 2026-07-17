@@ -7,7 +7,10 @@ import {
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState, CardName } from "../src/types/game-state";
+import type { Action } from "../src/types/action";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
+import { parseModelChoice } from "../src/agent/choice-parsing";
+import { projectPendingChoiceForAI } from "../src/agent/pending-choice-projection";
 import { MODEL_MAP } from "../src/config/models";
 import {
   buildStrategicContext,
@@ -18,7 +21,6 @@ import { countCards } from "../src/lib/card-array-utils";
 import { countVP, getAllCards } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
 import { getSubPhase } from "../src/lib/state-helpers";
-import { z } from "zod";
 import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
 import { env } from "../src/lib/env";
@@ -38,98 +40,6 @@ const ERROR_TEXT_PREVIEW_SHORT = 200;
 const DEFAULT_PROVINCE_COUNT = 8;
 const EARLY_GAME_TURN_THRESHOLD = 5;
 const LATE_GAME_PROVINCES_THRESHOLD = 4;
-
-const ActionSchema = z
-  .object({
-    type: z
-      .enum([
-        "play_action",
-        "play_treasure",
-        "buy_card",
-        "gain_card",
-        "discard_card",
-        "trash_card",
-        "topdeck_card",
-        "skip_decision",
-        "end_phase",
-        "reveal_reaction",
-        "decline_reaction",
-      ])
-      .describe("The type of action to perform"),
-    card: z
-      .string()
-      .describe(
-        "The card name to act on, or empty string for skip_decision/end_phase",
-      ),
-    reasoning: z
-      .string()
-      .describe("Explanation for why this action was chosen"),
-  })
-  .describe("A single atomic game action");
-
-// Repair malformed structured output from models that don't follow the schema
-// Handles: {"answer": "{...}"} wrapping (GLM-5), direct JSON without schema compliance
-type ActionOutput = z.infer<typeof ActionSchema>;
-function tryParseRecord(record: Record<string, unknown>): ActionOutput | null {
-  // Add defaults for fields models often omit
-  if (!("reasoning" in record)) record.reasoning = "";
-  // Coerce reasoning to string — some models return it as a nested object
-  if (typeof record.reasoning === "object" && record.reasoning !== null) {
-    record.reasoning = JSON.stringify(record.reasoning);
-  }
-  if (!("card" in record) || record.card === null) record.card = "";
-  const result = ActionSchema.safeParse(record);
-  return result.success ? result.data : null;
-}
-
-// Extract JSON from model response that may contain prose and markdown code blocks
-function extractJson(rawText: string): string | null {
-  // Try raw text as-is first
-  const trimmed = rawText.trim();
-  if (trimmed.startsWith("{")) return trimmed;
-
-  // Extract from ```json ... ``` or ``` ... ``` code blocks
-  const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-  if (codeBlockMatch?.[1]) return codeBlockMatch[1].trim();
-
-  // Last resort: find first { ... } in the text
-  const braceStart = trimmed.indexOf("{");
-  const braceEnd = trimmed.lastIndexOf("}");
-  if (braceStart !== -1 && braceEnd > braceStart) {
-    return trimmed.slice(braceStart, braceEnd + 1);
-  }
-
-  return null;
-}
-
-// Parse action from raw text, handling model quirks like wrapping or missing fields
-function parseActionFromText(rawText: string): ActionOutput | null {
-  const jsonStr = extractJson(rawText);
-  if (!jsonStr) return null;
-
-  try {
-    const parsed = JSON.parse(jsonStr);
-    if (!parsed || typeof parsed !== "object") return null;
-
-    // Direct match
-    if ("type" in parsed) return tryParseRecord(parsed);
-
-    // Unwrap {"answer": "..."} wrapping (GLM-5 pattern)
-    if (typeof parsed.answer === "string") {
-      return tryParseRecord(JSON.parse(parsed.answer));
-    }
-
-    // Unwrap any single-key wrapper with a stringified JSON value
-    const values = Object.values(parsed);
-    if (values.length === 1 && typeof values[0] === "string") {
-      return tryParseRecord(JSON.parse(values[0] as string));
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 // Debug logging for deployment
 if (!env.AI_GATEWAY_API_KEY) {
@@ -207,7 +117,7 @@ interface RequestBody {
   provider: string;
   currentState: GameState;
   humanChoice?: { selectedCards: string[] };
-  legalActions?: unknown[];
+  legalActions?: Action[];
   strategySummary?: string;
   customStrategy?: string;
   actionId?: string; // For grouping consensus votes in devtools
@@ -323,9 +233,21 @@ function optimizeStateForAI(state: GameState): unknown {
     ...(opponentState ? { opponent: opponentState } : {}),
     supply: supplyWithCounts,
     trash: state.trash,
-    ...(state.pendingChoice ? { pendingChoice: state.pendingChoice } : {}),
+    ...(state.pendingChoice
+      ? { pendingChoice: projectPendingChoiceForAI(state.pendingChoice) }
+      : {}),
     ...(subPhase ? { subPhase } : {}),
   };
+}
+
+// Number the legal actions so the model can answer with a single index
+function formatLegalActions(legalActions: Action[]): string {
+  const numbered = legalActions.map((action, index) => ({
+    choice: index + 1,
+    type: action.type,
+    card: "card" in action ? (action.card ?? "") : "",
+  }));
+  return encodeToon(numbered);
 }
 
 // Build user message with context
@@ -333,7 +255,7 @@ function buildUserMessage(params: {
   strategicContext: string;
   currentState: GameState;
   recentTurnsStr: string;
-  legalActions: unknown[];
+  legalActions: Action[];
   humanChoice?: { selectedCards: string[] };
 }): string {
   const {
@@ -359,14 +281,14 @@ function buildUserMessage(params: {
     ? [`Human chose: ${encodeToon(humanChoice.selectedCards)}`]
     : [];
 
-  const legalActionsContent = encodeToon(legalActions);
-
-  const legalActionsSection =
-    legalActions.length > 0 ? [`LEGAL ACTIONS:\n${legalActionsContent}`] : [];
+  const legalActionsSection = [
+    `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatLegalActions(legalActions)}`,
+    `Reply with ONLY: {"reasoning": "<1-2 sentences why>", "choice": <1-${legalActions.length}>}`,
+  ];
 
   const sections = [
     `CURRENT STATE:\n${stateStr}`,
-    strategicContext,
+    `STRATEGIC CONTEXT:\n${strategicContext}`,
     ...(recentTurnsStr ? [recentTurnsStr] : []),
     ...turnHistorySection,
     ...humanChoiceSection,
@@ -398,6 +320,12 @@ async function processGenerationRequest(
       .json({ error: "Missing required fields: provider, currentState" });
   }
 
+  if (!legalActions || legalActions.length === 0) {
+    return res
+      .status(HTTP_BAD_REQUEST)
+      .json({ error: "legalActions must be a non-empty list" });
+  }
+
   const modelName = MODEL_MAP[provider];
   if (!modelName) {
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
@@ -423,7 +351,7 @@ async function processGenerationRequest(
     strategicContext,
     currentState,
     recentTurnsStr,
-    legalActions: legalActions || [],
+    legalActions,
     ...(humanChoice ? { humanChoice } : {}),
   });
 
@@ -438,31 +366,46 @@ async function processGenerationRequest(
       maxRetries: 0,
     });
 
-    const jsonStr = extractJson(result.text);
-    if (!jsonStr) {
-      apiLogger.error(
-        `${provider} no JSON found in response (${result.text.length} chars): ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
-      );
-      return res.status(HTTP_INTERNAL_ERROR).json({
-        error: "No JSON in response",
-        provider,
-        rawText: result.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
-      });
+    const parsed = parseModelChoice(result.text, legalActions);
+    if (parsed.ok) {
+      return res
+        .status(HTTP_OK)
+        .json({ action: parsed.action, strategySummary });
     }
 
-    const parsed = parseActionFromText(result.text);
-    if (parsed) {
-      return res.status(HTTP_OK).json({ action: parsed, strategySummary });
+    // Invalid reply — give the model one corrective retry with the error
+    apiLogger.warn(
+      `${provider} invalid reply (${parsed.error}), retrying — raw: ${result.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+    );
+
+    const retryResult = await generateText({
+      model,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: userMessage },
+        { role: "assistant", content: result.text },
+        {
+          role: "user",
+          content: `Your previous reply was invalid: ${parsed.error}. Reply with ONLY the JSON object {"reasoning": "<why>", "choice": <number>} where choice is a number from 1 to ${legalActions.length} selecting one LEGAL ACTION from the list above.`,
+        },
+      ],
+      maxRetries: 0,
+    });
+
+    const retryParsed = parseModelChoice(retryResult.text, legalActions);
+    if (retryParsed.ok) {
+      return res
+        .status(HTTP_OK)
+        .json({ action: retryParsed.action, strategySummary });
     }
 
-    // JSON was found but didn't match schema — log both raw and extracted
     apiLogger.error(
-      `${provider} JSON schema mismatch — extracted: ${jsonStr.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
+      `${provider} invalid reply after retry (${retryParsed.error}) — raw: ${retryResult.text.slice(0, ERROR_TEXT_PREVIEW_LONG)}`,
     );
     return res.status(HTTP_INTERNAL_ERROR).json({
-      error: "JSON parse failed",
+      error: "Model reply did not select a legal action",
       provider,
-      rawText: result.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
+      rawText: retryResult.text.slice(0, ERROR_TEXT_PREVIEW_SHORT),
     });
   } catch (err) {
     const error = err as Error;
