@@ -23,6 +23,13 @@ describe("CARDS - data integrity", () => {
     });
   });
 
+  it("should have a non-empty strategy note for each card", () => {
+    Object.values(CARDS).forEach(card => {
+      expect(typeof card.strategy).toBe("string");
+      expect(card.strategy.length).toBeGreaterThan(0);
+    });
+  });
+
   it("should have coins property for treasure cards", () => {
     const treasures: CardName[] = ["Copper", "Silver", "Gold"];
     treasures.forEach(name => {
@@ -73,7 +80,7 @@ describe("CARDS - data integrity", () => {
 
 describe("CARDS - specific cards", () => {
   it("should define Copper correctly", () => {
-    expect(CARDS.Copper).toEqual({
+    expect(CARDS.Copper).toMatchObject({
       name: "Copper",
       cost: 0,
       types: ["treasure"],
@@ -83,7 +90,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Silver correctly", () => {
-    expect(CARDS.Silver).toEqual({
+    expect(CARDS.Silver).toMatchObject({
       name: "Silver",
       cost: 3,
       types: ["treasure"],
@@ -93,7 +100,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Gold correctly", () => {
-    expect(CARDS.Gold).toEqual({
+    expect(CARDS.Gold).toMatchObject({
       name: "Gold",
       cost: 6,
       types: ["treasure"],
@@ -103,7 +110,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Estate correctly", () => {
-    expect(CARDS.Estate).toEqual({
+    expect(CARDS.Estate).toMatchObject({
       name: "Estate",
       cost: 2,
       types: ["victory"],
@@ -113,7 +120,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Duchy correctly", () => {
-    expect(CARDS.Duchy).toEqual({
+    expect(CARDS.Duchy).toMatchObject({
       name: "Duchy",
       cost: 5,
       types: ["victory"],
@@ -123,7 +130,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Province correctly", () => {
-    expect(CARDS.Province).toEqual({
+    expect(CARDS.Province).toMatchObject({
       name: "Province",
       cost: 8,
       types: ["victory"],
@@ -133,7 +140,7 @@ describe("CARDS - specific cards", () => {
   });
 
   it("should define Curse correctly", () => {
-    expect(CARDS.Curse).toEqual({
+    expect(CARDS.Curse).toMatchObject({
       name: "Curse",
       cost: 0,
       types: ["curse"],
