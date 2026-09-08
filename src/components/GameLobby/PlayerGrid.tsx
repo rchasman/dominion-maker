@@ -214,8 +214,9 @@ export function PlayerGrid({
         gap: "var(--space-8)",
       }}
     >
-      {/* Players arranged in a circle - always show circle */}
+      {/* Use a circle on desktop and a wrapping list on small screens. */}
       <div
+        className="lobby-player-grid"
         style={{
           position: "relative",
           width: `${circleRadius * DIAMETER_MULTIPLIER + CIRCLE_LAYOUT.CONTAINER_PADDING_PX}px`,
@@ -227,6 +228,7 @@ export function PlayerGrid({
       >
         {/* Background circle - always visible */}
         <div
+          className="lobby-circle-background"
           style={{
             position: "absolute",
             width: `${circleRadius * DIAMETER_MULTIPLIER}px`,
@@ -240,6 +242,7 @@ export function PlayerGrid({
         {/* Connecting message in center */}
         {!isConnected && (
           <div
+            className="lobby-center-content"
             style={{
               position: "absolute",
               color: "var(--color-text-tertiary)",
@@ -254,6 +257,7 @@ export function PlayerGrid({
         {/* Active games inside the circle */}
         {activeGames.length > 0 && (
           <div
+            className="lobby-center-content"
             style={{
               position: "absolute",
               display: "flex",
@@ -296,6 +300,7 @@ export function PlayerGrid({
           return (
             <div
               key={player.id}
+              className="lobby-player-position"
               style={{
                 position: "absolute",
                 transform: `translate(${x}px, ${y}px)`,

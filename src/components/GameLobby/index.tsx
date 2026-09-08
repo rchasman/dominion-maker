@@ -5,6 +5,7 @@
  * they click back to accept and you're both in.
  * Also shows active games that spectators can join.
  */
+import "./lobby.css";
 import { useState, useEffect } from "preact/hooks";
 import { usePartyLobby } from "../../partykit/usePartyLobby";
 import { PlayerGrid } from "./PlayerGrid";
@@ -180,12 +181,14 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   // Lobby view
   return (
     <div
+      className="game-lobby"
       style={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         minBlockSize: "100dvh",
+        boxSizing: "border-box",
         gap: "var(--space-6)",
         background:
           "linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%)",
@@ -234,6 +237,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
       />
 
       <div
+        className="lobby-controls"
         style={{
           display: "flex",
           alignItems: "center",
