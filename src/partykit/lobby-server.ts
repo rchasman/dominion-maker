@@ -51,7 +51,7 @@ export default class LobbyServer implements Party.Server {
 
       // Cancel any requests involving this player
       const requestsToRemove = Array.from(this.requests.entries())
-        .filter(([_, req]) => req.fromId === conn.id || req.toId === conn.id)
+        .filter(([, req]) => req.fromId === conn.id || req.toId === conn.id)
         .map(([id]) => id);
       requestsToRemove.map(id => this.requests.delete(id));
 
@@ -111,7 +111,7 @@ export default class LobbyServer implements Party.Server {
   ) {
     // Check if this clientId is already connected (deduplication)
     const existingPlayer = [...this.players.entries()].find(
-      ([_, p]) => p.clientId === clientId,
+      ([, p]) => p.clientId === clientId,
     );
 
     if (existingPlayer) {
@@ -248,7 +248,7 @@ export default class LobbyServer implements Party.Server {
     // Cancel any other requests involving these players
     const requestsToRemove = Array.from(this.requests.entries())
       .filter(
-        ([_, req]) =>
+        ([, req]) =>
           req.fromId === player1.id ||
           req.toId === player1.id ||
           req.fromId === player2.id ||

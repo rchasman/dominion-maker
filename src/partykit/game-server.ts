@@ -956,9 +956,7 @@ export default class GameServer implements Party.Server {
   private cleanupBotConnections() {
     // Remove all bot connections
     const botConnectionIds = [...this.connections.entries()]
-      .filter(
-        ([_, conn]) => conn.clientId && this.botPlayers.has(conn.clientId),
-      )
+      .filter(([, conn]) => conn.clientId && this.botPlayers.has(conn.clientId))
       .map(([id]) => id);
 
     botConnectionIds.map(id => this.connections.delete(id));
