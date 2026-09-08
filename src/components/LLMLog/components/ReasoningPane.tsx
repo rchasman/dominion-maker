@@ -1,3 +1,4 @@
+import { VoteExplanations } from "./VoteExplanations";
 import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
 import type { Action } from "../../../types/action";
@@ -160,37 +161,7 @@ function LiveActionGroupDisplay({
       >
         {groupVotersByModel(group.voters)}
       </div>
-      {group.reasonings.length > 0 && group.reasonings[0] && (
-        <div
-          style={{
-            padding: "var(--space-3)",
-            backgroundColor: "var(--color-bg-secondary)",
-            borderRadius: "4px",
-            borderLeft: `3px solid ${isWinner ? "var(--color-action)" : "var(--color-text-secondary)"}`,
-          }}
-        >
-          <div
-            style={{
-              fontSize: "0.7rem",
-              fontWeight: 600,
-              color: getModelColor(group.reasonings[0].provider),
-              marginBottom: "var(--space-1)",
-            }}
-          >
-            {group.reasonings[0].provider}
-          </div>
-          <div
-            style={{
-              fontSize: "0.7rem",
-              color: "var(--color-text-primary)",
-              fontStyle: "italic",
-              lineHeight: 1.5,
-            }}
-          >
-            {group.reasonings[0].reasoning}
-          </div>
-        </div>
-      )}
+      <VoteExplanations reasonings={group.reasonings} />
     </div>
   );
 }

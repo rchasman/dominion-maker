@@ -28,6 +28,7 @@ export function VoteBar({
       style={{
         display: "flex",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: "var(--space-2)",
         fontSize: "0.75rem",
       }}
@@ -111,10 +112,10 @@ function PercentageLabel({
         fontSize: "0.7rem",
         fontWeight: 600,
         flexShrink: 0,
-        width: `${percentageWidth}px`,
+        minWidth: `${percentageWidth}px`,
       }}
     >
-      {percentage.toFixed(0)}%
+      {percentage.toFixed(0)}% vote share
     </span>
   );
 }

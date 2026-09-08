@@ -1,5 +1,7 @@
+import { createGame } from "../engine";
 import { describe, it, expect, mock } from "bun:test";
 import {
+  logVotingResults,
   createActionSignature,
   checkEarlyConsensus,
   handleModelSuccess,
@@ -702,4 +704,58 @@ describe("early consensus electorate safeguards", () => {
       })?.count,
     ).toBe(2);
   });
+});
+
+it("preserves different explanations from repeated instances of one model", () => {
+  const action: Action = { type: "buy_card", card: "Gold" };
+  const winner: VoteGroup = {
+    action,
+    signature: createActionSignature(action),
+    voters: ["gpt-5.4-nano", "gpt-5.4-nano"],
+    count: 2,
+  };
+  const state = createGame(["ai", "human"], undefined, 42).state;
+  const logger = mock<LLMLogger>(() => {});
+  logVotingResults({
+    winner,
+    votesConsidered: 3,
+    validEarlyConsensus: false,
+    rankedGroups: [winner],
+    aheadByK: 2,
+    completedResults: [
+      {
+        provider: "gpt-5.4-nano",
+        result: { ...action, reasoning: "Economy" },
+        duration: 1,
+        error: null,
+      },
+      {
+        provider: "gpt-5.4-nano",
+        result: { ...action, reasoning: "Action balance" },
+        duration: 1,
+        error: null,
+      },
+      {
+        provider: "gpt-5.4-nano",
+        result: { type: "end_phase", reasoning: "Skip" },
+        duration: 1,
+        error: null,
+      },
+    ],
+    legalActions: [action],
+    overallStart: performance.now(),
+    currentState: state,
+    playerState: state.players.ai,
+    hand: [],
+    inPlay: [],
+    handCounts: { treasures: 0, actions: 0, total: 0 },
+    logger,
+  });
+  const results = logger.mock.calls[0]?.[0].data?.allResults as Array<{
+    reasonings: { reasoning: string }[];
+  }>;
+  expect(results[0]?.reasonings.map(item => item.reasoning)).toEqual([
+    "Economy",
+    "Action balance",
+  ]);
 });

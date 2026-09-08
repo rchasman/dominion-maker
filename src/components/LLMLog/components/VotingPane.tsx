@@ -1,3 +1,4 @@
+import { VoteExplanations, type VoteExplanation } from "./VoteExplanations";
 import type { Action } from "../../../types/action";
 import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
@@ -29,8 +30,8 @@ function formatActionForValidation(action: Action): string {
 function isActionValidFromStrings(
   action: Action,
   legalActions: string[] | undefined,
-): boolean {
-  if (!legalActions) return true; // No validation data available
+): boolean | undefined {
+  if (!legalActions) return undefined; // No validation data available
   return legalActions.includes(formatActionForValidation(action));
 }
 const PIXELS_PER_CHAR_PERCENTAGE: number = 7.5;
@@ -38,7 +39,6 @@ const PIXELS_PER_VOTER_CIRCLE: number = 11;
 const TOTAL_BAR_CONTAINER_WIDTH: number = 290;
 const GAP_SPACING_TOTAL: number = 12;
 const PERCENTAGE_MULTIPLIER: number = 100;
-const OPACITY_HALF: number = 0.5;
 const FONT_WEIGHT_BOLD: number = 700;
 
 // Build vote groups from successful statuses using reduce
@@ -55,14 +55,24 @@ function buildVoteGroups(
       return new Map(voteGroups).set(signature, {
         ...existing,
         voters: [...existing.voters, status.provider],
+        reasonings: [
+          ...existing.reasonings,
+          {
+            provider: status.provider,
+            reasoning: status.action.reasoning ?? "",
+          },
+        ],
       });
     }
     return new Map(voteGroups).set(signature, {
       action: status.action,
       voters: [status.provider],
+      reasonings: [
+        { provider: status.provider, reasoning: status.action.reasoning ?? "" },
+      ],
       valid: isActionValidFromStrings(status.action, legalActions),
     });
-  }, new Map<string, { action: Action; voters: string[]; valid?: boolean }>());
+  }, new Map<string, { action: Action; voters: string[]; valid: boolean | undefined; reasonings: VoteExplanation[] }>());
 }
 
 // Collect all unique models from results
@@ -87,7 +97,7 @@ function calculateLayoutDimensions(
   const longestPercentageString = Math.max(
     ...allResults.map(r => {
       const pct = (r.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
-      return `${pct.toFixed(0)}%`.length;
+      return `${pct.toFixed(0)}% vote share`.length;
     }),
   );
   const percentageWidth = longestPercentageString * PIXELS_PER_CHAR_PERCENTAGE;
@@ -164,7 +174,8 @@ export function VotingPane({
           action: g.action,
           votes: g.voters.length,
           voters: g.voters,
-          valid: g.valid ?? true,
+          valid: g.valid,
+          reasonings: g.reasonings,
           signature: JSON.stringify(stripReasoning(g.action)),
         }))
         .sort(
@@ -208,6 +219,12 @@ export function VotingPane({
         }}
       >
         <div style={{ marginTop: "-1px" }}>
+          <p
+            style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)" }}
+          >
+            Vote share counts support for an action, not confidence in its
+            explanation. During voting, the denominator includes pending models.
+          </p>
           {allResults.map((result, idx) => (
             <VoteResultItem
               key={idx}
@@ -231,7 +248,8 @@ interface VoteResultItemProps {
     action: Action;
     votes: number;
     voters: string[];
-    valid?: boolean;
+    valid?: boolean | undefined;
+    reasonings?: VoteExplanation[];
   };
   isWinner: boolean;
   maxVotes: number;
@@ -250,7 +268,7 @@ function VoteResultItem({
 }: VoteResultItemProps) {
   const percentage = (result.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
   const actionStr = JSON.stringify(stripReasoning(result.action));
-  const isValid = result.valid !== false;
+  const isValid = result.valid;
   const groupedVoters = groupVotersWithColors(result.voters);
   const barWidthPx = (percentage / PERCENTAGE_MULTIPLIER) * barAreaWidth;
 
@@ -267,11 +285,21 @@ function VoteResultItem({
       />
       <ActionDetails
         actionStr={actionStr}
-        {...(result.action.reasoning !== undefined && {
-          reasoning: result.action.reasoning,
-        })}
         isValid={isValid}
         isWinner={isWinner}
+      />
+      <VoteExplanations
+        reasonings={
+          result.reasonings ??
+          (result.action.reasoning
+            ? [
+                {
+                  provider: "Unattributed voter",
+                  reasoning: result.action.reasoning,
+                },
+              ]
+            : [])
+        }
       />
     </div>
   );
@@ -279,17 +307,11 @@ function VoteResultItem({
 
 interface ActionDetailsProps {
   actionStr: string;
-  reasoning?: string;
-  isValid: boolean;
+  isValid: boolean | undefined;
   isWinner: boolean;
 }
 
-function ActionDetails({
-  actionStr,
-  reasoning,
-  isValid,
-  isWinner,
-}: ActionDetailsProps) {
+function ActionDetails({ actionStr, isValid, isWinner }: ActionDetailsProps) {
   return (
     <div
       style={{
@@ -304,11 +326,7 @@ function ActionDetails({
         gap: "4px",
       }}
     >
-      <ActionTextContent
-        actionStr={actionStr}
-        {...(reasoning !== undefined && { reasoning })}
-        isWinner={isWinner}
-      />
+      <ActionTextContent actionStr={actionStr} isWinner={isWinner} />
       <ValidationBadge isValid={isValid} />
     </div>
   );
@@ -316,14 +334,11 @@ function ActionDetails({
 
 function ActionTextContent({
   actionStr,
-  reasoning,
   isWinner,
 }: {
   actionStr: string;
-  reasoning?: string;
   isWinner: boolean;
 }) {
-  const reasoningOpacity: number = OPACITY_HALF;
   return (
     <div
       style={{
@@ -357,42 +372,33 @@ function ActionTextContent({
           {actionStr}
         </span>
       </div>
-      {reasoning && (
-        <div
-          style={{
-            display: "flex",
-            gap: "4px",
-            paddingLeft: "19px",
-            fontStyle: "italic",
-            color: isWinner
-              ? "var(--color-text-primary)"
-              : "var(--color-text-secondary)",
-            fontSize: "0.7rem",
-            lineHeight: "1.3",
-          }}
-        >
-          <span style={{ opacity: reasoningOpacity }}>→</span>
-          <span>{reasoning}</span>
-        </div>
-      )}
     </div>
   );
 }
 
-function ValidationBadge({ isValid }: { isValid: boolean }) {
+function ValidationBadge({ isValid }: { isValid: boolean | undefined }) {
   const fontWeight: number = FONT_WEIGHT_BOLD;
   return (
     <span
-      title={isValid ? "Valid action" : "Invalid action"}
+      title="Checks action legality only; explanations are not fact-checked"
       style={{
         fontSize: "0.75rem",
-        color: isValid ? "#10b981" : "#ef4444",
+        color:
+          isValid === undefined
+            ? "var(--color-text-secondary)"
+            : isValid
+              ? "#10b981"
+              : "#ef4444",
         fontWeight,
         cursor: "help",
         flexShrink: 0,
       }}
     >
-      {isValid ? "✓" : "✗"}
+      {isValid === undefined
+        ? "Legality unchecked"
+        : isValid
+          ? "Legal action"
+          : "Illegal action"}
     </span>
   );
 }

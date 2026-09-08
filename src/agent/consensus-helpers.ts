@@ -367,20 +367,16 @@ export const logVotingResults = (params: VotingResultsParams): void => {
         votes: g.count,
         voters: g.voters,
         valid: isActionValid(g.action, legalActions),
-        reasonings: g.voters.map(voter => {
-          const result = completedResults.find(r => {
-            if (!r.result) return false;
-            return (
-              r.provider === voter &&
-              JSON.stringify(stripReasoning(r.result)) ===
-                JSON.stringify(stripReasoning(g.action))
-            );
-          });
-          return {
-            provider: voter,
-            reasoning: result?.result?.reasoning,
-          };
-        }),
+        reasonings: completedResults
+          .filter(
+            result =>
+              result.result &&
+              createActionSignature(result.result) === g.signature,
+          )
+          .map(result => ({
+            provider: result.provider,
+            reasoning: result.result?.reasoning,
+          })),
       })),
       votingDuration: performance.now() - overallStart,
       currentPhase: currentState.phase,
