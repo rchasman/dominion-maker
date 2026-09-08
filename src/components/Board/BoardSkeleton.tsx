@@ -219,7 +219,8 @@ function SkeletonInPlaySection({ inverted }: { inverted: boolean }) {
         marginBlockEnd: inverted ? undefined : "var(--space-2)",
         background: "rgb(255 255 255 / 0.02)",
         border: "1px dashed var(--color-border)",
-        minBlockSize: "calc(var(--card-height-small) + var(--space-4) + 12px)",
+        boxSizing: "border-box",
+        blockSize: "calc(var(--card-width-small) * 8 / 5 + 2rem + 6px)",
         overflow: "hidden",
       }}
     >

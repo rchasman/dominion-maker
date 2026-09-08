@@ -214,3 +214,7 @@
     flex: 1;
   }
 }
+
+.in-play-cards > [data-card-id] {
+  flex: 0 0 var(--card-width-small) !important;
+}

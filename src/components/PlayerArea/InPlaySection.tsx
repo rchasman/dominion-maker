@@ -37,7 +37,7 @@ export function InPlaySection({
       className="in-play-section"
       style={{
         display: "grid",
-        gridTemplateRows: "auto 1fr",
+        gridTemplateRows: "auto minmax(0, 1fr)",
         marginBlockStart: inverted ? "var(--space-2)" : undefined,
         marginBlockEnd: inverted ? undefined : "var(--space-2)",
         background:
@@ -48,10 +48,8 @@ export function InPlaySection({
           inPlay.length > 0
             ? "1px solid var(--color-border)"
             : "1px dashed var(--color-border)",
-        minBlockSize:
-          inPlay.length === 0
-            ? "2rem"
-            : "calc(var(--card-height-small) + var(--space-4))",
+        // Reserve a complete card row even during turn cleanup.
+        blockSize: "calc(var(--card-width-small) * 8 / 5 + 2rem + 4px)",
         overflow: "hidden",
       }}
     >
@@ -67,12 +65,13 @@ export function InPlaySection({
         In Play {inPlay.length === 0 && "(empty)"}
       </div>
       <div
+        className="in-play-cards"
         style={{
           display: "flex",
           gap: "var(--space-1)",
-          flexWrap: "wrap",
+          overflowX: "auto",
           padding: "0 var(--space-2) var(--space-2)",
-          justifyContent: "center",
+          justifyContent: "safe center",
           alignItems: "center",
           alignContent: "center",
           minInlineSize: 0,
