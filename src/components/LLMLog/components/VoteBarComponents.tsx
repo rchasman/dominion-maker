@@ -28,8 +28,6 @@ export function VoteBar({
       style={{
         display: "flex",
         alignItems: "center",
-        flexWrap: "nowrap",
-        overflowX: "auto",
         gap: "var(--space-2)",
         fontSize: "0.75rem",
       }}
@@ -92,8 +90,8 @@ function ProgressBar({
           : "var(--color-text-secondary)",
         opacity,
         borderRadius: "3px",
-        minWidth: 0,
-        flexShrink: 1,
+        minWidth: "30px",
+        flexShrink: 0,
       }}
     />
   );
@@ -116,7 +114,6 @@ function PercentageLabel({
         fontWeight: 600,
         flexShrink: 0,
         width: `${percentageWidth}px`,
-        whiteSpace: "nowrap",
       }}
     >
       {percentage.toFixed(0)}%

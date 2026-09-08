@@ -105,14 +105,12 @@ function calculateLayoutDimensions(
   const maxVoterCircles = Math.max(...allResults.map(r => r.voters.length));
   const voterCirclesWidth = maxVoterCircles * PIXELS_PER_VOTER_CIRCLE;
 
-  const barAreaWidth = Math.max(
-    0,
+  const barAreaWidth =
     TOTAL_BAR_CONTAINER_WIDTH -
-      voteCountWidth -
-      percentageWidth -
-      voterCirclesWidth -
-      GAP_SPACING_TOTAL,
-  );
+    voteCountWidth -
+    percentageWidth -
+    voterCirclesWidth -
+    GAP_SPACING_TOTAL;
 
   return { voteCountWidth, percentageWidth, barAreaWidth };
 }
