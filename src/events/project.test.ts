@@ -538,7 +538,7 @@ describe("project", () => {
         type: "CARD_DRAWN",
         playerId: "human",
         card: "Copper",
-      })) as GameEvent[];
+      }));
 
       const counts = countEventsByType(events);
 

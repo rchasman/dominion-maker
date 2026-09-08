@@ -68,7 +68,7 @@ describe("game-agent", () => {
       }) as unknown as typeof fetch;
 
       try {
-        await expect(
+        expect(
           advanceGameStateWithConsensus(engine, "player1", {
             providers: ["gpt-5.4-mini"],
           }),

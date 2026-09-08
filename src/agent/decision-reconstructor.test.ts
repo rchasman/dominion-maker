@@ -157,10 +157,7 @@ describe("simulateCardSelection", () => {
       from: "hand",
     };
 
-    const original = engine.state.pendingChoice as Extract<
-      PendingChoice,
-      { choiceType: "decision" }
-    >;
+    const original = engine.state.pendingChoice;
     const originalOptions = [...original.cardOptions];
     simulateCardSelection(engine, "Copper");
 

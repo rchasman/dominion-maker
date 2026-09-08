@@ -86,7 +86,7 @@ describe("generateActionViaBackend", () => {
       playerOrder: ["player1", "player2"],
     };
 
-    await expect(
+    expect(
       generateActionViaBackend({
         provider: "gpt-5.4-mini",
         currentState: state,

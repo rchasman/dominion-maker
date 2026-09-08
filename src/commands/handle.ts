@@ -149,7 +149,7 @@ export function handleCommand(
   const seed = command.type === "START_GAME" ? command.seed : state.randomState;
   const random = createRandom(seed ?? Math.floor(Math.random() * 4294967296));
   const initial = random.state;
-  const result = decideCommand(state, command, fromPlayer, random.next);
+  const result = decideCommand(state, command, fromPlayer, () => random.next());
   if (!result.ok || (random.state === initial && command.type !== "START_GAME"))
     return result;
   const cause = result.events[0]?.id;

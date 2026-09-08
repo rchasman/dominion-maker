@@ -52,11 +52,11 @@ export function handleStartGame(
   // Deal starting decks (7 Copper, 3 Estate per official rules)
   const copperCards: CardName[] = Array.from(
     { length: STARTING_DECK.COPPER },
-    () => "Copper" as CardName,
+    () => "Copper",
   );
   const estateCards: CardName[] = Array.from(
     { length: STARTING_DECK.ESTATE },
-    () => "Estate" as CardName,
+    () => "Estate",
   );
   const startingDeck: CardName[] = [...copperCards, ...estateCards];
 

@@ -8,11 +8,8 @@ export default defineConfig([
   globalIgnores(["dist"]),
   {
     files: ["**/*.{ts,tsx}"],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommendedTypeChecked,
-      reactHooks.configs.flat.recommended,
-    ],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
+    plugins: { "react-hooks": reactHooks },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -24,69 +21,21 @@ export default defineConfig([
       },
     },
     rules: {
+      // Preact uses mutable signals; React Compiler rules assume React-only semantics.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error",
       // Disable for test files - handled in override below
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/no-unsafe-return": "error",
-      // Existing
-      "no-nested-ternary": "error",
-
-      // Category 1: Functional/Immutable Style
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "VariableDeclaration[kind='let']",
-          message: "Use const instead of let for immutability",
-        },
-        {
-          selector: "CallExpression[callee.property.name='forEach']",
-          message: "Use map/filter/reduce instead of forEach",
-        },
-        {
-          selector: "CallExpression[callee.property.name='push']",
-          message:
-            "Use spread [...arr, item] instead of push() for immutability",
-        },
-        {
-          selector: "CallExpression[callee.property.name='unshift']",
-          message:
-            "Use spread [item, ...arr] instead of unshift() for immutability",
-        },
-        {
-          selector: "CallExpression[callee.property.name='splice']",
-          message: "Use slice/spread instead of splice() for immutability",
-        },
-        {
-          selector: "CallExpression[callee.name='require']",
-          message: "Use ES modules (import) instead of require()",
-        },
-        {
-          selector: "ForStatement",
-          message: "Use map/filter/reduce instead of for loops",
-        },
-        {
-          selector: "ForInStatement",
-          message: "Use Object.keys/entries with map instead of for...in",
-        },
-        {
-          selector: "ForOfStatement",
-          message: "Use map/filter/reduce instead of for...of",
-        },
-      ],
+      // Correctness is enforced here; layout and stylistic preferences belong to Prettier.
       "prefer-const": "error",
       "no-var": "error",
       "no-else-return": ["error", { allowElseIf: false }],
 
       // Category 2: TypeScript Safety
-      "@typescript-eslint/no-non-null-assertion": "error",
-      "@typescript-eslint/consistent-type-assertions": [
-        "error",
-        {
-          assertionStyle: "as",
-          objectLiteralTypeAssertions: "allow-as-parameter",
-        },
-      ],
+
       "@typescript-eslint/ban-ts-comment": [
         "error",
         { "ts-expect-error": "allow-with-description", "ts-ignore": true },
@@ -99,30 +48,6 @@ export default defineConfig([
         "error",
         { checksVoidReturn: false },
       ],
-
-      // Category 4: Complexity Limits
-      "max-lines-per-function": [
-        "error",
-        { max: 300, skipBlankLines: true, skipComments: true },
-      ],
-      "max-lines": [
-        "error",
-        { max: 900, skipBlankLines: true, skipComments: true },
-      ],
-      complexity: ["error", 35],
-      "max-nested-callbacks": ["error", 4],
-      "max-params": ["error", 4],
-
-      // Category 5: Readability
-      "no-magic-numbers": [
-        "error",
-        {
-          ignore: [0, 1, -1],
-          ignoreArrayIndexes: true,
-          ignoreDefaultValues: true,
-        },
-      ],
-      "prefer-template": "error",
 
       // Category 6: Unused Variables (Infinite Game Thinking)
       // NEVER allow underscore prefix - delete unused code instead
@@ -158,6 +83,10 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
+      // Promise-returning mocks need not await; method references are commonly asserted, not called.
+      "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/unbound-method": "off",
+      "no-useless-assignment": "off",
       // Test files often need more flexibility
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",

@@ -293,7 +293,7 @@ describe("EventBuilder", () => {
       events1.push({
         type: "BUYS_MODIFIED",
         delta: 1,
-      } as GameEvent);
+      });
 
       const events2 = builder.build();
 

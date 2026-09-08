@@ -476,7 +476,7 @@ export function PerformancePane({
   const timings: TimingEntry[] = run(() => {
     if (liveStatuses && liveStatuses.size > 0)
       return buildTimingsFromLiveStatuses(liveStatuses, currentTime);
-    if (data?.timings) return data.timings as TimingEntry[];
+    if (data?.timings) return data.timings;
     return [];
   });
 

@@ -394,7 +394,7 @@ function renderRevealCard(
   entry: LogEntryType & {
     type: "reveal-card";
     playerId: string;
-    card: CardName | string;
+    card: string;
     from: string;
   },
 ) {
@@ -550,7 +550,7 @@ const ENTRY_RENDERERS = {
       entry as LogEntryType & {
         type: "reveal-card";
         playerId: string;
-        card: CardName | string;
+        card: string;
         from: string;
       },
     ),

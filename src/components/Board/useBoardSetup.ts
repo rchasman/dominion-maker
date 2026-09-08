@@ -81,19 +81,20 @@ export function useBoardSetup() {
 
   const [showDevtools, setShowDevtools] = useState(false);
 
+  const { startGame, requestUndo } = game;
   const onNewGame = useCallback(() => {
     exitPreview();
     clearSelection();
-    game.startGame();
-  }, [game, exitPreview, clearSelection]);
+    startGame();
+  }, [startGame, exitPreview, clearSelection]);
 
   const handleRequestUndo = useCallback(
     (eventId: string) => {
       exitPreview();
       clearSelection();
-      game.requestUndo(eventId);
+      requestUndo(eventId);
     },
-    [game, exitPreview, clearSelection],
+    [requestUndo, exitPreview, clearSelection],
   );
 
   const {

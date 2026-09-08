@@ -12,12 +12,11 @@
     "stylelint-config-standard",
     "bun:test",
     "react",
-    "react-dom"
+    "react-dom",
+    "bun"
   ],
   "ignore-patterns": [
     "dist",
-    "node_modules",
-    "*.test.ts",
-    "*.test.tsx"
+    "node_modules"
   ]
 }

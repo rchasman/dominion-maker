@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { Card } from "../Card";
 import { DEFAULT_LOG_HEIGHT_PERCENT } from "./constants";

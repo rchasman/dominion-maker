@@ -91,7 +91,7 @@ describe("Gardens", () => {
     const result = gardens.run(
       {
         state,
-        playerId: "nonexistent" as any,
+        playerId: "nonexistent",
         card: "Gardens",
         trigger: { type: "play" },
         random: () => 0.5,

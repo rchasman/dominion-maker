@@ -203,6 +203,8 @@ export class EngineStrategy implements GameStrategy {
     }
   }
 
+  // The shared strategy API is asynchronous even when heuristic decisions finish immediately.
+  // eslint-disable-next-line @typescript-eslint/require-await
   async resolveAIPendingDecision(engine: DominionEngine): Promise<void> {
     const decision = engine.state.pendingChoice;
     if (!decision || decision.playerId !== "ai") return;

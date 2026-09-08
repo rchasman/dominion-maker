@@ -155,7 +155,7 @@ describe("Moneylender", () => {
     const result = moneylender.run(
       {
         state,
-        playerId: "nonexistent" as any,
+        playerId: "nonexistent",
         card: "Moneylender",
         trigger: { type: "play" },
         random: () => 0.5,
@@ -181,7 +181,7 @@ describe("Moneylender", () => {
       {
         type: "answer",
         memory: null,
-        answer: { selectedCards: ["Estate" as any] },
+        answer: { selectedCards: ["Estate"] },
       },
     );
 

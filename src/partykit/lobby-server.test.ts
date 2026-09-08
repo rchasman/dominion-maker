@@ -96,7 +96,7 @@ describe("LobbyServer", () => {
       const players = new Map([["conn-old", { clientId: "client-123" }]]);
 
       players.delete("conn-old");
-      players.set("conn-new", { clientId: "client-123" } as any);
+      players.set("conn-new", { clientId: "client-123" });
 
       expect(players.has("conn-old")).toBe(false);
       expect(players.has("conn-new")).toBe(true);

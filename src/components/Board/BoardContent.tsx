@@ -350,18 +350,8 @@ export function BoardContent({
             }
             toEventId={pendingUndo.toEventId}
             events={game.events}
-            onApprove={useCallback(
-              (id: string) => {
-                if (approveUndo) approveUndo(id);
-              },
-              [approveUndo],
-            )}
-            onDeny={useCallback(
-              (id: string) => {
-                if (denyUndo) denyUndo(id);
-              },
-              [denyUndo],
-            )}
+            onApprove={approveUndo}
+            onDeny={denyUndo}
           />
         )}
 

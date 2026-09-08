@@ -48,10 +48,10 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastAITurnRef = useRef<string | null>(null);
 
+  const gameState = gameState$.value;
+  const isProcessing = isProcessing$.value;
   useEffect(() => {
     const engine = engineRef.current;
-    const gameState = gameState$.value;
-    const isProcessing = isProcessing$.value;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
       return;
     }
@@ -212,14 +212,7 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
     return () => {
       clearTimeout(timer);
     };
-  }, [
-    gameState$.value,
-    isProcessing$.value,
-    gameMode,
-    strategy,
-    engineRef,
-    animation,
-  ]);
+  }, [gameState, isProcessing, gameMode, strategy, engineRef, animation]);
 }
 
 /**
@@ -232,10 +225,10 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastAIDecisionRef = useRef<string | null>(null);
 
+  const gameState = gameState$.value;
+  const isProcessing = isProcessing$.value;
   useEffect(() => {
     const engine = engineRef.current;
-    const gameState = gameState$.value;
-    const isProcessing = isProcessing$.value;
     if (!gameState || gameState.gameOver || isProcessing || !engine) {
       return;
     }
@@ -308,7 +301,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
     return () => {
       clearTimeout(timer);
     };
-  }, [gameState$.value, isProcessing$.value, gameMode, strategy, engineRef]);
+  }, [gameState, isProcessing, gameMode, strategy, engineRef]);
 }
 
 /**
@@ -317,10 +310,10 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
 export function useAutoPhaseAdvance(
   engineRef: MutableRefObject<DominionEngine | null>,
 ): void {
+  const gameState = gameState$.value;
+  const isProcessing = isProcessing$.value;
   useEffect(() => {
     const engine = engineRef.current;
-    const gameState = gameState$.value;
-    const isProcessing = isProcessing$.value;
     if (!gameState || isProcessing || !engine) {
       return;
     }
@@ -338,7 +331,7 @@ export function useAutoPhaseAdvance(
     }
 
     return;
-  }, [gameState$.value, isProcessing$.value, engineRef]);
+  }, [gameState, isProcessing, engineRef]);
 }
 
 /**

@@ -224,7 +224,7 @@ describe("Poacher", () => {
     const result = poacher.run(
       {
         state,
-        playerId: "nonexistent" as any,
+        playerId: "nonexistent",
         card: "Poacher",
         trigger: { type: "play" },
         random: () => 0.5,

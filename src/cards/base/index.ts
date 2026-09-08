@@ -43,7 +43,7 @@ export const CARD_EFFECTS: Partial<Record<CardName, CardEffect>> = {
       ? done([], true)
       : done(
           state.players[playerId]
-            ? createDrawEvents(playerId, state.players[playerId]!, 2, random)
+            ? createDrawEvents(playerId, state.players[playerId], 2, random)
             : [],
         ),
   ),

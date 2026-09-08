@@ -457,7 +457,7 @@ describe("types - causality helpers", () => {
           type: "ACTIONS_MODIFIED",
           delta: 2,
           causedBy: "evt-1",
-        } as GameEvent,
+        },
       ];
 
       const chain = getCausalChain("evt-1", events);
@@ -791,7 +791,7 @@ describe("types - causality helpers", () => {
         {
           type: "ACTIONS_MODIFIED",
           delta: 1,
-        } as GameEvent,
+        },
       ];
 
       const result = removeEventChain("evt-1", events);

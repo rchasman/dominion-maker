@@ -474,7 +474,7 @@ function cardEventToLogEntry(event: MaybeAggregatedEvent): LogEntry | null {
         card: event.card,
         from: event.from || "deck",
         ...(event.id !== undefined && { eventId: event.id }),
-      } as LogEntry;
+      };
     case "DECK_SHUFFLED":
       return {
         type: "shuffle-deck",

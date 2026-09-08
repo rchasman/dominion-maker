@@ -677,7 +677,7 @@ describe("usePartyGame", () => {
   describe("error handling", () => {
     it("should handle transient errors without ending game", () => {
       let error: string | null = null;
-      let gameEndReason: string | null = null;
+      const gameEndReason: string | null = null;
 
       const msg: GameServerMessage = {
         type: "error",

@@ -294,7 +294,7 @@ describe("PartyKitSync", () => {
 
   describe("error handling", () => {
     it("should continue silently on connection error", () => {
-      let socketRef: any = { current: "socket" };
+      const socketRef: { current: string | null } = { current: "socket" };
 
       // Simulate error
       socketRef.current = null;
@@ -350,7 +350,9 @@ describe("PartyKitSync", () => {
     });
 
     it("should close old connection on reset", () => {
-      let socketRef: any = { current: { close: () => {} } };
+      const socketRef: { current: { close: () => void } | null } = {
+        current: { close: () => {} },
+      };
       let closed = false;
 
       // Simulate close

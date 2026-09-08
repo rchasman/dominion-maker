@@ -111,7 +111,7 @@ describe("GameServer", () => {
       const botPlayers = new Set<string>();
 
       const humanCount = connections.filter(
-        conn => conn.isSpectator || !botPlayers.has(conn.clientId as string),
+        conn => conn.isSpectator || !botPlayers.has(conn.clientId),
       ).length;
 
       expect(humanCount).toBe(2);
@@ -126,8 +126,7 @@ describe("GameServer", () => {
 
       const humanCount = connections.filter(
         conn =>
-          conn.isSpectator ||
-          (conn.clientId && !botPlayers.has(conn.clientId as string)),
+          conn.isSpectator || (conn.clientId && !botPlayers.has(conn.clientId)),
       ).length;
 
       expect(humanCount).toBe(1);
@@ -140,8 +139,7 @@ describe("GameServer", () => {
       const botPlayers = new Set<string>(["bot1", "bot2"]);
 
       const isFullMode =
-        players.length > 0 &&
-        players.every(p => botPlayers.has(p.clientId as string));
+        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
 
       expect(isFullMode).toBe(true);
     });
@@ -151,8 +149,7 @@ describe("GameServer", () => {
       const botPlayers = new Set<string>(["bot1"]);
 
       const isFullMode =
-        players.length > 0 &&
-        players.every(p => botPlayers.has(p.clientId as string));
+        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
 
       expect(isFullMode).toBe(false);
     });
@@ -391,7 +388,7 @@ describe("GameServer", () => {
       const isFullMode = false;
 
       const shouldEnd =
-        players.every(p => botPlayers.has(p.clientId as string)) &&
+        players.every(p => botPlayers.has(p.clientId)) &&
         humanCount === 0 &&
         !isFullMode;
 
@@ -673,7 +670,7 @@ describe("GameServer", () => {
       const botPlayers = new Set<string>();
 
       const humanPlayerCount = remainingPlayers.filter(
-        p => !botPlayers.has(p.clientId as string),
+        p => !botPlayers.has(p.clientId),
       ).length;
       const isMultiplayer = humanPlayerCount > 0;
 

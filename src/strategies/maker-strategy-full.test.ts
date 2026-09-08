@@ -310,7 +310,7 @@ describe("MakerStrategy - Full Coverage", () => {
 
   describe("edge cases", () => {
     it("should handle null provider", () => {
-      strategy = new MakerStrategy(null as any);
+      strategy = new MakerStrategy(null);
       expect(strategy).toBeDefined();
     });
 
