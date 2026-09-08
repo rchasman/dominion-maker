@@ -23,7 +23,8 @@ import {
   buildStrategicContext,
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
-import { CARDS, isTreasureCard } from "../src/data/cards";
+import { isTreasureCard } from "../src/data/cards";
+import { getCardCost } from "../src/cards/cost";
 import { countCards } from "../src/lib/card-array-utils";
 import { countVP, getAllCards } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
@@ -147,21 +148,13 @@ function optimizeStateForAI(state: GameState): unknown {
   );
   const opponent = opponentId ? state.players[opponentId] : null;
 
-  // Calculate effective card costs (base cost - active reductions)
-  const costReduction = state.activeEffects
-    .filter(e => e.effectType === "cost_reduction")
-    .reduce(
-      (total, e) =>
-        total + ((e.parameters as { amount?: number })?.amount ?? 0),
-      0,
-    );
-
   // Transform supply to array with counts and effective costs
   const supplyWithCounts = Object.entries(state.supply).map(([card, count]) => {
-    const cardData = CARDS[card as CardName];
-    const baseCost = cardData?.cost ?? 0;
-    const effectiveCost = Math.max(0, baseCost - costReduction);
-    return { card, count, cost: effectiveCost };
+    return {
+      card,
+      count,
+      cost: getCardCost(state, card as CardName).modifiedCost,
+    };
   });
 
   // Calculate treasures still in hand

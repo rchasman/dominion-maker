@@ -3,7 +3,8 @@
  */
 
 import { createMultiStageCard, getGainableTreasures } from "../effect-types";
-import { CARDS, isTreasureCard } from "../../data/cards";
+import { isTreasureCard } from "../../data/cards";
+import { getCardCost } from "../cost";
 import { STAGES } from "../stages";
 
 const COST_BONUS = 3;
@@ -37,7 +38,7 @@ export const mine = createMultiStageCard({
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
 
-    const maxCost = CARDS[toTrash].cost + COST_BONUS;
+    const maxCost = getCardCost(state, toTrash).modifiedCost + COST_BONUS;
     const gainOptions = getGainableTreasures(state, maxCost);
 
     const events = [

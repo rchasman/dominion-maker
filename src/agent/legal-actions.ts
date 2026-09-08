@@ -3,7 +3,8 @@
 
 import type { GameState, CardName } from "../types/game-state";
 import type { Action } from "../types/action";
-import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
+import { isActionCard, isTreasureCard } from "../data/cards";
+import { getCardCost } from "../cards/cost";
 import { decomposeDecisionForAI } from "./decision-decomposer";
 import { isReactionChoice, isDecisionChoice } from "../types/pending-choice";
 
@@ -124,7 +125,9 @@ export function getLegalActions(state: GameState): Action[] {
       .filter(([card, count]) => {
         const cardName = card as CardName;
         return (
-          count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
+          count > 0 &&
+          getCardCost(state, cardName).modifiedCost <= state.coins &&
+          state.buys > 0
         );
       })
       .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));

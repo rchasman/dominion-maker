@@ -3,7 +3,7 @@
  */
 
 import { createMultiStageCard, getGainableCards } from "../effect-types";
-import { CARDS } from "../../data/cards";
+import { getCardCost } from "../cost";
 import { STAGES } from "../stages";
 
 const COST_BONUS = 2;
@@ -35,7 +35,7 @@ export const remodel = createMultiStageCard({
     const toTrash = decision.selectedCards[0];
     if (!toTrash) return { events: [] };
 
-    const trashCost = CARDS[toTrash].cost;
+    const trashCost = getCardCost(state, toTrash).modifiedCost;
     const maxCost = trashCost + COST_BONUS;
     const gainOptions = getGainableCards(state, maxCost);
 

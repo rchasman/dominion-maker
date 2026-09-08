@@ -1,3 +1,4 @@
+import { getCardCost } from "../cards/cost";
 import type { GameState, CardName } from "../types/game-state";
 import type { CommandResult } from "./types";
 import type { GameEvent, PlayerId } from "../events/types";
@@ -310,32 +311,6 @@ export function handleUnplayTreasure(
   return { ok: true, events: builder.build() };
 }
 
-/**
- * Calculate the effective cost of a card considering active effects.
- * Returns base cost, modified cost, and list of applied modifiers.
- * @internal - Only used by command handler for affordability validation
- */
-function calculateEffectiveCost(
-  state: GameState,
-  card: CardName,
-): {
-  baseCost: number;
-  modifiedCost: number;
-  modifiers: Array<{ source: CardName; delta: number }>;
-} {
-  const baseCost = CARDS[card].cost;
-  const modifiers = state.activeEffects
-    .filter(e => e.effectType === "cost_reduction")
-    .map(e => ({ source: e.source, delta: -e.parameters.amount }));
-
-  const modifiedCost = Math.max(
-    0,
-    baseCost + modifiers.reduce((sum, m) => sum + m.delta, 0),
-  );
-
-  return { baseCost, modifiedCost, modifiers };
-}
-
 export function handleBuyCard(
   state: GameState,
   playerId: PlayerId,
@@ -353,7 +328,7 @@ export function handleBuyCard(
   }
 
   // Calculate effective cost with modifiers
-  const { modifiedCost, baseCost, modifiers } = calculateEffectiveCost(
+  const { modifiedCost, baseCost, modifiers } = getCardCost(
     state,
     card,
   );

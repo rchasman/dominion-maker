@@ -1,3 +1,4 @@
+import { getCardCost } from "./cost";
 import type {
   GameState,
   CardName,
@@ -154,7 +155,7 @@ export function getGainableCards(
     .filter((entry): entry is [CardName, number] => {
       const [card, count] = entry;
       if (!isCardName(card)) return false;
-      return count > 0 && CARDS[card].cost <= maxCost;
+      return count > 0 && getCardCost(state, card).modifiedCost <= maxCost;
     })
     .map(([card]) => card);
 }
@@ -174,7 +175,7 @@ export function getGainableTreasures(
       return (
         count > 0 &&
         cardDef.types.includes("treasure") &&
-        cardDef.cost <= maxCost
+        getCardCost(state, card).modifiedCost <= maxCost
       );
     })
     .map(([card]) => card);
