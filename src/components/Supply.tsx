@@ -348,12 +348,8 @@ export function Supply({
   return (
     <div
       ref={supplyRef}
+      className="supply-area"
       style={{
-        display: "grid",
-        gridTemplateColumns: "auto auto 1fr auto auto",
-        gridTemplateRows: "1fr auto",
-        gridTemplateAreas:
-          '"victory treasure kingdom curse trash" "actions actions actions actions actions"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
         background: "rgba(70, 70, 95, 0.25)",
@@ -395,7 +391,10 @@ export function Supply({
       </div>
 
       {/* Kingdom cards */}
-      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
+      <div
+        className="kingdom-container"
+        style={{ gridArea: "kingdom", minInlineSize: 0 }}
+      >
         <div
           style={{
             display: "grid",
@@ -510,6 +509,7 @@ export function Supply({
       {/* Action buttons */}
       {(isPlayerActive || hasPendingDecision) && (
         <div
+          className="supply-actions"
           style={{
             gridArea: "actions",
             display: "flex",

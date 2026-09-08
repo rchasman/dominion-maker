@@ -245,7 +245,7 @@ export function HandSection({
       >
         <span
           style={{
-            fontSize: "0.5625rem",
+            fontSize: "0.6875rem",
             color: "var(--color-text-muted)",
             fontWeight: 600,
             textTransform: "uppercase",

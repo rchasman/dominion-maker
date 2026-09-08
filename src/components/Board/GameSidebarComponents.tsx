@@ -47,10 +47,11 @@ export function GameModeSwitcher({
         {(["engine", "hybrid", "full"] as const).map(mode => (
           <button
             key={mode}
+            aria-pressed={gameMode === mode}
             onClick={() => onGameModeChange(mode)}
             style={{
               padding: "3px 8px",
-              fontSize: "0.65rem",
+              fontSize: "0.75rem",
               fontWeight:
                 gameMode === mode ? FONT_WEIGHT_BOLD : FONT_WEIGHT_NORMAL,
               background:
@@ -246,6 +247,7 @@ export function GameControlsSection({
 }: GameControlsSectionProps) {
   return (
     <div
+      className="game-controls"
       style={{
         padding: "var(--space-4)",
         borderBlockStart: "1px solid var(--color-border)",

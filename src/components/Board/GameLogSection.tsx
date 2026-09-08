@@ -140,7 +140,7 @@ export function GameLogSection({
         <div
           style={{
             fontWeight: 600,
-            fontSize: "0.625rem",
+            fontSize: "0.75rem",
             color: "var(--color-gold)",
           }}
         >
@@ -156,7 +156,7 @@ export function GameLogSection({
           overflowX: "hidden",
           padding: "var(--space-5)",
           paddingBlockStart: "var(--space-3)",
-          fontSize: "0.6875rem",
+          fontSize: "0.8125rem",
           wordWrap: "break-word",
           overflowWrap: "break-word",
         }}

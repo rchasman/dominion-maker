@@ -449,7 +449,8 @@ function PhaseIndicator({
     <span
       style={{
         textTransform: "uppercase",
-        fontSize: "0.625rem",
+        fontSize: "0.75rem",
+        borderRadius: "var(--radius-md)",
         padding: "var(--space-1) var(--space-2)",
         fontWeight: 600,
         minWidth: "4.5rem",
@@ -510,6 +511,7 @@ export function PlayerLabelSection({
     <div
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: "var(--space-4)",
         paddingBlock: "var(--space-1)",

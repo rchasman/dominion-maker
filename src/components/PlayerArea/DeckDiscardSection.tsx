@@ -17,7 +17,7 @@ function EmptyPileContent() {
         alignItems: "center",
         justifyContent: "center",
         color: "var(--color-text-muted)",
-        fontSize: "0.5625rem",
+        fontSize: "0.6875rem",
         background: "var(--color-bg-primary)",
       }}
     >
@@ -189,7 +189,7 @@ export function DeckDiscardSection({
         >
           <div
             style={{
-              fontSize: "0.5625rem",
+              fontSize: "0.6875rem",
               color: "rgb(205 133 63)",
               marginBlockEnd: "var(--space-2)",
               fontWeight: 600,
@@ -230,7 +230,7 @@ export function DeckDiscardSection({
         >
           <div
             style={{
-              fontSize: "0.5625rem",
+              fontSize: "0.6875rem",
               color: "rgb(180 180 180)",
               marginBlockEnd: "var(--space-2)",
               fontWeight: 600,

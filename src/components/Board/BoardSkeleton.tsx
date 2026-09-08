@@ -339,9 +339,8 @@ function SkeletonDeckDiscardSection() {
 function SkeletonHandAndDeckGrid() {
   return (
     <div
+      className="hand-deck-grid"
       style={{
-        display: "grid",
-        gridTemplateColumns: "75% 24.5%",
         gap: "var(--space-2)",
         alignItems: "stretch",
       }}
@@ -359,6 +358,9 @@ interface SkeletonPlayerAreaProps {
 function SkeletonPlayerArea({ inverted }: SkeletonPlayerAreaProps) {
   return (
     <div
+      className={
+        inverted ? "player-area opponent-area" : "player-area main-player-area"
+      }
       style={{
         padding: inverted
           ? "var(--space-1) var(--space-2) 0 var(--space-2)"
@@ -389,10 +391,8 @@ function SkeletonPlayerArea({ inverted }: SkeletonPlayerAreaProps) {
 function SkeletonSupply() {
   return (
     <div
+      className="supply-area"
       style={{
-        display: "grid",
-        gridTemplateColumns: "auto auto 1fr auto auto",
-        gridTemplateAreas: '"victory treasure kingdom curse trash"',
         gap: "var(--space-4)",
         padding: "var(--space-3) var(--space-4)",
         background: "rgba(70, 70, 95, 0.25)",
@@ -454,12 +454,13 @@ function SkeletonSupply() {
         </div>
       </div>
 
-      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
+      <div
+        className="kingdom-container"
+        style={{ gridArea: "kingdom", minInlineSize: 0 }}
+      >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(5, minmax(0, var(--card-width-large)))",
             justifyContent: "center",
             marginBlockEnd: "var(--space-2)",
           }}
@@ -479,8 +480,6 @@ function SkeletonSupply() {
           className="kingdom-grid"
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(5, minmax(0, var(--card-width-large)))",
             gap: "var(--space-2)",
           }}
         >
@@ -538,8 +537,8 @@ function SkeletonSidebar() {
 
   return (
     <div
+      className="skeleton-sidebar"
       style={{
-        display: "flex",
         flexDirection: "column",
         height: "100%",
         background:

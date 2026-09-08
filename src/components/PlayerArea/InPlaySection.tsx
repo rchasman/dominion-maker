@@ -34,6 +34,7 @@ export function InPlaySection({
   return (
     <div
       ref={containerRef}
+      className="in-play-section"
       style={{
         display: "grid",
         gridTemplateRows: "auto 1fr",
@@ -47,14 +48,17 @@ export function InPlaySection({
           inPlay.length > 0
             ? "1px solid var(--color-border)"
             : "1px dashed var(--color-border)",
-        minBlockSize: "calc(var(--card-height-small) + var(--space-4))",
+        minBlockSize:
+          inPlay.length === 0
+            ? "2rem"
+            : "calc(var(--card-height-small) + var(--space-4))",
         overflow: "hidden",
       }}
     >
       <div
         style={{
           padding: "var(--space-1) var(--space-2)",
-          fontSize: "0.5625rem",
+          fontSize: "0.6875rem",
           color: "var(--color-text-muted)",
           textTransform: "uppercase",
           fontWeight: 600,
