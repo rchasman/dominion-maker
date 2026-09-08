@@ -1,91 +1,98 @@
-/**
- * Library - Draw until you have 7 cards in hand, skipping any Actions you choose to
- */
-
+/** Library draws sequentially, keeping skipped Actions out of reshuffles. */
 import type { CardEffect, CardEffectResult } from "../effect-types";
 import type { GameEvent } from "../../events/types";
-import { createDrawEvents, peekDraw } from "../effect-types";
+import { createDrawEvents } from "../effect-types";
+import { applyEvents } from "../../events/apply";
 import { isActionCard } from "../../data/cards";
 import { CARD_ACTIONS } from "../card-actions";
 import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
 
-const TARGET_HAND_SIZE = 7;
-
 export const library: CardEffect = ({
   state,
   playerId,
+  random,
   decision,
-  stage,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+  if (!state.players[playerId]) return { events: [] };
+  const events: GameEvent[] = [];
+  const skipped = decision
+    ? [
+        ...getCardNamesFromMetadata(
+          state.pendingChoice?.metadata,
+          "skippedCards",
+        ),
+      ]
+    : [];
+  let current = state;
+  const emit = (next: GameEvent[]) => {
+    events.push(...next);
+    current = applyEvents(current, next);
+  };
 
-  // Library peek strategy:
-  // Peeks ahead to see which cards would be drawn. If shuffle occurs during
-  // actual drawing, peeked cards may not match drawn cards. This is acceptable
-  // because: (1) shuffle is random, (2) players make choices on visible info,
-  // (3) actual draws happen after decision and use final state
-
-  if (!decision || stage === undefined) {
-    const cardsNeeded = TARGET_HAND_SIZE - playerState.hand.length;
-
-    if (cardsNeeded <= 0) {
-      return { events: [] };
+  if (decision) {
+    const card =
+      state.pendingChoice?.choiceType === "decision"
+        ? state.pendingChoice.cardOptions[0]
+        : undefined;
+    if (!card) return { events: [] };
+    if (decision.cardActions?.[0] === "discard_card") {
+      skipped.push(card);
+    } else {
+      emit([
+        { type: "CARD_RETURNED_TO_HAND", playerId, card, from: "setAside" },
+      ]);
     }
-
-    // Look at what we'd draw
-    const { cards: peeked } = peekDraw(playerState, cardsNeeded);
-    const actionsInDraw = peeked.filter(isActionCard);
-
-    if (actionsInDraw.length === 0) {
-      // No actions, just draw all
-      const drawEvents = createDrawEvents(playerId, playerState, cardsNeeded);
-      return { events: drawEvents };
-    }
-
-    // Ask which actions to skip
-    // Use multi-action decision to handle duplicates properly
-    return {
-      events: [],
-      pendingChoice: {
-        choiceType: "decision",
-        playerId,
-        prompt: "Library: Choose which Actions to skip",
-        cardOptions: actionsInDraw,
-        actions: [
-          { ...CARD_ACTIONS.draw_card, isDefault: true },
-          CARD_ACTIONS.discard_card,
-        ],
-        cardBeingPlayed: "Library",
-        metadata: { cardsNeeded, peekedCards: peeked },
-      },
-    };
   }
 
-  // Process decision with indices
-  const peeked = getCardNamesFromMetadata(
-    state.pendingChoice?.metadata,
-    "peekedCards",
+  while (current.players[playerId]!.hand.length < 7) {
+    const draw = createDrawEvents(
+      playerId,
+      current.players[playerId]!,
+      1,
+      random,
+    );
+    const drawn = draw.find(event => event.type === "CARD_DRAWN");
+    if (!drawn || drawn.type !== "CARD_DRAWN") break;
+    if (isActionCard(drawn.card)) {
+      emit(
+        draw.map(event =>
+          event.type === "CARD_DRAWN"
+            ? {
+                type: "CARD_SET_ASIDE",
+                playerId,
+                card: event.card,
+                from: "deck",
+              }
+            : event,
+        ),
+      );
+      return {
+        events,
+        pendingChoice: {
+          choiceType: "decision",
+          playerId,
+          prompt: "Library: Keep this Action or set it aside?",
+          cardOptions: [drawn.card],
+          actions: [
+            { ...CARD_ACTIONS.draw_card, isDefault: true },
+            { ...CARD_ACTIONS.discard_card, label: "Set aside" },
+          ],
+          cardBeingPlayed: "Library",
+          stage: "keep-or-skip",
+          metadata: { skippedCards: skipped },
+        },
+      };
+    }
+    emit(draw);
+  }
+
+  emit(
+    skipped.map(card => ({
+      type: "CARD_DISCARDED",
+      playerId,
+      card,
+      from: "setAside",
+    })),
   );
-  const cardActions = decision.cardActions || {};
-
-  const drawEvents = Object.entries(cardActions)
-    .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
-    .filter(({ index, action }) => action === "draw_card" && peeked[index])
-    .flatMap(({ index }): GameEvent[] => {
-      const card = peeked[index];
-      return card ? [{ type: "CARD_DRAWN", playerId, card }] : [];
-    });
-
-  const discardEvents = Object.entries(cardActions)
-    .map(([indexStr, action]) => ({ index: parseInt(indexStr), action }))
-    .filter(({ index, action }) => action === "discard_card" && peeked[index])
-    .flatMap(({ index }): GameEvent[] => {
-      const card = peeked[index];
-      return card
-        ? [{ type: "CARD_DISCARDED", playerId, card, from: "deck" }]
-        : [];
-    });
-
-  return { events: [...drawEvents, ...discardEvents] };
+  return { events };
 };

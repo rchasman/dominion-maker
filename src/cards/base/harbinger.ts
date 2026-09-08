@@ -6,11 +6,11 @@ import { createMultiStageCard, createDrawEvents } from "../effect-types";
 import { STAGES } from "../stages";
 
 export const harbinger = createMultiStageCard({
-  initial: ({ state, playerId }) => {
+  initial: ({ state, playerId, random }) => {
     const playerState = state.players[playerId];
     if (!playerState) return { events: [] };
 
-    const drawEvents = createDrawEvents(playerId, playerState, 1);
+    const drawEvents = createDrawEvents(playerId, playerState, 1, random);
     const actionEvents = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
     const events = [...drawEvents, ...actionEvents];
 

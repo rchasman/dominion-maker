@@ -20,10 +20,10 @@ function createTestEngine(humanHand: CardName[]): DominionEngine {
   const engine = new DominionEngine();
   engine.startGame(["human", "ai"], ["Workshop", "Artisan", "Remodel", "Mine"]);
 
-  // Replace human's hand
-  const humanState = engine.state.players.human!;
-  humanState.deck = [];
-  humanState.hand = [...humanHand];
+  engine.applyExternalEvents([
+    { type: "INITIAL_DECK_DEALT", playerId: "human", cards: [...humanHand] },
+    { type: "INITIAL_HAND_DRAWN", playerId: "human", cards: [...humanHand] },
+  ]);
 
   return engine;
 }
@@ -297,17 +297,21 @@ describe("Supply Decision E2E Tests", () => {
         selectedCards: ["Workshop"],
       });
 
-      // Should create a special "execute_throned_card" decision
       expect(result.ok).toBe(true);
-      if (isDecisionChoice(engine.state.pendingChoice)) {
-        expect(engine.state.pendingChoice.stage).toBe("execute_throned_card");
-        expect(engine.state.pendingChoice.metadata?.throneRoomTarget).toBe(
-          "Workshop",
-        );
-        expect(
-          engine.state.pendingChoice.metadata?.throneRoomExecutionsRemaining,
-        ).toBe(2);
-      }
+      expect(engine.state.pendingChoice?.choiceType).toBe("decision");
+      if (!isDecisionChoice(engine.state.pendingChoice))
+        throw new Error("Expected Workshop choice");
+      expect(engine.state.pendingChoice.cardBeingPlayed).toBe("Workshop");
+      expect(engine.state.pendingChoice.from).toBe("supply");
+      expect(
+        engine.submitDecision("human", { selectedCards: ["Silver"] }).ok,
+      ).toBe(true);
+      expect(engine.state.pendingChoice?.choiceType).toBe("decision");
+      expect(
+        engine.submitDecision("human", { selectedCards: ["Silver"] }).ok,
+      ).toBe(true);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.players.human!.discard).toEqual(["Silver", "Silver"]);
     });
   });
 
@@ -357,7 +361,8 @@ describe("Supply Decision E2E Tests", () => {
 
       // Engine should handle this - either reject it or filter it
       // The exact behavior depends on submitDecision implementation
-      expect(result).toBeDefined();
+      expect(result.ok).toBe(false);
+      expect(engine.state.pendingChoice).not.toBeNull();
     });
   });
 });

@@ -13,6 +13,7 @@ import { STAGES } from "../stages";
 export const cellar: CardEffect = ({
   state,
   playerId,
+  random,
   decision,
   stage,
 }): CardEffectResult => {
@@ -73,6 +74,7 @@ export const cellar: CardEffect = ({
       playerId,
       simulatedState,
       toDiscard.length,
+      random,
     );
 
     return { events: [...discardEvents, ...drawEvents] };

@@ -1,8 +1,8 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent } from "../events/types";
-import { countVP } from "../lib/game-utils";
+import { shuffle, countVP } from "../lib/game-utils";
 import { generateEventId } from "../events/id-generator";
-import { CARDS } from "../data/cards";
+import { CARDS, KINGDOM_CARDS } from "../data/cards";
 import {
   getCopperSupplyCount,
   getVictoryCardCount,
@@ -36,41 +36,13 @@ export const GAME_CONSTANTS = {
   UUID_SLICE: 2,
 } as const;
 
-export function selectRandomKingdomCards(): CardName[] {
-  const allKingdom: CardName[] = [
-    "Cellar",
-    "Chapel",
-    "Moat",
-    "Harbinger",
-    "Merchant",
-    "Vassal",
-    "Village",
-    "Workshop",
-    "Bureaucrat",
-    "Gardens",
-    "Militia",
-    "Moneylender",
-    "Poacher",
-    "Remodel",
-    "Smithy",
-    "Throne Room",
-    "Bandit",
-    "Council Room",
-    "Festival",
-    "Laboratory",
-    "Library",
-    "Market",
-    "Mine",
-    "Sentry",
-    "Witch",
-    "Artisan",
-  ];
-
-  // Simple shuffle for now (could use seeded RNG)
-  const shuffled = [...allKingdom].sort(
-    () => Math.random() - GAME_CONSTANTS.RANDOM_OFFSET,
+export function selectRandomKingdomCards(
+  random: () => number = Math.random,
+): CardName[] {
+  return shuffle(KINGDOM_CARDS, random).slice(
+    0,
+    GAME_CONSTANTS.KINGDOM_CARD_SELECTION,
   );
-  return shuffled.slice(0, GAME_CONSTANTS.KINGDOM_CARD_SELECTION);
 }
 
 export function calculateSupply(

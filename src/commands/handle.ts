@@ -1,3 +1,5 @@
+import { createRandom } from "../engine/random";
+import { generateEventId } from "../events/id-generator";
 import type { GameState } from "../types/game-state";
 import type { GameCommand, CommandResult } from "./types";
 import type { PlayerId } from "../events/types";
@@ -20,15 +22,19 @@ import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
  * Handle a command and return the resulting events.
  * Validates the command against current state before producing events.
  */
-export function handleCommand(
+function decideCommand(
   state: GameState,
   command: GameCommand,
-  fromPlayer?: PlayerId,
+  fromPlayer: PlayerId | undefined,
+  random: () => number,
 ): CommandResult {
   // Validate player turn (unless it's a decision response or undo)
   if (fromPlayer && !isValidPlayer(state, command, fromPlayer)) {
     return { ok: false, error: "Not your turn" };
   }
+
+  if (fromPlayer && "playerId" in command && command.playerId !== fromPlayer)
+    return { ok: false, error: "Player identity mismatch" };
 
   switch (command.type) {
     case "START_GAME":
@@ -37,10 +43,11 @@ export function handleCommand(
         command.players,
         command.kingdomCards,
         command.seed,
+        random,
       );
 
     case "PLAY_ACTION":
-      return handlePlayAction(state, command.playerId, command.card);
+      return handlePlayAction(state, command.playerId, command.card, random);
 
     case "PLAY_TREASURE":
       return handlePlayTreasure(state, command.playerId, command.card);
@@ -55,19 +62,29 @@ export function handleCommand(
       return handleBuyCard(state, command.playerId, command.card);
 
     case "END_PHASE":
-      return handleEndPhase(state, command.playerId);
+      return handleEndPhase(state, command.playerId, random);
 
     case "SUBMIT_DECISION":
-      return handleSubmitDecision(state, command.playerId, command.choice);
+      return handleSubmitDecision(
+        state,
+        command.playerId,
+        command.choice,
+        random,
+      );
 
     case "SKIP_DECISION":
-      return handleSkipDecision(state, command.playerId);
+      return handleSkipDecision(state, command.playerId, random);
 
     case "REVEAL_REACTION":
-      return handleRevealReaction(state, command.playerId, command.card);
+      return handleRevealReaction(
+        state,
+        command.playerId,
+        command.card,
+        random,
+      );
 
     case "DECLINE_REACTION":
-      return handleDeclineReaction(state, command.playerId);
+      return handleDeclineReaction(state, command.playerId, random);
 
     case "REQUEST_UNDO":
       return handleRequestUndo(
@@ -122,4 +139,30 @@ function isValidPlayer(
 
   // Other commands must come from active player
   return state.activePlayerId === fromPlayer;
+}
+
+export function handleCommand(
+  state: GameState,
+  command: GameCommand,
+  fromPlayer?: PlayerId,
+): CommandResult {
+  const seed = command.type === "START_GAME" ? command.seed : state.randomState;
+  const random = createRandom(seed ?? Math.floor(Math.random() * 4294967296));
+  const initial = random.state;
+  const result = decideCommand(state, command, fromPlayer, random.next);
+  if (!result.ok || (random.state === initial && command.type !== "START_GAME"))
+    return result;
+  const cause = result.events[0]?.id;
+  return {
+    ok: true,
+    events: [
+      ...result.events,
+      {
+        type: "RANDOM_STATE_UPDATED",
+        state: random.state,
+        id: generateEventId(),
+        ...(cause !== undefined && { causedBy: cause }),
+      },
+    ],
+  };
 }

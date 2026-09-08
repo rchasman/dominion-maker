@@ -1,11 +1,14 @@
 import type { CardName, PlayerState } from "../types/game-state";
 import { countVP as countVPFromCards, getAllCards } from "./board-utils";
 
-export function shuffle<T>(array: T[]): T[] {
+export function shuffle<T>(
+  array: T[],
+  nextRandom: () => number = Math.random,
+): T[] {
   return [...array].reduceRight<T[]>(
     (result, _, currentIndex) => {
       if (currentIndex === 0) return result;
-      const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+      const randomIndex = Math.floor(nextRandom() * (currentIndex + 1));
       const current = result[currentIndex];
       const random = result[randomIndex];
       if (current === undefined || random === undefined) return result;

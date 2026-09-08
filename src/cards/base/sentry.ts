@@ -1,140 +1,106 @@
-/**
- * Sentry - +1 Card, +1 Action. Look at top 2 cards of deck. Trash/Discard any, put rest back in any order
- */
-
+/** Sentry draws first, then sets aside the next two cards for inspection. */
 import type { CardEffect, CardEffectResult } from "../effect-types";
-import { createDrawEvents, peekDraw } from "../effect-types";
-import type { GameEvent, PlayerId } from "../../events/types";
-import type { CardName } from "../../types/game-state";
+import { createDrawEvents } from "../effect-types";
+import { applyEvents } from "../../events/apply";
+import type { GameEvent } from "../../events/types";
 import { CARD_ACTIONS } from "../card-actions";
 import { getCardNamesFromMetadata } from "../../lib/metadata-helpers";
-
-const SENTRY_PEEK_COUNT = 2;
-
-const SENTRY_ACTIONS = [
-  { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-  CARD_ACTIONS.trash_card,
-  CARD_ACTIONS.discard_card,
-];
-
-function createPeekEvents(playerId: PlayerId, cards: CardName[]): GameEvent[] {
-  return cards.map(card => ({
-    type: "CARD_PEEKED" as const,
-    playerId,
-    card,
-    from: "deck" as const,
-  }));
-}
-
-type ActionEventParams = {
-  playerId: PlayerId;
-  revealed: CardName[];
-  cardActions: Record<string, string>;
-  actionType: string;
-  eventType: "CARD_TRASHED" | "CARD_DISCARDED";
-};
-
-function createActionEvents(params: ActionEventParams): GameEvent[] {
-  const { playerId, revealed, cardActions, actionType, eventType } = params;
-  return Object.entries(cardActions)
-    .filter(([, action]) => action === actionType)
-    .map(([indexStr]) => parseInt(indexStr))
-    .filter(index => revealed[index])
-    .flatMap((index): GameEvent[] => {
-      const card = revealed[index];
-      return card ? [{ type: eventType, playerId, card, from: "deck" }] : [];
-    });
-}
-
-function createTopdeckEvents(
-  playerId: PlayerId,
-  revealed: CardName[],
-  cardActions: Record<string, string>,
-  cardOrder: number[],
-): GameEvent[] {
-  const topdeckIndices =
-    cardOrder.length > 0
-      ? cardOrder
-      : Object.entries(cardActions)
-          .filter(([, action]) => action === "topdeck_card")
-          .map(([indexStr]) => parseInt(indexStr));
-
-  return [...topdeckIndices]
-    .reverse()
-    .filter(index => revealed[index])
-    .flatMap((index): GameEvent[] => {
-      const card = revealed[index];
-      return card
-        ? [{ type: "CARD_PUT_ON_DECK", playerId, card, from: "hand" }]
-        : [];
-    });
-}
 
 export const sentry: CardEffect = ({
   state,
   playerId,
+  random,
   decision,
 }): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
+  const player = state.players[playerId];
+  if (!player) return { events: [] };
 
-  // Initial: +1 Card, +1 Action, look at top 2
   if (!decision) {
-    const drawEvents = createDrawEvents(playerId, playerState, 1);
-    const { cards: revealed } = peekDraw(playerState, SENTRY_PEEK_COUNT);
-
-    if (revealed.length === 0) {
-      return {
-        events: [...drawEvents, { type: "ACTIONS_MODIFIED", delta: 1 }],
-      };
-    }
-
+    const events: GameEvent[] = [
+      ...createDrawEvents(playerId, player, 1, random),
+      { type: "ACTIONS_MODIFIED", delta: 1 },
+    ];
+    const afterDraw = applyEvents(state, events);
+    const look = createDrawEvents(
+      playerId,
+      afterDraw.players[playerId]!,
+      2,
+      random,
+    );
+    const revealed = look.flatMap(event =>
+      event.type === "CARD_DRAWN" ? [event.card] : [],
+    );
+    events.push(
+      ...look.flatMap((event): GameEvent[] =>
+        event.type === "CARD_DRAWN"
+          ? [
+              { type: "CARD_PEEKED", playerId, card: event.card, from: "deck" },
+              {
+                type: "CARD_SET_ASIDE",
+                playerId,
+                card: event.card,
+                from: "deck",
+              },
+            ]
+          : [event],
+      ),
+    );
+    if (revealed.length === 0) return { events };
     return {
-      events: [
-        ...drawEvents,
-        { type: "ACTIONS_MODIFIED", delta: 1 },
-        ...createPeekEvents(playerId, revealed),
-      ],
+      events,
       pendingChoice: {
         choiceType: "decision",
         playerId,
         prompt: "Sentry: Choose what to do with each card",
         cardOptions: revealed,
-        actions: [...SENTRY_ACTIONS],
+        actions: [
+          { ...CARD_ACTIONS.topdeck_card, isDefault: true },
+          CARD_ACTIONS.trash_card,
+          CARD_ACTIONS.discard_card,
+        ],
         requiresOrdering: true,
         orderingPrompt:
           "Cards to topdeck will return in this order (first = top)",
         cardBeingPlayed: "Sentry",
+        stage: "sort",
         metadata: { revealedCards: revealed },
       },
     };
   }
 
-  // Process the decision
   const revealed = getCardNamesFromMetadata(
     state.pendingChoice?.metadata,
     "revealedCards",
   );
-  const cardActions = decision.cardActions || {};
-  const cardOrder = (decision.cardOrder || []) as number[];
-
-  const events = [
-    ...createActionEvents({
-      playerId,
-      revealed,
-      cardActions,
-      actionType: "trash_card",
-      eventType: "CARD_TRASHED",
-    }),
-    ...createActionEvents({
-      playerId,
-      revealed,
-      cardActions,
-      actionType: "discard_card",
-      eventType: "CARD_DISCARDED",
-    }),
-    ...createTopdeckEvents(playerId, revealed, cardActions, cardOrder),
-  ];
-
+  const events: GameEvent[] = [];
+  const kept: number[] = [];
+  revealed.forEach((card, index) => {
+    const action = decision.cardActions?.[index] ?? "topdeck_card";
+    if (action === "trash_card" || action === "discard_card") {
+      events.push({
+        type: action === "trash_card" ? "CARD_TRASHED" : "CARD_DISCARDED",
+        playerId,
+        card,
+        from: "setAside",
+      });
+    } else {
+      kept.push(index);
+    }
+  });
+  const requestedOrder = (decision.cardOrder ?? []).filter(
+    (index): index is number =>
+      typeof index === "number" && kept.includes(index),
+  );
+  const order = [...new Set([...requestedOrder, ...kept])];
+  events.push(
+    ...order.reverse().map(
+      (index): GameEvent => ({
+        type: "CARD_PUT_ON_DECK",
+        playerId,
+        card: revealed[index]!,
+        from: "setAside",
+      }),
+    ),
+  );
   return { events };
 };

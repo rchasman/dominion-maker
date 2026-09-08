@@ -10,7 +10,7 @@ import {
 import { STAGES } from "../stages";
 
 export const poacher = createMultiStageCard({
-  initial: ({ state, playerId }) => {
+  initial: ({ state, playerId, random }) => {
     const playerState = state.players[playerId];
     if (!playerState) return { events: [] };
 
@@ -18,7 +18,7 @@ export const poacher = createMultiStageCard({
       count => count === 0,
     ).length;
 
-    const drawEvents = createDrawEvents(playerId, playerState, 1);
+    const drawEvents = createDrawEvents(playerId, playerState, 1, random);
     const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
     const coinEvent = { type: "COINS_MODIFIED" as const, delta: 1 };
     const initialEvents = [...drawEvents, actionEvent, coinEvent];

@@ -31,9 +31,9 @@ interface AIAutomationParams {
 }
 
 function getOpponentZone(
-  base: "hand" | "inPlay" | "deck" | "discard",
+  base: "hand" | "inPlay" | "deck" | "discard" | "setAside",
 ): "hand-opponent" | "inPlay-opponent" | "deck-opponent" | "discard-opponent" {
-  return `${base}-opponent`;
+  return `${base === "setAside" ? "deck" : base}-opponent`;
 }
 
 /**

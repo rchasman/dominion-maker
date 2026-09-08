@@ -6,11 +6,15 @@ import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
 import type { GameEvent } from "../../events/types";
 
-export const merchant: CardEffect = ({ state, playerId }): CardEffectResult => {
+export const merchant: CardEffect = ({
+  state,
+  playerId,
+  random,
+}): CardEffectResult => {
   const playerState = state.players[playerId];
   if (!playerState) return { events: [] };
 
-  const drawEvents = createDrawEvents(playerId, playerState, 1);
+  const drawEvents = createDrawEvents(playerId, playerState, 1, random);
   const actionEvents: GameEvent[] = [{ type: "ACTIONS_MODIFIED", delta: 1 }];
   // The +$1 for Silver is tracked by the engine during buy phase
   return { events: [...drawEvents, ...actionEvents] };

@@ -4,13 +4,12 @@ import type { CommandResult } from "./types";
 import type { GameEvent, PlayerId } from "../events/types";
 import { CARDS, isTreasureCard } from "../data/cards";
 import type { TriggerType, TriggerContext } from "../types/card-types";
-import { getCardEffect } from "../cards/base";
 import { applyEvents } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
-import { EventBuilder, decisionRequiredEvent } from "../events/event-builder";
+import { EventBuilder } from "../events/event-builder";
 import { createResourceEvents } from "./handle-helpers";
 import { validators, validateCommand } from "./validators";
-import { orchestrateAttack } from "./attack-orchestration";
+import { executeCard } from "../engine/execute";
 
 /**
  * Process triggers from cards in play for a given trigger type.
@@ -25,7 +24,13 @@ function processTriggers(
   const playerState = state.players[playerId];
   if (!playerState) return [];
 
-  return playerState.inPlay.flatMap(inPlayCard => {
+  const sources =
+    state.turnTriggers === undefined
+      ? playerState.inPlay
+      : state.turnTriggers
+          .filter(trigger => trigger.playerId === playerId)
+          .map(trigger => trigger.source);
+  return sources.flatMap(inPlayCard => {
     const triggers = CARDS[inPlayCard].triggers;
     if (!triggers) return [];
 
@@ -40,6 +45,7 @@ export function handlePlayAction(
   state: GameState,
   playerId: PlayerId,
   card: CardName,
+  random: () => number = Math.random,
 ): CommandResult {
   // Validate using middleware
   const validationError = validateCommand(
@@ -79,56 +85,13 @@ export function handlePlayAction(
   // Apply these events to get intermediate state
   const midState = applyEvents(state, baseEvents);
 
-  // Execute card effect
-  const effect = getCardEffect(card);
-  if (effect) {
-    // Check if this is an attack card (auto-handle reactions)
-    const cardDef = CARDS[card];
-    const isAttackCard = cardDef?.types.includes("attack");
-
-    if (isAttackCard) {
-      // Delegate to centralized attack orchestration
-      const attackEvents = orchestrateAttack({
-        state: midState,
-        attacker: playerId,
-        attackCard: card,
-        effect,
-        rootEventId,
-      });
-      return { ok: true, events: [...baseEvents, ...attackEvents] };
-    }
-
-    // Not an attack card, call effect normally
-    const result = effect({
-      state: midState,
-      playerId,
-      card,
-    });
-
-    const linkedEffectEvents = result.events.map(e => ({
-      ...e,
-      id: generateEventId(),
-      causedBy: rootEventId,
-    }));
-
-    // Handle normal decision if present
-    const decisionEvent = result.pendingChoice
-      ? [
-          decisionRequiredEvent(result.pendingChoice, {
-            causedBy: rootEventId,
-            cardBeingPlayed: card,
-            metadata: { originalCause: rootEventId },
-          }),
-        ]
-      : [];
-
-    return {
-      ok: true,
-      events: [...baseEvents, ...linkedEffectEvents, ...decisionEvent],
-    };
-  }
-
-  return { ok: true, events: baseEvents };
+  return {
+    ok: true,
+    events: [
+      ...baseEvents,
+      ...executeCard(midState, playerId, card, rootEventId, random),
+    ],
+  };
 }
 
 export function handlePlayTreasure(
@@ -328,10 +291,7 @@ export function handleBuyCard(
   }
 
   // Calculate effective cost with modifiers
-  const { modifiedCost, baseCost, modifiers } = getCardCost(
-    state,
-    card,
-  );
+  const { modifiedCost, baseCost, modifiers } = getCardCost(state, card);
 
   // Validate cost and supply
   const costValidationError = validateCommand(

@@ -130,11 +130,11 @@ describe("Vassal", () => {
       stage: "play_action",
     });
 
-    expect(result.events).toContainEqual({
-      type: "CARD_PLAYED",
+    expect(result.operations).toContainEqual({
+      type: "play",
       playerId: "human",
       card: "Village",
-      sourceIndex: 0,
+      from: "discard",
     });
   });
 

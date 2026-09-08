@@ -1019,11 +1019,26 @@ describe("Complex Card Interactions", () => {
 
       const newState = executeCard("Library", state);
 
-      // Should request which actions to skip
-      if (isDecisionChoice(newState.pendingChoice)) {
-        expect(newState.pendingChoice.cardOptions).toContain("Village");
-        expect(newState.pendingChoice.cardOptions).toContain("Smithy");
-      }
+      if (!isDecisionChoice(newState.pendingChoice))
+        throw new Error("No pending decision");
+      expect(newState.pendingChoice.cardOptions).toEqual(["Smithy"]);
+      expect(newState.players.human!.hand).toHaveLength(5);
+      const afterSkip = executeCard("Library", newState, {
+        selectedCards: [],
+        cardActions: { 0: "discard_card" },
+      });
+      if (!isDecisionChoice(afterSkip.pendingChoice))
+        throw new Error("No pending decision");
+      expect(afterSkip.pendingChoice.cardOptions).toEqual(["Village"]);
+      expect(afterSkip.players.human!.discard).toEqual([]);
+      const finished = executeCard("Library", afterSkip, {
+        selectedCards: [],
+        cardActions: { 0: "draw_card" },
+      });
+      expect(finished.players.human!.hand).toHaveLength(6);
+      expect(finished.players.human!.discard).toEqual(["Smithy"]);
+      expect(finished.players.human!.setAside).toEqual([]);
+      expect(finished.pendingChoice).toBeNull();
     });
   });
 
@@ -1061,6 +1076,17 @@ describe("Complex Card Interactions", () => {
       expect(newState.pendingChoice.choiceType).toBe("decision");
       expect(newState.pendingChoice.cardOptions.length).toBe(2);
       expect(newState.pendingChoice.actions).toHaveLength(3);
+      expect(newState.players.human!.hand).toEqual(["Estate"]);
+      expect(newState.pendingChoice.cardOptions).toEqual(["Gold", "Silver"]);
+      const finished = executeCard("Sentry", newState, {
+        selectedCards: [],
+        cardActions: { 0: "topdeck_card", 1: "trash_card" },
+        cardOrder: [0],
+      });
+      expect(finished.players.human!.deck).toEqual(["Copper", "Gold"]);
+      expect(finished.players.human!.hand).toEqual(["Estate"]);
+      expect(finished.players.human!.setAside).toEqual([]);
+      expect(finished.trash).toEqual(["Silver"]);
     });
   });
 

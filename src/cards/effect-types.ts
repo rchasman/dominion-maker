@@ -1,4 +1,3 @@
-import { getCardCost } from "./cost";
 import type {
   GameState,
   CardName,
@@ -9,6 +8,7 @@ import type {
 import type { GameEvent, DecisionChoice } from "../events/types";
 import { shuffle } from "../lib/game-utils";
 import { CARDS } from "../data/cards";
+import { getCardCost } from "./cost";
 import type { ReactionTrigger } from "../types/card-types";
 import { run } from "../lib/run";
 import {
@@ -29,6 +29,8 @@ function isCardName(card: string): card is CardName {
 export type CardEffectResult = {
   /** Events to emit (IDs will be added by engine) */
   events: GameEvent[];
+  /** Child work runs to completion before the caller continues. */
+  operations?: import("../engine/execution-types").CardOperation[];
   /** If set, pause for player decision before continuing */
   pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }>;
 };
@@ -37,6 +39,7 @@ export type CardEffectResult = {
  * Context provided to card effects.
  */
 export type CardEffectContext = {
+  random?: () => number;
   /** Current game state (read-only for effect logic) */
   state: GameState;
   /** Player who played the card (can be custom peer ID in multiplayer) */
@@ -55,7 +58,11 @@ export type CardEffectContext = {
  * A card effect function.
  * Pure function that returns events to emit.
  */
-export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
+export type CardEffect = ((ctx: CardEffectContext) => CardEffectResult) & {
+  /** Opponent portion, resolved after the attack reaction window. */
+  attack?: CardEffect;
+  benefit?: CardEffect;
+};
 
 // ============================================
 // HELPER FUNCTIONS FOR CARD EFFECTS
@@ -69,6 +76,7 @@ export type CardEffect = (ctx: CardEffectContext) => CardEffectResult;
 export function peekDraw(
   { deck: playerDeck, discard: playerDiscard }: PlayerState,
   count: number,
+  random: () => number = Math.random,
 ): {
   cards: CardName[];
   shuffled: boolean;
@@ -89,7 +97,7 @@ export function peekDraw(
       // Determine which deck to use
       const currentDeck =
         acc.deck.length === 0 && acc.discard.length > 0
-          ? shuffle(acc.discard)
+          ? shuffle(acc.discard, random)
           : acc.deck;
 
       // Check if we shuffled
@@ -196,10 +204,12 @@ export function createDrawEvents(
   playerId: PlayerId,
   playerState: PlayerState,
   count: number,
+  random: () => number = Math.random,
 ): GameEvent[] {
   const { cards, shuffled, newDeckOrder, cardsBeforeShuffle } = peekDraw(
     playerState,
     count,
+    random,
   );
 
   if (shuffled && cardsBeforeShuffle) {
@@ -258,14 +268,14 @@ export function createSimpleCardEffect(benefits: {
   buys?: number;
   coins?: number;
 }): CardEffect {
-  return ({ playerId, state }): CardEffectResult => {
+  return ({ playerId, state, random }): CardEffectResult => {
     const playerState = state.players[playerId];
     if (!playerState) {
       return { events: [] };
     }
 
     const cardEvents = benefits.cards
-      ? createDrawEvents(playerId, playerState, benefits.cards)
+      ? createDrawEvents(playerId, playerState, benefits.cards, random)
       : [];
 
     const resourceEvents: GameEvent[] = [

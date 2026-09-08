@@ -22,7 +22,7 @@ export const throneRoom = createMultiStageCard({
         from: "hand",
         prompt: "Throne Room: Choose an Action to play twice",
         cardOptions: actions,
-        min: 1,
+        min: 0,
         max: 1,
         cardBeingPlayed: "Throne Room",
         stage: STAGES.CHOOSE_ACTION,
@@ -31,27 +31,12 @@ export const throneRoom = createMultiStageCard({
   },
 
   choose_action: ({ playerId, decision }) => {
-    const cardToPlay = decision?.selectedCards[0];
-
-    // Don't emit CARD_PLAYED here - instead create a special decision
-    // that tells the engine to execute this card twice
+    const card = decision?.selectedCards[0];
     return {
       events: [],
-      pendingChoice: {
-        choiceType: "decision",
-        playerId,
-        from: "options",
-        prompt: "",
-        cardOptions: [],
-        min: 0,
-        max: 0,
-        cardBeingPlayed: "Throne Room",
-        stage: STAGES.EXECUTE_THRONED_CARD,
-        metadata: {
-          throneRoomTarget: cardToPlay,
-          throneRoomExecutionsRemaining: 2,
-        },
-      },
+      operations: card
+        ? [{ type: "play", playerId, card, from: "hand", times: 2 }]
+        : [],
     };
   },
 });

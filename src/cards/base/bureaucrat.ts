@@ -1,3 +1,5 @@
+import { createAttackEffect } from "../attack-effect";
+import { getOpponents } from "../effect-types";
 /**
  * Bureaucrat - Gain a Silver onto your deck. Each other player puts a Victory card from hand onto their deck
  */
@@ -14,7 +16,7 @@ type BureaucratData = {
 const getVictoryCards = (hand: CardName[]): CardName[] =>
   hand.filter(c => CARDS[c].types.includes("victory"));
 
-export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
+const attack = createOpponentIteratorEffect<BureaucratData>(
   {
     filter: (opponent, state) => {
       const oppState = state.players[opponent];
@@ -63,12 +65,22 @@ export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
     },
     stage: STAGES.OPPONENT_TOPDECK,
   },
-  (_state, playerId) => [
-    {
-      type: "CARD_GAINED" as const,
-      playerId,
-      card: "Silver" as const,
-      to: "deck" as const,
-    },
-  ],
+  (state, playerId, targets) =>
+    (targets ?? getOpponents(state, playerId)).flatMap(target => {
+      const hand = state.players[target]?.hand ?? [];
+      return getVictoryCards(hand).length
+        ? []
+        : hand.map(card => ({
+            type: "CARD_REVEALED" as const,
+            playerId: target,
+            card,
+            from: "hand" as const,
+          }));
+    }),
+);
+export const bureaucrat = createAttackEffect(
+  ({ playerId }) => ({
+    events: [{ type: "CARD_GAINED", playerId, card: "Silver", to: "deck" }],
+  }),
+  attack,
 );

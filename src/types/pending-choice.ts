@@ -71,6 +71,7 @@ export function isReactionChoice(
 }
 
 export type DecisionChoice = {
+  choiceId?: string;
   selectedCards: CardName[];
   cardActions?: Record<string | number, string>;
   cardOrder?: (CardName | number)[];

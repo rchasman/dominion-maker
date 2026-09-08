@@ -8,12 +8,16 @@ import type { GameEvent } from "../../events/types";
 import { STAGES } from "../stages";
 
 export const vassal = createMultiStageCard({
-  initial: ({ state, playerId }) => {
+  initial: ({ state, playerId, random }) => {
     const playerState = state.players[playerId];
     if (!playerState) return { events: [] };
 
     const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
-    const { cards: revealed } = peekDraw(playerState, 1);
+    const {
+      cards: revealed,
+      shuffled,
+      newDeckOrder,
+    } = peekDraw(playerState, 1, random);
 
     const topCard = revealed[0];
     if (!topCard) {
@@ -21,6 +25,9 @@ export const vassal = createMultiStageCard({
     }
 
     const discardEvents: GameEvent[] = [
+      ...(shuffled && newDeckOrder
+        ? [{ type: "DECK_SHUFFLED" as const, playerId, newDeckOrder }]
+        : []),
       {
         type: "CARD_DISCARDED",
         playerId,
@@ -57,13 +64,9 @@ export const vassal = createMultiStageCard({
     if (!cardToPlay) return { events: [] };
 
     return {
-      events: [
-        {
-          type: "CARD_PLAYED",
-          playerId,
-          card: cardToPlay,
-          sourceIndex: 0, // From discard, not hand
-        },
+      events: [],
+      operations: [
+        { type: "play", playerId, card: cardToPlay, from: "discard" },
       ],
     };
   },

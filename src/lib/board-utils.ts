@@ -101,13 +101,15 @@ export function getAllCards({
   hand,
   discard,
   inPlay,
+  setAside = [],
 }: {
   deck: CardName[];
   hand: CardName[];
   discard: CardName[];
   inPlay: CardName[];
+  setAside?: CardName[];
 }): CardName[] {
-  return [...deck, ...hand, ...discard, ...inPlay];
+  return [...deck, ...hand, ...discard, ...inPlay, ...setAside];
 }
 
 // Aggregate consecutive identical log entries for display
