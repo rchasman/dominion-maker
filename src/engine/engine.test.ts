@@ -996,10 +996,14 @@ describe("DominionEngine - Edge Cases", () => {
     const requestId =
       requestEvent && "requestId" in requestEvent ? requestEvent.requestId : "";
 
-    // Manually modify pendingUndo to point to non-existent event
-    if (engine.undoRequest) {
-      engine.undoRequest.toEventId = "non-existent-id";
-    }
+    // Load a persisted request whose target is no longer in the history.
+    engine.loadEvents(
+      engine.eventLog.map(event =>
+        event.type === "UNDO_REQUESTED"
+          ? { ...event, toEventId: "non-existent-id" }
+          : event,
+      ),
+    );
 
     const result = engine.approveUndo("ai", requestId);
 

@@ -7,18 +7,12 @@ import { removeEventChain } from "../events/types";
 import { generateEventId } from "../events/id-generator";
 import { engineLogger } from "../lib/logger";
 import { isActionCard } from "../data/cards";
+import { applyEvents } from "../events/apply";
+import { buildLogFromEvents } from "../events/log-builder";
 
-/**
- * Pending undo request awaiting approval.
- */
-export type PendingUndoRequest = {
-  requestId: string;
-  byPlayer: PlayerId;
-  toEventId: string; // Changed from toEventIndex to toEventId
-  reason?: string;
-  approvals: Set<PlayerId>;
-  needed: number;
-};
+import { projectUndoRequest, respondToUndo } from "./undo-session";
+import type { PendingUndoRequest } from "./undo-session";
+export type { PendingUndoRequest } from "./undo-session";
 
 /**
  * Event listener callback type.
@@ -39,7 +33,6 @@ export class DominionEngine {
   private events: GameEvent[] = [];
   private cachedState: GameState | null = null;
   private listeners: Set<EventListener> = new Set();
-  private pendingUndo: PendingUndoRequest | null = null;
 
   // Unique game ID for devtools grouping (uses first event ID)
   get gameId(): string | undefined {
@@ -68,13 +61,17 @@ export class DominionEngine {
    * Get pending undo request, if any.
    */
   get undoRequest(): PendingUndoRequest | null {
-    return this.pendingUndo;
+    return projectUndoRequest(this.events, this.state.playerOrder);
   }
 
   /**
    * Dispatch a command. Validates and emits events.
    */
   dispatch(command: GameCommand, fromPlayer?: PlayerId): CommandResult {
+    if (fromPlayer && "playerId" in command && command.playerId !== fromPlayer)
+      return { ok: false, error: "Player identity mismatch" };
+    if (command.type === "REQUEST_UNDO" && this.undoRequest)
+      return { ok: false, error: "An undo request is already pending" };
     // Handle undo approval/denial specially
     if (command.type === "APPROVE_UNDO" || command.type === "DENY_UNDO") {
       return this.handleUndoResponse(command);
@@ -100,7 +97,6 @@ export class DominionEngine {
     // Clear existing state
     this.events = [];
     this.cachedState = null;
-    this.pendingUndo = null;
 
     return this.dispatch({
       type: "START_GAME",
@@ -170,15 +166,7 @@ export class DominionEngine {
     toEventId: string,
     reason?: string,
   ): CommandResult {
-    // CRITICAL FIX: Reject simultaneous undo requests
-    if (this.pendingUndo) {
-      return {
-        ok: false,
-        error: "An undo request is already pending",
-      };
-    }
-
-    const result = this.dispatch(
+    return this.dispatch(
       {
         type: "REQUEST_UNDO",
         playerId,
@@ -187,26 +175,6 @@ export class DominionEngine {
       },
       playerId,
     );
-
-    if (result.ok) {
-      // Find the request event we just added
-      const requestEvent = result.events.find(e => e.type === "UNDO_REQUESTED");
-      if (requestEvent && requestEvent.type === "UNDO_REQUESTED") {
-        // Set up pending undo request
-        const opponents = this.state.playerOrder.filter(p => p !== playerId);
-
-        this.pendingUndo = {
-          requestId: requestEvent.requestId,
-          byPlayer: playerId,
-          toEventId,
-          ...(reason !== undefined && { reason }),
-          approvals: new Set(),
-          needed: opponents.length, // All opponents must approve
-        };
-      }
-    }
-
-    return result;
   }
 
   /**
@@ -229,7 +197,7 @@ export class DominionEngine {
 
   /**
    * Immediate undo to event (single-playerId, no approval needed).
-   * Removes the event and its causal chain.
+   * Keeps the event and its completed causal effects, then truncates later history.
    */
   undoToEvent(toEventId: string): void {
     engineLogger.info(`Undo to ${toEventId}`);
@@ -255,7 +223,7 @@ export class DominionEngine {
   fork(): DominionEngine {
     const forked = new DominionEngine();
     forked.events = [...this.events];
-    forked.cachedState = null; // Will be recomputed on access
+    forked.cachedState = structuredClone(this.state);
     return forked;
   }
 
@@ -327,13 +295,7 @@ export class DominionEngine {
    * Apply events from external source (e.g., network).
    */
   applyExternalEvents(events: GameEvent[]): void {
-    // Add IDs to events that don't have them
-    const eventsWithIds: GameEvent[] = events.map(event =>
-      event.id ? event : { ...event, id: generateEventId() },
-    );
-    this.events = [...this.events, ...eventsWithIds];
-    this.cachedState = null;
-    this.notifyListeners(eventsWithIds);
+    this.appendEvents(events);
   }
 
   /**
@@ -353,8 +315,9 @@ export class DominionEngine {
     const eventsWithIds: GameEvent[] = events.map(event =>
       event.id ? event : { ...event, id: generateEventId() },
     );
+    const nextState = applyEvents(this.state, eventsWithIds);
     this.events = [...this.events, ...eventsWithIds];
-    this.cachedState = null;
+    this.cachedState = { ...nextState, log: buildLogFromEvents(this.events) };
     this.notifyListeners(eventsWithIds);
   }
 
@@ -363,84 +326,25 @@ export class DominionEngine {
     [...this.listeners].map(listener => listener(events, state));
   }
 
-  private handleUndoResponse({
-    type,
-    playerId,
-    requestId,
-  }: {
+  private handleUndoResponse(command: {
     type: "APPROVE_UNDO" | "DENY_UNDO";
     playerId: PlayerId;
     requestId: string;
   }): CommandResult {
-    if (!this.pendingUndo) {
-      return { ok: false, error: "No pending undo request" };
-    }
-
-    if (this.pendingUndo.requestId !== requestId) {
-      return { ok: false, error: "Request ID mismatch" };
-    }
-
-    if (type === "DENY_UNDO") {
-      const events: GameEvent[] = [
-        {
-          type: "UNDO_DENIED",
-          requestId,
-          byPlayer: playerId,
-          id: generateEventId(),
-        },
-      ];
-      this.pendingUndo = null;
-      this.appendEvents(events);
-      return { ok: true, events };
-    }
-
-    // APPROVE_UNDO
-    this.pendingUndo.approvals.add(playerId);
-    const approvalEvent: GameEvent = {
-      type: "UNDO_APPROVED",
-      requestId,
-      byPlayer: playerId,
-      id: generateEventId(),
-    };
-
-    // Check if we have enough approvals
-    if (this.pendingUndo.approvals.size >= this.pendingUndo.needed) {
-      // Execute the undo using causal chain removal
-      const toEventId = this.pendingUndo.toEventId;
-
-      // Find the target event
-      const targetEvent = this.events.find(e => e.id === toEventId);
-      if (!targetEvent) {
-        return { ok: false, error: "Target event not found" };
-      }
-
-      // Get the ID of the last event before removal
-      const lastEvent = this.events[this.events.length - 1];
-      const fromEventId = lastEvent?.id || "";
-
-      // Record undo execution
-      const undoExecutedEvent: GameEvent = {
-        type: "UNDO_EXECUTED",
-        fromEventId,
-        toEventId,
-        id: generateEventId(),
-      };
-
-      const events: GameEvent[] = [approvalEvent, undoExecutedEvent];
-
-      // Remove the target event and all events caused by it (atomically)
-      this.events = removeEventChain(toEventId, this.events);
+    const result = respondToUndo(
+      this.undoRequest,
+      command,
+      this.state.playerOrder,
+      this.events,
+    );
+    if (!result.ok) return result;
+    const rewind = result.events.find(event => event.type === "UNDO_EXECUTED");
+    if (rewind) {
+      this.events = removeEventChain(rewind.toEventId, this.events);
       this.cachedState = null;
-      this.pendingUndo = null;
-
-      // Add the undo execution event to the log
-      this.appendEvents(events);
-      return { ok: true, events };
     }
-
-    const events: GameEvent[] = [approvalEvent];
-    this.appendEvents(events);
-    return { ok: true, events };
+    this.appendEvents(result.events);
+    return result;
   }
 }
 
