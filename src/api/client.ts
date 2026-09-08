@@ -7,6 +7,7 @@ import type { PlayerStrategyData } from "../types/player-strategy";
 
 interface GenerateActionRequest {
   provider: string;
+  actionId?: string;
   currentState: unknown;
   humanChoice?: { selectedCards: string[] };
   strategySummary?: string;

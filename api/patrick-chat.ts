@@ -1,15 +1,10 @@
+import { chatRequestSchema, readRequest } from "./_request";
 import { generateText, gateway } from "ai";
 import { apiLogger } from "../src/lib/logger";
 import type { VercelRequest, VercelResponse } from "./_http";
 
 const HTTP_OK = 200;
-const HTTP_BAD_REQUEST = 400;
 const HTTP_INTERNAL_ERROR = 500;
-
-interface ChatRequest {
-  message: string;
-  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
-}
 
 const PATRICK_SYSTEM = `You are a legendary Dominion strategy analyst with the passion and insight of a top-tier competitive card game commentator.
 
@@ -34,16 +29,10 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<void> {
+  const body = await readRequest(req, res, chatRequestSchema);
+  if (!body) return;
   try {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-
-    const { message, conversationHistory = [] } = (req.body ??
-      {}) as Partial<ChatRequest>;
-
-    if (!message?.trim()) {
-      res.status(HTTP_BAD_REQUEST).json({ error: "Message required" });
-      return;
-    }
+    const { message, conversationHistory = [] } = body;
 
     apiLogger.info("Generating chat response", {
       messageLength: message.length,

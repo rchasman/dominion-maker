@@ -1,3 +1,4 @@
+import { actionRequestSchema, readRequest } from "./_request";
 import { buildUserMessage } from "../src/agent/action-prompt";
 import {
   generateObject,
@@ -22,13 +23,10 @@ import {
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { run } from "../src/lib/run";
 import { env } from "../src/lib/env";
 
 // HTTP Status Codes
-const HTTP_NO_CONTENT = 204;
 const HTTP_BAD_REQUEST = 400;
-const HTTP_METHOD_NOT_ALLOWED = 405;
 const HTTP_OK = 200;
 const HTTP_INTERNAL_ERROR = 500;
 
@@ -111,18 +109,10 @@ function getDevToolsMiddleware(
 interface RequestBody {
   provider: string;
   currentState: GameState;
-  humanChoice?: { selectedCards: string[] };
-  strategySummary?: string;
-  customStrategy?: string;
-  actionId?: string; // For grouping consensus votes in devtools
-}
-
-// Parse and validate request body
-function parseRequestBody(req: VercelRequest): RequestBody {
-  const rawBody = req.body || "{}";
-  return (
-    typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody
-  ) as RequestBody;
+  humanChoice?: { selectedCards: string[] } | undefined;
+  strategySummary?: string | undefined;
+  customStrategy?: string | undefined;
+  actionId?: string | undefined; // For grouping consensus votes in devtools
 }
 
 // Process request body and validate input
@@ -252,33 +242,13 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<VercelResponse> {
-  // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(HTTP_NO_CONTENT).send("");
-  }
-
-  if (req.method !== "POST") {
-    return res
-      .status(HTTP_METHOD_NOT_ALLOWED)
-      .json({ error: "Method not allowed" });
-  }
+  const body = await readRequest(req, res, actionRequestSchema);
+  if (!body) return res;
 
   try {
-    const body = parseRequestBody(req);
     return await processGenerationRequest(body, res);
   } catch (err) {
-    // Try to parse body for provider name in error logging
-    const provider = run(() => {
-      try {
-        return parseRequestBody(req).provider;
-      } catch {
-        return "unknown";
-      }
-    });
+    const provider = body.provider;
 
     // Log and return error
     const error = err as Error;

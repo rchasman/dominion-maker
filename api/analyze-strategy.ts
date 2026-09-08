@@ -1,7 +1,7 @@
+import { analysisRequestSchema, readRequest } from "./_request";
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
-import type { GameState } from "../src/types/game-state";
 import {
   formatTurnHistoryForAnalysis,
   STRATEGY_ANALYSIS_TURNS,
@@ -33,44 +33,11 @@ function createDevToolsMiddleware() {
   return devToolsMiddleware();
 }
 
-// Parse request body safely
-async function parseRequestBody(req: VercelRequest): Promise<{
-  currentState: GameState;
-  previousAnalysis?: PlayerAnalysisRecord;
-}> {
-  const rawBody = req.body || (req.text ? await req.text() : "{}");
-  const parsed: unknown =
-    typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
-  return parsed as {
-    currentState: GameState;
-    previousAnalysis?: PlayerAnalysisRecord;
-  };
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(HTTP_STATUS.NO_CONTENT).send("");
-  }
-
-  if (req.method !== "POST") {
-    return res
-      .status(HTTP_STATUS.METHOD_NOT_ALLOWED)
-      .json({ error: "Method not allowed" });
-  }
-
+  const body = await readRequest(req, res, analysisRequestSchema);
+  if (!body) return res;
   try {
-    const { currentState, previousAnalysis } = await parseRequestBody(req);
-
-    if (!currentState) {
-      return res
-        .status(HTTP_STATUS.BAD_REQUEST)
-        .json({ error: "Missing required field: currentState" });
-    }
+    const { currentState, previousAnalysis } = body;
 
     // Extract turn history (use longer window for strategy - runs once per turn)
     const turnHistory = formatTurnHistoryForAnalysis(

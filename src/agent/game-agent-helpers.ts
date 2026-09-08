@@ -40,6 +40,7 @@ export async function generateActionViaBackend(
     {
       provider,
       currentState,
+      ...(actionId !== undefined && { actionId }),
       ...(humanChoice !== undefined ? { humanChoice } : {}),
       ...(strategySummary !== undefined && { strategySummary }),
       ...(customStrategy !== undefined && { customStrategy }),
@@ -48,7 +49,6 @@ export async function generateActionViaBackend(
       fetch: { ...(signal !== undefined && { signal }) },
     },
   );
-  void actionId; // Used for logging/tracking, not sent to API
 
   if (error) {
     const errorMsg =
