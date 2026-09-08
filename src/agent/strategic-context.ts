@@ -1,10 +1,13 @@
+import { z } from "zod";
+import { run } from "../lib/run";
+import { isAnalysisApplicable } from "./analysis-version";
 import type {
   GameState,
   LogEntry,
   CardName,
   PlayerId,
 } from "../types/game-state";
-import { run } from "../lib/run";
+import { getDecisionPlayerId } from "./state-projection";
 import { encodeToon } from "../lib/toon";
 
 type StrategicFacts = {
@@ -13,6 +16,8 @@ type StrategicFacts = {
   aiStrategyRead?: string;
   aiStrategyRecommendation?: string;
   strategyOverride?: string;
+  analysisAgeTurns?: number | string;
+  analysisSourceEventId?: string;
 };
 
 /**
@@ -24,11 +29,12 @@ interface TurnSummary {
   actionsPlayed: CardName[];
   treasuresPlayed: CardName[];
   cardsBought: CardName[];
+  cardsGained: CardName[];
+  cardsTrashed: CardName[];
 }
 
 const DEFAULT_LAST_N_TURNS = 3; // For quick decision-making (per action)
 export const STRATEGY_ANALYSIS_TURNS = 7; // For strategy analysis (once per turn)
-const SUMMARIES_PER_TURN = 2;
 
 /**
  * Default strategy used before first analysis completes
@@ -36,15 +42,16 @@ const SUMMARIES_PER_TURN = 2;
  */
 export const DEFAULT_STRATEGY = {
   gameplan:
-    "No analysis yet — default to Big Money+: Build Economy → Add Draw/Actions → Score VP",
-  read: "Early game: Silver/Gold improve average hand because every buy recurs when your discard reshuffles into your deck. Action cards that draw (+Cards) or give +Actions let you play more per turn; 1-2 terminal draw cards (like Smithy) beat treasure-only. Weak cards (Copper, early Estates) dilute deck and reduce hand quality.",
+    "No analysis yet — choose an economy, engine, attack or alternate scoring plan for this kingdom.",
+  read: "Compare the deck you own with the supply and opponents. Balance draw, actions and payload; consider trashing junk and how soon new cards will be shuffled in.",
   recommendation:
-    "Each buy: ask 'does this make my average hand stronger?' Buy the best treasure you can afford (Gold > Silver, never Copper), add 1-2 draw or trashing actions if the supply has them, and buy Province whenever you have $8. Skip other VP until the game is ending.",
+    "Compare useful purchases with saving deck space. Score when it improves your winning chances; check score leads and pile-ending consequences before ending the game. Treat card advice as conditional, not mandatory.",
 };
 
 function extractRecentTurns(
   log: LogEntry[],
   lastNTurns = DEFAULT_LAST_N_TURNS,
+  playerCount = 2,
 ): TurnSummary[] {
   interface TurnState {
     turnMap: Map<string, TurnSummary>;
@@ -52,7 +59,9 @@ function extractRecentTurns(
     trackedPlayerId: string;
   }
 
-  const { turnMap } = log.reduce<TurnState>(
+  const flatten = (entries: LogEntry[]): LogEntry[] =>
+    entries.flatMap(entry => [entry, ...flatten(entry.children ?? [])]);
+  const { turnMap } = flatten(log).reduce<TurnState>(
     (state, entry) => {
       if (entry.type === "turn-start") {
         const newTurn = entry.turn;
@@ -66,6 +75,8 @@ function extractRecentTurns(
             actionsPlayed: [],
             treasuresPlayed: [],
             cardsBought: [],
+            cardsGained: [],
+            cardsTrashed: [],
           });
           return {
             ...state,
@@ -82,20 +93,33 @@ function extractRecentTurns(
       const playerId =
         "playerId" in entry ? entry.playerId : state.trackedPlayerId;
       const key = `${playerId}-${state.currentTurn}`;
-      const summary = state.turnMap.get(key);
-      if (!summary) return state;
+      const summary = state.turnMap.get(key) ?? {
+        playerId,
+        turn: state.currentTurn,
+        actionsPlayed: [],
+        treasuresPlayed: [],
+        cardsBought: [],
+        cardsGained: [],
+        cardsTrashed: [],
+      };
 
       const fieldMap = {
         "play-action": "actionsPlayed",
         "play-treasure": "treasuresPlayed",
         "buy-card": "cardsBought",
+        "gain-card": "cardsGained",
+        "trash-card": "cardsTrashed",
       } as const;
 
       const field = fieldMap[entry.type as keyof typeof fieldMap];
-      if (field && "card" in entry) {
+      const cards = run(() => {
+        if ("card" in entry && entry.card) return [entry.card];
+        return entry.type === "trash-card" ? (entry.cards ?? []) : [];
+      });
+      if (field && cards.length) {
         const newSummary = {
           ...summary,
-          [field]: [...summary[field], entry.card],
+          [field]: [...summary[field], ...cards],
         };
         const newTurnMap = new Map(state.turnMap);
         newTurnMap.set(key, newSummary);
@@ -114,7 +138,7 @@ function extractRecentTurns(
   const allSummaries = Array.from(turnMap.values()).sort(
     (a, b) => b.turn - a.turn,
   );
-  return allSummaries.slice(0, lastNTurns * SUMMARIES_PER_TURN);
+  return allSummaries.slice(0, lastNTurns * playerCount);
 }
 
 /**
@@ -128,19 +152,24 @@ export function formatTurnHistoryForAnalysis(
   state: GameState,
   turnCount = DEFAULT_LAST_N_TURNS,
 ): string {
-  const recentTurns = extractRecentTurns(state.log, turnCount);
+  const recentTurns = extractRecentTurns(
+    state.log,
+    turnCount,
+    Object.keys(state.players).length,
+  );
 
   if (recentTurns.length === 0) {
     return "";
   }
 
-  // Convert player IDs to "you" and "opponent" for consistency
-  const activePlayerId = state.activePlayerId;
+  // Keep stable IDs: this history is also used to analyze non-active players.
   const compactTurns = recentTurns.map(turn => ({
     turn: turn.turn,
-    playerId: turn.playerId === activePlayerId ? "you" : "opponent",
+    playerId: turn.playerId,
     actions: turn.actionsPlayed.length > 0 ? turn.actionsPlayed : null,
     bought: turn.cardsBought.length > 0 ? turn.cardsBought : null,
+    gained: turn.cardsGained.length > 0 ? turn.cardsGained : null,
+    trashed: turn.cardsTrashed.length > 0 ? turn.cardsTrashed : null,
   }));
 
   const content = encodeToon(compactTurns);
@@ -148,11 +177,21 @@ export function formatTurnHistoryForAnalysis(
   return `RECENT TURN HISTORY:\n${content}`;
 }
 
-interface PlayerStrategyAnalysis {
-  gameplan: string;
-  read: string;
-  recommendation: string;
-}
+const strategySchema = z.record(
+  z.string(),
+  z.object({
+    gameplan: z.string(),
+    read: z.string(),
+    recommendation: z.string(),
+    analysis: z
+      .object({
+        turn: z.number().int().nonnegative(),
+        gameEventId: z.string(),
+        sourceEventId: z.string(),
+      })
+      .optional(),
+  }),
+);
 
 /**
  * Builds structured game facts encoded in TOON format
@@ -169,14 +208,26 @@ export function buildStrategicContext(
   // Add AI's own strategy analysis (not opponent's - no cheating)
   // Use provided strategy or default neutral strategy
   const aiStrategy = run(() => {
-    if (strategySummary) {
-      const strategies = JSON.parse(strategySummary) as Record<
-        string,
-        PlayerStrategyAnalysis
-      >;
-      return strategies[state.activePlayerId];
+    if (!strategySummary) return DEFAULT_STRATEGY;
+    try {
+      const parsed: unknown = JSON.parse(strategySummary);
+      const result = strategySchema.safeParse(parsed);
+      const candidate = result.success
+        ? result.data[getDecisionPlayerId(state)]
+        : undefined;
+      if (!candidate) return DEFAULT_STRATEGY;
+      const metadata = candidate.analysis;
+      if (metadata && !isAnalysisApplicable(metadata, state))
+        return DEFAULT_STRATEGY;
+      facts.analysisAgeTurns = metadata
+        ? state.turn - metadata.turn
+        : "unknown (legacy analysis)";
+      if (metadata) facts.analysisSourceEventId = metadata.sourceEventId;
+      return candidate;
+    } catch {
+      // A malformed or obsolete summary must not prevent a legal decision.
+      return DEFAULT_STRATEGY;
     }
-    return DEFAULT_STRATEGY;
   });
 
   if (aiStrategy) {

@@ -55,9 +55,9 @@ RULES:
   - Cleanup (automatic): discard hand and played cards, draw 5 new cards, reset to 1 Action / 1 Buy / $0 coins
 - BUY vs GAIN: buying spends coins and a buy during your Buy phase. "Gain" effects (Workshop, Witch, etc.) give a card for free; gained cards also go to your discard pile.
 - ATTACKS & REACTIONS: attack cards hurt other players. If you hold a Reaction card (e.g. Moat) when an opponent plays an attack, you may reveal it to block the attack entirely. Revealing is FREE — the card stays in your hand and is not used up. Revealing Moat against an attack is almost always correct.
-- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its "constraint" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next turn). trash = remove from the game forever.
+- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its "constraint" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.
 
-CARD DEFINITIONS (this game's supply — "strategy" is standard advice for that card):
+CARD DEFINITIONS (this game's supply — "strategy" is conditional advice, never a rule):
 ${buildCardDefinitionsTable(supply)}
 
 YOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.
@@ -77,13 +77,15 @@ IF strategyOverride is present in strategic context:
   - Default rules (like "never buy Copper/Curse" or "skip bad buys") DO NOT APPLY
 
 DEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):
-When buying, ask "what's the BEST card I can afford?" not "what can I afford?"
-- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1). Higher always dominates lower when affordable.
-- Copper trap: You START with 7 Copper. Check you.currentDeckComposition - buying more dilutes your deck for minimal gain. Almost never buy Copper.
-- Skip the buy: If only Copper/Curse/Estate are affordable, choose end_phase instead. Buying junk makes your deck worse. Not buying > buying junk.
-- Victory timing: Estate/Duchy clog hands without helping you buy. Only buy VP when:
-  (a) You can afford Province ($8 for 6 VP) - the only efficient VP card (or Province pile empty, then buy Duchy)
-  (b) Game ending soon - check supply: Province pile nearly empty, or 2 piles empty and a third is low
-- Dilution math: A 10-card deck draws 5 cards/turn. Adding weak cards reduces your average hand quality; trashing weak cards raises it.
-- Action cards: Evaluate by deck improvement. +Cards/+Actions compound. Terminals (no +Action) compete for your 1 action/turn.`;
+- Context: you is the decision player, which may differ from activePlayerId during attacks. Null resources belong to the other player's turn. History uses explicit player IDs.
+- Strategy summaries are fallible advice from an earlier state. Recheck them against CURRENT STATE, analysisAgeTurns, and the legal choices. Prefer current facts when advice conflicts.
+- Plan for this kingdom: compare economy, draw/action engines, attacks and alternate VP strategies. Evaluate the best sequence this turn, not just the most expensive card.
+- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1) for raw treasure output, but cost, synergies and needed engine pieces can make another purchase better.
+- Copper trap: You START with 7 Copper. Almost never buy Copper unless a specific synergy or winning pile-out justifies it.
+- Skip the buy: Not buying > buying junk, unless that purchase scores needed VP or creates a favorable game end.
+- Victory timing: Province is valuable but not automatic. Estate, Duchy and Gardens can be decisive. Game ending soon: inspect all opponents' scores and purchaseConsequences before emptying Province or a third pile. Avoid ending behind; evaluate whether building longer improves your chance to win.
+- purchaseConsequences projects one purchase only, before further actions or effects. Its winner follows this engine's scoring rules. Reassess after every move.
+- Dilution math: A 10-card deck drawing 5 cards/turn cycles quickly. Use drawPileCount, discardPileCount and nextFiveCardDrawNeedsShuffle to judge when a new card can matter.
+- Action cards: +Cards need sufficient +Actions and payload. Terminals compete for actions. Printed draw/action totals are approximate, not simulated turn output.
+- For trash/discard/topdeck decisions, evaluate the remaining hand and next draws, preserving necessary economy and action support. Known top cards are listed only when actually revealed.`;
 }

@@ -11,6 +11,8 @@ export function projectPendingChoiceForAI(
   if (isReactionChoice(choice)) {
     return {
       choiceType: "reaction",
+      playerId: choice.playerId,
+      triggeringPlayerId: choice.triggeringPlayerId,
       reactionTo: choice.triggeringCard,
       trigger: choice.triggerType,
       availableReactions: choice.availableReactions,
@@ -45,6 +47,7 @@ export function projectPendingChoiceForAI(
 
   return {
     choiceType: "decision",
+    playerId: choice.playerId,
     prompt: choice.prompt,
     cardBeingPlayed: choice.cardBeingPlayed,
     options: choice.cardOptions,

@@ -132,6 +132,8 @@ describe("projectPendingChoiceForAI", () => {
 
     expect(projected).toEqual({
       choiceType: "reaction",
+      playerId: "player_1",
+      triggeringPlayerId: "player_0",
       reactionTo: "Militia",
       trigger: "on_attack",
       availableReactions: ["Moat"],

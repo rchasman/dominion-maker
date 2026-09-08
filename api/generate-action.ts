@@ -1,3 +1,4 @@
+import { optimizeStateForAI } from "../src/agent/state-projection";
 import {
   generateObject,
   gateway,
@@ -7,7 +8,7 @@ import {
 import type { ModelMessage } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
-import type { GameState, CardName } from "../src/types/game-state";
+import type { GameState } from "../src/types/game-state";
 import type { Action } from "../src/types/action";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
@@ -17,18 +18,12 @@ import {
   replyFormatInstruction,
 } from "../src/agent/choice-parsing";
 import { getLegalActions } from "../src/agent/legal-actions";
-import { projectPendingChoiceForAI } from "../src/agent/pending-choice-projection";
 import { MODEL_MAP } from "../src/config/models";
 import {
   buildStrategicContext,
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
-import { isTreasureCard } from "../src/data/cards";
-import { getCardCost } from "../src/cards/cost";
-import { countCards } from "../src/lib/card-array-utils";
-import { countVP, getAllCards } from "../src/lib/board-utils";
 import { apiLogger } from "../src/lib/logger";
-import { getSubPhase } from "../src/lib/state-helpers";
 import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
 import { env } from "../src/lib/env";
@@ -43,11 +38,6 @@ const HTTP_INTERNAL_ERROR = 500;
 // Error message display limits
 const ERROR_TEXT_PREVIEW_LONG = 500;
 const ERROR_TEXT_PREVIEW_SHORT = 200;
-
-// Game stage constants
-const DEFAULT_PROVINCE_COUNT = 8;
-const EARLY_GAME_TURN_THRESHOLD = 5;
-const LATE_GAME_PROVINCES_THRESHOLD = 4;
 
 // Debug logging for deployment
 if (!env.AI_GATEWAY_API_KEY) {
@@ -138,94 +128,6 @@ function parseRequestBody(req: VercelRequest): RequestBody {
   ) as RequestBody;
 }
 
-// Transform game state to use counts instead of arrays for AI consumption
-// Nests all "your" state together for clearer AI reasoning
-function optimizeStateForAI(state: GameState): unknown {
-  const activePlayerId = state.activePlayerId;
-  const activePlayer = state.players[activePlayerId];
-  const opponentId = Object.keys(state.players).find(
-    id => id !== activePlayerId,
-  );
-  const opponent = opponentId ? state.players[opponentId] : null;
-
-  // Transform supply to array with counts and effective costs
-  const supplyWithCounts = Object.entries(state.supply).map(([card, count]) => {
-    return {
-      card,
-      count,
-      cost: getCardCost(state, card as CardName).modifiedCost,
-    };
-  });
-
-  // Calculate treasures still in hand
-  const treasuresInHand = activePlayer
-    ? activePlayer.hand.filter(isTreasureCard)
-    : [];
-
-  // Calculate current game stage
-  const provincesLeft = state.supply["Province"] ?? DEFAULT_PROVINCE_COUNT;
-  const currentGameStage = run(() => {
-    if (state.turn <= EARLY_GAME_TURN_THRESHOLD) return "Early";
-    if (provincesLeft <= LATE_GAME_PROVINCES_THRESHOLD) return "Late";
-    return "Mid";
-  });
-
-  // Calculate VP and deck composition for both players
-  const yourAllCards = activePlayer ? getAllCards(activePlayer) : [];
-  const opponentAllCards = opponent ? getAllCards(opponent) : [];
-
-  const yourVP = countVP(yourAllCards);
-  const opponentVP = countVP(opponentAllCards);
-
-  const yourDeckCounts = countCards(yourAllCards);
-  const opponentDeckCounts = countCards(opponentAllCards);
-
-  // Build "you" object with all your state nested together
-  const you: Record<string, unknown> = {
-    currentPhase: state.phase,
-    currentActions: state.actions,
-    currentBuys: state.buys,
-    currentCoins: state.coins,
-    currentVictoryPoints: yourVP,
-    currentDeckComposition: yourDeckCounts,
-    currentHand: activePlayer ? countCards(activePlayer.hand) : {},
-    currentDiscard: activePlayer ? countCards(activePlayer.discard) : {},
-    currentInPlay: activePlayer ? countCards(activePlayer.inPlay) : {},
-    // Add revealed deck cards when applicable
-    ...(activePlayer?.deckTopRevealed && activePlayer.deck.length > 0
-      ? { deckTopCards: activePlayer.deck }
-      : {}),
-    // Buy phase helper: treasures you can still play (always show in buy phase)
-    ...(state.phase === "buy"
-      ? { currentTreasuresInHand: countCards(treasuresInHand) }
-      : {}),
-  };
-
-  // Build "opponent" object (no hand - hidden information)
-  const opponentState: Record<string, unknown> | null = opponent
-    ? {
-        currentVictoryPoints: opponentVP,
-        currentDeckComposition: opponentDeckCounts,
-        currentDiscard: countCards(opponent.discard),
-        currentInPlay: countCards(opponent.inPlay),
-      }
-    : null;
-
-  const subPhase = getSubPhase(state);
-
-  return {
-    currentGameStage,
-    you,
-    ...(opponentState ? { opponent: opponentState } : {}),
-    supply: supplyWithCounts,
-    trash: state.trash,
-    ...(state.pendingChoice
-      ? { pendingChoice: projectPendingChoiceForAI(state.pendingChoice) }
-      : {}),
-    ...(subPhase ? { subPhase } : {}),
-  };
-}
-
 // Build user message with context
 function buildUserMessage(params: {
   strategicContext: string;
@@ -250,7 +152,9 @@ function buildUserMessage(params: {
 
   const turnHistorySection =
     currentState.turnHistory && currentState.turnHistory.length > 0
-      ? [`ACTIONS TAKEN THIS TURN:\n${encodeToon(currentState.turnHistory)}`]
+      ? [
+          `ACTIONS TAKEN THIS TURN (by ${currentState.activePlayerId}):\n${encodeToon(currentState.turnHistory)}`,
+        ]
       : [];
 
   const humanChoiceSection = humanChoice

@@ -40,7 +40,8 @@ export const CARDS: Record<CardName, CardDefinition> = {
     cost: 0,
     types: ["treasure"],
     description: "+$1",
-    strategy: "Never buy — every extra Copper dilutes your deck.",
+    strategy:
+      "Usually skip: extra Copper dilutes the deck unless a synergy or winning pile-out justifies it.",
     coins: 1,
   },
   Silver: {
