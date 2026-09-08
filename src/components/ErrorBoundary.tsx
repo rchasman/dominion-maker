@@ -2,6 +2,8 @@ import { Component } from "preact";
 import type { ComponentChildren } from "preact";
 import { uiLogger } from "../lib/logger";
 
+export const renderNothing = () => null;
+
 interface ErrorBoundaryProps {
   children: ComponentChildren;
   fallback?: (error: Error, retry: () => void) => ComponentChildren;

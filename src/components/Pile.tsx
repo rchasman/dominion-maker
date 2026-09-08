@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { CardName } from "../types/game-state";
 import { Card } from "./Card";
+import { ErrorBoundary, renderNothing } from "./ErrorBoundary";
 
 // Lazy load tooltip - only shown on hover
 const PileTooltip = lazy(() =>
@@ -98,15 +99,17 @@ export function Pile({
       </div>
 
       {tooltipPosition && (
-        <Suspense fallback={null}>
-          <PileTooltip
-            cards={cards}
-            {...(knownCards !== undefined && { knownCards })}
-            mouseX={tooltipPosition.x}
-            mouseY={tooltipPosition.y}
-            {...(pileType !== undefined && { pileType })}
-          />
-        </Suspense>
+        <ErrorBoundary fallback={renderNothing}>
+          <Suspense fallback={null}>
+            <PileTooltip
+              cards={cards}
+              {...(knownCards !== undefined && { knownCards })}
+              mouseX={tooltipPosition.x}
+              mouseY={tooltipPosition.y}
+              {...(pileType !== undefined && { pileType })}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );

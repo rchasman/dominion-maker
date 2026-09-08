@@ -10,6 +10,7 @@ import {
   CARD_WIDTHS,
 } from "../lib/image-optimization";
 import { DISABLED_OPACITY } from "./Board/constants";
+import { ErrorBoundary, renderNothing } from "./ErrorBoundary";
 
 // Lazy load tooltip - only shown on hover
 const CardTooltip = lazy(() =>
@@ -278,14 +279,16 @@ export function Card({
         {renderCardCount(count)}
       </div>
       {showTooltip && (
-        <Suspense fallback={null}>
-          <CardTooltip
-            cardName={name}
-            mouseX={mousePosition.x}
-            mouseY={mousePosition.y}
-            {...(showBack !== undefined && { showBack })}
-          />
-        </Suspense>
+        <ErrorBoundary fallback={renderNothing}>
+          <Suspense fallback={null}>
+            <CardTooltip
+              cardName={name}
+              mouseX={mousePosition.x}
+              mouseY={mousePosition.y}
+              {...(showBack !== undefined && { showBack })}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );
