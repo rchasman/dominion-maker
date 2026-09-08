@@ -97,7 +97,7 @@ function calculateLayoutDimensions(
   const longestPercentageString = Math.max(
     ...allResults.map(r => {
       const pct = (r.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
-      return `${pct.toFixed(0)}% vote share`.length;
+      return `${pct.toFixed(0)}%`.length;
     }),
   );
   const percentageWidth = longestPercentageString * PIXELS_PER_CHAR_PERCENTAGE;
@@ -105,12 +105,14 @@ function calculateLayoutDimensions(
   const maxVoterCircles = Math.max(...allResults.map(r => r.voters.length));
   const voterCirclesWidth = maxVoterCircles * PIXELS_PER_VOTER_CIRCLE;
 
-  const barAreaWidth =
+  const barAreaWidth = Math.max(
+    0,
     TOTAL_BAR_CONTAINER_WIDTH -
-    voteCountWidth -
-    percentageWidth -
-    voterCirclesWidth -
-    GAP_SPACING_TOTAL;
+      voteCountWidth -
+      percentageWidth -
+      voterCirclesWidth -
+      GAP_SPACING_TOTAL,
+  );
 
   return { voteCountWidth, percentageWidth, barAreaWidth };
 }

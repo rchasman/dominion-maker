@@ -28,7 +28,8 @@ export function VoteBar({
       style={{
         display: "flex",
         alignItems: "center",
-        flexWrap: "wrap",
+        flexWrap: "nowrap",
+        overflowX: "auto",
         gap: "var(--space-2)",
         fontSize: "0.75rem",
       }}
@@ -91,8 +92,8 @@ function ProgressBar({
           : "var(--color-text-secondary)",
         opacity,
         borderRadius: "3px",
-        minWidth: "30px",
-        flexShrink: 0,
+        minWidth: 0,
+        flexShrink: 1,
       }}
     />
   );
@@ -107,15 +108,18 @@ function PercentageLabel({
 }) {
   return (
     <span
+      aria-label={`${percentage.toFixed(0)}% vote share`}
+      title="Vote share"
       style={{
         color: "var(--color-text-secondary)",
         fontSize: "0.7rem",
         fontWeight: 600,
         flexShrink: 0,
-        minWidth: `${percentageWidth}px`,
+        width: `${percentageWidth}px`,
+        whiteSpace: "nowrap",
       }}
     >
-      {percentage.toFixed(0)}% vote share
+      {percentage.toFixed(0)}%
     </span>
   );
 }

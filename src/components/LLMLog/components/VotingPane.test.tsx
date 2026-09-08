@@ -39,7 +39,9 @@ describe("vote explanations", () => {
       />,
       root,
     );
-    expect(root.textContent).toContain("50% vote share");
+    expect(
+      root.querySelector('[aria-label="50% vote share"]')?.textContent,
+    ).toBe("50%");
     expect(root.querySelector('[aria-label="Valid action"]')?.textContent).toBe(
       "✓",
     );
