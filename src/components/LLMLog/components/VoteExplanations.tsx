@@ -12,6 +12,7 @@ export function VoteExplanations({
     <div
       style={{
         fontSize: "0.7rem",
+        color: "var(--color-text-primary)",
         lineHeight: "1.4",
         overflowWrap: "anywhere",
         marginTop: "var(--space-2)",
