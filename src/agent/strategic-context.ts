@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { strategyPlanSchema, type StrategyPlan } from "./strategy-plan";
 import { run } from "../lib/run";
 import { isAnalysisApplicable } from "./analysis-version";
 import type {
@@ -11,10 +12,8 @@ import { getDecisionPlayerId } from "./state-projection";
 import { encodeToon } from "../lib/toon";
 
 type StrategicFacts = {
-  // AI strategy (gameplan, situational read, recommendation)
-  aiStrategyGameplan?: string;
-  aiStrategyRead?: string;
-  aiStrategyRecommendation?: string;
+  // Unverified conditional advice, never display commentary.
+  aiDecisionPlan?: StrategyPlan;
   strategyOverride?: string;
   analysisAgeTurns?: number | string;
   analysisSourceEventId?: string;
@@ -40,12 +39,14 @@ export const STRATEGY_ANALYSIS_TURNS = 7; // For strategy analysis (once per tur
  * Default strategy used before first analysis completes
  * Provides reasoning primitives, not conclusions - let the AI derive good moves
  */
-export const DEFAULT_STRATEGY = {
-  gameplan:
+export const DEFAULT_STRATEGY: StrategyPlan = {
+  priority:
     "No analysis yet — choose an economy, engine, attack or alternate scoring plan for this kingdom.",
-  read: "Compare the deck you own with the supply and opponents. Balance draw, actions and payload; consider trashing junk and how soon new cards will be shuffled in.",
-  recommendation:
-    "Compare useful purchases with saving deck space. Score when it improves your winning chances; check score leads and pile-ending consequences before ending the game. Treat card advice as conditional, not mandatory.",
+  conditions: [
+    "Balance draw, actions and payload against the deck and supply.",
+    "Score when it improves winning chances; check pile-ending consequences before ending the game.",
+    "Treat card advice as conditional, not mandatory.",
+  ],
 };
 
 function extractRecentTurns(
@@ -180,9 +181,7 @@ export function formatTurnHistoryForAnalysis(
 const strategySchema = z.record(
   z.string(),
   z.object({
-    gameplan: z.string(),
-    read: z.string(),
-    recommendation: z.string(),
+    decisionPlan: strategyPlanSchema.optional(),
     analysis: z
       .object({
         turn: z.number().int().nonnegative(),
@@ -215,7 +214,7 @@ export function buildStrategicContext(
       const candidate = result.success
         ? result.data[getDecisionPlayerId(state)]
         : undefined;
-      if (!candidate) return DEFAULT_STRATEGY;
+      if (!candidate?.decisionPlan) return DEFAULT_STRATEGY;
       const metadata = candidate.analysis;
       if (metadata && !isAnalysisApplicable(metadata, state))
         return DEFAULT_STRATEGY;
@@ -223,7 +222,7 @@ export function buildStrategicContext(
         ? state.turn - metadata.turn
         : "unknown (legacy analysis)";
       if (metadata) facts.analysisSourceEventId = metadata.sourceEventId;
-      return candidate;
+      return candidate.decisionPlan;
     } catch {
       // A malformed or obsolete summary must not prevent a legal decision.
       return DEFAULT_STRATEGY;
@@ -231,9 +230,7 @@ export function buildStrategicContext(
   });
 
   if (aiStrategy) {
-    facts.aiStrategyGameplan = aiStrategy.gameplan;
-    facts.aiStrategyRead = aiStrategy.read;
-    facts.aiStrategyRecommendation = aiStrategy.recommendation;
+    facts.aiDecisionPlan = aiStrategy;
   }
 
   // Add custom override

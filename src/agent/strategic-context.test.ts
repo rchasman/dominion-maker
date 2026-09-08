@@ -57,9 +57,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only AI strategy, no game state (moved to main state object)
-      expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("aiStrategyRead:");
-      expect(context).toContain("aiStrategyRecommendation:");
+      expect(context).toContain("aiDecisionPlan:");
 
       // Game state facts removed (now in you/opponent objects)
       expect(context).not.toContain("gameStage:");
@@ -92,9 +90,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("aiStrategyRead:");
-      expect(context).toContain("aiStrategyRecommendation:");
+      expect(context).toContain("aiDecisionPlan:");
     });
 
     it("should build context for ai2 player", () => {
@@ -102,9 +98,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("aiStrategyRead:");
-      expect(context).toContain("aiStrategyRecommendation:");
+      expect(context).toContain("aiDecisionPlan:");
     });
 
     it("should not expose opponent's hand or private info", () => {
@@ -127,7 +121,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
     });
 
     it("should work with custom player IDs", () => {
@@ -135,7 +129,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
     });
   });
 
@@ -155,7 +149,7 @@ describe("buildStrategicContext", () => {
       expect(context).not.toContain("Estate:");
 
       // Only strategy remains
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
     });
 
     it("should focus only on AI strategy not state facts", () => {
@@ -185,7 +179,7 @@ describe("buildStrategicContext", () => {
       expect(context).not.toContain("gameStage:");
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
     });
   });
 
@@ -200,6 +194,10 @@ describe("buildStrategicContext", () => {
             "Keep buying Golds. Start greening when opponent completes their engine or at 2 Provinces.",
         },
         ai: {
+          decisionPlan: {
+            priority: "Build the engine",
+            conditions: ["Add Village when terminals compete"],
+          },
           gameplan: "Engine Building - Behind at 6 VP",
           read: "Building Villages and Smithies engine but execution is slow. Low buying power is the critical weakness. Needs 1-2 more engine pieces before competing.",
           recommendation:
@@ -209,9 +207,11 @@ describe("buildStrategicContext", () => {
 
       const context = buildStrategicContext(state, strategySummary);
 
-      expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("Engine Building - Behind at 6 VP");
-      expect(context).toContain("Villages and Smithies");
+      expect(context).toContain("aiDecisionPlan:");
+      expect(context).toContain("Build the engine");
+      expect(context).toContain("Add Village when terminals compete");
+      expect(context).not.toContain("Villages and Smithies");
+      expect(context).not.toContain("Big Money - Leading");
     });
 
     it("should use default strategy when none provided", () => {
@@ -219,7 +219,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Default strategy is always included
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
       expect(context).toContain("choose an economy");
       expect(context).toContain("Treat card advice as conditional");
 
@@ -303,9 +303,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only AI strategy
-      expect(context).toContain("aiStrategyGameplan:");
-      expect(context).toContain("aiStrategyRead:");
-      expect(context).toContain("aiStrategyRecommendation:");
+      expect(context).toContain("aiDecisionPlan:");
 
       // All game state moved to main state object
       expect(context).not.toContain("gameStage:");
@@ -325,7 +323,7 @@ describe("buildStrategicContext", () => {
       const context = buildStrategicContext(state);
 
       // Only strategy
-      expect(context).toContain("aiStrategyGameplan:");
+      expect(context).toContain("aiDecisionPlan:");
 
       // No state facts
       expect(context).not.toContain("yourDeckComposition:");

@@ -39,11 +39,16 @@ describe("decision context regression positions", () => {
       JSON.stringify({
         human: {
           gameplan: "attacker plan",
+          decisionPlan: { priority: "attacker plan", conditions: ["attack"] },
           read: "attacker read",
           recommendation: "attack",
         },
         ai: {
           gameplan: "defender plan",
+          decisionPlan: {
+            priority: "defender plan",
+            conditions: ["preserve draw"],
+          },
           read: "defender read",
           recommendation: "preserve draw",
         },

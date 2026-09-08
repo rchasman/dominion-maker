@@ -1,5 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { buildCardDefinitionsTable, buildSystemPrompt } from "./system-prompt";
+import {
+  buildCardDefinitionsTable,
+  buildCardStrategyTable,
+  buildSystemPrompt,
+} from "./system-prompt";
 
 const MINIMAL_SUPPLY: Record<string, number> = { Copper: 46 };
 
@@ -64,9 +68,10 @@ describe("buildCardDefinitionsTable", () => {
       Witch: 10,
     };
 
-    const table = buildCardDefinitionsTable(supply);
+    const table = buildCardStrategyTable(supply);
 
-    expect(table).toContain("strategy");
+    expect(buildCardDefinitionsTable(supply)).not.toContain("Top-tier attack");
+    expect(table).toContain("advice");
     expect(table).toContain("thin your deck"); // Chapel note
     expect(table).toContain("Top-tier attack"); // Witch note
   });

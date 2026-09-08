@@ -82,9 +82,7 @@ describe("Full mode integration", () => {
     const context = buildStrategicContext(engine.state);
 
     // Only strategy, no state facts
-    expect(context).toContain("aiStrategyGameplan:");
-    expect(context).toContain("aiStrategyRead:");
-    expect(context).toContain("aiStrategyRecommendation:");
+    expect(context).toContain("aiDecisionPlan:");
   });
 
   it("should generate valid strategic context for ai2", () => {
@@ -102,9 +100,7 @@ describe("Full mode integration", () => {
     const context = buildStrategicContext(engine.state);
 
     // Only strategy, no state facts
-    expect(context).toContain("aiStrategyGameplan:");
-    expect(context).toContain("aiStrategyRead:");
-    expect(context).toContain("aiStrategyRecommendation:");
+    expect(context).toContain("aiDecisionPlan:");
   });
 
   it("should allow both AIs to buy cards", () => {

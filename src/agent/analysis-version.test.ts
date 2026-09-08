@@ -11,6 +11,10 @@ describe("analysis version", () => {
     const advanced = { ...state, turn: state.turn + 2 };
     const summary = JSON.stringify({
       human: {
+        decisionPlan: {
+          priority: "versioned plan",
+          conditions: ["Recheck at next shuffle"],
+        },
         gameplan: "versioned plan",
         read: "read",
         recommendation: "recommendation",

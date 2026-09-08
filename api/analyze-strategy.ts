@@ -1,17 +1,19 @@
 import { generateObject, gateway, wrapLanguageModel } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
-import { z } from "zod";
-import type { GameState, CardName } from "../src/types/game-state";
+import type { GameState } from "../src/types/game-state";
 import {
   formatTurnHistoryForAnalysis,
   STRATEGY_ANALYSIS_TURNS,
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { buildPublicPlayerSummaries } from "../src/agent/state-projection";
 import { env } from "../src/lib/env";
-import { encodeToon } from "../src/lib/toon";
-import { buildCardDefinitionsTable } from "../src/agent/system-prompt";
+import {
+  buildStrategyAnalysisPrompt,
+  buildStrategyAnalysisMessage,
+  PlayerAnalysisSchema,
+  type PlayerAnalysisRecord,
+} from "../src/agent/strategy-analysis";
 
 // HTTP status codes
 const HTTP_STATUS = {
@@ -30,57 +32,6 @@ function createDevToolsMiddleware() {
   }
   return devToolsMiddleware();
 }
-
-function buildStrategyAnalysisPrompt(
-  supply: Record<CardName, number>,
-  hasPreviousAnalysis: boolean,
-): string {
-  const previousAnalysisGuidance = hasPreviousAnalysis
-    ? `
-CONTINUITY:
-- You provided analysis last turn - reference your previous read if relevant
-- Celebrate when players make smart pivots or ignore your advice for something better
-- Admit when your recommendation was wrong or didn't account for something
-- Track whether strategies are working out as expected`
-    : "";
-
-  return `Data is TOON-encoded (self-documenting, tab-delimited).
-
-You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
-
-CARD DEFINITIONS (static reference):
-${buildCardDefinitionsTable(supply)}
-
-For each playerId, provide:
-1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing
-2. **Read** (2-3 sentences): Paragraph analyzing their deck, execution, and position. Be specific about card synergies, buying patterns, and deck quality. Include their main weakness.
-3. **Recommendation** (1-2 sentences): What they should do next and why. Be decisive and actionable.
-${previousAnalysisGuidance}
-
-Compare this player with every opponent, including VP leads and pile-ending threats. Prefer conditional plans with pivot conditions over unconditional purchase rules. Be analytical but engaging. No fluff - every word should matter.`;
-}
-
-const PlayerAnalysisSchema = z.object({
-  gameplan: z
-    .string()
-    .describe("One-line summary of strategy and current standing"),
-  read: z
-    .string()
-    .describe(
-      "2-3 sentence paragraph analyzing deck quality, execution, and weakness",
-    ),
-  recommendation: z
-    .string()
-    .describe("1-2 sentences on what to do next and why - be decisive"),
-});
-
-interface PlayerAnalysis {
-  gameplan: string;
-  read: string;
-  recommendation: string;
-}
-
-type PlayerAnalysisRecord = Record<string, PlayerAnalysis>;
 
 // Parse request body safely
 async function parseRequestBody(req: VercelRequest): Promise<{
@@ -135,16 +86,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get all player IDs
     const playerIds = Object.keys(currentState.players);
 
-    // Build comprehensive game state context using TOON encoding
-    const gameContext = {
-      turn: currentState.turn,
-      phase: currentState.phase,
-      supply: currentState.supply,
-      trash: currentState.trash,
-    };
-
-    const playerDecks = buildPublicPlayerSummaries(currentState);
-
     // Use GPT-5.4 for high-quality strategy analysis
     const middleware = createDevToolsMiddleware();
     const model = middleware
@@ -158,29 +99,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const strategySummary: PlayerAnalysisRecord = Object.fromEntries(
       await Promise.all(
         playerIds.map(async playerId => {
-          const previousPlayerAnalysis = previousAnalysis?.[playerId];
-
-          const previousAnalysisSection = previousPlayerAnalysis
-            ? `\n\nYOUR PREVIOUS ANALYSIS (last turn):\n${encodeToon(
-                previousPlayerAnalysis,
-              )}`
-            : "";
-
-          const prompt = `${encodeToon(gameContext)}
-
-${turnHistory}
-
-PUBLIC PLAYER SUMMARIES (history uses these exact player IDs):
-${encodeToon(playerDecks)}${previousAnalysisSection}
-
-Provide strategic analysis for playerId: ${playerId}.`;
+          const prompt = buildStrategyAnalysisMessage(
+            currentState,
+            playerId,
+            previousAnalysis?.[playerId],
+          );
 
           const result = await generateObject({
             model,
-            instructions: buildStrategyAnalysisPrompt(
-              currentState.supply,
-              !!previousPlayerAnalysis,
-            ),
+            instructions: buildStrategyAnalysisPrompt(currentState.supply),
             prompt,
             schema: PlayerAnalysisSchema,
             maxRetries: 1,

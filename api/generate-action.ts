@@ -1,4 +1,4 @@
-import { optimizeStateForAI } from "../src/agent/state-projection";
+import { buildUserMessage } from "../src/agent/action-prompt";
 import {
   generateObject,
   gateway,
@@ -9,12 +9,10 @@ import type { ModelMessage } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState } from "../src/types/game-state";
-import type { Action } from "../src/types/action";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
   choiceSchema,
   choiceToAction,
-  formatLegalActions,
   replyFormatInstruction,
 } from "../src/agent/choice-parsing";
 import { getLegalActions } from "../src/agent/legal-actions";
@@ -24,7 +22,6 @@ import {
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
-import { encodeToon } from "../src/lib/toon";
 import { run } from "../src/lib/run";
 import { env } from "../src/lib/env";
 
@@ -126,56 +123,6 @@ function parseRequestBody(req: VercelRequest): RequestBody {
   return (
     typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody
   ) as RequestBody;
-}
-
-// Build user message with context
-function buildUserMessage(params: {
-  strategicContext: string;
-  currentState: GameState;
-  recentTurnsStr: string;
-  legalActions: Action[];
-  humanChoice?: { selectedCards: string[] };
-}): string {
-  const {
-    strategicContext,
-    currentState,
-    recentTurnsStr,
-    legalActions,
-    humanChoice,
-  } = params;
-
-  // Optimize state by converting arrays to counts
-  const optimizedState = optimizeStateForAI(currentState);
-
-  // Build structured prompt sections: state → strategy → history → options → decision
-  const stateStr = encodeToon(optimizedState);
-
-  const turnHistorySection =
-    currentState.turnHistory && currentState.turnHistory.length > 0
-      ? [
-          `ACTIONS TAKEN THIS TURN (by ${currentState.activePlayerId}):\n${encodeToon(currentState.turnHistory)}`,
-        ]
-      : [];
-
-  const humanChoiceSection = humanChoice
-    ? [`Human chose: ${encodeToon(humanChoice.selectedCards)}`]
-    : [];
-
-  const legalActionsSection = [
-    `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatLegalActions(legalActions)}`,
-    replyFormatInstruction(legalActions.length),
-  ];
-
-  const sections = [
-    `CURRENT STATE:\n${stateStr}`,
-    `STRATEGIC CONTEXT:\n${strategicContext}`,
-    ...(recentTurnsStr ? [recentTurnsStr] : []),
-    ...turnHistorySection,
-    ...humanChoiceSection,
-    ...legalActionsSection,
-  ];
-
-  return sections.join("\n\n");
 }
 
 // Process request body and validate input
