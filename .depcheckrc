@@ -1,6 +1,7 @@
 {
   "ignores": [
     "@types/*",
+    "@typescript/native",
     "eslint-*",
     "typescript-eslint",
     "globals",

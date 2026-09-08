@@ -46,6 +46,32 @@ describe("TOON encoding and decoding", () => {
     expect(decoded).toEqual(data);
   });
 
+  test("round-trips nested tabular game data", () => {
+    const data = [
+      { player: "human", resources: { actions: 2, coins: 3 } },
+      { player: "ai", resources: { actions: 1, coins: 5 } },
+    ];
+
+    expect(decodeToon<typeof data>(encodeToon(data))).toEqual(data);
+  });
+
+  test("round-trips keyed tables without dropping player identifiers", () => {
+    const data = {
+      players: {
+        human: { name: "Alice", score: 12 },
+        ai: { name: "Bot", score: 9 },
+      },
+    };
+
+    expect(decodeToon<typeof data>(encodeToon(data))).toEqual(data);
+  });
+
+  test("preserves strings that resemble comments or numbers", () => {
+    const data = ["# player name", "+1", "01", "Infinity"];
+
+    expect(decodeToon<typeof data>(encodeToon(data))).toEqual(data);
+  });
+
   test("strict mode validates malformed TOON", () => {
     const malformedToon = `users[3]{id,name}:
   1	Alice
