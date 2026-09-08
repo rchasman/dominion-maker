@@ -10,6 +10,99 @@ describe("Consensus System", () => {
     resetEventCounter();
   });
 
+  it("opens each Militia discard round before votes finish", async () => {
+    const engine = new DominionEngine();
+    engine.startGame(["human", "ai"]);
+    engine.state.players["human"]!.hand = ["Militia"];
+    engine.state.players["ai"]!.hand = [
+      "Estate",
+      "Estate",
+      "Copper",
+      "Copper",
+      "Copper",
+    ];
+    engine.state.activePlayerId = "human";
+    engine.state.phase = "action";
+    engine.state.actions = 1;
+    expect(
+      engine.dispatch({
+        type: "PLAY_ACTION",
+        playerId: "human",
+        card: "Militia",
+      }).ok,
+    ).toBe(true);
+    expect(engine.state.pendingChoice?.playerId).toBe("ai");
+
+    const entries: Omit<LLMLogEntry, "id" | "timestamp">[] = [];
+    const votes = Array.from({ length: 4 }, () =>
+      Promise.withResolvers<void>(),
+    );
+    const completed = votes.map(() => Promise.withResolvers<void>());
+    const started = [
+      Promise.withResolvers<void>(),
+      Promise.withResolvers<void>(),
+    ];
+    let requestIndex = 0;
+    let completedIndex = 0;
+    let roundIndex = 0;
+    const originalFetch = global.fetch;
+    global.fetch = mock(async () => {
+      await votes[requestIndex++]!.promise;
+      return Response.json({
+        action: { type: "discard_card", card: "Estate" },
+      });
+    }) as unknown as typeof fetch;
+
+    try {
+      const resolution = advanceGameStateWithConsensus(engine, "ai", {
+        providers: ["gpt-5.4-mini", "gpt-5.4-mini"],
+        logger: entry => {
+          entries.push(entry);
+          if (entry.type === "consensus-start") {
+            started[roundIndex++]!.resolve();
+          }
+          if (entry.type === "consensus-model-complete") {
+            completed[completedIndex++]!.resolve();
+          }
+        },
+      });
+
+      for (let round = 0; round < 2; round++) {
+        await started[round]!.promise;
+        const startIndex = entries
+          .map(entry => entry.type)
+          .lastIndexOf("consensus-start");
+        expect(entries[startIndex]?.data?.totalModels).toBe(2);
+        expect(
+          entries.filter(entry => entry.type === "consensus-voting"),
+        ).toHaveLength(round);
+
+        votes[round * 2]!.resolve();
+        await completed[round * 2]!.promise;
+        expect(entries.slice(startIndex + 1).map(entry => entry.type)).toEqual([
+          "consensus-model-pending",
+          "consensus-model-pending",
+          "consensus-model-complete",
+        ]);
+        votes[round * 2 + 1]!.resolve();
+      }
+
+      await resolution;
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.players["ai"]!.hand).toEqual([
+        "Copper",
+        "Copper",
+        "Copper",
+      ]);
+      expect(
+        entries.filter(entry => entry.type === "consensus-voting"),
+      ).toHaveLength(2);
+    } finally {
+      votes.forEach(vote => vote.resolve());
+      global.fetch = originalFetch;
+    }
+  });
+
   it("preserves model reasonings in voting data", async () => {
     const engine = new DominionEngine();
     engine.startGame(["player1", "player2"]);

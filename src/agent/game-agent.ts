@@ -287,6 +287,14 @@ async function handleBatchConsensus(
       `Batch round ${round + 1}/${max}: ${legalActions.length} legal actions`,
     );
 
+    logConsensusStart({
+      currentState: acc.engine.state,
+      playerId,
+      providers: config.providers,
+      legalActions,
+      ...(config.logger !== undefined && { logger: config.logger }),
+    });
+
     const { results, earlyConsensus, voteGroups, completedResults } =
       await runModelsInParallel({
         providers: config.providers,
