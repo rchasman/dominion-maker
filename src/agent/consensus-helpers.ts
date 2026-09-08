@@ -16,6 +16,7 @@ import { agentLogger } from "../lib/logger";
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
 
 // Constants
+const MIN_DISTINCT_CONSENSUS_MODELS = 3;
 export const MODEL_TIMEOUT_MS = 30_000;
 export const PERCENTAGE_MULTIPLIER = 100;
 
@@ -104,6 +105,7 @@ export const createActionSignature = (action: Action): ActionSignature => {
 export const checkEarlyConsensus = (
   voteGroups: Map<ActionSignature, VoteGroup>,
   aheadByK: number,
+  electorate?: { providers: ModelProvider[]; remainingVotes: number },
 ): VoteGroup | null => {
   const groups = Array.from(voteGroups.values()).sort(
     (a, b) => b.count - a.count,
@@ -113,6 +115,16 @@ export const checkEarlyConsensus = (
   const leader = groups[0];
   if (!leader) return null;
   const runnerUp = groups[1]?.count ?? 0;
+
+  if (electorate) {
+    const requiredModels = Math.min(
+      MIN_DISTINCT_CONSENSUS_MODELS,
+      new Set(electorate.providers).size,
+    );
+    if (new Set(leader.voters).size < requiredModels) return null;
+    // A fast subset must not cancel enough outstanding votes to reverse the result.
+    if (leader.count - runnerUp <= electorate.remainingVotes) return null;
+  }
 
   if (leader.count - runnerUp >= aheadByK) {
     return leader;
@@ -204,6 +216,8 @@ export const handleModelResult = (
     onComplete,
   } = context;
 
+  if (abortController.signal.aborted) return;
+
   if (modelResult.result) {
     const signature = createActionSignature(modelResult.result);
     const existing = voteGroups.get(signature);
@@ -223,7 +237,10 @@ export const handleModelResult = (
       });
     }
 
-    const winner = checkEarlyConsensus(voteGroups, aheadByK);
+    const winner = checkEarlyConsensus(voteGroups, aheadByK, {
+      providers,
+      remainingVotes: pendingModels.size,
+    });
     if (winner) {
       abortController.abort();
 

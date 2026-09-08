@@ -628,3 +628,78 @@ describe("selectConsensusWinner", () => {
     expect(winner.signature).toBe("action1");
   });
 });
+
+describe("early consensus electorate safeguards", () => {
+  const providers = [
+    "gpt-5.4-mini",
+    "gpt-5.4-mini",
+    "gpt-5.4-mini",
+    "grok-4-fast",
+    "grok-4-fast",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite",
+    "glm-4.7-flash",
+  ] as const;
+  const groups = (voters: VoteGroup["voters"]): Map<string, VoteGroup> =>
+    new Map([
+      [
+        "buy",
+        {
+          signature: "buy",
+          action: { type: "buy_card", card: "Silver" },
+          voters,
+          count: voters.length,
+        },
+      ],
+    ]);
+
+  it("waits when three fast matching votes can still be overturned", () => {
+    const votes = groups([
+      "gpt-5.4-mini",
+      "grok-4-fast",
+      "gemini-3.1-flash-lite",
+    ]);
+    expect(
+      checkEarlyConsensus(votes, 3, {
+        providers: [...providers],
+        remainingVotes: 5,
+      }),
+    ).toBeNull();
+  });
+
+  it("requires distinct models even when duplicates establish an unbeatable lead", () => {
+    const votes = groups(Array(5).fill("gpt-5.4-mini"));
+    expect(
+      checkEarlyConsensus(votes, 3, {
+        providers: [...providers],
+        remainingVotes: 3,
+      }),
+    ).toBeNull();
+  });
+
+  it("stops for a diverse lead that remaining votes cannot tie", () => {
+    const votes = groups([
+      "gpt-5.4-mini",
+      "gpt-5.4-mini",
+      "grok-4-fast",
+      "gemini-3.1-flash-lite",
+      "glm-4.7-flash",
+    ]);
+    expect(
+      checkEarlyConsensus(votes, 3, {
+        providers: [...providers],
+        remainingVotes: 3,
+      })?.count,
+    ).toBe(5);
+  });
+
+  it("supports deliberately single-model electorates", () => {
+    const votes = groups(["gpt-5.4-mini", "gpt-5.4-mini"]);
+    expect(
+      checkEarlyConsensus(votes, 2, {
+        providers: ["gpt-5.4-mini", "gpt-5.4-mini"],
+        remainingVotes: 0,
+      })?.count,
+    ).toBe(2);
+  });
+});
