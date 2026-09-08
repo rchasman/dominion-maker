@@ -81,6 +81,7 @@ type AITurnConfig = {
   logger?: LLMLogger;
   onStateChange?: (state: GameState) => void;
   strategySummary?: string;
+  getStrategySummary?: () => string | undefined;
   customStrategy?: string;
 };
 
@@ -736,6 +737,12 @@ export async function runAITurnWithConsensus(
 ): Promise<void> {
   const { providers, logger, onStateChange, strategySummary, customStrategy } =
     config;
+  const currentStrategy = () => {
+    const summary = config.getStrategySummary
+      ? config.getStrategySummary()
+      : strategySummary;
+    return summary !== undefined ? { strategySummary: summary } : {};
+  };
   agentLogger.info(`AI turn start: ${playerId} (${engine.state.phase} phase)`);
 
   logger?.({
@@ -762,7 +769,7 @@ export async function runAITurnWithConsensus(
       await advanceGameStateWithConsensus(engine, playerId, {
         providers,
         ...(logger !== undefined && { logger }),
-        ...(strategySummary !== undefined && { strategySummary }),
+        ...currentStrategy(),
         ...(customStrategy !== undefined && { customStrategy }),
       });
 
@@ -781,7 +788,7 @@ export async function runAITurnWithConsensus(
         await advanceGameStateWithConsensus(engine, playerId, {
           providers,
           ...(logger !== undefined && { logger }),
-          ...(strategySummary !== undefined && { strategySummary }),
+          ...currentStrategy(),
           ...(customStrategy !== undefined && { customStrategy }),
         });
         onStateChange?.(engine.state);

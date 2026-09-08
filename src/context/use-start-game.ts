@@ -1,3 +1,4 @@
+import { invalidateStrategyAnalysis } from "./use-strategy-analysis";
 /**
  * Hook for starting a new game
  * Writes directly to signals instead of using setters.
@@ -25,6 +26,7 @@ export function useStartGame(
 ): () => void {
   return useCallback(() => {
     abortOngoingConsensus();
+    invalidateStrategyAnalysis();
     clearGameStateStorage();
 
     // Clear signals immediately

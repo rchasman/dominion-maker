@@ -59,6 +59,7 @@ export class MakerStrategy implements GameStrategy {
     const activeplayerId = engine.state.activePlayerId;
     return runAITurnWithConsensus(engine, activeplayerId, {
       providers: models,
+      getStrategySummary: () => this.strategySummary,
       ...(this.logger !== undefined && { logger: this.logger }),
       ...(onStateChange !== undefined && { onStateChange }),
       ...(this.strategySummary !== undefined && {

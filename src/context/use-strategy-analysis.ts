@@ -13,7 +13,16 @@ import type { PlayerStrategyData } from "../types/player-strategy";
 import { api } from "../api/client";
 import { uiLogger } from "../lib/logger";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
-import { playerStrategies$ } from "./game-signals";
+import { playerStrategies$, gameState$, events$ } from "./game-signals";
+import {
+  analysisVersion,
+  isAnalysisApplicable,
+} from "../agent/analysis-version";
+
+const analysisRequests = { latest: 0 };
+export function invalidateStrategyAnalysis(): void {
+  analysisRequests.latest++;
+}
 
 /**
  * True when a turn just ended and the game is past the analysis threshold
@@ -36,15 +45,24 @@ export function fetchStrategyAnalysis(
   state: GameState,
   strategy: GameStrategy | undefined,
   currentStrategies: PlayerStrategyData,
-): void {
+): Promise<void> {
+  const request = ++analysisRequests.latest;
+  const version = analysisVersion(state);
   const hasStrategies = Object.keys(currentStrategies).length > 0;
 
-  api.api["analyze-strategy"]
+  return api.api["analyze-strategy"]
     .post({
       currentState: state,
       ...(hasStrategies && { previousAnalysis: currentStrategies }),
     })
     .then(({ data, error }) => {
+      const currentState = gameState$.peek();
+      if (
+        request !== analysisRequests.latest ||
+        !currentState ||
+        !isAnalysisApplicable(version, currentState)
+      )
+        return;
       if (error) {
         uiLogger.warn("Failed to fetch strategy analysis:", error);
         return;
@@ -57,9 +75,15 @@ export function fetchStrategyAnalysis(
         return;
       }
 
-      const stringifiedStrategies = JSON.stringify(data.strategySummary);
+      const versioned = Object.fromEntries(
+        Object.entries(data.strategySummary).map(([id, analysis]) => [
+          id,
+          { ...analysis, analysis: version },
+        ]),
+      );
+      const stringifiedStrategies = JSON.stringify(versioned);
       strategy?.setStrategySummary?.(stringifiedStrategies);
-      playerStrategies$.value = data.strategySummary;
+      playerStrategies$.value = versioned;
     })
     .catch((err: unknown) => {
       uiLogger.warn("Failed to fetch strategy analysis:", err);
@@ -73,6 +97,7 @@ export function useStrategyAnalysis(
   engineRef: MutableRefObject<DominionEngine | null>,
   strategy: GameStrategy,
 ): void {
+  const gameIdentity = events$.value[0]?.id;
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) {
@@ -80,14 +105,18 @@ export function useStrategyAnalysis(
       return;
     }
 
+    strategy.setStrategySummary?.(JSON.stringify(playerStrategies$.peek()));
     const unsubscribe = engine.subscribe((newEvents, state) => {
       if (turnEndedPastThreshold(newEvents, state)) {
-        fetchStrategyAnalysis(state, strategy, playerStrategies$.value);
+        void fetchStrategyAnalysis(state, strategy, playerStrategies$.value);
       }
     });
 
-    return unsubscribe;
-  }, [engineRef, strategy]);
+    return () => {
+      unsubscribe();
+      invalidateStrategyAnalysis();
+    };
+  }, [engineRef, strategy, gameIdentity]);
 }
 
 /**
@@ -98,8 +127,18 @@ export function useStrategyAnalysisFromEvents(
   gameState: GameState | null,
 ): void {
   const lastEventCountRef = useRef(0);
+  const gameIdentityRef = useRef<string | undefined>();
 
   useEffect(() => {
+    const identity = events[0]?.id;
+    if (
+      identity !== gameIdentityRef.current ||
+      events.length < lastEventCountRef.current
+    ) {
+      invalidateStrategyAnalysis();
+      lastEventCountRef.current = 0;
+      gameIdentityRef.current = identity;
+    }
     if (!gameState || events.length <= lastEventCountRef.current) return;
 
     const newEvents = events.slice(lastEventCountRef.current);
@@ -108,6 +147,6 @@ export function useStrategyAnalysisFromEvents(
     if (!turnEndedPastThreshold(newEvents, gameState)) return;
 
     // Multiplayer has no GameStrategy to notify
-    fetchStrategyAnalysis(gameState, undefined, playerStrategies$.value);
+    void fetchStrategyAnalysis(gameState, undefined, playerStrategies$.value);
   }, [events, gameState]);
 }

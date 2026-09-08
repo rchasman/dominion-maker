@@ -11,7 +11,10 @@ import type { DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { GameStrategy } from "../types/game-mode";
-import { fetchStrategyAnalysis } from "./use-strategy-analysis";
+import {
+  fetchStrategyAnalysis,
+  invalidateStrategyAnalysis,
+} from "./use-strategy-analysis";
 import { MIN_TURN_FOR_STRATEGY } from "./game-constants";
 import {
   syncEngineToSignals,
@@ -181,6 +184,9 @@ export function useGameActions(
         return;
       }
 
+      invalidateStrategyAnalysis();
+      strategy.setStrategySummary?.(undefined);
+      playerStrategies$.value = {};
       executeUndo(engine, toEventId);
       const eventsAfterUndo = engine.eventLog.length;
       const stateAfterUndo = engine.state;
@@ -190,7 +196,7 @@ export function useGameActions(
 
       // Refetch strategy analysis for the new game state after undo
       if (stateAfterUndo.turn >= MIN_TURN_FOR_STRATEGY) {
-        fetchStrategyAnalysis(
+        void fetchStrategyAnalysis(
           stateAfterUndo,
           strategy,
           playerStrategies$.value,
