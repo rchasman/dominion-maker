@@ -1,62 +1,73 @@
 # Extending the engine
 
-Commands validate player intent. Card effects describe events and either a real
-player choice or child operations. `execute.ts` runs a stack until it finishes or
-needs an answer. Only the runner assigns effect event IDs, applies intermediate
-events, and persists the remaining stack through `EXECUTION_UPDATED`.
+Commands validate player intent. Each card exposes one `run(context, input)`
+program and a schema for its saved local memory. A step returns one of:
 
-The stack is data: effect identity, owner, cause, local choice state, and pending
-plays/reactions. It contains no functions or generators. A repeated play moves
-one physical card and runs its effect twice; a nested choice finishes before the
-next execution. Keep card-local stages inside card modules, never in command
-handlers. A step must return a choice or child operations, not both.
+- `done(events)` — finish this invocation.
+- `choose(request, memory, events)` — ask a player, then resume with their answer.
+- `schedule(operations, events, continuation?)` — finish child work in order,
+  then optionally resume this invocation with the saved continuation.
 
-## Adding cards
+`execute.ts` owns the stack, event IDs, intermediate state projection, reaction
+windows, and checkpoints. Frames are serializable data. A nested choice finishes
+before its caller resumes; repeating a play moves one physical card and invokes
+its effect multiple times. Cards never read a pending UI choice to recover their
+execution state.
 
-- Add metadata to `data/cards.ts`, the name to `types/basic-types.ts`, and the
-  effect to `cards/base/index.ts`. The command handlers need no card-specific
-  branches. Kingdom setup derives its list from definitions (`supply: "base"` excludes
-  base piles). Variable victory cards provide their own `score(cards)` function.
-- Use `createSimpleCardEffect` for resources/draws and card-local stage handlers
-  for choices. Return `operations: [{ type: "play", card, playerId, from,
-times }]` for nested or repeated plays.
-- Use `createAttackEffect(benefit, attack)` to separate the attacker's benefit
-  from the opponent effect. Both can suspend; reaction state and remaining work
-  survive reload. Only resolved, unblocked targets reach the attack callback.
-- Pass `ctx.random` to draw/shuffle helpers. Commands own the seeded stream and
-  persist its cursor. Replaying recorded events never generates randomness.
-- Use the `setAside` zone for cards temporarily removed from a deck. Record the
-  actual shuffle and movement before asking about revealed cards. Preserve
-  duplicate card counts when moving selections.
-- Use `getCardCost` for purchases, gain limits, and upgrade comparisons.
-- Submit `choiceId` when a client can retain the pending event ID. It rejects
-  stale answers; it remains optional for existing clients. Choice counts,
-  multiplicities, action IDs, ordering, and ownership are checked centrally.
+## Adding a card
 
-## Expansion boundaries
+Add its name and metadata to `types/basic-types.ts` and `data/cards.ts`, then
+register its program in `cards/base/index.ts`. Commands need no card branches.
+Kingdom membership and variable victory scoring come from card definitions.
 
-The runner intentionally implements only mechanics used by the current set.
-Additional mechanics should extend its typed operations/frames, with a test
-that suspends, serializes, resumes, and rewinds through the interaction.
+Use `createSimpleCardEffect` for resources and draws. For choices, use
+`defineEffect(memorySchema, handler)`: `input.type` distinguishes a fresh play,
+a player answer, and continuation after child work. Schemas validate memory
+before it is saved or resumed. Use a strict object schema for structured memory.
 
-- Gain/trash/discard reactions need explicit timing windows around movement,
-  plus replacement/cancellation semantics. Do not trigger new rules from the
-  replay reducer: replay must only apply facts already recorded.
-- Duration cards need scheduled frames in persisted state and explicit cleanup
-  retention. Individual card IDs will be needed when effects track a particular
-  physical copy across turns; current zones identify cards by name.
-- More reaction types need registered reaction behavior. Current attack
-  reactions implement Moat's blocking behavior; a future reaction must not be
-  assumed to block just because it is a reaction.
-- Alternate costs, split piles, tokens, and scoring rules need dedicated rule
-  queries/state types. The current cost query models coin reductions only.
-- Version persisted frame shapes when their meaning changes. The compatibility
-  adapter handles old single-card choices and Throne Room continuations; it is
-  not a general migration framework for arbitrary historical card scripts.
+A choice request contains only presentation and allowed responses: intent,
+options, counts, actions, and ordering. Keep revealed cards and other local
+bookkeeping in memory. The command boundary checks ownership, multiplicities,
+actions, and ordering; include `choiceId` to reject stale responses.
+
+Schedule `{ type: "play", card, playerId, from, times }` for nested or repeated
+plays. `schedule(operations, events, memory)` also supports a caller that must
+continue after its children. This is tested with a reaction that plays Workshop,
+waits through its gain choice and reload, then resumes to block an attack.
+
+Attack programs schedule `{ type: "attack", targets }` after producing their
+attacker benefit. The runner invokes the same program with an `attack` trigger
+for each unblocked target, completing that target before advancing. Reactions
+use the same program contract with a `reaction` trigger. They can ask questions
+and schedule children; only an explicit `blockAttack` result blocks. A
+nonblocking reaction returns to the reaction window.
+
+Pass `context.random` to shuffle/draw helpers. Commands persist the seeded
+cursor; replay applies recorded facts without generating randomness. Use
+`setAside` for revealed cards that must stay outside reshuffles, and preserve
+multiplicities when moving cards. Use `getCardCost` for buying, gaining, and
+upgrade comparisons.
+
+## Persistence and extension boundaries
+
+Version 2 checkpoints contain invocation identity, trigger, validated memory,
+and pending child work. `resume.ts` validates that a checkpoint matches the
+public choice before execution. `migrate-execution.ts` translates historical
+stage/metadata checkpoints at that boundary; current cards and the runner do
+not interpret those formats.
+
+The current operation set covers the base cards and nested reaction programs.
+New mechanics should extend explicit rules data where needed:
+
+- Duration effects need persisted turn scheduling and cleanup retention.
+- Tracking a particular physical copy across turns needs card instance IDs.
+- Gain/trash replacement effects need movement timing and cancellation rules.
+- Alternate currencies and split piles need richer cost and supply types.
+
+These are distinct game rules, not behavior to infer inside the event reducer.
+Implement each with a suspension/reload/rewind regression when introducing it.
 
 `all-cards-execution.test.ts` exercises every current action normally, repeated,
-and via Vassal, checking conservation and reload at every choice. Focused card
-tests verify individual rules. `persistence.test.ts` covers RNG, incremental
-projection, forks, rewind, and undo negotiation. The public display log remains
-a separate projection of events; session approval bookkeeping lives in
-`undo-session.ts`.
+and via Vassal, checking conservation and reload at each choice. Focused card
+and migration tests cover rules and historical saves. `persistence.test.ts`
+covers RNG, incremental projection, forks, rewind, and undo negotiation.
