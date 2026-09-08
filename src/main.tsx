@@ -13,22 +13,6 @@ injectSpeedInsights();
 // Preload critical card images for faster initial render
 preloadCriticalImages();
 
-// Register service worker for aggressive card caching
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then(registration => {
-        uiLogger.info("Service worker registered", {
-          scope: registration.scope,
-        });
-      })
-      .catch(error => {
-        uiLogger.error("Service worker registration failed", { error });
-      });
-  });
-}
-
 // A deploy replaces every hashed chunk. Tabs opened before the deploy still
 // reference the old hashes, so their first lazy import 404s. Reload to pick
 // up the new index instead of surfacing a dead tooltip as an app crash.
