@@ -40,7 +40,9 @@ describe("vote explanations", () => {
       root,
     );
     expect(root.textContent).toContain("50% vote share");
-    expect(root.textContent).toContain("Legal action");
+    expect(root.querySelector('[aria-label="Valid action"]')?.textContent).toBe(
+      "✓",
+    );
     expect(root.textContent).toContain("gpt-5.4-nano · Individual explanation");
     expect(root.textContent).toContain("Not fact-checked");
     const details = root.querySelector("details")!;
@@ -54,8 +56,22 @@ describe("vote explanations", () => {
   it("does not report legality when legal actions are unavailable", () => {
     const root = document.createElement("div");
     render(<VotingPane data={null} liveStatuses={statuses()} />, root);
-    expect(root.textContent).toContain("Legality unchecked");
+    expect(
+      root.querySelector('[aria-label="Legality unchecked"]')?.textContent,
+    ).toBe("—");
     expect(root.textContent).not.toContain("Legal action");
+    render(null, root);
+  });
+
+  it("marks an illegal action with a cross", () => {
+    const root = document.createElement("div");
+    render(
+      <VotingPane data={null} liveStatuses={statuses()} legalActions={[]} />,
+      root,
+    );
+    expect(
+      root.querySelector('[aria-label="Invalid action"]')?.textContent,
+    ).toBe("✗");
     render(null, root);
   });
 });

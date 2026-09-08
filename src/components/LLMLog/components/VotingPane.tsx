@@ -378,9 +378,16 @@ function ActionTextContent({
 
 function ValidationBadge({ isValid }: { isValid: boolean | undefined }) {
   const fontWeight: number = FONT_WEIGHT_BOLD;
+  const label =
+    isValid === undefined
+      ? "Legality unchecked"
+      : isValid
+        ? "Valid action"
+        : "Invalid action";
   return (
     <span
-      title="Checks action legality only; explanations are not fact-checked"
+      aria-label={label}
+      title={label}
       style={{
         fontSize: "0.75rem",
         color:
@@ -394,11 +401,7 @@ function ValidationBadge({ isValid }: { isValid: boolean | undefined }) {
         flexShrink: 0,
       }}
     >
-      {isValid === undefined
-        ? "Legality unchecked"
-        : isValid
-          ? "Legal action"
-          : "Illegal action"}
+      {isValid === undefined ? "—" : isValid ? "✓" : "✗"}
     </span>
   );
 }
