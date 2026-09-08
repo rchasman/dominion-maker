@@ -9,7 +9,6 @@ import { countCards } from "./card-array-utils";
 import { run } from "./run";
 
 const HASH_MULTIPLIER = 5;
-const GARDENS_VP_DIVISOR = 10;
 
 /**
  * Player colors for consistent visual identification
@@ -91,10 +90,8 @@ export function formatPlayerName(
 
 export function countVP(cards: CardName[]): number {
   return cards.reduce((vp, card) => {
-    const { vp: cardVP } = CARDS[card];
-    if (cardVP === "variable") {
-      return vp + Math.floor(cards.length / GARDENS_VP_DIVISOR);
-    }
+    const { vp: cardVP, score } = CARDS[card];
+    if (score) return vp + score(cards);
     return vp + (typeof cardVP === "number" ? cardVP : 0);
   }, 0);
 }

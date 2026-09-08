@@ -15,6 +15,7 @@ export type CardTrigger = {
 
 export interface CardDefinition {
   name: CardName;
+  supply?: "base" | "kingdom";
   cost: number;
   types: CardType[];
   description: string;
@@ -24,6 +25,7 @@ export interface CardDefinition {
   coins?: number;
   // For victory cards
   vp?: number | "variable";
+  score?: (cards: CardName[]) => number;
   // For reaction cards
   reactionTrigger?: ReactionTrigger;
   // For cards with triggers
@@ -33,6 +35,7 @@ export interface CardDefinition {
 export const CARDS: Record<CardName, CardDefinition> = {
   // Treasures
   Copper: {
+    supply: "base",
     name: "Copper",
     cost: 0,
     types: ["treasure"],
@@ -41,6 +44,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     coins: 1,
   },
   Silver: {
+    supply: "base",
     name: "Silver",
     cost: 3,
     types: ["treasure"],
@@ -49,6 +53,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     coins: 2,
   },
   Gold: {
+    supply: "base",
     name: "Gold",
     cost: 6,
     types: ["treasure"],
@@ -59,6 +64,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
 
   // Victory
   Estate: {
+    supply: "base",
     name: "Estate",
     cost: 2,
     types: ["victory"],
@@ -67,6 +73,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     vp: 1,
   },
   Duchy: {
+    supply: "base",
     name: "Duchy",
     cost: 5,
     types: ["victory"],
@@ -75,6 +82,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
     vp: 3,
   },
   Province: {
+    supply: "base",
     name: "Province",
     cost: 8,
     types: ["victory"],
@@ -85,6 +93,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
 
   // Curse
   Curse: {
+    supply: "base",
     name: "Curse",
     cost: 0,
     types: ["curse"],
@@ -184,6 +193,7 @@ export const CARDS: Record<CardName, CardDefinition> = {
       "Mild attack — free topdecked Silver each play, slows victory-heavy decks.",
   },
   Gardens: {
+    score: cards => Math.floor(cards.length / 10),
     name: "Gardens",
     cost: 4,
     types: ["victory"],
@@ -328,34 +338,9 @@ export const CARDS: Record<CardName, CardDefinition> = {
 };
 
 // Kingdom cards only (excluding base treasures/victory/curse)
-export const KINGDOM_CARDS: CardName[] = [
-  "Cellar",
-  "Chapel",
-  "Moat",
-  "Harbinger",
-  "Merchant",
-  "Vassal",
-  "Village",
-  "Workshop",
-  "Bureaucrat",
-  "Gardens",
-  "Militia",
-  "Moneylender",
-  "Poacher",
-  "Remodel",
-  "Smithy",
-  "Throne Room",
-  "Bandit",
-  "Council Room",
-  "Festival",
-  "Laboratory",
-  "Library",
-  "Market",
-  "Mine",
-  "Sentry",
-  "Witch",
-  "Artisan",
-];
+export const KINGDOM_CARDS: CardName[] = Object.values(CARDS)
+  .filter(card => card.supply !== "base")
+  .map(card => card.name);
 
 // Recommended first game setup
 export const FIRST_GAME_KINGDOM: CardName[] = [
