@@ -48,7 +48,11 @@ http://localhost:5173 — configure models, voter count (1-16), k-value.
 
 ## Tech Stack
 
-Preact, TypeScript, Bun, Vite 8 beta, Vercel AI SDK v6 beta
+Preact, TypeScript 7, Bun, Vite 8, Vercel AI SDK 7
+
+Type checking uses TypeScript 7 through the `@typescript/native` alias. The
+`typescript` dependency aliases `@typescript/typescript6` to provide the compiler
+API required by typescript-eslint.
 
 - **Build**: 58ms build, 81ms types, 73ms tests (497), ~15s deploy
 - **Bundle**: 134 KB gzipped (72% compression), smart preloading, AVIF/WebP images
