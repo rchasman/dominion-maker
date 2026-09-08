@@ -21,7 +21,7 @@ describe("simulateCardSelection", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Copper", "Estate", "Duchy"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -47,7 +47,7 @@ describe("simulateCardSelection", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Copper", "Copper"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -73,7 +73,7 @@ describe("simulateCardSelection", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Estate"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -109,12 +109,6 @@ describe("simulateCardSelection", () => {
       triggeringCard: "Militia",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["player1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "Militia",
-      },
     };
 
     const simulated = simulateCardSelection(engine, "Copper");
@@ -134,7 +128,7 @@ describe("simulateCardSelection", () => {
       min: 0,
       max: 4,
       cardOptions: [],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -159,7 +153,7 @@ describe("simulateCardSelection", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper", "Estate"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -185,7 +179,7 @@ describe("isBatchDecision", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -201,7 +195,7 @@ describe("isBatchDecision", () => {
       min: 0,
       max: 1,
       cardOptions: ["Copper"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -217,7 +211,7 @@ describe("isBatchDecision", () => {
       min: 0,
       // max omitted (single card)
       cardOptions: ["Copper"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -240,12 +234,6 @@ describe("isBatchDecision", () => {
       triggeringCard: "Militia",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["player1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "Militia",
-      },
     };
 
     expect(isBatchDecision(reaction)).toBe(false);
@@ -282,7 +270,7 @@ describe("isMultiActionDecision", () => {
           isDefault: true,
         },
       ],
-      stage: "topdeck",
+      intent: "topdeck",
     };
 
     expect(isMultiActionDecision(decision)).toBe(true);
@@ -301,7 +289,7 @@ describe("isMultiActionDecision", () => {
         { id: "select", label: "Select", color: "#10B981", isDefault: false },
         { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -317,7 +305,7 @@ describe("isMultiActionDecision", () => {
       min: 0,
       max: 4,
       cardOptions: ["Copper"],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -334,7 +322,7 @@ describe("isMultiActionDecision", () => {
       max: 2,
       cardOptions: ["Copper"],
       actions: [],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -357,12 +345,6 @@ describe("isMultiActionDecision", () => {
       triggeringCard: "Militia",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["player1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "Militia",
-      },
     };
 
     expect(isMultiActionDecision(reaction)).toBe(false);
@@ -380,7 +362,7 @@ describe("isMultiActionDecision", () => {
       actions: [
         { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 
@@ -406,7 +388,7 @@ describe("isMultiActionDecision", () => {
         },
         { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
       ],
-      stage: "trash",
+      intent: "trash",
       from: "hand",
     };
 

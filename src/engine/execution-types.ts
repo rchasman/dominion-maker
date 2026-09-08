@@ -1,29 +1,18 @@
 import type { CardName, PlayerId } from "../types/basic-types";
-import type { PendingChoice } from "../types/pending-choice";
+import type { CardOperation, EffectTrigger, JsonValue } from "../cards/program";
+export type { CardOperation } from "../cards/program";
 
-/** Card-authored work. The runner owns movement, repetition and interruptions. */
-export type CardOperation = {
-  type: "play";
-  card: CardName;
-  playerId: PlayerId;
-  from: "hand" | "discard";
-  times?: number;
-};
-
-export type CardFrame = {
-  type: "effect";
+export type Invocation = {
   card: CardName;
   playerId: PlayerId;
   cause: string;
-  attackTargets?: PlayerId[];
-  part?: "benefit";
-  choice?: Extract<PendingChoice, { choiceType: "decision" }>;
+  trigger: EffectTrigger;
 };
-
-/** Plain data only: a suspended stack survives JSON round trips and replay. */
 export type ExecutionFrame =
-  | CardFrame
-  | (CardOperation & { cause: string })
+  | (Invocation & { type: "effect" })
+  | (Invocation & { type: "choice"; memory: JsonValue })
+  | (Invocation & { type: "continue"; memory: JsonValue })
+  | (Extract<CardOperation, { type: "play" }> & { cause: string })
   | {
       type: "attack";
       card: CardName;
@@ -31,5 +20,6 @@ export type ExecutionFrame =
       cause: string;
       targets: PlayerId[];
       index: number;
-      blocked: PlayerId[];
+      phase: "declare" | "react" | "afterReaction" | "resolve";
+      blocked: boolean;
     };

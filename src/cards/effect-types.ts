@@ -1,20 +1,18 @@
+import { applyEvents } from "../events/apply";
+import { defineEffect, done, noMemory } from "./program";
+import type { CardEffect, EffectContext } from "./program";
 import type {
   GameState,
   CardName,
   PlayerState,
   PlayerId,
-  PendingChoice,
 } from "../types/game-state";
-import type { GameEvent, DecisionChoice } from "../events/types";
+import type { GameEvent } from "../events/types";
 import { shuffle } from "../lib/game-utils";
 import { CARDS } from "../data/cards";
 import { getCardCost } from "./cost";
 import type { ReactionTrigger } from "../types/card-types";
 import { run } from "../lib/run";
-import {
-  getStringArrayFromMetadata,
-  getStringFromMetadata,
-} from "../lib/metadata-helpers";
 import { isDecisionChoice } from "../types/pending-choice";
 export { isDecisionChoice };
 
@@ -22,51 +20,6 @@ export { isDecisionChoice };
 function isCardName(card: string): card is CardName {
   return card in CARDS;
 }
-
-/**
- * Result of executing a card effect.
- */
-export type CardEffectResult = {
-  /** Events to emit (IDs will be added by engine) */
-  events: GameEvent[];
-  /** Child work runs to completion before the caller continues. */
-  operations?: import("../engine/execution-types").CardOperation[];
-  /** If set, pause for player decision before continuing */
-  pendingChoice?: Extract<PendingChoice, { choiceType: "decision" }>;
-};
-
-/**
- * Context provided to card effects.
- */
-export type CardEffectContext = {
-  random?: () => number;
-  /** Current game state (read-only for effect logic) */
-  state: GameState;
-  /** Player who played the card (can be custom peer ID in multiplayer) */
-  playerId: PlayerId;
-  /** The card being played (for multi-stage effects) */
-  card: CardName;
-  /** Decision from player (if resuming a multi-stage effect) */
-  decision?: DecisionChoice;
-  /** Stage identifier for multi-stage effects */
-  stage?: string;
-  /** For attack cards: targets who didn't block (undefined until reactions resolved) */
-  attackTargets?: PlayerId[];
-};
-
-/**
- * A card effect function.
- * Pure function that returns events to emit.
- */
-export type CardEffect = ((ctx: CardEffectContext) => CardEffectResult) & {
-  /** Opponent portion, resolved after the attack reaction window. */
-  attack?: CardEffect;
-  benefit?: CardEffect;
-};
-
-// ============================================
-// HELPER FUNCTIONS FOR CARD EFFECTS
-// ============================================
 
 /**
  * Peek at cards that would be drawn (without modifying state).
@@ -156,7 +109,7 @@ export function peekDraw(
  * Get cards that can be gained from supply up to a cost limit.
  */
 export function getGainableCards(
-  state: GameState,
+  state: Pick<GameState, "supply" | "activeEffects">,
   maxCost: number,
 ): CardName[] {
   return Object.entries(state.supply)
@@ -172,7 +125,7 @@ export function getGainableCards(
  * Get treasure cards that can be gained from supply up to a cost limit.
  */
 export function getGainableTreasures(
-  state: GameState,
+  state: Pick<GameState, "supply" | "activeEffects">,
   maxCost: number,
 ): CardName[] {
   return Object.entries(state.supply)
@@ -192,7 +145,10 @@ export function getGainableTreasures(
 /**
  * Get opponents for attack cards.
  */
-export function getOpponents(state: GameState, playerId: PlayerId): PlayerId[] {
+export function getOpponents(
+  state: Pick<GameState, "playerOrder" | "players">,
+  playerId: PlayerId,
+): PlayerId[] {
   return state.playerOrder.filter(p => p !== playerId && state.players[p]);
 }
 
@@ -250,101 +206,10 @@ export function cardsToEvents(
 }
 
 /**
- * Empty result (for cards with no immediate effect or fully handled by caller).
- */
-export const EMPTY_RESULT: CardEffectResult = { events: [] };
-
-// ============================================
-// SIMPLE CARD EFFECT FACTORY
-// ============================================
-
-/**
- * Create a simple card effect that just provides benefits (cards, actions, buys, coins).
- * Used for cards like Smithy, Village, Laboratory, Moat, Festival, Market.
- */
-export function createSimpleCardEffect(benefits: {
-  cards?: number;
-  actions?: number;
-  buys?: number;
-  coins?: number;
-}): CardEffect {
-  return ({ playerId, state, random }): CardEffectResult => {
-    const playerState = state.players[playerId];
-    if (!playerState) {
-      return { events: [] };
-    }
-
-    const cardEvents = benefits.cards
-      ? createDrawEvents(playerId, playerState, benefits.cards, random)
-      : [];
-
-    const resourceEvents: GameEvent[] = [
-      ...(benefits.actions
-        ? [{ type: "ACTIONS_MODIFIED" as const, delta: benefits.actions }]
-        : []),
-      ...(benefits.buys
-        ? [{ type: "BUYS_MODIFIED" as const, delta: benefits.buys }]
-        : []),
-      ...(benefits.coins
-        ? [{ type: "COINS_MODIFIED" as const, delta: benefits.coins }]
-        : []),
-    ];
-
-    return { events: [...cardEvents, ...resourceEvents] };
-  };
-}
-
-// ============================================
-// DECISION REQUEST HELPERS
-// ============================================
-
-/**
- * Check if this is the initial call to a multi-stage card effect.
- */
-export function isInitialCall(
-  decision: DecisionChoice | undefined,
-  stage: string | undefined,
-): boolean {
-  return !decision || stage === undefined;
-}
-
-/**
- * Create a card selection decision request with standard structure.
- */
-export function createCardSelectionDecision(params: {
-  playerId: PlayerId;
-  from: "hand" | "supply" | "revealed" | "options" | "discard";
-  prompt: string;
-  cardOptions: CardName[];
-  min: number;
-  max: number;
-  cardBeingPlayed: CardName;
-  stage: string;
-  metadata?: Record<string, unknown>;
-}): Extract<PendingChoice, { choiceType: "decision" }> {
-  return {
-    choiceType: "decision",
-    playerId: params.playerId,
-    from: params.from,
-    prompt: params.prompt,
-    cardOptions: params.cardOptions,
-    min: params.min,
-    max: params.max,
-    cardBeingPlayed: params.cardBeingPlayed,
-    stage: params.stage,
-    ...(params.metadata !== undefined && { metadata: params.metadata }),
-  };
-}
-
-// ============================================
-// ATTACK AND REACTION HELPERS
-// ============================================
-
-/**
  * Get available reaction cards for a trigger (data-driven, no hardcoded card names)
  */
 export function getAvailableReactions(
-  state: GameState,
+  state: Pick<GameState, "players">,
   playerId: PlayerId,
   trigger: ReactionTrigger,
 ): CardName[] {
@@ -357,221 +222,37 @@ export function getAvailableReactions(
   });
 }
 
-// ============================================
-// MULTI-STAGE CARD EFFECT FACTORY
-// ============================================
-
-/**
- * A stage handler function that processes one stage of a multi-stage card.
- * Returns events and optionally triggers the next stage.
- */
-export type StageHandler = (ctx: CardEffectContext) => CardEffectResult;
-
-/**
- * Configuration for a multi-stage card effect.
- * Keys are stage names (or "initial" for the first call).
- */
-export type MultiStageConfig = {
-  initial: StageHandler;
-  [stageName: string]: StageHandler;
-};
-
-/**
- * Create a multi-stage card effect that eliminates stage-routing boilerplate.
- *
- * Example usage:
- * ```typescript
- * export const mine = createMultiStageCard({
- *   initial: (ctx) => ({
- *     events: [],
- *     pendingChoice: { stage: "trash", ... }
- *   }),
- *   trash: (ctx) => ({
- *     events: [trashEvent],
- *     pendingChoice: { stage: "gain", ... }
- *   }),
- *   gain: (ctx) => ({
- *     events: [gainEvent]
- *   })
- * });
- * ```
- */
-export function createMultiStageCard(config: MultiStageConfig): CardEffect {
-  return (ctx: CardEffectContext): CardEffectResult => {
-    const { decision, stage } = ctx;
-
-    // Initial call: no decision or stage
-    if (!decision || stage === undefined) {
-      return config.initial(ctx);
-    }
-
-    // Route to appropriate stage handler
-    const handler = config[stage];
-    if (!handler) {
-      // Unknown stage - return empty result
-      return EMPTY_RESULT;
-    }
-
-    return handler(ctx);
-  };
+/** Card-local projections are rules state only; choices and logs are not inputs. */
+export function projectEffectEvents(
+  state: EffectContext["state"],
+  events: GameEvent[],
+): EffectContext["state"] {
+  return applyEvents(
+    { ...state, pendingChoice: null, pendingChoiceEventId: null, log: [] },
+    events,
+  );
 }
 
-// ============================================
-// OPPONENT ITERATOR FOR ATTACK CARDS
-// ============================================
-
-/**
- * Data extracted from an opponent who needs to make a decision.
- */
-export type OpponentDecisionData<T = Record<PlayerId, unknown>> = {
-  opponent: PlayerId;
-  data: T;
-};
-
-/**
- * Configuration for opponent iterator card effects.
- */
-export type OpponentIteratorConfig<T = Record<PlayerId, unknown>> = {
-  /** Filter to determine which opponents need a decision */
-  filter: (
-    opponent: PlayerId,
-    state: GameState,
-  ) => OpponentDecisionData<T> | null;
-  /** Create decision request for an opponent */
-  createDecision: (
-    opponentData: OpponentDecisionData<T>,
-    remainingOpponents: PlayerId[],
-    attackingPlayer: PlayerId,
-    cardName: CardName,
-  ) => Extract<PendingChoice, { choiceType: "decision" }>;
-  /** Process decision choice and emit events */
-  processChoice: (
-    choice: DecisionChoice,
-    opponentData: OpponentDecisionData<T>,
-    state: GameState,
-  ) => GameEvent[];
-  /** Stage identifier for the opponent decision */
-  stage: string;
-};
-
-/**
- * Create a card effect that iterates through opponents for attacks.
- * Removes the manual "queue next decision" pattern from attack cards.
- */
-export function createOpponentIteratorEffect<T = Record<string, unknown>>(
-  config: OpponentIteratorConfig<T>,
-  initialEvents:
-    | GameEvent[]
-    | ((
-        state: GameState,
-        playerId: PlayerId,
-        attackTargets?: PlayerId[],
-      ) => GameEvent[]) = [],
-): CardEffect {
-  return ({
-    state,
-    playerId,
-    card,
-    attackTargets,
-    decision,
-    stage,
-  }): CardEffectResult => {
-    // Initial call: find first opponent needing decision
-    if (!stage) {
-      const events =
-        typeof initialEvents === "function"
-          ? initialEvents(state, playerId, attackTargets)
-          : [...initialEvents];
-      const targets =
-        attackTargets !== undefined
-          ? attackTargets
-          : getOpponents(state, playerId);
-
-      const opponentData = run(() => {
-        const targetWithData = targets
-          .map(target => ({
-            target,
-            data: config.filter(target, state),
-          }))
-          .find(({ data }) => data);
-
-        if (!targetWithData || !targetWithData.data) return null;
-
-        return {
-          ...targetWithData.data,
-          remainingTargets: targets.filter(t => t !== targetWithData.target),
-        };
-      });
-
-      if (opponentData) {
-        const { remainingTargets, ...rest } = opponentData;
-        return {
-          events,
-          pendingChoice: config.createDecision(
-            rest,
-            remainingTargets,
-            playerId,
-            card,
-          ),
-        };
-      }
-      return { events };
-    }
-
-    // Process opponent decision
-    if (stage === config.stage && decision) {
-      const metadata = state.pendingChoice?.metadata;
-      const remainingOpponents = getStringArrayFromMetadata(
-        metadata,
-        "remainingOpponents",
-      );
-      const attackingPlayer = getStringFromMetadata(
-        metadata,
-        "attackingPlayer",
-        playerId,
-      );
-      const currentOpponent = state.pendingChoice?.playerId || "";
-
-      // Reconstruct opponent data for processing
-      const opponentData = config.filter(currentOpponent, state);
-      const choiceEvents = opponentData
-        ? config.processChoice(decision, opponentData, state)
-        : [];
-
-      // Find next opponent needing decision
-      const nextOpponentData = run(() => {
-        const targetWithData = remainingOpponents
-          .map(target => ({
-            target,
-            data: config.filter(target, state),
-          }))
-          .find(({ data }) => data);
-
-        if (!targetWithData || !targetWithData.data) return null;
-
-        return {
-          ...targetWithData.data,
-          remainingTargets: remainingOpponents.filter(
-            t => t !== targetWithData.target,
-          ),
-        };
-      });
-
-      if (nextOpponentData) {
-        const { remainingTargets, ...rest } = nextOpponentData;
-        return {
-          events: choiceEvents,
-          pendingChoice: config.createDecision(
-            rest,
-            remainingTargets,
-            attackingPlayer,
-            card,
-          ),
-        };
-      }
-      return { events: choiceEvents };
-    }
-
-    return { events: [] };
-  };
+export function createSimpleCardEffect(benefits: {
+  cards?: number;
+  actions?: number;
+  buys?: number;
+  coins?: number;
+}): CardEffect {
+  return defineEffect(noMemory, ({ state, playerId, random }) => {
+    const player = state.players[playerId];
+    if (!player) return done();
+    return done([
+      ...createDrawEvents(playerId, player, benefits.cards ?? 0, random),
+      ...(benefits.actions
+        ? [{ type: "ACTIONS_MODIFIED" as const, delta: benefits.actions }]
+        : []),
+      ...(benefits.buys
+        ? [{ type: "BUYS_MODIFIED" as const, delta: benefits.buys }]
+        : []),
+      ...(benefits.coins
+        ? [{ type: "COINS_MODIFIED" as const, delta: benefits.coins }]
+        : []),
+    ]);
+  });
 }

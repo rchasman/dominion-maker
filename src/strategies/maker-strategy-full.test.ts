@@ -168,7 +168,7 @@ describe("MakerStrategy - Full Coverage", () => {
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         playerId: "ai",
-        stage: "discard",
+        intent: "discard",
         prompt: "Discard",
         min: 1,
         max: 1,

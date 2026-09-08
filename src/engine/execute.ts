@@ -1,20 +1,25 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
-import type { CardFrame, ExecutionFrame } from "./execution-types";
-import { applyEvent, applyEvents } from "../events/apply";
+import type { ExecutionFrame } from "./execution-types";
+import type { CardEffect, EffectInput, JsonValue } from "../cards/program";
+import { applyEvent } from "../events/apply";
 import { generateEventId } from "../events/id-generator";
 import { getCardEffect } from "../cards/base";
 import { CARDS } from "../data/cards";
 import { getAvailableReactions } from "../cards/effect-types";
 
-/** Run until there is a real choice or no work remains. Last frame runs first. */
-function execute(
+export type ExecutionResponse =
+  | { choice: DecisionChoice; skip?: boolean }
+  | { reaction: CardName | null };
+export type EffectRegistry = (card: CardName) => CardEffect | undefined;
+
+/** The only execution loop. Frames contain rules data; requests live in the view. */
+export function runExecution(
   initialState: GameState,
   initialStack: ExecutionFrame[],
   random: () => number,
-  response?:
-    | { choice: DecisionChoice; skip?: boolean }
-    | { reaction: CardName | null },
+  response?: ExecutionResponse,
+  lookup: EffectRegistry = getCardEffect,
 ): GameEvent[] {
   let state = initialState;
   const stack = [...initialStack];
@@ -29,28 +34,6 @@ function execute(
     state = applyEvent(state, linked);
     return linked.id;
   };
-  const scheduleAttack = (frame: CardFrame) => {
-    const targets = state.playerOrder.filter(id => id !== frame.playerId);
-    emit(
-      {
-        type: "ATTACK_DECLARED",
-        attacker: frame.playerId,
-        attackCard: frame.card,
-        targets,
-      },
-      frame.cause,
-    );
-    stack.push({
-      type: "attack",
-      card: frame.card,
-      playerId: frame.playerId,
-      cause: frame.cause,
-      targets,
-      index: 0,
-      blocked: [],
-    });
-  };
-
   while (stack.length) {
     const frame = stack.pop()!;
     if (frame.type === "play") {
@@ -66,45 +49,72 @@ function execute(
         },
         frame.cause,
       );
-      // Repetition re-executes an effect without moving a second physical card.
-      for (let i = 0; i < (frame.times ?? 1); i++) {
+      for (let i = 0; i < (frame.times ?? 1); i++)
         stack.push({
           type: "effect",
-          playerId: frame.playerId,
           card: frame.card,
+          playerId: frame.playerId,
+          trigger: { type: "play" },
           cause,
         });
-      }
       continue;
     }
-
     if (frame.type === "attack") {
-      let blocked = [...frame.blocked];
-      let index = frame.index;
-      if (response && "reaction" in response) {
-        const target = frame.targets[index]!;
-        const card = response.reaction;
-        if (card) {
-          emit(
-            {
-              type: "REACTION_REVEALED",
-              playerId: target,
+      if (frame.phase === "declare") {
+        emit(
+          {
+            type: "ATTACK_DECLARED",
+            attacker: frame.playerId,
+            attackCard: frame.card,
+            targets: frame.targets,
+          },
+          frame.cause,
+        );
+        if (frame.targets.length) stack.push({ ...frame, phase: "react" });
+        continue;
+      }
+      const target = frame.targets[frame.index];
+      if (!target) continue;
+      if (
+        frame.phase === "react" ||
+        (frame.phase === "afterReaction" && !frame.blocked)
+      ) {
+        if (response && "reaction" in response) {
+          const card = response.reaction;
+          response = undefined;
+          if (card) {
+            emit(
+              {
+                type: "REACTION_REVEALED",
+                playerId: target,
+                card,
+                triggeringCard: frame.card,
+              },
+              state.pendingChoiceEventId ?? frame.cause,
+            );
+            const cause = emit(
+              {
+                type: "REACTION_PLAYED",
+                playerId: target,
+                card,
+                triggerEventId: frame.cause,
+              },
+              frame.cause,
+            );
+            stack.push({ ...frame, phase: "afterReaction" });
+            stack.push({
+              type: "effect",
               card,
-              triggeringCard: frame.card,
-            },
-            state.pendingChoiceEventId ?? frame.cause,
-          );
-          emit(
-            {
-              type: "REACTION_PLAYED",
               playerId: target,
-              card,
-              triggerEventId: frame.cause,
-            },
-            frame.cause,
-          );
-          blocked = [...blocked, target];
-        } else {
+              cause,
+              trigger: {
+                type: "reaction",
+                attacker: frame.playerId,
+                attackCard: frame.card,
+              },
+            });
+            continue;
+          }
           emit(
             {
               type: "REACTION_DECLINED",
@@ -113,74 +123,77 @@ function execute(
             },
             state.pendingChoiceEventId ?? frame.cause,
           );
-        }
-        emit(
-          {
-            type: "ATTACK_RESOLVED",
-            attacker: frame.playerId,
+        } else {
+          const availableReactions = getAvailableReactions(
+            state,
             target,
-            attackCard: frame.card,
-            blocked: card !== null,
-          },
-          frame.cause,
-        );
-        index++;
-        response = undefined;
-      }
-      let waiting = false;
-      for (; index < frame.targets.length; index++) {
-        const target = frame.targets[index]!;
-        const reactions = getAvailableReactions(state, target, "on_attack");
-        if (reactions.length) {
-          stack.push({ ...frame, index, blocked });
-          emit(
-            {
-              type: "REACTION_OPPORTUNITY",
-              playerId: target,
-              triggeringPlayerId: frame.playerId,
-              triggeringCard: frame.card,
-              triggerType: "on_attack",
-              availableReactions: reactions,
-              metadata: {
-                allTargets: frame.targets,
-                currentTargetIndex: index,
-                blockedTargets: blocked,
-                originalCause: frame.cause,
-              },
-            },
-            frame.cause,
+            "on_attack",
           );
-          waiting = true;
-          break;
+          if (availableReactions.length) {
+            stack.push({ ...frame, phase: "react" });
+            emit(
+              {
+                type: "REACTION_OPPORTUNITY",
+                playerId: target,
+                triggeringPlayerId: frame.playerId,
+                triggeringCard: frame.card,
+                triggerType: "on_attack",
+                availableReactions,
+              },
+              frame.cause,
+            );
+            break;
+          }
         }
-        emit(
-          {
-            type: "ATTACK_RESOLVED",
-            attacker: frame.playerId,
-            target,
-            attackCard: frame.card,
-            blocked: false,
-          },
-          frame.cause,
-        );
       }
-      if (waiting) break;
-      stack.push({
-        type: "effect",
-        card: frame.card,
-        playerId: frame.playerId,
-        cause: frame.cause,
-        attackTargets: frame.targets.filter(id => !blocked.includes(id)),
-      });
+      emit(
+        {
+          type: "ATTACK_RESOLVED",
+          attacker: frame.playerId,
+          target,
+          attackCard: frame.card,
+          blocked: frame.blocked,
+        },
+        frame.cause,
+      );
+      if (frame.index + 1 < frame.targets.length)
+        stack.push({
+          ...frame,
+          index: frame.index + 1,
+          phase: "react",
+          blocked: false,
+        });
+      if (!frame.blocked)
+        stack.push({
+          type: "effect",
+          card: frame.card,
+          playerId: frame.playerId,
+          cause: frame.cause,
+          trigger: { type: "attack", target },
+        });
       continue;
     }
-
-    const effect = getCardEffect(frame.card);
-    if (
-      !frame.choice &&
-      !frame.part &&
-      frame.attackTargets === undefined &&
-      CARDS[frame.card]?.triggers?.length
+    const effect = lookup(frame.card);
+    if (!effect) throw new Error(`No effect registered for ${frame.card}`);
+    let input: EffectInput<JsonValue> = { type: "start" };
+    if (frame.type === "choice") {
+      if (!response || !("choice" in response))
+        throw new Error("Missing choice response");
+      input = { type: "answer", memory: frame.memory, answer: response.choice };
+      const playerId = state.pendingChoice?.playerId;
+      if (!playerId) throw new Error("Missing pending choice");
+      emit(
+        response.skip
+          ? { type: "DECISION_SKIPPED", playerId, cardBeingPlayed: frame.card }
+          : { type: "DECISION_RESOLVED", playerId, choice: response.choice },
+        state.pendingChoiceEventId ?? undefined,
+      );
+      response = undefined;
+    } else if (frame.type === "continue") {
+      input = { type: "continue", memory: frame.memory };
+    } else if (
+      frame.trigger.type === "play" &&
+      CARDS[frame.card].triggers?.length
     ) {
       emit(
         {
@@ -191,82 +204,83 @@ function execute(
         frame.cause,
       );
     }
-    if (
-      !frame.choice &&
-      !frame.part &&
-      frame.attackTargets === undefined &&
-      effect?.attack
-    ) {
-      scheduleAttack(frame);
-      stack.push({ ...frame, part: "benefit" });
-      continue;
-    }
-    let decision: DecisionChoice | undefined;
-    if (frame.choice) {
-      if (!response || !("choice" in response))
-        throw new Error("Missing choice response");
-      decision = response.choice;
-      const cause = state.pendingChoiceEventId ?? undefined;
-      emit(
-        response.skip
-          ? {
-              type: "DECISION_SKIPPED",
-              playerId: frame.choice.playerId,
-              cardBeingPlayed: frame.card,
-              ...(frame.choice.stage !== undefined && {
-                stage: frame.choice.stage,
-              }),
-            }
-          : {
-              type: "DECISION_RESOLVED",
-              playerId: frame.choice.playerId,
-              choice: decision,
-            },
-        cause,
-      );
-      response = undefined;
-    }
-    if (!effect) continue;
-    const handler =
-      frame.part === "benefit"
-        ? (effect.benefit ?? effect)
-        : frame.attackTargets !== undefined
-          ? (effect.attack ?? effect)
-          : effect;
-    const result = handler({
-      random,
-      state: frame.choice ? { ...state, pendingChoice: frame.choice } : state,
-      playerId: frame.playerId,
-      card: frame.card,
-      ...(decision !== undefined && { decision }),
-      ...(frame.choice?.stage !== undefined && { stage: frame.choice.stage }),
-      ...(frame.attackTargets !== undefined && {
-        attackTargets: frame.attackTargets,
-      }),
-    });
-    if (result.pendingChoice && result.operations?.length)
-      throw new Error(
-        "A card step must request a choice or schedule child work, not both",
-      );
+    const result = effect.run(
+      {
+        state,
+        playerId: frame.playerId,
+        card: frame.card,
+        trigger: frame.trigger,
+        random,
+      },
+      input,
+    );
     for (const event of result.events) emit(event, frame.cause);
-    if (result.pendingChoice) {
-      stack.push({ ...frame, choice: result.pendingChoice });
+    if (result.type === "choice") {
+      stack.push({
+        type: "choice",
+        card: frame.card,
+        playerId: frame.playerId,
+        cause: frame.cause,
+        trigger: frame.trigger,
+        memory: effect.parseMemory(result.memory),
+      });
       emit(
-        { type: "DECISION_REQUIRED", decision: result.pendingChoice },
+        { type: "DECISION_REQUIRED", decision: result.request },
         frame.cause,
       );
+      break;
     }
-    for (const operation of [...(result.operations ?? [])].reverse()) {
-      stack.push({ ...operation, cause: frame.cause });
+    if (result.type === "done" && result.blockAttack) {
+      if (frame.trigger.type !== "reaction")
+        throw new Error("Only a reaction can block an attack");
+      let index = stack.length - 1;
+      while (index >= 0) {
+        const item = stack[index];
+        if (
+          item?.type === "attack" &&
+          item.phase === "afterReaction" &&
+          item.targets[item.index] === frame.playerId
+        )
+          break;
+        index--;
+      }
+      const attack = stack[index];
+      if (!attack || attack.type !== "attack")
+        throw new Error("No attack to block");
+      stack[index] = { ...attack, blocked: true };
     }
-    if (result.pendingChoice) break;
+    if (result.type === "schedule") {
+      if (result.continuation !== undefined)
+        stack.push({
+          type: "continue",
+          card: frame.card,
+          playerId: frame.playerId,
+          cause: frame.cause,
+          trigger: frame.trigger,
+          memory: effect.parseMemory(result.continuation),
+        });
+      for (const operation of [...result.operations].reverse()) {
+        if (operation.type === "play")
+          stack.push({ ...operation, cause: frame.cause });
+        else {
+          stack.push({
+            type: "attack",
+            card: frame.card,
+            playerId: frame.playerId,
+            cause: frame.cause,
+            targets: operation.targets,
+            index: 0,
+            phase: "declare",
+            blocked: false,
+          });
+        }
+      }
+    }
   }
-  if (stack.length || initialState.executionStack?.length) {
-    emit(
-      { type: "EXECUTION_UPDATED", stack },
-      initialStack.at(-1)?.cause ?? events[0]?.id ?? generateEventId(),
-    );
-  }
+  emit(
+    { type: "EXECUTION_UPDATED", version: 2, stack },
+    initialStack.at(-1)?.cause,
+  );
   return events;
 }
 
@@ -277,115 +291,9 @@ export function executeCard(
   cause: string,
   random: () => number = Math.random,
 ): GameEvent[] {
-  return execute(state, [{ type: "effect", playerId, card, cause }], random);
-}
-
-export function resumeExecution(
-  state: GameState,
-  response:
-    | { choice: DecisionChoice; skip?: boolean }
-    | { reaction: CardName | null },
-  random: () => number = Math.random,
-): GameEvent[] {
-  let stack = state.executionStack;
-  // Old event logs and standalone card fixtures have no execution checkpoint.
-  // Their pending choice still describes the single suspended card.
-  if (!stack?.length) {
-    const pending = state.pendingChoice;
-    if (!pending) return [];
-    if (
-      pending.choiceType === "decision" &&
-      pending.stage === "execute_throned_card"
-    ) {
-      const card = pending.metadata?.throneRoomTarget as CardName | undefined;
-      const count = pending.metadata?.throneRoomExecutionsRemaining;
-      const cause = state.pendingChoiceEventId ?? generateEventId();
-      const resolved: GameEvent = {
-        type: "DECISION_RESOLVED",
-        playerId: pending.playerId,
-        choice: { selectedCards: [] },
-        id: generateEventId(),
-        causedBy: cause,
-      };
-      const work: ExecutionFrame[] =
-        card && typeof count === "number" && count > 0
-          ? [
-              {
-                type: "play",
-                playerId: state.activePlayerId,
-                card,
-                from: "hand",
-                times: count,
-                cause,
-              },
-            ]
-          : [];
-      return [
-        resolved,
-        ...execute(applyEvents(state, [resolved]), work, random),
-      ];
-    }
-    if (pending.choiceType === "reaction") {
-      stack = [
-        {
-          type: "attack",
-          card: pending.triggeringCard,
-          playerId: pending.triggeringPlayerId,
-          cause: pending.metadata.originalCause,
-          targets: pending.metadata.allTargets,
-          index: pending.metadata.currentTargetIndex,
-          blocked: pending.metadata.blockedTargets,
-        },
-      ];
-      const benefit = getCardEffect(pending.triggeringCard)?.benefit;
-      if (benefit) {
-        const initial = benefit({
-          state,
-          playerId: pending.triggeringPlayerId,
-          card: pending.triggeringCard,
-          random,
-        });
-        const events = initial.events.map(event => ({
-          ...event,
-          id: generateEventId(),
-          causedBy: pending.metadata.originalCause,
-        }));
-        return [
-          ...events,
-          ...execute(applyEvents(state, events), stack, random, response),
-        ];
-      }
-    } else {
-      stack = [
-        {
-          type: "effect",
-          card: pending.cardBeingPlayed,
-          playerId: state.activePlayerId,
-          cause:
-            typeof pending.metadata?.originalCause === "string"
-              ? pending.metadata.originalCause
-              : (state.pendingChoiceEventId ?? generateEventId()),
-          choice: pending,
-        },
-      ];
-      const remaining = pending.metadata?.throneRoomExecutionsRemaining;
-      const repeatedCard = pending.metadata?.throneRoomTarget as
-        | CardName
-        | undefined;
-      if (repeatedCard && typeof remaining === "number" && remaining > 0) {
-        stack.unshift(
-          ...Array.from(
-            { length: remaining },
-            (): CardFrame => ({
-              type: "effect",
-              playerId: state.activePlayerId,
-              card: repeatedCard,
-              cause: stack![0]!.cause,
-            }),
-          ),
-        );
-      }
-    }
-  }
-  return execute(state, stack, random, response);
+  return runExecution(
+    state,
+    [{ type: "effect", playerId, card, cause, trigger: { type: "play" } }],
+    random,
+  );
 }

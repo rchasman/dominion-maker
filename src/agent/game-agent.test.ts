@@ -245,7 +245,7 @@ describe("game-agent", () => {
         min: 0,
         max: 2,
         cardOptions: ["Copper"],
-        stage: "discard",
+        intent: "discard",
         from: "hand",
       };
 

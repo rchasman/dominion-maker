@@ -145,12 +145,6 @@ describe("useBuyCardLogic hook", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["human"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "event-1",
-          },
         };
 
       // Simulate the hook's logic
@@ -305,12 +299,6 @@ describe("useBuyCardLogic hook", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["human"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "event-1",
-          },
         };
 
       const handleBuyCard = (card: CardName): CommandResult => {

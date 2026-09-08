@@ -32,9 +32,9 @@ describe("decomposeDecisionForAI", () => {
             isDefault: true,
           },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        metadata: { currentRoundIndex: 0 },
+        presentation: { currentRoundIndex: 0 },
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -74,9 +74,9 @@ describe("decomposeDecisionForAI", () => {
             isDefault: true,
           },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        metadata: { currentRoundIndex: 1 },
+        presentation: { currentRoundIndex: 1 },
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -110,9 +110,9 @@ describe("decomposeDecisionForAI", () => {
             isDefault: false,
           },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        metadata: { currentRoundIndex: 5 }, // Out of bounds
+        presentation: { currentRoundIndex: 5 }, // Out of bounds
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -120,7 +120,7 @@ describe("decomposeDecisionForAI", () => {
       expect(result).toEqual([{ type: "skip_decision" }]);
     });
 
-    it("should handle missing metadata with default round index 0", () => {
+    it("should handle missing presentation with default round index 0", () => {
       const decision: Extract<PendingChoice, { choiceType: "decision" }> = {
         choiceType: "decision",
         playerId: "player1",
@@ -142,9 +142,9 @@ describe("decomposeDecisionForAI", () => {
             isDefault: true,
           },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        // No metadata
+        // No presentation
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -171,9 +171,9 @@ describe("decomposeDecisionForAI", () => {
             isDefault: false,
           },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        metadata: { currentRoundIndex: 0 },
+        presentation: { currentRoundIndex: 0 },
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -193,9 +193,9 @@ describe("decomposeDecisionForAI", () => {
           { id: "select", label: "Select", color: "#10B981", isDefault: false },
           { id: "skip", label: "Skip", color: "#9CA3AF", isDefault: true },
         ],
-        stage: "topdeck",
+        intent: "topdeck",
         cardBeingPlayed: "Sentry",
-        metadata: { currentRoundIndex: 0 },
+        presentation: { currentRoundIndex: 0 },
       };
 
       const result = decomposeDecisionForAI(decision);
@@ -215,7 +215,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 4,
         cardOptions: ["Copper", "Copper", "Estate"],
-        stage: "trash",
+        intent: "trash",
         from: "hand",
       };
 
@@ -236,7 +236,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 3,
         cardOptions: ["Copper", "Silver", "Gold"],
-        stage: "discard",
+        intent: "discard",
         from: "hand",
       };
 
@@ -258,7 +258,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 2,
         cardOptions: ["Silver", "Estate"],
-        stage: "gain",
+        intent: "gain",
         from: "supply",
       };
 
@@ -279,7 +279,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 2,
         cardOptions: ["Copper", "Silver"],
-        stage: "topdeck",
+        intent: "topdeck",
         from: "discard",
       };
 
@@ -300,7 +300,7 @@ describe("decomposeDecisionForAI", () => {
         min: 2,
         max: 2,
         cardOptions: ["Copper", "Silver", "Gold"],
-        stage: "discard",
+        intent: "discard",
         from: "hand",
       };
 
@@ -313,7 +313,7 @@ describe("decomposeDecisionForAI", () => {
       expect(result).not.toContainEqual({ type: "skip_decision" });
     });
 
-    it("should handle opponent_discard stage", () => {
+    it("should handle discard intent for an opponent", () => {
       const decision: Extract<PendingChoice, { choiceType: "decision" }> = {
         choiceType: "decision",
         playerId: "player1",
@@ -322,7 +322,7 @@ describe("decomposeDecisionForAI", () => {
         min: 1,
         max: 2,
         cardOptions: ["Copper", "Estate"],
-        stage: "opponent_discard",
+        intent: "discard",
         from: "hand",
       };
 
@@ -333,7 +333,7 @@ describe("decomposeDecisionForAI", () => {
       expect(result).toContainEqual({ type: "discard_card", card: "Estate" });
     });
 
-    it("should handle victim_trash_choice stage", () => {
+    it("should handle trash intent for a victim", () => {
       const decision: Extract<PendingChoice, { choiceType: "decision" }> = {
         choiceType: "decision",
         playerId: "player1",
@@ -342,7 +342,7 @@ describe("decomposeDecisionForAI", () => {
         min: 1,
         max: 1, // Single card decision - not decomposed
         cardOptions: ["Copper", "Silver"],
-        stage: "victim_trash_choice",
+        intent: "trash",
         from: "hand",
       };
 
@@ -352,7 +352,7 @@ describe("decomposeDecisionForAI", () => {
       expect(result).toEqual([]);
     });
 
-    it("should handle opponent_topdeck stage", () => {
+    it("should handle topdeck intent for an opponent", () => {
       const decision: Extract<PendingChoice, { choiceType: "decision" }> = {
         choiceType: "decision",
         playerId: "player1",
@@ -361,7 +361,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 1, // Single card decision - not decomposed
         cardOptions: ["Estate", "Duchy"],
-        stage: "opponent_topdeck",
+        intent: "topdeck",
         from: "hand",
       };
 
@@ -371,21 +371,21 @@ describe("decomposeDecisionForAI", () => {
       expect(result).toEqual([]);
     });
 
-    it("should throw error for unknown batch stage", () => {
+    it("should throw error for unsupported batch intent", () => {
       const decision: Extract<PendingChoice, { choiceType: "decision" }> = {
         choiceType: "decision",
         playerId: "player1",
-        prompt: "Unknown stage",
+        prompt: "Unknown intent",
         cardBeingPlayed: "Chapel",
         min: 0,
         max: 2,
         cardOptions: ["Copper"],
-        stage: "unknown_stage" as any,
+        intent: "select",
         from: "hand",
       };
 
       expect(() => decomposeDecisionForAI(decision)).toThrow(
-        "Unknown batch decision stage: unknown_stage",
+        "Unknown batch decision intent: select",
       );
     });
   });
@@ -400,7 +400,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 1,
         cardOptions: ["Copper", "Silver"],
-        stage: "trash",
+        intent: "trash",
         from: "hand",
       };
 
@@ -419,7 +419,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         // max omitted (single card)
         cardOptions: ["Silver", "Estate"],
-        stage: "gain",
+        intent: "gain",
         from: "supply",
       };
 
@@ -439,7 +439,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 4,
         cardOptions: [],
-        stage: "trash",
+        intent: "trash",
         from: "hand",
       };
 
@@ -457,7 +457,7 @@ describe("decomposeDecisionForAI", () => {
         min: 0,
         max: 0,
         cardOptions: ["Copper"],
-        stage: "trash",
+        intent: "trash",
         from: "hand",
       };
 

@@ -53,41 +53,35 @@ export function getLegalActions(state: GameState): Action[] {
       return decomposeDecisionForAI(decision);
     }
 
-    if (
-      decision.stage === "trash" ||
-      decision.stage === "victim_trash_choice"
-    ) {
+    if (decision.intent === "trash") {
       return withSkipOption(
         options.map(card => ({ type: "trash_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "discard" || decision.stage === "opponent_discard") {
+    if (decision.intent === "discard") {
       return withSkipOption(
         options.map(card => ({ type: "discard_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "gain" || decision.from === "supply") {
+    if (decision.intent === "gain" || decision.from === "supply") {
       return withSkipOption(
         options.map(card => ({ type: "gain_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "topdeck" || decision.stage === "opponent_topdeck") {
+    if (decision.intent === "topdeck") {
       return withSkipOption(
         options.map(card => ({ type: "topdeck_card" as const, card })),
         canSkip,
       );
     }
 
-    if (
-      decision.stage === "choose_action" ||
-      decision.stage === "play_action"
-    ) {
+    if (decision.intent === "play") {
       return withSkipOption(
         options.map(card => ({ type: "play_action" as const, card })),
         canSkip,

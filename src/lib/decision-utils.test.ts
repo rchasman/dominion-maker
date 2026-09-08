@@ -50,12 +50,6 @@ describe("decision-utils", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "event-1",
-        },
       };
       expect(canSkipDecision(decision)).toBe(false);
     });
@@ -146,12 +140,6 @@ describe("decision-utils", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "event-1",
-        },
       };
       const result = shouldSelectCard(0, [], pendingChoice);
       expect(result.canAdd).toBe(true);

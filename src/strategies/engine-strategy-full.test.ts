@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import { EngineStrategy } from "./engine-strategy";
 import { DominionEngine } from "../engine";
 import { resetEventCounter } from "../events/id-generator";
+import { isActionCard } from "../data/cards";
 import type { GameEvent } from "../events/types";
 
 describe("EngineStrategy - Full Coverage", () => {
@@ -81,7 +82,12 @@ describe("EngineStrategy - Full Coverage", () => {
 
       const newCardPlayedEvents = engine.eventLog
         .slice(eventsBefore)
-        .filter(e => e.type === "CARD_PLAYED" && e.playerId === "ai");
+        .filter(
+          e =>
+            e.type === "CARD_PLAYED" &&
+            e.playerId === "ai" &&
+            isActionCard(e.card),
+        );
       expect(newCardPlayedEvents.length).toBe(0);
     });
 
@@ -184,7 +190,7 @@ describe("EngineStrategy - Full Coverage", () => {
       ];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard 3 cards",
@@ -202,7 +208,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Estate", "Copper", "Silver", "Gold"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "opponent_discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard down to 3",
@@ -219,7 +225,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Estate", "Gold", "Silver"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard 1",
@@ -236,7 +242,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Gold", "Silver", "Village"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard 2",
@@ -253,7 +259,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Curse", "Estate", "Copper", "Silver"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "trash",
+        intent: "trash",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Trash up to 3",
@@ -270,7 +276,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Curse", "Curse", "Silver", "Gold"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "trash",
+        intent: "trash",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Trash cards",
@@ -287,7 +293,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Copper", "Estate", "Silver"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "trash",
+        intent: "trash",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Trash 1",
@@ -304,7 +310,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.players.ai!.hand = ["Gold", "Silver", "Village"];
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "trash",
+        intent: "trash",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Trash 2",
@@ -320,7 +326,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "gain",
+        intent: "gain",
         choiceType: "decision",
         cardBeingPlayed: "Workshop",
         prompt: "Gain a card",
@@ -336,7 +342,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "gain",
+        intent: "gain",
         choiceType: "decision",
         cardBeingPlayed: "Workshop",
         prompt: "Gain a card",
@@ -352,7 +358,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "unknown",
+        intent: "select",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Choose",
@@ -368,7 +374,7 @@ describe("EngineStrategy - Full Coverage", () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "unknown",
+        intent: "select",
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Optional",
@@ -391,7 +397,7 @@ describe("EngineStrategy - Full Coverage", () => {
     it("should do nothing when decision is for different player", () => {
       engine.state.pendingChoice = {
         playerId: "human",
-        stage: "discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard",
@@ -422,7 +428,7 @@ describe("EngineStrategy - Full Coverage", () => {
       delete engine.state.players.ai;
       engine.state.pendingChoice = {
         playerId: "ai",
-        stage: "discard",
+        intent: "discard",
         choiceType: "decision",
         cardBeingPlayed: "Militia",
         prompt: "Discard",

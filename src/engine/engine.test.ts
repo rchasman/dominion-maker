@@ -762,7 +762,7 @@ describe("DominionEngine - Auto-advance Phase", () => {
       cardBeingPlayed: "Cellar",
       min: 0,
       max: 1,
-      stage: "test",
+      intent: "select",
     };
 
     expect(engine.shouldAutoAdvancePhase("human")).toBe(false);

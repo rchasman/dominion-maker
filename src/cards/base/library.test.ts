@@ -1,7 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { library } from "./library";
 import type { GameState, CardName } from "../../types/game-state";
-import type { CardEffectResult } from "../effect-types";
+import type { EffectStep } from "../program";
+import type { DecisionChoice } from "../../types/pending-choice";
 import { applyEvents } from "../../events/apply";
 
 function createTestState(): GameState {
@@ -42,49 +43,52 @@ function createTestState(): GameState {
   };
 }
 
-function options(state: GameState): CardName[] {
-  return state.pendingChoice?.choiceType === "decision"
-    ? state.pendingChoice.cardOptions
-    : [];
-}
-
-function resolve(state: GameState, result: CardEffectResult): GameState {
+function context(state: GameState, playerId = "human") {
   return {
-    ...applyEvents(state, result.events),
-    pendingChoice: result.pendingChoice ?? null,
+    state,
+    playerId,
+    card: "Library" as const,
+    trigger: { type: "play" as const },
+    random: () => 0.5,
   };
+}
+function begin(state: GameState) {
+  return library.run(context(state), { type: "start" });
+}
+function answer(state: GameState, step: EffectStep, choice: DecisionChoice) {
+  if (step.type !== "choice") throw new Error("Expected a choice");
+  return library.run(context(state), {
+    type: "answer",
+    memory: JSON.parse(JSON.stringify(step.memory)),
+    answer: choice,
+  });
 }
 
 describe("Library", () => {
   it("does nothing with seven cards or a missing player", () => {
     const state = createTestState();
     state.players.human!.hand = Array(7).fill("Copper");
-    expect(library({ state, playerId: "human", card: "Library" })).toEqual({
-      events: [],
-    });
-    expect(library({ state, playerId: "missing", card: "Library" })).toEqual({
+    expect(begin(state)).toEqual({ type: "done", events: [] });
+    expect(library.run(context(state, "missing"), { type: "start" })).toEqual({
+      type: "done",
       events: [],
     });
   });
-
   it("draws ordinary cards until seven, leaving excess cards in the deck", () => {
     const state = createTestState();
     state.players.human!.hand = Array(5).fill("Copper");
     state.players.human!.deck = ["Gold", "Silver", "Estate"];
-    const after = resolve(
-      state,
-      library({ state, playerId: "human", card: "Library" }),
-    );
+    const step = begin(state);
+    const after = applyEvents(state, step.events);
     expect(after.players.human!.hand).toEqual([
       ...Array(5).fill("Copper"),
       "Estate",
       "Silver",
     ]);
     expect(after.players.human!.deck).toEqual(["Gold"]);
-    expect(after.pendingChoice).toBeNull();
+    expect(step.type).toBe("done");
   });
-
-  it("asks about one Action at a time and resumes through a serialized choice", () => {
+  it("resumes serialized private memory with no pending UI choice", () => {
     let state = createTestState();
     state.players.human!.hand = Array(4).fill("Copper");
     state.players.human!.deck = [
@@ -94,61 +98,49 @@ describe("Library", () => {
       "Village",
       "Estate",
     ];
-    state = resolve(
-      state,
-      library({ state, playerId: "human", card: "Library" }),
-    );
+    let step = begin(state);
+    state = applyEvents(state, step.events);
     expect(state.players.human!.hand.length).toBe(5);
-    expect(options(state)).toEqual(["Village"]);
+    expect(step.type === "choice" && step.request.cardOptions).toEqual([
+      "Village",
+    ]);
     expect(state.players.human!.setAside).toEqual(["Village"]);
     state = JSON.parse(JSON.stringify(state));
-    state = resolve(
-      state,
-      library({
-        state,
-        playerId: "human",
-        card: "Library",
-        stage: "keep-or-skip",
-        decision: { selectedCards: [], cardActions: { 0: "discard_card" } },
-      }),
-    );
+    expect(state.pendingChoice).toBeNull();
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
+    });
+    state = applyEvents(state, step.events);
     expect(state.players.human!.hand.length).toBe(6);
-    expect(options(state)).toEqual(["Smithy"]);
+    expect(step.type === "choice" && step.request.cardOptions).toEqual([
+      "Smithy",
+    ]);
     expect(state.players.human!.discard).toEqual([]);
     expect(state.players.human!.setAside).toEqual(["Village", "Smithy"]);
-    state = resolve(
-      state,
-      library({
-        state,
-        playerId: "human",
-        card: "Library",
-        stage: "keep-or-skip",
-        decision: { selectedCards: [], cardActions: { 0: "draw_card" } },
-      }),
-    );
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "draw_card" },
+    });
+    state = applyEvents(state, step.events);
     expect(state.players.human!.hand.at(-1)).toBe("Smithy");
     expect(state.players.human!.hand.length).toBe(7);
     expect(state.players.human!.deck).toEqual(["Gold"]);
     expect(state.players.human!.discard).toEqual(["Village"]);
     expect(state.players.human!.setAside).toEqual([]);
-    expect(state.pendingChoice).toBeNull();
+    expect(step.type).toBe("done");
   });
-
-  it("does not reshuffle skipped Actions and stops when all available cards are exhausted", () => {
+  it("does not reshuffle skipped Actions and exhausts available cards", () => {
     let state = createTestState();
     state.players.human!.deck = ["Village"];
     state.players.human!.discard = ["Silver", "Copper"];
-    state = resolve(
-      state,
-      library({ state, playerId: "human", card: "Library" }),
-    );
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-      decision: { selectedCards: [], cardActions: { 0: "discard_card" } },
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
     });
-    const after = resolve(state, result);
+    const after = applyEvents(state, step.events);
     expect(after.players.human!.hand.slice().sort()).toEqual([
       "Copper",
       "Silver",
@@ -156,38 +148,41 @@ describe("Library", () => {
     expect(after.players.human!.discard).toEqual(["Village"]);
     expect(after.players.human!.deck).toEqual([]);
     expect(after.players.human!.setAside).toEqual([]);
-    expect(after.pendingChoice).toBeNull();
-    expect(resolve(state, JSON.parse(JSON.stringify(result)))).toEqual(after);
+    expect(step.type).toBe("done");
+    expect(applyEvents(state, JSON.parse(JSON.stringify(step.events)))).toEqual(
+      after,
+    );
   });
-
   it("keeps duplicate Actions as separate choices and conserves every card", () => {
     let state = createTestState();
     state.players.human!.deck = ["Village", "Village"];
-    state = resolve(
-      state,
-      library({ state, playerId: "human", card: "Library" }),
-    );
-    state = resolve(
-      state,
-      library({
-        state,
-        playerId: "human",
-        card: "Library",
-        decision: { selectedCards: [], cardActions: { 0: "discard_card" } },
-      }),
-    );
-    state = resolve(
-      state,
-      library({
-        state,
-        playerId: "human",
-        card: "Library",
-        decision: { selectedCards: [], cardActions: { 0: "draw_card" } },
-      }),
-    );
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
+    });
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "draw_card" },
+    });
+    state = applyEvents(state, step.events);
     expect(state.players.human!.hand).toEqual(["Village"]);
     expect(state.players.human!.discard).toEqual(["Village"]);
     expect(state.players.human!.setAside).toEqual([]);
-    expect(state.pendingChoice).toBeNull();
+    expect(step.type).toBe("done");
+  });
+  it("rejects malformed private continuation memory", () => {
+    expect(() =>
+      library.parseMemory({
+        offered: "Village",
+        skipped: [],
+        unexpected: true,
+      }),
+    ).toThrow();
+    expect(() =>
+      library.parseMemory({ offered: "Imaginary", skipped: [] }),
+    ).toThrow();
   });
 });

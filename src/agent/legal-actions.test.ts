@@ -42,12 +42,6 @@ describe("getLegalActions", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["player1"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "Militia",
-          },
         },
         pendingChoiceEventId: null,
         activeEffects: [],
@@ -63,7 +57,7 @@ describe("getLegalActions", () => {
   });
 
   describe("decision choices", () => {
-    it("should return trash actions for trash stage", () => {
+    it("should return trash actions for trash intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -95,7 +89,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Copper", "Estate"],
-          stage: "trash",
+          intent: "trash",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -142,7 +136,7 @@ describe("getLegalActions", () => {
           min: 1,
           max: 1,
           cardOptions: ["Copper", "Estate"],
-          stage: "trash",
+          intent: "trash",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -157,7 +151,7 @@ describe("getLegalActions", () => {
       expect(actions).not.toContainEqual({ type: "skip_decision" });
     });
 
-    it("should return discard actions for discard stage", () => {
+    it("should return discard actions for discard intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -189,7 +183,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 2,
           cardOptions: ["Copper", "Silver"],
-          stage: "discard",
+          intent: "discard",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -204,7 +198,7 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "skip_decision" });
     });
 
-    it("should return gain actions for gain stage", () => {
+    it("should return gain actions for gain intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -236,7 +230,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Silver", "Estate"],
-          stage: "gain",
+          intent: "gain",
           from: "supply",
         },
         pendingChoiceEventId: null,
@@ -251,7 +245,7 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "skip_decision" });
     });
 
-    it("should return topdeck actions for topdeck stage", () => {
+    it("should return topdeck actions for topdeck intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -283,7 +277,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
-          stage: "topdeck",
+          intent: "topdeck",
           from: "discard",
         },
         pendingChoiceEventId: null,
@@ -297,7 +291,7 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "skip_decision" });
     });
 
-    it("should return play_action actions for choose_action stage", () => {
+    it("should return play_action actions for play intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -329,7 +323,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Village", "Smithy"],
-          stage: "choose_action",
+          intent: "play",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -344,7 +338,7 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "skip_decision" });
     });
 
-    it("should handle victim_trash_choice stage", () => {
+    it("should handle trash intent for a victim", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -376,7 +370,7 @@ describe("getLegalActions", () => {
           min: 1,
           max: 1,
           cardOptions: ["Copper", "Silver"],
-          stage: "victim_trash_choice",
+          intent: "trash",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -391,7 +385,7 @@ describe("getLegalActions", () => {
       expect(actions).not.toContainEqual({ type: "skip_decision" });
     });
 
-    it("should handle opponent_discard stage", () => {
+    it("should handle discard intent for an opponent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -423,7 +417,7 @@ describe("getLegalActions", () => {
           min: 1,
           max: 1,
           cardOptions: ["Copper"],
-          stage: "opponent_discard",
+          intent: "discard",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -436,7 +430,7 @@ describe("getLegalActions", () => {
       expect(actions).toContainEqual({ type: "discard_card", card: "Copper" });
     });
 
-    it("should handle opponent_topdeck stage", () => {
+    it("should handle topdeck intent for an opponent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -468,7 +462,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Estate"],
-          stage: "opponent_topdeck",
+          intent: "topdeck",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -506,7 +500,7 @@ describe("getLegalActions", () => {
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
-          stage: "trash",
+          intent: "trash",
           from: "hand",
         },
         pendingChoiceEventId: null,
@@ -519,7 +513,7 @@ describe("getLegalActions", () => {
       expect(actions).toEqual([]);
     });
 
-    it("should return empty array for unknown stage", () => {
+    it("should return empty array for unsupported intent", () => {
       const state: GameState = {
         players: {
           player1: {
@@ -546,12 +540,12 @@ describe("getLegalActions", () => {
         pendingChoice: {
           choiceType: "decision",
           playerId: "player1",
-          prompt: "Unknown stage",
+          prompt: "Unknown intent",
           cardBeingPlayed: "Chapel",
           min: 0,
           max: 1,
           cardOptions: ["Copper"],
-          stage: "unknown_stage" as any,
+          intent: "select",
           from: "hand",
         },
         pendingChoiceEventId: null,

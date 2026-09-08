@@ -1,42 +1,33 @@
-/**
- * Throne Room - Choose an action from hand, play it twice
- */
-
-import { createMultiStageCard } from "../effect-types";
 import { isActionCard } from "../../data/cards";
-import { STAGES } from "../stages";
+import { choose, defineEffect, done, noMemory, schedule } from "../program";
 
-export const throneRoom = createMultiStageCard({
-  initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-
-    const actions = playerState.hand.filter(isActionCard);
-    if (actions.length === 0) return { events: [] };
-
-    return {
-      events: [],
-      pendingChoice: {
+export const throneRoom = defineEffect(
+  noMemory,
+  ({ state, playerId }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Throne Room");
+    if (input.type === "answer") {
+      const card = input.answer.selectedCards[0];
+      return card
+        ? schedule([{ type: "play", playerId, card, from: "hand", times: 2 }])
+        : done();
+    }
+    const cardOptions =
+      state.players[playerId]?.hand.filter(isActionCard) ?? [];
+    if (!cardOptions.length) return done();
+    return choose(
+      {
         choiceType: "decision",
         playerId,
+        cardBeingPlayed: "Throne Room",
+        intent: "play",
         from: "hand",
         prompt: "Throne Room: Choose an Action to play twice",
-        cardOptions: actions,
+        cardOptions,
         min: 0,
         max: 1,
-        cardBeingPlayed: "Throne Room",
-        stage: STAGES.CHOOSE_ACTION,
       },
-    };
+      null,
+    );
   },
-
-  choose_action: ({ playerId, decision }) => {
-    const card = decision?.selectedCards[0];
-    return {
-      events: [],
-      operations: card
-        ? [{ type: "play", playerId, card, from: "hand", times: 2 }]
-        : [],
-    };
-  },
-});
+);

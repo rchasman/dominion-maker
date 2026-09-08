@@ -1,73 +1,62 @@
-/**
- * Vassal - +$2. Discard top card. If it's an Action, you may play it
- */
-
-import { createMultiStageCard, peekDraw } from "../effect-types";
+/** Vassal discards the top card and can schedule it as a nested play. */
+import { z } from "zod";
+import { peekDraw } from "../effect-types";
 import { isActionCard } from "../../data/cards";
 import type { GameEvent } from "../../events/types";
-import { STAGES } from "../stages";
+import {
+  cardNameSchema,
+  choose,
+  defineEffect,
+  done,
+  schedule,
+} from "../program";
 
-export const vassal = createMultiStageCard({
-  initial: ({ state, playerId, random }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-
-    const coinEvents: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
-    const {
-      cards: revealed,
-      shuffled,
-      newDeckOrder,
-    } = peekDraw(playerState, 1, random);
-
-    const topCard = revealed[0];
-    if (!topCard) {
-      return { events: coinEvents };
+export const vassal = defineEffect(
+  z.object({ discarded: cardNameSchema }).strict(),
+  ({ state, playerId, random }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Vassal");
+    if (input.type === "answer") {
+      return input.answer.selectedCards.length
+        ? schedule([
+            {
+              type: "play",
+              playerId,
+              card: input.memory.discarded,
+              from: "discard",
+            },
+          ])
+        : done();
     }
-
-    const discardEvents: GameEvent[] = [
-      ...(shuffled && newDeckOrder
-        ? [{ type: "DECK_SHUFFLED" as const, playerId, newDeckOrder }]
-        : []),
+    const player = state.players[playerId];
+    if (!player) return done();
+    const events: GameEvent[] = [{ type: "COINS_MODIFIED", delta: 2 }];
+    const { cards, shuffled, newDeckOrder } = peekDraw(player, 1, random);
+    const topCard = cards[0];
+    if (!topCard) return done(events);
+    if (shuffled && newDeckOrder)
+      events.push({ type: "DECK_SHUFFLED", playerId, newDeckOrder });
+    events.push({
+      type: "CARD_DISCARDED",
+      playerId,
+      card: topCard,
+      from: "deck",
+    });
+    if (!isActionCard(topCard)) return done(events);
+    return choose(
       {
-        type: "CARD_DISCARDED",
+        choiceType: "decision",
         playerId,
-        card: topCard,
-        from: "deck",
+        from: "discard",
+        intent: "play",
+        prompt: `Vassal: Play ${topCard} from discard?`,
+        cardOptions: [topCard],
+        min: 0,
+        max: 1,
+        cardBeingPlayed: "Vassal",
       },
-    ];
-
-    // If it's an action, offer to play it
-    if (isActionCard(topCard)) {
-      return {
-        events: [...coinEvents, ...discardEvents],
-        pendingChoice: {
-          choiceType: "decision",
-          playerId,
-          from: "options",
-          prompt: `Vassal: Play ${topCard} from discard?`,
-          cardOptions: [topCard],
-          min: 0,
-          max: 1,
-          cardBeingPlayed: "Vassal",
-          stage: STAGES.PLAY_ACTION,
-          metadata: { discardedCard: topCard },
-        },
-      };
-    }
-
-    return { events: [...coinEvents, ...discardEvents] };
+      { discarded: topCard },
+      events,
+    );
   },
-
-  play_action: ({ playerId, decision }) => {
-    // Coins already emitted in initial stage
-    const cardToPlay = decision?.selectedCards[0];
-    if (!cardToPlay) return { events: [] };
-
-    return {
-      events: [],
-      operations: [
-        { type: "play", playerId, card: cardToPlay, from: "discard" },
-      ],
-    };
-  },
-});
+);

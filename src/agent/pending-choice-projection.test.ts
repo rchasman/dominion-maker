@@ -19,12 +19,12 @@ describe("projectPendingChoiceForAI", () => {
   it("keeps decision essentials and drops UI/internal fields", () => {
     const projected = projectPendingChoiceForAI(
       decision({
-        stage: "trash",
+        intent: "trash",
         actions: [
           { id: "trash_card", label: "Trash", color: "#ef4444" },
           { id: "skip", label: "Skip", color: "#94a3b8", isDefault: true },
         ],
-        metadata: { internal: true },
+        presentation: { currentRoundIndex: 0 },
       }),
     );
 
@@ -35,8 +35,8 @@ describe("projectPendingChoiceForAI", () => {
       options: ["Copper", "Estate"],
     });
     expect(projected).not.toHaveProperty("actions");
-    expect(projected).not.toHaveProperty("metadata");
-    expect(projected).not.toHaveProperty("stage");
+    expect(projected).not.toHaveProperty("presentation");
+    expect(projected).not.toHaveProperty("intent");
     expect(JSON.stringify(projected)).not.toContain("#ef4444");
   });
 
@@ -80,7 +80,7 @@ describe("projectPendingChoiceForAI", () => {
           { id: "trash_card", label: "Trash", color: "#ef4444" },
           { id: "topdeck_card", label: "Topdeck", color: "#3b82f6" },
         ],
-        metadata: { currentRoundIndex: 1 },
+        presentation: { currentRoundIndex: 1 },
       }),
     );
 
@@ -88,7 +88,7 @@ describe("projectPendingChoiceForAI", () => {
     expect(projected.progress).toBe("card 2 of 2");
   });
 
-  it("defaults multi-round decisions without metadata to the first card", () => {
+  it("defaults multi-round decisions without presentation to the first card", () => {
     const projected = projectPendingChoiceForAI(
       decision({
         cardOptions: ["Copper", "Gold"],
@@ -128,12 +128,6 @@ describe("projectPendingChoiceForAI", () => {
       triggeringCard: "Militia",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["player_1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt_1",
-      },
     });
 
     expect(projected).toEqual({

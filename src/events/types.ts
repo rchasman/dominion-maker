@@ -207,12 +207,6 @@ export type ReactionOpportunityEvent = EventMetadata & {
   triggeringCard: CardName; // The card that triggered this (was: attackCard)
   triggerType: import("../types/card-types").ReactionTrigger; // on_attack, on_gain, etc.
   availableReactions: CardName[];
-  metadata: {
-    allTargets: PlayerId[];
-    currentTargetIndex: number;
-    blockedTargets: PlayerId[];
-    originalCause: string;
-  };
 };
 
 export type ReactionRevealedEvent = EventMetadata & {
@@ -244,7 +238,6 @@ export type DecisionSkippedEvent = EventMetadata & {
   type: "DECISION_SKIPPED";
   playerId: PlayerId;
   cardBeingPlayed?: CardName;
-  stage?: string;
 };
 
 // Game End
@@ -292,6 +285,7 @@ export type GameEvent =
     })
   | (EventMetadata & {
       type: "EXECUTION_UPDATED";
+      version?: 2;
       stack: import("../engine/execution-types").ExecutionFrame[];
     })
   | (EventMetadata & {

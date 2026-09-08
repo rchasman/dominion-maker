@@ -208,17 +208,17 @@ export class EngineStrategy implements GameStrategy {
     if (!decision || decision.playerId !== "ai") return;
     if (!isDecisionChoice(decision)) return;
 
-    if (decision.stage === "opponent_discard" || decision.stage === "discard") {
+    if (decision.intent === "discard") {
       this.handleDiscardDecision(engine);
       return;
     }
 
-    if (decision.stage === "trash") {
+    if (decision.intent === "trash") {
       this.handleTrashDecision(engine);
       return;
     }
 
-    if (decision.stage === "gain") {
+    if (decision.intent === "gain") {
       this.handleGainDecision(engine);
       return;
     }

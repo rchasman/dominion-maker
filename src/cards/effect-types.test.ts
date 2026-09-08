@@ -1,3 +1,4 @@
+import { requestOf } from "./test-helpers";
 import { describe, it, expect, beforeEach } from "bun:test";
 import {
   peekDraw,
@@ -6,8 +7,6 @@ import {
   getGainableTreasures,
   getOpponents,
   createSimpleCardEffect,
-  isInitialCall,
-  createCardSelectionDecision,
 } from "./effect-types";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameState, PlayerState, CardName } from "../types/game-state";
@@ -447,7 +446,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human!.deck = ["Copper", "Silver", "Gold"];
 
     const effect = createSimpleCardEffect({ cards: 3 });
-    const result = effect({ state, playerId: "human", card: "Smithy" });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Smithy",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     const drawEvents = result.events.filter(
       (e: GameEvent) => e.type === "CARD_DRAWN",
@@ -459,7 +467,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ actions: 2 });
-    const result = effect({ state, playerId: "human", card: "Village" });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Village",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     const actionsEvent = result.events.find(
       (e: GameEvent) => e.type === "ACTIONS_MODIFIED",
@@ -474,7 +491,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ buys: 1 });
-    const result = effect({ state, playerId: "human", card: "Festival" });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Festival",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     const buysEvent = result.events.find(
       (e: GameEvent) => e.type === "BUYS_MODIFIED",
@@ -489,7 +515,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({ coins: 2 });
-    const result = effect({ state, playerId: "human", card: "Festival" });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Festival",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     const coinsEvent = result.events.find(
       (e: GameEvent) => e.type === "COINS_MODIFIED",
@@ -510,7 +545,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
       buys: 1,
       coins: 1,
     });
-    const result = effect({ state, playerId: "human", card: "Market" });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Market",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.find((e: GameEvent) => e.type === "CARD_DRAWN"),
@@ -531,11 +575,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     const state = createBasicState();
 
     const effect = createSimpleCardEffect({});
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Test" as CardName,
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Test" as CardName,
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -545,12 +594,21 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human!.deck = ["Copper", "Silver", "Gold"];
 
     const smithyFactory = createSimpleCardEffect({ cards: 3 });
-    const result = smithyFactory({ state, playerId: "human", card: "Smithy" });
+    const result = smithyFactory.run(
+      {
+        state,
+        playerId: "human",
+        card: "Smithy",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
     ).toBe(3);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("should exactly match Village behavior (+1 card, +2 actions)", () => {
@@ -558,11 +616,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
     state.players.human!.deck = ["Copper"];
 
     const villageFactory = createSimpleCardEffect({ cards: 1, actions: 2 });
-    const result = villageFactory({
-      state,
-      playerId: "human",
-      card: "Village",
-    });
+    const result = villageFactory.run(
+      {
+        state,
+        playerId: "human",
+        card: "Village",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
@@ -581,11 +644,16 @@ describe("createSimpleCardEffect - Factory Function", () => {
       buys: 1,
       coins: 2,
     });
-    const result = festivalFactory({
-      state,
-      playerId: "human",
-      card: "Festival",
-    });
+    const result = festivalFactory.run(
+      {
+        state,
+        playerId: "human",
+        card: "Festival",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
@@ -597,78 +665,6 @@ describe("createSimpleCardEffect - Factory Function", () => {
     expect(
       result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
     ).toBe(2);
-  });
-});
-
-describe("Decision Helper Functions", () => {
-  beforeEach(() => resetEventCounter());
-
-  it("isInitialCall should detect initial calls", () => {
-    expect(isInitialCall(undefined, undefined)).toBe(true);
-    expect(isInitialCall(undefined, "trash")).toBe(true);
-    expect(isInitialCall(undefined, "gain")).toBe(true);
-  });
-
-  it("isInitialCall should detect non-initial calls", () => {
-    expect(isInitialCall({ selectedCards: [] }, "trash")).toBe(false);
-  });
-
-  it("createCardSelectionDecision should create valid decision", () => {
-    const decision = createCardSelectionDecision({
-      playerId: "human",
-      from: "hand",
-      prompt: "Choose cards",
-      cardOptions: ["Copper", "Silver"],
-      min: 1,
-      max: 2,
-      cardBeingPlayed: "Chapel",
-      stage: "trash",
-    });
-
-    expect(decision.choiceType).toBe("decision");
-    expect(decision.playerId).toBe("human");
-    expect(decision.from).toBe("hand");
-    expect(decision.prompt).toBe("Choose cards");
-    expect(decision.cardOptions).toEqual(["Copper", "Silver"]);
-    expect(decision.min).toBe(1);
-    expect(decision.max).toBe(2);
-    expect(decision.cardBeingPlayed).toBe("Chapel");
-    expect(decision.stage).toBe("trash");
-  });
-
-  it("createCardSelectionDecision should handle metadata", () => {
-    const decision = createCardSelectionDecision({
-      playerId: "human",
-      from: "hand",
-      prompt: "Test",
-      cardOptions: [],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Library",
-      stage: "skip_actions",
-      metadata: { cardsNeeded: 5, peekedCards: ["Village"] },
-    });
-
-    expect(decision.metadata).toBeDefined();
-    expect(decision.metadata).toEqual({
-      cardsNeeded: 5,
-      peekedCards: ["Village"],
-    });
-  });
-
-  it("createCardSelectionDecision should work without metadata", () => {
-    const decision = createCardSelectionDecision({
-      playerId: "human",
-      from: "hand",
-      prompt: "Test",
-      cardOptions: [],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Chapel",
-      stage: "trash",
-    });
-
-    expect(decision.metadata).toBeUndefined();
   });
 });
 
@@ -713,7 +709,16 @@ describe("Helper Function Integration", () => {
     state.players.human!.discard = [];
 
     const smithy = createSimpleCardEffect({ cards: 3 });
-    const result = smithy({ state, playerId: "human", card: "Smithy" });
+    const result = smithy.run(
+      {
+        state,
+        playerId: "human",
+        card: "Smithy",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     // Should not crash, just return empty events
     const drawEvents = result.events.filter(

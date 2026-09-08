@@ -3,7 +3,7 @@ import type { CardName, GameState } from "../types/game-state";
 
 /** The current cost applies in every zone, including cards being upgraded. */
 export function getCardCost(
-  state: GameState,
+  state: Pick<GameState, "activeEffects">,
   card: CardName,
 ): {
   baseCost: number;

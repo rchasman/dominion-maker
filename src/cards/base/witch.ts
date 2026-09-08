@@ -1,20 +1,27 @@
-import { createAttackEffect } from "../attack-effect";
 import { createDrawEvents, getOpponents } from "../effect-types";
+import { defineEffect, done, noMemory, schedule } from "../program";
 
-export const witch = createAttackEffect(
-  ({ state, playerId, random }) => ({
-    events: state.players[playerId]
-      ? createDrawEvents(playerId, state.players[playerId]!, 2, random)
-      : [],
-  }),
-  ({ state, playerId, attackTargets }) => ({
-    events: (attackTargets ?? getOpponents(state, playerId))
-      .slice(0, state.supply.Curse ?? 0)
-      .map(target => ({
-        type: "CARD_GAINED",
-        playerId: target,
-        card: "Curse",
-        to: "discard",
-      })),
-  }),
+export const witch = defineEffect(
+  noMemory,
+  ({ state, playerId, trigger, random }) => {
+    if (trigger.type === "play") {
+      const player = state.players[playerId];
+      return schedule(
+        [{ type: "attack", targets: getOpponents(state, playerId) }],
+        player ? createDrawEvents(playerId, player, 2, random) : [],
+      );
+    }
+    return done(
+      trigger.type === "attack" && (state.supply.Curse ?? 0) > 0
+        ? [
+            {
+              type: "CARD_GAINED",
+              playerId: trigger.target,
+              card: "Curse",
+              to: "discard",
+            },
+          ]
+        : [],
+    );
+  },
 );

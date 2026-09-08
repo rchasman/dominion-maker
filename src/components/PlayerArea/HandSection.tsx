@@ -41,8 +41,8 @@ function getHandCardHighlightMode(
   const isSelectable = pendingChoice.cardOptions?.includes(card) ?? true;
   if (!isSelectable) return undefined;
 
-  if (pendingChoice.stage === "trash") return "trash";
-  if (pendingChoice.stage === "discard") return "discard";
+  if (pendingChoice.intent === "trash") return "trash";
+  if (pendingChoice.intent === "discard") return "discard";
 
   return undefined;
 }

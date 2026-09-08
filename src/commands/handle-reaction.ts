@@ -1,6 +1,6 @@
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { CommandResult } from "./types";
-import { resumeExecution } from "../engine/execute";
+import { resumeExecution } from "../engine/resume";
 
 function respond(
   state: GameState,
@@ -11,8 +11,6 @@ function respond(
   const pending = state.pendingChoice;
   if (pending?.choiceType !== "reaction")
     return { ok: false, error: "No pending reaction" };
-  if (!pending.metadata)
-    return { ok: false, error: "Missing reaction metadata" };
   if (pending.playerId !== playerId)
     return {
       ok: false,

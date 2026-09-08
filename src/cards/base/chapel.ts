@@ -1,58 +1,27 @@
-/**
- * Chapel - Trash up to 4 cards from your hand
- */
+import { cardsToEvents } from "../effect-types";
+import { choose, defineEffect, done, noMemory } from "../program";
 
-import type { CardEffect, CardEffectResult } from "../effect-types";
-import { cardsToEvents, isInitialCall } from "../effect-types";
-import { STAGES } from "../stages";
-
-const CHAPEL_MAX_TRASH = 4;
-
-export const chapel: CardEffect = ({
-  state,
-  playerId,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
-
-  // Initial call: request batch selection
-  if (isInitialCall(decision, stage)) {
-    if (playerState.hand.length === 0) {
-      return { events: [] };
-    }
-
-    return {
-      events: [],
-      pendingChoice: {
-        choiceType: "decision",
-        playerId,
-        from: "hand",
-        prompt: "Chapel: Trash up to 4 cards from your hand",
-        cardOptions: [...playerState.hand],
-        min: 0,
-        max: CHAPEL_MAX_TRASH,
-        cardBeingPlayed: "Chapel",
-        stage: STAGES.TRASH,
-      },
-    };
-  }
-
-  // Process trash decision
-  if (stage === STAGES.TRASH && decision) {
-    const toTrash = decision.selectedCards;
-
-    if (toTrash.length === 0) {
-      return { events: [] };
-    }
-
-    const events = cardsToEvents(toTrash, playerId, "CARD_TRASHED");
-
-    // Never create loop - just process and finish
-    // AI strategy layer handles multi-round consensus before calling this
-    return { events };
-  }
-
-  return { events: [] };
-};
+export const chapel = defineEffect(noMemory, ({ state, playerId }, input) => {
+  if (input.type === "continue")
+    throw new Error("Unexpected continuation for Chapel");
+  if (input.type === "answer")
+    return done(
+      cardsToEvents(input.answer.selectedCards, playerId, "CARD_TRASHED"),
+    );
+  const hand = state.players[playerId]?.hand ?? [];
+  if (!hand.length) return done();
+  return choose(
+    {
+      choiceType: "decision",
+      playerId,
+      cardBeingPlayed: "Chapel",
+      intent: "trash",
+      from: "hand",
+      prompt: "Chapel: Trash up to 4 cards from your hand",
+      cardOptions: [...hand],
+      min: 0,
+      max: Math.min(4, hand.length),
+    },
+    null,
+  );
+});

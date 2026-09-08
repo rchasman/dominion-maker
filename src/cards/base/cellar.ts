@@ -1,84 +1,42 @@
-/**
- * Cellar - +1 Action. Discard any number of cards, then draw that many
- */
-
-import type { CardEffect, CardEffectResult } from "../effect-types";
 import {
   cardsToEvents,
   createDrawEvents,
-  isInitialCall,
+  projectEffectEvents,
 } from "../effect-types";
-import { STAGES } from "../stages";
+import { choose, defineEffect, done, noMemory } from "../program";
 
-export const cellar: CardEffect = ({
-  state,
-  playerId,
-  random,
-  decision,
-  stage,
-}): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
-
-  // Initial call: +1 Action, then request batch discard
-  if (isInitialCall(decision, stage)) {
-    const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
-
-    if (playerState.hand.length === 0) {
-      return { events: [actionEvent] };
+export const cellar = defineEffect(
+  noMemory,
+  ({ state, playerId, random }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Cellar");
+    const player = state.players[playerId];
+    if (!player) return done();
+    if (input.type === "answer") {
+      const selected = input.answer.selectedCards;
+      const events = cardsToEvents(selected, playerId, "CARD_DISCARDED");
+      const afterDiscard = projectEffectEvents(state, events).players[playerId];
+      return done([
+        ...events,
+        ...createDrawEvents(playerId, afterDiscard!, selected.length, random),
+      ]);
     }
-
-    return {
-      events: [actionEvent],
-      pendingChoice: {
+    const events = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
+    if (!player.hand.length) return done(events);
+    return choose(
+      {
         choiceType: "decision",
         playerId,
+        cardBeingPlayed: "Cellar",
+        intent: "discard",
         from: "hand",
         prompt: "Cellar: Discard any number of cards, then draw that many",
-        cardOptions: [...playerState.hand],
+        cardOptions: [...player.hand],
         min: 0,
-        max: playerState.hand.length,
-        cardBeingPlayed: "Cellar",
-        stage: STAGES.DISCARD,
+        max: player.hand.length,
       },
-    };
-  }
-
-  // Process discard decision
-  if (stage === STAGES.DISCARD && decision) {
-    const toDiscard = decision.selectedCards;
-
-    if (toDiscard.length === 0) {
-      return { events: [] };
-    }
-
-    const discardEvents = cardsToEvents(toDiscard, playerId, "CARD_DISCARDED");
-
-    // Calculate updated hand for drawing
-    const updatedHand = toDiscard.reduce((hand, card) => {
-      const idx = hand.indexOf(card);
-      return idx === -1
-        ? hand
-        : [...hand.slice(0, idx), ...hand.slice(idx + 1)];
-    }, playerState.hand);
-
-    // Simulate discarded state for drawing
-    const simulatedState = {
-      ...playerState,
-      hand: updatedHand,
-      discard: [...playerState.discard, ...toDiscard],
-      deck: [...playerState.deck],
-    };
-
-    const drawEvents = createDrawEvents(
-      playerId,
-      simulatedState,
-      toDiscard.length,
-      random,
+      null,
+      events,
     );
-
-    return { events: [...discardEvents, ...drawEvents] };
-  }
-
-  return { events: [] };
-};
+  },
+);

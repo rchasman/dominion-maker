@@ -29,16 +29,24 @@ export type PendingChoice =
       prompt: string;
       cardOptions: CardName[];
       cardBeingPlayed: CardName;
+      intent?:
+        | "trash"
+        | "discard"
+        | "gain"
+        | "topdeck"
+        | "play"
+        | "organize"
+        | "keep"
+        | "select";
+      presentation?: { currentRoundIndex?: number };
       // Simple selection mode
       from?: "hand" | "supply" | "revealed" | "options" | "discard";
       min?: number;
       max?: number;
-      stage?: string;
       // Complex multi-action mode
       actions?: CardAction[];
       requiresOrdering?: boolean;
       orderingPrompt?: string;
-      metadata?: Record<string, unknown>;
     }
   | {
       choiceType: "reaction";
@@ -47,12 +55,6 @@ export type PendingChoice =
       triggeringCard: CardName; // Card that triggered the reaction
       triggerType: import("./card-types").ReactionTrigger; // on_attack, on_gain, etc.
       availableReactions: CardName[];
-      metadata: {
-        allTargets: PlayerId[];
-        currentTargetIndex: number;
-        blockedTargets: PlayerId[];
-        originalCause: string;
-      };
     };
 
 /**

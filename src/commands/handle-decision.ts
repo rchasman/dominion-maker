@@ -1,7 +1,7 @@
 import type { GameState, PlayerId } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { CommandResult } from "./types";
-import { resumeExecution } from "../engine/execute";
+import { resumeExecution } from "../engine/resume";
 
 /** Validate the offered contract once, before any effect or movement occurs. */
 export function handleSubmitDecision(

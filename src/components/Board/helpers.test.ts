@@ -53,12 +53,6 @@ describe("Board/helpers", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["human"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "militia-attack",
-          },
         },
       };
 
@@ -84,12 +78,6 @@ describe("Board/helpers", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["ai"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "militia-attack",
-          },
         },
       };
 
@@ -226,12 +214,6 @@ describe("Board/helpers", () => {
           triggeringCard: "Witch",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["human"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "witch-attack",
-          },
         },
       };
 

@@ -57,26 +57,30 @@ function reload(engine: DominionEngine) {
 describe("Composable card execution", () => {
   it("resumes a legacy synthetic Throne Room checkpoint", () => {
     let engine = createEngine({ human: ["Workshop"], opponent: ["Copper"] });
-    engine.applyExternalEvents([
-      {
-        type: "DECISION_REQUIRED",
-        decision: {
-          choiceType: "decision",
-          playerId: "human",
-          cardBeingPlayed: "Throne Room",
-          prompt: "",
-          cardOptions: [],
-          min: 0,
-          max: 0,
-          from: "options",
-          stage: "execute_throned_card",
-          metadata: {
-            throneRoomTarget: "Workshop",
-            throneRoomExecutionsRemaining: 2,
+    engine.applyExternalEvents(
+      JSON.parse(
+        JSON.stringify([
+          {
+            type: "DECISION_REQUIRED",
+            decision: {
+              choiceType: "decision",
+              playerId: "human",
+              cardBeingPlayed: "Throne Room",
+              prompt: "",
+              cardOptions: [],
+              min: 0,
+              max: 0,
+              from: "options",
+              stage: "execute_throned_card",
+              metadata: {
+                throneRoomTarget: "Workshop",
+                throneRoomExecutionsRemaining: 2,
+              },
+            },
           },
-        },
-      },
-    ]);
+        ]),
+      ),
+    );
     engine = reload(engine);
     select(engine, []);
     expectDecision(engine, "Workshop", "supply");

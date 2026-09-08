@@ -4,6 +4,39 @@ import { resetEventCounter } from "../events/id-generator";
 import type { GameState } from "../types/game-state";
 import type { GameCommand } from "./types";
 
+function withExecutionFrame(state: GameState): GameState {
+  const pending = state.pendingChoice;
+  if (!pending) return state;
+  return {
+    ...state,
+    executionVersion: 2,
+    executionStack:
+      pending.choiceType === "decision"
+        ? [
+            {
+              type: "choice",
+              card: pending.cardBeingPlayed,
+              playerId: pending.playerId,
+              cause: "evt-card",
+              trigger: { type: "play" },
+              memory: null,
+            },
+          ]
+        : [
+            {
+              type: "attack",
+              card: pending.triggeringCard,
+              playerId: pending.triggeringPlayerId,
+              cause: "evt-attack",
+              targets: [pending.playerId],
+              index: 0,
+              phase: "react",
+              blocked: false,
+            },
+          ],
+  };
+}
+
 function createMockState(): GameState {
   // Partial supply satisfies Record<CardName, number> structurally via a
   // string-keyed record (same idiom as events/project.ts).
@@ -62,7 +95,7 @@ describe("handle - handleCommand", () => {
       requestId: "undo_1",
     };
 
-    const result = handleCommand(state, command);
+    const result = handleCommand(withExecutionFrame(state), command);
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -77,7 +110,7 @@ describe("handle - handleCommand", () => {
       requestId: "undo_1",
     };
 
-    const result = handleCommand(state, command);
+    const result = handleCommand(withExecutionFrame(state), command);
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -93,7 +126,7 @@ describe("handle - handleCommand", () => {
     };
 
     // Try to execute as wrong player
-    const result = handleCommand(state, command, "p2");
+    const result = handleCommand(withExecutionFrame(state), command, "p2");
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -108,8 +141,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
-      // Copper has no card effect, so the handler emits only the base event
-      cardBeingPlayed: "Copper",
+      // Resume a saved optional Cellar selection.
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 0,
     };
@@ -121,7 +154,7 @@ describe("handle - handleCommand", () => {
 
     // Should allow from decision player even if not active player
     state.activePlayerId = "p2";
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
   });
@@ -135,12 +168,6 @@ describe("handle - handleCommand", () => {
       triggeringPlayerId: "p1",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p2", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.players.p2!.hand = ["Moat"];
     state.players.p3 = {
@@ -160,7 +187,7 @@ describe("handle - handleCommand", () => {
 
     // Should allow from defender even though p1 is active
     state.activePlayerId = "p1";
-    const result = handleCommand(state, command, "p2");
+    const result = handleCommand(withExecutionFrame(state), command, "p2");
 
     expect(result.ok).toBe(true);
   });
@@ -174,7 +201,7 @@ describe("handle - handleCommand", () => {
     };
 
     // Should allow from non-active player
-    const result = handleCommand(state, command, "p2");
+    const result = handleCommand(withExecutionFrame(state), command, "p2");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -188,7 +215,7 @@ describe("handle - handleCommand", () => {
       players: ["p1", "p2"],
     };
 
-    const result = handleCommand(state, command);
+    const result = handleCommand(withExecutionFrame(state), command);
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -203,7 +230,7 @@ describe("handle - handleCommand", () => {
       card: "Village",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -220,7 +247,7 @@ describe("handle - handleCommand", () => {
       card: "Copper",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -236,7 +263,7 @@ describe("handle - handleCommand", () => {
       playerId: "p1",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
   });
@@ -253,7 +280,7 @@ describe("handle - handleCommand", () => {
       card: "Copper",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -271,7 +298,7 @@ describe("handle - handleCommand", () => {
       card: "Copper",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -285,7 +312,7 @@ describe("handle - handleCommand", () => {
       playerId: "p1",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -300,8 +327,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
-      // Copper has no card effect, so the handler emits only the base event
-      cardBeingPlayed: "Copper",
+      // Resume a saved optional Cellar selection.
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 0,
     };
@@ -311,7 +338,7 @@ describe("handle - handleCommand", () => {
       choice: { selectedCards: [] },
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -326,8 +353,8 @@ describe("handle - handleCommand", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
-      // Copper has no card effect, so the handler emits only the base event
-      cardBeingPlayed: "Copper",
+      // Resume a saved optional Cellar selection.
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 0,
     };
@@ -336,7 +363,7 @@ describe("handle - handleCommand", () => {
       playerId: "p1",
     };
 
-    const result = handleCommand(state, command, "p1");
+    const result = handleCommand(withExecutionFrame(state), command, "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -352,12 +379,6 @@ describe("handle - handleCommand", () => {
       triggeringPlayerId: "p1",
       triggerType: "on_attack",
       availableReactions: [],
-      metadata: {
-        allTargets: ["p2", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.players.p3 = {
       deck: [],
@@ -373,7 +394,7 @@ describe("handle - handleCommand", () => {
       playerId: "p2",
     };
 
-    const result = handleCommand(state, command, "p2");
+    const result = handleCommand(withExecutionFrame(state), command, "p2");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");

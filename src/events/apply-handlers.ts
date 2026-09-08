@@ -231,7 +231,9 @@ export function applyReactionEvent(
         triggeringCard: reactionEvent.triggeringCard,
         triggerType: reactionEvent.triggerType,
         availableReactions: reactionEvent.availableReactions,
-        metadata: reactionEvent.metadata,
+        ...(Object.hasOwn(reactionEvent, "metadata") && {
+          metadata: Reflect.get(reactionEvent, "metadata"),
+        }),
       },
       pendingChoiceEventId: reactionEvent.id || null,
     };

@@ -2,23 +2,33 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { handleRevealReaction, handleDeclineReaction } from "./handle-reaction";
 import { resetEventCounter } from "../events/id-generator";
 import type { GameState } from "../types/game-state";
-import type { PendingChoice } from "../types/pending-choice";
 import type {
   AttackResolvedEvent,
   ReactionOpportunityEvent,
 } from "../events/types";
 
-type ReactionPendingChoice = Extract<PendingChoice, { choiceType: "reaction" }>;
-
-/**
- * The handlers defensively guard against reactions persisted without metadata
- * (see handleRevealReaction/handleDeclineReaction). Build such a value without
- * weakening the fixture's type.
- */
-function reactionWithoutMetadata(
-  fields: Omit<ReactionPendingChoice, "metadata">,
-): PendingChoice {
-  return fields as PendingChoice;
+function withReactionFrame(state: GameState): GameState {
+  const pending = state.pendingChoice;
+  if (pending?.choiceType !== "reaction") return state;
+  const targets = state.playerOrder.filter(
+    player => player !== pending.triggeringPlayerId,
+  );
+  return {
+    ...state,
+    executionVersion: 2,
+    executionStack: [
+      {
+        type: "attack",
+        card: pending.triggeringCard,
+        playerId: pending.triggeringPlayerId,
+        cause: "evt-attack",
+        targets,
+        index: targets.indexOf(pending.playerId),
+        phase: "react",
+        blocked: false,
+      },
+    ],
+  };
 }
 
 function createMockState(): GameState {
@@ -84,7 +94,7 @@ describe("handle-reaction - handleRevealReaction", () => {
     const state = createMockState();
     state.pendingChoice = null;
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
@@ -103,27 +113,29 @@ describe("handle-reaction - handleRevealReaction", () => {
       max: 0,
     };
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
-  test("should return error when metadata is missing", () => {
+  test("should resume a reaction using only its execution checkpoint", () => {
     const state = createMockState();
-    state.pendingChoice = reactionWithoutMetadata({
+    state.pendingChoice = {
       choiceType: "reaction",
       playerId: "p1",
       triggeringCard: "Witch",
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-    });
+    };
 
-    const result = handleRevealReaction(state, "p1", "Moat");
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("Expected failure");
-    expect(result.error).toContain("Missing reaction metadata");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.events.some(event => event.type === "ATTACK_RESOLVED")).toBe(
+      true,
+    );
   });
 
   test("should return error when wrong player reveals", () => {
@@ -135,16 +147,10 @@ describe("handle-reaction - handleRevealReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleRevealReaction(state, "p3", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p3", "Moat");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your reaction to reveal");
@@ -159,17 +165,15 @@ describe("handle-reaction - handleRevealReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
     // Village is a valid card but not among the available reactions
-    const result = handleRevealReaction(state, "p1", "Village");
+    const result = handleRevealReaction(
+      withReactionFrame(state),
+      "p1",
+      "Village",
+    );
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Card not available to reveal");
@@ -184,16 +188,10 @@ describe("handle-reaction - handleRevealReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -223,16 +221,10 @@ describe("handle-reaction - handleRevealReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -247,6 +239,7 @@ describe("handle-reaction - handleRevealReaction", () => {
 
   test("should apply attack when last target reveals reaction", () => {
     const state = createMockState();
+    state.players.p3!.hand = ["Moat"];
     state.pendingChoice = {
       choiceType: "reaction",
       playerId: "p3",
@@ -254,16 +247,10 @@ describe("handle-reaction - handleRevealReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 1,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-3";
 
-    const result = handleRevealReaction(state, "p3", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p3", "Moat");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -285,7 +272,7 @@ describe("handle-reaction - handleDeclineReaction", () => {
     const state = createMockState();
     state.pendingChoice = null;
 
-    const result = handleDeclineReaction(state, "p1");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
@@ -304,27 +291,29 @@ describe("handle-reaction - handleDeclineReaction", () => {
       max: 0,
     };
 
-    const result = handleDeclineReaction(state, "p1");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending reaction");
   });
 
-  test("should return error when metadata is missing", () => {
+  test("should resume a reaction using only its execution checkpoint", () => {
     const state = createMockState();
-    state.pendingChoice = reactionWithoutMetadata({
+    state.pendingChoice = {
       choiceType: "reaction",
       playerId: "p1",
       triggeringCard: "Witch",
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-    });
+    };
 
-    const result = handleDeclineReaction(state, "p1");
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("Expected failure");
-    expect(result.error).toContain("Missing reaction metadata");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.events.some(event => event.type === "ATTACK_RESOLVED")).toBe(
+      true,
+    );
   });
 
   test("should return error when wrong player declines", () => {
@@ -336,16 +325,10 @@ describe("handle-reaction - handleDeclineReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleDeclineReaction(state, "p3");
+    const result = handleDeclineReaction(withReactionFrame(state), "p3");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your reaction to decline");
@@ -360,16 +343,10 @@ describe("handle-reaction - handleDeclineReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleDeclineReaction(state, "p1");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -396,16 +373,10 @@ describe("handle-reaction - handleDeclineReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleDeclineReaction(state, "p1");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -427,16 +398,10 @@ describe("handle-reaction - handleDeclineReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: [],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 1,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-3";
 
-    const result = handleDeclineReaction(state, "p3");
+    const result = handleDeclineReaction(withReactionFrame(state), "p3");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -458,16 +423,10 @@ describe("handle-reaction - handleDeclineReaction", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1", "p3"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleDeclineReaction(state, "p1");
+    const result = handleDeclineReaction(withReactionFrame(state), "p1");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -494,16 +453,10 @@ describe("handle-reaction - Edge cases", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = null;
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
@@ -511,6 +464,7 @@ describe("handle-reaction - Edge cases", () => {
 
   test("should handle single target with reaction", () => {
     const state = createMockState();
+    state.playerOrder = ["p1", "p2"];
     state.pendingChoice = {
       choiceType: "reaction",
       playerId: "p1",
@@ -518,16 +472,10 @@ describe("handle-reaction - Edge cases", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-1",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleRevealReaction(state, "p1", "Moat");
+    const result = handleRevealReaction(withReactionFrame(state), "p1", "Moat");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
