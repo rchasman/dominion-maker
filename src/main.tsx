@@ -29,6 +29,17 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
   });
 }
 
+// A deploy replaces every hashed chunk. Tabs opened before the deploy still
+// reference the old hashes, so their first lazy import 404s. Reload to pick
+// up the new index instead of surfacing a dead tooltip as an app crash.
+window.addEventListener("vite:preloadError", event => {
+  event.preventDefault();
+  uiLogger.warn("Stale chunk after deploy, reloading", {
+    error: event.payload.message,
+  });
+  window.location.reload();
+});
+
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("Root element not found");
