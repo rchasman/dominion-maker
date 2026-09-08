@@ -20,12 +20,16 @@ export function StateView({ state }: StateViewProps) {
         <div style={styles.stateRow}>
           <span>Hand:</span>{" "}
           <span style={styles.stateValue}>
-            {player.hand.join(", ") || "(empty)"}
+            {player.handHidden
+              ? `${player.handCount ?? 0} hidden cards`
+              : player.hand.join(", ") || "(empty)"}
           </span>
         </div>
         <div style={styles.stateRow}>
           <span>Deck:</span>{" "}
-          <span style={styles.stateValue}>{player.deck.length} cards</span>
+          <span style={styles.stateValue}>
+            {player.deckCount ?? player.deck.length} cards
+          </span>
         </div>
         <div style={styles.stateRow}>
           <span>Discard:</span>{" "}

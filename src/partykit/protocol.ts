@@ -86,7 +86,13 @@ export interface ChatMessageData {
 
 // Client -> Game Server
 export type GameClientMessage =
-  | { type: "join"; name: string; clientId?: string; isBot?: boolean }
+  | {
+      type: "join";
+      name: string;
+      clientId?: string;
+      isBot?: boolean;
+      reconnectToken?: string;
+    }
   | { type: "spectate"; name: string; clientId?: string }
   | { type: "start_game"; kingdomCards?: CardName[]; botPlayerIds?: PlayerId[] }
   | {
@@ -106,6 +112,7 @@ export type GameClientMessage =
   | { type: "request_undo"; toEventId: string; reason?: string }
   | { type: "approve_undo"; requestId: string }
   | { type: "deny_undo"; requestId: string }
+  | { type: "preview_state"; eventId: string }
   | { type: "resign" }
   | { type: "leave" }
   | { type: "chat"; message: ChatMessageData };
@@ -117,7 +124,10 @@ export type GameServerMessage =
       playerId: PlayerId | null;
       isSpectator: boolean;
       isHost: boolean;
+      reconnectToken?: string;
+      gameStarted?: boolean;
     }
+  | { type: "preview_state"; eventId: string; state: GameState | null }
   | { type: "player_list"; players: PlayerInfo[] }
   | { type: "spectator_count"; count: number }
   | { type: "game_started"; state: GameState; events: GameEvent[] }

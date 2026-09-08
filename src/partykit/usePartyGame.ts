@@ -15,7 +15,7 @@ import type {
   GameServerMessage,
   ChatMessageData,
 } from "./protocol";
-import { projectState } from "../events/project";
+import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
 import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
 
@@ -104,7 +104,7 @@ interface PartyGameActions {
   denyUndo: (requestId: string) => void;
   resign: () => void;
   leave: () => void;
-  getStateAtEvent: (eventId: string) => GameState;
+  getStateAtEvent: (eventId: string) => Promise<GameState>;
   sendChat: (message: ChatMessageData) => void;
 }
 
@@ -118,6 +118,16 @@ export function usePartyGame({
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
   const eventsRef = useRef<GameEvent[]>([]);
+  const previews = useRef(
+    new Map<
+      string,
+      {
+        resolve: (state: GameState) => void;
+        reject: (error: Error) => void;
+        timer: ReturnType<typeof setTimeout>;
+      }
+    >(),
+  );
   // Use ref to track spectator status without causing action functions to recreate
   const isSpectatorRef = useRef(false);
 
@@ -144,6 +154,7 @@ export function usePartyGame({
   }, [state.isSpectator]);
 
   useEffect(() => {
+    const pendingPreviews = previews.current;
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
       room: roomId,
@@ -151,27 +162,46 @@ export function usePartyGame({
 
     socketRef.current = socket;
 
-    socket.addEventListener("open", () => {
+    const onOpen = () => {
       setState(s => ({ ...s, isConnected: true }));
+      const reconnectToken = loadReconnectToken(roomId, clientId);
       const msg: GameClientMessage = isSpectator
         ? { type: "spectate", name: playerName, clientId }
-        : { type: "join", name: playerName, clientId };
+        : {
+            type: "join",
+            name: playerName,
+            clientId,
+            ...(reconnectToken ? { reconnectToken } : {}),
+          };
       socket.send(JSON.stringify(msg));
-    });
+    };
 
-    socket.addEventListener("close", () => {
+    const onClose = () => {
       setState(s => ({ ...s, isConnected: false }));
-    });
+    };
 
-    socket.addEventListener("message", e => {
+    const onMessage = (e: MessageEvent) => {
       const data = e.data as string;
       const msg = JSON.parse(data) as GameServerMessage;
+      if (msg.type === "joined" && msg.reconnectToken)
+        saveReconnectToken(roomId, clientId, msg.reconnectToken);
       handleMessage(msg);
-    });
+    };
 
+    socket.addEventListener("open", onOpen);
+    socket.addEventListener("message", onMessage);
+    socket.addEventListener("close", onClose);
     return () => {
+      socket.removeEventListener("open", onOpen);
+      socket.removeEventListener("message", onMessage);
+      socket.removeEventListener("close", onClose);
       socket.close();
       socketRef.current = null;
+      for (const pending of pendingPreviews.values()) {
+        clearTimeout(pending.timer);
+        pending.reject(new Error("Disconnected"));
+      }
+      pendingPreviews.clear();
     };
     // handleMessage is stable (no dependencies) so we don't need it in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,6 +209,16 @@ export function usePartyGame({
 
   const handleMessage = useCallback((msg: GameServerMessage) => {
     switch (msg.type) {
+      case "preview_state": {
+        const pending = previews.current.get(msg.eventId);
+        if (pending) {
+          clearTimeout(pending.timer);
+          previews.current.delete(msg.eventId);
+          if (msg.state) pending.resolve(msg.state);
+          else pending.reject(new Error("History checkpoint no longer exists"));
+        }
+        break;
+      }
       case "joined":
         setState(s => ({
           ...s,
@@ -411,14 +451,36 @@ export function usePartyGame({
     [send],
   );
 
-  const getStateAtEvent = useCallback((eventId: string): GameState => {
-    const events = eventsRef.current;
-    const eventIndex = events.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) {
-      throw new Error(`Event ${eventId} not found`);
-    }
-    return projectState(events.slice(0, eventIndex + 1));
-  }, []);
+  const getStateAtEvent = useCallback(
+    (eventId: string): Promise<GameState> => {
+      const socket = socketRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN)
+        return Promise.reject(new Error("Not connected"));
+      return new Promise((resolve, reject) => {
+        const previous = previews.current.get(eventId);
+        if (previous) {
+          const originalResolve = previous.resolve;
+          const originalReject = previous.reject;
+          previous.resolve = state => {
+            originalResolve(state);
+            resolve(state);
+          };
+          previous.reject = error => {
+            originalReject(error);
+            reject(error);
+          };
+          return;
+        }
+        const timer = setTimeout(() => {
+          previews.current.delete(eventId);
+          reject(new Error("History request timed out"));
+        }, 10_000);
+        previews.current.set(eventId, { resolve, reject, timer });
+        send({ type: "preview_state", eventId });
+      });
+    },
+    [send],
+  );
 
   // Auto-start single-player games
   useEffect(() => {

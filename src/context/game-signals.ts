@@ -88,9 +88,9 @@ export const setGameMode$ = signal<((mode: GameMode) => void) | null>(null);
 export const setModelSettings$ = signal<
   ((settings: Partial<ModelSettings>) => void) | null
 >(null);
-export const getStateAtEvent$ = signal<((eventId: string) => GameState) | null>(
-  null,
-);
+export const getStateAtEvent$ = signal<
+  ((eventId: string) => GameState | Promise<GameState>) | null
+>(null);
 
 // ---------------------------------------------------------------------------
 // LLM logs signal

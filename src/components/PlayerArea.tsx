@@ -111,7 +111,8 @@ function HandAndDeckGrid({
     >
       <HandSection
         hand={player.hand}
-        showCards={showCards}
+        showCards={showCards && !player.handHidden}
+        hiddenCount={player.handCount}
         loading={loading}
         selectedCardIndices={selectedCardIndices}
         pendingChoice={pendingChoice}
@@ -126,6 +127,7 @@ function HandAndDeckGrid({
       {showCards && (
         <DeckDiscardSection
           deck={player.deck}
+          deckCount={player.deckCount}
           discard={player.discard}
           loading={loading}
           deckTopRevealed={player.deckTopRevealed ?? false}

@@ -101,10 +101,12 @@ export function optimizeStateForAI(state: GameState) {
     opponents,
     decisionFacts: {
       ...deckFacts(yourAllCards),
-      drawPileCount: decisionPlayer?.deck.length ?? 0,
+      drawPileCount:
+        decisionPlayer?.deckCount ?? decisionPlayer?.deck.length ?? 0,
       discardPileCount: decisionPlayer?.discard.length ?? 0,
       nextFiveCardDrawNeedsShuffle:
-        (decisionPlayer?.deck.length ?? 0) < NEXT_HAND_SIZE,
+        (decisionPlayer?.deckCount ?? decisionPlayer?.deck.length ?? 0) <
+        NEXT_HAND_SIZE,
       scoreLead: opponents.length ? yourVP - bestOpponentVP : 0,
       emptyPiles: Object.entries(state.supply)
         .filter(([, count]) => count <= 0)

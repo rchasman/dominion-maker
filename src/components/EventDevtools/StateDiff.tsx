@@ -65,18 +65,24 @@ function comparePlayerStates(
   nextPlayer: PlayerState,
 ): StateChange[] {
   return [
-    prevPlayer.hand.length !== nextPlayer.hand.length
+    (prevPlayer.handCount ?? prevPlayer.hand.length) !==
+    (nextPlayer.handCount ?? nextPlayer.hand.length)
       ? {
           path: `${playerId}.hand`,
-          from: prevPlayer.hand.join(", ") || "(empty)",
-          to: nextPlayer.hand.join(", ") || "(empty)",
+          from: prevPlayer.handHidden
+            ? `${prevPlayer.handCount ?? 0} hidden cards`
+            : prevPlayer.hand.join(", ") || "(empty)",
+          to: nextPlayer.handHidden
+            ? `${nextPlayer.handCount ?? 0} hidden cards`
+            : nextPlayer.hand.join(", ") || "(empty)",
         }
       : null,
-    prevPlayer.deck.length !== nextPlayer.deck.length
+    (prevPlayer.deckCount ?? prevPlayer.deck.length) !==
+    (nextPlayer.deckCount ?? nextPlayer.deck.length)
       ? {
           path: `${playerId}.deck`,
-          from: `${prevPlayer.deck.length} cards`,
-          to: `${nextPlayer.deck.length} cards`,
+          from: `${prevPlayer.deckCount ?? prevPlayer.deck.length} cards`,
+          to: `${nextPlayer.deckCount ?? nextPlayer.deck.length} cards`,
         }
       : null,
     prevPlayer.discard.length !== nextPlayer.discard.length

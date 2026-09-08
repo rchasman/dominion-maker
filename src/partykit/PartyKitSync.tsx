@@ -1,201 +1,112 @@
-/**
- * PartyKitSync - Background sync of local game to PartyKit for spectating
- *
- * Listens to events from local GameContext and forwards them to PartyKit.
- * If connection fails, silently continues - local game is unaffected.
- */
-
+/** Mirrors a local game to a host-owned room for public spectating. */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { events$, gameState$, gameMode$ } from "../context/game-signals";
 import PartySocket from "partysocket";
-import type { GameClientMessage } from "./protocol";
-import { generatePlayerName } from "../lib/name-generator";
+import { events$, gameState$, gameMode$ } from "../context/game-signals";
 import { generateRoomId } from "../lib/room-id";
-import { STORAGE_KEYS } from "../context/storage-utils";
+import { generatePlayerName } from "../lib/name-generator";
+import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
 import { multiplayerLogger } from "../lib/logger";
-import { run } from "../lib/run";
+import type { GameServerMessage } from "./protocol";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
     : "dominion-maker.rchasman.partykit.dev";
 
-const ROOM_STORAGE_KEY = "dominion_singleplayer_sync_room";
-
 export function PartyKitSync() {
   const events = events$.value;
-  const gameState = gameState$.value;
+  const state = gameState$.value;
   const gameMode = gameMode$.value;
+  const gameIdentity = events[0]?.id;
   const socketRef = useRef<PartySocket | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const syncedEventCountRef = useRef(0);
+  const [joined, setJoined] = useState(false);
 
-  // Persistent room ID for this single-player session
-  const roomIdRef = useRef<string>(
-    run(() => {
-      try {
-        const stored = localStorage.getItem(ROOM_STORAGE_KEY);
-        if (stored) return stored;
-      } catch {}
-      const newId = generateRoomId();
-      try {
-        localStorage.setItem(ROOM_STORAGE_KEY, newId);
-      } catch {}
-      return newId;
-    }),
-  );
-
-  // Get player name
-  const playerNameRef = useRef<string>(
-    run(() => {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
-        if (stored) return stored;
-      } catch {}
-      return generatePlayerName();
-    }),
-  );
-
-  // Connect to PartyKit when game starts
   useEffect(() => {
-    if (!gameState) return;
-
+    if (!gameIdentity) return;
+    const room = generateRoomId();
+    let clientId: string = crypto.randomUUID();
+    let name = generatePlayerName();
     try {
-      const socket = new PartySocket({
-        host: PARTYKIT_HOST,
-        room: roomIdRef.current,
-      });
-
-      socketRef.current = socket;
-
-      socket.addEventListener("open", () => {
-        multiplayerLogger.info("Connected for spectating", {
-          room: roomIdRef.current,
-        });
-
-        // Join as the human player
-        const joinMsg: GameClientMessage = {
+      clientId = localStorage.getItem("dominion_client_id") ?? clientId;
+      localStorage.setItem("dominion_client_id", clientId);
+      name = localStorage.getItem("dominion_player_name") ?? name;
+    } catch {
+      /* Storage is optional for a local spectator mirror. */
+    }
+    const socket = new PartySocket({ host: PARTYKIT_HOST, room });
+    socketRef.current = socket;
+    const onOpen = () => {
+      const reconnectToken = loadReconnectToken(room, clientId);
+      socket.send(
+        JSON.stringify({
           type: "join",
-          name: playerNameRef.current,
-        };
-        socket.send(JSON.stringify(joinMsg));
-        setIsJoined(true);
-      });
-
-      socket.addEventListener("error", () => {
-        multiplayerLogger.warn("Connection failed - continuing locally");
-        socketRef.current = null;
-      });
-
-      socket.addEventListener("close", () => {
-        setIsJoined(false);
-      });
-
-      return () => {
-        socket.close();
-        socketRef.current = null;
-        setIsJoined(false);
-      };
-    } catch (error) {
-      multiplayerLogger.warn("Setup failed - continuing locally", { error });
-    }
-  }, [gameState]);
-
-  // Reset sync counter when new game starts (events array shrinks)
-  useEffect(() => {
-    if (events.length < syncedEventCountRef.current) {
-      multiplayerLogger.info("New game detected, resetting sync counter");
-      syncedEventCountRef.current = 0;
-
-      // Clear old room and generate new one for fresh game
-      const newRoomId = generateRoomId();
-      roomIdRef.current = newRoomId;
-      localStorage.setItem(ROOM_STORAGE_KEY, newRoomId);
-
-      // Close old connection if it exists
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-        setIsJoined(false);
+          name,
+          clientId,
+          ...(reconnectToken ? { reconnectToken } : {}),
+        }),
+      );
+    };
+    const onMessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(String(event.data)) as GameServerMessage;
+        if (msg.type !== "joined" || msg.isSpectator) return;
+        if (msg.reconnectToken)
+          saveReconnectToken(room, clientId, msg.reconnectToken);
+        if (!msg.gameStarted)
+          socket.send(
+            JSON.stringify({
+              type: "start_singleplayer",
+              gameMode: gameMode$.peek(),
+            }),
+          );
+        setJoined(true);
+      } catch {
+        multiplayerLogger.warn("Invalid sync response");
       }
-    }
-  }, [events.length]);
+    };
+    const onClose = () => setJoined(false);
+    const onError = () =>
+      multiplayerLogger.warn(
+        "Spectator sync disconnected; local game continues",
+      );
+    socket.addEventListener("open", onOpen);
+    socket.addEventListener("message", onMessage);
+    socket.addEventListener("close", onClose);
+    socket.addEventListener("error", onError);
+    return () => {
+      socket.removeEventListener("open", onOpen);
+      socket.removeEventListener("message", onMessage);
+      socket.removeEventListener("close", onClose);
+      socket.removeEventListener("error", onError);
+      socket.close();
+      socketRef.current = null;
+      setJoined(false);
+    };
+  }, [gameIdentity]);
 
-  // Start game on server once joined
   useEffect(() => {
-    if (!isJoined || !gameState || syncedEventCountRef.current > 0) return;
-
     const socket = socketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    if (
+      !joined ||
+      !socket ||
+      socket.readyState !== WebSocket.OPEN ||
+      !events.length
+    )
+      return;
+    // Full history makes reconnect and undo idempotent, without relying on event IDs from a different engine.
+    socket.send(JSON.stringify({ type: "sync_events", events }));
+  }, [events, joined]);
 
-    try {
-      const startMsg: GameClientMessage = {
-        type: "start_singleplayer",
-        gameMode,
-      };
-      socket.send(JSON.stringify(startMsg));
-
-      // Send all events to sync initial state
-      if (events.length > 0) {
-        const syncMsg: GameClientMessage = {
-          type: "sync_events",
-          events,
-        };
-        socket.send(JSON.stringify(syncMsg));
-        multiplayerLogger.info("Synced initial state", {
-          eventCount: events.length,
-        });
-      }
-
-      syncedEventCountRef.current = events.length;
-    } catch (error) {
-      multiplayerLogger.warn("Failed to start game on server", { error });
-    }
-  }, [isJoined, gameState, events, gameMode]);
-
-  // Sync new events as they occur
   useEffect(() => {
-    if (!isJoined || syncedEventCountRef.current === 0) return;
+    if (joined)
+      socketRef.current?.send(
+        JSON.stringify({ type: "change_game_mode", gameMode }),
+      );
+  }, [gameMode, joined]);
 
-    const socket = socketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-    const newEvents = events.slice(syncedEventCountRef.current);
-    if (newEvents.length === 0) return;
-
-    try {
-      const syncMsg: GameClientMessage = {
-        type: "sync_events",
-        events: newEvents,
-      };
-      socket.send(JSON.stringify(syncMsg));
-      multiplayerLogger.info("Synced new events", {
-        eventCount: newEvents.length,
-      });
-      syncedEventCountRef.current = events.length;
-    } catch (error) {
-      multiplayerLogger.warn("Failed to sync events", { error });
-    }
-  }, [events, isJoined]);
-
-  // End game on server when local game ends
   useEffect(() => {
-    if (!gameState?.gameOver || !isJoined) return;
-
-    const socket = socketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
-    try {
-      const leaveMsg: GameClientMessage = { type: "leave" };
-      socket.send(JSON.stringify(leaveMsg));
-      multiplayerLogger.info("Game ended, cleaning up server");
-
-      // Clear room ID so a new room is created on next game
-      localStorage.removeItem(ROOM_STORAGE_KEY);
-    } catch (error) {
-      multiplayerLogger.warn("Failed to send leave message", { error });
-    }
-  }, [gameState?.gameOver, isJoined]);
-
+    if (joined && state?.gameOver)
+      socketRef.current?.send(JSON.stringify({ type: "leave" }));
+  }, [joined, state?.gameOver]);
   return null;
 }

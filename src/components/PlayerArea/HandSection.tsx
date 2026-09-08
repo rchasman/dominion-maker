@@ -9,6 +9,7 @@ const PLACEHOLDER_HAND_SIZE = 5;
 
 interface HandSectionProps {
   hand: CardName[];
+  hiddenCount?: number | undefined;
   showCards: boolean;
   loading: boolean;
   selectedCardIndices: number[];
@@ -192,6 +193,7 @@ function HandCardRenderer({
 
 export function HandSection({
   hand,
+  hiddenCount,
   showCards,
   loading,
   selectedCardIndices,
@@ -217,7 +219,7 @@ export function HandSection({
   }, [animation, inverted]);
 
   if (!showCards) {
-    return <HandCountDisplay handLength={hand.length} />;
+    return <HandCountDisplay handLength={hiddenCount ?? hand.length} />;
   }
 
   return (

@@ -40,6 +40,7 @@ function LoadingCardContent() {
 
 interface DeckDiscardSectionProps {
   deck: CardName[];
+  deckCount?: number | undefined;
   discard: CardName[];
   loading: boolean;
   deckTopRevealed: boolean;
@@ -117,6 +118,7 @@ function getDiscardContent(
 
 export function DeckDiscardSection({
   deck,
+  deckCount = deck.length,
   discard,
   loading,
   deckTopRevealed,
@@ -201,10 +203,11 @@ export function DeckDiscardSection({
               if (loading) {
                 return <LoadingCardContent />;
               }
-              if (deck.length > 0) {
+              if (deckCount > 0) {
                 return (
                   <Pile
                     cards={deck}
+                    count={deckCount}
                     knownCards={knownDeckCards}
                     pileType="deck"
                     size="medium"

@@ -74,7 +74,7 @@ interface MultiplayerGameState {
   approveUndo: (requestId: string) => void;
   denyUndo: (requestId: string) => void;
   pendingUndo: PendingUndoRequest | null;
-  getStateAtEvent: (eventId: string) => GameState;
+  getStateAtEvent: (eventId: string) => GameState | Promise<GameState>;
   startGame: () => void;
   sendChat: (message: ChatMessageData) => void;
 }
@@ -96,6 +96,7 @@ export function useMultiplayerGameContext({
   gameMode = "engine",
   onGameModeChange,
 }: UseMultiplayerGameContextOptions): void {
+  const { sendChat, startGame } = game;
   // Strategy analysis - writes to playerStrategies$ signal
   useStrategyAnalysisFromEvents(game.events, game.gameState);
 
@@ -143,7 +144,7 @@ export function useMultiplayerGameContext({
   }, [game.chatMessages]);
   useEffect(() => {
     sendChat$.value = (content: string) => {
-      game.sendChat({
+      sendChat({
         id: crypto.randomUUID(),
         senderName: playerName,
         content,
@@ -153,18 +154,11 @@ export function useMultiplayerGameContext({
     return () => {
       sendChat$.value = null;
     };
-  }, [game.sendChat, playerName]);
+  }, [sendChat, playerName]);
 
   // No-op unplayTreasure for multiplayer
   const unplayTreasure = (_card: CardName): CommandResult => {
     return { ok: false, error: "Unplay treasure not supported in multiplayer" };
-  };
-
-  // Handle mode change (for single-player via multiplayer connection)
-  const handleGameModeChange = (mode: GameMode) => {
-    if (onGameModeChange) {
-      onGameModeChange(mode);
-    }
   };
 
   // Write action callbacks into signals
@@ -208,11 +202,11 @@ export function useMultiplayerGameContext({
     pendingUndo$.value = game.pendingUndo ?? null;
   }, [game.pendingUndo]);
   useEffect(() => {
-    startGame$.value = () => game.startGame();
-  }, [game.startGame]);
+    startGame$.value = startGame;
+  }, [startGame]);
   useEffect(() => {
-    setGameMode$.value = handleGameModeChange;
-  }, [handleGameModeChange]);
+    setGameMode$.value = mode => onGameModeChange?.(mode);
+  }, [onGameModeChange]);
   useEffect(() => {
     setModelSettings$.value = () => {};
   }, []);

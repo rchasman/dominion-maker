@@ -1,3 +1,6 @@
+import { gameMessageSchema, parseMessage } from "../validation/messages";
+import { playerView, publicEvents } from "./player-view";
+import { projectState } from "../events/project";
 /**
  * PartyKit Game Server
  *
@@ -36,6 +39,8 @@ export default class GameServer implements Party.Server {
   private hostConnectionId: string | null = null;
   private hostClientId: string | null = null;
   private isStarted = false;
+  private localMirror = false;
+  private reconnectTokens = new Map<string, string>();
   private chatMessages: ChatMessageData[] = []; // Chat history
   private playerInfo: Record<
     PlayerId,
@@ -74,7 +79,7 @@ export default class GameServer implements Party.Server {
 
       this.broadcastPlayerList();
       this.broadcastSpectatorCount();
-      this.updateLobby();
+      void this.updateLobby();
     }
 
     // In single-player games, only end if no humans remain (including spectators)
@@ -113,13 +118,24 @@ export default class GameServer implements Party.Server {
   }
 
   onMessage(message: string, sender: Party.Connection) {
-    const msg = JSON.parse(message) as GameClientMessage;
+    const msg = parseMessage(message, gameMessageSchema);
+    if (!msg) {
+      this.send(sender, { type: "error", message: "Invalid message" });
+      return;
+    }
     const conn = this.connections.get(sender.id);
     if (!conn) return;
 
     switch (msg.type) {
       case "join":
-        this.handleJoin(sender, conn, msg.name, msg.clientId, msg.isBot);
+        this.handleJoin(
+          sender,
+          conn,
+          msg.name,
+          msg.clientId,
+          msg.isBot,
+          msg.reconnectToken,
+        );
         break;
       case "spectate":
         this.handleSpectate(sender, conn, msg.name, msg.clientId);
@@ -152,6 +168,18 @@ export default class GameServer implements Party.Server {
       case "deny_undo":
         this.handleGameCommand(sender, conn, msg);
         break;
+      case "preview_state": {
+        const events = [...(this.engine?.eventLog ?? [])];
+        const index = events.findIndex(event => event.id === msg.eventId);
+        const state =
+          index < 0 ? null : projectState(events.slice(0, index + 1));
+        this.send(sender, {
+          type: "preview_state",
+          eventId: msg.eventId,
+          state,
+        });
+        break;
+      }
       case "resign":
         this.handleResign(sender, conn);
         break;
@@ -164,7 +192,15 @@ export default class GameServer implements Party.Server {
     }
   }
 
-  private handleChat(_sender: Party.Connection, message: ChatMessageData) {
+  private handleChat(sender: Party.Connection, input: ChatMessageData) {
+    const player = this.connections.get(sender.id);
+    if (!player?.name) return;
+    const message = {
+      ...input,
+      id: crypto.randomUUID(),
+      senderName: player.name,
+      timestamp: Date.now(),
+    };
     // Store message (with limit)
     this.chatMessages = [...this.chatMessages, message].slice(
       -MAX_CHAT_MESSAGES,
@@ -180,22 +216,40 @@ export default class GameServer implements Party.Server {
     name: string,
     clientId?: string,
     isBot?: boolean,
+    reconnectToken?: string,
   ) {
-    // If game started, check if this player can rejoin
+    const knownToken = clientId
+      ? this.reconnectTokens.get(clientId)
+      : undefined;
+    if (knownToken && reconnectToken !== knownToken) {
+      this.send(conn, {
+        type: "error",
+        message: "Reconnect credentials required",
+      });
+      return;
+    }
+    if (isBot) {
+      this.send(conn, {
+        type: "error",
+        message: "Bots are created by the host",
+      });
+      return;
+    }
     if (this.isStarted && this.engine) {
-      console.log(
-        `[Rejoin] Attempt by ${name} (${clientId}), playerInfo keys:`,
-        Object.keys(this.playerInfo),
-      );
-
-      // Try to find by clientId first (more stable), then fall back to name
-      const existingPlayerId = clientId
-        ? this.findPlayerIdByClientId(clientId)
-        : this.findPlayerIdByName(name);
-
-      console.log(`[Rejoin] Found existingPlayerId:`, existingPlayerId);
-
+      const existingPlayerId =
+        clientId && knownToken && this.playerInfo[clientId] ? clientId : null;
       if (existingPlayerId) {
+        // Replace any previous socket for this authenticated seat.
+        for (const [id, previous] of this.connections) {
+          if (
+            id !== conn.id &&
+            previous.clientId === existingPlayerId &&
+            !previous.isSpectator
+          )
+            this.connections.delete(id);
+        }
+        if (this.hostClientId === existingPlayerId)
+          this.hostConnectionId = conn.id;
         // Rejoin as existing player
         player.name = name;
         player.clientId = existingPlayerId; // ClientId is the playerId
@@ -209,9 +263,11 @@ export default class GameServer implements Party.Server {
 
         this.send(conn, {
           type: "joined",
+          gameStarted: this.isStarted,
           playerId: existingPlayerId,
           isSpectator: false,
           isHost: this.hostClientId === existingPlayerId,
+          ...(knownToken ? { reconnectToken: knownToken } : {}),
         });
 
         // Send full state with playerInfo included
@@ -258,11 +314,25 @@ export default class GameServer implements Party.Server {
 
     const actualClientId = clientId || crypto.randomUUID();
 
+    if (knownToken) {
+      for (const [id, previous] of this.connections) {
+        if (
+          id !== conn.id &&
+          previous.clientId === actualClientId &&
+          !previous.isSpectator
+        )
+          this.connections.delete(id);
+      }
+      if (this.hostClientId === actualClientId) this.hostConnectionId = conn.id;
+    }
     const playerCount = this.getPlayerCount();
     if (playerCount >= MAX_PLAYERS) {
       this.send(conn, { type: "error", message: "Game is full" });
       return;
     }
+
+    const token = knownToken ?? crypto.randomUUID();
+    this.reconnectTokens.set(actualClientId, token);
 
     // Use clientId directly as playerId
     player.name = name;
@@ -282,13 +352,15 @@ export default class GameServer implements Party.Server {
 
     this.send(conn, {
       type: "joined",
+      gameStarted: this.isStarted,
       playerId: actualClientId,
       isSpectator: false,
       isHost: this.hostClientId === actualClientId,
+      reconnectToken: token,
     });
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
-    this.updateLobby();
+    void this.updateLobby();
 
     // Auto-start when 2 players join (from lobby matchmaking)
     if (this.getPlayerCount() === 2 && !this.isStarted) {
@@ -296,19 +368,8 @@ export default class GameServer implements Party.Server {
     }
   }
 
-  private findPlayerIdByName(name: string): PlayerId | null {
-    for (const [clientId, info] of Object.entries(this.playerInfo)) {
-      if (info.name === name) return clientId;
-    }
-    return null;
-  }
-
-  private findPlayerIdByClientId(clientId: string): PlayerId | null {
-    // ClientId IS the playerId now
-    return this.playerInfo[clientId] ? clientId : null;
-  }
-
   private autoStartGame() {
+    this.localMirror = false;
     const players = this.getPlayers();
     if (players.length < 2) return;
 
@@ -360,7 +421,7 @@ export default class GameServer implements Party.Server {
       }
 
       if (state.gameOver) {
-        this.updateLobby();
+        void this.updateLobby();
       }
     });
 
@@ -374,7 +435,7 @@ export default class GameServer implements Party.Server {
       events: [...engine.eventLog],
     });
 
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private handleStartSinglePlayer(
@@ -402,6 +463,7 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    this.localMirror = true;
     // In "full" mode, both players are bots
     const isFullMode = gameMode === "full";
     const botPlayerName = botName || "AI Opponent";
@@ -468,7 +530,7 @@ export default class GameServer implements Party.Server {
       }
 
       if (state.gameOver) {
-        this.updateLobby();
+        void this.updateLobby();
       }
     });
 
@@ -483,7 +545,7 @@ export default class GameServer implements Party.Server {
     });
 
     this.broadcastPlayerList();
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private handleChangeGameMode(conn: Party.Connection, gameMode: string) {
@@ -522,37 +584,34 @@ export default class GameServer implements Party.Server {
     }
 
     // Notify lobby of the change
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private handleSyncEvents(conn: Party.Connection, events: GameEvent[]) {
+    if (conn.id !== this.hostConnectionId || !this.localMirror) {
+      this.send(conn, {
+        type: "error",
+        message: "Only a local-game host can sync events",
+      });
+      return;
+    }
     if (!this.engine || !this.isStarted) {
       this.send(conn, { type: "error", message: "Game not started" });
       return;
     }
 
-    // Replay events to sync server state with client
-    // The engine is event-sourced, so we can replay from any point
     try {
-      events.map(event => {
-        // Apply event to engine if not already applied
-        const hasEvent = this.engine!.eventLog.some(e => e.id === event.id);
-        if (!hasEvent) {
-          // Replay this event on the server
-          // The engine handles event application internally
-          console.log("[Sync] Replaying event:", event.id);
-        }
-        return hasEvent;
-      });
-
-      // Update lobby with current state
-      this.updateLobby();
-    } catch (error) {
-      console.error("[Sync] Failed to replay events:", error);
-      this.send(conn, {
-        type: "error",
-        message: "Failed to sync events",
-      });
+      // Local-game hosts send a complete snapshot, including rewinds; multiplayer never accepts this path.
+      if (events[0]?.type !== "GAME_INITIALIZED")
+        throw new Error("Expected complete event history");
+      const projected = projectState(events);
+      if (Object.keys(projected.players).length !== 2)
+        throw new Error("Invalid player count");
+      this.engine.loadEvents(events);
+      this.broadcast({ type: "full_state", state: this.engine.state, events });
+      void this.updateLobby();
+    } catch {
+      this.send(conn, { type: "error", message: "Failed to sync events" });
     }
   }
 
@@ -580,6 +639,7 @@ export default class GameServer implements Party.Server {
 
     this.send(conn, {
       type: "joined",
+      gameStarted: this.isStarted,
       playerId: null,
       isSpectator: true,
       isHost: false,
@@ -614,6 +674,11 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    if (this.isStarted && !this.engine?.state.gameOver) {
+      this.send(conn, { type: "error", message: "Game already started" });
+      return;
+    }
+    this.localMirror = false;
     const players = this.getPlayers();
     if (players.length < 2) {
       this.send(conn, { type: "error", message: "Need at least 2 players" });
@@ -662,7 +727,7 @@ export default class GameServer implements Party.Server {
       }
 
       if (state.gameOver) {
-        this.updateLobby();
+        void this.updateLobby();
       }
     });
 
@@ -676,7 +741,7 @@ export default class GameServer implements Party.Server {
       events: [...engine.eventLog],
     });
 
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private handleGameCommand(
@@ -758,7 +823,7 @@ export default class GameServer implements Party.Server {
 
     this.broadcastPlayerList();
     this.broadcastSpectatorCount();
-    this.updateLobby();
+    void this.updateLobby();
 
     // If only one player left, end the game
     if (this.getPlayerCount() < 2 && this.isStarted) {
@@ -774,7 +839,7 @@ export default class GameServer implements Party.Server {
     this.hostConnectionId = null;
     this.hostClientId = null;
     this.broadcast({ type: "game_ended", reason });
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private handleLeave(conn: Party.Connection) {
@@ -822,14 +887,14 @@ export default class GameServer implements Party.Server {
         this.broadcast({
           type: "player_disconnected",
           playerName: player.name,
-          playerId: player.clientId!,
+          playerId: player.clientId,
         });
         this.endGame(`${player.name} left the game`);
         return;
       }
     }
 
-    this.updateLobby();
+    void this.updateLobby();
   }
 
   private getPlayers(): PlayerConnection[] {
@@ -910,10 +975,31 @@ export default class GameServer implements Party.Server {
   }
 
   private send(conn: Party.Connection, msg: GameServerMessage) {
+    if ("state" in msg && msg.state) {
+      const player = this.connections.get(conn.id);
+      const viewer = player && !player.isSpectator ? player.clientId : null;
+      const events = [...(this.engine?.eventLog ?? [])];
+      const visibleEvents =
+        msg.type === "preview_state"
+          ? events.slice(0, events.findIndex(e => e.id === msg.eventId) + 1)
+          : events;
+      conn.send(
+        JSON.stringify({
+          ...msg,
+          state: playerView(msg.state, visibleEvents, viewer),
+          ...("events" in msg ? { events: publicEvents(msg.events) } : {}),
+        }),
+      );
+      return;
+    }
     conn.send(JSON.stringify(msg));
   }
 
   private broadcast(msg: GameServerMessage) {
+    if ("state" in msg) {
+      for (const conn of this.room.getConnections()) this.send(conn, msg);
+      return;
+    }
     this.room.broadcast(JSON.stringify(msg));
   }
 
@@ -947,10 +1033,15 @@ export default class GameServer implements Party.Server {
       isSinglePlayer: players.some(p => p.isBot),
     };
 
-    await lobbyRoom.fetch({
-      method: "POST",
-      body: JSON.stringify(update),
-    });
+    try {
+      const response = await lobbyRoom.fetch({
+        method: "POST",
+        body: JSON.stringify(update),
+      });
+      if (!response.ok) console.warn("Lobby update failed", response.status);
+    } catch (error) {
+      console.warn("Lobby update failed", error);
+    }
   }
 
   private cleanupBotConnections() {

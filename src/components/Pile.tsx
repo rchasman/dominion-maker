@@ -11,6 +11,7 @@ const PileTooltip = lazy(() =>
 
 interface PileProps {
   cards: CardName[];
+  count?: number | undefined;
   pileType: "deck" | "discard" | "trash";
   knownCards?: CardName[];
   size?: "small" | "medium" | "large";
@@ -40,6 +41,7 @@ function EmptyPile() {
 
 export function Pile({
   cards,
+  count = cards.length,
   pileType,
   knownCards,
   size = "small",
@@ -51,7 +53,9 @@ export function Pile({
     y: number;
   } | null>(null);
 
-  const topCard = cards[cards.length - 1];
+  const topCard =
+    cards[cards.length - 1] ??
+    (count > 0 && pileType === "deck" ? "Copper" : undefined);
   if (topCard === undefined) {
     return <EmptyPile />;
   }
@@ -94,7 +98,7 @@ export function Pile({
             boxShadow: "0 0.125rem 0.25rem rgba(0,0,0,0.3)",
           }}
         >
-          {cards.length}
+          {count}
         </div>
       </div>
 

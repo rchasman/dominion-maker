@@ -199,13 +199,18 @@ export type LogEntry =
   | {
       type: "reveal-card";
       playerId: PlayerId;
-      card: CardName | string;
+      card: string;
       from: string;
       eventId?: string;
       children?: LogEntry[];
     };
 
 export type PlayerState = {
+  /** Public view metadata. Hidden zones are empty, never fabricated cards. */
+  publicCards?: CardName[];
+  handCount?: number;
+  deckCount?: number;
+  handHidden?: boolean;
   setAside?: CardName[];
   deck: CardName[];
   hand: CardName[];

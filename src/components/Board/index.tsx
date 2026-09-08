@@ -1,4 +1,5 @@
-import { useMemo } from "preact/hooks";
+import type { GameState } from "../../types/game-state";
+import { useMemo, useEffect, useState } from "preact/hooks";
 import { computeBoardState, type BoardState } from "./boardStateHelpers";
 import { createBoardCallbacks } from "./useBoardCallbacks";
 import { createGameProps } from "./createGameProps";
@@ -31,6 +32,37 @@ export function Board({ onBackToHome }: BoardProps) {
     handleBuyCard,
   } = useBoardSetup();
 
+  const getStateAtEvent = game.getStateAtEvent;
+  const [preview, setPreview] = useState<{
+    eventId: string;
+    state?: GameState;
+    error?: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!previewEventId) {
+      setPreview(null);
+      return;
+    }
+    const request = { active: true };
+    setPreview({ eventId: previewEventId });
+    void Promise.resolve()
+      .then(() => getStateAtEvent(previewEventId))
+      .then(state => {
+        if (request.active) setPreview({ eventId: previewEventId, state });
+      })
+      .catch((error: unknown) => {
+        if (request.active)
+          setPreview({
+            eventId: previewEventId,
+            error:
+              error instanceof Error ? error.message : "Preview unavailable",
+          });
+      });
+    return () => {
+      request.active = false;
+    };
+  }, [previewEventId, getStateAtEvent]);
+
   const boardState: BoardState | null = useMemo(() => {
     if (!game.gameState) return null;
     return computeBoardState({
@@ -40,7 +72,10 @@ export function Board({ onBackToHome }: BoardProps) {
       gameMode: game.gameMode,
       hasPlayableActions: game.hasPlayableActions,
       hasTreasuresInHand: game.hasTreasuresInHand,
-      getStateAtEvent: game.getStateAtEvent,
+      getStateAtEvent: () =>
+        preview?.eventId === previewEventId && preview.state
+          ? preview.state
+          : game.gameState!,
       localPlayerId: game.localPlayerId,
       isSpectator: game.isSpectator ?? false,
     });
@@ -51,7 +86,7 @@ export function Board({ onBackToHome }: BoardProps) {
     game.gameMode,
     game.hasPlayableActions,
     game.hasTreasuresInHand,
-    game.getStateAtEvent,
+    preview,
     game.localPlayerId,
     game.isSpectator,
   ]);
@@ -93,6 +128,18 @@ export function Board({ onBackToHome }: BoardProps) {
     hasTreasuresInHand: game.hasTreasuresInHand,
     gameState,
   });
+
+  if (
+    previewEventId &&
+    (preview?.eventId !== previewEventId || !preview.state)
+  ) {
+    return (
+      <div role="status">
+        {preview?.error ?? "Loading history…"}
+        <button onClick={() => enterPreview(null)}>Return to game</button>
+      </div>
+    );
+  }
 
   return (
     <BoardContent

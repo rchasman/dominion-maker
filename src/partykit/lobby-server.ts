@@ -1,3 +1,8 @@
+import {
+  lobbyMessageSchema,
+  gameUpdateSchema,
+  parseMessage,
+} from "../validation/messages";
 /**
  * PartyKit Lobby Server - Person-centric matchmaking
  *
@@ -10,9 +15,7 @@ import type {
   LobbyPlayer,
   GameRequest,
   ActiveGame,
-  LobbyClientMessage,
   LobbyServerMessage,
-  GameUpdateMessage,
   PlayerId,
 } from "./protocol";
 import { generateRoomId } from "../lib/room-id";
@@ -63,7 +66,11 @@ export default class LobbyServer implements Party.Server {
   }
 
   onMessage(message: string, sender: Party.Connection) {
-    const msg = JSON.parse(message) as LobbyClientMessage;
+    const msg = parseMessage(message, lobbyMessageSchema);
+    if (!msg) {
+      this.send(sender, { type: "error", message: "Invalid message" });
+      return;
+    }
 
     switch (msg.type) {
       case "join_lobby":
@@ -83,7 +90,8 @@ export default class LobbyServer implements Party.Server {
 
   async onRequest(req: Party.Request): Promise<Response> {
     if (req.method === "POST") {
-      const body = (await req.json()) as GameUpdateMessage;
+      const body = parseMessage(await req.text(), gameUpdateSchema);
+      if (!body) return new Response("Invalid request", { status: 400 });
 
       if (body.type === "game_update") {
         if (body.isActive) {
@@ -115,7 +123,7 @@ export default class LobbyServer implements Party.Server {
     );
 
     if (existingPlayer) {
-      const [oldConnId, _oldPlayer] = existingPlayer;
+      const [oldConnId] = existingPlayer;
       // Remove old connection entry
       this.players.delete(oldConnId);
       // Cancel any pending disconnect timeout for the old connection
