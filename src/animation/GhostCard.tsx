@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
+import { getCardImageUrl } from "../data/card-urls";
 import type { Zone } from "./types";
 import {
   getOptimizedImageUrl,
   generateSrcSet,
+  CARD_WIDTHS,
 } from "../lib/image-optimization";
 
 interface GhostCardProps {
@@ -33,17 +34,8 @@ const ZONE_SCALE: Record<Zone, number> = {
 const CENTER_DIVISOR = 2;
 
 // Image optimization constants
-const SRCSET_WIDTH_200 = 200;
-const SRCSET_WIDTH_300 = 300;
-const SRCSET_WIDTH_400 = 400;
-const SRCSET_WIDTH_600 = 600;
-const SRCSET_WIDTHS = [
-  SRCSET_WIDTH_200,
-  SRCSET_WIDTH_300,
-  SRCSET_WIDTH_400,
-  SRCSET_WIDTH_600,
-];
-const DEFAULT_IMAGE_WIDTH = SRCSET_WIDTH_400;
+const SRCSET_WIDTHS = CARD_WIDTHS.large;
+const DEFAULT_IMAGE_WIDTH = CARD_WIDTHS.large[1];
 const CARD_IMAGE_WIDTH = "200";
 const CARD_IMAGE_HEIGHT = "320";
 const CARD_BORDER_RADIUS = "4px";
@@ -116,7 +108,6 @@ export function GhostCard({
   if (phase === "done") return null;
 
   const imageUrl = getCardImageUrl(cardName);
-  const fallbackUrl = getCardImageFallbackUrl(cardName);
 
   return (
     <div
@@ -136,11 +127,6 @@ export function GhostCard({
         <source
           type="image/webp"
           srcSet={generateSrcSet(imageUrl, SRCSET_WIDTHS)}
-          sizes={`${fromRect.width}px`}
-        />
-        <source
-          type="image/jpeg"
-          srcSet={generateSrcSet(fallbackUrl, SRCSET_WIDTHS)}
           sizes={`${fromRect.width}px`}
         />
         <img

@@ -1,7 +1,7 @@
 import { useState, useRef } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
+import { CARD_BACK_IMAGE_URL, getCardImageUrl } from "../data/card-urls";
 import { isTooltipActive, setTooltipActive } from "../lib/tooltip-state";
 import { run } from "../lib/run";
 import {
@@ -81,20 +81,17 @@ function getCardWidth(size: "small" | "medium" | "large"): string {
 
 function renderCardImage(params: {
   imageUrl: string;
-  fallbackUrl: string;
   showBack: boolean;
   name: string;
   cardWidth: string;
   size: "small" | "medium" | "large";
   priority?: boolean;
 }) {
-  const { imageUrl, fallbackUrl, showBack, name, cardWidth, size, priority } =
-    params;
+  const { imageUrl, showBack, name, cardWidth, size, priority } = params;
 
   // Generate responsive srcset with Vercel optimization
   const widths = CARD_WIDTHS[size];
   const webpSrcSet = generateSrcSet(imageUrl, widths);
-  const jpgSrcSet = generateSrcSet(fallbackUrl, widths);
   const optimizedSrc = getOptimizedImageUrl({
     url: imageUrl,
     width: widths[1], // Use middle width as default
@@ -103,7 +100,6 @@ function renderCardImage(params: {
   return (
     <picture>
       <source type="image/webp" srcSet={webpSrcSet} sizes={cardWidth} />
-      <source type="image/jpeg" srcSet={jpgSrcSet} sizes={cardWidth} />
       <img
         src={optimizedSrc}
         alt={showBack ? "Card back" : name}
@@ -169,10 +165,7 @@ export function Card({
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const imageUrl = showBack ? "/cards/Card_back.webp" : getCardImageUrl(name);
-  const fallbackUrl = showBack
-    ? "/cards/Card_back.jpg"
-    : getCardImageFallbackUrl(name);
+  const imageUrl = showBack ? CARD_BACK_IMAGE_URL : getCardImageUrl(name);
   const cardWidth = getCardWidth(size);
 
   const handleMouseEnter = () => {
@@ -269,7 +262,6 @@ export function Card({
       >
         {renderCardImage({
           imageUrl,
-          fallbackUrl,
           showBack: showBack ?? false,
           name,
           cardWidth,

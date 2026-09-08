@@ -1,5 +1,5 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl } from "../data/card-urls";
+import { CARD_BACK_IMAGE_URL, getCardImageUrl } from "../data/card-urls";
 import { getOptimizedImageUrl } from "./image-optimization";
 
 /**
@@ -21,7 +21,7 @@ const CRITICAL_CARDS: CardName[] = [
  */
 export function preloadCriticalImages(): void {
   // Preload card back (always visible)
-  preloadImage("/cards/Card_back.webp", 128);
+  preloadImage(CARD_BACK_IMAGE_URL, 128);
 
   // Preload basic cards (in every game)
   CRITICAL_CARDS.map(card => {

@@ -1,10 +1,11 @@
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
+import { CARD_BACK_IMAGE_URL, getCardImageUrl } from "../data/card-urls";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
 import {
   getOptimizedImageUrl,
   generateSrcSet,
+  CARD_WIDTHS,
 } from "../lib/image-optimization";
 
 const TOOLTIP_DIMENSIONS = {
@@ -17,14 +18,9 @@ const TOOLTIP_OFFSET = {
   Y_PX: 34,
 } as const;
 
-const SRCSET_SIZE_SMALL = 200;
-const SRCSET_SIZE_MEDIUM = 320;
-const SRCSET_SIZE_LARGE = 400;
-const OPTIMIZED_IMAGE_WIDTH = 300;
-
 const IMAGE_WIDTHS = {
-  SRCSET_SIZES: [SRCSET_SIZE_SMALL, SRCSET_SIZE_MEDIUM, SRCSET_SIZE_LARGE],
-  OPTIMIZED_WIDTH: OPTIMIZED_IMAGE_WIDTH,
+  SRCSET_SIZES: CARD_WIDTHS.tooltip,
+  OPTIMIZED_WIDTH: CARD_WIDTHS.tooltip[1],
 } as const;
 
 interface CardTooltipProps {
@@ -40,12 +36,7 @@ export function CardTooltip({
   mouseY,
   showBack,
 }: CardTooltipProps) {
-  const imageUrl = showBack
-    ? "/cards/Card_back.webp"
-    : getCardImageUrl(cardName);
-  const fallbackUrl = showBack
-    ? "/cards/Card_back.jpg"
-    : getCardImageFallbackUrl(cardName);
+  const imageUrl = showBack ? CARD_BACK_IMAGE_URL : getCardImageUrl(cardName);
 
   const tooltipWidth = TOOLTIP_DIMENSIONS.WIDTH_PX;
   const tooltipHeight = TOOLTIP_DIMENSIONS.HEIGHT_PX;
@@ -101,11 +92,6 @@ export function CardTooltip({
           <source
             type="image/webp"
             srcSet={generateSrcSet(imageUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
-            sizes={`${TOOLTIP_DIMENSIONS.WIDTH_PX}px`}
-          />
-          <source
-            type="image/jpeg"
-            srcSet={generateSrcSet(fallbackUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
             sizes={`${TOOLTIP_DIMENSIONS.WIDTH_PX}px`}
           />
           <img

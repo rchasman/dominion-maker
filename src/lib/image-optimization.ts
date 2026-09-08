@@ -21,7 +21,7 @@ export function getOptimizedImageUrl({
   // In production, use Vercel Image Optimization for CDN caching
   // Use relative URLs for same-origin images (Vercel static files)
   const params = new URLSearchParams({
-    url, // Relative URL like /cards/Gold.webp
+    url, // Same-origin hashed asset URL like /assets/Gold-Cx1a.webp
     w: width.toString(),
     q: quality.toString(),
   });
@@ -47,4 +47,5 @@ export const CARD_WIDTHS = {
   small: [128, 256], // ~56px display = 128px for 2x DPI
   medium: [160, 320], // ~68px display = 160px for 2x DPI
   large: [200, 400], // ~90px display = 200px for 2x DPI
+  tooltip: [400, 640, 800], // 216px display = 640px for 2x, 800px for 3x DPI
 } as const;

@@ -1,12 +1,13 @@
 import type { JSX } from "preact";
 import type { CardName } from "../types/game-state";
-import { getCardImageUrl, getCardImageFallbackUrl } from "../data/card-urls";
+import { getCardImageUrl } from "../data/card-urls";
 import { countCards } from "../lib/card-array-utils";
 import { run } from "../lib/run";
 import { createPortal } from "preact/compat";
 import {
   getOptimizedImageUrl,
   generateSrcSet,
+  CARD_WIDTHS,
 } from "../lib/image-optimization";
 
 const TOOLTIP_DIMENSIONS = {
@@ -19,14 +20,10 @@ const CARD_SIZING = {
   PADDING_PX: 100,
 } as const;
 
-const SRCSET_SIZE_SMALL = 200;
-const SRCSET_SIZE_MEDIUM = 300;
-const SRCSET_SIZE_LARGE = 400;
-
 const IMAGE_WIDTHS = {
-  SRCSET_SIZES: [SRCSET_SIZE_SMALL, SRCSET_SIZE_MEDIUM, SRCSET_SIZE_LARGE],
-  OPTIMIZED_WIDTH: SRCSET_SIZE_MEDIUM,
-  DISPLAY_WIDTH: SRCSET_SIZE_SMALL,
+  SRCSET_SIZES: CARD_WIDTHS.medium,
+  OPTIMIZED_WIDTH: CARD_WIDTHS.medium[1],
+  DISPLAY_WIDTH: 200,
   DISPLAY_HEIGHT: 320,
 } as const;
 
@@ -100,7 +97,6 @@ function CardImage({
   count: number;
 }): JSX.Element {
   const imageUrl = getCardImageUrl(card);
-  const fallbackUrl = getCardImageFallbackUrl(card);
 
   return (
     <div
@@ -115,11 +111,6 @@ function CardImage({
         <source
           type="image/webp"
           srcSet={generateSrcSet(imageUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
-          sizes="var(--card-width-medium)"
-        />
-        <source
-          type="image/jpeg"
-          srcSet={generateSrcSet(fallbackUrl, IMAGE_WIDTHS.SRCSET_SIZES)}
           sizes="var(--card-width-medium)"
         />
         <img

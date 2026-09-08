@@ -5,22 +5,13 @@
   "outputDirectory": "dist",
   "installCommand": "bun install",
   "images": {
-    "sizes": [128, 160, 200, 256, 320, 400],
+    "sizes": [128, 160, 200, 256, 320, 400, 640, 800],
     "domains": [],
     "remotePatterns": [],
     "minimumCacheTTL": 31536000,
     "formats": ["image/avif", "image/webp"]
   },
   "headers": [
-    {
-      "source": "/cards/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
     {
       "source": "/assets/(.*)",
       "headers": [
