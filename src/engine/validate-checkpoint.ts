@@ -6,7 +6,7 @@ import type { ExecutionResponse } from "./execute";
 export function validateCheckpoint(
   state: GameState,
   stack: ExecutionFrame[],
-  response?: ExecutionResponse,
+  response: ExecutionResponse,
 ): void {
   for (const frame of stack) {
     if (!state.players[frame.playerId])
@@ -33,8 +33,6 @@ export function validateCheckpoint(
         throw new Error("Saved execution refers to a missing trigger player");
     }
   }
-  // Historical migration can consume a reaction itself, leaving no response.
-  if (!response) return;
   const pending = state.pendingChoice;
   const top = stack.at(-1);
   if ("choice" in response) {

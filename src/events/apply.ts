@@ -123,7 +123,6 @@ export function applyEvent(state: GameState, event: GameEvent): GameState {
     return {
       ...state,
       executionStack: event.stack,
-      ...(event.version !== undefined && { executionVersion: event.version }),
     };
   }
   if (event.type === "CARD_SET_ASIDE") {

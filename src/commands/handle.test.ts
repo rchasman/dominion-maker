@@ -9,7 +9,6 @@ function withExecutionFrame(state: GameState): GameState {
   if (!pending) return state;
   return {
     ...state,
-    executionVersion: 2,
     executionStack:
       pending.choiceType === "decision"
         ? [

@@ -20,7 +20,6 @@ function withChoiceFrame(state: GameState): GameState {
   if (pending?.choiceType !== "decision") return state;
   return {
     ...state,
-    executionVersion: 2,
     executionStack: state.executionStack ?? [
       {
         type: "choice",

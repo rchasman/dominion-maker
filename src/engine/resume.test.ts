@@ -9,7 +9,6 @@ function decisionState(): GameState {
   engine.startGame(["human", "ai"], ["Workshop", "Chapel", "Militia", "Moat"]);
   return {
     ...engine.state,
-    executionVersion: 2,
     executionStack: [
       {
         type: "choice",
@@ -73,6 +72,18 @@ function rejectsWithoutMutation(state: GameState, response: ExecutionResponse) {
 }
 
 describe("execution checkpoint semantics", () => {
+  it("rejects a missing checkpoint", () => {
+    const state = decisionState();
+    delete state.executionStack;
+    rejectsWithoutMutation(state, answer);
+  });
+  it("rejects malformed local memory", () => {
+    const state = decisionState();
+    const frame = state.executionStack![0]!;
+    if (frame.type !== "choice") throw new Error("Expected choice");
+    frame.memory = { unexpected: "Workshop requires null memory" };
+    rejectsWithoutMutation(state, answer);
+  });
   it("resumes a matching decision", () => {
     const events = resumeExecution(decisionState(), answer);
     expect(events).toContainEqual(

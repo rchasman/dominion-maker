@@ -285,7 +285,6 @@ export type GameEvent =
     })
   | (EventMetadata & {
       type: "EXECUTION_UPDATED";
-      version?: 2;
       stack: import("../engine/execution-types").ExecutionFrame[];
     })
   | (EventMetadata & {

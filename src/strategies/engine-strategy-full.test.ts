@@ -5,6 +5,26 @@ import { resetEventCounter } from "../events/id-generator";
 import { isActionCard } from "../data/cards";
 import type { GameEvent } from "../events/types";
 
+// Strategy tests vary the public selection constraints independently of card
+// initiation. Persist the matching current-format continuation explicitly.
+function installChoiceCheckpoint(engine: DominionEngine) {
+  const choice = engine.state.pendingChoice;
+  if (choice?.choiceType !== "decision") throw new Error("Expected a decision");
+  const attack = choice.cardBeingPlayed === "Militia";
+  engine.state.executionStack = [
+    {
+      type: "choice",
+      card: choice.cardBeingPlayed,
+      playerId: attack ? "human" : choice.playerId,
+      cause: "strategy-card",
+      trigger: attack
+        ? { type: "attack", target: choice.playerId }
+        : { type: "play" },
+      memory: null,
+    },
+  ];
+}
+
 describe("EngineStrategy - Full Coverage", () => {
   let strategy: EngineStrategy;
   let engine: DominionEngine;
@@ -178,8 +198,8 @@ describe("EngineStrategy - Full Coverage", () => {
     });
   });
 
-  describe("resolveAIPendingDecision", () => {
-    it("should handle discard decision", () => {
+  describe("resolveAIPendingDecision", async () => {
+    it("should handle discard decision", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = [
         "Estate",
@@ -200,10 +220,18 @@ describe("EngineStrategy - Full Coverage", () => {
       };
 
       // Should execute without error
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual([
+        "Estate",
+        "Estate",
+        "Copper",
+      ]);
     });
 
-    it("should handle opponent_discard decision", () => {
+    it("should handle opponent_discard decision", async () => {
       engine.state.activePlayerId = "human";
       engine.state.players.ai!.hand = ["Estate", "Copper", "Silver", "Gold"];
       engine.state.pendingChoice = {
@@ -217,10 +245,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Estate"]);
     });
 
-    it("should prioritize discarding Estates", () => {
+    it("should prioritize discarding Estates", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Estate", "Gold", "Silver"];
       engine.state.pendingChoice = {
@@ -234,10 +266,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Estate"]);
     });
 
-    it("should fill remaining with expensive cards when discarding", () => {
+    it("should fill remaining with expensive cards when discarding", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Gold", "Silver", "Village"];
       engine.state.pendingChoice = {
@@ -251,10 +287,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Gold", "Silver"]);
     });
 
-    it("should handle trash decision", () => {
+    it("should handle trash decision", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Curse", "Estate", "Copper", "Silver"];
       engine.state.pendingChoice = {
@@ -268,10 +308,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual([]);
     });
 
-    it("should prioritize trashing Curses", () => {
+    it("should prioritize trashing Curses", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Curse", "Curse", "Silver", "Gold"];
       engine.state.pendingChoice = {
@@ -280,15 +324,19 @@ describe("EngineStrategy - Full Coverage", () => {
         choiceType: "decision",
         cardBeingPlayed: "Chapel",
         prompt: "Trash cards",
-        min: 0,
+        min: 2,
         max: 2,
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual(["Curse", "Curse"]);
     });
 
-    it("should prioritize trashing Estates over Copper", () => {
+    it("should prioritize trashing Estates over Copper", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Copper", "Estate", "Silver"];
       engine.state.pendingChoice = {
@@ -302,10 +350,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual(["Estate"]);
     });
 
-    it("should fill remaining with cheap cards when trashing", () => {
+    it("should fill remaining with cheap cards when trashing", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.players.ai!.hand = ["Gold", "Silver", "Village"];
       engine.state.pendingChoice = {
@@ -319,10 +371,14 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: engine.state.players.ai!.hand,
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual(["Silver", "Village"]);
     });
 
-    it("should handle gain decision", () => {
+    it("should handle gain decision", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
@@ -332,13 +388,17 @@ describe("EngineStrategy - Full Coverage", () => {
         prompt: "Gain a card",
         min: 1,
         max: 1,
-        cardOptions: ["Copper", "Silver", "Gold"],
+        cardOptions: ["Copper", "Silver"],
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Silver"]);
     });
 
-    it("should gain most expensive card", () => {
+    it("should gain most expensive card", async () => {
       engine.state.activePlayerId = "ai";
       engine.state.pendingChoice = {
         playerId: "ai",
@@ -348,14 +408,19 @@ describe("EngineStrategy - Full Coverage", () => {
         prompt: "Gain a card",
         min: 1,
         max: 1,
-        cardOptions: ["Copper", "Silver", "Gold"],
+        cardOptions: ["Copper", "Silver"],
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Silver"]);
     });
 
-    it("should handle default decision with min > 0", () => {
+    it("should handle default decision with min > 0", async () => {
       engine.state.activePlayerId = "ai";
+      engine.state.players.ai!.hand = ["Copper", "Silver"];
       engine.state.pendingChoice = {
         playerId: "ai",
         intent: "select",
@@ -367,11 +432,16 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: ["Copper", "Silver"],
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual(["Copper"]);
     });
 
-    it("should handle default decision with min = 0", () => {
+    it("should handle default decision with min = 0", async () => {
       engine.state.activePlayerId = "ai";
+      engine.state.players.ai!.hand = ["Copper", "Silver"];
       engine.state.pendingChoice = {
         playerId: "ai",
         intent: "select",
@@ -383,18 +453,22 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: ["Copper", "Silver"],
       };
 
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      installChoiceCheckpoint(engine);
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.trash).toEqual([]);
     });
 
-    it("should do nothing when no pending decision", () => {
+    it("should do nothing when no pending decision", async () => {
       engine.state.pendingChoice = null;
 
-      strategy.resolveAIPendingDecision(engine);
+      await strategy.resolveAIPendingDecision(engine);
 
       expect(engine.state.pendingChoice).toBeNull();
     });
 
-    it("should do nothing when decision is for different player", () => {
+    it("should do nothing when decision is for different player", async () => {
       engine.state.pendingChoice = {
         playerId: "human",
         intent: "discard",
@@ -406,24 +480,24 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: ["Copper"],
       };
 
-      strategy.resolveAIPendingDecision(engine);
+      await strategy.resolveAIPendingDecision(engine);
 
       expect(engine.state.pendingChoice).not.toBeNull();
       expect(engine.state.pendingChoice?.playerId).toBe("human");
     });
 
-    it("should do nothing when pending choice is not decision choice", () => {
+    it("should do nothing when pending choice is not decision choice", async () => {
       engine.state.pendingChoice = {
         playerId: "ai",
         type: "not-decision",
       } as any;
 
-      strategy.resolveAIPendingDecision(engine);
+      await strategy.resolveAIPendingDecision(engine);
 
       expect(engine.state.pendingChoice).not.toBeNull();
     });
 
-    it("should handle decision with undefined aiPlayer gracefully", () => {
+    it("should handle decision with undefined aiPlayer gracefully", async () => {
       engine.state.activePlayerId = "ai";
       delete engine.state.players.ai;
       engine.state.pendingChoice = {
@@ -437,7 +511,7 @@ describe("EngineStrategy - Full Coverage", () => {
         cardOptions: ["Copper"],
       };
 
-      strategy.resolveAIPendingDecision(engine);
+      await strategy.resolveAIPendingDecision(engine);
 
       // Should handle gracefully without crashing
       expect(engine.state.pendingChoice).not.toBeNull();

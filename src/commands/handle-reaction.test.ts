@@ -15,7 +15,6 @@ function withReactionFrame(state: GameState): GameState {
   );
   return {
     ...state,
-    executionVersion: 2,
     executionStack: [
       {
         type: "attack",

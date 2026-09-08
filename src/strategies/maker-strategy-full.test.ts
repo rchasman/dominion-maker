@@ -163,7 +163,8 @@ describe("MakerStrategy - Full Coverage", () => {
       );
     });
 
-    it("should accept engine parameter", () => {
+    it("should resolve the only legal choice from a current checkpoint", async () => {
+      engine.state.players.ai!.hand = ["Copper"];
       engine.state.pendingChoice = {
         choiceType: "decision",
         cardBeingPlayed: "Militia",
@@ -174,7 +175,20 @@ describe("MakerStrategy - Full Coverage", () => {
         max: 1,
         cardOptions: ["Copper"],
       };
-      expect(() => strategy.resolveAIPendingDecision(engine)).not.toThrow();
+      engine.state.executionStack = [
+        {
+          type: "choice",
+          card: "Militia",
+          playerId: "human",
+          cause: "attack",
+          trigger: { type: "attack", target: "ai" },
+          memory: null,
+        },
+      ];
+      await strategy.resolveAIPendingDecision(engine);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.executionStack).toEqual([]);
+      expect(engine.state.players.ai!.discard).toEqual(["Copper"]);
     });
 
     it("should handle null pending choice", () => {

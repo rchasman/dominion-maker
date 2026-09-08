@@ -231,7 +231,6 @@ export type TurnAction = {
 export type GameState = {
   randomState?: number;
   turnTriggers?: Array<{ playerId: PlayerId; source: CardName }>;
-  executionVersion?: number;
   executionStack?: import("../engine/execution-types").ExecutionFrame[];
   turn: number;
   phase: Phase;

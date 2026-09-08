@@ -277,10 +277,7 @@ export function runExecution(
       }
     }
   }
-  emit(
-    { type: "EXECUTION_UPDATED", version: 2, stack },
-    initialStack.at(-1)?.cause,
-  );
+  emit({ type: "EXECUTION_UPDATED", stack }, initialStack.at(-1)?.cause);
   return events;
 }
 
