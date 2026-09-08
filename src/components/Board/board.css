@@ -22,7 +22,6 @@
 
 .player-area {
   min-inline-size: 0;
-  border-radius: var(--radius-md);
 }
 
 .hand-deck-grid {

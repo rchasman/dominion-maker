@@ -85,7 +85,6 @@
   min-block-size: 3.25rem;
   padding: var(--space-6) var(--space-7);
   border: 1px solid;
-  border-radius: var(--radius-md);
   color: #fff;
   font: inherit;
   font-size: 0.875rem;
