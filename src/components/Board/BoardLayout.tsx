@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
-import "./board.css";
 import {
+  GRID_TEMPLATE_COLUMNS,
   PREVIEW_INDICATOR_TOP,
   PREVIEW_INDICATOR_LEFT,
   PREVIEW_INDICATOR_RIGHT,
@@ -21,7 +21,17 @@ interface BoardLayoutProps {
 
 export function BoardLayout({ isPreviewMode, children }: BoardLayoutProps) {
   return (
-    <div className="board-layout" data-preview={isPreviewMode}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+        inlineSize: "100vw",
+        blockSize: "100dvh",
+        overflow: "hidden",
+        background: "var(--color-bg-primary)",
+        position: "relative",
+      }}
+    >
       {isPreviewMode && (
         <div
           style={{
@@ -58,8 +68,13 @@ export function GameAreaLayout({
 }: GameAreaLayoutProps) {
   return (
     <div
-      className="game-area"
       style={{
+        display: "grid",
+        gridTemplateRows: "auto 1fr auto",
+        rowGap: "var(--space-2)",
+        padding: "var(--space-3)",
+        minInlineSize: 0,
+        overflow: "hidden",
         paddingTop: isPreviewMode
           ? `calc(var(--space-3) + ${PREVIEW_PADDING_OFFSET})`
           : "var(--space-3)",

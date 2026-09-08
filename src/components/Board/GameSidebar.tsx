@@ -14,7 +14,7 @@ import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
 import { ChatAccordion } from "../LLMLog/components/ChatAccordion";
-import { useState, useEffect, useId, useRef } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 function CyclingSquare() {
   const glyphs = ["▤", "▥", "▦"];
   const [startTime] = useState(() => Date.now());
@@ -170,9 +170,6 @@ export function GameSidebar({
   onBackToHome,
   onRequestUndo,
 }: GameSidebarProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const panelId = useId();
-  const toggleRef = useRef<HTMLButtonElement>(null);
   const llmLogs = llmLogs$.value;
   const spectatorCount = spectatorCount$.value;
   const isSpectator = isSpectator$.value;
@@ -182,92 +179,72 @@ export function GameSidebar({
     useResizeHandle();
 
   return (
-    <aside
-      className="game-sidebar"
-      aria-label="Game log and settings"
-      data-open={isOpen}
+    <div
+      ref={sidebarRef}
+      style={{
+        borderInlineStart: "1px solid var(--color-border)",
+        background:
+          "linear-gradient(180deg, var(--color-bg-tertiary) 0%, var(--color-bg-primary) 100%)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
     >
-      <button
-        ref={toggleRef}
-        type="button"
-        className="sidebar-toggle"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        onClick={() => setIsOpen(open => !open)}
-      >
-        <span>Game log &amp; settings</span>
-        <span aria-hidden="true">{isOpen ? "−" : "+"}</span>
-      </button>
-      <div
-        id={panelId}
-        ref={sidebarRef}
-        className="game-sidebar-content"
-        onKeyDown={event => {
-          if (event.key === "Escape" && isOpen) {
-            event.stopPropagation();
-            setIsOpen(false);
-            toggleRef.current?.focus();
+      <GameLogSection
+        state={state}
+        {...(events !== undefined && { events })}
+        isProcessing={isProcessing}
+        {...(onRequestUndo !== undefined && { onRequestUndo })}
+        gameMode={gameMode}
+        gameLogHeight={gameLogHeight}
+        turnStatusIndicator={
+          <TurnStatusIndicator
+            isProcessing={isProcessing}
+            isLocalPlayerTurn={isLocalPlayerTurn}
+            subPhase={getSubPhase(state)}
+            activePlayerId={state.activePlayerId}
+          />
+        }
+      />
+
+      {/* Resize Handle - only show in MAKER modes (hybrid/full) */}
+      {(gameMode === "hybrid" || gameMode === "full") && (
+        <ResizeHandle
+          isDragging={isDragging}
+          onMouseDown={() => setIsDragging(true)}
+          onMouseEnter={e =>
+            (e.currentTarget.style.background = "var(--color-gold)")
           }
-        }}
-      >
-        <GameLogSection
-          state={state}
-          {...(events !== undefined && { events })}
-          isProcessing={isProcessing}
-          {...(onRequestUndo !== undefined && { onRequestUndo })}
+          onMouseLeave={e => {
+            if (!isDragging) {
+              e.currentTarget.style.background = "var(--color-border)";
+            }
+          }}
+        />
+      )}
+
+      {(gameMode === "hybrid" || gameMode === "full") && (
+        <LLMLogSection
+          llmLogs={llmLogs}
           gameMode={gameMode}
           gameLogHeight={gameLogHeight}
-          turnStatusIndicator={
-            <TurnStatusIndicator
-              isProcessing={isProcessing}
-              isLocalPlayerTurn={isLocalPlayerTurn}
-              subPhase={getSubPhase(state)}
-              activePlayerId={state.activePlayerId}
-            />
-          }
+          {...(modelSettings !== undefined && { modelSettings })}
+          {...(onModelSettingsChange !== undefined && {
+            onModelSettingsChange,
+          })}
         />
+      )}
 
-        {/* Resize Handle - only show in MAKER modes (hybrid/full) */}
-        {(gameMode === "hybrid" || gameMode === "full") && (
-          <ResizeHandle
-            isDragging={isDragging}
-            onMouseDown={() => setIsDragging(true)}
-            onMouseEnter={e =>
-              (e.currentTarget.style.background = "var(--color-gold)")
-            }
-            onMouseLeave={e => {
-              if (!isDragging) {
-                e.currentTarget.style.background = "var(--color-border)";
-              }
-            }}
-          />
-        )}
+      {(gameMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
 
-        {(gameMode === "hybrid" || gameMode === "full") && (
-          <LLMLogSection
-            llmLogs={llmLogs}
-            gameMode={gameMode}
-            gameLogHeight={gameLogHeight}
-            {...(modelSettings !== undefined && { modelSettings })}
-            {...(onModelSettingsChange !== undefined && {
-              onModelSettingsChange,
-            })}
-          />
-        )}
-
-        {(gameMode === "multiplayer" || spectatorCount > 0) && (
-          <ChatAccordion />
-        )}
-
-        <GameControlsSection
-          gameMode={gameMode}
-          {...(onGameModeChange !== undefined && { onGameModeChange })}
-          {...(onNewGame !== undefined && { onNewGame })}
-          {...(onEndGame !== undefined && { onEndGame })}
-          {...(onBackToHome !== undefined && { onBackToHome })}
-          isSpectator={isSpectator}
-        />
-      </div>
-    </aside>
+      <GameControlsSection
+        gameMode={gameMode}
+        {...(onGameModeChange !== undefined && { onGameModeChange })}
+        {...(onNewGame !== undefined && { onNewGame })}
+        {...(onEndGame !== undefined && { onEndGame })}
+        {...(onBackToHome !== undefined && { onBackToHome })}
+        isSpectator={isSpectator}
+      />
+    </div>
   );
 }

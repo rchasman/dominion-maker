@@ -67,7 +67,7 @@ export function MainPlayerArea({
   });
 
   return (
-    <div className="main-player-area" style={{ position: "relative" }}>
+    <div style={{ position: "relative" }}>
       <PlayerArea
         player={localPlayer}
         label={displayName}

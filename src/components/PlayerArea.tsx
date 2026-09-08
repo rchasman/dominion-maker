@@ -102,8 +102,9 @@ function HandAndDeckGrid({
 }) {
   return (
     <div
-      className="hand-deck-grid"
       style={{
+        display: "grid",
+        gridTemplateColumns: "3fr 1fr",
         gap: "var(--space-2)",
         alignItems: "stretch",
       }}
@@ -169,13 +170,13 @@ export function PlayerArea({
 
   return (
     <div
-      className={inverted ? "player-area opponent-area" : "player-area"}
       style={{
         padding: inverted
           ? "var(--space-1) var(--space-2) 0 var(--space-2)"
           : "0 var(--space-2) var(--space-1) var(--space-2)",
         ...getBorderStyle(isActive, borderColor),
         background: backgroundColor,
+        overflow: "auto",
         minHeight: 0,
       }}
     >

@@ -245,7 +245,7 @@ export function HandSection({
       >
         <span
           style={{
-            fontSize: "0.6875rem",
+            fontSize: "0.5625rem",
             color: "var(--color-text-muted)",
             fontWeight: 600,
             textTransform: "uppercase",
@@ -273,10 +273,7 @@ export function HandSection({
       </div>
       <div
         className="hand-grid"
-        style={{
-          padding: "0 var(--space-2) var(--space-2)",
-          minBlockSize: "calc(var(--card-width-large) * 8 / 5 + 4px)",
-        }}
+        style={{ padding: "0 var(--space-2) var(--space-2)" }}
       >
         {loading
           ? Array.from({ length: PLACEHOLDER_HAND_SIZE }).map((_, i) => (
