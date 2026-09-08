@@ -78,20 +78,21 @@ export type CardPlayedEvent = EventMetadata & {
   playerId: PlayerId;
   card: CardName;
   sourceIndex: number; // Index in hand before playing
+  from?: "hand" | "discard" | "inPlay";
 };
 
 export type CardDiscardedEvent = EventMetadata & {
   type: "CARD_DISCARDED";
   playerId: PlayerId;
   card: CardName;
-  from: "hand" | "inPlay" | "deck";
+  from: "hand" | "inPlay" | "deck" | "setAside";
 };
 
 export type CardTrashedEvent = EventMetadata & {
   type: "CARD_TRASHED";
   playerId: PlayerId;
   card: CardName;
-  from: "hand" | "deck" | "inPlay";
+  from: "hand" | "deck" | "inPlay" | "setAside";
 };
 
 export type CardGainedEvent = EventMetadata & {
@@ -126,14 +127,14 @@ export type CardPutOnDeckEvent = EventMetadata & {
   type: "CARD_PUT_ON_DECK";
   playerId: PlayerId;
   card: CardName;
-  from: "hand" | "discard";
+  from: "hand" | "discard" | "setAside";
 };
 
 export type CardReturnedToHandEvent = EventMetadata & {
   type: "CARD_RETURNED_TO_HAND";
   playerId: PlayerId;
   card: CardName;
-  from: "inPlay" | "discard" | "deck";
+  from: "inPlay" | "discard" | "deck" | "setAside";
 };
 
 // Resources
@@ -206,12 +207,6 @@ export type ReactionOpportunityEvent = EventMetadata & {
   triggeringCard: CardName; // The card that triggered this (was: attackCard)
   triggerType: import("../types/card-types").ReactionTrigger; // on_attack, on_gain, etc.
   availableReactions: CardName[];
-  metadata: {
-    allTargets: PlayerId[];
-    currentTargetIndex: number;
-    blockedTargets: PlayerId[];
-    originalCause: string;
-  };
 };
 
 export type ReactionRevealedEvent = EventMetadata & {
@@ -243,7 +238,6 @@ export type DecisionSkippedEvent = EventMetadata & {
   type: "DECISION_SKIPPED";
   playerId: PlayerId;
   cardBeingPlayed?: CardName;
-  stage?: string;
 };
 
 // Game End
@@ -283,6 +277,22 @@ export type UndoExecutedEvent = EventMetadata & {
 
 // Union of all events
 export type GameEvent =
+  | (EventMetadata & { type: "RANDOM_STATE_UPDATED"; state: number })
+  | (EventMetadata & {
+      type: "TRIGGER_REGISTERED";
+      playerId: PlayerId;
+      source: CardName;
+    })
+  | (EventMetadata & {
+      type: "EXECUTION_UPDATED";
+      stack: import("../engine/execution-types").ExecutionFrame[];
+    })
+  | (EventMetadata & {
+      type: "CARD_SET_ASIDE";
+      playerId: PlayerId;
+      card: CardName;
+      from: "deck";
+    })
   // Setup
   | GameInitializedEvent
   | InitialDeckDealtEvent

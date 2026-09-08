@@ -1,163 +1,109 @@
-/**
- * Bandit - Gain a Gold. Each other player reveals top 2 cards, trashes a non-Copper Treasure
- */
-
-import {
-  createOpponentIteratorEffect,
-  peekDraw,
-  getOpponents,
-} from "../effect-types";
-import type { GameEvent, PlayerId } from "../../events/types";
-import type { GameState } from "../../types/game-state";
+import { z } from "zod";
+import { createDrawEvents, getOpponents } from "../effect-types";
+import type { GameEvent } from "../../events/types";
+import type { CardName, PlayerId } from "../../types/game-state";
 import { CARDS } from "../../data/cards";
-import type { CardName } from "../../types/game-state";
-import { STAGES } from "../stages";
+import {
+  cardNameSchema,
+  choose,
+  defineEffect,
+  done,
+  schedule,
+} from "../program";
 
-const BANDIT_REVEAL_COUNT = 2;
-
-type BanditAttackData = {
-  opponent: string;
-  revealed: CardName[];
-  trashable: CardName[];
-};
-
-/**
- * Process opponent's reveal without decision (0 or 1 trashable)
- */
-function processOpponentAutoAttack(
-  state: GameState,
+function finish(
   target: PlayerId,
+  revealed: CardName[],
+  trashed?: CardName,
 ): GameEvent[] {
-  const targetState = state.players[target];
-  if (!targetState) return [];
-
-  const { cards: revealed } = peekDraw(targetState, BANDIT_REVEAL_COUNT);
-  if (revealed.length === 0) return [];
-
-  const revealEvents: GameEvent[] = revealed.map(card => ({
-    type: "CARD_REVEALED" as const,
-    playerId: target,
-    card,
-    from: "deck" as const,
-  }));
-
-  const trashable = revealed.filter(
-    c => CARDS[c].types.includes("treasure") && c !== "Copper",
-  );
-
-  if (trashable.length === 0) {
-    const discardEvents = revealed.map(card => ({
-      type: "CARD_DISCARDED" as const,
-      playerId: target,
-      card,
-      from: "deck" as const,
-    }));
-    return [...revealEvents, ...discardEvents];
-  }
-
-  if (trashable.length === 1) {
-    const toTrash = trashable[0];
-    if (!toTrash) return [];
-    const trashEvent: GameEvent = {
+  const remaining = [...revealed];
+  const events: GameEvent[] = [];
+  if (trashed) {
+    remaining.splice(remaining.indexOf(trashed), 1);
+    events.push({
       type: "CARD_TRASHED",
       playerId: target,
-      card: toTrash,
-      from: "deck",
-    };
-    const remaining = revealed.filter(c => c !== toTrash);
-    const discardEvents = remaining.map(card => ({
-      type: "CARD_DISCARDED" as const,
-      playerId: target,
-      card,
-      from: "deck" as const,
-    }));
-    return [...revealEvents, trashEvent, ...discardEvents];
+      card: trashed,
+      from: "setAside",
+    });
   }
-
-  return revealEvents;
+  return [
+    ...events,
+    ...remaining.map(
+      (card): GameEvent => ({
+        type: "CARD_DISCARDED",
+        playerId: target,
+        card,
+        from: "setAside",
+      }),
+    ),
+  ];
 }
 
-export const bandit = createOpponentIteratorEffect<BanditAttackData>(
-  {
-    filter: (opponent, state) => {
-      const oppState = state.players[opponent];
-      if (!oppState) return null;
-
-      const { cards: revealed } = peekDraw(oppState, BANDIT_REVEAL_COUNT);
-      if (revealed.length === 0) return null;
-
-      const trashable = revealed.filter(
-        c => CARDS[c].types.includes("treasure") && c !== "Copper",
+export const bandit = defineEffect(
+  z.object({ revealed: z.array(cardNameSchema).length(2) }).strict(),
+  ({ state, playerId, trigger, random }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Bandit");
+    if (trigger.type === "play") {
+      return schedule(
+        [{ type: "attack", targets: getOpponents(state, playerId) }],
+        (state.supply.Gold ?? 0) > 0
+          ? [{ type: "CARD_GAINED", playerId, card: "Gold", to: "discard" }]
+          : [],
       );
-
-      // Only create decision if 2+ trashable treasures
-      if (trashable.length > 1) {
-        return {
-          opponent,
-          data: { opponent, revealed, trashable },
-        };
-      }
-
-      return null;
-    },
-    createDecision: (
-      { opponent, data },
-      remainingOpponents,
-      attackingPlayer,
-      cardName,
-    ) => ({
-      choiceType: "decision",
-      playerId: opponent,
-      from: "revealed",
-      prompt: `${cardName} Attack: Choose which Treasure to trash`,
-      cardOptions: data.trashable,
-      min: 1,
-      max: 1,
-      cardBeingPlayed: cardName,
-      stage: STAGES.VICTIM_TRASH_CHOICE,
-      metadata: {
-        revealed: data.revealed,
-        remainingOpponents,
-        attackingPlayer,
-      },
-    }),
-    processChoice: (choice, { opponent, data }) => {
-      const toTrash = choice.selectedCards[0];
-      if (!toTrash) return [];
-
-      const trashEvent: GameEvent = {
-        type: "CARD_TRASHED",
-        playerId: opponent,
-        card: toTrash,
-        from: "deck",
-      };
-
-      const remaining = data.revealed.filter(c => c !== toTrash);
-      const discardEvents = remaining.map(card => ({
-        type: "CARD_DISCARDED" as const,
-        playerId: opponent,
-        card,
-        from: "deck" as const,
-      }));
-
-      return [trashEvent, ...discardEvents];
-    },
-    stage: STAGES.VICTIM_TRASH_CHOICE,
-  },
-  (state, playerId, attackTargets) => {
-    // Initial events: Gain Gold + auto-process all opponents without choices
-    const gainGold: GameEvent = {
-      type: "CARD_GAINED",
-      playerId,
-      card: "Gold",
-      to: "discard",
-    };
-
-    const targets = attackTargets ?? getOpponents(state, playerId);
-    const autoProcessEvents = targets.flatMap(t =>
-      processOpponentAutoAttack(state, t),
+    }
+    if (trigger.type !== "attack") return done();
+    const target = trigger.target;
+    if (input.type === "answer") {
+      return done(
+        finish(target, input.memory.revealed, input.answer.selectedCards[0]),
+      );
+    }
+    const player = state.players[target];
+    if (!player) return done();
+    const draw = createDrawEvents(target, player, 2, random);
+    const revealed = draw.flatMap(event =>
+      event.type === "CARD_DRAWN" ? [event.card] : [],
     );
-
-    return [gainGold, ...autoProcessEvents];
+    const events = draw.flatMap((event): GameEvent[] =>
+      event.type === "CARD_DRAWN"
+        ? [
+            {
+              type: "CARD_REVEALED",
+              playerId: target,
+              card: event.card,
+              from: "deck",
+            },
+            {
+              type: "CARD_SET_ASIDE",
+              playerId: target,
+              card: event.card,
+              from: "deck",
+            },
+          ]
+        : [event],
+    );
+    const trashable = revealed.filter(
+      card => card !== "Copper" && CARDS[card].types.includes("treasure"),
+    );
+    if (new Set(trashable).size > 1) {
+      return choose(
+        {
+          choiceType: "decision",
+          playerId: target,
+          from: "revealed",
+          intent: "trash",
+          prompt: "Bandit: Choose a Treasure to trash",
+          cardOptions: trashable,
+          min: 1,
+          max: 1,
+          cardBeingPlayed: "Bandit",
+        },
+        { revealed },
+        events,
+      );
+    }
+    return done([...events, ...finish(target, revealed, trashable[0])]);
   },
 );

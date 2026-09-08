@@ -1,74 +1,58 @@
-/**
- * Bureaucrat - Gain a Silver onto your deck. Each other player puts a Victory card from hand onto their deck
- */
-
-import { createOpponentIteratorEffect } from "../effect-types";
+/** Bureaucrat gains a Silver and resolves each target's Victory-card topdeck. */
 import { CARDS } from "../../data/cards";
-import type { CardName } from "../../types/game-state";
-import { STAGES } from "../stages";
+import { getOpponents } from "../effect-types";
+import { choose, defineEffect, done, noMemory, schedule } from "../program";
 
-type BureaucratData = {
-  victoryCards: CardName[];
-};
-
-const getVictoryCards = (hand: CardName[]): CardName[] =>
-  hand.filter(c => CARDS[c].types.includes("victory"));
-
-export const bureaucrat = createOpponentIteratorEffect<BureaucratData>(
-  {
-    filter: (opponent, state) => {
-      const oppState = state.players[opponent];
-      if (!oppState) return null;
-
-      const victoryCards = getVictoryCards(oppState.hand);
-      if (victoryCards.length === 0) return null;
-
-      return {
-        opponent,
-        data: { victoryCards },
-      };
-    },
-    createDecision: (
-      { opponent, data },
-      remainingOpponents,
-      attackingPlayer,
-      cardName,
-    ) => ({
-      choiceType: "decision",
-      playerId: opponent,
-      from: "hand",
-      prompt: `${cardName}: Put a Victory card on your deck`,
-      cardOptions: data.victoryCards,
-      min: 1,
-      max: 1,
-      cardBeingPlayed: cardName,
-      stage: STAGES.OPPONENT_TOPDECK,
-      metadata: {
-        remainingOpponents,
-        attackingPlayer,
+export const bureaucrat = defineEffect(
+  noMemory,
+  ({ state, playerId, trigger }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Bureaucrat");
+    if (trigger.type === "play") {
+      return schedule(
+        [{ type: "attack", targets: getOpponents(state, playerId) }],
+        (state.supply.Silver ?? 0) > 0
+          ? [{ type: "CARD_GAINED", playerId, card: "Silver", to: "deck" }]
+          : [],
+      );
+    }
+    if (trigger.type !== "attack") return done();
+    const target = trigger.target;
+    if (input.type === "answer") {
+      const card = input.answer.selectedCards[0];
+      return done(
+        card
+          ? [{ type: "CARD_PUT_ON_DECK", playerId: target, card, from: "hand" }]
+          : [],
+      );
+    }
+    const hand = state.players[target]?.hand ?? [];
+    const victoryCards = hand.filter(card =>
+      CARDS[card].types.includes("victory"),
+    );
+    if (!victoryCards.length) {
+      return done(
+        hand.map(card => ({
+          type: "CARD_REVEALED",
+          playerId: target,
+          card,
+          from: "hand",
+        })),
+      );
+    }
+    return choose(
+      {
+        choiceType: "decision",
+        playerId: target,
+        from: "hand",
+        intent: "topdeck",
+        prompt: "Bureaucrat: Put a Victory card on your deck",
+        cardOptions: victoryCards,
+        min: 1,
+        max: 1,
+        cardBeingPlayed: "Bureaucrat",
       },
-    }),
-    processChoice: (choice, { opponent }) => {
-      const toPutOnDeck = choice.selectedCards[0];
-      if (!toPutOnDeck) return [];
-
-      return [
-        {
-          type: "CARD_PUT_ON_DECK" as const,
-          playerId: opponent,
-          card: toPutOnDeck,
-          from: "hand" as const,
-        },
-      ];
-    },
-    stage: STAGES.OPPONENT_TOPDECK,
+      null,
+    );
   },
-  (_state, playerId) => [
-    {
-      type: "CARD_GAINED" as const,
-      playerId,
-      card: "Silver" as const,
-      to: "deck" as const,
-    },
-  ],
 );

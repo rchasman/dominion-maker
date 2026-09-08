@@ -627,7 +627,7 @@ describe("Event Application - Decisions", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Chapel" as CardName,
-      stage: "trash",
+      intent: "trash" as const,
     };
 
     const event: GameEvent = {
@@ -654,7 +654,7 @@ describe("Event Application - Decisions", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Militia" as CardName,
-      stage: "opponent_discard",
+      intent: "discard" as const,
     };
 
     const event: GameEvent = {
@@ -679,7 +679,7 @@ describe("Event Application - Decisions", () => {
       min: 0,
       max: 1,
       cardBeingPlayed: "Chapel",
-      stage: "trash",
+      intent: "trash" as const,
     };
 
     const event: GameEvent = {

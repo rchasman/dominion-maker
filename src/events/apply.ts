@@ -108,6 +108,38 @@ function applyGameSetupEvent(
  * This is the core state transition function - pure and deterministic.
  */
 export function applyEvent(state: GameState, event: GameEvent): GameState {
+  if (event.type === "RANDOM_STATE_UPDATED")
+    return { ...state, randomState: event.state };
+  if (event.type === "TRIGGER_REGISTERED") {
+    return {
+      ...state,
+      turnTriggers: [
+        ...(state.turnTriggers ?? []),
+        { playerId: event.playerId, source: event.source },
+      ],
+    };
+  }
+  if (event.type === "EXECUTION_UPDATED") {
+    return {
+      ...state,
+      executionStack: event.stack,
+    };
+  }
+  if (event.type === "CARD_SET_ASIDE") {
+    const player = state.players[event.playerId];
+    if (!player || player.deck.at(-1) !== event.card) return state;
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        [event.playerId]: {
+          ...player,
+          deck: player.deck.slice(0, -1),
+          setAside: [...(player.setAside ?? []), event.card],
+        },
+      },
+    };
+  }
   // Try game setup events
   const setupResult = applyGameSetupEvent(state, event);
   if (setupResult) return setupResult;

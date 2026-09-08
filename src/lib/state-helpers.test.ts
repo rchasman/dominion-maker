@@ -36,13 +36,6 @@ describe("state-helpers", () => {
     ...overrides,
   });
 
-  const reactionMetadata = {
-    allTargets: ["human"],
-    currentTargetIndex: 0,
-    blockedTargets: [],
-    originalCause: "event-1",
-  };
-
   describe("getSubPhase", () => {
     it("returns null when no pending choice", () => {
       const state: GameState = createMockState({
@@ -76,7 +69,6 @@ describe("state-helpers", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: reactionMetadata,
         },
       });
       expect(getSubPhase(state)).toBe("awaiting_reaction");
@@ -107,12 +99,6 @@ describe("state-helpers", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: {
-            allTargets: ["ai"],
-            currentTargetIndex: 0,
-            blockedTargets: [],
-            originalCause: "event-1",
-          },
         },
       });
       expect(getSubPhase(state)).toBe("opponent_decision");
@@ -127,7 +113,6 @@ describe("state-helpers", () => {
           triggeringCard: "Militia",
           triggerType: "on_attack",
           availableReactions: ["Moat"],
-          metadata: reactionMetadata,
         },
       });
       expect(getSubPhase(state)).toBe("awaiting_reaction");

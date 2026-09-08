@@ -1,54 +1,43 @@
-/**
- * Harbinger - +1 Card, +1 Action. Look through discard, may put a card on deck
- */
+import { createDrawEvents, projectEffectEvents } from "../effect-types";
+import { choose, defineEffect, done, noMemory } from "../program";
 
-import { createMultiStageCard, createDrawEvents } from "../effect-types";
-import { STAGES } from "../stages";
-
-export const harbinger = createMultiStageCard({
-  initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-
-    const drawEvents = createDrawEvents(playerId, playerState, 1);
-    const actionEvents = [{ type: "ACTIONS_MODIFIED" as const, delta: 1 }];
-    const events = [...drawEvents, ...actionEvents];
-
-    // If discard pile is empty, we're done
-    if (playerState.discard.length === 0) {
-      return { events };
+export const harbinger = defineEffect(
+  noMemory,
+  ({ state, playerId, random }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Harbinger");
+    if (input.type === "answer") {
+      const card = input.answer.selectedCards[0];
+      return done(
+        card
+          ? [{ type: "CARD_PUT_ON_DECK", playerId, card, from: "discard" }]
+          : [],
+      );
     }
-
-    return {
-      events,
-      pendingChoice: {
+    const player = state.players[playerId];
+    if (!player) return done();
+    const events = [
+      ...createDrawEvents(playerId, player, 1, random),
+      { type: "ACTIONS_MODIFIED" as const, delta: 1 },
+    ];
+    const discard =
+      projectEffectEvents(state, events).players[playerId]?.discard ?? [];
+    if (!discard.length) return done(events);
+    return choose(
+      {
         choiceType: "decision",
         playerId,
+        cardBeingPlayed: "Harbinger",
+        intent: "topdeck",
         from: "discard",
         prompt:
           "Harbinger: Put a card from your discard onto your deck (or skip)",
-        cardOptions: [...playerState.discard],
+        cardOptions: [...discard],
         min: 0,
         max: 1,
-        cardBeingPlayed: "Harbinger",
-        stage: STAGES.TOPDECK,
       },
-    };
+      null,
+      events,
+    );
   },
-
-  topdeck: ({ playerId, decision }) => {
-    const selectedCard = decision?.selectedCards[0];
-    if (!selectedCard) return { events: [] };
-
-    return {
-      events: [
-        {
-          type: "CARD_PUT_ON_DECK" as const,
-          playerId,
-          card: selectedCard,
-          from: "discard" as const,
-        },
-      ],
-    };
-  },
-});
+);

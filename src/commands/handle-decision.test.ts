@@ -7,14 +7,30 @@ import type { PendingChoice } from "../types/pending-choice";
 type DecisionPendingChoice = Extract<PendingChoice, { choiceType: "decision" }>;
 
 /**
- * The handlers defensively support decisions persisted before cardBeingPlayed
- * became required (see DecisionContext in handle-decision.ts). Build such a
- * value without weakening the fixture's type.
+ * Build an optional Cellar choice using the same public contract as real cards.
  */
-function decisionWithoutCardBeingPlayed(
+function optionalCellarDecision(
   fields: Omit<DecisionPendingChoice, "cardBeingPlayed">,
 ): PendingChoice {
-  return fields as PendingChoice;
+  return { ...fields, cardBeingPlayed: "Cellar" };
+}
+
+function withChoiceFrame(state: GameState): GameState {
+  const pending = state.pendingChoice;
+  if (pending?.choiceType !== "decision") return state;
+  return {
+    ...state,
+    executionStack: state.executionStack ?? [
+      {
+        type: "choice",
+        card: pending.cardBeingPlayed,
+        playerId: pending.playerId,
+        cause: "evt-original",
+        trigger: { type: "play" },
+        memory: null,
+      },
+    ],
+  };
 }
 
 function createMockState(): GameState {
@@ -74,7 +90,9 @@ describe("handle-decision - handleSubmitDecision", () => {
 
   test("should return error when no pending decision", () => {
     const state = createMockState();
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending decision");
@@ -89,14 +107,10 @@ describe("handle-decision - handleSubmitDecision", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-attack",
-      },
     };
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("not a decision");
@@ -110,11 +124,13 @@ describe("handle-decision - handleSubmitDecision", () => {
       from: "hand",
       prompt: "Select a card",
       cardOptions: ["Copper"],
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 1,
     };
-    const result = handleSubmitDecision(state, "p2", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p2", {
+      selectedCards: [],
+    });
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your decision");
@@ -128,14 +144,14 @@ describe("handle-decision - handleSubmitDecision", () => {
       from: "hand",
       prompt: "Select cards",
       cardOptions: ["Copper", "Estate"],
-      // Copper has no card effect, so resolution emits only DECISION_RESOLVED
-      cardBeingPlayed: "Copper",
+      // Cellar resumes from a saved choice frame.
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 2,
     };
     state.pendingChoiceEventId = "evt-1";
 
-    const result = handleSubmitDecision(state, "p1", {
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
       selectedCards: ["Copper"],
     });
 
@@ -161,13 +177,10 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Throne Room",
-      metadata: {
-        originalCause: "evt-root",
-      },
     };
     state.pendingChoiceEventId = "evt-2";
 
-    const result = handleSubmitDecision(state, "p1", {
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
       selectedCards: ["Village"],
     });
 
@@ -182,7 +195,7 @@ describe("handle-decision - handleSubmitDecision", () => {
     expect(resolvedEvent).toBeDefined();
   });
 
-  test("should handle Throne Room with executionsRemaining", () => {
+  test("should handle Throne Room with a remaining execution", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -193,23 +206,37 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 0,
       max: 1,
       cardBeingPlayed: "Cellar",
-      stage: "discard",
-      metadata: {
-        throneRoomTarget: "Cellar",
-        throneRoomExecutionsRemaining: 1,
-        originalCause: "evt-root",
-      },
+      intent: "discard",
     };
     state.pendingChoiceEventId = "evt-3";
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    state.executionStack = [
+      {
+        type: "effect",
+        card: "Cellar",
+        playerId: "p1",
+        cause: "evt-throne",
+        trigger: { type: "play" },
+      },
+      {
+        type: "choice",
+        card: "Cellar",
+        playerId: "p1",
+        cause: "evt-throne",
+        trigger: { type: "play" },
+        memory: null,
+      },
+    ];
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
-  test("should handle card effect continuation with stage", () => {
+  test("should handle card effect continuation with private memory", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -220,14 +247,11 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 0,
       max: 2,
       cardBeingPlayed: "Cellar",
-      stage: "discard",
-      metadata: {
-        originalCause: "evt-root",
-      },
+      intent: "discard",
     };
     state.pendingChoiceEventId = "evt-4";
 
-    const result = handleSubmitDecision(state, "p1", {
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
       selectedCards: ["Estate"],
     });
 
@@ -236,9 +260,9 @@ describe("handle-decision - handleSubmitDecision", () => {
     expect(result.events).toBeDefined();
   });
 
-  test("should handle decision without cardBeingPlayed", () => {
+  test("should handle decision with an optional empty selection", () => {
     const state = createMockState();
-    state.pendingChoice = decisionWithoutCardBeingPlayed({
+    state.pendingChoice = optionalCellarDecision({
       choiceType: "decision",
       playerId: "p1",
       from: "hand",
@@ -249,7 +273,9 @@ describe("handle-decision - handleSubmitDecision", () => {
     });
     state.pendingChoiceEventId = "evt-5";
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -260,7 +286,9 @@ describe("handle-decision - handleSubmitDecision", () => {
       e => e.type === "DECISION_RESOLVED",
     );
     expect(resolvedEvent).toBeDefined();
-    expect(result.events.length).toBe(1);
+    expect(
+      result.events.filter(e => e.type !== "EXECUTION_UPDATED").length,
+    ).toBe(1);
   });
 
   test("should handle Throne Room with no effect", () => {
@@ -274,14 +302,9 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Throne Room",
-      metadata: {
-        throneRoomTarget: "Copper",
-        throneRoomExecutionsRemaining: 2,
-        originalCause: "evt-root",
-      },
     };
 
-    const result = handleSubmitDecision(state, "p1", {
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
       selectedCards: ["Copper"],
     });
 
@@ -290,7 +313,7 @@ describe("handle-decision - handleSubmitDecision", () => {
     expect(result.events).toBeDefined();
   });
 
-  test("should link events to originalCause when present", () => {
+  test("should link effect events to the saved frame cause", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -301,14 +324,11 @@ describe("handle-decision - handleSubmitDecision", () => {
       min: 1,
       max: 1,
       cardBeingPlayed: "Workshop",
-      stage: "gain",
-      metadata: {
-        originalCause: "evt-original",
-      },
+      intent: "gain",
     };
     state.pendingChoiceEventId = "evt-6";
 
-    const result = handleSubmitDecision(state, "p1", {
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
       selectedCards: ["Estate"],
     });
 
@@ -329,7 +349,7 @@ describe("handle-decision - handleSkipDecision", () => {
 
   test("should return error when no pending decision", () => {
     const state = createMockState();
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("No pending decision");
@@ -344,14 +364,8 @@ describe("handle-decision - handleSkipDecision", () => {
       triggeringPlayerId: "p2",
       triggerType: "on_attack",
       availableReactions: ["Moat"],
-      metadata: {
-        allTargets: ["p1"],
-        currentTargetIndex: 0,
-        blockedTargets: [],
-        originalCause: "evt-attack",
-      },
     };
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("not a decision");
@@ -365,11 +379,11 @@ describe("handle-decision - handleSkipDecision", () => {
       from: "hand",
       prompt: "Select a card",
       cardOptions: ["Copper"],
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 1,
     };
-    const result = handleSkipDecision(state, "p2");
+    const result = handleSkipDecision(withChoiceFrame(state), "p2");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Not your decision");
@@ -383,11 +397,11 @@ describe("handle-decision - handleSkipDecision", () => {
       from: "hand",
       prompt: "Must select a card",
       cardOptions: ["Copper"],
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
       min: 1,
       max: 1,
     };
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Cannot skip");
@@ -401,10 +415,10 @@ describe("handle-decision - handleSkipDecision", () => {
       from: "hand",
       prompt: "Select cards",
       cardOptions: ["Copper"],
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
       max: 1,
     };
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
     expect(result.error).toContain("Cannot skip");
@@ -418,13 +432,13 @@ describe("handle-decision - handleSkipDecision", () => {
       from: "hand",
       prompt: "Select cards (optional)",
       cardOptions: ["Copper"],
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 1,
     };
     state.pendingChoiceEventId = "evt-7";
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -435,9 +449,9 @@ describe("handle-decision - handleSkipDecision", () => {
     expect(skipEvent?.causedBy).toBe("evt-7");
   });
 
-  test("should skip without cardBeingPlayed", () => {
+  test("should skip with an optional empty selection", () => {
     const state = createMockState();
-    state.pendingChoice = decisionWithoutCardBeingPlayed({
+    state.pendingChoice = optionalCellarDecision({
       choiceType: "decision",
       playerId: "p1",
       from: "hand",
@@ -448,14 +462,16 @@ describe("handle-decision - handleSkipDecision", () => {
     });
     state.pendingChoiceEventId = "evt-8";
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
 
     // Should only have DECISION_SKIPPED
-    expect(result.events.length).toBe(1);
+    expect(
+      result.events.filter(e => e.type !== "EXECUTION_UPDATED").length,
+    ).toBe(1);
     expect(result.events[0]!.type).toBe("DECISION_SKIPPED");
   });
 
@@ -470,14 +486,11 @@ describe("handle-decision - handleSkipDecision", () => {
       min: 0,
       max: 1,
       cardBeingPlayed: "Cellar",
-      stage: "discard",
-      metadata: {
-        originalCause: "evt-cellar",
-      },
+      intent: "discard",
     };
     state.pendingChoiceEventId = "evt-9";
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -487,7 +500,7 @@ describe("handle-decision - handleSkipDecision", () => {
     expect(skipEvent).toBeDefined();
   });
 
-  test("should link skip events to originalCause", () => {
+  test("should link skip events to the pending choice event", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -497,14 +510,11 @@ describe("handle-decision - handleSkipDecision", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Village",
-      metadata: {
-        originalCause: "evt-village",
-      },
+      cardBeingPlayed: "Cellar",
     };
     state.pendingChoiceEventId = "evt-10";
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -527,10 +537,10 @@ describe("handle-decision - handleSkipDecision", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Village",
+      cardBeingPlayed: "Cellar",
     };
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
     expect(result.ok).toBe(true);
   });
 
@@ -544,11 +554,11 @@ describe("handle-decision - handleSkipDecision", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Copper",
+      cardBeingPlayed: "Cellar",
     };
     state.pendingChoiceEventId = "evt-11";
 
-    const result = handleSkipDecision(state, "p1");
+    const result = handleSkipDecision(withChoiceFrame(state), "p1");
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -572,22 +582,36 @@ describe("handle-decision - Throne Room integration", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Smithy",
-      metadata: {
-        throneRoomTarget: "Smithy",
-        throneRoomExecutionsRemaining: 2,
-        originalCause: "evt-throne",
-      },
+      cardBeingPlayed: "Cellar",
     };
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    state.executionStack = [
+      {
+        type: "effect",
+        card: "Cellar",
+        playerId: "p1",
+        cause: "evt-throne",
+        trigger: { type: "play" },
+      },
+      {
+        type: "choice",
+        card: "Cellar",
+        playerId: "p1",
+        cause: "evt-throne",
+        trigger: { type: "play" },
+        memory: null,
+      },
+    ];
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
-  test("should handle Throne Room with executionsRemaining = 0", () => {
+  test("should handle Throne Room with no remaining executions", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -597,15 +621,12 @@ describe("handle-decision - Throne Room integration", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Village",
-      metadata: {
-        throneRoomTarget: "Village",
-        throneRoomExecutionsRemaining: 0,
-        originalCause: "evt-throne",
-      },
+      cardBeingPlayed: "Cellar",
     };
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -618,7 +639,7 @@ describe("handle-decision - Edge cases", () => {
     resetEventCounter();
   });
 
-  test("should handle decision with stage but no metadata", () => {
+  test("should handle decision with semantic intent and empty private memory", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -628,18 +649,20 @@ describe("handle-decision - Edge cases", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Village",
-      stage: "test_stage",
+      cardBeingPlayed: "Cellar",
+      intent: "select",
     };
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
     expect(result.events).toBeDefined();
   });
 
-  test("should handle decision with metadata but no stage", () => {
+  test("should handle decision with presentation without intent", () => {
     const state = createMockState();
     state.pendingChoice = {
       choiceType: "decision",
@@ -649,13 +672,12 @@ describe("handle-decision - Edge cases", () => {
       cardOptions: [],
       min: 0,
       max: 0,
-      cardBeingPlayed: "Village",
-      metadata: {
-        testKey: "testValue",
-      },
+      cardBeingPlayed: "Cellar",
     };
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");
@@ -670,14 +692,16 @@ describe("handle-decision - Edge cases", () => {
       from: "hand",
       prompt: "Test",
       cardOptions: [],
-      // Copper has no card effect, so resolution emits only DECISION_RESOLVED
-      cardBeingPlayed: "Copper",
+      // Cellar resumes from a saved choice frame.
+      cardBeingPlayed: "Cellar",
       min: 0,
       max: 0,
     };
     state.pendingChoiceEventId = null;
 
-    const result = handleSubmitDecision(state, "p1", { selectedCards: [] });
+    const result = handleSubmitDecision(withChoiceFrame(state), "p1", {
+      selectedCards: [],
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected ok result");

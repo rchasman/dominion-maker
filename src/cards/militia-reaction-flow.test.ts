@@ -161,7 +161,7 @@ describe("Militia with Reaction Flow", () => {
       throw new Error("No decision event - BUG NOT FIXED!");
 
     expect(decisionEvent.decision.playerId).toBe("ai2");
-    expect(decisionEvent.decision.stage).toBe("opponent_discard");
+    expect(decisionEvent.decision.intent).toBe("discard");
     expect(decisionEvent.decision.cardBeingPlayed).toBe("Militia");
     expect(decisionEvent.decision.min).toBe(2); // 5 - 3 = 2 cards to discard
     expect(decisionEvent.decision.max).toBe(2);
@@ -214,15 +214,12 @@ describe("Militia with Reaction Flow", () => {
       throw new Error("No attack resolved event for ai1");
     expect(attackResolved1.blocked).toBe(false);
 
-    // Should check for reaction from ai2 (who has no reactions)
-    // Since ai2 has no Moat, should auto-resolve and create DECISION_REQUIRED
-    const attackResolved2 = reactionResult.events.find(
-      e => e.type === "ATTACK_RESOLVED" && e.target === "ai2",
-    );
-    expect(attackResolved2).toBeDefined();
-    if (!attackResolved2 || attackResolved2.type !== "ATTACK_RESOLVED")
-      throw new Error("No attack resolved event for ai2");
-    expect(attackResolved2.blocked).toBe(false);
+    // Finish this target's discard before advancing to the next target.
+    expect(
+      reactionResult.events.some(
+        e => e.type === "ATTACK_RESOLVED" && e.target === "ai2",
+      ),
+    ).toBe(false);
 
     // THE BUG FIX: Should have DECISION_REQUIRED for ai1 to discard
     const decisionEvents = reactionResult.events.filter(
@@ -235,7 +232,7 @@ describe("Militia with Reaction Flow", () => {
       e =>
         e.type === "DECISION_REQUIRED" &&
         e.decision.playerId === "ai1" &&
-        e.decision.stage === "opponent_discard",
+        e.decision.intent === "discard",
     );
     expect(decision1).toBeDefined();
     if (!decision1 || decision1.type !== "DECISION_REQUIRED")
@@ -243,5 +240,24 @@ describe("Militia with Reaction Flow", () => {
 
     expect(decision1.decision.cardBeingPlayed).toBe("Militia");
     expect(decision1.decision.min).toBe(2); // 5 - 3 = 2 cards to discard
+    const afterDecline = applyEvents(midState, reactionResult.events);
+    const discardResult = handleCommand(
+      afterDecline,
+      {
+        type: "SUBMIT_DECISION",
+        playerId: "ai1",
+        choice: { selectedCards: decision1.decision.cardOptions.slice(0, 2) },
+      },
+      "ai1",
+    );
+    expect(discardResult.ok).toBe(true);
+    if (!discardResult.ok) throw new Error(discardResult.error);
+    const nextAttack = discardResult.events.find(
+      e => e.type === "ATTACK_RESOLVED" && e.target === "ai2",
+    );
+    expect(nextAttack).toMatchObject({ blocked: false });
+    const afterDiscard = applyEvents(afterDecline, discardResult.events);
+    expect(afterDiscard.players.ai1!.hand).toHaveLength(3);
+    expect(afterDiscard.pendingChoice?.playerId).toBe("ai2");
   });
 });

@@ -1,3 +1,4 @@
+import { requestOf } from "./test-helpers";
 import { describe, it, expect, beforeEach } from "bun:test";
 import { getCardEffect } from "./base";
 import { applyEvents } from "../events/apply";
@@ -89,17 +90,22 @@ describe("Edge Cases - Empty Hand", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Cellar",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Cellar",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.find((e: GameEvent) => e.type === "ACTIONS_MODIFIED")
         ?.delta,
     ).toBe(1);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("Chapel with empty hand does nothing", () => {
@@ -108,14 +114,19 @@ describe("Edge Cases - Empty Hand", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Chapel",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Chapel",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("Mine with no treasures does nothing", () => {
@@ -124,11 +135,16 @@ describe("Edge Cases - Empty Hand", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Mine",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Mine",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -139,11 +155,16 @@ describe("Edge Cases - Empty Hand", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Remodel",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Remodel",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -154,11 +175,16 @@ describe("Edge Cases - Empty Hand", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Throne Room",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Throne Room",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -173,11 +199,16 @@ describe("Edge Cases - Empty Deck", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Smithy",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Smithy",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
@@ -193,11 +224,16 @@ describe("Edge Cases - Empty Deck", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Library",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Library",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -208,16 +244,21 @@ describe("Edge Cases - Empty Deck", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Vassal",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Vassal",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.find((e: GameEvent) => e.type === "COINS_MODIFIED")?.delta,
     ).toBe(2);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("Harbinger with empty discard skips topdeck decision", () => {
@@ -226,16 +267,21 @@ describe("Edge Cases - Empty Deck", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Harbinger",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Harbinger",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
     ).toBe(1);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 });
 
@@ -249,13 +295,18 @@ describe("Edge Cases - Supply Constraints", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Workshop",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Workshop",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("Workshop only offers cards costing ≤ 4", () => {
@@ -264,16 +315,21 @@ describe("Edge Cases - Supply Constraints", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Workshop",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Workshop",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    if (!result.pendingChoice) return;
-    expect(result.pendingChoice.cardOptions).not.toContain("Duchy");
-    expect(result.pendingChoice.cardOptions).not.toContain("Gold");
+    expect(requestOf(result)).toBeDefined();
+    if (!requestOf(result)) return;
+    expect(requestOf(result)!.cardOptions).not.toContain("Duchy");
+    expect(requestOf(result)!.cardOptions).not.toContain("Gold");
   });
 
   it("Artisan only offers cards costing ≤ 5", () => {
@@ -282,16 +338,21 @@ describe("Edge Cases - Supply Constraints", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Artisan",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Artisan",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    if (!result.pendingChoice) return;
-    expect(result.pendingChoice.cardOptions).toContain("Duchy");
-    expect(result.pendingChoice.cardOptions).not.toContain("Gold");
+    expect(requestOf(result)).toBeDefined();
+    if (!requestOf(result)) return;
+    expect(requestOf(result)!.cardOptions).toContain("Duchy");
+    expect(requestOf(result)!.cardOptions).not.toContain("Gold");
   });
 });
 
@@ -405,11 +466,16 @@ describe("Edge Cases - Opponent Interactions", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    const result = effect({
-      state,
-      playerId: "human",
-      card: "Council Room",
-    });
+    const result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Council Room",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(
       result.events.filter((e: GameEvent) => e.type === "CARD_DRAWN").length,
@@ -427,22 +493,34 @@ describe("Edge Cases - Decision Cancellation", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    let result = effect({ state, playerId: "human", card: "Chapel" });
+    let result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Chapel",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     // Get decision
-    expect(result.pendingChoice).toBeDefined();
-    if (result.pendingChoice) {
-      state.pendingChoice = result.pendingChoice;
+    expect(requestOf(result)).toBeDefined();
+    if (requestOf(result)) {
+      state.pendingChoice = requestOf(result)!;
     }
 
-    // Skip using on_skip stage
-    result = effect({
-      state,
-      playerId: "human",
-      card: "Chapel",
-      decision: { selectedCards: [] },
-      stage: "on_skip",
-    });
+    // Decline the optional trash.
+    result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Chapel",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: [] } },
+    );
 
     expect(result.events.length).toBe(0);
   });
@@ -454,24 +532,32 @@ describe("Edge Cases - Decision Cancellation", () => {
     expect(effect).toBeDefined();
     if (!effect) return;
 
-    let result = effect({
-      state,
-      playerId: "human",
-      card: "Cellar",
-    });
+    let result = effect.run(
+      {
+        state,
+        playerId: "human",
+        card: "Cellar",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    if (result.pendingChoice) {
-      state.pendingChoice = result.pendingChoice;
+    if (requestOf(result)) {
+      state.pendingChoice = requestOf(result)!;
     }
 
-    // Skip immediately using on_skip stage
-    result = effect({
-      state: applyEvents(state, result.events),
-      playerId: "human",
-      card: "Cellar",
-      decision: { selectedCards: [] },
-      stage: "on_skip",
-    });
+    // Decline the optional topdeck.
+    result = effect.run(
+      {
+        state: applyEvents(state, result.events),
+        playerId: "human",
+        card: "Cellar",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: [] } },
+    );
 
     const drawEvents = result.events.filter(
       (e: GameEvent) => e.type === "CARD_DRAWN",

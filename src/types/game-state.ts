@@ -206,6 +206,7 @@ export type LogEntry =
     };
 
 export type PlayerState = {
+  setAside?: CardName[];
   deck: CardName[];
   hand: CardName[];
   discard: CardName[];
@@ -228,6 +229,9 @@ export type TurnAction = {
 };
 
 export type GameState = {
+  randomState?: number;
+  turnTriggers?: Array<{ playerId: PlayerId; source: CardName }>;
+  executionStack?: import("../engine/execution-types").ExecutionFrame[];
   turn: number;
   phase: Phase;
   activePlayerId: PlayerId;

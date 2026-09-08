@@ -93,7 +93,7 @@ describe("Opponent Plays Militia Against You", () => {
     }
 
     expect(decisionEvent.decision.playerId).toBe("human");
-    expect(decisionEvent.decision.stage).toBe("opponent_discard");
+    expect(decisionEvent.decision.intent).toBe("discard");
 
     // Apply events and check pendingChoice is set correctly
     const newState = applyEvents(state, result.events);
@@ -106,7 +106,7 @@ describe("Opponent Plays Militia Against You", () => {
       choiceType: newState.pendingChoice?.choiceType,
       stage:
         newState.pendingChoice?.choiceType === "decision"
-          ? newState.pendingChoice.stage
+          ? newState.pendingChoice.intent
           : null,
     });
   });

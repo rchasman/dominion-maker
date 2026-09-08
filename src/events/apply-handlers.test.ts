@@ -393,12 +393,6 @@ describe("apply-handlers", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["ai"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "evt-0",
-        },
       };
 
       const result = applyReactionEvent(state, event);
@@ -418,12 +412,6 @@ describe("apply-handlers", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["ai"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "evt-0",
-        },
       };
 
       const event: GameEvent = {
@@ -451,12 +439,6 @@ describe("apply-handlers", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["ai"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "evt-0",
-        },
       };
 
       const event: GameEvent = {
@@ -484,12 +466,6 @@ describe("apply-handlers", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["ai"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "evt-0",
-        },
       };
 
       const event: GameEvent = {
@@ -516,12 +492,6 @@ describe("apply-handlers", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["ai"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "evt-0",
-        },
       };
 
       const event: GameEvent = {
@@ -568,7 +538,7 @@ describe("apply-handlers", () => {
           min: 1,
           max: 1,
           cardBeingPlayed: "Chapel",
-          stage: "trash",
+          intent: "trash",
         },
       };
 
@@ -594,7 +564,7 @@ describe("apply-handlers", () => {
           min: 1,
           max: 1,
           cardBeingPlayed: "Chapel",
-          stage: "trash",
+          intent: "trash",
         },
       };
 
@@ -615,7 +585,7 @@ describe("apply-handlers", () => {
         min: 0,
         max: 1,
         cardBeingPlayed: "Chapel",
-        stage: "trash",
+        intent: "trash",
       };
 
       const event: GameEvent = {
@@ -642,7 +612,7 @@ describe("apply-handlers", () => {
         min: 0,
         max: 1,
         cardBeingPlayed: "Chapel",
-        stage: "trash",
+        intent: "trash",
       };
 
       const event: GameEvent = {

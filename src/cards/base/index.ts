@@ -3,7 +3,9 @@
  */
 
 import type { CardName } from "../../types/game-state";
-import type { CardEffect } from "../effect-types";
+import type { CardEffect } from "../program";
+import { defineEffect, done, noMemory } from "../program";
+import { createDrawEvents } from "../effect-types";
 import { createSimpleCardEffect } from "../effect-types";
 
 // Import complex cards
@@ -36,7 +38,15 @@ export const CARD_EFFECTS: Partial<Record<CardName, CardEffect>> = {
   // $2 Cost
   Cellar: cellar,
   Chapel: chapel,
-  Moat: createSimpleCardEffect({ cards: 2 }),
+  Moat: defineEffect(noMemory, ({ state, playerId, trigger, random }) =>
+    trigger.type === "reaction"
+      ? done([], true)
+      : done(
+          state.players[playerId]
+            ? createDrawEvents(playerId, state.players[playerId]!, 2, random)
+            : [],
+        ),
+  ),
 
   // $3 Cost
   Harbinger: harbinger,

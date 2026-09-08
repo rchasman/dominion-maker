@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { getCardEffect } from "../cards/base";
+import { handleCommand } from "../commands/handle";
 import { applyEvents } from "./apply";
 import { resetEventCounter } from "./id-generator";
 import type { GameState } from "../types/game-state";
@@ -62,16 +62,14 @@ describe("Supply Depletion - Centralized Enforcement", () => {
     const state = createTestState();
     state.players.human!.deck = ["Copper", "Silver"];
 
-    const effect = getCardEffect("Witch");
-    expect(effect).toBeDefined();
-    if (!effect) return;
-
-    const result = effect({
+    state.players.human!.hand = ["Witch"];
+    const result = handleCommand(
       state,
-      playerId: "human",
-      card: "Witch",
-      attackTargets: ["ai"], // Simulate resolved attack
-    });
+      { type: "PLAY_ACTION", playerId: "human", card: "Witch" },
+      "human",
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
 
     // Apply events
     const newState = applyEvents(state, result.events);
@@ -87,16 +85,14 @@ describe("Supply Depletion - Centralized Enforcement", () => {
   it("Bureaucrat with empty Silver supply does not gain Silver", () => {
     const state = createTestState();
 
-    const effect = getCardEffect("Bureaucrat");
-    expect(effect).toBeDefined();
-    if (!effect) return;
-
-    const result = effect({
+    state.players.human!.hand = ["Bureaucrat"];
+    const result = handleCommand(
       state,
-      playerId: "human",
-      card: "Bureaucrat",
-      attackTargets: [], // No opponents with victory cards
-    });
+      { type: "PLAY_ACTION", playerId: "human", card: "Bureaucrat" },
+      "human",
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
 
     // Apply events
     const newState = applyEvents(state, result.events);
@@ -109,16 +105,14 @@ describe("Supply Depletion - Centralized Enforcement", () => {
   it("Bandit with empty Gold supply does not gain Gold", () => {
     const state = createTestState();
 
-    const effect = getCardEffect("Bandit");
-    expect(effect).toBeDefined();
-    if (!effect) return;
-
-    const result = effect({
+    state.players.human!.hand = ["Bandit"];
+    const result = handleCommand(
       state,
-      playerId: "human",
-      card: "Bandit",
-      attackTargets: [], // No opponents
-    });
+      { type: "PLAY_ACTION", playerId: "human", card: "Bandit" },
+      "human",
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
 
     // Apply events
     const newState = applyEvents(state, result.events);
@@ -148,16 +142,14 @@ describe("Supply Depletion - Centralized Enforcement", () => {
       inPlaySourceIndices: [],
     };
 
-    const effect = getCardEffect("Witch");
-    expect(effect).toBeDefined();
-    if (!effect) return;
-
-    const result = effect({
+    state.players.human!.hand = ["Witch"];
+    const result = handleCommand(
       state,
-      playerId: "human",
-      card: "Witch",
-      attackTargets: ["ai1", "ai2"], // 2 targets, but only 1 Curse
-    });
+      { type: "PLAY_ACTION", playerId: "human", card: "Witch" },
+      "human",
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
 
     // Apply events
     const newState = applyEvents(state, result.events);

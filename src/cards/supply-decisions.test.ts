@@ -20,10 +20,10 @@ function createTestEngine(humanHand: CardName[]): DominionEngine {
   const engine = new DominionEngine();
   engine.startGame(["human", "ai"], ["Workshop", "Artisan", "Remodel", "Mine"]);
 
-  // Replace human's hand
-  const humanState = engine.state.players.human!;
-  humanState.deck = [];
-  humanState.hand = [...humanHand];
+  engine.applyExternalEvents([
+    { type: "INITIAL_DECK_DEALT", playerId: "human", cards: [...humanHand] },
+    { type: "INITIAL_HAND_DRAWN", playerId: "human", cards: [...humanHand] },
+  ]);
 
   return engine;
 }
@@ -110,7 +110,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("supply");
-        expect(engine.state.pendingChoice.stage).toBe("gain");
+        expect(engine.state.pendingChoice.intent).toBe("gain");
       }
     });
 
@@ -133,7 +133,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("hand");
-        expect(engine.state.pendingChoice.stage).toBe("topdeck");
+        expect(engine.state.pendingChoice.intent).toBe("topdeck");
       }
 
       engine.submitDecision("human", { selectedCards: ["Copper"] });
@@ -170,7 +170,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("hand");
-        expect(engine.state.pendingChoice.stage).toBe("trash");
+        expect(engine.state.pendingChoice.intent).toBe("trash");
       }
 
       const initialTrashSize = engine.state.trash.length;
@@ -185,7 +185,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("supply");
-        expect(engine.state.pendingChoice.stage).toBe("gain");
+        expect(engine.state.pendingChoice.intent).toBe("gain");
       }
     });
 
@@ -216,7 +216,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("hand");
-        expect(engine.state.pendingChoice.stage).toBe("trash");
+        expect(engine.state.pendingChoice.intent).toBe("trash");
 
         // Options should only include treasures
         expect(engine.state.pendingChoice.cardOptions).toContain("Copper");
@@ -236,7 +236,7 @@ describe("Supply Decision E2E Tests", () => {
       // Stage 2: Gain treasure to hand (up to $3)
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("supply");
-        expect(engine.state.pendingChoice.stage).toBe("gain");
+        expect(engine.state.pendingChoice.intent).toBe("gain");
 
         // Should be able to gain Silver ($3) but not Gold ($6)
         expect(engine.state.pendingChoice.cardOptions).toContain("Silver");
@@ -282,7 +282,7 @@ describe("Supply Decision E2E Tests", () => {
       expect(engine.state.pendingChoice).toBeDefined();
       if (isDecisionChoice(engine.state.pendingChoice)) {
         expect(engine.state.pendingChoice.from).toBe("hand");
-        expect(engine.state.pendingChoice.stage).toBe("choose_action");
+        expect(engine.state.pendingChoice.intent).toBe("play");
         expect(engine.state.pendingChoice.cardOptions).toContain("Workshop");
       }
     });
@@ -297,17 +297,21 @@ describe("Supply Decision E2E Tests", () => {
         selectedCards: ["Workshop"],
       });
 
-      // Should create a special "execute_throned_card" decision
       expect(result.ok).toBe(true);
-      if (isDecisionChoice(engine.state.pendingChoice)) {
-        expect(engine.state.pendingChoice.stage).toBe("execute_throned_card");
-        expect(engine.state.pendingChoice.metadata?.throneRoomTarget).toBe(
-          "Workshop",
-        );
-        expect(
-          engine.state.pendingChoice.metadata?.throneRoomExecutionsRemaining,
-        ).toBe(2);
-      }
+      expect(engine.state.pendingChoice?.choiceType).toBe("decision");
+      if (!isDecisionChoice(engine.state.pendingChoice))
+        throw new Error("Expected Workshop choice");
+      expect(engine.state.pendingChoice.cardBeingPlayed).toBe("Workshop");
+      expect(engine.state.pendingChoice.from).toBe("supply");
+      expect(
+        engine.submitDecision("human", { selectedCards: ["Silver"] }).ok,
+      ).toBe(true);
+      expect(engine.state.pendingChoice?.choiceType).toBe("decision");
+      expect(
+        engine.submitDecision("human", { selectedCards: ["Silver"] }).ok,
+      ).toBe(true);
+      expect(engine.state.pendingChoice).toBeNull();
+      expect(engine.state.players.human!.discard).toEqual(["Silver", "Silver"]);
     });
   });
 
@@ -357,7 +361,8 @@ describe("Supply Decision E2E Tests", () => {
 
       // Engine should handle this - either reject it or filter it
       // The exact behavior depends on submitDecision implementation
-      expect(result).toBeDefined();
+      expect(result.ok).toBe(false);
+      expect(engine.state.pendingChoice).not.toBeNull();
     });
   });
 });

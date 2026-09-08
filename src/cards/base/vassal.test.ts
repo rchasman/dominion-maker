@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { vassal } from "./vassal";
 import type { GameState, CardName } from "../../types/game-state";
-import { resetEventCounter } from "../../events/id-generator";
 
 function createTestState(): GameState {
   return {
@@ -41,237 +40,112 @@ function createTestState(): GameState {
   };
 }
 
+function context(state: GameState, playerId = "human") {
+  return {
+    state,
+    playerId,
+    card: "Vassal" as const,
+    trigger: { type: "play" as const },
+    random: () => 0.5,
+  };
+}
 describe("Vassal", () => {
-  beforeEach(() => {
-    resetEventCounter();
-  });
-
-  it("should grant +$2 and discard top card with empty deck", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = [];
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
+  it("grants coins with an empty deck", () => {
+    const result = vassal.run(context(createTestState()), { type: "start" });
+    expect(result).toEqual({
+      type: "done",
+      events: [{ type: "COINS_MODIFIED", delta: 2 }],
     });
-
-    expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 2 });
-    expect(result.pendingChoice).toBeUndefined();
   });
-
-  it("should discard non-action card without prompting", () => {
+  it.each([
+    "Copper",
+    "Silver",
+    "Gold",
+    "Estate",
+    "Duchy",
+    "Province",
+  ] as CardName[])("discards %s without a choice", card => {
     const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = ["Silver"];
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
-    });
-
+    state.players.human!.deck = [card];
+    const result = vassal.run(context(state), { type: "start" });
+    expect(result.type).toBe("done");
     expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 2 });
     expect(result.events).toContainEqual({
       type: "CARD_DISCARDED",
       playerId: "human",
-      card: "Silver",
+      card,
       from: "deck",
     });
-    expect(result.pendingChoice).toBeUndefined();
   });
-
-  it("should prompt to play action card from discard", () => {
+  it.each([
+    "Village",
+    "Smithy",
+    "Market",
+    "Militia",
+    "Throne Room",
+  ] as CardName[])("offers to play discarded %s", card => {
     const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = ["Village"];
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
+    state.players.human!.deck = [card];
+    const result = vassal.run(context(state), { type: "start" });
+    expect(result.type).toBe("choice");
+    if (result.type !== "choice") throw new Error("Expected choice");
+    expect(result.request).toMatchObject({
+      cardOptions: [card],
+      min: 0,
+      max: 1,
+      intent: "play",
+      from: "discard",
     });
-
-    expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 2 });
+    expect(result.memory).toEqual({ discarded: card });
     expect(result.events).toContainEqual({
       type: "CARD_DISCARDED",
       playerId: "human",
-      card: "Village",
+      card,
       from: "deck",
     });
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.cardOptions).toEqual(["Village"]);
-    expect(result.pendingChoice?.min).toBe(0);
-    expect(result.pendingChoice?.max).toBe(1);
   });
-
-  it("should play action from discard when chosen", () => {
+  it("schedules the chosen Action without applying its benefits twice", () => {
     const state = createTestState();
-    state.players["human"]!.discard = ["Village"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "options",
-      prompt: "Vassal: Play Village from discard?",
-      cardOptions: ["Village"],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Vassal",
-      stage: "play_action",
-      metadata: { discardedCard: "Village" },
-    };
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
-      decision: { selectedCards: ["Village"] },
-      stage: "play_action",
+    state.players.human!.discard = ["Village"];
+    const result = vassal.run(context(state), {
+      type: "answer",
+      memory: { discarded: "Village" },
+      answer: { selectedCards: ["Village"] },
     });
-
-    expect(result.events).toContainEqual({
-      type: "CARD_PLAYED",
-      playerId: "human",
-      card: "Village",
-      sourceIndex: 0,
+    expect(result).toEqual({
+      type: "schedule",
+      events: [],
+      operations: [
+        { type: "play", playerId: "human", card: "Village", from: "discard" },
+      ],
     });
   });
-
-  it("should not play action when declined", () => {
+  it("does nothing when declined or the player is missing", () => {
     const state = createTestState();
-    state.players["human"]!.discard = ["Village"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "options",
-      prompt: "Vassal: Play Village from discard?",
-      cardOptions: ["Village"],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Vassal",
-      stage: "play_action",
-      metadata: { discardedCard: "Village" },
-    };
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
-      decision: { selectedCards: [] },
-      stage: "play_action",
-    });
-
-    expect(result.events).toEqual([]);
+    expect(
+      vassal.run(context(state), {
+        type: "answer",
+        memory: { discarded: "Village" },
+        answer: { selectedCards: [] },
+      }),
+    ).toEqual({ type: "done", events: [] });
+    expect(
+      vassal.run(context(state, "missing"), { type: "start" }).events,
+    ).toEqual([]);
   });
-
-  it("should handle missing player state", () => {
+  it("records a shuffle before discarding its top card", () => {
     const state = createTestState();
-
-    const result = vassal({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Vassal",
-    });
-
-    expect(result.events).toEqual([]);
+    state.players.human!.discard = ["Village"];
+    const result = vassal.run(context(state), { type: "start" });
+    expect(result.events.map(event => event.type)).toEqual([
+      "COINS_MODIFIED",
+      "DECK_SHUFFLED",
+      "CARD_DISCARDED",
+    ]);
+    expect(result.type).toBe("choice");
   });
-
-  it("should handle undefined top card", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = [];
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
-    });
-
-    expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 2 });
-  });
-
-  it("should handle various action cards", () => {
-    const actionCards: CardName[] = [
-      "Smithy",
-      "Market",
-      "Militia",
-      "Throne Room",
-    ];
-
-    actionCards.forEach(card => {
-      const state = createTestState();
-      state.players["human"]!.deck = [card];
-
-      const result = vassal({
-        state,
-        playerId: "human",
-        card: "Vassal",
-      });
-
-      expect(result.pendingChoice).toBeDefined();
-      expect(result.pendingChoice?.cardOptions).toEqual([card]);
-    });
-  });
-
-  it("should return empty events for unknown stage", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-
-    const result = vassal({
-      state,
-      playerId: "human",
-      card: "Vassal",
-      decision: { selectedCards: [] },
-      stage: "unknown_stage" as any,
-    });
-
-    expect(result.events).toEqual([]);
-  });
-
-  it("should handle treasure card discards", () => {
-    const treasures: CardName[] = ["Copper", "Silver", "Gold"];
-
-    treasures.forEach(treasure => {
-      const state = createTestState();
-      state.players["human"]!.deck = [treasure];
-
-      const result = vassal({
-        state,
-        playerId: "human",
-        card: "Vassal",
-      });
-
-      expect(result.events).toContainEqual({
-        type: "CARD_DISCARDED",
-        playerId: "human",
-        card: treasure,
-        from: "deck",
-      });
-      expect(result.pendingChoice).toBeUndefined();
-    });
-  });
-
-  it("should handle victory card discards", () => {
-    const victories: CardName[] = ["Estate", "Duchy", "Province"];
-
-    victories.forEach(victory => {
-      const state = createTestState();
-      state.players["human"]!.deck = [victory];
-
-      const result = vassal({
-        state,
-        playerId: "human",
-        card: "Vassal",
-      });
-
-      expect(result.events).toContainEqual({
-        type: "CARD_DISCARDED",
-        playerId: "human",
-        card: victory,
-        from: "deck",
-      });
-      expect(result.pendingChoice).toBeUndefined();
-    });
+  it("rejects malformed continuation memory instead of silently ignoring stages", () => {
+    expect(() => vassal.parseMemory({ stage: "unknown_stage" })).toThrow();
+    expect(() => vassal.parseMemory({ discarded: "Imaginary" })).toThrow();
   });
 });

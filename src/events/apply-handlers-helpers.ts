@@ -65,11 +65,13 @@ export function applyCardPlayed(
   if (event.type !== "CARD_PLAYED") return null;
   const playerState = state.players[event.playerId];
   if (!playerState) return state;
-  const handIndex = playerState.hand.indexOf(event.card);
-  if (handIndex === -1) return state;
-  const newHand = [
-    ...playerState.hand.slice(0, handIndex),
-    ...playerState.hand.slice(handIndex + 1),
+  const from = event.from ?? "hand";
+  const source = playerState[from];
+  const sourceIndex = source.indexOf(event.card);
+  if (sourceIndex === -1) return state;
+  const remaining = [
+    ...source.slice(0, sourceIndex),
+    ...source.slice(sourceIndex + 1),
   ];
 
   // Determine action type for turnHistory based on card type
@@ -89,9 +91,19 @@ export function applyCardPlayed(
       ...state.players,
       [event.playerId]: {
         ...playerState,
-        hand: newHand,
-        inPlay: [...playerState.inPlay, event.card],
-        inPlaySourceIndices: [...playerState.inPlaySourceIndices, handIndex],
+        hand: from === "hand" ? remaining : playerState.hand,
+        discard: from === "discard" ? remaining : playerState.discard,
+        inPlay:
+          from === "inPlay"
+            ? playerState.inPlay
+            : [...playerState.inPlay, event.card],
+        inPlaySourceIndices:
+          from === "inPlay"
+            ? playerState.inPlaySourceIndices
+            : [
+                ...playerState.inPlaySourceIndices,
+                from === "hand" ? sourceIndex : -1,
+              ],
       },
     },
     turnHistory: turnHistoryEntry
@@ -133,6 +145,9 @@ export function applyCardDiscarded(
       ...state.players,
       [event.playerId]: {
         ...playerState,
+        ...(event.from === "setAside"
+          ? { setAside: removeCard(playerState.setAside ?? [], event.card) }
+          : {}),
         hand:
           event.from === "hand"
             ? removeCard(playerState.hand, event.card)
@@ -192,6 +207,9 @@ export function applyCardTrashed(
       ...state.players,
       [event.playerId]: {
         ...playerState,
+        ...(event.from === "setAside"
+          ? { setAside: removeCard(playerState.setAside ?? [], event.card) }
+          : {}),
         hand:
           event.from === "hand"
             ? removeCard(playerState.hand, event.card)
@@ -337,6 +355,9 @@ export function applyCardReposition(
         ...state.players,
         [event.playerId]: {
           ...playerState,
+          ...(event.from === "setAside"
+            ? { setAside: removeCard(playerState.setAside ?? [], event.card) }
+            : {}),
           hand:
             event.from === "hand"
               ? removeCard(playerState.hand, event.card)
@@ -369,6 +390,9 @@ export function applyCardReposition(
         ...state.players,
         [event.playerId]: {
           ...playerState,
+          ...(event.from === "setAside"
+            ? { setAside: removeCard(playerState.setAside ?? [], event.card) }
+            : {}),
           hand: [...playerState.hand, event.card],
           inPlay: newInPlay,
           inPlaySourceIndices: newInPlaySourceIndices,

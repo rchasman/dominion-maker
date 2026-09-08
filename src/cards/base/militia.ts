@@ -1,61 +1,46 @@
-/**
- * Militia - +$2. Each other player discards down to 3 cards in hand
- */
+/** Militia gives coins, then asks each unblocked target to discard to three. */
+import { getOpponents } from "../effect-types";
+import { choose, defineEffect, done, noMemory, schedule } from "../program";
 
-import type { CardName } from "../../types/game-state";
-import { createOpponentIteratorEffect } from "../effect-types";
-import { STAGES } from "../stages";
-
-const MILITIA_HAND_LIMIT = 3;
-const MILITIA_COIN_BONUS = 2;
-
-type MilitiaData = {
-  hand: string[];
-  discardCount: number;
-};
-
-export const militia = createOpponentIteratorEffect<MilitiaData>(
-  {
-    filter: (opponent, state) => {
-      const oppState = state.players[opponent];
-      if (!oppState || oppState.hand.length <= MILITIA_HAND_LIMIT) return null;
-
-      return {
-        opponent,
-        data: {
-          hand: oppState.hand,
-          discardCount: oppState.hand.length - MILITIA_HAND_LIMIT,
-        },
-      };
-    },
-    createDecision: (
-      { opponent, data },
-      remainingOpponents,
-      attackingPlayer,
-      cardName,
-    ) => ({
-      choiceType: "decision",
-      playerId: opponent,
-      from: "hand",
-      prompt: `${cardName}: Discard down to 3 cards (discard ${data.discardCount})`,
-      cardOptions: [...data.hand] as CardName[],
-      min: data.discardCount,
-      max: data.discardCount,
-      cardBeingPlayed: cardName,
-      stage: STAGES.OPPONENT_DISCARD,
-      metadata: {
-        remainingOpponents,
-        attackingPlayer,
+export const militia = defineEffect(
+  noMemory,
+  ({ state, playerId, trigger }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Militia");
+    if (trigger.type === "play") {
+      return schedule(
+        [{ type: "attack", targets: getOpponents(state, playerId) }],
+        [{ type: "COINS_MODIFIED", delta: 2 }],
+      );
+    }
+    if (trigger.type !== "attack") return done();
+    const target = trigger.target;
+    if (input.type === "answer") {
+      return done(
+        input.answer.selectedCards.map(card => ({
+          type: "CARD_DISCARDED",
+          playerId: target,
+          card,
+          from: "hand",
+        })),
+      );
+    }
+    const hand = state.players[target]?.hand;
+    if (!hand || hand.length <= 3) return done();
+    const count = hand.length - 3;
+    return choose(
+      {
+        choiceType: "decision",
+        playerId: target,
+        from: "hand",
+        intent: "discard",
+        prompt: `Militia: Discard down to 3 cards (discard ${count})`,
+        cardOptions: [...hand],
+        min: count,
+        max: count,
+        cardBeingPlayed: "Militia",
       },
-    }),
-    processChoice: (choice, { opponent }) =>
-      (choice.selectedCards || []).map(card => ({
-        type: "CARD_DISCARDED" as const,
-        playerId: opponent,
-        card,
-        from: "hand" as const,
-      })),
-    stage: STAGES.OPPONENT_DISCARD,
+      null,
+    );
   },
-  [{ type: "COINS_MODIFIED", delta: MILITIA_COIN_BONUS }],
 );

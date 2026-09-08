@@ -27,6 +27,35 @@ The engine emits immutable events (`CARD_PLAYED`, `TURN_STARTED`). State derives
 - **Deterministic replay** — shuffles stored for perfect fidelity
 - **A/B test consensus** — same game state, different voter configs
 
+### How a card runs
+
+Cards describe what happens next. One runner handles the order, pauses for
+choices, and saves unfinished work.
+
+```mermaid
+flowchart TD
+    Command[Player or AI command] --> Validate[Validate the command]
+    Validate --> Runner[Run the next stack frame]
+    Runner --> Card[Card program]
+    Card --> Done[Finish with events]
+    Card --> Choice[Ask a player and save local memory]
+    Card --> Children[Schedule child work]
+    Done --> Next{Work remains?}
+    Children --> Next
+    Next -->|Yes| Runner
+    Next -->|No| Finished[Command finishes]
+    Choice --> Save[Record choice and execution checkpoint]
+    Save --> Answer[Player answers, possibly after reload]
+    Answer --> Validate
+```
+
+When no work remains, the command finishes. For example, **Throne Room →
+Remodel** moves one Remodel into play, then completes its trash-and-gain choices
+twice. The second play waits until the first finishes; both survive save/load.
+
+See the [visual engine walkthrough](src/engine/README.md) for stack snapshots,
+reaction flow, and the contract for adding cards.
+
 ## Consensus Panel
 
 Real-time visualization of multi-model voting with 4 tabbed panes:
@@ -54,7 +83,7 @@ Type checking uses TypeScript 7 through the `@typescript/native` alias. The
 `typescript` dependency aliases `@typescript/typescript6` to provide the compiler
 API required by typescript-eslint.
 
-- **Build**: 58ms build, 81ms types, 73ms tests (497), ~15s deploy
+- **Validation**: `bun run check` runs tests, build, type checking, lint, formatting, dependency checks, and circular-import checks
 - **Bundle**: 134 KB gzipped (72% compression), smart preloading, AVIF/WebP images
 - **Multiplayer**: Real-time via PartyKit (WebSocket + edge)
 - **Dev tools**: Event scrubber for time-travel debugging

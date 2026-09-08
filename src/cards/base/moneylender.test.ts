@@ -1,3 +1,4 @@
+import { requestOf } from "../test-helpers";
 import { describe, it, expect, beforeEach } from "bun:test";
 import { moneylender } from "./moneylender";
 import type { GameState } from "../../types/game-state";
@@ -50,55 +51,57 @@ describe("Moneylender", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Estate", "Silver", "Gold"];
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("should prompt to trash Copper if present", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper", "Estate", "Silver"];
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.cardOptions).toEqual(["Copper"]);
-    expect(result.pendingChoice?.min).toBe(0);
-    expect(result.pendingChoice?.max).toBe(1);
-    expect(result.pendingChoice?.prompt).toContain("Trash a Copper for +$3");
+    expect(requestOf(result)).toBeDefined();
+    expect(requestOf(result)?.cardOptions).toEqual(["Copper"]);
+    expect(requestOf(result)?.min).toBe(0);
+    expect(requestOf(result)?.max).toBe(1);
+    expect(requestOf(result)?.prompt).toContain("Trash a Copper for +$3");
   });
 
   it("should trash Copper and grant +$3 when chosen", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper", "Estate"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "hand",
-      prompt: "Moneylender: Trash a Copper for +$3?",
-      cardOptions: ["Copper"],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Moneylender",
-      stage: "trash",
-    };
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-      decision: { selectedCards: ["Copper"] },
-      stage: "trash",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: ["Copper"] } },
+    );
 
     expect(result.events).toContainEqual({
       type: "CARD_TRASHED",
@@ -112,24 +115,17 @@ describe("Moneylender", () => {
   it("should do nothing when player declines to trash", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper", "Estate"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "hand",
-      prompt: "Moneylender: Trash a Copper for +$3?",
-      cardOptions: ["Copper"],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Moneylender",
-      stage: "trash",
-    };
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-      decision: { selectedCards: [] },
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: [] } },
+    );
 
     expect(result.events).toEqual([]);
   });
@@ -138,24 +134,34 @@ describe("Moneylender", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper", "Copper", "Copper"];
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.max).toBe(1); // Only trash one
+    expect(requestOf(result)).toBeDefined();
+    expect(requestOf(result)?.max).toBe(1); // Only trash one
   });
 
   it("should handle missing player state", () => {
     const state = createTestState();
 
-    const result = moneylender({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Moneylender",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "nonexistent" as any,
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
   });
@@ -163,24 +169,21 @@ describe("Moneylender", () => {
   it("should handle decision with wrong card selected", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper", "Estate"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "hand",
-      prompt: "Moneylender: Trash a Copper for +$3?",
-      cardOptions: ["Copper"],
-      min: 0,
-      max: 1,
-      cardBeingPlayed: "Moneylender",
-      stage: "trash",
-    };
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-      decision: { selectedCards: ["Estate" as any] },
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      {
+        type: "answer",
+        memory: null,
+        answer: { selectedCards: ["Estate" as any] },
+      },
+    );
 
     expect(result.events).toEqual([]);
   });
@@ -189,13 +192,18 @@ describe("Moneylender", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper"];
 
-    const result = moneylender({
-      state,
-      playerId: "human",
-      card: "Moneylender",
-    });
+    const result = moneylender.run(
+      {
+        state,
+        playerId: "human",
+        card: "Moneylender",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.cardOptions).toEqual(["Copper"]);
+    expect(requestOf(result)).toBeDefined();
+    expect(requestOf(result)?.cardOptions).toEqual(["Copper"]);
   });
 });

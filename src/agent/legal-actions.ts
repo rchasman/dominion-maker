@@ -3,7 +3,8 @@
 
 import type { GameState, CardName } from "../types/game-state";
 import type { Action } from "../types/action";
-import { CARDS, isActionCard, isTreasureCard } from "../data/cards";
+import { isActionCard, isTreasureCard } from "../data/cards";
+import { getCardCost } from "../cards/cost";
 import { decomposeDecisionForAI } from "./decision-decomposer";
 import { isReactionChoice, isDecisionChoice } from "../types/pending-choice";
 
@@ -52,41 +53,35 @@ export function getLegalActions(state: GameState): Action[] {
       return decomposeDecisionForAI(decision);
     }
 
-    if (
-      decision.stage === "trash" ||
-      decision.stage === "victim_trash_choice"
-    ) {
+    if (decision.intent === "trash") {
       return withSkipOption(
         options.map(card => ({ type: "trash_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "discard" || decision.stage === "opponent_discard") {
+    if (decision.intent === "discard") {
       return withSkipOption(
         options.map(card => ({ type: "discard_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "gain" || decision.from === "supply") {
+    if (decision.intent === "gain" || decision.from === "supply") {
       return withSkipOption(
         options.map(card => ({ type: "gain_card" as const, card })),
         canSkip,
       );
     }
 
-    if (decision.stage === "topdeck" || decision.stage === "opponent_topdeck") {
+    if (decision.intent === "topdeck") {
       return withSkipOption(
         options.map(card => ({ type: "topdeck_card" as const, card })),
         canSkip,
       );
     }
 
-    if (
-      decision.stage === "choose_action" ||
-      decision.stage === "play_action"
-    ) {
+    if (decision.intent === "play") {
       return withSkipOption(
         options.map(card => ({ type: "play_action" as const, card })),
         canSkip,
@@ -124,7 +119,9 @@ export function getLegalActions(state: GameState): Action[] {
       .filter(([card, count]) => {
         const cardName = card as CardName;
         return (
-          count > 0 && CARDS[cardName]?.cost <= state.coins && state.buys > 0
+          count > 0 &&
+          getCardCost(state, cardName).modifiedCost <= state.coins &&
+          state.buys > 0
         );
       })
       .map(([card]) => ({ type: "buy_card" as const, card: card as CardName }));

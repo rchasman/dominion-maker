@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { library } from "./library";
 import type { GameState, CardName } from "../../types/game-state";
-import { CARD_ACTIONS } from "../card-actions";
-import { resetEventCounter } from "../../events/id-generator";
+import type { EffectStep } from "../program";
+import type { DecisionChoice } from "../../types/pending-choice";
+import { applyEvents } from "../../events/apply";
 
 function createTestState(): GameState {
   return {
@@ -42,263 +43,146 @@ function createTestState(): GameState {
   };
 }
 
+function context(state: GameState, playerId = "human") {
+  return {
+    state,
+    playerId,
+    card: "Library" as const,
+    trigger: { type: "play" as const },
+    random: () => 0.5,
+  };
+}
+function begin(state: GameState) {
+  return library.run(context(state), { type: "start" });
+}
+function answer(state: GameState, step: EffectStep, choice: DecisionChoice) {
+  if (step.type !== "choice") throw new Error("Expected a choice");
+  return library.run(context(state), {
+    type: "answer",
+    memory: JSON.parse(JSON.stringify(step.memory)),
+    answer: choice,
+  });
+}
+
 describe("Library", () => {
-  beforeEach(() => {
-    resetEventCounter();
-  });
-
-  it("should do nothing if already at 7 cards", () => {
+  it("does nothing with seven cards or a missing player", () => {
     const state = createTestState();
-    state.players["human"]!.hand = [
-      "Copper",
-      "Copper",
-      "Copper",
-      "Estate",
-      "Estate",
-      "Estate",
-      "Silver",
-    ];
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
+    state.players.human!.hand = Array(7).fill("Copper");
+    expect(begin(state)).toEqual({ type: "done", events: [] });
+    expect(library.run(context(state, "missing"), { type: "start" })).toEqual({
+      type: "done",
+      events: [],
     });
-
-    expect(result.events).toEqual([]);
-    expect(result.pendingChoice).toBeUndefined();
   });
-
-  it("should draw cards directly if no actions in deck", () => {
+  it("draws ordinary cards until seven, leaving excess cards in the deck", () => {
     const state = createTestState();
-    state.players["human"]!.hand = ["Copper", "Copper"];
-    state.players["human"]!.deck = [
-      "Copper",
-      "Silver",
-      "Gold",
+    state.players.human!.hand = Array(5).fill("Copper");
+    state.players.human!.deck = ["Gold", "Silver", "Estate"];
+    const step = begin(state);
+    const after = applyEvents(state, step.events);
+    expect(after.players.human!.hand).toEqual([
+      ...Array(5).fill("Copper"),
       "Estate",
-      "Duchy",
-    ];
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-    });
-
-    expect(result.events.length).toBe(5);
-    expect(result.events.every(e => e.type === "CARD_DRAWN")).toBe(true);
-    expect(result.pendingChoice).toBeUndefined();
-  });
-
-  it("should prompt for action cards in peek", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper", "Copper"];
-    // Deck is in reverse order - last element is drawn first
-    state.players["human"]!.deck = [
-      "Market",
       "Silver",
-      "Smithy",
-      "Copper",
-      "Village",
-    ];
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-    });
-
-    expect(result.events).toEqual([]);
-    expect(result.pendingChoice).toBeDefined();
-    // Actions appear in the order they were peeked
-    const actionOptions = result.pendingChoice?.cardOptions.filter((c: any) =>
-      ["Village", "Smithy", "Market"].includes(c),
-    );
-    expect(actionOptions?.length).toBe(3);
-    expect(result.pendingChoice?.metadata?.peekedCards).toEqual([
-      "Village",
-      "Copper",
-      "Smithy",
-      "Silver",
-      "Market",
     ]);
+    expect(after.players.human!.deck).toEqual(["Gold"]);
+    expect(step.type).toBe("done");
   });
-
-  it("should draw selected actions and discard skipped ones", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    // Library reads from state.pendingChoice.metadata, not decision
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Library: Choose which Actions to skip",
-      cardOptions: ["Village", "Smithy", "Market"],
-      actions: [
-        { ...CARD_ACTIONS.draw_card, isDefault: true },
-        CARD_ACTIONS.discard_card,
-      ],
-      cardBeingPlayed: "Library",
-      metadata: {
-        cardsNeeded: 6,
-        peekedCards: ["Village", "Smithy", "Market"],
-      },
-    };
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "draw_card", // Draw Village
-          "1": "discard_card", // Discard Smithy
-          "2": "draw_card", // Draw Market
-        },
-      },
-      stage: "decision" as any, // Any non-undefined stage to process decision
+  it("resumes serialized private memory with no pending UI choice", () => {
+    let state = createTestState();
+    state.players.human!.hand = Array(4).fill("Copper");
+    state.players.human!.deck = [
+      "Gold",
+      "Smithy",
+      "Silver",
+      "Village",
+      "Estate",
+    ];
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand.length).toBe(5);
+    expect(step.type === "choice" && step.request.cardOptions).toEqual([
+      "Village",
+    ]);
+    expect(state.players.human!.setAside).toEqual(["Village"]);
+    state = JSON.parse(JSON.stringify(state));
+    expect(state.pendingChoice).toBeNull();
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
     });
-
-    const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand.length).toBe(6);
+    expect(step.type === "choice" && step.request.cardOptions).toEqual([
+      "Smithy",
+    ]);
+    expect(state.players.human!.discard).toEqual([]);
+    expect(state.players.human!.setAside).toEqual(["Village", "Smithy"]);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "draw_card" },
+    });
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand.at(-1)).toBe("Smithy");
+    expect(state.players.human!.hand.length).toBe(7);
+    expect(state.players.human!.deck).toEqual(["Gold"]);
+    expect(state.players.human!.discard).toEqual(["Village"]);
+    expect(state.players.human!.setAside).toEqual([]);
+    expect(step.type).toBe("done");
+  });
+  it("does not reshuffle skipped Actions and exhausts available cards", () => {
+    let state = createTestState();
+    state.players.human!.deck = ["Village"];
+    state.players.human!.discard = ["Silver", "Copper"];
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
+    });
+    const after = applyEvents(state, step.events);
+    expect(after.players.human!.hand.slice().sort()).toEqual([
+      "Copper",
+      "Silver",
+    ]);
+    expect(after.players.human!.discard).toEqual(["Village"]);
+    expect(after.players.human!.deck).toEqual([]);
+    expect(after.players.human!.setAside).toEqual([]);
+    expect(step.type).toBe("done");
+    expect(applyEvents(state, JSON.parse(JSON.stringify(step.events)))).toEqual(
+      after,
     );
-
-    expect(drawEvents.length).toBe(2);
-    expect(drawEvents.some(e => e.card === "Village")).toBe(true);
-    expect(drawEvents.some(e => e.card === "Market")).toBe(true);
-
-    expect(discardEvents.length).toBe(1);
-    expect(discardEvents[0]?.card).toBe("Smithy");
-    expect(discardEvents[0]?.from).toBe("deck");
   });
-
-  it("should handle all actions being discarded", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Library: Choose which Actions to skip",
-      cardOptions: ["Village", "Smithy"],
-      actions: [
-        { ...CARD_ACTIONS.draw_card, isDefault: true },
-        CARD_ACTIONS.discard_card,
-      ],
-      cardBeingPlayed: "Library",
-      metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy"] },
-    };
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "discard_card",
-          "1": "discard_card",
-        },
-      },
-      stage: "decision" as any, // Any non-undefined stage to process decision
+  it("keeps duplicate Actions as separate choices and conserves every card", () => {
+    let state = createTestState();
+    state.players.human!.deck = ["Village", "Village"];
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "discard_card" },
     });
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    expect(discardEvents.length).toBe(2);
-    expect(discardEvents.every(e => e.from === "deck")).toBe(true);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "draw_card" },
+    });
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand).toEqual(["Village"]);
+    expect(state.players.human!.discard).toEqual(["Village"]);
+    expect(state.players.human!.setAside).toEqual([]);
+    expect(step.type).toBe("done");
   });
-
-  it("should handle all actions being drawn", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Library: Choose which Actions to skip",
-      cardOptions: ["Village", "Smithy"],
-      actions: [
-        { ...CARD_ACTIONS.draw_card, isDefault: true },
-        CARD_ACTIONS.discard_card,
-      ],
-      cardBeingPlayed: "Library",
-      metadata: { cardsNeeded: 6, peekedCards: ["Village", "Smithy"] },
-    };
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "draw_card",
-          "1": "draw_card",
-        },
-      },
-      stage: "decision" as any, // Any non-undefined stage to process decision
-    });
-
-    const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
-    expect(drawEvents.length).toBe(2);
-  });
-
-  it("should handle empty deck gracefully", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = [];
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-    });
-
-    expect(result.events).toEqual([]);
-    expect(result.pendingChoice).toBeUndefined();
-  });
-
-  it("should handle missing player state", () => {
-    const state = createTestState();
-
-    const result = library({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Library",
-    });
-
-    expect(result.events).toEqual([]);
-  });
-
-  it("should handle decision with invalid indices", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Library: Choose which Actions to skip",
-      cardOptions: ["Village"],
-      actions: [
-        { ...CARD_ACTIONS.draw_card, isDefault: true },
-        CARD_ACTIONS.discard_card,
-      ],
-      cardBeingPlayed: "Library",
-      metadata: { cardsNeeded: 6, peekedCards: ["Village"] },
-    };
-
-    const result = library({
-      state,
-      playerId: "human",
-      card: "Library",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "10": "draw_card", // Out of bounds
-        },
-      },
-    });
-
-    expect(result.events).toEqual([]);
+  it("rejects malformed private continuation memory", () => {
+    expect(() =>
+      library.parseMemory({
+        offered: "Village",
+        skipped: [],
+        unexpected: true,
+      }),
+    ).toThrow();
+    expect(() =>
+      library.parseMemory({ offered: "Imaginary", skipped: [] }),
+    ).toThrow();
   });
 });

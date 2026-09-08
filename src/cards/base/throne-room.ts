@@ -1,57 +1,33 @@
-/**
- * Throne Room - Choose an action from hand, play it twice
- */
-
-import { createMultiStageCard } from "../effect-types";
 import { isActionCard } from "../../data/cards";
-import { STAGES } from "../stages";
+import { choose, defineEffect, done, noMemory, schedule } from "../program";
 
-export const throneRoom = createMultiStageCard({
-  initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-
-    const actions = playerState.hand.filter(isActionCard);
-    if (actions.length === 0) return { events: [] };
-
-    return {
-      events: [],
-      pendingChoice: {
+export const throneRoom = defineEffect(
+  noMemory,
+  ({ state, playerId }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Throne Room");
+    if (input.type === "answer") {
+      const card = input.answer.selectedCards[0];
+      return card
+        ? schedule([{ type: "play", playerId, card, from: "hand", times: 2 }])
+        : done();
+    }
+    const cardOptions =
+      state.players[playerId]?.hand.filter(isActionCard) ?? [];
+    if (!cardOptions.length) return done();
+    return choose(
+      {
         choiceType: "decision",
         playerId,
+        cardBeingPlayed: "Throne Room",
+        intent: "play",
         from: "hand",
         prompt: "Throne Room: Choose an Action to play twice",
-        cardOptions: actions,
-        min: 1,
-        max: 1,
-        cardBeingPlayed: "Throne Room",
-        stage: STAGES.CHOOSE_ACTION,
-      },
-    };
-  },
-
-  choose_action: ({ playerId, decision }) => {
-    const cardToPlay = decision?.selectedCards[0];
-
-    // Don't emit CARD_PLAYED here - instead create a special decision
-    // that tells the engine to execute this card twice
-    return {
-      events: [],
-      pendingChoice: {
-        choiceType: "decision",
-        playerId,
-        from: "options",
-        prompt: "",
-        cardOptions: [],
+        cardOptions,
         min: 0,
-        max: 0,
-        cardBeingPlayed: "Throne Room",
-        stage: STAGES.EXECUTE_THRONED_CARD,
-        metadata: {
-          throneRoomTarget: cardToPlay,
-          throneRoomExecutionsRemaining: 2,
-        },
+        max: 1,
       },
-    };
+      null,
+    );
   },
-});
+);

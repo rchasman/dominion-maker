@@ -103,7 +103,7 @@ describe("Militia Discard Modal Bug", () => {
     }
 
     expect(decisionEvent.decision.playerId).toBe("human");
-    expect(decisionEvent.decision.stage).toBe("opponent_discard");
+    expect(decisionEvent.decision.intent).toBe("discard");
     expect(decisionEvent.decision.cardBeingPlayed).toBe("Militia");
     expect(decisionEvent.decision.min).toBe(2); // 5 - 3 = 2 cards to discard
     expect(decisionEvent.decision.max).toBe(2);

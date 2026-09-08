@@ -1,3 +1,4 @@
+import { requestOf } from "../test-helpers";
 import { describe, it, expect, beforeEach } from "bun:test";
 import { poacher } from "./poacher";
 import type { GameState } from "../../types/game-state";
@@ -56,11 +57,16 @@ describe("Poacher", () => {
       Gold: 10,
     } as GameState["supply"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toContainEqual({
       type: "ACTIONS_MODIFIED",
@@ -69,7 +75,7 @@ describe("Poacher", () => {
     expect(result.events).toContainEqual({ type: "COINS_MODIFIED", delta: 1 });
     const drawEvents = result.events.filter(e => e.type === "CARD_DRAWN");
     expect(drawEvents.length).toBe(1);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("should prompt to discard for each empty pile", () => {
@@ -82,16 +88,21 @@ describe("Poacher", () => {
       Gold: 10,
     } as GameState["supply"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.min).toBe(2);
-    expect(result.pendingChoice?.max).toBe(2);
-    expect(result.pendingChoice?.prompt).toContain("2 empty pile(s)");
+    expect(requestOf(result)).toBeDefined();
+    expect(requestOf(result)?.min).toBe(2);
+    expect(requestOf(result)?.max).toBe(2);
+    expect(requestOf(result)?.prompt).toContain("2 empty pile(s)");
   });
 
   it("should discard selected cards", () => {
@@ -101,25 +112,17 @@ describe("Poacher", () => {
       Copper: 0,
       Silver: 10,
     } as GameState["supply"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "hand",
-      prompt: "Poacher: Discard 1 card(s) (1 empty pile(s))",
-      cardOptions: ["Copper", "Estate", "Silver"],
-      min: 1,
-      max: 1,
-      cardBeingPlayed: "Poacher",
-      stage: "discard",
-    };
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-      decision: { selectedCards: ["Estate"] },
-      stage: "discard",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: ["Estate"] } },
+    );
 
     const discardEvents = result.events.filter(
       e => e.type === "CARD_DISCARDED",
@@ -137,25 +140,21 @@ describe("Poacher", () => {
       Estate: 0,
       Duchy: 0,
     } as GameState["supply"];
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      from: "hand",
-      prompt: "Poacher: Discard 3 card(s) (3 empty pile(s))",
-      cardOptions: ["Copper", "Estate", "Silver", "Gold"],
-      min: 3,
-      max: 3,
-      cardBeingPlayed: "Poacher",
-      stage: "discard",
-    };
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-      decision: { selectedCards: ["Copper", "Estate", "Silver"] },
-      stage: "discard",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      {
+        type: "answer",
+        memory: null,
+        answer: { selectedCards: ["Copper", "Estate", "Silver"] },
+      },
+    );
 
     const discardEvents = result.events.filter(
       e => e.type === "CARD_DISCARDED",
@@ -175,15 +174,20 @@ describe("Poacher", () => {
       Silver: 0,
     } as GameState["supply"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.min).toBe(2); // Only 2 cards in hand after draw
-    expect(result.pendingChoice?.max).toBe(2);
+    expect(requestOf(result)).toBeDefined();
+    expect(requestOf(result)?.min).toBe(3); // Includes the newly drawn card
+    expect(requestOf(result)?.max).toBe(3);
   });
 
   it("should not prompt for discard if hand is empty after draw", () => {
@@ -195,13 +199,18 @@ describe("Poacher", () => {
       Estate: 0,
     } as GameState["supply"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
     expect(result.events).toContainEqual({
       type: "ACTIONS_MODIFIED",
       delta: 1,
@@ -212,28 +221,40 @@ describe("Poacher", () => {
   it("should handle missing player state", () => {
     const state = createTestState();
 
-    const result = poacher({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "nonexistent" as any,
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
   });
 
-  it("should return empty events for unknown stage", () => {
+  it("should reject malformed saved memory", () => {
     const state = createTestState();
     state.players["human"]!.hand = ["Copper"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-      decision: { selectedCards: [] },
-      stage: "unknown_stage" as any,
-    });
-
-    expect(result.events).toEqual([]);
+    expect(() =>
+      poacher.run(
+        {
+          state,
+          playerId: "human",
+          card: "Poacher",
+          trigger: { type: "play" },
+          random: () => 0.5,
+        },
+        {
+          type: "answer",
+          memory: "unknown_stage",
+          answer: { selectedCards: [] },
+        },
+      ),
+    ).toThrow();
   });
 
   it("should handle exactly hand size empty piles", () => {
@@ -246,15 +267,20 @@ describe("Poacher", () => {
       Duchy: 0,
     } as GameState["supply"];
 
-    const result = poacher({
-      state,
-      playerId: "human",
-      card: "Poacher",
-    });
+    const result = poacher.run(
+      {
+        state,
+        playerId: "human",
+        card: "Poacher",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
-    expect(result.pendingChoice).toBeDefined();
-    // Hand has 2 cards, 3 empty piles, but can only discard what's in hand (2)
-    expect(result.pendingChoice?.min).toBe(2);
-    expect(result.pendingChoice?.max).toBe(2);
+    expect(requestOf(result)).toBeDefined();
+    // All three cards, including the draw, must be discarded.
+    expect(requestOf(result)?.min).toBe(3);
+    expect(requestOf(result)?.max).toBe(3);
   });
 });

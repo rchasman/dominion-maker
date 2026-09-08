@@ -1,3 +1,4 @@
+import { requestOf } from "../test-helpers";
 import { describe, it, expect, beforeEach } from "bun:test";
 import { gardens } from "./gardens";
 import type { GameState } from "../../types/game-state";
@@ -49,14 +50,19 @@ describe("Gardens", () => {
   it("should have no active effect when played", () => {
     const state = createTestState();
 
-    const result = gardens({
-      state,
-      playerId: "human",
-      card: "Gardens",
-    });
+    const result = gardens.run(
+      {
+        state,
+        playerId: "human",
+        card: "Gardens",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
-    expect(result.pendingChoice).toBeUndefined();
+    expect(requestOf(result)).toBeUndefined();
   });
 
   it("should have no effect regardless of game state", () => {
@@ -65,11 +71,16 @@ describe("Gardens", () => {
     state.players["human"]!.deck = ["Estate", "Estate"];
     state.players["human"]!.discard = ["Silver", "Gold"];
 
-    const result = gardens({
-      state,
-      playerId: "human",
-      card: "Gardens",
-    });
+    const result = gardens.run(
+      {
+        state,
+        playerId: "human",
+        card: "Gardens",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
   });
@@ -77,11 +88,16 @@ describe("Gardens", () => {
   it("should have no effect with missing player", () => {
     const state = createTestState();
 
-    const result = gardens({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Gardens",
-    });
+    const result = gardens.run(
+      {
+        state,
+        playerId: "nonexistent" as any,
+        card: "Gardens",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "start" },
+    );
 
     expect(result.events).toEqual([]);
   });
@@ -89,12 +105,16 @@ describe("Gardens", () => {
   it("should have no effect with decision passed", () => {
     const state = createTestState();
 
-    const result = gardens({
-      state,
-      playerId: "human",
-      card: "Gardens",
-      decision: { selectedCards: ["Copper"] },
-    });
+    const result = gardens.run(
+      {
+        state,
+        playerId: "human",
+        card: "Gardens",
+        trigger: { type: "play" },
+        random: () => 0.5,
+      },
+      { type: "answer", memory: null, answer: { selectedCards: ["Copper"] } },
+    );
 
     expect(result.events).toEqual([]);
   });

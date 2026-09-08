@@ -1,17 +1,17 @@
-/**
- * Merchant - +1 Card, +1 Action. First Silver you play this turn: +$1
- */
-
-import type { CardEffect, CardEffectResult } from "../effect-types";
 import { createDrawEvents } from "../effect-types";
-import type { GameEvent } from "../../events/types";
+import { defineEffect, done, noMemory } from "../program";
 
-export const merchant: CardEffect = ({ state, playerId }): CardEffectResult => {
-  const playerState = state.players[playerId];
-  if (!playerState) return { events: [] };
-
-  const drawEvents = createDrawEvents(playerId, playerState, 1);
-  const actionEvents: GameEvent[] = [{ type: "ACTIONS_MODIFIED", delta: 1 }];
-  // The +$1 for Silver is tracked by the engine during buy phase
-  return { events: [...drawEvents, ...actionEvents] };
-};
+export const merchant = defineEffect(
+  noMemory,
+  ({ state, playerId, random }) => {
+    const player = state.players[playerId];
+    return done(
+      player
+        ? [
+            ...createDrawEvents(playerId, player, 1, random),
+            { type: "ACTIONS_MODIFIED", delta: 1 },
+          ]
+        : [],
+    );
+  },
+);

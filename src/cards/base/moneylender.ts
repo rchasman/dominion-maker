@@ -1,40 +1,31 @@
-/**
- * Moneylender - Trash a Copper from your hand for +$3
- */
+import { choose, defineEffect, done, noMemory } from "../program";
 
-import { createMultiStageCard } from "../effect-types";
-import { STAGES } from "../stages";
-
-export const moneylender = createMultiStageCard({
-  initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-    if (!playerState.hand.includes("Copper")) return { events: [] };
-
-    return {
-      events: [],
-      pendingChoice: {
+export const moneylender = defineEffect(
+  noMemory,
+  ({ state, playerId }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Moneylender");
+    if (input.type === "answer")
+      return input.answer.selectedCards.includes("Copper")
+        ? done([
+            { type: "CARD_TRASHED", playerId, card: "Copper", from: "hand" },
+            { type: "COINS_MODIFIED", delta: 3 },
+          ])
+        : done();
+    if (!state.players[playerId]?.hand.includes("Copper")) return done();
+    return choose(
+      {
         choiceType: "decision",
         playerId,
+        cardBeingPlayed: "Moneylender",
+        intent: "trash",
         from: "hand",
         prompt: "Moneylender: Trash a Copper for +$3?",
         cardOptions: ["Copper"],
         min: 0,
         max: 1,
-        cardBeingPlayed: "Moneylender",
-        stage: STAGES.TRASH,
       },
-    };
+      null,
+    );
   },
-
-  trash: ({ playerId, decision }) => {
-    if (!decision?.selectedCards.includes("Copper")) return { events: [] };
-
-    return {
-      events: [
-        { type: "CARD_TRASHED", playerId, card: "Copper", from: "hand" },
-        { type: "COINS_MODIFIED", delta: 3 },
-      ],
-    };
-  },
-});
+);

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { sentry } from "./sentry";
 import type { GameState, CardName } from "../../types/game-state";
-import { CARD_ACTIONS } from "../card-actions";
-import { resetEventCounter } from "../../events/id-generator";
+import type { EffectStep } from "../program";
+import type { DecisionChoice } from "../../types/pending-choice";
+import { applyEvents } from "../../events/apply";
 
 function createTestState(): GameState {
   return {
@@ -42,321 +43,138 @@ function createTestState(): GameState {
   };
 }
 
+function context(state: GameState, playerId = "human") {
+  return {
+    state,
+    playerId,
+    card: "Sentry" as const,
+    trigger: { type: "play" as const },
+    random: () => 0.5,
+  };
+}
+function begin(state: GameState) {
+  return sentry.run(context(state), { type: "start" });
+}
+function answer(state: GameState, step: EffectStep, choice: DecisionChoice) {
+  if (step.type !== "choice") throw new Error("Expected a choice");
+  return sentry.run(context(state), {
+    type: "answer",
+    memory: JSON.parse(JSON.stringify(step.memory)),
+    answer: choice,
+  });
+}
+
 describe("Sentry", () => {
-  beforeEach(() => {
-    resetEventCounter();
-  });
-
-  it("should grant +1 Card and +1 Action with empty deck", () => {
+  it("draws before looking at the next two cards", () => {
     const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = [];
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-    });
-
-    expect(result.events).toContainEqual({
-      type: "ACTIONS_MODIFIED",
-      delta: 1,
-    });
-    expect(result.pendingChoice).toBeUndefined();
+    state.players.human!.deck = ["Gold", "Silver", "Estate", "Copper"];
+    const step = begin(state);
+    const after = applyEvents(state, step.events);
+    expect(after.players.human!.hand).toEqual(["Copper"]);
+    expect(after.players.human!.deck).toEqual(["Gold"]);
+    expect(after.players.human!.setAside).toEqual(["Estate", "Silver"]);
+    expect(step.type === "choice" && step.request.cardOptions).toEqual([
+      "Estate",
+      "Silver",
+    ]);
+    expect(after.actions).toBe(2);
   });
-
-  it("should peek at top 2 cards and prompt for actions", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    // Deck is in reverse order - last element is drawn first
-    state.players["human"]!.deck = ["Silver", "Estate", "Gold"];
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
+  it("trashes and discards using serialized memory without touching hand duplicates", () => {
+    let state = createTestState();
+    state.players.human!.hand = ["Estate", "Silver"];
+    state.players.human!.deck = ["Silver", "Estate", "Copper"];
+    let step = begin(state);
+    state = JSON.parse(JSON.stringify(applyEvents(state, step.events)));
+    expect(state.pendingChoice).toBeNull();
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "trash_card", 1: "discard_card" },
     });
-
-    expect(result.events).toContainEqual({
-      type: "ACTIONS_MODIFIED",
-      delta: 1,
-    });
-    const peekEvents = result.events.filter(e => e.type === "CARD_PEEKED");
-    expect(peekEvents.length).toBe(2);
-    // Check that both cards were peeked
-    const peekedCards = peekEvents.map(e => e.card).sort();
-    expect(peekedCards).toEqual(["Estate", "Gold"]);
-
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.cardOptions.length).toBe(2);
-    expect(result.pendingChoice?.requiresOrdering).toBe(true);
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand).toEqual(["Estate", "Silver", "Copper"]);
+    expect(state.players.human!.discard).toEqual(["Silver"]);
+    expect(state.trash).toEqual(["Estate"]);
+    expect(state.players.human!.setAside).toEqual([]);
+    expect(state.players.human!.deck).toEqual([]);
   });
-
-  it("should trash selected cards", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate", "Copper"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate", "Copper"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "trash_card",
-          "1": "trash_card",
-        },
-      },
+  it("topdecks in requested order without taking cards from hand", () => {
+    let state = createTestState();
+    state.players.human!.hand = ["Estate"];
+    state.players.human!.deck = ["Gold", "Silver", "Estate", "Copper"];
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "topdeck_card", 1: "topdeck_card" },
+      cardOrder: [1, 0],
     });
-
-    const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(2);
-    expect(trashEvents[0]?.card).toBe("Estate");
-    expect(trashEvents[1]?.card).toBe("Copper");
-    expect(trashEvents.every(e => e.from === "deck")).toBe(true);
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.hand).toEqual(["Estate", "Copper"]);
+    expect(state.players.human!.deck).toEqual(["Gold", "Estate", "Silver"]);
+    expect(state.players.human!.setAside).toEqual([]);
   });
-
-  it("should discard selected cards", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate", "Copper"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate", "Copper"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "discard_card",
-          "1": "discard_card",
-        },
-      },
+  it("preserves duplicate looked-at cards independently", () => {
+    let state = createTestState();
+    state.players.human!.deck = ["Estate", "Estate", "Copper"];
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "trash_card", 1: "topdeck_card" },
+      cardOrder: [1],
     });
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
+    state = applyEvents(state, step.events);
+    expect(state.players.human!.deck).toEqual(["Estate"]);
+    expect(state.trash).toEqual(["Estate"]);
+    expect(state.players.human!.setAside).toEqual([]);
+  });
+  it("looks across a shuffle and records the order used by replay", () => {
+    let state = createTestState();
+    state.players.human!.deck = ["Estate", "Copper"];
+    state.players.human!.discard = ["Gold", "Silver"];
+    const before = state;
+    let step = begin(state);
+    state = applyEvents(state, step.events);
+    expect(step.type === "choice" && step.request.cardOptions[0]).toBe(
+      "Estate",
     );
-    expect(discardEvents.length).toBe(2);
-    expect(discardEvents[0]?.card).toBe("Estate");
-    expect(discardEvents[1]?.card).toBe("Copper");
+    expect(state.players.human!.setAside?.length).toBe(2);
+    expect(state.players.human!.deck.length).toBe(1);
+    expect(state.players.human!.discard).toEqual([]);
+    expect(
+      applyEvents(before, JSON.parse(JSON.stringify(step.events))),
+    ).toEqual(state);
+    step = answer(state, step, {
+      selectedCards: [],
+      cardActions: { 0: "topdeck_card", 1: "topdeck_card" },
+      cardOrder: [0, 1],
+    });
+    state = applyEvents(state, step.events);
+    expect(
+      [...state.players.human!.hand, ...state.players.human!.deck].sort(),
+    ).toEqual(["Copper", "Estate", "Gold", "Silver"]);
+    expect(state.players.human!.setAside).toEqual([]);
   });
-
-  it("should topdeck cards in specified order", () => {
+  it("handles zero or one available card after drawing and missing players", () => {
     const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate", "Silver"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate", "Silver"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "topdeck_card",
-          "1": "topdeck_card",
-        },
-        cardOrder: [1, 0], // Silver first, then Estate
-      },
-    });
-
-    const topdeckEvents = result.events.filter(
-      e => e.type === "CARD_PUT_ON_DECK",
-    );
-    expect(topdeckEvents.length).toBe(2);
-    // Reversed because they're put on deck in reverse order
-    expect(topdeckEvents[0]?.card).toBe("Estate");
-    expect(topdeckEvents[1]?.card).toBe("Silver");
+    expect(begin(state).type).toBe("done");
+    state.players.human!.deck = ["Copper"];
+    const step = begin(state);
+    expect(step.type).toBe("done");
+    expect(applyEvents(state, step.events).players.human!.hand).toEqual([
+      "Copper",
+    ]);
+    state.players.human!.deck = ["Silver", "Copper"];
+    const one = begin(state);
+    expect(one.type === "choice" && one.request.cardOptions).toEqual([
+      "Silver",
+    ]);
+    expect(
+      sentry.run(context(state, "missing"), { type: "start" }).events,
+    ).toEqual([]);
   });
-
-  it("should handle mixed actions: trash, discard, topdeck", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate", "Copper"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate", "Copper"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "trash_card",
-          "1": "topdeck_card",
-        },
-      },
-    });
-
-    expect(result.events).toContainEqual({
-      type: "CARD_TRASHED",
-      playerId: "human",
-      card: "Estate",
-      from: "deck",
-    });
-    expect(result.events).toContainEqual({
-      type: "CARD_PUT_ON_DECK",
-      playerId: "human",
-      card: "Copper",
-      from: "hand",
-    });
-  });
-
-  it("should handle topdeck with no explicit order", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate", "Silver"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate", "Silver"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "0": "topdeck_card",
-          "1": "topdeck_card",
-        },
-        cardOrder: [],
-      },
-    });
-
-    const topdeckEvents = result.events.filter(
-      e => e.type === "CARD_PUT_ON_DECK",
-    );
-    expect(topdeckEvents.length).toBe(2);
-  });
-
-  it("should handle only 1 card in deck", () => {
-    const state = createTestState();
-    state.players["human"]!.hand = ["Copper"];
-    state.players["human"]!.deck = ["Estate"];
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-    });
-
-    const peekEvents = result.events.filter(e => e.type === "CARD_PEEKED");
-    expect(peekEvents.length).toBe(1);
-    expect(result.pendingChoice?.cardOptions).toEqual(["Estate"]);
-  });
-
-  it("should handle missing player state", () => {
-    const state = createTestState();
-
-    const result = sentry({
-      state,
-      playerId: "nonexistent" as any,
-      card: "Sentry",
-    });
-
-    expect(result.events).toEqual([]);
-  });
-
-  it("should handle invalid card indices in decision", () => {
-    const state = createTestState();
-    state.pendingChoice = {
-      choiceType: "decision",
-      playerId: "human",
-      prompt: "Sentry: Choose what to do with each card",
-      cardOptions: ["Estate"],
-      actions: [
-        { ...CARD_ACTIONS.topdeck_card, isDefault: true },
-        CARD_ACTIONS.trash_card,
-        CARD_ACTIONS.discard_card,
-      ],
-      requiresOrdering: true,
-      orderingPrompt:
-        "Cards to topdeck will return in this order (first = top)",
-      cardBeingPlayed: "Sentry",
-      metadata: { revealedCards: ["Estate"] },
-    };
-
-    const result = sentry({
-      state,
-      playerId: "human",
-      card: "Sentry",
-      decision: {
-        selectedCards: [],
-        cardActions: {
-          "5": "trash_card", // Out of bounds
-        },
-      },
-    });
-
-    expect(result.events).toEqual([]);
+  it("rejects impossible or unknown continuation cards", () => {
+    expect(() => sentry.parseMemory({ revealed: [] })).toThrow();
+    expect(() => sentry.parseMemory({ revealed: ["Imaginary"] })).toThrow();
   });
 });

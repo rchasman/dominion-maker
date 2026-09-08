@@ -21,6 +21,7 @@ export function handleStartGame(
   players: PlayerId[],
   kingdomCards?: CardName[],
   seed?: number,
+  random: () => number = Math.random,
 ): CommandResult {
   void state;
 
@@ -30,7 +31,7 @@ export function handleStartGame(
   }
 
   // Select kingdom cards if not provided
-  const selectedKingdom = kingdomCards || selectRandomKingdomCards();
+  const selectedKingdom = kingdomCards || selectRandomKingdomCards(random);
 
   // Calculate supply based on player count
   const supply = calculateSupply(players.length, selectedKingdom);
@@ -60,7 +61,7 @@ export function handleStartGame(
   const startingDeck: CardName[] = [...copperCards, ...estateCards];
 
   const playerSetupEvents = players.flatMap(playerId => {
-    const shuffledDeck = shuffle([...startingDeck]);
+    const shuffledDeck = shuffle([...startingDeck], random);
     const initialHand = shuffledDeck.slice(-GAME_CONSTANTS.INITIAL_HAND_SIZE);
     return [
       {
@@ -109,6 +110,7 @@ export function handleStartGame(
 export function handleEndPhase(
   state: GameState,
   playerId: PlayerId,
+  random: () => number = Math.random,
 ): CommandResult {
   // Cannot end phase while there's a pending decision
   if (state.pendingChoice) {
@@ -182,6 +184,7 @@ export function handleEndPhase(
       playerId,
       playerStateAfterCleanup,
       GAME_CONSTANTS.INITIAL_HAND_SIZE,
+      random,
     );
 
     const allEvents = [

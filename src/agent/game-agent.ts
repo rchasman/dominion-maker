@@ -434,8 +434,8 @@ async function handleMultiActionConsensus(
         pendingChoice: isDecisionChoice(engine.state.pendingChoice)
           ? {
               ...engine.state.pendingChoice,
-              metadata: {
-                ...engine.state.pendingChoice.metadata,
+              presentation: {
+                ...engine.state.pendingChoice.presentation,
                 currentRoundIndex: roundIndex,
               },
             }

@@ -24,12 +24,6 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "Militia attack",
-        },
       };
 
       expect(isDecisionChoice(choice)).toBe(false);
@@ -69,12 +63,6 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Witch",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human", "player2"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "Witch attack",
-        },
       };
 
       expect(isReactionChoice(choice)).toBe(true);
@@ -108,12 +96,6 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "Militia attack",
-        },
       };
 
       if (isReactionChoice(choice)) {
@@ -189,28 +171,25 @@ describe("Type guards for PendingChoice", () => {
       }
     });
 
-    it("should handle decision with metadata", () => {
+    it("should handle decision with presentation", () => {
       const choice: PendingChoice = {
         choiceType: "decision",
         playerId: "human",
         prompt: "Choose a card",
         cardOptions: ["Province"],
         cardBeingPlayed: "Workshop",
-        metadata: {
-          maxCost: 4,
-          originalPrompt: "Gain a card",
-        },
+        presentation: { currentRoundIndex: 1 },
       };
 
       expect(isDecisionChoice(choice)).toBe(true);
       if (isDecisionChoice(choice)) {
-        expect(choice.metadata?.maxCost).toBe(4);
+        expect(choice.presentation?.currentRoundIndex).toBe(1);
       }
     });
   });
 
-  describe("reaction choice with metadata", () => {
-    it("should handle reaction with blocked targets", () => {
+  describe("reaction choice contract", () => {
+    it("should expose the reaction trigger without attack bookkeeping", () => {
       const choice: PendingChoice = {
         choiceType: "reaction",
         playerId: "human",
@@ -218,18 +197,12 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["human", "player2", "player3"],
-          currentTargetIndex: 1,
-          blockedTargets: ["player2"],
-          originalCause: "Militia attack targeting all opponents",
-        },
       };
 
       expect(isReactionChoice(choice)).toBe(true);
       if (isReactionChoice(choice)) {
-        expect(choice.metadata.blockedTargets).toContain("player2");
-        expect(choice.metadata.currentTargetIndex).toBe(1);
+        expect(choice).not.toHaveProperty("metadata");
+        expect(choice.triggerType).toBe("on_attack");
       }
     });
 
@@ -241,12 +214,6 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Witch",
         triggerType: "on_attack",
         availableReactions: ["Moat", "Chapel"],
-        metadata: {
-          allTargets: ["human"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "Witch curse distribution",
-        },
       };
 
       expect(isReactionChoice(choice)).toBe(true);
@@ -269,16 +236,16 @@ describe("Type guards for PendingChoice", () => {
         from: "supply",
         min: 1,
         max: 3,
-        stage: "test-stage",
+        intent: "select",
         actions: [{ id: "select", label: "Select", color: "blue" }],
         requiresOrdering: true,
         orderingPrompt: "Order prompt",
-        metadata: { test: "data" },
+        presentation: { currentRoundIndex: 0 },
       };
 
       if (isDecisionChoice(choice)) {
         expect(choice.playerId).toBe("test-player");
-        expect(choice.stage).toBe("test-stage");
+        expect(choice.intent).toBe("select");
         expect(choice.from).toBe("supply");
       }
     });
@@ -291,18 +258,12 @@ describe("Type guards for PendingChoice", () => {
         triggeringCard: "Militia",
         triggerType: "on_attack",
         availableReactions: ["Moat"],
-        metadata: {
-          allTargets: ["test-player"],
-          currentTargetIndex: 0,
-          blockedTargets: [],
-          originalCause: "test cause",
-        },
       };
 
       if (isReactionChoice(choice)) {
         expect(choice.triggeringPlayerId).toBe("other-player");
         expect(choice.triggerType).toBe("on_attack");
-        expect(choice.metadata.originalCause).toBe("test cause");
+        expect(choice.triggeringPlayerId).toBe("other-player");
       }
     });
   });

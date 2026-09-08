@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { bandit } from "./bandit";
 import type { GameState } from "../../types/game-state";
-import { resetEventCounter } from "../../events/id-generator";
 import { applyEvents } from "../../events/apply";
 
 function createTestState(): GameState {
@@ -49,233 +48,136 @@ function createTestState(): GameState {
   };
 }
 
+function context(state: GameState, target = "ai1") {
+  return {
+    state,
+    playerId: "human",
+    card: "Bandit" as const,
+    trigger: { type: "attack" as const, target },
+    random: () => 0.5,
+  };
+}
+function attack(state: GameState, target = "ai1") {
+  return bandit.run(context(state, target), { type: "start" });
+}
 describe("Bandit", () => {
-  beforeEach(() => {
-    resetEventCounter();
-  });
-
-  it("should gain Gold for attacker", () => {
+  it("gains Gold and schedules opponents without executing them", () => {
     const state = createTestState();
-    state.players["ai1"]!.deck = ["Copper", "Copper"];
-    state.players["ai2"]!.deck = ["Copper", "Estate"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const gainEvents = result.events.filter(e => e.type === "CARD_GAINED");
-    expect(gainEvents.length).toBe(1);
-    expect(gainEvents[0]?.card).toBe("Gold");
-    expect(gainEvents[0]?.playerId).toBe("human");
-  });
-
-  it("should auto-discard if opponent has no trashable treasures", () => {
-    const state = createTestState();
-    // Deck is in reverse order - last element is drawn first
-    state.players["ai1"]!.deck = ["Estate", "Copper"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const revealEvents = result.events.filter(e => e.type === "CARD_REVEALED");
-    expect(revealEvents.length).toBe(2);
-    // Check that both cards are revealed
-    const revealedCards = revealEvents.map(e => e.card).sort();
-    expect(revealedCards).toEqual(["Copper", "Estate"]);
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
+    state.supply.Gold = 1;
+    state.players.ai1!.deck = ["Silver"];
+    const result = bandit.run(
+      { ...context(state), trigger: { type: "play" } },
+      { type: "start" },
     );
-    expect(discardEvents.length).toBe(2);
-    expect(result.pendingChoice).toBeUndefined();
-  });
-
-  it("should auto-trash if opponent has exactly 1 trashable treasure", () => {
-    const state = createTestState();
-    state.players["ai1"]!.deck = ["Silver", "Estate"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
+    expect(result).toEqual({
+      type: "schedule",
+      events: [
+        { type: "CARD_GAINED", playerId: "human", card: "Gold", to: "discard" },
+      ],
+      operations: [{ type: "attack", targets: ["ai1", "ai2"] }],
     });
-
-    const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(1);
-    expect(trashEvents[0]?.card).toBe("Silver");
-    expect(trashEvents[0]?.playerId).toBe("ai1");
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    expect(discardEvents.length).toBe(1);
-    expect(discardEvents[0]?.card).toBe("Estate");
+    state.supply.Gold = 0;
+    expect(
+      bandit.run(
+        { ...context(state), trigger: { type: "play" } },
+        { type: "start" },
+      ).events,
+    ).toEqual([]);
   });
-
-  it("should prompt for choice if opponent has 2 trashable treasures", () => {
+  it("reveals and discards both cards when no eligible Treasure exists", () => {
     const state = createTestState();
-    // Deck is in reverse order - last element is drawn first
-    state.players["ai1"]!.deck = ["Gold", "Silver"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    expect(result.pendingChoice).toBeDefined();
-    expect(result.pendingChoice?.playerId).toBe("ai1");
-    // Check that both treasures are in options
-    const options = result.pendingChoice?.cardOptions.sort();
-    expect(options).toEqual(["Gold", "Silver"]);
-    expect(result.pendingChoice?.min).toBe(1);
-    expect(result.pendingChoice?.max).toBe(1);
+    state.players.ai1!.deck = ["Estate", "Copper"];
+    const result = attack(state);
+    expect(result.type).toBe("done");
+    expect(
+      result.events.filter(e => e.type === "CARD_REVEALED").map(e => e.card),
+    ).toEqual(["Copper", "Estate"]);
+    const after = applyEvents(state, result.events);
+    expect(after.players.ai1!.discard).toEqual(["Copper", "Estate"]);
+    expect(after.players.ai1!.setAside).toEqual([]);
+    expect(after.trash).toEqual([]);
   });
-
-  it("should handle opponent choice to trash Silver over Gold", () => {
+  it("automatically trashes a lone eligible Treasure", () => {
+    const state = createTestState();
+    state.players.ai1!.deck = ["Silver", "Estate"];
+    const after = applyEvents(state, attack(state).events);
+    expect(after.trash).toEqual(["Silver"]);
+    expect(after.players.ai1!.discard).toEqual(["Estate"]);
+  });
+  it("offers distinct Treasures and resolves from serialized private memory", () => {
     let state = createTestState();
-    state.players["ai1"]!.deck = ["Silver", "Gold"];
-
-    const result1 = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
+    state.players.ai1!.deck = ["Silver", "Gold"];
+    state.players.ai2!.deck = ["Silver", "Estate"];
+    const initial = attack(state);
+    if (initial.type !== "choice") throw new Error("Expected choice");
+    expect(initial.request).toMatchObject({
+      playerId: "ai1",
+      cardOptions: ["Gold", "Silver"],
+      min: 1,
+      max: 1,
     });
-
-    state = applyEvents(state, result1.events);
-    if (result1.pendingChoice) {
-      state.pendingChoice = result1.pendingChoice;
-    }
-
-    const result2 = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-      decision: { selectedCards: ["Silver"] },
-      stage: "victim_trash_choice",
+    state = applyEvents(state, initial.events);
+    const result = bandit.run(context(state), {
+      type: "answer",
+      memory: JSON.parse(JSON.stringify(initial.memory)),
+      answer: { selectedCards: ["Silver"] },
     });
-
-    const trashEvents = result2.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(1);
-    expect(trashEvents[0]?.card).toBe("Silver");
-
-    const discardEvents = result2.events.filter(
-      e => e.type === "CARD_DISCARDED",
+    expect(result.type).toBe("done");
+    const after = applyEvents(state, result.events);
+    expect(after.trash).toEqual(["Silver"]);
+    expect(after.players.ai1!.discard).toEqual(["Gold"]);
+    expect(after.players.ai1!.setAside).toEqual([]);
+    // The runner, not this continuation, owns advancing to ai2.
+    expect(after.players.ai2!.deck).toEqual(["Silver", "Estate"]);
+    const next = applyEvents(after, attack(after, "ai2").events);
+    expect(next.trash).toEqual(["Silver", "Silver"]);
+    expect(next.players.ai2!.discard).toEqual(["Estate"]);
+  });
+  it("trashes only one of duplicate Treasures without prompting", () => {
+    const state = createTestState();
+    state.players.ai1!.deck = ["Silver", "Silver"];
+    const result = attack(state);
+    expect(result.type).toBe("done");
+    const after = applyEvents(state, result.events);
+    expect(after.trash).toEqual(["Silver"]);
+    expect(after.players.ai1!.discard).toEqual(["Silver"]);
+  });
+  it("handles empty decks, missing targets, and one available card", () => {
+    const state = createTestState();
+    expect(attack(state).events).toEqual([]);
+    expect(attack(state, "missing").events).toEqual([]);
+    state.players.ai1!.deck = ["Silver"];
+    const result = attack(state);
+    expect(result.events.filter(e => e.type === "CARD_REVEALED")).toHaveLength(
+      1,
     );
-    expect(discardEvents.length).toBe(1);
-    expect(discardEvents[0]?.card).toBe("Gold");
+    expect(applyEvents(state, result.events).trash).toEqual(["Silver"]);
   });
-
-  it("should handle multiple opponents with different scenarios", () => {
+  it("never trashes Copper", () => {
     const state = createTestState();
-    state.players["ai1"]!.deck = ["Silver", "Estate"]; // Auto-trash Silver
-    state.players["ai2"]!.deck = ["Copper", "Copper"]; // Auto-discard both
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(1);
-    expect(trashEvents[0]?.card).toBe("Silver");
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    expect(discardEvents.length).toBe(3); // Estate from ai1, both Coppers from ai2
+    state.players.ai1!.deck = ["Copper", "Copper"];
+    const after = applyEvents(state, attack(state).events);
+    expect(after.trash).toEqual([]);
+    expect(after.players.ai1!.discard).toEqual(["Copper", "Copper"]);
   });
-
-  it("should handle opponent with empty deck", () => {
+  it("preserves cards when revealing across a shuffle", () => {
     const state = createTestState();
-    state.players["ai1"]!.deck = [];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const gainEvents = result.events.filter(e => e.type === "CARD_GAINED");
-    expect(gainEvents.length).toBe(1);
-    expect(gainEvents[0]?.card).toBe("Gold");
-
-    const revealEvents = result.events.filter(e => e.type === "CARD_REVEALED");
-    expect(revealEvents.length).toBe(0);
+    state.players.ai1!.deck = ["Estate"];
+    state.players.ai1!.discard = ["Silver"];
+    const result = attack(state);
+    const after = applyEvents(state, result.events);
+    expect(after.trash).toEqual(["Silver"]);
+    expect(after.players.ai1!.discard).toEqual(["Estate"]);
+    expect(after.players.ai1!.deck).toEqual([]);
+    expect(after.players.ai1!.setAside).toEqual([]);
+    expect(
+      applyEvents(state, JSON.parse(JSON.stringify(result.events))),
+    ).toEqual(after);
   });
-
-  it("should handle opponent with only 1 card in deck", () => {
-    const state = createTestState();
-    state.players["ai1"]!.deck = ["Silver"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const revealEvents = result.events.filter(e => e.type === "CARD_REVEALED");
-    expect(revealEvents.length).toBe(1);
-
-    const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(1);
-    expect(trashEvents[0]?.card).toBe("Silver");
-  });
-
-  it("should not trash Copper", () => {
-    const state = createTestState();
-    state.players["ai1"]!.deck = ["Copper", "Copper"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const trashEvents = result.events.filter(e => e.type === "CARD_TRASHED");
-    expect(trashEvents.length).toBe(0);
-
-    const discardEvents = result.events.filter(
-      e => e.type === "CARD_DISCARDED",
-    );
-    expect(discardEvents.length).toBe(2);
-  });
-
-  it("should handle missing opponent", () => {
-    const state = createTestState();
-    delete state.players["ai1"];
-
-    const result = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    const gainEvents = result.events.filter(e => e.type === "CARD_GAINED");
-    expect(gainEvents.length).toBe(1);
-  });
-
-  it("should process next opponent after current choice", () => {
-    let state = createTestState();
-    state.players["ai1"]!.deck = ["Silver", "Gold"]; // Needs choice
-    state.players["ai2"]!.deck = ["Silver", "Estate"]; // Auto-trash
-
-    const result1 = bandit({
-      state,
-      playerId: "human",
-      card: "Bandit",
-    });
-
-    expect(result1.pendingChoice).toBeDefined();
-    expect(result1.pendingChoice?.playerId).toBe("ai1");
-    expect(result1.pendingChoice?.metadata?.remainingOpponents).toEqual([
-      "ai2",
-    ]);
+  it("rejects impossible continuation memory", () => {
+    expect(() => bandit.parseMemory({ revealed: ["Gold"] })).toThrow();
+    expect(() =>
+      bandit.parseMemory({ revealed: ["Gold", "Imaginary"] }),
+    ).toThrow();
   });
 });

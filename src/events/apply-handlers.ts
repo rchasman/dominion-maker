@@ -38,6 +38,7 @@ export function applyTurnEvent(
     return {
       ...state,
       activeEffects: [], // Clear all turn-based effects
+      ...(state.turnTriggers !== undefined && { turnTriggers: [] }),
     };
   }
 
@@ -230,7 +231,6 @@ export function applyReactionEvent(
         triggeringCard: reactionEvent.triggeringCard,
         triggerType: reactionEvent.triggerType,
         availableReactions: reactionEvent.availableReactions,
-        metadata: reactionEvent.metadata,
       },
       pendingChoiceEventId: reactionEvent.id || null,
     };

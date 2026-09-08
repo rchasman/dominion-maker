@@ -1,54 +1,47 @@
-/**
- * Poacher - +1 Card, +1 Action, +$1. Discard 1 card per empty supply pile
- */
-
 import {
-  createMultiStageCard,
   cardsToEvents,
   createDrawEvents,
+  projectEffectEvents,
 } from "../effect-types";
-import { STAGES } from "../stages";
+import { choose, defineEffect, done, noMemory } from "../program";
 
-export const poacher = createMultiStageCard({
-  initial: ({ state, playerId }) => {
-    const playerState = state.players[playerId];
-    if (!playerState) return { events: [] };
-
+export const poacher = defineEffect(
+  noMemory,
+  ({ state, playerId, random }, input) => {
+    if (input.type === "continue")
+      throw new Error("Unexpected continuation for Poacher");
+    if (input.type === "answer")
+      return done(
+        cardsToEvents(input.answer.selectedCards, playerId, "CARD_DISCARDED"),
+      );
+    const player = state.players[playerId];
+    if (!player) return done();
+    const events = [
+      ...createDrawEvents(playerId, player, 1, random),
+      { type: "ACTIONS_MODIFIED" as const, delta: 1 },
+      { type: "COINS_MODIFIED" as const, delta: 1 },
+    ];
+    const hand =
+      projectEffectEvents(state, events).players[playerId]?.hand ?? [];
     const emptyPiles = Object.values(state.supply).filter(
       count => count === 0,
     ).length;
-
-    const drawEvents = createDrawEvents(playerId, playerState, 1);
-    const actionEvent = { type: "ACTIONS_MODIFIED" as const, delta: 1 };
-    const coinEvent = { type: "COINS_MODIFIED" as const, delta: 1 };
-    const initialEvents = [...drawEvents, actionEvent, coinEvent];
-
-    if (emptyPiles === 0 || playerState.hand.length === 0) {
-      return { events: initialEvents };
-    }
-
-    const discardCount = Math.min(emptyPiles, playerState.hand.length);
-
-    return {
-      events: initialEvents,
-      pendingChoice: {
+    const count = Math.min(emptyPiles, hand.length);
+    if (!count) return done(events);
+    return choose(
+      {
         choiceType: "decision",
         playerId,
-        from: "hand",
-        prompt: `Poacher: Discard ${discardCount} card(s) (${emptyPiles} empty pile(s))`,
-        cardOptions: [...playerState.hand],
-        min: discardCount,
-        max: discardCount,
         cardBeingPlayed: "Poacher",
-        stage: STAGES.DISCARD,
+        intent: "discard",
+        from: "hand",
+        prompt: `Poacher: Discard ${count} card(s) (${emptyPiles} empty pile(s))`,
+        cardOptions: [...hand],
+        min: count,
+        max: count,
       },
-    };
+      null,
+      events,
+    );
   },
-
-  discard: ({ playerId, decision }) => {
-    if (!decision) return { events: [] };
-    return {
-      events: cardsToEvents(decision.selectedCards, playerId, "CARD_DISCARDED"),
-    };
-  },
-});
+);
