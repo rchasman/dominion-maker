@@ -4,8 +4,22 @@ import { actionRequestSchema, analysisRequestSchema } from "../../api/_request";
 import { createGame } from "../engine";
 import { generateActionViaBackend } from "../agent/game-agent-helpers";
 import { api } from "./client";
+import { MODELS } from "../config/models";
 
 describe("API request boundaries", () => {
+  it("accepts every roster model and rejects the retired non-ZDR model", () => {
+    const currentState = createGame(["human", "ai"], undefined, 42).state;
+    for (const model of MODELS) {
+      expect(
+        actionRequestSchema.safeParse({ provider: model.id, currentState })
+          .success,
+      ).toBe(true);
+    }
+    expect(
+      actionRequestSchema.safeParse({ provider: "grok-4.5", currentState })
+        .success,
+    ).toBe(false);
+  });
   it("rejects malformed JSON and wrong shapes on every endpoint", async () => {
     for (const endpoint of [
       "generate-action",

@@ -17,13 +17,14 @@ import {
   replyFormatInstruction,
 } from "../src/agent/choice-parsing";
 import { getLegalActions } from "../src/agent/legal-actions";
-import { MODEL_MAP } from "../src/config/models";
+import { MODELS, type ModelConfig } from "../src/config/models";
 import {
   buildStrategicContext,
   formatTurnHistoryForAnalysis,
 } from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { env } from "../src/lib/env";
+import { promptJsonMiddleware } from "../src/agent/model-output";
 
 // HTTP Status Codes
 const HTTP_BAD_REQUEST = 400;
@@ -104,8 +105,6 @@ function getDevToolsMiddleware(
   return entry.middleware;
 }
 
-// Get provider options for AI Gateway routing
-
 interface RequestBody {
   provider: string;
   currentState: GameState;
@@ -144,15 +143,20 @@ async function processGenerationRequest(
       .json({ error: "No legal actions for the current state" });
   }
 
-  const modelName = MODEL_MAP[provider];
-  if (!modelName) {
+  const config: ModelConfig | undefined = MODELS.find(m => m.id === provider);
+  if (!config) {
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
   const devTools = getDevToolsMiddleware(actionId);
-  const model = devTools
-    ? wrapLanguageModel({ model: gateway(modelName), middleware: [devTools] })
-    : gateway(modelName);
+  const middleware = [
+    ...(config.structuredOutput === "prompt" ? [promptJsonMiddleware] : []),
+    ...(devTools ? [devTools] : []),
+  ];
+  const baseModel = gateway(config.fullName);
+  const model = middleware.length
+    ? wrapLanguageModel({ model: baseModel, middleware })
+    : baseModel;
 
   // Format recent turn history (last 3 turns) from log with TOON encoding
   const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
@@ -174,7 +178,7 @@ async function processGenerationRequest(
   const systemPrompt = buildSystemPrompt(currentState.supply);
 
   // No text repair by design — invalid replies get one corrective retry and
-  // habitual misformatters surface as warns (roster live-verified 2026-07)
+  // habitual misformatters surface as warns (roster live-verified 2026-09)
   const schema = choiceSchema(legalActions.length);
   const attempt = async (messages: ModelMessage[]) => {
     const { object } = await generateObject({
@@ -183,6 +187,16 @@ async function processGenerationRequest(
       messages,
       schema,
       maxRetries: 0,
+      providerOptions: {
+        gateway: {
+          zeroDataRetention: true,
+          ...(config.gatewayProviders
+            ? { only: [...config.gatewayProviders] }
+            : {}),
+          // Actions are short: prioritize time to first token.
+          sort: "ttft",
+        },
+      },
     });
     return choiceToAction(object, legalActions);
   };

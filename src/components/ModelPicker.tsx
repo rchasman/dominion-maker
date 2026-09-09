@@ -18,46 +18,11 @@ const FLEX_FILL = 1;
 
 // Helper to get display name for a model
 const getModelDisplayName = (model: ModelProvider): string => {
-  switch (model) {
-    case "claude-haiku":
-      return "Claude Haiku";
-    case "claude-sonnet":
-      return "Claude Sonnet";
-    case "claude-opus":
-      return "Claude Opus (max 3)";
-    case "gpt-oss-120b":
-      return "GPT OSS 120B";
-    case "gpt-5.4-nano":
-      return "GPT-5.4 Nano";
-    case "gpt-5.4-mini":
-      return "GPT-5.4 Mini";
-    case "gpt-5.4":
-      return "GPT-5.4 (max 3)";
-    case "gpt-5.6-terra":
-      return "GPT-5.6 Terra (max 3)";
-    case "gemini-3.1-flash-lite":
-      return "Gemini 3.1 Flash Lite";
-    case "gemini-3.5-flash":
-      return "Gemini 3.5 Flash";
-    case "gemini-3.1-pro":
-      return "Gemini 3.1 Pro (max 3)";
-    case "grok-4-fast":
-      return "Grok 4 Fast";
-    case "grok-4.5":
-      return "Grok 4.5 (max 3)";
-    case "deepseek-v4-pro":
-      return "DeepSeek V4 Pro";
-    case "glm-4.7-flash":
-      return "GLM-4.7 Flash";
-    case "glm-5.2":
-      return "GLM-5.2";
-    case "qwen3.5-flash":
-      return "Qwen 3.5 Flash";
-    default: {
-      const _exhaustive: never = model;
-      return String(_exhaustive);
-    }
-  }
+  const config: ModelConfig | undefined = MODELS.find(m => m.id === model);
+  if (!config) return model;
+  return config.maxInstances
+    ? `${config.displayName} (max ${config.maxInstances})`
+    : config.displayName;
 };
 
 const providerDisplayNames: Record<string, string> = {
@@ -68,6 +33,12 @@ const providerDisplayNames: Record<string, string> = {
   deepseek: "DeepSeek",
   zhipu: "Zhipu AI",
   alibaba: "Alibaba",
+  meta: "Meta",
+  nvidia: "NVIDIA",
+  stepfun: "StepFun",
+  moonshotai: "Moonshot AI",
+  thinkingmachines: "Thinking Machines",
+  mistral: "Mistral",
 };
 
 const providerOrder = [
