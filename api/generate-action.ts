@@ -189,7 +189,6 @@ async function processGenerationRequest(
       maxRetries: 0,
       providerOptions: {
         gateway: {
-          zeroDataRetention: true,
           ...(config.gatewayProviders
             ? { only: [...config.gatewayProviders] }
             : {}),
