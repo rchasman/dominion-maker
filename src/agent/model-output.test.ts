@@ -26,7 +26,7 @@ describe("prompted JSON model compatibility", () => {
     };
   };
 
-  it("avoids native schemas while preserving ZDR routing and validation", async () => {
+  it("avoids native schemas while preserving routing options and validation", async () => {
     const { base, model } = createModel(
       '{"reasoning":"Buy Silver","choice":1}',
     );
@@ -34,12 +34,12 @@ describe("prompted JSON model compatibility", () => {
       model,
       prompt: "Choose an action. Return JSON with reasoning and choice.",
       schema: choiceSchema(3),
-      providerOptions: { gateway: { zeroDataRetention: true, sort: "ttft" } },
+      providerOptions: { gateway: { sort: "ttft", only: ["deepinfra"] } },
     });
     expect(result.object.choice).toBe(1);
     expect(base.doGenerateCalls[0]?.responseFormat).toEqual({ type: "text" });
     expect(base.doGenerateCalls[0]?.providerOptions).toEqual({
-      gateway: { zeroDataRetention: true, sort: "ttft" },
+      gateway: { sort: "ttft", only: ["deepinfra"] },
     });
   });
 

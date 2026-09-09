@@ -19,7 +19,7 @@ export interface ModelConfig {
 // Includes the low-latency shortlist and current Flash/Lite families. Morph
 // is excluded: it applies code edits rather than generating game actions.
 // Prices are catalog base estimates; routed providers and tiers can differ.
-// Enforce ZDR per request: some models also have non-ZDR providers.
+// ZDR is enforced by the AI Gateway account setting.
 export const MODELS = [
   // anthropic
   {
