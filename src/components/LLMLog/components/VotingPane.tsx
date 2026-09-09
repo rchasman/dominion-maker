@@ -219,12 +219,6 @@ export function VotingPane({
         }}
       >
         <div style={{ marginTop: "-1px" }}>
-          <p
-            style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)" }}
-          >
-            Vote share counts support for an action, not confidence in its
-            explanation. During voting, the denominator includes pending models.
-          </p>
           {allResults.map((result, idx) => (
             <VoteResultItem
               key={idx}

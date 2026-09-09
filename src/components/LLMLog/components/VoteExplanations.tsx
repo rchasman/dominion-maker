@@ -19,7 +19,7 @@ export function VoteExplanations({
       }}
     >
       <div style={{ color: "var(--color-text-secondary)" }}>
-        {first.provider} · Individual explanation · Not fact-checked
+        {first.provider}
       </div>
       <div>{first.reasoning}</div>
       {available.length > 1 && (

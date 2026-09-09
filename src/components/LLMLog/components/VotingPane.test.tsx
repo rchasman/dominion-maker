@@ -28,7 +28,7 @@ function statuses(): Map<number, ModelStatus> {
 }
 
 describe("vote explanations", () => {
-  it("attributes each live response without implying factual consensus", () => {
+  it("attributes each live response to its provider", () => {
     const root = document.createElement("div");
     render(
       <VotingPane
@@ -45,8 +45,7 @@ describe("vote explanations", () => {
     expect(root.querySelector('[aria-label="Valid action"]')?.textContent).toBe(
       "✓",
     );
-    expect(root.textContent).toContain("gpt-5.4-nano · Individual explanation");
-    expect(root.textContent).toContain("Not fact-checked");
+    expect(root.textContent).toContain("gpt-5.4-nano");
     const details = root.querySelector("details")!;
     expect(details.textContent).toContain("Action balance");
     expect(details.open).toBe(false);
