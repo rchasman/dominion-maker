@@ -1,6 +1,7 @@
 import { actionRequestSchema, readRequest } from "./_request";
 import { buildUserMessage } from "../src/agent/action-prompt";
 import {
+  experimental_evaluate,
   generateObject,
   gateway,
   wrapLanguageModel,
@@ -25,6 +26,12 @@ import {
 import { apiLogger } from "../src/lib/logger";
 import { env } from "../src/lib/env";
 import { promptJsonMiddleware } from "../src/agent/model-output";
+import {
+  buildJevQuestion,
+  buildJevState,
+  jevAnswerToAction,
+  JEV_QUESTION_ID,
+} from "../src/agent/jev-choice";
 
 // HTTP Status Codes
 const HTTP_BAD_REQUEST = 400;
@@ -148,6 +155,31 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
+  // Format recent turn history (last 3 turns) from log with TOON encoding
+  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
+
+  const strategicContext = buildStrategicContext(
+    currentState,
+    strategySummary,
+    customStrategy,
+  );
+
+  if (config.evaluation) {
+    const { answers } = await experimental_evaluate({
+      model: gateway.evaluationModel(config.fullName),
+      state: buildJevState({
+        currentState,
+        strategicContext,
+        recentTurnsStr,
+        ...(humanChoice ? { humanChoice } : {}),
+      }),
+      questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
+      maxRetries: 0,
+    });
+    const action = jevAnswerToAction(answers[JEV_QUESTION_ID], legalActions);
+    return res.status(HTTP_OK).json({ action, strategySummary });
+  }
+
   const devTools = getDevToolsMiddleware(actionId);
   const middleware = [
     ...(config.structuredOutput === "prompt" ? [promptJsonMiddleware] : []),
@@ -157,15 +189,6 @@ async function processGenerationRequest(
   const model = middleware.length
     ? wrapLanguageModel({ model: baseModel, middleware })
     : baseModel;
-
-  // Format recent turn history (last 3 turns) from log with TOON encoding
-  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
-
-  const strategicContext = buildStrategicContext(
-    currentState,
-    strategySummary,
-    customStrategy,
-  );
 
   const userMessage = buildUserMessage({
     strategicContext,

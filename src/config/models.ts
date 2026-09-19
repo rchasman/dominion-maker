@@ -11,6 +11,7 @@ export interface ModelConfig {
   speed?: number; // Tokens per second (optional)
   gatewayProviders?: readonly string[]; // Restrict incompatible provider routes
   structuredOutput?: "prompt"; // For providers without native JSON schemas
+  evaluation?: true; // Answers a typed Choice via experimental_evaluate, no JSON reply
   maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)
 }
 
@@ -20,6 +21,8 @@ export interface ModelConfig {
 // is excluded: it applies code edits rather than generating game actions.
 // Prices are catalog base estimates; routed providers and tiers can differ.
 // ZDR is enforced by the AI Gateway account setting.
+// Jev (typesafe-ai) is an evaluation model: it picks one option from the legal
+// actions and returns probabilities instead of a JSON reply with reasoning.
 export const MODELS = [
   // anthropic
   {
@@ -49,6 +52,18 @@ export const MODELS = [
     inputPrice: 5.0,
     outputPrice: 25.0,
     maxInstances: 3,
+  },
+
+  // typesafe
+  {
+    id: "jev",
+    evaluation: true,
+    fullName: "typesafe-ai/jev",
+    displayName: "Jev",
+    provider: "typesafe",
+    color: "#f472b6",
+    inputPrice: 0.042,
+    outputPrice: 0,
   },
 
   // openai
