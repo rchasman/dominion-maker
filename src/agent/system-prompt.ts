@@ -3,13 +3,10 @@ import { encodeToon } from "../lib/toon";
 import { formatLegalActions, replyShape } from "./choice-parsing";
 import type { CardName } from "../types/game-state";
 
-export function buildCardDefinitionsTable(
-  supply: Record<CardName, number>,
-): string {
-  // Only include cards that are in the current game's supply
+// Only cards in the current game's supply
+export function cardDefinitionRows(supply: Record<CardName, number>) {
   const cardsInSupply = Object.keys(supply) as CardName[];
-
-  const cardData = cardsInSupply.map(cardName => {
+  return cardsInSupply.map(cardName => {
     const card = CARDS[cardName];
     return {
       name: card.name,
@@ -20,19 +17,25 @@ export function buildCardDefinitionsTable(
       vp: card.vp ?? null,
     };
   });
+}
 
-  return encodeToon(cardData);
+export function cardStrategyRows(supply: Record<CardName, number>) {
+  return Object.keys(supply).map(name => ({
+    name,
+    advice: CARDS[name as CardName].strategy,
+  }));
+}
+
+export function buildCardDefinitionsTable(
+  supply: Record<CardName, number>,
+): string {
+  return encodeToon(cardDefinitionRows(supply));
 }
 
 export function buildCardStrategyTable(
   supply: Record<CardName, number>,
 ): string {
-  return encodeToon(
-    Object.keys(supply).map(name => ({
-      name,
-      advice: CARDS[name as CardName].strategy,
-    })),
-  );
+  return encodeToon(cardStrategyRows(supply));
 }
 
 export const RULE_AUTHORITY = `RULE AUTHORITY:

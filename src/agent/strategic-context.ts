@@ -11,7 +11,7 @@ import type {
 import { getDecisionPlayerId } from "./state-projection";
 import { encodeToon } from "../lib/toon";
 
-type StrategicFacts = {
+export type StrategicFacts = {
   // Unverified conditional advice, never display commentary.
   aiDecisionPlan?: StrategyPlan;
   strategyOverride?: string;
@@ -149,22 +149,18 @@ function extractRecentTurns(
  * @param state - Current game state
  * @param turnCount - Number of turns to include (default 3 for decisions, use 7 for strategy)
  */
-export function formatTurnHistoryForAnalysis(
+export function summarizeRecentTurns(
   state: GameState,
   turnCount = DEFAULT_LAST_N_TURNS,
-): string {
+) {
   const recentTurns = extractRecentTurns(
     state.log,
     turnCount,
     Object.keys(state.players).length,
   );
 
-  if (recentTurns.length === 0) {
-    return "";
-  }
-
   // Keep stable IDs: this history is also used to analyze non-active players.
-  const compactTurns = recentTurns.map(turn => ({
+  return recentTurns.map(turn => ({
     turn: turn.turn,
     playerId: turn.playerId,
     actions: turn.actionsPlayed.length > 0 ? turn.actionsPlayed : null,
@@ -172,10 +168,17 @@ export function formatTurnHistoryForAnalysis(
     gained: turn.cardsGained.length > 0 ? turn.cardsGained : null,
     trashed: turn.cardsTrashed.length > 0 ? turn.cardsTrashed : null,
   }));
+}
 
-  const content = encodeToon(compactTurns);
-
-  return `RECENT TURN HISTORY:\n${content}`;
+export function formatTurnHistoryForAnalysis(
+  state: GameState,
+  turnCount = DEFAULT_LAST_N_TURNS,
+): string {
+  const compactTurns = summarizeRecentTurns(state, turnCount);
+  if (compactTurns.length === 0) {
+    return "";
+  }
+  return `RECENT TURN HISTORY:\n${encodeToon(compactTurns)}`;
 }
 
 const strategySchema = z.record(
@@ -193,14 +196,13 @@ const strategySchema = z.record(
 );
 
 /**
- * Builds structured game facts encoded in TOON format
- * Only includes strategic insights - removes data already present in game state
+ * Strategic insights only - removes data already present in game state
  */
-export function buildStrategicContext(
+export function buildStrategicFacts(
   state: GameState,
   strategySummary?: string,
   customStrategy?: string,
-): string {
+): StrategicFacts {
   // Strategic insights only - AI strategy analysis
   const facts: StrategicFacts = {};
 
@@ -238,5 +240,16 @@ export function buildStrategicContext(
     facts.strategyOverride = customStrategy.trim();
   }
 
-  return encodeToon(facts);
+  return facts;
+}
+
+/** The same facts, TOON-encoded for the text-model prompts */
+export function buildStrategicContext(
+  state: GameState,
+  strategySummary?: string,
+  customStrategy?: string,
+): string {
+  return encodeToon(
+    buildStrategicFacts(state, strategySummary, customStrategy),
+  );
 }
