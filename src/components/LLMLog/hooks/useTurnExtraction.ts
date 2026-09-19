@@ -34,34 +34,35 @@ interface TurnBuildState {
 }
 
 /**
- * Hook to extract and build turns from log entries
+ * Build turns from log entries.
  * Returns an array of Turn objects representing consensus decisions
  */
-export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] => {
-  return useMemo(() => {
-    if (!Array.isArray(entries)) {
-      return [];
-    }
+export function extractTurns(entries: LLMLogEntry[]): Turn[] {
+  const state: TurnBuildState = {
+    turns: [],
+    buildingTurn: null,
+    stepNumber: 0,
+  };
 
-    const state: TurnBuildState = {
-      turns: [],
-      buildingTurn: null,
-      stepNumber: 0,
-    };
+  entries.map((entry, i) => processEntry(entry, i, entries, state));
 
-    entries.map((entry, i) => processEntry(entry, i, entries, state));
+  // Add the last turn if it has decisions OR is pending
+  if (
+    state.buildingTurn &&
+    (state.buildingTurn.decisions.length > 0 || state.buildingTurn.pending)
+  ) {
+    state.turns = [...state.turns, state.buildingTurn];
+  }
 
-    // Add the last turn if it has decisions OR is pending
-    if (
-      state.buildingTurn &&
-      (state.buildingTurn.decisions.length > 0 || state.buildingTurn.pending)
-    ) {
-      state.turns = [...state.turns, state.buildingTurn];
-    }
+  return state.turns;
+}
 
-    return state.turns;
-  }, [entries]);
-};
+/** True while a consensus has started and neither a winner nor an error closed it */
+export const hasLiveConsensus = (turns: Turn[]): boolean =>
+  turns.some(turn => turn.pending === true);
+
+export const useTurnExtraction = (entries: LLMLogEntry[]): Turn[] =>
+  useMemo(() => extractTurns(entries), [entries]);
 
 function handleAITurnStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
@@ -174,6 +175,11 @@ function handleConsensusModelAborted(
   status.aborted = true;
 }
 
+function handleConsensusStepError(state: TurnBuildState): void {
+  if (!state.buildingTurn) return;
+  state.buildingTurn.pending = false;
+}
+
 function handleConsensusVoting(
   entry: LLMLogEntry,
   index: number,
@@ -224,5 +230,7 @@ function processEntry(
     handleConsensusModelAborted(entry, state);
   } else if (entry.type === "consensus-voting") {
     handleConsensusVoting(entry, index, entries, state);
+  } else if (entry.type === "consensus-step-error") {
+    handleConsensusStepError(state);
   }
 }

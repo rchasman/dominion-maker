@@ -28,8 +28,8 @@ export function LLMLog({
 }: LLMLogProps) {
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
 
-  const now = useLiveTimer(entries);
   const turns = useTurnExtraction(entries);
+  const now = useLiveTimer(turns);
   const {
     currentTurnIndex,
     currentActionIndex,
