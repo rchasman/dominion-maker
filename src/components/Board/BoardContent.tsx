@@ -16,7 +16,7 @@ import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/game-agent";
+import type { ModelSettings } from "../../agent/types";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";

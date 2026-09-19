@@ -5,47 +5,31 @@
 
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { ModelSettings, ModelProvider } from "../agent/game-agent";
-import type { GameMode } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
+import type { Seats } from "../core/seats";
+import { seatsSchema } from "../validation/seats";
 
 // Storage keys
 export const STORAGE_KEYS = {
   EVENTS: "dominion-maker-sp-events",
-  MODE: "dominion-maker-game-mode",
+  SEATS: "dominion-maker-seats",
   LLM_LOGS: "dominion-maker-llm-logs",
-  MODEL_SETTINGS: "dominion-maker-model-settings",
   STRATEGIES: "dominion-maker-strategies",
   PLAYER_NAME: "dominion-maker-player-name",
 } as const;
 
-// Valid game modes for validation
-const VALID_GAME_MODES: GameMode[] = [
-  "engine",
-  "hybrid",
-  "full",
-  "multiplayer",
-];
-
 /**
- * Load game mode from localStorage with validation
+ * Load the seats of the saved game; null when absent or malformed
  */
-export function loadGameMode(): GameMode {
-  const savedModeRaw = localStorage.getItem(STORAGE_KEYS.MODE);
-  if (!savedModeRaw) {
-    return "engine";
-  }
-
+export function loadSeats(): Seats | null {
+  const saved = localStorage.getItem(STORAGE_KEYS.SEATS);
+  if (!saved) return null;
   try {
-    const savedMode = JSON.parse(savedModeRaw) as string;
-    if (VALID_GAME_MODES.includes(savedMode as GameMode)) {
-      return savedMode as GameMode;
-    }
+    const parsed = seatsSchema.safeParse(JSON.parse(saved));
+    return parsed.success ? parsed.data : null;
   } catch {
-    // Invalid JSON, ignore
+    return null;
   }
-
-  return "engine";
 }
 
 /**
@@ -81,31 +65,6 @@ export function loadLLMLogs(): LLMLogEntry[] {
 }
 
 /**
- * Load model settings from localStorage
- */
-export function loadModelSettings(): ModelSettings | null {
-  const savedSettings = localStorage.getItem(STORAGE_KEYS.MODEL_SETTINGS);
-  if (!savedSettings) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(savedSettings) as {
-      enabledModels: ModelProvider[];
-      consensusCount: number;
-      customStrategy?: string;
-    };
-    return {
-      enabledModels: new Set(parsed.enabledModels),
-      consensusCount: parsed.consensusCount,
-      customStrategy: parsed.customStrategy || "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Load player strategies from localStorage
  */
 export function loadPlayerStrategies(): PlayerStrategyData {
@@ -126,17 +85,17 @@ export function loadPlayerStrategies(): PlayerStrategyData {
  */
 export function clearGameStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.EVENTS);
-  localStorage.removeItem(STORAGE_KEYS.MODE);
+  localStorage.removeItem(STORAGE_KEYS.SEATS);
   localStorage.removeItem(STORAGE_KEYS.LLM_LOGS);
   localStorage.removeItem(STORAGE_KEYS.STRATEGIES);
-  localStorage.removeItem(STORAGE_KEYS.MODEL_SETTINGS);
 }
 
 /**
- * Clear game state storage (events, logs, strategies) but preserve mode and settings
+ * Clear the saved game (events, seats, logs, strategies)
  */
 export function clearGameStateStorage(): void {
   localStorage.removeItem(STORAGE_KEYS.EVENTS);
+  localStorage.removeItem(STORAGE_KEYS.SEATS);
   localStorage.removeItem(STORAGE_KEYS.LLM_LOGS);
   localStorage.removeItem(STORAGE_KEYS.STRATEGIES);
 }

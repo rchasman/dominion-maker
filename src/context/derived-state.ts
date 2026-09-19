@@ -11,14 +11,13 @@ import { isActionCard, isTreasureCard } from "../data/cards";
  */
 export function hasPlayableActions(
   gameState: GameState | null,
-  playerId?: string | null,
+  playerId: string | null,
 ): boolean {
-  if (!gameState) {
+  if (!gameState || playerId === null) {
     return false;
   }
 
-  const pid = playerId || "human";
-  const playerState = gameState.players[pid];
+  const playerState = gameState.players[playerId];
   if (!playerState) {
     return false;
   }
@@ -31,14 +30,13 @@ export function hasPlayableActions(
  */
 export function hasTreasuresInHand(
   gameState: GameState | null,
-  playerId?: string | null,
+  playerId: string | null,
 ): boolean {
-  if (!gameState) {
+  if (!gameState || playerId === null) {
     return false;
   }
 
-  const pid = playerId || "human";
-  const playerState = gameState.players[pid];
+  const playerState = gameState.players[playerId];
   if (!playerState) {
     return false;
   }

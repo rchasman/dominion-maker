@@ -5,30 +5,28 @@
  * No useState for game state - signals are the primary state owner.
  */
 
-import { useEffect, useRef, useMemo } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import type { DominionEngine } from "../engine";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { GameMode, GameStrategy } from "../types/game-mode";
-import { abortOngoingConsensus, type ModelSettings } from "../agent/game-agent";
-import { EngineStrategy } from "../strategies/engine-strategy";
-import { MakerStrategy } from "../strategies/maker-strategy";
+import type { LLMLogEntryInput, LLMLogger } from "../core/consensus/types";
+import type { GameMode } from "../types/game-mode";
+import type { ModelSettings } from "../agent/types";
+import type { ControllerConfig } from "../core/seats";
+import { DEFAULT_LLM_SEAT, HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
 import { useGameActions } from "./use-game-actions";
-import {
-  useAITurnAutomation,
-  useAIDecisionAutomation,
-  useAutoPhaseAdvance,
-} from "./use-ai-automation";
+import { useSeatDriver } from "./use-seat-driver";
+import { useAutoEndActionPhase } from "./use-auto-end-action-phase";
 import { useStrategyAnalysis } from "./use-strategy-analysis";
 import { useGameStorage } from "./use-game-storage";
 import { useStartGame } from "./use-start-game";
 import { useStorageSync } from "./use-storage-sync";
+import { useAnimationSafe } from "../animation";
 import {
-  gameMode$,
-  isProcessing$,
-  modelSettings$,
-  strategy$,
+  appMode$,
+  gameState$,
   llmLogs$,
+  localHumanSeat$,
   playAction$,
   playTreasure$,
   unplayTreasure$,
@@ -41,25 +39,48 @@ import {
   requestUndo$,
   getStateAtEvent$,
   startGame$,
+  seats$,
   setGameMode$,
   setModelSettings$,
+  setSeat$,
+  updateSeat,
 } from "./game-signals";
 
-/**
- * Create LLM log entry with metadata
- */
 function createLLMLogEntry(
-  entry: Omit<LLMLogEntry, "id" | "timestamp">,
+  entry: LLMLogEntryInput,
   eventCount: number | undefined,
 ): LLMLogEntry {
   return {
     ...entry,
     id: `${Date.now()}-${Math.random()}`,
     timestamp: Date.now(),
-    data: {
-      ...entry.data,
-      eventCount,
-    },
+    data: { ...entry.data, eventCount },
+  };
+}
+
+// Transitional: the sidebar still switches "modes"; a mode is a table shape.
+function seatForMode(mode: GameMode, index: number): ControllerConfig {
+  if (mode === "full") return DEFAULT_LLM_SEAT;
+  if (index === 0) return HUMAN_SEAT;
+  return mode === "engine" ? HEURISTIC_SEAT : DEFAULT_LLM_SEAT;
+}
+
+function applyModelSettings(
+  seat: ControllerConfig,
+  settings: Partial<ModelSettings>,
+): ControllerConfig {
+  if (seat.kind !== "llm") return seat;
+  return {
+    ...seat,
+    ...(settings.enabledModels !== undefined && {
+      models: [...settings.enabledModels],
+    }),
+    ...(settings.consensusCount !== undefined && {
+      consensusCount: settings.consensusCount,
+    }),
+    ...(settings.customStrategy !== undefined && {
+      customStrategy: settings.customStrategy,
+    }),
   };
 }
 
@@ -70,63 +91,44 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     engineRef.current = engine;
   };
 
-  // Read signal values for reactive effects
-  const gameMode = gameMode$.value;
-  const currentModelSettings = modelSettings$.value;
+  appMode$.value = "local";
 
   const setGameMode = (mode: GameMode) => {
-    abortOngoingConsensus();
-    isProcessing$.value = false;
-    gameMode$.value = mode;
+    const order = gameState$.peek()?.playerOrder ?? [];
+    seats$.value = Object.fromEntries(
+      order.map((id, index) => [id, seatForMode(mode, index)]),
+    );
   };
 
   const setModelSettingsFn = (settings: Partial<ModelSettings>) => {
-    modelSettings$.value = { ...modelSettings$.value, ...settings };
+    seats$.value = Object.fromEntries(
+      Object.entries(seats$.value).map(([id, seat]) => [
+        id,
+        applyModelSettings(seat, settings),
+      ]),
+    );
   };
 
   // Sync to localStorage (reads from signals)
   useStorageSync();
 
   // LLM Logger - stable reference that reads current engine when called
-  const llmLoggerRef = useRef(
-    (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
-      const engine = engineRef.current;
-      const logEntry = createLLMLogEntry(entry, engine?.eventLog.length);
-      llmLogs$.value = [...llmLogs$.value, logEntry];
-    },
-  );
+  const loggerRef = useRef<LLMLogger>(entry => {
+    const engine = engineRef.current;
+    llmLogs$.value = [
+      ...llmLogs$.value,
+      createLLMLogEntry(entry, engine?.eventLog.length),
+    ];
+  });
 
-  // Strategy - create strategy instance without logger to avoid ref access during render
-  const strategy: GameStrategy = useMemo(() => {
-    if (gameMode === "engine") {
-      return new EngineStrategy();
-    }
-    // Create MakerStrategy without logger initially
-    return new MakerStrategy("openai", undefined, currentModelSettings);
-  }, [gameMode, currentModelSettings]);
-
-  // Set logger on strategy after creation (outside of render)
-  useEffect(() => {
-    if (strategy instanceof MakerStrategy) {
-      const loggerFn = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => {
-        llmLoggerRef.current(entry);
-      };
-      strategy.setLogger(loggerFn);
-    }
-  }, [strategy]);
-
-  // Write strategy and config actions to signals
-  strategy$.value = strategy;
   setGameMode$.value = setGameMode;
   setModelSettings$.value = setModelSettingsFn;
+  setSeat$.value = updateSeat;
 
-  // Strategy analysis
-  useStrategyAnalysis(engineRef, strategy);
+  useStrategyAnalysis(engineRef);
 
-  // Start new game
   const startGame = useStartGame(setEngine);
 
-  // Game actions (writes to signals directly)
   const {
     playAction,
     playTreasure,
@@ -139,9 +141,8 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     declineReaction,
     requestUndo,
     getStateAtEvent,
-  } = useGameActions(engineRef, strategy);
+  } = useGameActions(engineRef);
 
-  // Write action callbacks to signals
   startGame$.value = startGame;
   playAction$.value = playAction;
   playTreasure$.value = playTreasure;
@@ -155,20 +156,13 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
   requestUndo$.value = requestUndo;
   getStateAtEvent$.value = getStateAtEvent;
 
-  // AI Automation (reads from signals directly)
-  useAITurnAutomation({
-    gameMode,
-    strategy,
-    engineRef,
+  useSeatDriver(engineRef, loggerRef.current, useAnimationSafe());
+  useAutoEndActionPhase({
+    localPlayerId: localHumanSeat$.value,
+    endPhase: () => {
+      endPhase();
+    },
   });
-
-  useAIDecisionAutomation({
-    gameMode,
-    strategy,
-    engineRef,
-  });
-
-  useAutoPhaseAdvance(gameMode, engineRef);
 
   return <>{children}</>;
 }

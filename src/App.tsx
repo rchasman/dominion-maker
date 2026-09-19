@@ -2,7 +2,11 @@ import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import type { GameMode } from "./types/game-mode";
 import { StartScreen } from "./components/StartScreen";
-import { STORAGE_KEYS } from "./context/storage-utils";
+import {
+  loadSeatPreset,
+  saveSeatPreset,
+  type SeatPreset,
+} from "./context/seat-presets";
 import { uiLogger } from "./lib/logger";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -23,6 +27,17 @@ type AppMode = "menu" | "singleplayer" | "multiplayer";
 
 const STORAGE_APP_MODE_KEY = "dominion-maker-app-mode";
 
+const MODE_BY_PRESET: Record<SeatPreset, GameMode> = {
+  rules: "engine",
+  hybrid: "hybrid",
+  watch: "full",
+};
+const PRESET_BY_MODE: Partial<Record<GameMode, SeatPreset>> = {
+  engine: "rules",
+  hybrid: "hybrid",
+  full: "watch",
+};
+
 function App() {
   // App navigation mode (menu vs singleplayer vs multiplayer)
   const [mode, setMode] = useState<AppMode>(() => {
@@ -38,21 +53,10 @@ function App() {
     return "menu";
   });
 
-  // Game mode selection (engine/hybrid/full) - synced to localStorage
-  const [gameMode, setGameMode] = useState<GameMode>(() => {
-    try {
-      const savedMode = localStorage.getItem(STORAGE_KEYS.MODE);
-      if (savedMode) {
-        const parsed = JSON.parse(savedMode) as string;
-        if (["engine", "hybrid", "full"].includes(parsed)) {
-          return parsed as GameMode;
-        }
-      }
-    } catch {
-      // Invalid JSON, use default
-    }
-    return "engine";
-  });
+  // Transitional: the start screen still speaks modes; a mode names a seat preset
+  const [gameMode, setGameMode] = useState<GameMode>(
+    () => MODE_BY_PRESET[loadSeatPreset()],
+  );
 
   // Sync app mode to localStorage
   useEffect(() => {
@@ -63,13 +67,9 @@ function App() {
     }
   }, [mode]);
 
-  // Sync game mode to localStorage (GameProvider will read this on mount)
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify(gameMode));
-    } catch {
-      // Storage unavailable
-    }
+    const preset = PRESET_BY_MODE[gameMode];
+    if (preset) saveSeatPreset(preset);
   }, [gameMode]);
 
   // Preload game modules when on menu (loads in background while user reads)

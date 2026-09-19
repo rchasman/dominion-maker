@@ -1,6 +1,6 @@
 import type { GameEvent } from "../../events/types";
 import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/game-agent";
+import type { ModelSettings } from "../../agent/types";
 import type { CardName, GameState } from "../../types/game-state";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 

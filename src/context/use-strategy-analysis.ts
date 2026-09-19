@@ -6,7 +6,6 @@
 import type { MutableRef as MutableRefObject } from "preact/hooks";
 import { useEffect, useRef } from "preact/hooks";
 import type { DominionEngine } from "../engine";
-import type { GameStrategy } from "../types/game-mode";
 import type { GameState } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
@@ -39,11 +38,10 @@ function turnEndedPastThreshold(
 
 /**
  * Fetch strategy analysis from API and write to playerStrategies$ signal.
- * Multiplayer has no GameStrategy, so strategy is optional.
+ * LLM seats read the signal on every decision, so nothing else needs telling.
  */
 export function fetchStrategyAnalysis(
   state: GameState,
-  strategy: GameStrategy | undefined,
   currentStrategies: PlayerStrategyData,
 ): Promise<void> {
   const request = ++analysisRequests.latest;
@@ -81,8 +79,6 @@ export function fetchStrategyAnalysis(
           { ...analysis, analysis: version },
         ]),
       );
-      const stringifiedStrategies = JSON.stringify(versioned);
-      strategy?.setStrategySummary?.(stringifiedStrategies);
       playerStrategies$.value = versioned;
     })
     .catch((err: unknown) => {
@@ -95,7 +91,6 @@ export function fetchStrategyAnalysis(
  */
 export function useStrategyAnalysis(
   engineRef: MutableRefObject<DominionEngine | null>,
-  strategy: GameStrategy,
 ): void {
   const gameIdentity = events$.value[0]?.id;
   useEffect(() => {
@@ -105,10 +100,9 @@ export function useStrategyAnalysis(
       return;
     }
 
-    strategy.setStrategySummary?.(JSON.stringify(playerStrategies$.peek()));
     const unsubscribe = engine.subscribe((newEvents, state) => {
       if (turnEndedPastThreshold(newEvents, state)) {
-        void fetchStrategyAnalysis(state, strategy, playerStrategies$.value);
+        void fetchStrategyAnalysis(state, playerStrategies$.value);
       }
     });
 
@@ -116,7 +110,7 @@ export function useStrategyAnalysis(
       unsubscribe();
       invalidateStrategyAnalysis();
     };
-  }, [engineRef, strategy, gameIdentity]);
+  }, [engineRef, gameIdentity]);
 }
 
 /**
@@ -146,7 +140,6 @@ export function useStrategyAnalysisFromEvents(
 
     if (!turnEndedPastThreshold(newEvents, gameState)) return;
 
-    // Multiplayer has no GameStrategy to notify
-    void fetchStrategyAnalysis(gameState, undefined, playerStrategies$.value);
+    void fetchStrategyAnalysis(gameState, playerStrategies$.value);
   }, [events, gameState]);
 }

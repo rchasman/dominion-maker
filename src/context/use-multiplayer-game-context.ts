@@ -17,17 +17,16 @@ import type { ChatMessageData } from "../partykit/protocol";
 import type { CommandResult } from "../commands/types";
 import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
-import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
+import { HUMAN_SEAT } from "../core/seats";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
-import { useAutoPhaseAdvanceMultiplayer } from "./use-ai-automation";
+import { useAutoEndActionPhase } from "./use-auto-end-action-phase";
 import {
   gameState$,
   events$,
-  gameMode$,
+  appMode$,
+  seats$,
   isProcessing$,
   isLoading$,
-  modelSettings$,
-  strategy$,
   chatMessages$,
   sendChat$,
   localPlayerId$,
@@ -50,7 +49,6 @@ import {
   pendingUndo$,
   startGame$,
   setGameMode$,
-  setModelSettings$,
   getStateAtEvent$,
 } from "./game-signals";
 
@@ -92,8 +90,6 @@ export function useMultiplayerGameContext({
   game,
   playerName,
   isSpectator,
-  isSinglePlayer = false,
-  gameMode = "engine",
   onGameModeChange,
 }: UseMultiplayerGameContextOptions): void {
   const { sendChat, startGame } = game;
@@ -108,22 +104,19 @@ export function useMultiplayerGameContext({
     events$.value = game.events;
   }, [game.events]);
   useEffect(() => {
-    gameMode$.value = isSinglePlayer ? gameMode : "multiplayer";
-  }, [isSinglePlayer, gameMode]);
+    appMode$.value = "multiplayer";
+  }, []);
+  useEffect(() => {
+    seats$.value = Object.fromEntries(
+      game.players.map(p => [p.playerId, HUMAN_SEAT]),
+    );
+  }, [game.players]);
   useEffect(() => {
     isProcessing$.value = !game.isConnected;
   }, [game.isConnected]);
   useEffect(() => {
     isLoading$.value = !game.isJoined;
   }, [game.isJoined]);
-  useEffect(() => {
-    modelSettings$.value = DEFAULT_MODEL_SETTINGS;
-  }, []);
-  useEffect(() => {
-    strategy$.value = {
-      getModeName: () => (isSinglePlayer ? gameMode : "multiplayer"),
-    } as never;
-  }, [isSinglePlayer, gameMode]);
   useEffect(() => {
     localPlayerId$.value = game.playerId;
   }, [game.playerId]);
@@ -208,18 +201,14 @@ export function useMultiplayerGameContext({
     setGameMode$.value = mode => onGameModeChange?.(mode);
   }, [onGameModeChange]);
   useEffect(() => {
-    setModelSettings$.value = () => {};
-  }, []);
-  useEffect(() => {
     getStateAtEvent$.value = game.getStateAtEvent;
   }, [game.getStateAtEvent]);
 
-  // Auto-skip action phase when no playable actions
-  useAutoPhaseAdvanceMultiplayer(
-    game.gameState,
-    game.playerId,
-    game.isProcessing,
-    isSpectator,
-    game.endPhase,
-  );
+  const { endPhase } = game;
+  useAutoEndActionPhase({
+    localPlayerId: isSpectator ? null : game.playerId,
+    endPhase: () => {
+      endPhase();
+    },
+  });
 }

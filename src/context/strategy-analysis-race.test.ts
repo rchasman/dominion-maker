@@ -25,8 +25,8 @@ it("keeps the newest analysis when responses arrive in reverse order", async () 
     });
   const state = createGame(["human", "ai"], undefined, 42).state;
   gameState$.value = state;
-  const first = fetchStrategyAnalysis(state, undefined, {});
-  const second = fetchStrategyAnalysis(state, undefined, {});
+  const first = fetchStrategyAnalysis(state, {});
+  const second = fetchStrategyAnalysis(state, {});
   const result = (gameplan: string) => ({
     data: {
       strategySummary: {
@@ -53,7 +53,7 @@ it("rejects an in-flight response after a new game or undo invalidates it", asyn
     });
   const state = createGame(["human", "ai"], undefined, 42).state;
   gameState$.value = state;
-  const pending = fetchStrategyAnalysis(state, undefined, {});
+  const pending = fetchStrategyAnalysis(state, {});
   invalidateStrategyAnalysis();
   response.resolve!({
     data: {
