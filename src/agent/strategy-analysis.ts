@@ -1,4 +1,5 @@
 import { buildPublicPlayerSummaries } from "./state-projection";
+import { STRATEGY_PRINCIPLES } from "../data/strategy-principles";
 import { encodeToon } from "../lib/toon";
 import {
   formatTurnHistoryForAnalysis,
@@ -27,6 +28,9 @@ CONTINUITY:
 You are a Dominion strategy analyst with personality - think Patrick Chapin analyzing a Magic game. Write engaging strategic commentary.
 
 ${buildCardReference(supply)}
+
+STRATEGY PRINCIPLES (general doctrine, apply them to this kingdom):
+${STRATEGY_PRINCIPLES.map(line => `- ${line}`).join("\n")}
 
 For each playerId, provide:
 1. **Gameplan** (1 line): What they're doing (Big Money/Engine/Hybrid) and current standing

@@ -15,6 +15,8 @@ import {
   type PlayerAnalysisRecord,
 } from "../src/agent/strategy-analysis";
 
+const STRATEGY_ANALYSIS_MODEL = "openai/gpt-5.6-terra";
+
 // HTTP status codes
 const HTTP_STATUS = {
   OK: 200,
@@ -53,14 +55,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Get all player IDs
     const playerIds = Object.keys(currentState.players);
 
-    // Use GPT-5.4 for high-quality strategy analysis
+    // Grounding eval 2026-09-19: Terra matched GPT-5.4 on factual grades
+    // and latency; Opus 5 failed this schema, Sonnet 5 graded lower.
     const middleware = createDevToolsMiddleware();
     const model = middleware
       ? wrapLanguageModel({
-          model: gateway("openai/gpt-5.4"),
+          model: gateway(STRATEGY_ANALYSIS_MODEL),
           middleware,
         })
-      : gateway("openai/gpt-5.4");
+      : gateway(STRATEGY_ANALYSIS_MODEL);
 
     // Generate analysis one player at a time, build record
     const strategySummary: PlayerAnalysisRecord = Object.fromEntries(

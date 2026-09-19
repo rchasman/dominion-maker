@@ -15,7 +15,7 @@ export interface ModelConfig {
   maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)
 }
 
-// Verified 2026-09-09 against https://ai-gateway.vercel.sh/v1/models
+// Verified 2026-09-19 against https://ai-gateway.vercel.sh/v1/models
 // and /v1/models/{id}/endpoints (ZDR routes and live P50 latency).
 // Includes the low-latency shortlist and current Flash/Lite families. Morph
 // is excluded: it applies code edits rather than generating game actions.
@@ -48,7 +48,17 @@ export const MODELS = [
     fullName: "anthropic/claude-opus-4.8",
     provider: "anthropic",
     color: "#a78bfa",
-    displayName: "Claude Opus",
+    displayName: "Claude Opus 4.8",
+    inputPrice: 5.0,
+    outputPrice: 25.0,
+    maxInstances: 3,
+  },
+  {
+    id: "claude-opus-5",
+    fullName: "anthropic/claude-opus-5",
+    provider: "anthropic",
+    color: "#a78bfa",
+    displayName: "Claude Opus 5",
     inputPrice: 5.0,
     outputPrice: 25.0,
     maxInstances: 3,
@@ -268,6 +278,15 @@ export const MODELS = [
     outputPrice: 0.5,
   },
   {
+    id: "glm-5.2-fast",
+    fullName: "zai/glm-5.2-fast",
+    displayName: "GLM-5.2 Fast",
+    provider: "zhipu",
+    color: "#34d399",
+    inputPrice: 2.1,
+    outputPrice: 6.6,
+  },
+  {
     id: "glm-5.3-fast",
     fullName: "zai/glm-5.3-fast",
     displayName: "GLM 5.3 Fast",
@@ -406,6 +425,15 @@ export const MODELS = [
     outputPrice: 0.2,
   },
   {
+    id: "nemotron-3-super-120b-a12b",
+    fullName: "nvidia/nemotron-3-super-120b-a12b",
+    displayName: "Nemotron 3 Super 120B",
+    provider: "nvidia",
+    color: "#a3e635",
+    inputPrice: 0.15,
+    outputPrice: 0.65,
+  },
+  {
     id: "nemotron-3-ultra-550b-a55b",
     fullName: "nvidia/nemotron-3-ultra-550b-a55b",
     displayName: "Nemotron 3 Ultra",
@@ -436,6 +464,15 @@ export const MODELS = [
     color: "#e879f9",
     inputPrice: 3.0,
     outputPrice: 15.0,
+  },
+  {
+    id: "kimi-k3-fast",
+    fullName: "moonshotai/kimi-k3-fast",
+    displayName: "Kimi K3 Fast",
+    provider: "moonshotai",
+    color: "#e879f9",
+    inputPrice: 4.5,
+    outputPrice: 22.5,
   },
 
   // thinkingmachines
@@ -476,6 +513,15 @@ export const MODELS = [
     color: "#fb923c",
     inputPrice: 0.15,
     outputPrice: 0.15,
+  },
+  {
+    id: "mistral-medium-3.5",
+    fullName: "mistral/mistral-medium-3.5",
+    displayName: "Mistral Medium 3.5",
+    provider: "mistral",
+    color: "#fb923c",
+    inputPrice: 1.5,
+    outputPrice: 7.5,
   },
   {
     id: "ministral-14b",

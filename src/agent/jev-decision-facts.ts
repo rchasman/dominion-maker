@@ -10,12 +10,31 @@ import {
 } from "./state-projection";
 
 // Jev reads numbers as text and cannot do arithmetic, so code turns the
-// counts it would otherwise have to compare into named facts.
+// counts it would otherwise have to compare into named facts. Every fact
+// here is provable from the engine or the card data: no thresholds, no card
+// names, so expansions and new kingdoms need no changes.
 
-const PROVINCE_VP = 6;
-const RICH_COINS_PER_CARD = 1.1;
-const THIN_COINS_PER_CARD = 0.8;
-const PILES_NEAR_END = 2;
+const emptyPlayer = () => ({
+  hand: [],
+  deck: [],
+  discard: [],
+  inPlay: [],
+  inPlaySourceIndices: [],
+});
+
+/** The most valuable fixed-VP card in this kingdom, the natural unit for a lead */
+function biggestVictoryCard(
+  state: GameState,
+): { name: string; vp: number } | undefined {
+  return Object.entries(CARDS)
+    .filter(([name]) => name in state.supply)
+    .flatMap(([, card]) =>
+      typeof card.vp === "number" && card.vp > 0
+        ? [{ name: card.name, vp: card.vp }]
+        : [],
+    )
+    .sort((a, b) => b.vp - a.vp)[0];
+}
 
 function scorePosition(state: GameState) {
   const you = getDecisionPlayerId(state);
@@ -27,40 +46,21 @@ function scorePosition(state: GameState) {
   );
   const lead = yourVP - bestOpponent;
   if (lead === 0) return "tied on victory points";
+  const unit = biggestVictoryCard(state);
   const size =
-    Math.abs(lead) >= PROVINCE_VP
-      ? "a Province or more"
+    unit && Math.abs(lead) >= unit.vp
+      ? `one ${unit.name} or more`
       : `${Math.abs(lead)} VP`;
   return lead > 0 ? `ahead by ${size}` : `behind by ${size}`;
 }
 
-const emptyPlayer = () => ({
-  hand: [],
-  deck: [],
-  discard: [],
-  inPlay: [],
-  inPlaySourceIndices: [],
-});
-
+/** Engine-proven: does any purchase available right now end the game */
 function gameEndProximity(state: GameState) {
-  const provincesLeft = state.supply["Province"] ?? 0;
-  const emptyPiles = Object.values(state.supply).filter(n => n <= 0).length;
-  if (provincesLeft <= 1 || emptyPiles >= PILES_NEAR_END) {
-    return "the game can end on the next purchase";
-  }
-  if (provincesLeft <= 3) return "the game is close to ending";
-  return "the game is not close to ending";
-}
-
-function deckMoney(state: GameState) {
-  const cards = getAllCards(
-    state.players[getDecisionPlayerId(state)] ?? emptyPlayer(),
-  );
-  const coins = cards.reduce((sum, card) => sum + (CARDS[card].coins ?? 0), 0);
-  const density = cards.length ? coins / cards.length : 0;
-  if (density >= RICH_COINS_PER_CARD) return "rich in money";
-  if (density <= THIN_COINS_PER_CARD) return "thin on money";
-  return "average money";
+  const projections = purchaseConsequences(state);
+  if (projections.length === 0) return "no purchase is being decided right now";
+  return projections.some(p => p.triggersGameEnd)
+    ? "at least one purchase available right now ends the game"
+    : "no purchase available right now ends the game";
 }
 
 /** Named facts about the decision, computed once per state */
@@ -68,7 +68,6 @@ export function decisionSummary(state: GameState) {
   return {
     scorePosition: scorePosition(state),
     gameEnd: gameEndProximity(state),
-    deckMoney: deckMoney(state),
   };
 }
 
@@ -96,10 +95,16 @@ function actionNote(state: GameState, card: CardName): string | null {
     : "Terminal: gives no +Action.";
 }
 
+// A card whose text names a supply pile that is empty cannot deliver that
+// part of its effect. Works for any gainer or curser in any expansion.
 function emptyPileNote(state: GameState, card: CardName): string | null {
-  const givesCurses = /curse/i.test(CARDS[card].description);
-  if (!givesCurses || (state.supply["Curse"] ?? 0) > 0) return null;
-  return "The Curse pile is empty, so this card's Curse-giving effect does nothing.";
+  const text = CARDS[card].description;
+  const emptyNamed = Object.entries(state.supply)
+    .filter(([pile, count]) => count <= 0 && pile !== card)
+    .map(([pile]) => pile)
+    .filter(pile => new RegExp(`\\b${pile}\\b`, "i").test(text));
+  if (emptyNamed.length === 0) return null;
+  return `The ${emptyNamed.join(" and ")} pile is empty, so the part of this card that gives ${emptyNamed.join(" or ")} does nothing.`;
 }
 
 const joinNotes = (notes: (string | null)[]): string | null => {
