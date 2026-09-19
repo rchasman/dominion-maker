@@ -11,6 +11,7 @@ import { getHandComposition } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import { run } from "../lib/run";
 import { agentLogger } from "../lib/logger";
+import { formatVoteCount } from "../lib/vote-format";
 
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
@@ -40,11 +41,6 @@ export type VoteGroup = {
   /** Summed weight, fractional when a voter spread its mass */
   count: number;
 };
-
-const VOTE_DECIMALS = 1;
-/** "3×" for whole counts, "2.6×"-style for fractional ones */
-export const formatVoteCount = (count: number): string =>
-  Number.isInteger(count) ? `${count}` : count.toFixed(VOTE_DECIMALS);
 
 export type ModelHandlerParams = {
   provider: ModelProvider;

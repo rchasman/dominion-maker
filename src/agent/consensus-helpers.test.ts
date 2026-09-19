@@ -11,7 +11,6 @@ import {
   selectConsensusWinner,
   MODEL_TIMEOUT_MS,
   tallyVotes,
-  formatVoteCount,
 } from "./consensus-helpers";
 import type { Action } from "../types/action";
 import type { LLMLogger, VoteGroup } from "./consensus-helpers";
@@ -706,13 +705,6 @@ describe("tallyVotes", () => {
       duration: 1,
     });
     expect(groups.get(createActionSignature(silver))?.count).toBe(1);
-  });
-});
-
-describe("formatVoteCount", () => {
-  it("keeps whole counts plain and rounds fractions to one decimal", () => {
-    expect(formatVoteCount(3)).toBe("3");
-    expect(formatVoteCount(2.6499)).toBe("2.6");
   });
 });
 

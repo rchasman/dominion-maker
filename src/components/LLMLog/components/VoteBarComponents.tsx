@@ -1,4 +1,4 @@
-import { formatVoteCount } from "../../../agent/consensus-helpers";
+import { formatVoteCount } from "../../../lib/vote-format";
 
 // Constants
 const OPACITY_HALF: number = 0.5;

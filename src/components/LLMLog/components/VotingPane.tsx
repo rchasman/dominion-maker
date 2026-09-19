@@ -6,7 +6,7 @@ import type { ConsensusVotingData, ModelStatus } from "../types";
 import { groupVotersWithColors } from "../utils/groupVoters";
 import { run } from "../../../lib/run";
 import { VoteBar } from "./VoteBarComponents";
-import { formatVoteCount } from "../../../agent/consensus-helpers";
+import { formatVoteCount } from "../../../lib/vote-format";
 
 interface VotingPaneProps {
   data: ConsensusVotingData | null | undefined;
