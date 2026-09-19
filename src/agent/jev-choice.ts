@@ -6,6 +6,7 @@ import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { hasCardField } from "../lib/action-utils";
 import { optimizeStateForAI } from "./state-projection";
+import { isDecisionChoice, isReactionChoice } from "../types/pending-choice";
 import {
   GAME_RULES,
   DECISION_GUIDANCE,
@@ -87,11 +88,38 @@ export function offeredToJev(legalActions: Action[]) {
   return treasurePlays.length > 0 ? treasurePlays : indexed;
 }
 
+const AUTHORITY =
+  "`rules`, `ruleAuthority` and `cardDefinitions` are binding. `strategy`, `decisionGuidance` and the advice in each option are fallible suggestions; when `strategy.strategyOverride` is present it replaces `decisionGuidance`. Pick the option that most improves `currentState.you`'s chance of winning this game of Dominion.";
+
+// Jev answers the question as written, so each decision type asks its own
+// literal question instead of one generic "which action" prompt
+function jevInstructions(state: GameState, legalActions: Action[]): string {
+  const pending = state.pendingChoice;
+  if (isReactionChoice(pending)) {
+    return `An opponent played ${pending.triggeringCard}, an attack against you. Should you reveal a Reaction card from your hand to block it, or let the attack resolve? Revealing is free and the card stays in your hand. ${AUTHORITY}`;
+  }
+  if (isDecisionChoice(pending)) {
+    const verb = pending.intent ?? "choose";
+    const skip = legalActions.some(a => a.type === "skip_decision")
+      ? " Skipping is allowed if no option helps you."
+      : "";
+    return `${pending.cardBeingPlayed ?? "A card effect"} asks you to ${verb} a card (\`currentState.pendingChoice\` gives the exact constraint). Which card should you ${verb} now?${skip} ${AUTHORITY}`;
+  }
+  if (state.phase === "action") {
+    return `It is your Action phase with ${state.actions} action${state.actions === 1 ? "" : "s"} left. Which action card should you play now, or should you end the phase and move to buying? Cards that give +Actions go before terminal cards. ${AUTHORITY}`;
+  }
+  if (
+    offeredToJev(legalActions).every(o => o.action.type === "play_treasure")
+  ) {
+    return `It is your Buy phase and you still hold treasures. Which treasure should you play next? Every treasure in hand gets played before buying; the order rarely matters. ${AUTHORITY}`;
+  }
+  return `It is your Buy phase with ${state.coins} coins and ${state.buys} buy${state.buys === 1 ? "" : "s"}. Which card should you buy now, or should you end the phase without buying? ${AUTHORITY}`;
+}
+
 export function buildJevQuestion(state: GameState, legalActions: Action[]) {
   return {
     type: "choice" as const,
-    instructions:
-      "Which one of these legal actions should the player `currentState.you` take right now to maximise their chance of winning this game of Dominion? `rules`, `ruleAuthority` and `cardDefinitions` are binding. `strategy`, `decisionGuidance` and the advice in each option are fallible suggestions; when `strategy.strategyOverride` is present it replaces `decisionGuidance`.",
+    instructions: jevInstructions(state, legalActions),
     criteria: Object.fromEntries(
       offeredToJev(legalActions).map(({ action, index }) => [
         jevOptionKey(index, action),

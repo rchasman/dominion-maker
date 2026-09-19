@@ -79,9 +79,63 @@ describe("buildJevQuestion", () => {
     expect(question.criteria["1. buy Silver"]).toContain("cost 3");
   });
 
-  it("asks a single literal question about the decision player", () => {
+  it("asks the buy-phase question with the coins and buys spelled out", () => {
     expect(question.type).toBe("choice");
+    expect(question.instructions).toContain("Buy phase with 0 coins and 1 buy");
     expect(question.instructions).toContain("`currentState.you`");
+  });
+
+  it("asks a treasure question while treasures remain", () => {
+    const withTreasures = buildJevQuestion(buyPhaseState(), LEGAL);
+    expect(withTreasures.instructions).toContain(
+      "Which treasure should you play",
+    );
+  });
+
+  it("asks a reaction question with the attacking card named", () => {
+    const state: GameState = {
+      ...buyPhaseState(),
+      activePlayerId: "human",
+      phase: "action",
+      pendingChoice: {
+        choiceType: "reaction",
+        playerId: "ai",
+        triggeringPlayerId: "human",
+        triggeringCard: "Militia",
+        triggerType: "on_attack",
+        availableReactions: ["Moat"],
+      },
+    };
+    const reaction = buildJevQuestion(state, [
+      { type: "reveal_reaction", card: "Moat" },
+      { type: "decline_reaction" },
+    ]);
+    expect(reaction.instructions).toContain("An opponent played Militia");
+  });
+
+  it("asks a decision question with the intent verb and skip allowance", () => {
+    const state: GameState = {
+      ...buyPhaseState(),
+      phase: "action",
+      pendingChoice: {
+        choiceType: "decision",
+        playerId: "ai",
+        prompt: "Trash up to 4 cards",
+        cardBeingPlayed: "Chapel",
+        min: 0,
+        max: 4,
+        cardOptions: ["Copper", "Estate"],
+        intent: "trash",
+        from: "hand",
+      },
+    };
+    const decision = buildJevQuestion(state, [
+      { type: "trash_card", card: "Copper" },
+      { type: "trash_card", card: "Estate" },
+      { type: "skip_decision" },
+    ]);
+    expect(decision.instructions).toContain("Chapel asks you to trash a card");
+    expect(decision.instructions).toContain("Skipping is allowed");
   });
 });
 
