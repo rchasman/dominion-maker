@@ -117,6 +117,7 @@ export const chatMessages$ = signal<ChatMessageData[]>([]);
 export const sendChat$ = signal<((message: string) => void) | null>(null);
 export const spectatorCount$ = signal(0);
 export const isSpectator$ = signal(false);
+export const isHost$ = signal(false);
 export const localPlayerName$ = signal<string | undefined>();
 export const players$ = signal<Array<{ id: string; name: string }>>([]);
 

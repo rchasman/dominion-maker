@@ -8,6 +8,7 @@ import {
   pendingUndo$,
   approveUndo$,
   denyUndo$,
+  isHost$,
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
 import { GameSidebar } from "./GameSidebar";
@@ -16,7 +17,7 @@ import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { ControllerConfig, Seats } from "../../core/seats";
-import { HUMAN_SEAT } from "../../core/seats";
+import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { SeatSelector } from "../SeatSelector";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
@@ -184,6 +185,11 @@ export function BoardContent({
   });
 
   const setSeat = game.setSeat;
+  const isHost = isHost$.value;
+  const canEditSeat = (playerId: PlayerId): boolean =>
+    game.appMode === "local" ||
+    playerId === contextLocalPlayerId ||
+    (isHost && !isHumanSeat(game.seats[playerId]));
   const seatControl =
     setSeat === undefined || isPreviewMode
       ? null
@@ -192,6 +198,7 @@ export function BoardContent({
             playerId={playerId}
             config={game.seats[playerId] ?? HUMAN_SEAT}
             onChange={config => setSeat(playerId, config)}
+            disabled={!canEditSeat(playerId)}
           />
         );
 

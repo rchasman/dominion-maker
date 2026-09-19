@@ -239,8 +239,8 @@ describe("usePartyGame", () => {
       const msg: GameServerMessage = {
         type: "player_list",
         players: [
-          { name: "Player 1", playerId: "p1" },
-          { name: "Player 2", playerId: "p2" },
+          { name: "Player 1", playerId: "p1", controller: "human" },
+          { name: "Player 2", playerId: "p2", controller: "heuristic" },
         ],
       };
 
@@ -544,111 +544,29 @@ describe("usePartyGame", () => {
     });
   });
 
-  describe("game mode handling", () => {
-    it("should send start_singleplayer for single-player mode", () => {
-      const isSinglePlayer = true;
-      const gameMode = "engine";
-
-      const msg: GameClientMessage = isSinglePlayer
-        ? { type: "start_singleplayer", gameMode }
-        : { type: "start_game" };
-
-      expect(msg.type).toBe("start_singleplayer");
-      if (msg.type === "start_singleplayer") {
-        expect(msg.gameMode).toBe("engine");
-      }
-    });
-
-    it("should send start_game for multiplayer mode", () => {
-      const isSinglePlayer = false;
-
-      const msg: GameClientMessage = isSinglePlayer
-        ? { type: "start_singleplayer" }
-        : { type: "start_game" };
-
-      expect(msg.type).toBe("start_game");
-    });
-
-    it("should include kingdomCards when provided", () => {
+  describe("start and seat messages", () => {
+    it("starts a game with optional kingdom cards and bot seats", () => {
       const kingdomCards: CardName[] = ["Village", "Smithy"];
       const msg: GameClientMessage = {
         type: "start_game",
         kingdomCards,
+        bots: [{ name: "AI Opponent", controller: { kind: "heuristic" } }],
       };
 
-      expect(msg.kingdomCards).toEqual(["Village", "Smithy"]);
+      expect(msg.type).toBe("start_game");
+      if (msg.type === "start_game") {
+        expect(msg.kingdomCards).toEqual(["Village", "Smithy"]);
+        expect(msg.bots?.[0]?.controller.kind).toBe("heuristic");
+      }
     });
 
-    it("should create change_game_mode message", () => {
+    it("swaps a seat's controller", () => {
       const msg: GameClientMessage = {
-        type: "change_game_mode",
-        gameMode: "full",
+        type: "set_seat",
+        playerId: "p1",
+        controller: { kind: "human" },
       };
-
-      expect(msg.type).toBe("change_game_mode");
-      expect(msg.gameMode).toBe("full");
-    });
-  });
-
-  describe("auto-start logic", () => {
-    it("should auto-start when all conditions met", () => {
-      const isSinglePlayer = true;
-      const isJoined = true;
-      const isHost = true;
-      const hasGameState = false;
-
-      const shouldAutoStart =
-        isSinglePlayer && isJoined && isHost && !hasGameState;
-
-      expect(shouldAutoStart).toBe(true);
-    });
-
-    it("should not auto-start when not single-player", () => {
-      const isSinglePlayer = false;
-      const isJoined = true;
-      const isHost = true;
-      const hasGameState = false;
-
-      const shouldAutoStart =
-        isSinglePlayer && isJoined && isHost && !hasGameState;
-
-      expect(shouldAutoStart).toBe(false);
-    });
-
-    it("should not auto-start when not joined", () => {
-      const isSinglePlayer = true;
-      const isJoined = false;
-      const isHost = true;
-      const hasGameState = false;
-
-      const shouldAutoStart =
-        isSinglePlayer && isJoined && isHost && !hasGameState;
-
-      expect(shouldAutoStart).toBe(false);
-    });
-
-    it("should not auto-start when not host", () => {
-      const isSinglePlayer = true;
-      const isJoined = true;
-      const isHost = false;
-      const hasGameState = false;
-
-      const shouldAutoStart =
-        isSinglePlayer && isJoined && isHost && !hasGameState;
-
-      expect(shouldAutoStart).toBe(false);
-    });
-
-    it("should not auto-start when game already started", () => {
-      const isSinglePlayer = true;
-      const isJoined = true;
-      const isHost = true;
-      const hasGameState = true;
-
-      const shouldAutoStart =
-        isSinglePlayer && isJoined && isHost && !hasGameState;
-
-      expect(shouldAutoStart).toBe(false);
+      expect(msg.type).toBe("set_seat");
     });
   });
 

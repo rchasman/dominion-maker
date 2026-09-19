@@ -16,7 +16,14 @@ import type { GameEvent } from "../events/types";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { CommandResult } from "../commands/types";
 import type { PendingUndoRequest } from "../engine/engine";
-import { HUMAN_SEAT } from "../core/seats";
+import type { ControllerConfig, ControllerKind } from "../core/seats";
+import {
+  DEFAULT_LLM_SEAT,
+  HEURISTIC_SEAT,
+  HUMAN_SEAT,
+  sameConfig,
+} from "../core/seats";
+import { useState } from "preact/hooks";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
 import { useAutoEndActionPhase } from "./use-auto-end-action-phase";
 import {
@@ -24,6 +31,8 @@ import {
   events$,
   appMode$,
   seats$,
+  setSeat$,
+  isHost$,
   isProcessing$,
   isLoading$,
   chatMessages$,
@@ -58,7 +67,12 @@ interface MultiplayerGameState {
   isConnected: boolean;
   isJoined: boolean;
   spectatorCount: number;
-  players: Array<{ name: string; playerId: PlayerId }>;
+  isHost: boolean;
+  players: Array<{
+    name: string;
+    playerId: PlayerId;
+    controller: ControllerKind;
+  }>;
   chatMessages: ChatMessageData[];
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
@@ -66,6 +80,7 @@ interface MultiplayerGameState {
   buyCard: (card: CardName) => CommandResult;
   endPhase: () => CommandResult;
   submitDecision: (choice: DecisionChoice) => CommandResult;
+  setSeat: (playerId: PlayerId, controller: ControllerConfig) => void;
   requestUndo: (toEventId: string) => void;
   approveUndo: (requestId: string) => void;
   denyUndo: (requestId: string) => void;
@@ -100,11 +115,38 @@ export function useMultiplayerGameContext({
   useEffect(() => {
     appMode$.value = "multiplayer";
   }, []);
+  // Other seats arrive as kinds only; this client's own LLM config stays here
+  const [ownSeat, setOwnSeat] = useState<ControllerConfig>(HUMAN_SEAT);
   useEffect(() => {
+    const seatFor = (kind: ControllerKind): ControllerConfig => {
+      if (kind === "heuristic") return HEURISTIC_SEAT;
+      if (kind === "llm") return DEFAULT_LLM_SEAT;
+      return HUMAN_SEAT;
+    };
     seats$.value = Object.fromEntries(
-      game.players.map(p => [p.playerId, HUMAN_SEAT]),
+      game.players.map(p => [
+        p.playerId,
+        p.playerId === game.playerId && ownSeat.kind === p.controller
+          ? ownSeat
+          : seatFor(p.controller),
+      ]),
     );
-  }, [game.players]);
+  }, [game.players, game.playerId, ownSeat]);
+  useEffect(() => {
+    isHost$.value = game.isHost;
+  }, [game.isHost]);
+  const { setSeat } = game;
+  useEffect(() => {
+    setSeat$.value = (playerId, controller) => {
+      if (playerId === game.playerId && !sameConfig(controller, ownSeat)) {
+        setOwnSeat(controller);
+      }
+      setSeat(playerId, controller);
+    };
+    return () => {
+      setSeat$.value = null;
+    };
+  }, [setSeat, game.playerId, ownSeat]);
   useEffect(() => {
     isProcessing$.value = !game.isConnected;
   }, [game.isConnected]);

@@ -13,12 +13,23 @@ import type { CardName } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type {
+  BotConfig,
   GameClientMessage,
   GameServerMessage,
   GameUpdateMessage,
   ChatMessageData,
   PlayerId,
 } from "./protocol";
+import type { ControllerConfig, Seats } from "../core/seats";
+import { HUMAN_SEAT, isHumanSeat } from "../core/seats";
+import type { Controller } from "../core/controller";
+import { heuristicController } from "../core/controller";
+import { llmController } from "../core/llm-controller";
+import { createControllerCache } from "../core/controller-cache";
+import { driveEngine } from "../core/driver";
+import { dominionGame, type DominionShape } from "../dominion/definition";
+import { reasoningOf } from "../dominion/moves";
+import { httpDecideMove } from "../agent/http-decide-move";
 
 interface PlayerConnection {
   id: string;
@@ -28,6 +39,23 @@ interface PlayerConnection {
   isBot?: boolean | undefined;
 }
 
+/** What the server needs from a connection; tests supply a plain object */
+export type ConnLike = Pick<Party.Connection, "id" | "send" | "close">;
+
+/** What the server needs from the room; tests supply a plain object */
+export type RoomLike = {
+  id: string;
+  env: Record<string, unknown>;
+  getConnections(): Iterable<ConnLike>;
+  broadcast(message: string): void;
+  context: {
+    parties: Record<
+      string,
+      { get(id: string): { fetch(init: RequestInit): Promise<Response> } }
+    >;
+  };
+};
+
 const MAX_PLAYERS = 2;
 
 const MAX_CHAT_MESSAGES = 100;
@@ -35,7 +63,14 @@ const MAX_CHAT_MESSAGES = 100;
 export default class GameServer implements Party.Server {
   private engine: DominionEngine | null = null;
   private connections: Map<string, PlayerConnection> = new Map();
-  private botPlayers: Set<PlayerId> = new Set(); // Track which players are bots (by clientId)
+  /** Who controls each seat, keyed by player id */
+  private seats: Seats = {};
+  private driving: Promise<void> | null = null;
+  private driveAbort: AbortController | null = null;
+  private readonly controllerFor: (
+    config: ControllerConfig,
+    player: string,
+  ) => Controller<DominionShape> | null;
   private hostConnectionId: string | null = null;
   private hostClientId: string | null = null;
   private isStarted = false;
@@ -48,13 +83,55 @@ export default class GameServer implements Party.Server {
   > = {}; // Track player info separately from engine state
   private spectatorTimeoutId: ReturnType<typeof setTimeout> | null = null; // Timeout for kicking spectators
 
-  readonly room: Party.Room;
+  readonly room: RoomLike;
 
-  constructor(room: Party.Room) {
+  constructor(room: RoomLike) {
     this.room = room;
+    const apiOrigin =
+      typeof room.env["API_ORIGIN"] === "string" ? room.env["API_ORIGIN"] : "";
+    this.controllerFor = createControllerCache<DominionShape>(config => {
+      if (config.kind === "human") return null;
+      if (config.kind === "heuristic") return heuristicController(dominionGame);
+      return llmController(dominionGame, config, {
+        decideMove: httpDecideMove(apiOrigin),
+        getPlayerStrategies: () => ({}),
+        reasoningOf,
+      });
+    });
+  }
+
+  /** Bots wait for nobody: whenever a non-human seat must act, drive it */
+  private driveBots(): void {
+    const engine = this.engine;
+    if (this.localMirror || !engine || !this.isStarted || this.driving) return;
+    const next = dominionGame.whoMustAct(engine.state);
+    if (next === null || isHumanSeat(this.seats[next])) return;
+    const abort = new AbortController();
+    this.driveAbort = abort;
+    this.driving = driveEngine(engine, {
+      game: dominionGame,
+      getSeats: () => this.seats,
+      controllerFor: this.controllerFor,
+      stepDelayMs: 0,
+      signal: abort.signal,
+      logError: message => console.error(`[GameServer] ${message}`),
+    }).finally(() => {
+      this.driving = null;
+      if (this.driveAbort === abort) this.driveAbort = null;
+      if (this.engine === engine && !abort.signal.aborted) this.driveBots();
+    });
+  }
+
+  /** Resolves when the current bot run ends; null when no bot is acting */
+  get botsDriving(): Promise<void> | null {
+    return this.driving;
   }
 
   onConnect(conn: Party.Connection) {
+    this.connect(conn);
+  }
+
+  connect(conn: ConnLike) {
     this.connections.set(conn.id, {
       id: conn.id,
       name: "",
@@ -64,6 +141,10 @@ export default class GameServer implements Party.Server {
   }
 
   onClose(conn: Party.Connection) {
+    this.disconnect(conn);
+  }
+
+  disconnect(conn: ConnLike) {
     const player = this.connections.get(conn.id);
     this.connections.delete(conn.id);
 
@@ -86,15 +167,12 @@ export default class GameServer implements Party.Server {
     // Exception: full mode (AI vs AI) should continue even without humans
     if (this.isStarted && this.getPlayerCount() === 1) {
       const remainingPlayer = this.getPlayers()[0];
-      if (
-        remainingPlayer?.clientId &&
-        this.botPlayers.has(remainingPlayer.clientId)
-      ) {
+      if (remainingPlayer?.isBot) {
         // Only a bot remains as player - check if this should end the game
         const humanCount = this.getHumanConnectionCount();
 
-        // End game only if no humans remain AND not in full mode
-        if (humanCount === 0 && !this.isFullMode()) {
+        // End game only if no humans remain AND not every seat is a bot
+        if (humanCount === 0 && !this.allSeatsNonHuman()) {
           this.cleanupBotConnections();
           this.endGame("Player left");
         }
@@ -118,6 +196,10 @@ export default class GameServer implements Party.Server {
   }
 
   onMessage(message: string, sender: Party.Connection) {
+    this.handleMessage(message, sender);
+  }
+
+  handleMessage(message: string, sender: ConnLike) {
     const msg = parseMessage(message, gameMessageSchema);
     if (!msg) {
       this.send(sender, { type: "error", message: "Invalid message" });
@@ -141,18 +223,13 @@ export default class GameServer implements Party.Server {
         this.handleSpectate(sender, conn, msg.name, msg.clientId);
         break;
       case "start_game":
-        this.handleStartGame(sender, msg.kingdomCards, msg.botPlayerIds);
+        this.handleStartGame(sender, msg.kingdomCards, msg.bots ?? []);
         break;
       case "start_singleplayer":
-        this.handleStartSinglePlayer(
-          sender,
-          msg.botName,
-          msg.kingdomCards,
-          msg.gameMode,
-        );
+        this.handleStartSinglePlayer(sender, msg.seats, msg.kingdomCards);
         break;
-      case "change_game_mode":
-        this.handleChangeGameMode(sender, msg.gameMode);
+      case "set_seat":
+        this.handleSetSeat(sender, conn, msg.playerId, msg.controller);
         break;
       case "sync_events":
         this.handleSyncEvents(sender, msg.events);
@@ -192,7 +269,7 @@ export default class GameServer implements Party.Server {
     }
   }
 
-  private handleChat(sender: Party.Connection, input: ChatMessageData) {
+  private handleChat(sender: ConnLike, input: ChatMessageData) {
     const player = this.connections.get(sender.id);
     if (!player?.name) return;
     const message = {
@@ -211,7 +288,7 @@ export default class GameServer implements Party.Server {
   }
 
   private handleJoin(
-    conn: Party.Connection,
+    conn: ConnLike,
     player: PlayerConnection,
     name: string,
     clientId?: string,
@@ -339,10 +416,7 @@ export default class GameServer implements Party.Server {
     player.clientId = actualClientId;
     player.isSpectator = false;
     player.isBot = isBot;
-
-    if (isBot) {
-      this.botPlayers.add(actualClientId);
-    }
+    this.seats = { ...this.seats, [actualClientId]: HUMAN_SEAT };
 
     // Set host on first join
     if (!this.hostConnectionId) {
@@ -372,77 +446,13 @@ export default class GameServer implements Party.Server {
     this.localMirror = false;
     const players = this.getPlayers();
     if (players.length < 2) return;
-
-    console.log(
-      "[AutoStart] Players:",
-      players.map(p => `${p.name} (${p.clientId})`),
-    );
-
-    const playerIds = players.map(p => p.clientId);
-
-    const engine = new DominionEngine();
-    this.engine = engine;
-    engine.startGame(playerIds);
-    this.isStarted = true;
-
-    // Populate playerInfo with real player data
-    this.playerInfo = {};
-    for (const p of players) {
-      this.playerInfo[p.clientId] = {
-        id: p.clientId,
-        name: p.name,
-        type: p.isBot ? "ai" : "human",
-        connected: true,
-      };
-      console.log(`[AutoStart] playerInfo[${p.clientId}].name = "${p.name}"`);
-    }
-
-    console.log(
-      "[AutoStart] Broadcasting state with playerInfo:",
-      Object.keys(this.playerInfo),
-    );
-
-    engine.subscribe((events, state) => {
-      const stateWithPlayerInfo = {
-        ...state,
-        playerInfo: this.playerInfo,
-      };
-
-      // If undo was executed, send full state to sync all clients
-      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
-      if (hasUndoExecuted) {
-        this.broadcast({
-          type: "full_state",
-          state: stateWithPlayerInfo,
-          events: [...engine.eventLog],
-        });
-      } else {
-        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
-      }
-
-      if (state.gameOver) {
-        void this.updateLobby();
-      }
-    });
-
-    const stateWithPlayerInfo = {
-      ...engine.state,
-      playerInfo: this.playerInfo,
-    };
-    this.broadcast({
-      type: "game_started",
-      state: stateWithPlayerInfo,
-      events: [...engine.eventLog],
-    });
-
-    void this.updateLobby();
+    this.startEngine(players);
   }
 
   private handleStartSinglePlayer(
-    conn: Party.Connection,
-    botName?: string,
+    conn: ConnLike,
+    seats: Seats,
     kingdomCards?: CardName[],
-    gameMode?: string,
   ) {
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
@@ -463,61 +473,36 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    // The host's own engine is authoritative; this room only mirrors it for
+    // spectators, so seats are labels keyed by the local game's player ids.
     this.localMirror = true;
-    // In "full" mode, both players are bots
-    const isFullMode = gameMode === "full";
-    const botPlayerName = botName || "AI Opponent";
-
-    // Create bot with real UUID
-    const botClientId = crypto.randomUUID();
-    const botConnectionId = `conn_${botClientId}`;
-
-    // Add bot to connections (without actual socket)
-    this.connections.set(botConnectionId, {
-      id: botConnectionId,
-      name: botPlayerName,
-      clientId: botClientId,
-      isSpectator: false,
-      isBot: true,
+    const humanPlayer = players[0];
+    if (!humanPlayer) return;
+    const seatIds = Object.keys(seats);
+    const botConnectionId = this.addBotConnection(seatIds[1] ?? "AI Opponent", {
+      kind: "heuristic",
     });
-
-    this.botPlayers.add(botClientId);
-
-    // In full mode, mark human player as bot too
-    const humanPlayer = players[0]!;
-    if (isFullMode) {
-      this.botPlayers.add(humanPlayer.clientId);
-    }
-
-    const playerIds = [humanPlayer.clientId, botClientId];
+    this.seats = seats;
 
     const engine = new DominionEngine();
     this.engine = engine;
-    engine.startGame(playerIds, kingdomCards);
+    engine.startGame([humanPlayer.clientId, botConnectionId], kingdomCards);
     this.isStarted = true;
 
-    // Populate playerInfo with real player data
-    this.playerInfo = {};
-    this.playerInfo[humanPlayer.clientId] = {
-      id: humanPlayer.clientId,
-      name: humanPlayer.name,
-      type: isFullMode ? "ai" : "human",
-      connected: true,
-    };
-    this.playerInfo[botClientId] = {
-      id: botClientId,
-      name: botPlayerName,
-      type: "ai",
-      connected: true,
-    };
+    this.playerInfo = Object.fromEntries(
+      Object.entries(seats).map(([id, seat]) => [
+        id,
+        {
+          id,
+          name: id,
+          type: isHumanSeat(seat) ? "human" : "ai",
+          connected: true,
+        } as const,
+      ]),
+    );
 
     engine.subscribe((events, state) => {
-      const stateWithPlayerInfo = {
-        ...state,
-        playerInfo: this.playerInfo,
-      };
-
-      // If undo was executed, send full state to sync all clients
+      const stateWithPlayerInfo = { ...state, playerInfo: this.playerInfo };
       const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
       if (hasUndoExecuted) {
         this.broadcast({
@@ -528,66 +513,61 @@ export default class GameServer implements Party.Server {
       } else {
         this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
       }
-
-      if (state.gameOver) {
-        void this.updateLobby();
-      }
+      if (state.gameOver) void this.updateLobby();
     });
 
-    const stateWithPlayerInfo = {
-      ...engine.state,
-      playerInfo: this.playerInfo,
-    };
     this.broadcast({
       type: "game_started",
-      state: stateWithPlayerInfo,
+      state: { ...engine.state, playerInfo: this.playerInfo },
       events: [...engine.eventLog],
     });
-
     this.broadcastPlayerList();
     void this.updateLobby();
   }
 
-  private handleChangeGameMode(conn: Party.Connection, gameMode: string) {
-    // Only allow host to change mode
-    if (conn.id !== this.hostConnectionId) {
-      this.send(conn, { type: "error", message: "Only host can change mode" });
-      return;
-    }
-
-    // Only allow in single-player games
-    if (this.getPlayerCount() !== 2 || this.botPlayers.size === 0) {
-      this.send(conn, {
-        type: "error",
-        message: "Mode change only allowed in single-player",
-      });
-      return;
-    }
-
-    const isFullMode = gameMode === "full";
-
-    // Update bot status based on mode
-    const players = this.getPlayers();
-    if (players.length === 2) {
-      const [player1, player2] = players;
-      if (isFullMode) {
-        // Mark both players as bots
-        this.botPlayers.add(player1!.clientId);
-        this.botPlayers.add(player2!.clientId);
-      } else {
-        // Only the bot opponent is marked as bot
-        const humanPlayer = players.find(p => !p.isBot);
-        const botPlayer = players.find(p => p.isBot);
-        if (humanPlayer) this.botPlayers.delete(humanPlayer.clientId);
-        if (botPlayer) this.botPlayers.add(botPlayer.clientId);
+  private handleSetSeat(
+    conn: ConnLike,
+    sender: PlayerConnection,
+    playerId: PlayerId,
+    controller: ControllerConfig,
+  ) {
+    const isHost = conn.id === this.hostConnectionId;
+    if (this.localMirror) {
+      if (!isHost) {
+        this.send(conn, { type: "error", message: "Not your seat" });
+        return;
       }
+      this.seats = { ...this.seats, [playerId]: controller };
+      const info = this.playerInfo[playerId];
+      if (info) info.type = isHumanSeat(controller) ? "human" : "ai";
+      this.broadcastPlayerList();
+      void this.updateLobby();
+      return;
     }
 
-    // Notify lobby of the change
+    const ownSeat = !sender.isSpectator && sender.clientId === playerId;
+    const humanConnected = this.getPlayers().some(
+      p => p.clientId === playerId && !p.isBot,
+    );
+    if (!ownSeat && !(isHost && !humanConnected)) {
+      this.send(conn, { type: "error", message: "Not your seat" });
+      return;
+    }
+    if (!(playerId in this.seats) && !this.playerInfo[playerId]) {
+      this.send(conn, { type: "error", message: "Unknown seat" });
+      return;
+    }
+    this.seats = { ...this.seats, [playerId]: controller };
+    const info = this.playerInfo[playerId];
+    if (info) info.type = isHumanSeat(controller) ? "human" : "ai";
+    // A seat that changed hands mid-decision must not finish the old decision
+    this.driveAbort?.abort();
+    this.broadcastPlayerList();
     void this.updateLobby();
+    this.driveBots();
   }
 
-  private handleSyncEvents(conn: Party.Connection, events: GameEvent[]) {
+  private handleSyncEvents(conn: ConnLike, events: GameEvent[]) {
     if (conn.id !== this.hostConnectionId || !this.localMirror) {
       this.send(conn, {
         type: "error",
@@ -616,7 +596,7 @@ export default class GameServer implements Party.Server {
   }
 
   private handleSpectate(
-    conn: Party.Connection,
+    conn: ConnLike,
     player: PlayerConnection,
     name: string,
     clientId?: string,
@@ -664,56 +644,40 @@ export default class GameServer implements Party.Server {
     this.broadcastSpectatorCount();
   }
 
-  private handleStartGame(
-    conn: Party.Connection,
-    kingdomCards?: CardName[],
-    botPlayerIds?: PlayerId[],
-  ) {
-    if (conn.id !== this.hostConnectionId) {
-      this.send(conn, { type: "error", message: "Only host can start" });
-      return;
-    }
+  private addBotConnection(name: string, controller: BotConfig): string {
+    const clientId = crypto.randomUUID();
+    this.connections.set(`conn_${clientId}`, {
+      id: `conn_${clientId}`,
+      name,
+      clientId,
+      isSpectator: false,
+      isBot: true,
+    });
+    this.seats = { ...this.seats, [clientId]: controller };
+    return clientId;
+  }
 
-    if (this.isStarted && !this.engine?.state.gameOver) {
-      this.send(conn, { type: "error", message: "Game already started" });
-      return;
-    }
-    this.localMirror = false;
-    const players = this.getPlayers();
-    if (players.length < 2) {
-      this.send(conn, { type: "error", message: "Need at least 2 players" });
-      return;
-    }
-
+  private startEngine(players: PlayerConnection[], kingdomCards?: CardName[]) {
     const playerIds = players.map(p => p.clientId);
-
-    // Mark bot players
-    botPlayerIds
-      ?.filter(clientId => playerIds.includes(clientId))
-      .map(clientId => this.botPlayers.add(clientId));
-
     const engine = new DominionEngine();
     this.engine = engine;
     engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
-    // Populate playerInfo with real player data
-    this.playerInfo = {};
-    for (const p of players) {
-      this.playerInfo[p.clientId] = {
-        id: p.clientId,
-        name: p.name,
-        type: p.isBot ? "ai" : "human",
-        connected: true,
-      };
-    }
+    this.playerInfo = Object.fromEntries(
+      players.map(p => [
+        p.clientId,
+        {
+          id: p.clientId,
+          name: p.name,
+          type: isHumanSeat(this.seats[p.clientId]) ? "human" : "ai",
+          connected: true,
+        } as const,
+      ]),
+    );
 
     engine.subscribe((events, state) => {
-      const stateWithPlayerInfo = {
-        ...state,
-        playerInfo: this.playerInfo,
-      };
-
+      const stateWithPlayerInfo = { ...state, playerInfo: this.playerInfo };
       // If undo was executed, send full state to sync all clients
       const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
       if (hasUndoExecuted) {
@@ -725,27 +689,51 @@ export default class GameServer implements Party.Server {
       } else {
         this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
       }
-
-      if (state.gameOver) {
-        void this.updateLobby();
-      }
+      if (state.gameOver) void this.updateLobby();
     });
 
-    const stateWithPlayerInfo = {
-      ...engine.state,
-      playerInfo: this.playerInfo,
-    };
     this.broadcast({
       type: "game_started",
-      state: stateWithPlayerInfo,
+      state: { ...engine.state, playerInfo: this.playerInfo },
       events: [...engine.eventLog],
     });
-
+    this.broadcastPlayerList();
     void this.updateLobby();
   }
 
+  private handleStartGame(
+    conn: ConnLike,
+    kingdomCards: CardName[] | undefined,
+    bots: Array<{ name: string; controller: BotConfig }>,
+  ) {
+    if (conn.id !== this.hostConnectionId) {
+      this.send(conn, { type: "error", message: "Only host can start" });
+      return;
+    }
+
+    if (this.isStarted && !this.engine?.state.gameOver) {
+      this.send(conn, { type: "error", message: "Game already started" });
+      return;
+    }
+    this.localMirror = false;
+    const humans = this.getPlayers();
+    const seatCount = humans.length + bots.length;
+    if (seatCount < 2) {
+      this.send(conn, { type: "error", message: "Need at least 2 players" });
+      return;
+    }
+    if (seatCount > MAX_PLAYERS) {
+      this.send(conn, { type: "error", message: "Game is full" });
+      return;
+    }
+
+    bots.map(bot => this.addBotConnection(bot.name, bot.controller));
+    this.startEngine(this.getPlayers(), kingdomCards);
+    this.driveBots();
+  }
+
   private handleGameCommand(
-    conn: Party.Connection,
+    conn: ConnLike,
     player: PlayerConnection,
     msg: GameClientMessage,
   ) {
@@ -801,10 +789,21 @@ export default class GameServer implements Party.Server {
 
     if (!result.ok) {
       this.send(conn, { type: "error", message: result.error });
+      return;
     }
+
+    if (msg.type === "request_undo") {
+      const requestId = this.engine.undoRequest?.requestId;
+      if (requestId) {
+        Object.entries(this.seats)
+          .filter(([, seat]) => !isHumanSeat(seat))
+          .map(([botId]) => this.engine?.approveUndo(botId, requestId));
+      }
+    }
+    this.driveBots();
   }
 
-  private handleResign(conn: Party.Connection, player: PlayerConnection) {
+  private handleResign(conn: ConnLike, player: PlayerConnection) {
     if (!player.clientId || player.isSpectator) {
       this.send(conn, { type: "error", message: "Not a player" });
       return;
@@ -832,17 +831,18 @@ export default class GameServer implements Party.Server {
   }
 
   private endGame(reason: string) {
+    this.driveAbort?.abort();
     this.isStarted = false;
     this.engine = null;
     this.playerInfo = {};
-    this.botPlayers.clear();
+    this.seats = {};
     this.hostConnectionId = null;
     this.hostClientId = null;
     this.broadcast({ type: "game_ended", reason });
     void this.updateLobby();
   }
 
-  private handleLeave(conn: Party.Connection) {
+  private handleLeave(conn: ConnLike) {
     const player = this.connections.get(conn.id);
     if (!player) return;
 
@@ -865,11 +865,9 @@ export default class GameServer implements Party.Server {
       const remainingPlayers = this.getPlayers();
 
       // Check if only bots remain or it's a single-player game
-      const onlyBotsRemain = remainingPlayers.every(
-        p => p.clientId && this.botPlayers.has(p.clientId),
-      );
+      const onlyBotsRemain = remainingPlayers.every(p => p.isBot);
 
-      if (onlyBotsRemain && !this.isFullMode()) {
+      if (onlyBotsRemain && !this.allSeatsNonHuman()) {
         // Single-player game abandoned - clean it up
         this.cleanupBotConnections();
         this.endGame("Player left");
@@ -878,9 +876,7 @@ export default class GameServer implements Party.Server {
 
       // CRITICAL FIX: End multiplayer games when any player leaves
       // Multiplayer games require all human players to continue
-      const humanPlayerCount = remainingPlayers.filter(
-        p => p.clientId && !this.botPlayers.has(p.clientId),
-      ).length;
+      const humanPlayerCount = remainingPlayers.filter(p => !p.isBot).length;
 
       if (humanPlayerCount < remainingPlayers.length && humanPlayerCount > 0) {
         // This is multiplayer (has non-bot players) and someone left
@@ -916,17 +912,14 @@ export default class GameServer implements Party.Server {
       // Spectators are always human
       if (conn.isSpectator) return true;
       // Non-spectator players who are not bots are human
-      return conn.clientId && !this.botPlayers.has(conn.clientId);
+      return conn.clientId && !conn.isBot;
     }).length;
   }
 
-  private isFullMode(): boolean {
-    // Full mode is when all players are marked as bots
-    // This indicates an AI vs AI game that should continue autonomously
-    const players = this.getPlayers();
-    return (
-      players.length > 0 && players.every(p => this.botPlayers.has(p.clientId))
-    );
+  /** An all-bot table keeps playing for its spectators */
+  private allSeatsNonHuman(): boolean {
+    const seats = Object.values(this.seats);
+    return seats.length > 0 && seats.every(seat => !isHumanSeat(seat));
   }
 
   private scheduleSpectatorTimeout() {
@@ -960,10 +953,18 @@ export default class GameServer implements Party.Server {
   }
 
   private broadcastPlayerList() {
-    const players = this.getPlayers().map(p => ({
-      name: p.name,
-      playerId: p.clientId,
-    }));
+    // A mirror room's seats are keyed by the local game's ids, not by connections
+    const players = this.localMirror
+      ? Object.entries(this.seats).map(([playerId, seat]) => ({
+          name: this.playerInfo[playerId]?.name ?? playerId,
+          playerId,
+          controller: seat.kind,
+        }))
+      : this.getPlayers().map(p => ({
+          name: p.name,
+          playerId: p.clientId,
+          controller: (this.seats[p.clientId] ?? HUMAN_SEAT).kind,
+        }));
     this.broadcast({ type: "player_list", players });
   }
 
@@ -974,7 +975,7 @@ export default class GameServer implements Party.Server {
     });
   }
 
-  private send(conn: Party.Connection, msg: GameServerMessage) {
+  private send(conn: ConnLike, msg: GameServerMessage) {
     if ("state" in msg && msg.state) {
       const player = this.connections.get(conn.id);
       const viewer = player && !player.isSpectator ? player.clientId : null;
@@ -1016,7 +1017,7 @@ export default class GameServer implements Party.Server {
 
       return {
         name: info.name,
-        isBot: this.botPlayers.has(clientId),
+        isBot: !isHumanSeat(this.seats[clientId]),
         isConnected: !!activeConnection,
       };
     });
@@ -1047,7 +1048,7 @@ export default class GameServer implements Party.Server {
   private cleanupBotConnections() {
     // Remove all bot connections
     const botConnectionIds = [...this.connections.entries()]
-      .filter(([, conn]) => conn.clientId && this.botPlayers.has(conn.clientId))
+      .filter(([, conn]) => conn.isBot)
       .map(([id]) => id);
 
     botConnectionIds.map(id => this.connections.delete(id));

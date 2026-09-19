@@ -9,12 +9,14 @@ import type { GameState, CardName } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type {
+  BotConfig,
   PlayerId,
   PlayerInfo,
   GameClientMessage,
   GameServerMessage,
   ChatMessageData,
 } from "./protocol";
+import type { ControllerConfig } from "../core/seats";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
 import type { PendingUndoRequest } from "../engine/engine";
 
@@ -68,8 +70,6 @@ interface UsePartyGameOptions {
   playerName: string;
   clientId: string;
   isSpectator?: boolean;
-  isSinglePlayer?: boolean;
-  gameMode?: "engine" | "hybrid" | "full";
 }
 
 interface PartyGameState {
@@ -90,8 +90,11 @@ interface PartyGameState {
 }
 
 interface PartyGameActions {
-  startGame: (kingdomCards?: CardName[]) => void;
-  changeGameMode: (gameMode: string) => void;
+  startGame: (
+    kingdomCards?: CardName[],
+    bots?: Array<{ name: string; controller: BotConfig }>,
+  ) => void;
+  setSeat: (playerId: PlayerId, controller: ControllerConfig) => void;
   playAction: (card: CardName) => CommandResult;
   playTreasure: (card: CardName) => CommandResult;
   playAllTreasures: () => CommandResult;
@@ -112,8 +115,6 @@ export function usePartyGame({
   playerName,
   clientId,
   isSpectator = false,
-  isSinglePlayer = false,
-  gameMode = "engine",
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
   const eventsRef = useRef<GameEvent[]>([]);
@@ -326,26 +327,22 @@ export function usePartyGame({
   }, []);
 
   const startGame = useCallback(
-    (kingdomCards?: CardName[]) => {
-      if (isSinglePlayer) {
-        send({
-          type: "start_singleplayer",
-          ...(kingdomCards !== undefined && { kingdomCards }),
-          gameMode,
-        });
-      } else {
-        send({
-          type: "start_game",
-          ...(kingdomCards !== undefined && { kingdomCards }),
-        });
-      }
+    (
+      kingdomCards?: CardName[],
+      bots?: Array<{ name: string; controller: BotConfig }>,
+    ) => {
+      send({
+        type: "start_game",
+        ...(kingdomCards !== undefined && { kingdomCards }),
+        ...(bots !== undefined && bots.length > 0 && { bots }),
+      });
     },
-    [send, isSinglePlayer, gameMode],
+    [send],
   );
 
-  const changeGameMode = useCallback(
-    (newGameMode: string) => {
-      send({ type: "change_game_mode", gameMode: newGameMode });
+  const setSeat = useCallback(
+    (playerId: PlayerId, controller: ControllerConfig) => {
+      send({ type: "set_seat", playerId, controller });
     },
     [send],
   );
@@ -481,23 +478,10 @@ export function usePartyGame({
     [send],
   );
 
-  // Auto-start single-player games
-  useEffect(() => {
-    if (isSinglePlayer && state.isJoined && state.isHost && !state.gameState) {
-      startGame();
-    }
-  }, [
-    isSinglePlayer,
-    state.isJoined,
-    state.isHost,
-    state.gameState,
-    startGame,
-  ]);
-
   return {
     ...state,
     startGame,
-    changeGameMode,
+    setSeat,
     playAction,
     playTreasure,
     playAllTreasures,

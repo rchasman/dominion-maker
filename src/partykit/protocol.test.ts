@@ -32,6 +32,7 @@ describe("Protocol Types", () => {
       const playerInfo: PlayerInfo = {
         name: "Test Player",
         playerId: "player-123",
+        controller: "human",
       };
       expect(playerInfo.name).toBe("Test Player");
       expect(playerInfo.playerId).toBe("player-123");
@@ -236,16 +237,26 @@ describe("Protocol Types", () => {
     it("should accept start_singleplayer message", () => {
       const msg: GameClientMessage = {
         type: "start_singleplayer",
+        seats: { human: { kind: "human" } },
       };
       expect(msg.type).toBe("start_singleplayer");
     });
 
-    it("should accept change_game_mode message", () => {
+    it("should accept start_game with bot seats", () => {
       const msg: GameClientMessage = {
-        type: "change_game_mode",
-        gameMode: "engine",
+        type: "start_game",
+        bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
       };
-      expect(msg.type).toBe("change_game_mode");
+      expect(msg.type).toBe("start_game");
+    });
+
+    it("should accept set_seat message", () => {
+      const msg: GameClientMessage = {
+        type: "set_seat",
+        playerId: "p1",
+        controller: { kind: "heuristic" },
+      };
+      expect(msg.type).toBe("set_seat");
     });
 
     it("should accept play_action message", () => {
@@ -360,7 +371,7 @@ describe("Protocol Types", () => {
     it("should accept player_list message", () => {
       const msg: GameServerMessage = {
         type: "player_list",
-        players: [{ name: "Player", playerId: "p1" }],
+        players: [{ name: "Player", playerId: "p1", controller: "human" }],
       };
       expect(msg.type).toBe("player_list");
     });
