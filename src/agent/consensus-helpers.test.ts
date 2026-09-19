@@ -10,6 +10,7 @@ import {
   isActionValid,
   selectConsensusWinner,
   MODEL_TIMEOUT_MS,
+  tallyVotes,
 } from "./consensus-helpers";
 import type { Action } from "../types/action";
 import type { LLMLogger, VoteGroup } from "./consensus-helpers";
@@ -411,24 +412,28 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gemini-3.1-flash-lite" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
     ];
@@ -462,12 +467,14 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
     ];
@@ -507,18 +514,21 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
     ];
@@ -543,12 +553,14 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: null,
         error: new Error("Failed"),
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: null,
         error: new Error("Failed"),
+        distribution: [],
         duration: 100,
       },
     ];
@@ -576,6 +588,7 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Market" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
     ];
@@ -610,12 +623,14 @@ describe("selectConsensusWinner", () => {
         provider: "gpt-5.4-mini" as const,
         result: { type: "play_action" as const, card: "Village" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
       {
         provider: "gpt-oss-120b" as const,
         result: { type: "play_action" as const, card: "Smithy" as const },
         error: null,
+        distribution: [],
         duration: 100,
       },
     ];
@@ -629,6 +644,67 @@ describe("selectConsensusWinner", () => {
 
     // Alphabetically, action1 comes before action2
     expect(winner.signature).toBe("action1");
+  });
+});
+
+describe("tallyVotes", () => {
+  const silver = { type: "buy_card" as const, card: "Silver" as const };
+  const chapel = { type: "buy_card" as const, card: "Chapel" as const };
+
+  it("adds a text model's pick as one whole vote", () => {
+    const groups = new Map<string, VoteGroup>();
+    tallyVotes(groups, {
+      provider: "gpt-5.4-nano",
+      result: silver,
+      distribution: [{ action: silver, weight: 1 }],
+      error: null,
+      duration: 1,
+    });
+    expect(groups.get(createActionSignature(silver))).toMatchObject({
+      count: 1,
+      voters: ["gpt-5.4-nano"],
+    });
+  });
+
+  it("spreads Jev's mass across actions but lists it as a voter only on its top pick", () => {
+    const groups = new Map<string, VoteGroup>();
+    tallyVotes(groups, {
+      provider: "jev",
+      result: chapel,
+      distribution: [
+        { action: chapel, weight: 0.6 },
+        { action: silver, weight: 0.4 },
+      ],
+      error: null,
+      duration: 1,
+    });
+    tallyVotes(groups, {
+      provider: "gpt-5.4-nano",
+      result: silver,
+      distribution: [{ action: silver, weight: 1 }],
+      error: null,
+      duration: 1,
+    });
+    expect(groups.get(createActionSignature(chapel))).toMatchObject({
+      count: 0.6,
+      voters: ["jev"],
+    });
+    expect(groups.get(createActionSignature(silver))).toMatchObject({
+      count: 1.4,
+      voters: ["gpt-5.4-nano"],
+    });
+  });
+
+  it("falls back to one whole vote when a result carries no distribution", () => {
+    const groups = new Map<string, VoteGroup>();
+    tallyVotes(groups, {
+      provider: "jev",
+      result: silver,
+      distribution: [],
+      error: null,
+      duration: 1,
+    });
+    expect(groups.get(createActionSignature(silver))?.count).toBe(1);
   });
 });
 
@@ -718,6 +794,7 @@ it("preserves different explanations from repeated instances of one model", () =
   const state = createGame(["ai", "human"], undefined, 42).state;
   const logger = mock<LLMLogger>(() => {});
   logVotingResults({
+    actionId: "test-action",
     winner,
     votesConsidered: 3,
     validEarlyConsensus: false,
@@ -729,18 +806,21 @@ it("preserves different explanations from repeated instances of one model", () =
         result: { ...action, reasoning: "Economy" },
         duration: 1,
         error: null,
+        distribution: [],
       },
       {
         provider: "gpt-5.4-nano",
         result: { ...action, reasoning: "Action balance" },
         duration: 1,
         error: null,
+        distribution: [],
       },
       {
         provider: "gpt-5.4-nano",
         result: { type: "end_phase", reasoning: "Skip" },
         duration: 1,
         error: null,
+        distribution: [],
       },
     ],
     legalActions: [action],
@@ -776,6 +856,7 @@ describe("handleModelResult", () => {
       {
         provider: "gpt-5.4-mini",
         result: null,
+        distribution: [],
         error: new Error("aborted"),
         duration: 1,
       },

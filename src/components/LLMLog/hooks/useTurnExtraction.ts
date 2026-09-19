@@ -1,6 +1,6 @@
 import { useMemo } from "preact/hooks";
 import type { ModelProvider } from "../../../config/models";
-import type { Action } from "../../../types/action";
+import type { Action, WeightedVote } from "../../../types/action";
 import type { LLMLogEntry, Turn, PendingData } from "../types";
 
 const LOOKBACK_RANGE = 5;
@@ -155,6 +155,7 @@ function handleConsensusModelComplete(
   status.success = data.success as boolean | undefined;
   status.completed = true;
   status.action = data.action as Action | undefined;
+  status.distribution = data.distribution as WeightedVote[] | undefined;
   status.aborted = data.aborted as boolean | undefined;
 }
 
@@ -196,11 +197,13 @@ function handleConsensusVoting(
     ? new Map(state.buildingTurn.modelStatuses)
     : undefined;
 
+  const actionId = entry.data?.actionId;
   state.buildingTurn.decisions = [
     ...state.buildingTurn.decisions,
     {
       id: entry.id,
       votingEntry: entry,
+      ...(typeof actionId === "string" && { actionId }),
       ...(timingEntry !== undefined && { timingEntry }),
       stepNumber: state.stepNumber,
       ...(modelStatusesSnapshot !== undefined && {
@@ -208,6 +211,30 @@ function handleConsensusVoting(
       }),
     },
   ];
+}
+
+// The verdict arrives after the vote, often after the next decision has
+// started, so it is matched to its decision by actionId across all turns
+function handleConsensusVerdict(
+  entry: LLMLogEntry,
+  state: TurnBuildState,
+): void {
+  const data = entry.data || {};
+  const actionId = data.actionId;
+  const blunder = data.blunder;
+  if (typeof actionId !== "string" || typeof blunder !== "number") return;
+  const followsOverride = data.followsOverride;
+  const verdict = {
+    blunder,
+    ...(typeof followsOverride === "number" && { followsOverride }),
+  };
+  const turns = state.buildingTurn
+    ? [...state.turns, state.buildingTurn]
+    : state.turns;
+  const decision = turns
+    .flatMap(turn => turn.decisions)
+    .find(d => d.actionId === actionId);
+  if (decision) decision.verdict = verdict;
 }
 
 function processEntry(
@@ -232,5 +259,7 @@ function processEntry(
     handleConsensusVoting(entry, index, entries, state);
   } else if (entry.type === "consensus-step-error") {
     handleConsensusStepError(state);
+  } else if (entry.type === "consensus-verdict") {
+    handleConsensusVerdict(entry, state);
   }
 }

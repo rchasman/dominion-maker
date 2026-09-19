@@ -2,16 +2,48 @@ import { VoteExplanations, type VoteExplanation } from "./VoteExplanations";
 import type { Action } from "../../../types/action";
 import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
-import type { ConsensusVotingData, ModelStatus } from "../types";
+import type {
+  ConsensusVotingData,
+  ConsensusVerdict,
+  ModelStatus,
+} from "../types";
 import { groupVotersWithColors } from "../utils/groupVoters";
 import { run } from "../../../lib/run";
 import { VoteBar } from "./VoteBarComponents";
+import { formatVoteCount } from "../../../lib/vote-format";
 
 interface VotingPaneProps {
   data: ConsensusVotingData | null | undefined;
   liveStatuses?: Map<number, ModelStatus>;
   totalModels?: number;
   legalActions?: string[];
+  verdict?: ConsensusVerdict;
+}
+
+const BLUNDER_WARNING_THRESHOLD = 0.5;
+// A group nobody picked that rounds to 0.0× is a probability sliver, not a vote
+const MIN_VISIBLE_VOTES = 0.05;
+const PERCENT = 100;
+const pct = (p: number) => `${Math.round(p * PERCENT)}%`;
+
+// Same type scale and colors as ActionDetails so the row reads as one block
+function JevVerdictLine({ verdict }: { verdict: ConsensusVerdict }) {
+  const risky = verdict.blunder >= BLUNDER_WARNING_THRESHOLD;
+  return (
+    <div
+      style={{
+        marginTop: "2px",
+        fontSize: "0.65rem",
+        fontFamily: "monospace",
+        color: risky ? "#ef4444" : "var(--color-text-secondary)",
+      }}
+      title="Jev's second opinion on the winning action, as probabilities"
+    >
+      Jev check · blunder risk {pct(verdict.blunder)}
+      {verdict.followsOverride !== undefined &&
+        ` · follows override ${pct(verdict.followsOverride)}`}
+    </div>
+  );
 }
 
 // Constants for layout calculations
@@ -41,38 +73,48 @@ const GAP_SPACING_TOTAL: number = 12;
 const PERCENTAGE_MULTIPLIER: number = 100;
 const FONT_WEIGHT_BOLD: number = 700;
 
-// Build vote groups from successful statuses using reduce
+type PaneVoteGroup = {
+  action: Action;
+  votes: number;
+  voters: string[];
+  valid: boolean | undefined;
+  reasonings: VoteExplanation[];
+};
+
+// Mirrors the agent tally: weight goes to every action in a model's
+// distribution, the voter circle and reasoning only to its top pick
 function buildVoteGroups(
   successfulStatuses: ModelStatus[],
   legalActions: string[] | undefined,
 ) {
   return successfulStatuses.reduce((voteGroups, status) => {
     if (!status.action) return voteGroups;
-    // Exclude reasoning from signature so actions with different reasoning group together
-    const signature = JSON.stringify(stripReasoning(status.action));
-    const existing = voteGroups.get(signature);
-    if (existing) {
-      return new Map(voteGroups).set(signature, {
+    const top = status.action;
+    const topSignature = JSON.stringify(stripReasoning(top));
+    const votes = status.distribution ?? [{ action: top, weight: 1 }];
+    return votes.reduce((groups, { action, weight }) => {
+      const signature = JSON.stringify(stripReasoning(action));
+      const isTop = signature === topSignature;
+      const existing = groups.get(signature) ?? {
+        action,
+        votes: 0,
+        voters: [],
+        reasonings: [],
+        valid: isActionValidFromStrings(action, legalActions),
+      };
+      return new Map(groups).set(signature, {
         ...existing,
-        voters: [...existing.voters, status.provider],
-        reasonings: [
-          ...existing.reasonings,
-          {
-            provider: status.provider,
-            reasoning: status.action.reasoning ?? "",
-          },
-        ],
+        votes: existing.votes + weight,
+        voters: isTop ? [...existing.voters, status.provider] : existing.voters,
+        reasonings: isTop
+          ? [
+              ...existing.reasonings,
+              { provider: status.provider, reasoning: top.reasoning ?? "" },
+            ]
+          : existing.reasonings,
       });
-    }
-    return new Map(voteGroups).set(signature, {
-      action: status.action,
-      voters: [status.provider],
-      reasonings: [
-        { provider: status.provider, reasoning: status.action.reasoning ?? "" },
-      ],
-      valid: isActionValidFromStrings(status.action, legalActions),
-    });
-  }, new Map<string, { action: Action; voters: string[]; valid: boolean | undefined; reasonings: VoteExplanation[] }>());
+    }, voteGroups);
+  }, new Map<string, PaneVoteGroup>());
 }
 
 // Collect all unique models from results
@@ -90,7 +132,7 @@ function calculateLayoutDimensions(
   maxVotes: number,
 ) {
   const longestVoteString = Math.max(
-    ...allResults.map(r => `${r.votes}×`.length),
+    ...allResults.map(r => `${formatVoteCount(r.votes)}×`.length),
   );
   const voteCountWidth = longestVoteString * PIXELS_PER_CHAR_VOTE;
 
@@ -159,6 +201,7 @@ export function VotingPane({
   liveStatuses,
   totalModels,
   legalActions,
+  verdict,
 }: VotingPaneProps) {
   const { allResults, maxVotes } = run(() => {
     if (liveStatuses && liveStatuses.size > 0) {
@@ -170,9 +213,10 @@ export function VotingPane({
 
       // Sort by vote count descending, then by signature alphabetically for deterministic tie-breaking
       const results = Array.from(voteGroups.values())
+        .filter(g => g.voters.length > 0 || g.votes >= MIN_VISIBLE_VOTES)
         .map(g => ({
           action: g.action,
-          votes: g.voters.length,
+          votes: g.votes,
           voters: g.voters,
           valid: g.valid,
           reasonings: g.reasonings,
@@ -228,6 +272,7 @@ export function VotingPane({
               voteCountWidth={voteCountWidth}
               percentageWidth={percentageWidth}
               barAreaWidth={barAreaWidth}
+              {...(idx === 0 && verdict !== undefined && { verdict })}
             />
           ))}
         </div>
@@ -250,6 +295,7 @@ interface VoteResultItemProps {
   voteCountWidth: number;
   percentageWidth: number;
   barAreaWidth: number;
+  verdict?: ConsensusVerdict;
 }
 
 function VoteResultItem({
@@ -259,6 +305,7 @@ function VoteResultItem({
   voteCountWidth,
   percentageWidth,
   barAreaWidth,
+  verdict,
 }: VoteResultItemProps) {
   const percentage = (result.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
   const actionStr = JSON.stringify(stripReasoning(result.action));
@@ -282,6 +329,7 @@ function VoteResultItem({
         isValid={isValid}
         isWinner={isWinner}
       />
+      {verdict && <JevVerdictLine verdict={verdict} />}
       <VoteExplanations
         reasonings={
           result.reasonings ??

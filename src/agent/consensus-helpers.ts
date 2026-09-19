@@ -3,7 +3,7 @@
  */
 
 import type { GameState, CardName, PlayerId } from "../types/game-state";
-import type { Action } from "../types/action";
+import type { Action, WeightedVote } from "../types/action";
 import { stripReasoning } from "../types/action";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ModelProvider } from "../config/models";
@@ -11,6 +11,7 @@ import { getHandComposition } from "../data/cards";
 import { formatActionDescription } from "../lib/action-utils";
 import { run } from "../lib/run";
 import { agentLogger } from "../lib/logger";
+import { formatVoteCount } from "../lib/vote-format";
 
 // Logger type for capturing LLM activity
 export type LLMLogger = (entry: Omit<LLMLogEntry, "id" | "timestamp">) => void;
@@ -24,6 +25,8 @@ export const PERCENTAGE_MULTIPLIER = 100;
 export type ModelResult = {
   provider: ModelProvider;
   result: Action | null;
+  /** Probability mass per action; a text model's single pick is one vote of weight 1 */
+  distribution: WeightedVote[];
   error: unknown;
   duration: number;
 };
@@ -33,7 +36,9 @@ export type ActionSignature = string;
 export type VoteGroup = {
   signature: ActionSignature;
   action: Action;
+  /** Models whose top pick is this action */
   voters: ModelProvider[];
+  /** Summed weight, fractional when a voter spread its mass */
   count: number;
 };
 
@@ -80,6 +85,7 @@ export type ConsensusStartParams = {
 };
 
 export type VotingResultsParams = {
+  actionId: string;
   winner: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
@@ -136,6 +142,7 @@ export const checkEarlyConsensus = (
 export const handleModelSuccess = (
   action: Action,
   params: ModelHandlerParams,
+  distribution: WeightedVote[] = [{ action, weight: 1 }],
 ): ModelResult => {
   const { provider, index, modelStart, logger } = params;
   const modelDuration = performance.now() - modelStart;
@@ -147,12 +154,14 @@ export const handleModelSuccess = (
       index,
       duration: modelDuration,
       action,
+      distribution,
       success: true,
     },
   });
   return {
     provider,
     result: action,
+    distribution,
     error: null,
     duration: modelDuration,
   };
@@ -194,9 +203,42 @@ export const handleModelError = (
   return {
     provider,
     result: null,
+    distribution: [],
     error: errorObj,
     duration: modelDuration,
   };
+};
+
+// Each weighted vote adds its mass to that action's count; the provider is
+// listed as a voter only on its top pick so the distinct-model guard and the
+// voter circles keep meaning "one model, one circle"
+export const tallyVotes = (
+  voteGroups: Map<ActionSignature, VoteGroup>,
+  modelResult: ModelResult,
+): void => {
+  if (!modelResult.result) return;
+  const topSignature = createActionSignature(modelResult.result);
+  const votes =
+    modelResult.distribution.length > 0
+      ? modelResult.distribution
+      : [{ action: modelResult.result, weight: 1 }];
+  votes.forEach(({ action, weight }) => {
+    const signature = createActionSignature(action);
+    const existing = voteGroups.get(signature) ?? {
+      signature,
+      action,
+      voters: [],
+      count: 0,
+    };
+    voteGroups.set(signature, {
+      ...existing,
+      voters:
+        signature === topSignature
+          ? [...existing.voters, modelResult.provider]
+          : existing.voters,
+      count: existing.count + weight,
+    });
+  });
 };
 
 // Handle model result and check for early consensus
@@ -222,23 +264,7 @@ export const handleModelResult = (
   }
 
   if (modelResult.result) {
-    const signature = createActionSignature(modelResult.result);
-    const existing = voteGroups.get(signature);
-    if (existing) {
-      const updatedVoters = [...existing.voters, modelResult.provider];
-      voteGroups.set(signature, {
-        ...existing,
-        voters: updatedVoters,
-        count: existing.count + 1,
-      });
-    } else {
-      voteGroups.set(signature, {
-        signature,
-        action: modelResult.result,
-        voters: [modelResult.provider],
-        count: 1,
-      });
-    }
+    tallyVotes(voteGroups, modelResult);
 
     const winner = checkEarlyConsensus(voteGroups, aheadByK, {
       providers,
@@ -331,6 +357,7 @@ export const selectConsensusWinner = (
 // Log voting results
 export const logVotingResults = (params: VotingResultsParams): void => {
   const {
+    actionId,
     winner,
     votesConsidered,
     validEarlyConsensus,
@@ -353,9 +380,10 @@ export const logVotingResults = (params: VotingResultsParams): void => {
   logger?.({
     type: "consensus-voting",
     message: validEarlyConsensus
-      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${winner.count} votes)`
-      : `◉ Voting: winner ${actionDesc} (${winner.count}/${votesConsidered})`,
+      ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${formatVoteCount(winner.count)} votes)`
+      : `◉ Voting: winner ${actionDesc} (${formatVoteCount(winner.count)}/${votesConsidered})`,
     data: {
+      actionId,
       topResult: {
         action: winner.action,
         votes: winner.count,

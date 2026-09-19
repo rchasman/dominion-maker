@@ -43,6 +43,7 @@ const providerDisplayNames: Record<string, string> = {
 };
 
 const providerOrder = [
+  "typesafe",
   "openai",
   "google",
   "anthropic",

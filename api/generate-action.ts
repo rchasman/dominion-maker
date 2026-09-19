@@ -1,7 +1,6 @@
 import { actionRequestSchema, readRequest } from "./_request";
 import { buildUserMessage } from "../src/agent/action-prompt";
 import {
-  experimental_evaluate,
   generateObject,
   gateway,
   wrapLanguageModel,
@@ -26,12 +25,7 @@ import {
 import { apiLogger } from "../src/lib/logger";
 import { env } from "../src/lib/env";
 import { promptJsonMiddleware } from "../src/agent/model-output";
-import {
-  buildJevQuestion,
-  buildJevState,
-  jevAnswerToAction,
-  JEV_QUESTION_ID,
-} from "../src/agent/jev-choice";
+import { askJev } from "../src/agent/jev-choice";
 
 // HTTP Status Codes
 const HTTP_BAD_REQUEST = 400;
@@ -156,20 +150,15 @@ async function processGenerationRequest(
   }
 
   if (config.evaluation) {
-    // Jev's rate limits move with demand; a 429 should not fail the vote outright
-    const { answers } = await experimental_evaluate({
-      model: gateway.evaluationModel(config.fullName),
-      state: buildJevState({
-        currentState,
-        strategySummary,
-        customStrategy,
-        ...(humanChoice ? { humanChoice } : {}),
-      }),
-      questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
-      maxRetries: 2,
+    const { action, distribution } = await askJev({
+      modelId: config.fullName,
+      currentState,
+      legalActions,
+      strategySummary,
+      customStrategy,
+      ...(humanChoice ? { humanChoice } : {}),
     });
-    const action = jevAnswerToAction(answers[JEV_QUESTION_ID], legalActions);
-    return res.status(HTTP_OK).json({ action, strategySummary });
+    return res.status(HTTP_OK).json({ action, distribution, strategySummary });
   }
 
   // Format recent turn history (last 3 turns) from log with TOON encoding

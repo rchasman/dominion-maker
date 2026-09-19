@@ -1,5 +1,5 @@
 import type { ModelProvider } from "../../config/models";
-import type { Action } from "../../types/action";
+import type { Action, WeightedVote } from "../../types/action";
 import type {
   CardName,
   Phase,
@@ -73,10 +73,17 @@ export interface LLMLogEntry {
     | "consensus-model-pending"
     | "consensus-model-complete"
     | "consensus-model-aborted"
+    | "consensus-verdict"
     | "ai-decision-resolving";
   message: string;
   data?: Record<string, unknown>;
   children?: LLMLogEntry[];
+}
+
+/** Jev's second opinion on the winner; probabilities, not verdicts */
+export interface ConsensusVerdict {
+  blunder: number;
+  followsOverride?: number;
 }
 
 export interface ConsensusDecision {
@@ -85,6 +92,8 @@ export interface ConsensusDecision {
   timingEntry?: LLMLogEntry;
   stepNumber: number;
   modelStatuses?: Map<number, ModelStatus>;
+  actionId?: string;
+  verdict?: ConsensusVerdict;
 }
 
 export interface ModelStatus {
@@ -96,6 +105,7 @@ export interface ModelStatus {
   completed: boolean;
   aborted?: boolean | undefined;
   action?: Action | undefined;
+  distribution?: WeightedVote[] | undefined;
 }
 
 export interface PendingData {

@@ -53,3 +53,40 @@ describe("hasLiveConsensus", () => {
     );
   });
 });
+
+describe("extractTurns verdicts", () => {
+  it("attaches a late verdict to the decision with the same actionId", () => {
+    const entries: LLMLogEntry[] = [
+      entry("ai-turn-start", { turn: 1 }),
+      entry("consensus-start", { providers: [], totalModels: 0 }),
+      entry("consensus-voting", { actionId: "g1-t1-a1" }),
+      entry("consensus-start", { providers: [], totalModels: 0 }),
+      entry("consensus-verdict", {
+        actionId: "g1-t1-a1",
+        blunder: 0.07,
+        followsOverride: 0.9,
+      }),
+      entry("consensus-voting", { actionId: "g1-t1-a2" }),
+    ];
+    const [turn] = extractTurns(entries);
+    expect(turn?.decisions.map(d => d.actionId)).toEqual([
+      "g1-t1-a1",
+      "g1-t1-a2",
+    ]);
+    expect(turn?.decisions[0]?.verdict).toEqual({
+      blunder: 0.07,
+      followsOverride: 0.9,
+    });
+    expect(turn?.decisions[1]?.verdict).toBeUndefined();
+  });
+
+  it("ignores a verdict without a numeric blunder probability", () => {
+    const entries: LLMLogEntry[] = [
+      entry("ai-turn-start", { turn: 1 }),
+      entry("consensus-start", { providers: [], totalModels: 0 }),
+      entry("consensus-voting", { actionId: "a" }),
+      entry("consensus-verdict", { actionId: "a" }),
+    ];
+    expect(extractTurns(entries)[0]?.decisions[0]?.verdict).toBeUndefined();
+  });
+});
