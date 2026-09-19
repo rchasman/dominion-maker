@@ -39,6 +39,7 @@ const providerDisplayNames: Record<string, string> = {
   moonshotai: "Moonshot AI",
   thinkingmachines: "Thinking Machines",
   mistral: "Mistral",
+  typesafe: "TypeSafe",
 };
 
 const providerOrder = [

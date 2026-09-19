@@ -3,13 +3,10 @@ import { encodeToon } from "../lib/toon";
 import { formatLegalActions, replyShape } from "./choice-parsing";
 import type { CardName } from "../types/game-state";
 
-export function buildCardDefinitionsTable(
-  supply: Record<CardName, number>,
-): string {
-  // Only include cards that are in the current game's supply
+// Only cards in the current game's supply
+export function cardDefinitionRows(supply: Record<CardName, number>) {
   const cardsInSupply = Object.keys(supply) as CardName[];
-
-  const cardData = cardsInSupply.map(cardName => {
+  return cardsInSupply.map(cardName => {
     const card = CARDS[cardName];
     return {
       name: card.name,
@@ -20,19 +17,25 @@ export function buildCardDefinitionsTable(
       vp: card.vp ?? null,
     };
   });
+}
 
-  return encodeToon(cardData);
+export function cardStrategyRows(supply: Record<CardName, number>) {
+  return Object.keys(supply).map(name => ({
+    name,
+    advice: CARDS[name as CardName].strategy,
+  }));
+}
+
+export function buildCardDefinitionsTable(
+  supply: Record<CardName, number>,
+): string {
+  return encodeToon(cardDefinitionRows(supply));
 }
 
 export function buildCardStrategyTable(
   supply: Record<CardName, number>,
 ): string {
-  return encodeToon(
-    Object.keys(supply).map(name => ({
-      name,
-      advice: CARDS[name as CardName].strategy,
-    })),
-  );
+  return encodeToon(cardStrategyRows(supply));
 }
 
 export const RULE_AUTHORITY = `RULE AUTHORITY:
@@ -64,12 +67,7 @@ ${formatLegalActions([
 Correct reply:
 {"reasoning": "With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.", "choice": 1}`;
 
-// OUTPUT FORMAT prose + example + replyFormatInstruction are load-bearing over
-// response_format — trimming breaks qwen/gpt-oss-120b/deepseek/glm-5.2 (live-verified 2026-07)
-export function buildSystemPrompt(supply: Record<CardName, number>): string {
-  return `You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.
-
-RULES:
+export const GAME_RULES = `RULES:
 - WIN CONDITION: most VP when the game ends. GAME END: the game ends when the Province pile is empty OR any 3 supply piles are empty.
 - DECK CYCLING: cards you buy or gain go to your discard pile. When your deck runs out, your discard pile is shuffled to become your new deck. So every card you add will be drawn again and again — strong cards compound, weak cards clog every future hand. Trashing a card removes it from your deck PERMANENTLY (trashing junk like Copper/Estate/Curse is usually good).
 - STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards. You draw 5 cards per hand.
@@ -82,20 +80,9 @@ RULES:
   - Cleanup (automatic): discard hand and played cards, draw 5 new cards, reset to 1 Action / 1 Buy / $0 coins
 - BUY vs GAIN: buying spends coins and a buy during your Buy phase. "Gain" effects (Workshop, Witch, etc.) give a card for free; gained cards also go to your discard pile.
 - ATTACKS & REACTIONS: attack cards hurt other players. If you hold a Reaction card (e.g. Moat) when an opponent plays an attack, you may reveal it to block the attack entirely. Revealing is FREE — the card stays in your hand and is not used up. Revealing Moat against an attack is almost always correct.
-- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its "constraint" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.
+- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its "constraint" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.`;
 
-${buildCardReference(supply)}
-
-YOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.
-
-OUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice. Explain only the decisive benefit and relevant tradeoff of this choice in 1-2 sentences, grounded in current facts and printed effects. Omit unrelated predictions and unsupported mechanics:
-${replyShape("<number from LEGAL ACTIONS>")}
-
-${EXAMPLE_SECTION}
-
-CRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.
-
-🚨 STRATEGY OVERRIDE RULES 🚨
+export const DECISION_GUIDANCE = `🚨 STRATEGY OVERRIDE RULES 🚨
 IF strategyOverride is present in strategic context:
   - IGNORE ALL default decision framework guidance below
   - The strategyOverride is your ONLY strategic guidance
@@ -114,4 +101,24 @@ DEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):
 - Dilution math: A 10-card deck drawing 5 cards/turn cycles quickly. Use drawPileCount, discardPileCount and nextFiveCardDrawNeedsShuffle to judge when a new card can matter.
 - Action cards: +Cards need sufficient +Actions and payload. Terminals compete for actions. Printed draw/action totals are approximate, not simulated turn output.
 - For trash/discard/topdeck decisions, evaluate the remaining hand and next draws, preserving necessary economy and action support. Known top cards are listed only when actually revealed.`;
+
+// OUTPUT FORMAT prose + example + replyFormatInstruction are load-bearing over
+// response_format — trimming breaks qwen/gpt-oss-120b/deepseek/glm-5.2 (live-verified 2026-07)
+export function buildSystemPrompt(supply: Record<CardName, number>): string {
+  return `You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.
+
+${GAME_RULES}
+
+${buildCardReference(supply)}
+
+YOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.
+
+OUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice. Explain only the decisive benefit and relevant tradeoff of this choice in 1-2 sentences, grounded in current facts and printed effects. Omit unrelated predictions and unsupported mechanics:
+${replyShape("<number from LEGAL ACTIONS>")}
+
+${EXAMPLE_SECTION}
+
+CRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.
+
+${DECISION_GUIDANCE}`;
 }

@@ -20,6 +20,7 @@ export interface ModelSettings {
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   enabledModels: new Set([
+    "jev",
     "grok-4-fast",
     "gpt-5.4-nano",
     "gpt-5.4-mini",
