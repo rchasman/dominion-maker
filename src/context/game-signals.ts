@@ -12,7 +12,7 @@ import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
-import type { ControllerConfig, Seats } from "../core/seats";
+import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
 import { firstHumanSeat, withSeat } from "../core/seats";
 import type { LLMLogEntry } from "../components/LLMLog/types";
 import type { ChatMessageData } from "../partykit/protocol";
@@ -34,6 +34,8 @@ export const appMode$ = signal<"local" | "multiplayer">("local");
 export const localPlayerId$ = signal<string | null>(null);
 /** Seat whose LLM settings panel should open, if any */
 export const settingsSeat$ = signal<string | null>(null);
+/** The LLM config each seat last had, so handing a seat back to an LLM restores its roster */
+export const rememberedLlm$ = signal<Record<string, LlmSeatConfig>>({});
 export const isProcessing$ = signal(false);
 export const isLoading$ = signal(false);
 export const playerStrategies$ = signal<PlayerStrategyData>({});
