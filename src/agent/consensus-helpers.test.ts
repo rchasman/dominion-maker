@@ -855,6 +855,7 @@ describe("handleModelResult", () => {
       {
         provider: "gpt-5.4-mini",
         result: null,
+        distribution: [],
         error: new Error("aborted"),
         duration: 1,
       },
