@@ -196,15 +196,13 @@ export function useAITurnAutomation(params: AIAutomationParams): void {
             events$.value = [...engine.eventLog];
             gameState$.value = state;
           });
-
-          // Check if aborted before final state update
-          if (signal.aborted) return;
-
-          syncEngineToSignals(engine);
         } catch (error: unknown) {
           uiLogger.error("AI turn error", { error });
         } finally {
-          isProcessing$.value = false;
+          if (!signal.aborted) {
+            syncEngineToSignals(engine);
+            isProcessing$.value = false;
+          }
         }
       });
     }, TIMING.AI_TURN_DELAY);
@@ -285,15 +283,13 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
         isProcessing$.value = true;
         try {
           await strategy.resolveAIPendingDecision(engine);
-
-          // Check if aborted before state update
-          if (signal.aborted) return;
-
-          syncEngineToSignals(engine);
         } catch (error: unknown) {
           uiLogger.error("AI pending decision error", { error });
         } finally {
-          isProcessing$.value = false;
+          if (!signal.aborted) {
+            syncEngineToSignals(engine);
+            isProcessing$.value = false;
+          }
         }
       });
     }, TIMING.AI_DECISION_DELAY);
@@ -308,6 +304,7 @@ export function useAIDecisionAutomation(params: AIAutomationParams): void {
  * Handle automatic phase advancement (single-player with engine)
  */
 export function useAutoPhaseAdvance(
+  gameMode: GameMode,
   engineRef: MutableRefObject<DominionEngine | null>,
 ): void {
   const gameState = gameState$.value;
@@ -318,7 +315,10 @@ export function useAutoPhaseAdvance(
       return;
     }
 
-    if (engine.shouldAutoAdvancePhase("human")) {
+    if (
+      !isAIControlled(gameMode, "human") &&
+      engine.shouldAutoAdvancePhase("human")
+    ) {
       const timer = setTimeout(() => {
         uiLogger.info("Auto-transitioning to buy phase (no playable actions)");
         engine.dispatch({ type: "END_PHASE", playerId: "human" }, "human");
@@ -331,7 +331,7 @@ export function useAutoPhaseAdvance(
     }
 
     return;
-  }, [gameState, isProcessing, engineRef]);
+  }, [gameState, isProcessing, gameMode, engineRef]);
 }
 
 /**
