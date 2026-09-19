@@ -1,5 +1,5 @@
 import type { ModelProvider } from "../../config/models";
-import type { Action } from "../../types/action";
+import type { Action, WeightedVote } from "../../types/action";
 import type {
   CardName,
   Phase,
@@ -96,6 +96,7 @@ export interface ModelStatus {
   completed: boolean;
   aborted?: boolean | undefined;
   action?: Action | undefined;
+  distribution?: WeightedVote[] | undefined;
 }
 
 export interface PendingData {

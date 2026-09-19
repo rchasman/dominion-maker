@@ -3,6 +3,7 @@ import {
   buildJevQuestion,
   buildJevState,
   jevAnswerToAction,
+  jevDistribution,
 } from "./jev-choice";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
@@ -242,5 +243,40 @@ describe("jevAnswerToAction", () => {
     expect(() =>
       jevAnswerToAction({ type: "choice", choice: "9. buy Gold" }, LEGAL),
     ).toThrow("not an offered option");
+  });
+});
+
+describe("jevDistribution", () => {
+  it("turns the probabilities into weighted votes on the legal actions, dropping zero mass", () => {
+    const votes = jevDistribution(
+      {
+        type: "choice",
+        choice: "3. buy Silver",
+        probabilities: {
+          "1. play treasure Copper": 0.1,
+          "2. play treasure Copper": 0,
+          "3. buy Silver": 0.7,
+          "4. end phase": 0.2,
+        },
+      },
+      LEGAL,
+    );
+    expect(votes).toEqual([
+      { action: { type: "play_treasure", card: "Copper" }, weight: 0.1 },
+      { action: { type: "buy_card", card: "Silver" }, weight: 0.7 },
+      { action: { type: "end_phase" }, weight: 0.2 },
+    ]);
+  });
+
+  it("is one whole vote on the pick when no distribution came back", () => {
+    const votes = jevDistribution(
+      { type: "choice", choice: "4. end phase" },
+      LEGAL,
+    );
+    expect(votes).toHaveLength(1);
+    expect(votes[0]).toMatchObject({
+      weight: 1,
+      action: { type: "end_phase" },
+    });
   });
 });

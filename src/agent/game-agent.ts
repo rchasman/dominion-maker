@@ -137,9 +137,9 @@ const executeModel = (context: ModelExecutionContext): void => {
     ...(customStrategy !== undefined && { customStrategy }),
     ...(actionId !== undefined && { actionId }),
   })
-    .then(({ action }) => {
+    .then(({ action, distribution }) => {
       clearTimeout(timeoutId);
-      return handleModelSuccess(action, handlerParams);
+      return handleModelSuccess(action, handlerParams, distribution);
     })
     .catch(error => {
       clearTimeout(timeoutId);

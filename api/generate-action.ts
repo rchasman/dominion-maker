@@ -150,7 +150,7 @@ async function processGenerationRequest(
   }
 
   if (config.evaluation) {
-    const { action } = await askJev({
+    const { action, distribution } = await askJev({
       modelId: config.fullName,
       currentState,
       legalActions,
@@ -158,7 +158,7 @@ async function processGenerationRequest(
       customStrategy,
       ...(humanChoice ? { humanChoice } : {}),
     });
-    return res.status(HTTP_OK).json({ action, strategySummary });
+    return res.status(HTTP_OK).json({ action, distribution, strategySummary });
   }
 
   // Format recent turn history (last 3 turns) from log with TOON encoding

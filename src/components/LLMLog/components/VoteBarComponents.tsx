@@ -1,3 +1,5 @@
+import { formatVoteCount } from "../../../agent/consensus-helpers";
+
 // Constants
 const OPACITY_HALF: number = 0.5;
 const OPACITY_FADED: number = 0.2;
@@ -67,7 +69,7 @@ function VoteCount({
         flexShrink: 0,
       }}
     >
-      {votes}×
+      {formatVoteCount(votes)}×
     </span>
   );
 }

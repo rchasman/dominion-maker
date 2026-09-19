@@ -1,7 +1,7 @@
 import { experimental_evaluate, gateway } from "ai";
 import type { JSONValue } from "ai";
 import { z } from "zod";
-import type { Action } from "../types/action";
+import type { Action, WeightedVote } from "../types/action";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { hasCardField } from "../lib/action-utils";
@@ -228,8 +228,28 @@ export function jevAnswerToAction(
   };
 }
 
+/** Jev's whole distribution as weighted votes, so the tally can use the mass and not just the argmax */
+export function jevDistribution(
+  answer: JevChoiceAnswer,
+  legalActions: Action[],
+): WeightedVote[] {
+  if (!answer.probabilities) {
+    return [{ action: jevAnswerToAction(answer, legalActions), weight: 1 }];
+  }
+  return Object.entries(answer.probabilities)
+    .filter(([, weight]) => weight > 0)
+    .flatMap(([key, weight]) => {
+      const index = legalActions.findIndex(
+        (action, i) => jevOptionKey(i, action) === key,
+      );
+      const legal = legalActions[index];
+      return legal ? [{ action: legal, weight }] : [];
+    });
+}
+
 export type JevVote = {
   action: Action;
+  distribution: WeightedVote[];
   answer: JevChoiceAnswer;
   /** TypeSafe's distribution-concentration statistic for the pick, 0-1 */
   confidence: number | undefined;
@@ -273,6 +293,7 @@ export async function askJev(params: {
   const answer = answers[JEV_QUESTION_ID];
   return {
     action: jevAnswerToAction(answer, legalActions),
+    distribution: jevDistribution(answer, legalActions),
     answer,
     confidence: readTypesafeConfidence(providerMetadata),
   };
