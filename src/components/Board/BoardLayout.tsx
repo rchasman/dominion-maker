@@ -16,10 +16,15 @@ import {
 
 interface BoardLayoutProps {
   isPreviewMode: boolean;
+  previewError: string | null;
   children: ComponentChildren;
 }
 
-export function BoardLayout({ isPreviewMode, children }: BoardLayoutProps) {
+export function BoardLayout({
+  isPreviewMode,
+  previewError,
+  children,
+}: BoardLayoutProps) {
   return (
     <div
       style={{
@@ -49,7 +54,9 @@ export function BoardLayout({ isPreviewMode, children }: BoardLayoutProps) {
             borderBottom: `${PREVIEW_BORDER_WIDTH} solid ${PREVIEW_BORDER_COLOR}`,
           }}
         >
-          ⏸ PREVIEW MODE - Scrubbing through history
+          {previewError
+            ? `⏸ PREVIEW MODE - ${previewError}`
+            : "⏸ PREVIEW MODE - Scrubbing through history"}
         </div>
       )}
       {children}

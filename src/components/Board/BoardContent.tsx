@@ -55,6 +55,7 @@ interface BoardContentProps {
     winnerId: PlayerId | undefined;
   };
   isPreviewMode: boolean;
+  previewError: string | null;
   selectedCardIndices: number[];
   complexDecisionData: ComplexDecisionData | null;
   showDevtools: boolean;
@@ -128,6 +129,7 @@ export function BoardContent({
   boardState,
   game,
   isPreviewMode,
+  previewError,
   selectedCardIndices,
   complexDecisionData,
   showDevtools,
@@ -255,7 +257,7 @@ export function BoardContent({
   }, [onPlayAllTreasures, animation]);
 
   return (
-    <BoardLayout isPreviewMode={isPreviewMode}>
+    <BoardLayout isPreviewMode={isPreviewMode} previewError={previewError}>
       <GameAreaLayout isPreviewMode={isPreviewMode}>
         <PlayerArea
           player={opponent}
