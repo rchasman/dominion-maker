@@ -153,6 +153,7 @@ export function BoardContent({
     localPlayerId,
     opponentPlayerId,
     isLocalPlayerTurn,
+    canLocalPlayerAct,
     canBuy,
     opponent,
     localPlayer,
@@ -282,7 +283,7 @@ export function BoardContent({
           {...(!isPreviewMode &&
             animatedBuyCard !== undefined && { onBuyCard: animatedBuyCard })}
           canBuy={isPreviewMode ? false : canBuy}
-          isPlayerActive={isLocalPlayerTurn}
+          isPlayerActive={canLocalPlayerAct}
           hasTreasuresInHand={game.hasTreasuresInHand}
           onPlayAllTreasures={animatedPlayAllTreasures}
           {...(onEndPhase !== undefined && { onEndPhase })}

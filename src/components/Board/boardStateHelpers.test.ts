@@ -289,6 +289,42 @@ describe("Board/boardStateHelpers", () => {
       ).toThrow("Player state not found");
     });
 
+    it("lets a human act for a human local player on their turn", () => {
+      const result = computeBoardState({
+        state: { ...baseState, phase: "buy" },
+        previewEventId: null,
+        isPreviewMode: false,
+        gameMode: "hybrid",
+        hasPlayableActions: false,
+        hasTreasuresInHand: false,
+        getStateAtEvent: mockGetStateAtEvent,
+        localPlayerId: "human",
+        isSpectator: false,
+      });
+
+      expect(result.canLocalPlayerAct).toBe(true);
+      expect(result.canBuy).toBe(true);
+    });
+
+    it("gives the human no controls when the local player is AI", () => {
+      const result = computeBoardState({
+        state: { ...baseState, phase: "buy" },
+        previewEventId: null,
+        isPreviewMode: false,
+        gameMode: "full",
+        hasPlayableActions: true,
+        hasTreasuresInHand: true,
+        getStateAtEvent: mockGetStateAtEvent,
+        localPlayerId: "human",
+        isSpectator: false,
+      });
+
+      expect(result.isLocalPlayerTurn).toBe(true);
+      expect(result.canLocalPlayerAct).toBe(false);
+      expect(result.canBuy).toBe(false);
+      expect(result.hint).toBe("Opponent is playing...");
+    });
+
     it("should use resolved local player ID from perspective", () => {
       const result = computeBoardState({
         state: baseState,
