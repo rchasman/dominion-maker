@@ -1,3 +1,4 @@
+import { nowMs } from "../clock";
 import type { ModelProvider } from "../../config/models";
 import type {
   DecideMoveFor,
@@ -25,7 +26,7 @@ const handleModelSuccess = <M>(
   distribution: WeightedVote<M>[] = [{ move, weight: 1 }],
 ): ModelResult<M> => {
   const { provider, index, modelStart, logger } = params;
-  const modelDuration = performance.now() - modelStart;
+  const modelDuration = nowMs() - modelStart;
   logger?.({
     type: "consensus-model-complete",
     message: `${provider} completed in ${modelDuration.toFixed(0)}ms`,
@@ -52,7 +53,7 @@ const handleModelError = <M>(
   params: HandlerParams,
 ): ModelResult<M> => {
   const { provider, index, modelStart, logger } = params;
-  const modelDuration = performance.now() - modelStart;
+  const modelDuration = nowMs() - modelStart;
   const isAborted =
     (error instanceof Error && error.name === "AbortError") ||
     (typeof error === "object" &&
@@ -182,7 +183,7 @@ export function runModelsInParallel<S, M>(
 
     void Promise.all(
       providers.map((provider, index) => {
-        const modelStart = performance.now();
+        const modelStart = nowMs();
         const uiStartTime = Date.now();
         pendingModels.add(index);
         modelStartTimes.set(index, uiStartTime);

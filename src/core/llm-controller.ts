@@ -1,3 +1,4 @@
+import { nowMs } from "./clock";
 import type { GameDefinition, GameShape, EngineOf } from "./game-definition";
 import type { Controller } from "./controller";
 import type { LlmSeatConfig } from "./seats";
@@ -128,7 +129,7 @@ export function llmController<G extends GameShape>(
           },
         });
       }
-      const overallStart = performance.now();
+      const overallStart = nowMs();
       const actionId = `t${String(turn)}-${String(context.payload["phase"])}-${Date.now()}`;
 
       const single =

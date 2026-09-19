@@ -1,3 +1,4 @@
+import { nowMs } from "../clock";
 import type { ModelProvider } from "../../config/models";
 import type { LLMLogger, ModelResult, VoteGroup } from "./types";
 import type { ConsensusWinnerResult, MoveKey } from "./vote";
@@ -86,7 +87,7 @@ export function logVotingResults<M>(
         valid: isMoveLegal(group.move, moves, moveKey),
         reasonings: reasoningsFor(group),
       })),
-      votingDuration: performance.now() - overallStart,
+      votingDuration: nowMs() - overallStart,
       currentPhase: payload["phase"],
       gameState: payload,
     },
