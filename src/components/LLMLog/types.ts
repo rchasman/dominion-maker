@@ -64,28 +64,16 @@ export interface LLMLogEntry {
   timestamp: number;
   type:
     | "ai-turn-start"
-    | "ai-turn-end"
-    | "llm-call-start"
-    | "llm-call-end"
-    | "state-change"
     | "error"
-    | "warning"
     | "consensus-start"
     | "consensus-compare"
-    | "consensus-validation"
-    | "consensus-agree"
-    | "consensus-success"
-    | "consensus-step"
     | "consensus-step-error"
     | "consensus-voting"
-    | "consensus-complete"
     | "consensus-skipped"
     | "consensus-model-pending"
     | "consensus-model-complete"
     | "consensus-model-aborted"
-    | "ai-decision-resolving"
-    | "ai-decision-continuing"
-    | "ai-decision-resolved";
+    | "ai-decision-resolving";
   message: string;
   data?: Record<string, unknown>;
   children?: LLMLogEntry[];
