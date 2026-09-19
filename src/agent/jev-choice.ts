@@ -76,13 +76,24 @@ function describeOption(state: GameState, action: Action): string | null {
   ].join(" ");
 }
 
+// Code owns the rule "play all treasures before buying": while any treasure
+// play is legal, Jev is offered only those. Keys keep the full-list index so
+// the answer still maps back through the unfiltered legal actions.
+export function offeredToJev(legalActions: Action[]) {
+  const indexed = legalActions.map((action, index) => ({ action, index }));
+  const treasurePlays = indexed.filter(
+    ({ action }) => action.type === "play_treasure",
+  );
+  return treasurePlays.length > 0 ? treasurePlays : indexed;
+}
+
 export function buildJevQuestion(state: GameState, legalActions: Action[]) {
   return {
     type: "choice" as const,
     instructions:
       "Which one of these legal actions should the player `currentState.you` take right now to maximise their chance of winning this game of Dominion? `rules`, `ruleAuthority` and `cardDefinitions` are binding. `strategy`, `decisionGuidance` and the advice in each option are fallible suggestions; when `strategy.strategyOverride` is present it replaces `decisionGuidance`.",
     criteria: Object.fromEntries(
-      legalActions.map((action, index) => [
+      offeredToJev(legalActions).map(({ action, index }) => [
         jevOptionKey(index, action),
         describeOption(state, action),
       ]),

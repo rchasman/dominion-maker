@@ -49,27 +49,34 @@ const buyPhaseState = (): GameState => ({
   playerOrder: ["ai", "human"],
 });
 
-describe("buildJevQuestion", () => {
-  const question = buildJevQuestion(buyPhaseState(), LEGAL);
+const NO_TREASURES_LEFT: Action[] = [
+  { type: "buy_card", card: "Silver" },
+  { type: "buy_card", card: "Chapel" },
+  { type: "end_phase" },
+];
 
-  it("offers one numbered option per legal action, so duplicate cards stay distinct", () => {
+describe("buildJevQuestion", () => {
+  const question = buildJevQuestion(buyPhaseState(), NO_TREASURES_LEFT);
+
+  it("offers one numbered option per legal action once treasures are played", () => {
     expect(Object.keys(question.criteria)).toEqual([
+      "1. buy Silver",
+      "2. buy Chapel",
+      "3. end phase",
+    ]);
+  });
+
+  it("offers only treasure plays while any treasure is still in hand, with duplicates distinct", () => {
+    const withTreasures = buildJevQuestion(buyPhaseState(), LEGAL);
+    expect(Object.keys(withTreasures.criteria)).toEqual([
       "1. play treasure Copper",
       "2. play treasure Copper",
-      "3. buy Silver",
-      "4. end phase",
     ]);
   });
 
   it("describes card options with the printed card effect", () => {
-    expect(question.criteria["3. buy Silver"]).toContain("Silver");
-    expect(question.criteria["3. buy Silver"]).toContain("cost 3");
-  });
-
-  it("tells the model treasures must be played before buying", () => {
-    expect(question.criteria["1. play treasure Copper"]).toContain(
-      "before buying",
-    );
+    expect(question.criteria["1. buy Silver"]).toContain("Silver");
+    expect(question.criteria["1. buy Silver"]).toContain("cost 3");
   });
 
   it("asks a single literal question about the decision player", () => {
@@ -80,9 +87,9 @@ describe("buildJevQuestion", () => {
 
 describe("buildJevQuestion option advice", () => {
   it("puts the card's strategy advice on the option so Jev needs no lookup", () => {
-    const question = buildJevQuestion(buyPhaseState(), LEGAL);
-    expect(question.criteria["3. buy Silver"]).toContain("Advice:");
-    expect(question.criteria["3. buy Silver"]).toContain(CARDS.Silver.strategy);
+    const question = buildJevQuestion(buyPhaseState(), NO_TREASURES_LEFT);
+    expect(question.criteria["1. buy Silver"]).toContain("Advice:");
+    expect(question.criteria["1. buy Silver"]).toContain(CARDS.Silver.strategy);
   });
 });
 
