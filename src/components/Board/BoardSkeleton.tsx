@@ -3,7 +3,6 @@ import { Card } from "../Card";
 import { DEFAULT_LOG_HEIGHT_PERCENT } from "./constants";
 
 const STORAGE_LOG_HEIGHT_KEY = "dominion-maker-log-height";
-const STORAGE_GAME_MODE_KEY = "dominion-maker-game-mode";
 
 // Skeleton display constants
 const STARTING_HAND_SIZE = 5;
@@ -39,11 +38,6 @@ const CONSENSUS_VIEWER_SKELETON_WIDTHS = [
   CONSENSUS_WIDTH_4,
 ];
 
-const BUTTON_FONT_WEIGHT_SELECTED = 700;
-const BUTTON_FONT_WEIGHT_UNSELECTED = 400;
-
-type GameMode = "engine" | "hybrid" | "full";
-
 function getStoredLogHeight(): number {
   try {
     const saved = localStorage.getItem(STORAGE_LOG_HEIGHT_KEY);
@@ -51,24 +45,6 @@ function getStoredLogHeight(): number {
   } catch {
     return DEFAULT_LOG_HEIGHT_PERCENT;
   }
-}
-
-function getStoredGameMode(): GameMode {
-  try {
-    const savedModeRaw = localStorage.getItem(STORAGE_GAME_MODE_KEY);
-    if (!savedModeRaw) return "engine";
-    const savedMode = JSON.parse(savedModeRaw) as string;
-    if (
-      savedMode === "engine" ||
-      savedMode === "hybrid" ||
-      savedMode === "full"
-    ) {
-      return savedMode;
-    }
-  } catch {
-    // Invalid JSON or storage error
-  }
-  return "engine";
 }
 
 interface SkeletonCardProps {
@@ -534,7 +510,6 @@ function SkeletonSupply() {
 
 function SkeletonSidebar() {
   const gameLogHeight = getStoredLogHeight();
-  const gameMode = getStoredGameMode();
 
   return (
     <div
@@ -795,61 +770,6 @@ function SkeletonSidebar() {
           background: "var(--color-bg-surface)",
         }}
       >
-        <div style={{ marginBlockEnd: "var(--space-3)" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-2)",
-              alignItems: "center",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.75rem",
-                color: "var(--color-text-secondary)",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.05rem",
-              }}
-            >
-              Mode:
-            </span>
-            {(["Engine", "Hybrid", "Full"] as const).map(modeName => {
-              const isSelected = modeName.toLowerCase() === gameMode;
-              return (
-                <button
-                  key={modeName}
-                  disabled
-                  style={{
-                    padding: "3px 8px",
-                    fontSize: "0.65rem",
-                    fontWeight: isSelected
-                      ? BUTTON_FONT_WEIGHT_SELECTED
-                      : BUTTON_FONT_WEIGHT_UNSELECTED,
-                    background: isSelected
-                      ? "var(--color-victory-dark)"
-                      : "transparent",
-                    color: isSelected ? "#fff" : "var(--color-text-secondary)",
-                    border: "1px solid",
-                    borderColor: isSelected
-                      ? "var(--color-victory)"
-                      : "var(--color-border-secondary)",
-                    cursor: "default",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05rem",
-                    fontFamily: "inherit",
-                    borderRadius: "3px",
-                  }}
-                >
-                  {modeName}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <div
           style={{
             display: "flex",

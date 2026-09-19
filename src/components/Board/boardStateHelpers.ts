@@ -1,6 +1,6 @@
 import type { GameState, PlayerId } from "../../types/game-state";
-import type { GameMode } from "../../types/game-mode";
-import { isAIControlled } from "../../lib/game-mode-utils";
+import type { Seats } from "../../core/seats";
+import { isHumanSeat } from "../../core/seats";
 import { countVP, getAllCards } from "../../lib/board-utils";
 import { getPlayerPerspective } from "../../lib/player-utils";
 import type { PlayerPerspective } from "../../lib/player-utils";
@@ -11,7 +11,7 @@ interface BoardStateParams {
   state: GameState;
   previewEventId: string | null;
   isPreviewMode: boolean;
-  gameMode: GameMode;
+  seats: Seats;
   hasPlayableActions: boolean;
   hasTreasuresInHand: boolean;
   getStateAtEvent: (eventId: string) => GameState;
@@ -41,7 +41,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     state,
     previewEventId,
     isPreviewMode,
-    gameMode,
+    seats,
     hasPlayableActions,
     hasTreasuresInHand,
     getStateAtEvent,
@@ -50,18 +50,14 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   } = params;
 
   const displayState = previewEventId ? getStateAtEvent(previewEventId) : state;
-  const playerPerspective = getPlayerPerspective(
-    state,
-    gameMode,
-    localPlayerId,
-  );
+  const playerPerspective = getPlayerPerspective(state, seats, localPlayerId);
   const { localPlayerId: resolvedLocalPlayerId, opponentPlayerId } =
     playerPerspective;
 
   const isLocalPlayerTurn =
     !isSpectator && displayState.activePlayerId === resolvedLocalPlayerId;
 
-  const isLocalPlayerAI = isAIControlled(gameMode, resolvedLocalPlayerId);
+  const isLocalPlayerAI = !isHumanSeat(seats[resolvedLocalPlayerId]);
 
   const canLocalPlayerAct = isLocalPlayerTurn && !isLocalPlayerAI;
 
@@ -90,7 +86,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     hasTreasuresInHand,
   });
 
-  const isOpponentAI = isAIControlled(gameMode, opponentPlayerId);
+  const isOpponentAI = !isHumanSeat(seats[opponentPlayerId]);
 
   const result: BoardState = {
     displayState,

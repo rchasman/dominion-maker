@@ -1,6 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
-import type { GameMode } from "./types/game-mode";
 import { StartScreen } from "./components/StartScreen";
 import {
   loadSeatPreset,
@@ -27,17 +26,6 @@ type AppMode = "menu" | "singleplayer" | "multiplayer";
 
 const STORAGE_APP_MODE_KEY = "dominion-maker-app-mode";
 
-const MODE_BY_PRESET: Record<SeatPreset, GameMode> = {
-  rules: "engine",
-  hybrid: "hybrid",
-  watch: "full",
-};
-const PRESET_BY_MODE: Partial<Record<GameMode, SeatPreset>> = {
-  engine: "rules",
-  hybrid: "hybrid",
-  full: "watch",
-};
-
 function App() {
   // App navigation mode (menu vs singleplayer vs multiplayer)
   const [mode, setMode] = useState<AppMode>(() => {
@@ -53,10 +41,7 @@ function App() {
     return "menu";
   });
 
-  // Transitional: the start screen still speaks modes; a mode names a seat preset
-  const [gameMode, setGameMode] = useState<GameMode>(
-    () => MODE_BY_PRESET[loadSeatPreset()],
-  );
+  const [preset, setPreset] = useState<SeatPreset>(() => loadSeatPreset());
 
   // Sync app mode to localStorage
   useEffect(() => {
@@ -68,9 +53,8 @@ function App() {
   }, [mode]);
 
   useEffect(() => {
-    const preset = PRESET_BY_MODE[gameMode];
-    if (preset) saveSeatPreset(preset);
-  }, [gameMode]);
+    saveSeatPreset(preset);
+  }, [preset]);
 
   // Preload game modules when on menu (loads in background while user reads)
   useEffect(() => {
@@ -84,8 +68,8 @@ function App() {
   if (mode === "menu") {
     return (
       <StartScreen
-        gameMode={gameMode}
-        onGameModeChange={setGameMode}
+        preset={preset}
+        onPresetChange={setPreset}
         onStartSinglePlayer={() => setMode("singleplayer")}
         onStartMultiplayer={() => setMode("multiplayer")}
       />

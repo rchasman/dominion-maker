@@ -1,27 +1,22 @@
-import type { GameMode } from "../types/game-mode";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
+import {
+  SEAT_PRESETS,
+  SEAT_PRESET_NAMES,
+  type SeatPreset,
+} from "../context/seat-presets";
 
 const FONT_WEIGHT_ACTIVE = 700;
 const FONT_WEIGHT_INACTIVE = 400;
 
 interface StartScreenProps {
-  gameMode: GameMode;
-  onGameModeChange: (mode: GameMode) => void;
+  preset: SeatPreset;
+  onPresetChange: (preset: SeatPreset) => void;
   onStartSinglePlayer?: () => void;
   onStartMultiplayer?: () => void;
 }
 
-function getModeDescription(gameMode: string): string {
-  if (gameMode === "multiplayer") {
-    return "";
-  }
-  const config = GAME_MODE_CONFIG[gameMode as keyof typeof GAME_MODE_CONFIG];
-  return config?.description ?? "";
-}
-
-function renderModeButtons(
-  gameMode: string,
-  setGameMode: (mode: "engine" | "hybrid" | "full") => void,
+function renderPresetButtons(
+  preset: SeatPreset,
+  onPresetChange: (preset: SeatPreset) => void,
 ) {
   return (
     <div
@@ -34,9 +29,14 @@ function renderModeButtons(
         borderRadius: "8px",
       }}
     >
-      <ModeButton mode="engine" current={gameMode} onClick={setGameMode} />
-      <ModeButton mode="hybrid" current={gameMode} onClick={setGameMode} />
-      <ModeButton mode="full" current={gameMode} onClick={setGameMode} />
+      {SEAT_PRESET_NAMES.map(name => (
+        <PresetButton
+          key={name}
+          preset={name}
+          current={preset}
+          onClick={onPresetChange}
+        />
+      ))}
     </div>
   );
 }
@@ -100,8 +100,8 @@ function renderActionButtons(
 }
 
 export function StartScreen({
-  gameMode,
-  onGameModeChange,
+  preset,
+  onPresetChange,
   onStartSinglePlayer,
   onStartMultiplayer,
 }: StartScreenProps) {
@@ -141,7 +141,7 @@ export function StartScreen({
         Base Game
       </p>
 
-      {renderModeButtons(gameMode, onGameModeChange)}
+      {renderPresetButtons(preset, onPresetChange)}
 
       <p
         style={{
@@ -153,7 +153,7 @@ export function StartScreen({
           lineHeight: 1.6,
         }}
       >
-        {getModeDescription(gameMode)}
+        {SEAT_PRESETS[preset].description}
       </p>
 
       {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
@@ -161,19 +161,19 @@ export function StartScreen({
   );
 }
 
-function ModeButton({
-  mode,
+function PresetButton({
+  preset,
   current,
   onClick,
 }: {
-  mode: "engine" | "hybrid" | "full";
-  current: string;
-  onClick: (mode: "engine" | "hybrid" | "full") => void;
+  preset: SeatPreset;
+  current: SeatPreset;
+  onClick: (preset: SeatPreset) => void;
 }) {
-  const isActive = mode === current;
+  const isActive = preset === current;
   return (
     <button
-      onClick={() => onClick(mode)}
+      onClick={() => onClick(preset)}
       style={{
         padding: "var(--space-3) var(--space-6)",
         fontSize: "0.75rem",
@@ -191,7 +191,7 @@ function ModeButton({
         borderRadius: "4px",
       }}
     >
-      {GAME_MODE_CONFIG[mode].name}
+      {SEAT_PRESETS[preset].name}
     </button>
   );
 }

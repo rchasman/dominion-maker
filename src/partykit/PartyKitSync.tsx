@@ -1,7 +1,8 @@
 /** Mirrors a local game to a host-owned room for public spectating. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import PartySocket from "partysocket";
-import { events$, gameState$, gameMode$ } from "../context/game-signals";
+import { events$, gameState$, seats$ } from "../context/game-signals";
+import { hasLlmSeat, type Seats } from "../core/seats";
 import { generateRoomId } from "../lib/room-id";
 import { generatePlayerName } from "../lib/name-generator";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
@@ -13,10 +14,17 @@ const PARTYKIT_HOST =
     ? "localhost:1999"
     : "dominion-maker.rchasman.partykit.dev";
 
+// The mirror room still speaks the old mode names until the seats protocol lands
+const modeLabel = (seats: Seats): "engine" | "hybrid" | "full" => {
+  const human = Object.values(seats).some(seat => seat.kind === "human");
+  if (!human) return "full";
+  return hasLlmSeat(seats) ? "hybrid" : "engine";
+};
+
 export function PartyKitSync() {
   const events = events$.value;
   const state = gameState$.value;
-  const gameMode = gameMode$.value;
+  const gameMode = modeLabel(seats$.value);
   const gameIdentity = events[0]?.id;
   const socketRef = useRef<PartySocket | null>(null);
   const [joined, setJoined] = useState(false);
@@ -56,7 +64,7 @@ export function PartyKitSync() {
           socket.send(
             JSON.stringify({
               type: "start_singleplayer",
-              gameMode: gameMode$.peek(),
+              gameMode: modeLabel(seats$.peek()),
             }),
           );
         setJoined(true);

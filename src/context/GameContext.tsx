@@ -10,10 +10,6 @@ import type { ComponentChildren } from "preact";
 import type { DominionEngine } from "../engine";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { LLMLogEntryInput, LLMLogger } from "../core/consensus/types";
-import type { GameMode } from "../types/game-mode";
-import type { ModelSettings } from "../agent/types";
-import type { ControllerConfig } from "../core/seats";
-import { DEFAULT_LLM_SEAT, HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
 import { useGameActions } from "./use-game-actions";
 import { useSeatDriver } from "./use-seat-driver";
 import { useAutoEndActionPhase } from "./use-auto-end-action-phase";
@@ -24,7 +20,6 @@ import { useStorageSync } from "./use-storage-sync";
 import { useAnimationSafe } from "../animation";
 import {
   appMode$,
-  gameState$,
   llmLogs$,
   localHumanSeat$,
   playAction$,
@@ -39,9 +34,6 @@ import {
   requestUndo$,
   getStateAtEvent$,
   startGame$,
-  seats$,
-  setGameMode$,
-  setModelSettings$,
   setSeat$,
   updateSeat,
 } from "./game-signals";
@@ -58,32 +50,6 @@ function createLLMLogEntry(
   };
 }
 
-// Transitional: the sidebar still switches "modes"; a mode is a table shape.
-function seatForMode(mode: GameMode, index: number): ControllerConfig {
-  if (mode === "full") return DEFAULT_LLM_SEAT;
-  if (index === 0) return HUMAN_SEAT;
-  return mode === "engine" ? HEURISTIC_SEAT : DEFAULT_LLM_SEAT;
-}
-
-function applyModelSettings(
-  seat: ControllerConfig,
-  settings: Partial<ModelSettings>,
-): ControllerConfig {
-  if (seat.kind !== "llm") return seat;
-  return {
-    ...seat,
-    ...(settings.enabledModels !== undefined && {
-      models: [...settings.enabledModels],
-    }),
-    ...(settings.consensusCount !== undefined && {
-      consensusCount: settings.consensusCount,
-    }),
-    ...(settings.customStrategy !== undefined && {
-      customStrategy: settings.customStrategy,
-    }),
-  };
-}
-
 export function GameProvider({ children }: { children: ComponentChildren }) {
   const storage = useGameStorage();
   const engineRef = useRef<DominionEngine | null>(storage.engineRef);
@@ -92,22 +58,6 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
   };
 
   appMode$.value = "local";
-
-  const setGameMode = (mode: GameMode) => {
-    const order = gameState$.peek()?.playerOrder ?? [];
-    seats$.value = Object.fromEntries(
-      order.map((id, index) => [id, seatForMode(mode, index)]),
-    );
-  };
-
-  const setModelSettingsFn = (settings: Partial<ModelSettings>) => {
-    seats$.value = Object.fromEntries(
-      Object.entries(seats$.value).map(([id, seat]) => [
-        id,
-        applyModelSettings(seat, settings),
-      ]),
-    );
-  };
 
   // Sync to localStorage (reads from signals)
   useStorageSync();
@@ -121,8 +71,6 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     ];
   });
 
-  setGameMode$.value = setGameMode;
-  setModelSettings$.value = setModelSettingsFn;
   setSeat$.value = updateSeat;
 
   useStrategyAnalysis(engineRef);

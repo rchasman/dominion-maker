@@ -11,7 +11,6 @@ import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
-import type { GameMode } from "../../types/game-mode";
 import { AnimationProvider } from "../../animation";
 
 interface GameRoomProps {
@@ -19,9 +18,6 @@ interface GameRoomProps {
   playerName: string;
   clientId: string;
   isSpectator: boolean;
-  isSinglePlayer?: boolean;
-  gameMode?: GameMode;
-  onGameModeChange?: (mode: GameMode) => void;
   onBack: () => void;
   onResign?: () => void;
 }
@@ -31,21 +27,11 @@ export function GameRoom({
   playerName,
   clientId,
   isSpectator,
-  isSinglePlayer = false,
-  gameMode = "engine",
-  onGameModeChange,
   onBack,
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({
-    roomId,
-    playerName,
-    clientId,
-    isSpectator,
-    isSinglePlayer,
-    gameMode,
-  });
+  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
 
   // Sync multiplayer state into signals
   // usePartyGame has no processing concept; the context derives spinners from
@@ -54,16 +40,6 @@ export function GameRoom({
     game: { ...game, isProcessing: false },
     playerName,
     isSpectator,
-    isSinglePlayer,
-    gameMode,
-    onGameModeChange: (mode: GameMode) => {
-      if (isSinglePlayer) {
-        game.changeGameMode(mode);
-      }
-      if (onGameModeChange) {
-        onGameModeChange(mode);
-      }
-    },
   });
 
   // Handle resignation
@@ -105,7 +81,7 @@ export function GameRoom({
             onLeave={handleResign}
           />
         )}
-        {game.gameEndReason && !isSinglePlayer && (
+        {game.gameEndReason && (
           <GameOverNotification
             message={game.gameEndReason}
             onClose={() => {

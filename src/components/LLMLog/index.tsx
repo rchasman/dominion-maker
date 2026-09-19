@@ -1,7 +1,7 @@
-import { useState } from "preact/hooks";
-import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/types";
+import { useEffect, useState } from "preact/hooks";
+import type { ControllerConfig, LlmSeatConfig, Seats } from "../../core/seats";
 import type { LLMLogEntry } from "./types";
+import { settingsSeat$ } from "../../context/game-signals";
 import { useLiveTimer } from "./hooks/useLiveTimer";
 import { useTurnExtraction } from "./hooks/useTurnExtraction";
 import { useNavigationState } from "./hooks/useNavigationState";
@@ -12,21 +12,35 @@ import { MainContent } from "./components/MainContent";
 
 export type { LLMLogEntry } from "./types";
 
+export type LlmSeat = { playerId: string; config: LlmSeatConfig };
+
+const llmSeatsOf = (seats: Seats): LlmSeat[] =>
+  Object.entries(seats).flatMap(([playerId, config]) =>
+    config.kind === "llm" ? [{ playerId, config }] : [],
+  );
+
 interface LLMLogProps {
   entries: LLMLogEntry[];
-  gameMode?: GameMode;
-  modelSettings?: {
-    settings: ModelSettings;
-    onChange: (settings: ModelSettings) => void;
-  };
+  seats: Seats;
+  onSeatChange?: (player: string, config: ControllerConfig) => void;
 }
 
-export function LLMLog({
-  entries,
-  gameMode = "hybrid",
-  modelSettings,
-}: LLMLogProps) {
+export function LLMLog({ entries, seats, onSeatChange }: LLMLogProps) {
+  const llmSeats = llmSeatsOf(seats);
+  const requestedSeat = settingsSeat$.value;
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
+  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+
+  // A seat selector that just switched a player to LLM asks for that seat's panel
+  useEffect(() => {
+    if (requestedSeat === null) return;
+    setSelectedSeat(requestedSeat);
+    setIsModelSettingsExpanded(true);
+    settingsSeat$.value = null;
+  }, [requestedSeat]);
+
+  const activeSeat =
+    llmSeats.find(seat => seat.playerId === selectedSeat) ?? llmSeats[0];
 
   const turns = useTurnExtraction(entries);
   const now = useLiveTimer(turns);
@@ -46,6 +60,7 @@ export function LLMLog({
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
   const { activePane, setActivePane } = useActivePane();
+  const canEdit = onSeatChange !== undefined && activeSeat !== undefined;
 
   return (
     <div
@@ -66,13 +81,16 @@ export function LLMLog({
         handleNextTurn={handleNextTurn}
         isModelSettingsExpanded={isModelSettingsExpanded}
         setIsModelSettingsExpanded={setIsModelSettingsExpanded}
-        hasModelSettings={!!modelSettings}
+        hasModelSettings={canEdit}
+        llmSeats={llmSeats}
+        selectedSeat={activeSeat?.playerId ?? null}
+        onSelectSeat={setSelectedSeat}
       />
 
-      {isModelSettingsExpanded && modelSettings && (
+      {isModelSettingsExpanded && canEdit && activeSeat && (
         <ModelSettingsPanel
-          settings={modelSettings.settings}
-          onChange={modelSettings.onChange}
+          settings={activeSeat.config}
+          onChange={config => onSeatChange(activeSeat.playerId, config)}
         />
       )}
 
@@ -90,7 +108,7 @@ export function LLMLog({
           currentTurn={currentTurn}
           currentDecision={currentDecision}
           currentActionIndex={currentActionIndex}
-          gameMode={gameMode}
+          hasLlmSeats={llmSeats.length > 0}
           activePane={activePane}
           setActivePane={setActivePane}
           hasPrevAction={hasPrevAction}

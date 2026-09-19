@@ -1,7 +1,7 @@
 import type { GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
-import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/types";
+import type { ControllerConfig, Seats } from "../../core/seats";
+import { hasLlmSeat } from "../../core/seats";
 import {
   llmLogs$,
   spectatorCount$,
@@ -145,11 +145,10 @@ interface GameSidebarProps {
   state: GameState;
   events?: GameEvent[]; // Optional events array for clickable undo
   isProcessing: boolean;
-  gameMode: GameMode;
-  onGameModeChange?: (mode: GameMode) => void;
+  appMode: "local" | "multiplayer";
+  seats: Seats;
+  onSeatChange?: (player: string, config: ControllerConfig) => void;
   localPlayer?: string; // The player viewing this UI (e.g., "human", "player0")
-  modelSettings?: ModelSettings; // Optional for multiplayer
-  onModelSettingsChange?: (settings: ModelSettings) => void; // Optional for multiplayer
   onNewGame?: () => void; // Optional (single-player)
   onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
@@ -160,11 +159,10 @@ export function GameSidebar({
   state,
   events,
   isProcessing,
-  gameMode,
-  onGameModeChange,
+  appMode,
+  seats,
+  onSeatChange,
   localPlayer = "human",
-  modelSettings,
-  onModelSettingsChange,
   onNewGame,
   onEndGame,
   onBackToHome,
@@ -175,6 +173,7 @@ export function GameSidebar({
   const isSpectator = isSpectator$.value;
 
   const isLocalPlayerTurn = state.activePlayerId === localPlayer;
+  const showConsensus = hasLlmSeat(seats);
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
     useResizeHandle();
 
@@ -195,7 +194,7 @@ export function GameSidebar({
         {...(events !== undefined && { events })}
         isProcessing={isProcessing}
         {...(onRequestUndo !== undefined && { onRequestUndo })}
-        gameMode={gameMode}
+        hasLlmSeat={showConsensus}
         gameLogHeight={gameLogHeight}
         turnStatusIndicator={
           <TurnStatusIndicator
@@ -207,8 +206,7 @@ export function GameSidebar({
         }
       />
 
-      {/* Resize Handle - only show in MAKER modes (hybrid/full) */}
-      {(gameMode === "hybrid" || gameMode === "full") && (
+      {showConsensus && (
         <ResizeHandle
           isDragging={isDragging}
           onMouseDown={() => setIsDragging(true)}
@@ -223,23 +221,18 @@ export function GameSidebar({
         />
       )}
 
-      {(gameMode === "hybrid" || gameMode === "full") && (
+      {showConsensus && (
         <LLMLogSection
           llmLogs={llmLogs}
-          gameMode={gameMode}
+          seats={seats}
           gameLogHeight={gameLogHeight}
-          {...(modelSettings !== undefined && { modelSettings })}
-          {...(onModelSettingsChange !== undefined && {
-            onModelSettingsChange,
-          })}
+          {...(onSeatChange !== undefined && { onSeatChange })}
         />
       )}
 
-      {(gameMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
+      {(appMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
 
       <GameControlsSection
-        gameMode={gameMode}
-        {...(onGameModeChange !== undefined && { onGameModeChange })}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}

@@ -5,10 +5,11 @@ import { formatPlayerName } from "../../lib/board-utils";
 import { getPlayerPerspective } from "../../lib/player-utils";
 import {
   players$,
-  gameMode$,
+  seats$,
   localPlayerId$ as localPlayerId$$,
   playerStrategies$,
 } from "../../context/game-signals";
+import type { ComponentChildren } from "preact";
 import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
@@ -20,6 +21,7 @@ interface MainPlayerAreaProps {
   localPlayerVP: number;
   isLocalPlayerTurn: boolean;
   isLocalPlayerAI: boolean;
+  headerControl?: ComponentChildren;
   selectedCardIndices: number[];
   isPreviewMode: boolean;
   displayState: GameState;
@@ -35,6 +37,7 @@ export function MainPlayerArea({
   localPlayerVP,
   isLocalPlayerTurn,
   isLocalPlayerAI,
+  headerControl,
   selectedCardIndices,
   isPreviewMode,
   displayState,
@@ -45,12 +48,11 @@ export function MainPlayerArea({
   onDeclineReaction,
 }: MainPlayerAreaProps) {
   const players = players$.value;
-  const gameMode = gameMode$.value;
   const contextLocalPlayerId = localPlayerId$$.value;
   const playerStrategies = playerStrategies$.value;
   const { localPlayerId } = getPlayerPerspective(
     displayState,
-    gameMode,
+    seats$.value,
     contextLocalPlayerId,
   );
   const playerStrategy = playerStrategies[localPlayerId];
@@ -71,6 +73,7 @@ export function MainPlayerArea({
       <PlayerArea
         player={localPlayer}
         label={displayName}
+        {...(headerControl !== undefined && { headerControl })}
         vpCount={localPlayerVP}
         isActive={isLocalPlayerTurn}
         showCards={true}

@@ -15,7 +15,6 @@ import type {
 import type { GameEvent } from "../events/types";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { CommandResult } from "../commands/types";
-import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
 import { HUMAN_SEAT } from "../core/seats";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
@@ -48,7 +47,6 @@ import {
   denyUndo$,
   pendingUndo$,
   startGame$,
-  setGameMode$,
   getStateAtEvent$,
 } from "./game-signals";
 
@@ -81,16 +79,12 @@ interface UseMultiplayerGameContextOptions {
   game: MultiplayerGameState;
   playerName: string;
   isSpectator: boolean;
-  isSinglePlayer?: boolean;
-  gameMode?: GameMode;
-  onGameModeChange?: (mode: GameMode) => void;
 }
 
 export function useMultiplayerGameContext({
   game,
   playerName,
   isSpectator,
-  onGameModeChange,
 }: UseMultiplayerGameContextOptions): void {
   const { sendChat, startGame } = game;
   // Strategy analysis - writes to playerStrategies$ signal
@@ -197,9 +191,6 @@ export function useMultiplayerGameContext({
   useEffect(() => {
     startGame$.value = startGame;
   }, [startGame]);
-  useEffect(() => {
-    setGameMode$.value = mode => onGameModeChange?.(mode);
-  }, [onGameModeChange]);
   useEffect(() => {
     getStateAtEvent$.value = game.getStateAtEvent;
   }, [game.getStateAtEvent]);

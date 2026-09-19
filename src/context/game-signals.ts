@@ -11,16 +11,9 @@ import type { GameState, CardName } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameMode } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
-import type { ModelSettings } from "../agent/types";
-import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
-import {
-  DEFAULT_LLM_SEAT,
-  firstHumanSeat,
-  hasLlmSeat,
-  withSeat,
-} from "../core/seats";
+import type { ControllerConfig, Seats } from "../core/seats";
+import { firstHumanSeat, withSeat } from "../core/seats";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
@@ -52,26 +45,6 @@ export const localHumanSeat$ = computed<string | null>(() =>
     : firstHumanSeat(seats$.value, gameState$.value?.playerOrder ?? []),
 );
 
-// Transitional labels for UI that still speaks GameMode; removed with GameMode.
-export const gameMode$ = computed<GameMode>(() => {
-  if (appMode$.value === "multiplayer") return "multiplayer";
-  const seats = seats$.value;
-  const human = Object.values(seats).some(seat => seat.kind === "human");
-  if (!human) return "full";
-  return hasLlmSeat(seats) ? "hybrid" : "engine";
-});
-const firstLlmSeat = (seats: Seats): LlmSeatConfig | undefined =>
-  Object.values(seats).find(
-    (seat): seat is LlmSeatConfig => seat.kind === "llm",
-  );
-export const modelSettings$ = computed<ModelSettings>(() => {
-  const llm = firstLlmSeat(seats$.value) ?? DEFAULT_LLM_SEAT;
-  return {
-    enabledModels: new Set(llm.models),
-    consensusCount: llm.consensusCount,
-    customStrategy: llm.customStrategy,
-  };
-});
 export const setSeat$ = signal<
   ((player: string, config: ControllerConfig) => void) | null
 >(null);
@@ -124,10 +97,6 @@ export const pendingUndo$ = signal<PendingUndoRequest | null>(null);
 // Setup / config action signals
 // ---------------------------------------------------------------------------
 export const startGame$ = signal<(() => void) | null>(null);
-export const setGameMode$ = signal<((mode: GameMode) => void) | null>(null);
-export const setModelSettings$ = signal<
-  ((settings: Partial<ModelSettings>) => void) | null
->(null);
 
 export function updateSeat(player: string, config: ControllerConfig): void {
   seats$.value = withSeat(seats$.value, player, config);

@@ -16,7 +16,6 @@ import type {
   ChatMessageData,
 } from "./protocol";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
-import type { GameMode } from "../types/game-mode";
 import type { PendingUndoRequest } from "../engine/engine";
 
 const PARTYKIT_HOST =
@@ -70,7 +69,7 @@ interface UsePartyGameOptions {
   clientId: string;
   isSpectator?: boolean;
   isSinglePlayer?: boolean;
-  gameMode?: GameMode;
+  gameMode?: "engine" | "hybrid" | "full";
 }
 
 interface PartyGameState {

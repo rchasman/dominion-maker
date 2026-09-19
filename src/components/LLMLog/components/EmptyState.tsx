@@ -1,15 +1,12 @@
-import type { GameMode } from "../../../types/game-mode";
-import { GAME_MODE_CONFIG } from "../../../types/game-mode";
-
 interface EmptyStateProps {
-  gameMode: GameMode;
+  hasLlmSeats: boolean;
 }
 
-export function EmptyState({ gameMode }: EmptyStateProps) {
-  const { title, description } =
-    gameMode === "multiplayer"
-      ? { title: "", description: "" }
-      : GAME_MODE_CONFIG[gameMode].logDescription;
+export function EmptyState({ hasLlmSeats }: EmptyStateProps) {
+  const title = hasLlmSeats ? "Consensus Viewer" : "No LLM seat at the table";
+  const description = hasLlmSeats
+    ? "Consensus decisions appear here when an LLM seat acts."
+    : "Set a player's controller to LLM to see votes here.";
 
   return (
     <div
