@@ -168,6 +168,8 @@ describe("buildJevState", () => {
     expect(jevState.ruleAuthority).toContain("RULE AUTHORITY");
     expect(Array.isArray(jevState.cardDefinitions)).toBe(true);
     expect(jevState).not.toHaveProperty("cardStrategyAdvice");
+    // Doctrine goes to the strategy analyst, not to Jev: measured 15/15 -> 14/15
+    expect(jevState).not.toHaveProperty("principles");
     expect(jevState.currentState).toMatchObject({
       you: { currentCoins: 0, currentPhase: "buy" },
     });
