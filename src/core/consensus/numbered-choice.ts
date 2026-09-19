@@ -32,7 +32,7 @@ export function choiceSchema(choiceCount: number) {
   });
 }
 
-export type ChoiceReply = z.infer<ReturnType<typeof choiceSchema>>;
+type ChoiceReply = z.infer<ReturnType<typeof choiceSchema>>;
 
 /** Map a schema-validated reply back to the chosen legal move */
 export function choiceToMove<M>(

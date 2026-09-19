@@ -14,7 +14,7 @@ import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ControllerConfig, Seats } from "../core/seats";
 import { firstHumanSeat, withSeat } from "../core/seats";
-import type { LLMLogEntry } from "../components/LLMLog";
+import type { LLMLogEntry } from "../components/LLMLog/types";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
 import {

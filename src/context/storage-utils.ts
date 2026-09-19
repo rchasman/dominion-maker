@@ -81,16 +81,6 @@ export function loadPlayerStrategies(): PlayerStrategyData {
 }
 
 /**
- * Clear all game-related storage
- */
-export function clearGameStorage(): void {
-  localStorage.removeItem(STORAGE_KEYS.EVENTS);
-  localStorage.removeItem(STORAGE_KEYS.SEATS);
-  localStorage.removeItem(STORAGE_KEYS.LLM_LOGS);
-  localStorage.removeItem(STORAGE_KEYS.STRATEGIES);
-}
-
-/**
  * Clear the saved game (events, seats, logs, strategies)
  */
 export function clearGameStateStorage(): void {

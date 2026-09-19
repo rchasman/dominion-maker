@@ -5,7 +5,7 @@ import { isHumanSeat } from "./seats";
 
 const MIN_RETRY_DELAY_MS = 500;
 
-export type DriveOptions<G extends GameShape> = {
+type DriveOptions<G extends GameShape> = {
   game: GameDefinition<G>;
   getSeats: () => Seats<G["playerId"]>;
   controllerFor: (

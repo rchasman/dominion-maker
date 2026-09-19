@@ -45,7 +45,7 @@ export const SEAT_PRESET_NAMES = Object.keys(SEAT_PRESETS).filter(
   (name): name is SeatPreset => name in SEAT_PRESETS,
 );
 
-export const SEAT_PRESET_STORAGE_KEY = "dominion-maker-seat-preset";
+const SEAT_PRESET_STORAGE_KEY = "dominion-maker-seat-preset";
 
 const isPreset = (value: string | null): value is SeatPreset =>
   value !== null && value in SEAT_PRESETS;

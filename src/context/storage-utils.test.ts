@@ -4,7 +4,6 @@ import {
   loadLLMLogs,
   loadPlayerStrategies,
   loadSeats,
-  clearGameStorage,
   clearGameStateStorage,
   STORAGE_KEYS,
 } from "./storage-utils";
@@ -198,37 +197,6 @@ describe("storage-utils", () => {
       const result = loadPlayerStrategies() as PlayerStrategyData | null;
       // JSON.parse("null") returns null, not an array
       expect(result).toEqual(null);
-    });
-  });
-
-  describe("clearGameStorage", () => {
-    it("should remove all game-related storage keys", () => {
-      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify({}));
-      localStorage.setItem(STORAGE_KEYS.LLM_LOGS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, "TestPlayer");
-
-      clearGameStorage();
-
-      expect(localStorage.getItem(STORAGE_KEYS.EVENTS)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.SEATS)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.LLM_LOGS)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.STRATEGIES)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.PLAYER_NAME)).toBe("TestPlayer");
-    });
-
-    it("should not affect other localStorage keys", () => {
-      localStorage.setItem("other-key", "other-value");
-      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([]));
-
-      clearGameStorage();
-
-      expect(localStorage.getItem("other-key")).toBe("other-value");
-    });
-
-    it("should be safe to call when storage is empty", () => {
-      expect(() => clearGameStorage()).not.toThrow();
     });
   });
 

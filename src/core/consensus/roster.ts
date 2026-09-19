@@ -9,7 +9,7 @@ const findModelConfig = (modelId: ModelProvider): ModelConfig | undefined =>
 export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
 
 /** Cheapest instances for cost-effective consensus (duplicates allowed) */
-export const ALL_FAST_MODELS: ModelProvider[] = [
+const ALL_FAST_MODELS: ModelProvider[] = [
   "gpt-5.4-nano",
   "gpt-5.4-nano",
   "glm-4.7-flash",
@@ -54,7 +54,7 @@ const shuffle = <T>(items: T[]): T[] =>
   }, []);
 
 /** Cycle the enabled models up to the count, honouring per-model instance limits, then shuffle */
-export function buildRosterFrom(
+function buildRosterFrom(
   enabledModels: ModelProvider[],
   consensusCount: number,
 ): ModelProvider[] {

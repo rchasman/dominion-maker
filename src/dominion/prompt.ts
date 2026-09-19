@@ -1,5 +1,5 @@
 import type { EvaluateInput, PromptInput } from "../core/game-definition";
-import type { DominionShape } from "./definition";
+import type { DominionShape } from "./shape";
 import { buildSystemPrompt } from "../agent/system-prompt";
 import { buildUserMessage } from "../agent/action-prompt";
 import {

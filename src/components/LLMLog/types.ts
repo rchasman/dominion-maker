@@ -4,6 +4,10 @@ import type {
   LLMLogEntryInput,
   WeightedVote,
 } from "../../core/consensus/types";
+import type { LlmSeatConfig } from "../../core/seats";
+
+/** An LLM-controlled seat and its config, as the settings panel edits it */
+export type LlmSeat = { playerId: string; config: LlmSeatConfig };
 import type {
   CardName,
   Phase,

@@ -10,7 +10,7 @@ import type { MoveKey } from "./vote";
 import { checkEarlyConsensus, tallyVotes } from "./vote";
 import { run } from "../../lib/run";
 
-export const MODEL_TIMEOUT_MS = 30_000;
+const MODEL_TIMEOUT_MS = 30_000;
 
 type HandlerParams = {
   provider: ModelProvider;
@@ -19,7 +19,7 @@ type HandlerParams = {
   logger?: LLMLogger | undefined;
 };
 
-export const handleModelSuccess = <M>(
+const handleModelSuccess = <M>(
   move: M,
   params: HandlerParams,
   distribution: WeightedVote<M>[] = [{ move, weight: 1 }],
@@ -47,7 +47,7 @@ export const handleModelSuccess = <M>(
   };
 };
 
-export const handleModelError = <M>(
+const handleModelError = <M>(
   error: unknown,
   params: HandlerParams,
 ): ModelResult<M> => {
@@ -90,7 +90,7 @@ export const handleModelError = <M>(
   };
 };
 
-export type RunModelsParams<S, M> = {
+type RunModelsParams<S, M> = {
   providers: ModelProvider[];
   state: S;
   actionId: string;
@@ -103,7 +103,7 @@ export type RunModelsParams<S, M> = {
   signal: AbortSignal;
 };
 
-export type RunModelsResult<M> = {
+type RunModelsResult<M> = {
   results: ModelResult<M>[];
   earlyConsensus: VoteGroup<M> | null;
   voteGroups: Map<string, VoteGroup<M>>;

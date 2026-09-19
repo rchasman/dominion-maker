@@ -2,7 +2,7 @@
 import type { CardName, GameState, PlayerId } from "../types/game-state";
 import type { Action } from "../types/action";
 import type { CompoundDecision } from "../core/game-definition";
-import type { DominionShape } from "./definition";
+import type { DominionShape } from "./shape";
 import { isDecisionChoice } from "../types/pending-choice";
 import { getLegalActions } from "../agent/legal-actions";
 

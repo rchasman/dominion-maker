@@ -12,7 +12,7 @@ export type DecideMove<G extends GameShape> = DecideMoveFor<
   G["move"]
 >;
 
-export type LlmControllerDeps<G extends GameShape> = {
+type LlmControllerDeps<G extends GameShape> = {
   decideMove: DecideMove<G>;
   logger?: LLMLogger;
   getPlayerStrategies: () => Record<string, unknown>;

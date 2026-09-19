@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import type { ControllerConfig, LlmSeatConfig, Seats } from "../../core/seats";
-import type { LLMLogEntry } from "./types";
+import type { ControllerConfig, Seats } from "../../core/seats";
+import type { LLMLogEntry, LlmSeat } from "./types";
 import { settingsSeat$ } from "../../context/game-signals";
 import { useLiveTimer } from "./hooks/useLiveTimer";
 import { useTurnExtraction } from "./hooks/useTurnExtraction";
@@ -10,9 +10,7 @@ import { Header } from "./components/Header";
 import { ModelSettingsPanel } from "./components/ModelSettingsPanel";
 import { MainContent } from "./components/MainContent";
 
-export type { LLMLogEntry } from "./types";
-
-export type LlmSeat = { playerId: string; config: LlmSeatConfig };
+export type { LLMLogEntry, LlmSeat } from "./types";
 
 const llmSeatsOf = (seats: Seats): LlmSeat[] =>
   Object.entries(seats).flatMap(([playerId, config]) =>

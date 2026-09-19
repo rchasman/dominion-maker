@@ -1,6 +1,6 @@
 import { TurnNavigationButtons } from "./TurnNavigationButtons";
 import { SettingsButton } from "./SettingsButton";
-import type { LlmSeat } from "../index";
+import type { LlmSeat } from "../types";
 
 interface HeaderProps {
   turnsCount: number;

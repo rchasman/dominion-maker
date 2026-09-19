@@ -1,9 +1,6 @@
-import type { GameState, PlayerId } from "../types/game-state";
-import type { GameEvent } from "../events/types";
-import type { GameCommand } from "../commands/types";
-import type { Action } from "../types/action";
 import { stripReasoning } from "../types/action";
 import type { GameDefinition } from "../core/game-definition";
+import type { DominionShape } from "./shape";
 import { getLegalActions } from "../agent/legal-actions";
 import { formatActionDescription, hasCardField } from "../lib/action-utils";
 import { isSimpleTreasure } from "../data/cards";
@@ -14,13 +11,7 @@ import { dominionCompound } from "./compound";
 import { dominionLogContext } from "./log-context";
 import { dominionEvaluate, dominionPrompt } from "./prompt";
 
-export type DominionShape = {
-  state: GameState;
-  event: GameEvent;
-  command: GameCommand;
-  move: Action;
-  playerId: PlayerId;
-};
+export type { DominionShape } from "./shape";
 
 export const dominionGame: GameDefinition<DominionShape> = {
   id: "dominion",

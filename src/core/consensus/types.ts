@@ -1,6 +1,6 @@
 import type { ModelProvider } from "../../config/models";
 
-export type LLMLogEntryType =
+type LLMLogEntryType =
   | "ai-turn-start"
   | "error"
   | "consensus-start"
