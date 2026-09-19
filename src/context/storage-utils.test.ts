@@ -145,7 +145,7 @@ describe("storage-utils", () => {
         {
           id: "log-1",
           timestamp: 1000,
-          type: "state-change",
+          type: "consensus-skipped",
           message: "game started",
           data: { eventCount: 1 },
         },
