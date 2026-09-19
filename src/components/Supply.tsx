@@ -13,6 +13,7 @@ import { getPlayerPerspective } from "../lib/player-utils";
 import { isDecisionChoice } from "../types/pending-choice";
 
 const KINGDOM_GRID_COLUMNS = 5;
+const KINGDOM_HEADER_BLOCK_SIZE = "1.75rem";
 const TREASURES: CardName[] = ["Copper", "Silver", "Gold"];
 const VICTORY: CardName[] = ["Estate", "Duchy", "Province"];
 
@@ -351,11 +352,9 @@ export function Supply({
       style={{
         display: "grid",
         gridTemplateColumns: "auto auto 1fr auto auto",
-        gridTemplateRows: "1fr auto",
-        gridTemplateAreas:
-          '"victory treasure kingdom curse trash" "actions actions actions actions actions"',
+        gridTemplateAreas: '"victory treasure kingdom curse trash"',
         gap: "var(--space-4)",
-        padding: "var(--space-3) var(--space-4)",
+        padding: "var(--space-2) var(--space-4)",
         background: "rgba(70, 70, 95, 0.25)",
         backdropFilter: "blur(12px)",
         borderRadius: "0.5rem",
@@ -402,7 +401,9 @@ export function Supply({
             gridTemplateColumns:
               "repeat(5, minmax(0, var(--card-width-large)))",
             justifyContent: "center",
-            marginBlockEnd: "var(--space-2)",
+            alignItems: "center",
+            minBlockSize: KINGDOM_HEADER_BLOCK_SIZE,
+            marginBlockEnd: "var(--space-1)",
           }}
         >
           <div
@@ -411,6 +412,59 @@ export function Supply({
           >
             Kingdom
           </div>
+          {(isPlayerActive || hasPendingDecision) && (
+            <div
+              style={{
+                gridColumn: "2 / -1",
+                display: "flex",
+                gap: "var(--space-3)",
+                alignItems: "center",
+                justifyContent: "flex-end",
+              }}
+            >
+              {run(() => {
+                if (onConfirmDecision && hasPendingDecision) {
+                  const minRequired = isDecisionChoice(state.pendingChoice)
+                    ? (state.pendingChoice.min ?? 0)
+                    : 0;
+                  return (
+                    <>
+                      <ConfirmButton
+                        onConfirmDecision={onConfirmDecision}
+                        complexDecisionData={complexDecisionData}
+                        selectedCardIndices={selectedCardIndices}
+                        minRequired={minRequired}
+                      />
+                      {onSkipDecision && minRequired === 0 && (
+                        <SkipButton onSkipDecision={onSkipDecision} />
+                      )}
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    {onPlayAllTreasures &&
+                      state.phase === "buy" &&
+                      hasTreasuresInHand && (
+                        <PlayTreasuresButton
+                          onPlayAllTreasures={onPlayAllTreasures}
+                          pendingChoice={state.pendingChoice}
+                        />
+                      )}
+                    {onEndPhase && (
+                      <EndPhaseButton
+                        onEndPhase={onEndPhase}
+                        pendingChoice={state.pendingChoice}
+                        phase={state.phase}
+                        isTurnComplete={isTurnComplete}
+                      />
+                    )}
+                  </>
+                );
+              })}
+            </div>
+          )}
         </div>
         <div className="kingdom-grid">
           {sortedKingdom.map(card => {
@@ -506,61 +560,6 @@ export function Supply({
           />
         </div>
       </div>
-
-      {/* Action buttons */}
-      {(isPlayerActive || hasPendingDecision) && (
-        <div
-          style={{
-            gridArea: "actions",
-            display: "flex",
-            gap: "var(--space-3)",
-            alignItems: "center",
-            justifyContent: "flex-end",
-          }}
-        >
-          {run(() => {
-            if (onConfirmDecision && hasPendingDecision) {
-              const minRequired = isDecisionChoice(state.pendingChoice)
-                ? (state.pendingChoice.min ?? 0)
-                : 0;
-              return (
-                <>
-                  <ConfirmButton
-                    onConfirmDecision={onConfirmDecision}
-                    complexDecisionData={complexDecisionData}
-                    selectedCardIndices={selectedCardIndices}
-                    minRequired={minRequired}
-                  />
-                  {onSkipDecision && minRequired === 0 && (
-                    <SkipButton onSkipDecision={onSkipDecision} />
-                  )}
-                </>
-              );
-            }
-
-            return (
-              <>
-                {onPlayAllTreasures &&
-                  state.phase === "buy" &&
-                  hasTreasuresInHand && (
-                    <PlayTreasuresButton
-                      onPlayAllTreasures={onPlayAllTreasures}
-                      pendingChoice={state.pendingChoice}
-                    />
-                  )}
-                {onEndPhase && (
-                  <EndPhaseButton
-                    onEndPhase={onEndPhase}
-                    pendingChoice={state.pendingChoice}
-                    phase={state.phase}
-                    isTurnComplete={isTurnComplete}
-                  />
-                )}
-              </>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
