@@ -46,8 +46,28 @@ for (const scenario of jevCases()) {
       currentState: scenario.state,
       legalActions,
       customStrategy: scenario.customStrategy,
-      abortSignal: AbortSignal.timeout(30_000),
+      abortSignal: AbortSignal.timeout(60_000),
+    }).catch((error: unknown) => {
+      console.log(
+        JSON.stringify({
+          id: scenario.id,
+          error: String(error),
+          ms: Math.round(performance.now() - started),
+        }),
+      );
+      return null;
     });
+    if (!vote) {
+      rows.push({
+        id: scenario.id,
+        pick: "ERROR",
+        acceptable: false,
+        pAcceptable: 0,
+        confidence: undefined,
+        ms: Math.round(performance.now() - started),
+      });
+      continue;
+    }
     const ms = Math.round(performance.now() - started);
     const pickedIndex = legalActions.findIndex(a =>
       sameAction(stripReasoning(a), stripReasoning(vote.action)),
