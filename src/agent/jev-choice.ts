@@ -1,4 +1,6 @@
+import { experimental_evaluate, gateway } from "ai";
 import type { JSONValue } from "ai";
+import { z } from "zod";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
@@ -182,5 +184,50 @@ export function jevAnswerToAction(
   return {
     ...legal,
     reasoning: summariseDistribution(answer.choice, answer.probabilities),
+  };
+}
+
+export type JevVote = {
+  action: Action;
+  answer: JevChoiceAnswer;
+  /** TypeSafe's distribution-concentration statistic for the pick, 0-1 */
+  confidence: number | undefined;
+};
+
+const typesafeMetadataSchema = z.object({
+  typesafe: z.object({ confidence: z.record(z.string(), z.number()) }),
+});
+
+function readTypesafeConfidence(metadata: unknown): number | undefined {
+  const parsed = typesafeMetadataSchema.safeParse(metadata);
+  return parsed.success
+    ? parsed.data.typesafe.confidence[JEV_QUESTION_ID]
+    : undefined;
+}
+
+/** One Jev vote: the same call for the endpoint and the evals */
+export async function askJev(params: {
+  modelId: string;
+  currentState: GameState;
+  legalActions: Action[];
+  strategySummary?: string | undefined;
+  customStrategy?: string | undefined;
+  humanChoice?: { selectedCards: string[] } | undefined;
+  abortSignal?: AbortSignal | undefined;
+}): Promise<JevVote> {
+  const { modelId, legalActions, abortSignal, ...stateParams } = params;
+  // Jev's rate limits move with demand; a 429 should not fail the vote outright
+  const { answers, providerMetadata } = await experimental_evaluate({
+    model: gateway.evaluationModel(modelId),
+    state: buildJevState(stateParams),
+    questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
+    maxRetries: 2,
+    ...(abortSignal ? { abortSignal } : {}),
+  });
+  const answer = answers[JEV_QUESTION_ID];
+  return {
+    action: jevAnswerToAction(answer, legalActions),
+    answer,
+    confidence: readTypesafeConfidence(providerMetadata),
   };
 }
