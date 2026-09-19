@@ -197,11 +197,13 @@ function handleConsensusVoting(
     ? new Map(state.buildingTurn.modelStatuses)
     : undefined;
 
+  const actionId = entry.data?.actionId;
   state.buildingTurn.decisions = [
     ...state.buildingTurn.decisions,
     {
       id: entry.id,
       votingEntry: entry,
+      ...(typeof actionId === "string" && { actionId }),
       ...(timingEntry !== undefined && { timingEntry }),
       stepNumber: state.stepNumber,
       ...(modelStatusesSnapshot !== undefined && {
@@ -209,6 +211,30 @@ function handleConsensusVoting(
       }),
     },
   ];
+}
+
+// The verdict arrives after the vote, often after the next decision has
+// started, so it is matched to its decision by actionId across all turns
+function handleConsensusVerdict(
+  entry: LLMLogEntry,
+  state: TurnBuildState,
+): void {
+  const data = entry.data || {};
+  const actionId = data.actionId;
+  const blunder = data.blunder;
+  if (typeof actionId !== "string" || typeof blunder !== "number") return;
+  const followsOverride = data.followsOverride;
+  const verdict = {
+    blunder,
+    ...(typeof followsOverride === "number" && { followsOverride }),
+  };
+  const turns = state.buildingTurn
+    ? [...state.turns, state.buildingTurn]
+    : state.turns;
+  const decision = turns
+    .flatMap(turn => turn.decisions)
+    .find(d => d.actionId === actionId);
+  if (decision) decision.verdict = verdict;
 }
 
 function processEntry(
@@ -233,5 +259,7 @@ function processEntry(
     handleConsensusVoting(entry, index, entries, state);
   } else if (entry.type === "consensus-step-error") {
     handleConsensusStepError(state);
+  } else if (entry.type === "consensus-verdict") {
+    handleConsensusVerdict(entry, state);
   }
 }

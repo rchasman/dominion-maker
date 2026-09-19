@@ -85,6 +85,7 @@ export type ConsensusStartParams = {
 };
 
 export type VotingResultsParams = {
+  actionId: string;
   winner: VoteGroup;
   votesConsidered: number;
   validEarlyConsensus: boolean;
@@ -356,6 +357,7 @@ export const selectConsensusWinner = (
 // Log voting results
 export const logVotingResults = (params: VotingResultsParams): void => {
   const {
+    actionId,
     winner,
     votesConsidered,
     validEarlyConsensus,
@@ -381,6 +383,7 @@ export const logVotingResults = (params: VotingResultsParams): void => {
       ? `⚡ Ahead-by-${aheadByK}: ${actionDesc} (${formatVoteCount(winner.count)} votes)`
       : `◉ Voting: winner ${actionDesc} (${formatVoteCount(winner.count)}/${votesConsidered})`,
     data: {
+      actionId,
       topResult: {
         action: winner.action,
         votes: winner.count,

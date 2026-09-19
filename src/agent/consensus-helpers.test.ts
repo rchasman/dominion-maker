@@ -794,6 +794,7 @@ it("preserves different explanations from repeated instances of one model", () =
   const state = createGame(["ai", "human"], undefined, 42).state;
   const logger = mock<LLMLogger>(() => {});
   logVotingResults({
+    actionId: "test-action",
     winner,
     votesConsidered: 3,
     validEarlyConsensus: false,

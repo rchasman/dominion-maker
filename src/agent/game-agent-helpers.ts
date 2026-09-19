@@ -68,6 +68,55 @@ export async function generateActionViaBackend(
   };
 }
 
+type VerifyParams = {
+  currentState: GameState;
+  action: Action;
+  actionId: string;
+  customStrategy?: string | undefined;
+  logger?:
+    | ((entry: {
+        type: "consensus-verdict";
+        message: string;
+        data: Record<string, unknown>;
+      }) => void)
+    | undefined;
+};
+
+/**
+ * Ask the evaluation model for a second opinion on the winner. Fire and
+ * forget: the verdict is logged against the decision's actionId and never
+ * delays execution.
+ */
+export function verifyConsensusWinner(params: VerifyParams): void {
+  const { currentState, action, actionId, customStrategy, logger } = params;
+  if (!logger) return;
+  void api.api["verify-action"]
+    .post({
+      currentState,
+      action,
+      ...(customStrategy !== undefined && { customStrategy }),
+    })
+    .then(({ data, error }) => {
+      if (error || !data || typeof data.blunder !== "number") {
+        agentLogger.warn(
+          `verify-action skipped: ${error?.value ?? "no verdict"}`,
+        );
+        return;
+      }
+      logger({
+        type: "consensus-verdict",
+        message: `Jev check: blunder risk ${Math.round(data.blunder * 100)}%`,
+        data: {
+          actionId,
+          blunder: data.blunder,
+          ...(data.followsOverride !== undefined && {
+            followsOverride: data.followsOverride,
+          }),
+        },
+      });
+    });
+}
+
 /**
  * Execute an action by dispatching command to engine
  * This replaces the old executeAction that mutated state

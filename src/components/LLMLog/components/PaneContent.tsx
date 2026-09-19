@@ -1,6 +1,7 @@
 import type { PaneType } from "./PaneTabSwitcher";
 import type {
   ConsensusVotingData,
+  ConsensusVerdict,
   TimingData,
   ModelStatus,
   GameStateSnapshot,
@@ -19,6 +20,7 @@ interface PaneContentProps {
   totalModels?: number;
   now?: number;
   legalActions?: string[];
+  verdict?: ConsensusVerdict;
 }
 
 export function PaneContent({
@@ -30,6 +32,7 @@ export function PaneContent({
   totalModels,
   now,
   legalActions,
+  verdict,
 }: PaneContentProps) {
   switch (activePane) {
     case "voting":
@@ -39,6 +42,7 @@ export function PaneContent({
           {...(modelStatuses !== undefined && { liveStatuses: modelStatuses })}
           {...(totalModels !== undefined && { totalModels })}
           {...(legalActions !== undefined && { legalActions })}
+          {...(verdict !== undefined && { verdict })}
         />
       );
     case "performance":

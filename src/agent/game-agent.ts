@@ -18,6 +18,7 @@ import { getLegalActions } from "./legal-actions";
 import {
   generateActionViaBackend,
   executeActionWithEngine,
+  verifyConsensusWinner,
 } from "./game-agent-helpers";
 import { isDecisionChoice } from "../types/pending-choice";
 import {
@@ -321,7 +322,9 @@ async function handleBatchConsensus(
     const inPlay = playerState?.inPlay || [];
     const handCounts = getHandComposition(hand);
 
+    const roundActionId = `${config.actionId}-r${round}`;
     logVotingResults({
+      actionId: roundActionId,
       winner,
       votesConsidered,
       validEarlyConsensus,
@@ -336,6 +339,13 @@ async function handleBatchConsensus(
       inPlay,
       handCounts,
       ...(config.logger !== undefined && { logger: config.logger }),
+    });
+    verifyConsensusWinner({
+      currentState: acc.engine.state,
+      action: winner.action,
+      actionId: roundActionId,
+      customStrategy: config.customStrategy,
+      logger: config.logger,
     });
 
     if (winner.action.type === "skip_decision") {
@@ -703,6 +713,7 @@ export async function advanceGameStateWithConsensus(
     selectConsensusWinner(voteGroups, results, earlyConsensus, legalActions);
 
   logVotingResults({
+    actionId,
     winner,
     votesConsidered,
     validEarlyConsensus,
@@ -717,6 +728,13 @@ export async function advanceGameStateWithConsensus(
     inPlay,
     handCounts,
     ...(logger !== undefined && { logger }),
+  });
+  verifyConsensusWinner({
+    currentState,
+    action: winner.action,
+    actionId,
+    customStrategy,
+    logger,
   });
 
   // Execute winner action via engine

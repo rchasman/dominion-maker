@@ -73,10 +73,17 @@ export interface LLMLogEntry {
     | "consensus-model-pending"
     | "consensus-model-complete"
     | "consensus-model-aborted"
+    | "consensus-verdict"
     | "ai-decision-resolving";
   message: string;
   data?: Record<string, unknown>;
   children?: LLMLogEntry[];
+}
+
+/** Jev's second opinion on the winner; probabilities, not verdicts */
+export interface ConsensusVerdict {
+  blunder: number;
+  followsOverride?: number;
 }
 
 export interface ConsensusDecision {
@@ -85,6 +92,8 @@ export interface ConsensusDecision {
   timingEntry?: LLMLogEntry;
   stepNumber: number;
   modelStatuses?: Map<number, ModelStatus>;
+  actionId?: string;
+  verdict?: ConsensusVerdict;
 }
 
 export interface ModelStatus {

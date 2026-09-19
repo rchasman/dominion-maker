@@ -23,6 +23,17 @@ export const actionRequestSchema = z.object({
   customStrategy: z.string().max(20000).optional(),
   actionId: z.string().max(200).optional(),
 });
+export const verifyRequestSchema = z.object({
+  currentState: gameStateSchema,
+  action: z
+    .object({
+      type: z.string(),
+      card: z.string().nullish(),
+      optionIndex: z.number().optional(),
+    })
+    .passthrough(),
+  customStrategy: z.string().max(20000).optional(),
+});
 export const analysisRequestSchema = z.object({
   currentState: gameStateSchema,
   previousAnalysis: z.record(z.string(), strategy).optional(),

@@ -2,7 +2,11 @@ import { VoteExplanations, type VoteExplanation } from "./VoteExplanations";
 import type { Action } from "../../../types/action";
 import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
-import type { ConsensusVotingData, ModelStatus } from "../types";
+import type {
+  ConsensusVotingData,
+  ConsensusVerdict,
+  ModelStatus,
+} from "../types";
 import { groupVotersWithColors } from "../utils/groupVoters";
 import { run } from "../../../lib/run";
 import { VoteBar } from "./VoteBarComponents";
@@ -13,6 +17,33 @@ interface VotingPaneProps {
   liveStatuses?: Map<number, ModelStatus>;
   totalModels?: number;
   legalActions?: string[];
+  verdict?: ConsensusVerdict;
+}
+
+const BLUNDER_WARNING_THRESHOLD = 0.5;
+// A group nobody picked that rounds to 0.0× is a probability sliver, not a vote
+const MIN_VISIBLE_VOTES = 0.05;
+const PERCENT = 100;
+const pct = (p: number) => `${Math.round(p * PERCENT)}%`;
+
+// Same type scale and colors as ActionDetails so the row reads as one block
+function JevVerdictLine({ verdict }: { verdict: ConsensusVerdict }) {
+  const risky = verdict.blunder >= BLUNDER_WARNING_THRESHOLD;
+  return (
+    <div
+      style={{
+        marginTop: "2px",
+        fontSize: "0.65rem",
+        fontFamily: "monospace",
+        color: risky ? "#ef4444" : "var(--color-text-secondary)",
+      }}
+      title="Jev's second opinion on the winning action, as probabilities"
+    >
+      Jev check · blunder risk {pct(verdict.blunder)}
+      {verdict.followsOverride !== undefined &&
+        ` · follows override ${pct(verdict.followsOverride)}`}
+    </div>
+  );
 }
 
 // Constants for layout calculations
@@ -170,6 +201,7 @@ export function VotingPane({
   liveStatuses,
   totalModels,
   legalActions,
+  verdict,
 }: VotingPaneProps) {
   const { allResults, maxVotes } = run(() => {
     if (liveStatuses && liveStatuses.size > 0) {
@@ -181,6 +213,7 @@ export function VotingPane({
 
       // Sort by vote count descending, then by signature alphabetically for deterministic tie-breaking
       const results = Array.from(voteGroups.values())
+        .filter(g => g.voters.length > 0 || g.votes >= MIN_VISIBLE_VOTES)
         .map(g => ({
           action: g.action,
           votes: g.votes,
@@ -239,6 +272,7 @@ export function VotingPane({
               voteCountWidth={voteCountWidth}
               percentageWidth={percentageWidth}
               barAreaWidth={barAreaWidth}
+              {...(idx === 0 && verdict !== undefined && { verdict })}
             />
           ))}
         </div>
@@ -261,6 +295,7 @@ interface VoteResultItemProps {
   voteCountWidth: number;
   percentageWidth: number;
   barAreaWidth: number;
+  verdict?: ConsensusVerdict;
 }
 
 function VoteResultItem({
@@ -270,6 +305,7 @@ function VoteResultItem({
   voteCountWidth,
   percentageWidth,
   barAreaWidth,
+  verdict,
 }: VoteResultItemProps) {
   const percentage = (result.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
   const actionStr = JSON.stringify(stripReasoning(result.action));
@@ -293,6 +329,7 @@ function VoteResultItem({
         isValid={isValid}
         isWinner={isWinner}
       />
+      {verdict && <JevVerdictLine verdict={verdict} />}
       <VoteExplanations
         reasonings={
           result.reasonings ??

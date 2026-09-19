@@ -23,8 +23,10 @@ import { decisionSummary, optionFacts } from "./jev-decision-facts";
 // plain objects with named fields and each option carries its own card advice.
 
 export const JEV_QUESTION_ID = "action";
-export const JEV_PHASE_ID = "gamePhase";
-export const JEV_OPPONENT_ID = "opponentDeckStronger";
+/** Below this an option is noise in the tally and the voting pane */
+const MIN_VOTE_WEIGHT = 0.01;
+const JEV_PHASE_ID = "gamePhase";
+const JEV_OPPONENT_ID = "opponentDeckStronger";
 
 export const GAME_PHASE_LEVELS = [
   "build: keep improving the deck's economy and engine, victory cards would only clog it",
@@ -51,6 +53,74 @@ export function buildJevReadQuestions() {
         false: "Your deck is at least as strong as the opponent's.",
       },
     },
+  };
+}
+
+const JEV_BLUNDER_ID = "blunder";
+const JEV_OVERRIDE_ID = "followsOverride";
+
+// A second opinion on the consensus winner: not "which action" again, but two
+// judgments code cannot make. Runs after the vote and never blocks the game.
+export function buildJevVerifyQuestions(hasOverride: boolean) {
+  return {
+    [JEV_BLUNDER_ID]: {
+      type: "boolean" as const,
+      instructions:
+        "Is `proposedAction` a clear mistake in `currentState`, one that a competent Dominion player would never make here given `rules`, `cardDefinitions` and `decisionSummary`?",
+      criteria: {
+        true: "A competent player would reject this action outright; it loses coins, tempo or the game for no benefit.",
+        false:
+          "A competent player could reasonably take this action, even if a better one exists.",
+      },
+    },
+    ...(hasOverride
+      ? {
+          [JEV_OVERRIDE_ID]: {
+            type: "boolean" as const,
+            instructions:
+              "Does `proposedAction` follow the player's own instructions in `strategy.strategyOverride`?",
+            criteria: {
+              true: "The action does what the override asks, or the override says nothing about this situation.",
+              false:
+                "The override asks for something else in this situation and the action ignores it.",
+            },
+          },
+        }
+      : {}),
+  };
+}
+
+export type JevVerdict = {
+  /** P(true) that the winning action is a clear mistake */
+  blunder: number;
+  /** P(true) that it follows the custom strategy override, when one is set */
+  followsOverride?: number;
+};
+
+export async function verifyWithJev(params: {
+  modelId: string;
+  currentState: GameState;
+  action: Action;
+  customStrategy?: string | undefined;
+  abortSignal?: AbortSignal | undefined;
+}): Promise<JevVerdict> {
+  const { modelId, currentState, action, customStrategy, abortSignal } = params;
+  const hasOverride = Boolean(customStrategy?.trim());
+  const { answers } = await experimental_evaluate({
+    model: gateway.evaluationModel(modelId),
+    state: {
+      ...buildJevState({ currentState, customStrategy }),
+      proposedAction: describeLegalAction(action),
+      proposedActionDetails: describeOption(currentState, action),
+    },
+    questions: buildJevVerifyQuestions(hasOverride),
+    maxRetries: 2,
+    ...(abortSignal ? { abortSignal } : {}),
+  });
+  const override = answers[JEV_OVERRIDE_ID];
+  return {
+    blunder: answers[JEV_BLUNDER_ID].probability,
+    ...(override ? { followsOverride: override.probability } : {}),
   };
 }
 
@@ -281,7 +351,7 @@ export function jevDistribution(
     return [{ action: jevAnswerToAction(answer, legalActions), weight: 1 }];
   }
   return Object.entries(answer.probabilities)
-    .filter(([, weight]) => weight > 0)
+    .filter(([, weight]) => weight >= MIN_VOTE_WEIGHT)
     .flatMap(([key, weight]) => {
       const index = legalActions.findIndex(
         (action, i) => jevOptionKey(i, action) === key,

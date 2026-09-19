@@ -21,6 +21,19 @@ interface GenerateActionResponse {
   message?: string;
 }
 
+interface VerifyActionRequest {
+  currentState: unknown;
+  action: Action;
+  customStrategy?: string;
+}
+
+export interface VerifyActionResponse {
+  blunder?: number;
+  followsOverride?: number;
+  error?: string;
+  message?: string;
+}
+
 interface AnalyzeStrategyRequest {
   currentState: unknown;
   previousAnalysis?: PlayerStrategyData;
@@ -61,6 +74,36 @@ export const api = {
           return { data, error: null };
         } catch (err) {
           return { data: null, error: { value: String(err) } };
+        }
+      },
+    },
+    "verify-action": {
+      post: async (
+        body: VerifyActionRequest,
+        options?: { fetch?: RequestInit },
+      ) => {
+        try {
+          const response = await fetch("/api/verify-action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            ...options?.fetch,
+          });
+          const data = (await response.json()) as VerifyActionResponse;
+          if (!response.ok) {
+            return {
+              data: null,
+              error: { value: data.message || data.error || "Request failed" },
+            };
+          }
+          return { data, error: null };
+        } catch (error) {
+          return {
+            data: null,
+            error: {
+              value: error instanceof Error ? error.message : "Network error",
+            },
+          };
         }
       },
     },

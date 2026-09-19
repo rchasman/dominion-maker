@@ -6,6 +6,7 @@ import {
   jevDistribution,
   describeGameRead,
   buildJevReadQuestions,
+  buildJevVerifyQuestions,
   GAME_PHASE_LEVELS,
 } from "./jev-choice";
 import type { Action } from "../types/action";
@@ -250,14 +251,14 @@ describe("jevAnswerToAction", () => {
 });
 
 describe("jevDistribution", () => {
-  it("turns the probabilities into weighted votes on the legal actions, dropping zero mass", () => {
+  it("turns the probabilities into weighted votes on the legal actions, dropping slivers under 1%", () => {
     const votes = jevDistribution(
       {
         type: "choice",
         choice: "3. buy Silver",
         probabilities: {
           "1. play treasure Copper": 0.1,
-          "2. play treasure Copper": 0,
+          "2. play treasure Copper": 0.004,
           "3. buy Silver": 0.7,
           "4. end phase": 0.2,
         },
@@ -302,5 +303,18 @@ describe("game read companions", () => {
     expect(
       describeGameRead({ gamePhase: 0.2, opponentDeckStronger: 0.9 }),
     ).toContain("build phase");
+  });
+});
+
+describe("buildJevVerifyQuestions", () => {
+  it("always asks about a blunder and only asks about the override when one exists", () => {
+    expect(Object.keys(buildJevVerifyQuestions(false))).toEqual(["blunder"]);
+    expect(Object.keys(buildJevVerifyQuestions(true))).toEqual([
+      "blunder",
+      "followsOverride",
+    ]);
+    expect(buildJevVerifyQuestions(true).blunder.instructions).toContain(
+      "`proposedAction`",
+    );
   });
 });

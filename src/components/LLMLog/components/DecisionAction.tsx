@@ -59,6 +59,9 @@ export function DecisionAction({
 
       <PaneContent
         activePane={activePane}
+        {...(currentDecision.verdict !== undefined && {
+          verdict: currentDecision.verdict,
+        })}
         votingData={
           currentDecision.votingEntry.data as unknown as ConsensusVotingData
         }
