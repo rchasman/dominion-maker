@@ -41,3 +41,13 @@ export type VoteGroup<M> = {
   /** Summed weight, fractional when a voter spread its mass */
   count: number;
 };
+
+/** Transport that asks one model for one move; the endpoint numbers the moves */
+export type DecideMoveFor<S, M> = (input: {
+  provider: ModelProvider;
+  state: S;
+  actionId: string;
+  playerStrategies: Record<string, unknown>;
+  customStrategy: string;
+  signal: AbortSignal;
+}) => Promise<{ move: M; distribution: WeightedVote<M>[] }>;

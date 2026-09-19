@@ -5,7 +5,8 @@ import {
   buildStrategyAnalysisMessage,
   PlayerAnalysisSchema,
 } from "./strategy-analysis";
-import { choiceSchema, choiceToAction } from "./choice-parsing";
+import { choiceSchema, choiceToMove } from "../core/consensus/numbered-choice";
+import { withReasoning } from "../dominion/moves";
 import { analysisVersion } from "./analysis-version";
 
 const commentary = {
@@ -86,7 +87,9 @@ describe("strategy grounding boundaries", () => {
       reasoning: "Witch trashes Gold",
       choice: 1,
     });
-    expect(choiceToAction(reply, legal)).toMatchObject({ card: "Gold" });
+    expect(choiceToMove(reply, legal, withReasoning)).toMatchObject({
+      card: "Gold",
+    });
     // This schema does not claim to fact-check prose. Live evals grade that separately.
     expect(reply.reasoning).toBe("Witch trashes Gold");
   });

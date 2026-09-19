@@ -13,9 +13,10 @@ import type { GameState } from "../src/types/game-state";
 import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
   choiceSchema,
-  choiceToAction,
+  choiceToMove,
   replyFormatInstruction,
-} from "../src/agent/choice-parsing";
+} from "../src/core/consensus/numbered-choice";
+import { withReasoning } from "../src/dominion/moves";
 import { getLegalActions } from "../src/agent/legal-actions";
 import { MODELS, type ModelConfig } from "../src/config/models";
 import {
@@ -210,7 +211,7 @@ async function processGenerationRequest(
         },
       },
     });
-    return choiceToAction(object, legalActions);
+    return choiceToMove(object, legalActions, withReasoning);
   };
 
   const generationFailed = (error: Error) => {

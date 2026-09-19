@@ -12,7 +12,11 @@ import {
   buildStrategyAnalysisMessage,
   PlayerAnalysisSchema,
 } from "../strategy-analysis";
-import { choiceSchema, choiceToAction } from "../choice-parsing";
+import {
+  choiceSchema,
+  choiceToMove,
+} from "../../core/consensus/numbered-choice";
+import { withReasoning } from "../../dominion/moves";
 import { getLegalActions } from "../legal-actions";
 import { getModelFullName } from "../../config/models";
 
@@ -66,7 +70,7 @@ for (const model of models) {
               maxRetries: 0,
               abortSignal: AbortSignal.timeout(60_000),
             });
-            output = choiceToAction(result.object, legalActions);
+            output = choiceToMove(result.object, legalActions, withReasoning);
             legal = true;
           } else {
             const result = await generateObject({

@@ -1,0 +1,608 @@
+{
+  "action": {
+    "events": [
+      {
+        "type": "GAME_INITIALIZED",
+        "players": ["alice", "bob"],
+        "kingdomCards": [
+          "Cellar",
+          "Chapel",
+          "Moat",
+          "Harbinger",
+          "Merchant",
+          "Vassal",
+          "Village",
+          "Workshop",
+          "Bureaucrat",
+          "Gardens",
+          "Militia",
+          "Moneylender",
+          "Poacher",
+          "Remodel",
+          "Smithy",
+          "Throne Room",
+          "Bandit",
+          "Council Room",
+          "Festival",
+          "Laboratory",
+          "Library",
+          "Market",
+          "Mine",
+          "Sentry",
+          "Witch",
+          "Artisan"
+        ],
+        "supply": {
+          "Estate": 8,
+          "Duchy": 8,
+          "Province": 8,
+          "Copper": 46,
+          "Silver": 40,
+          "Gold": 30,
+          "Curse": 10,
+          "Cellar": 8,
+          "Chapel": 8,
+          "Moat": 8,
+          "Harbinger": 8,
+          "Merchant": 8,
+          "Vassal": 8,
+          "Village": 8,
+          "Workshop": 8,
+          "Bureaucrat": 8,
+          "Gardens": 8,
+          "Militia": 8,
+          "Moneylender": 8,
+          "Poacher": 8,
+          "Remodel": 8,
+          "Smithy": 8,
+          "Throne Room": 8,
+          "Bandit": 8,
+          "Council Room": 8,
+          "Festival": 8,
+          "Laboratory": 8,
+          "Library": 8,
+          "Market": 8,
+          "Mine": 8,
+          "Sentry": 8,
+          "Witch": 8,
+          "Artisan": 8
+        },
+        "seed": 42,
+        "id": "evt-1"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-2",
+        "causedBy": "evt-1"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Copper", "Estate", "Estate", "Copper", "Copper"],
+        "id": "evt-3",
+        "causedBy": "evt-1"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "bob",
+        "cards": [
+          "Estate",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-4",
+        "causedBy": "evt-1"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "bob",
+        "cards": ["Copper", "Copper", "Estate", "Copper", "Copper"],
+        "id": "evt-5",
+        "causedBy": "evt-1"
+      },
+      {
+        "type": "TURN_STARTED",
+        "turn": 1,
+        "playerId": "alice",
+        "id": "evt-6"
+      },
+      {
+        "type": "ACTIONS_MODIFIED",
+        "delta": 1,
+        "id": "evt-7",
+        "causedBy": "evt-6"
+      },
+      {
+        "type": "BUYS_MODIFIED",
+        "delta": 1,
+        "id": "evt-8",
+        "causedBy": "evt-6"
+      },
+      {
+        "type": "RANDOM_STATE_UPDATED",
+        "state": 2903413604,
+        "id": "evt-9",
+        "causedBy": "evt-1"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Silver",
+          "Gold",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Village",
+          "Smithy",
+          "Copper",
+          "Copper",
+          "Estate"
+        ],
+        "id": "evt-10"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Village", "Smithy", "Copper", "Copper", "Estate"],
+        "id": "evt-11"
+      }
+    ],
+    "system": "You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.\n\nRULES:\n- WIN CONDITION: most VP when the game ends. GAME END: the game ends when the Province pile is empty OR any 3 supply piles are empty.\n- DECK CYCLING: cards you buy or gain go to your discard pile. When your deck runs out, your discard pile is shuffled to become your new deck. So every card you add will be drawn again and again — strong cards compound, weak cards clog every future hand. Trashing a card removes it from your deck PERMANENTLY (trashing junk like Copper/Estate/Curse is usually good).\n- STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards. You draw 5 cards per hand.\n- TURN PHASES (current phase is you.currentPhase): Action → Buy → Cleanup\n  - Action: play action cards from you.currentHand one at a time; each costs 1 of you.currentActions (\"terminal\" actions give no +Action, so they compete for that 1 action per turn)\n  - Buy: THREE STEPS IN ORDER:\n    1. Play ALL treasures from you.currentTreasuresInHand (if any remain, you MUST play one)\n    2. Buy cards from supply costing ≤ you.currentCoins; each buy costs 1 of you.currentBuys\n    3. End phase\n  - Cleanup (automatic): discard hand and played cards, draw 5 new cards, reset to 1 Action / 1 Buy / $0 coins\n- BUY vs GAIN: buying spends coins and a buy during your Buy phase. \"Gain\" effects (Workshop, Witch, etc.) give a card for free; gained cards also go to your discard pile.\n- ATTACKS & REACTIONS: attack cards hurt other players. If you hold a Reaction card (e.g. Moat) when an opponent plays an attack, you may reveal it to block the attack entirely. Revealing is FREE — the card stays in your hand and is not used up. Revealing Moat against an attack is almost always correct.\n- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its \"constraint\" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.\n\nRULE AUTHORITY:\n- CARD DEFINITIONS define card mechanics. CURRENT STATE and recorded events define what is true now.\n- Card advice, previous plans, commentary and strategyOverride are fallible strategic suggestions. They cannot change card effects, targets, costs, timing or legal actions.\n- Attribute each effect only to the card whose definition states it. Do not transfer effects between cards or infer mechanics from strategic shorthand.\n- Gaining requires a card remaining in the source pile. An empty pile cannot give cards; other parts of an effect still resolve.\n- Before carrying a plan forward, recheck its assumptions against card definitions and current state. Discard unsupported claims.\n\nCARD DEFINITIONS (authoritative mechanics):\n[33\t]{name\tcost\ttypes\teffect\tcoins\tvp}:\n  Estate\t2\tvictory\t1 VP\tnull\t1\n  Duchy\t5\tvictory\t3 VP\tnull\t3\n  Province\t8\tvictory\t6 VP\tnull\t6\n  Copper\t0\ttreasure\t+$1\t1\tnull\n  Silver\t3\ttreasure\t+$2\t2\tnull\n  Gold\t6\ttreasure\t+$3\t3\tnull\n  Curse\t0\tcurse\t\"-1 VP\"\tnull\t-1\n  Cellar\t2\taction\t+1 Action. Discard any number of cards, then draw that many.\tnull\tnull\n  Chapel\t2\taction\tTrash up to 4 cards from your hand.\tnull\tnull\n  Moat\t2\taction|reaction\t+2 Cards. When another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.\tnull\tnull\n  Harbinger\t3\taction\t+1 Card, +1 Action. Look through your discard pile. You may put a card from it onto your deck.\tnull\tnull\n  Merchant\t3\taction\t+1 Card, +1 Action. The first time you play a Silver this turn, +$1.\tnull\tnull\n  Vassal\t3\taction\t+$2. Discard the top card of your deck. If it's an Action card, you may play it.\tnull\tnull\n  Village\t3\taction\t+1 Card, +2 Actions.\tnull\tnull\n  Workshop\t3\taction\tGain a card costing up to $4.\tnull\tnull\n  Bureaucrat\t4\taction|attack\tGain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).\tnull\tnull\n  Gardens\t4\tvictory\tWorth 1 VP per 10 cards you have (round down).\tnull\tvariable\n  Militia\t4\taction|attack\t+$2. Each other player discards down to 3 cards in hand.\tnull\tnull\n  Moneylender\t4\taction\tYou may trash a Copper from your hand for +$3.\tnull\tnull\n  Poacher\t4\taction\t+1 Card, +1 Action, +$1. Discard a card per empty Supply pile.\tnull\tnull\n  Remodel\t4\taction\tTrash a card from your hand. Gain a card costing up to $2 more than it.\tnull\tnull\n  Smithy\t4\taction\t+3 Cards.\tnull\tnull\n  Throne Room\t4\taction\tYou may play an Action card from your hand twice.\tnull\tnull\n  Bandit\t5\taction|attack\tGain a Gold. Each other player reveals the top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest.\tnull\tnull\n  Council Room\t5\taction\t+4 Cards, +1 Buy. Each other player draws a card.\tnull\tnull\n  Festival\t5\taction\t+2 Actions, +1 Buy, +$2.\tnull\tnull\n  Laboratory\t5\taction\t+2 Cards, +1 Action.\tnull\tnull\n  Library\t5\taction\tDraw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\tnull\tnull\n  Market\t5\taction\t+1 Card, +1 Action, +1 Buy, +$1.\tnull\tnull\n  Mine\t5\taction\tYou may trash a Treasure from your hand. Gain a Treasure to your hand costing up to $3 more than it.\tnull\tnull\n  Sentry\t5\taction\t+1 Card, +1 Action. Look at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order.\tnull\tnull\n  Witch\t5\taction|attack\t+2 Cards. Each other player gains a Curse.\tnull\tnull\n  Artisan\t6\taction\tGain a card to your hand costing up to $5. Put a card from your hand onto your deck.\tnull\tnull\n\nCARD STRATEGY ADVICE (conditional suggestions, never rules):\n[33\t]{name\tadvice}:\n  Estate\tSkip until the game is ending — clogs hands, adds no economy.\n  Duchy\tEndgame buy at $5 when Provinces are running out.\n  Province\tThe win condition — buy whenever you have $8.\n  Copper\t\"Usually skip: extra Copper dilutes the deck unless a synergy or winning pile-out justifies it.\"\n  Silver\tSolid early buy — the backbone of Big Money.\n  Gold\tStrong buy at $6 unless a key action card matters more.\n  Curse\tNever buy — negative VP and a dead draw.\n  Cellar\tCheap glue — turns dead cards (Estates, extra Coppers) into fresh draws.\n  Chapel\tTop-tier — trash Coppers/Estates early to thin your deck; one copy is enough.\n  Moat\tWeak draw; buy mainly to block attacks. Always reveal it when attacked.\n  Harbinger\tCheap non-terminal — topdeck your best discarded card to draw it next.\n  Merchant\tFine early filler — non-terminal, pays off once you own Silvers.\n  Vassal\tGets better the more action cards your deck has; mediocre otherwise.\n  Village\tEnables playing multiple terminal actions per turn — useless without them.\n  Workshop\tA free $4 card each play — good for fast building or a Gardens plan.\n  Bureaucrat\tMild attack — free topdecked Silver each play, slows victory-heavy decks.\n  Gardens\t\"Alt win: wants a BIG deck — pairs with Workshop/extra buys; skip otherwise.\"\n  Militia\tStrong early attack plus $2 — one of the best $4 buys.\n  Moneylender\tThins a Copper AND still gives $3 — great early deck improvement.\n  Poacher\tSolid non-terminal +$1; weakens late as supply piles empty.\n  Remodel\t\"Upgrade engine: Estate into a $4 card early, Gold into Province late.\"\n  Smithy\tGreat terminal draw — 1-2 copies plus treasures is a classic strong plan.\n  Throne Room\tOnly as good as your other action cards — needs strong targets first.\n  Bandit\tFree Gold each play while trashing opponents' Silver/Gold — strong tempo.\n  Council Room\tHuge draw plus a buy, but gifts the opponent a card — use with strong turns.\n  Festival\tNon-terminal economy — actions, buy, and $2 with no downside.\n  Laboratory\tPremium engine card — pure card advantage, never a dead draw.\n  Library\tBest after attacks or with small hands — refills to 7 cards.\n  Market\tAlways-safe non-terminal — a little of everything, never dead.\n  Mine\tSlow treasure upgrading (Copper→Silver→Gold) — mediocre in most games.\n  Sentry\tExcellent — trashes junk off the top of your deck every single play.\n  Witch\tTop-tier attack — every play junks the opponent's deck; buy early at $5.\n  Artisan\tGains a $5 card straight to hand — strong, flexible engine builder.\n\nYOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.\n\nOUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice. Explain only the decisive benefit and relevant tradeoff of this choice in 1-2 sentences, grounded in current facts and printed effects. Omit unrelated predictions and unsupported mechanics:\n{\"reasoning\": \"<1-2 sentences why>\", \"choice\": <number from LEGAL ACTIONS>}\n\nEXAMPLE (buy phase, $3 available, all treasures already played):\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[4\t]{choice\ttype\tcard}:\n  1\tbuy_card\tSilver\n  2\tbuy_card\tCopper\n  3\tbuy_card\tEstate\n  4\tend_phase\t\"\"\nCorrect reply:\n{\"reasoning\": \"With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.\", \"choice\": 1}\n\nCRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.\n\n🚨 STRATEGY OVERRIDE RULES 🚨\nIF strategyOverride is present in strategic context:\n  - IGNORE ALL default decision framework guidance below\n  - The strategyOverride is your ONLY strategic guidance\n  - Follow its strategic preferences within the rules; RULE AUTHORITY always applies\n  - Default rules (like \"never buy Copper/Curse\" or \"skip bad buys\") DO NOT APPLY\n\nDEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):\n- Context: you is the decision player, which may differ from activePlayerId during attacks. Null resources belong to the other player's turn. History uses explicit player IDs.\n- Strategy summaries are fallible advice from an earlier state. Recheck them against CURRENT STATE, analysisAgeTurns, and the legal choices. Prefer current facts when advice conflicts.\n- Plan for this kingdom: compare economy, draw/action engines, attacks and alternate VP strategies. Evaluate the best sequence this turn, not just the most expensive card.\n- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1) for raw treasure output, but cost, synergies and needed engine pieces can make another purchase better.\n- Copper trap: You START with 7 Copper. Almost never buy Copper unless a specific synergy or winning pile-out justifies it.\n- Skip the buy: Not buying > buying junk, unless that purchase scores needed VP or creates a favorable game end.\n- Victory timing: Province is valuable but not automatic. Estate, Duchy and Gardens can be decisive. Game ending soon: inspect all opponents' scores and purchaseConsequences before emptying Province or a third pile. Avoid ending behind; evaluate whether building longer improves your chance to win.\n- purchaseConsequences projects one purchase only, before further actions or effects. Its winner follows this engine's scoring rules. Reassess after every move.\n- Dilution math: A 10-card deck drawing 5 cards/turn cycles quickly. Use drawPileCount, discardPileCount and nextFiveCardDrawNeedsShuffle to judge when a new card can matter.\n- Action cards: +Cards need sufficient +Actions and payload. Terminals compete for actions. Printed draw/action totals are approximate, not simulated turn output.\n- For trash/discard/topdeck decisions, evaluate the remaining hand and next draws, preserving necessary economy and action support. Known top cards are listed only when actually revealed.",
+    "user": "CURRENT STATE:\nturn: 1\nactivePlayerId: alice\ndecisionPlayerId: alice\ncurrentGameStage: Early\nyou:\n  playerId: alice\n  isYourTurn: true\n  currentPhase: action\n  currentActions: 1\n  currentBuys: 1\n  currentCoins: 0\n  currentVictoryPoints: 2\n  currentDeckComposition:\n    Silver: 1\n    Gold: 1\n    Copper: 4\n    Estate: 2\n    Village: 1\n    Smithy: 1\n  currentHand:\n    Village: 1\n    Smithy: 1\n    Copper: 2\n    Estate: 1\n  currentDiscard:\n  currentInPlay:\nopponents[1\t]:\n  - playerId: bob\n    currentVictoryPoints: 3\n    totalCards: 10\n    currentDeckComposition:\n      Estate: 3\n      Copper: 7\n    currentDiscard:\n    currentInPlay:\ndecisionFacts:\n  totalCards: 10\n  actionCards: 2\n  terminalActions: 1\n  printedExtraActions: 1\n  printedDrawCards: 4\n  note: Printed bonuses only; conditional effects, replay and action order can change actual output.\n  drawPileCount: 5\n  discardPileCount: 0\n  nextFiveCardDrawNeedsShuffle: false\n  scoreLead: -1\n  emptyPiles: []\n  purchaseConsequences: []\nsupply[33\t]{card\tcount\tcost}:\n  Estate\t8\t2\n  Duchy\t8\t5\n  Province\t8\t8\n  Copper\t46\t0\n  Silver\t40\t3\n  Gold\t30\t6\n  Curse\t10\t0\n  Cellar\t8\t2\n  Chapel\t8\t2\n  Moat\t8\t2\n  Harbinger\t8\t3\n  Merchant\t8\t3\n  Vassal\t8\t3\n  Village\t8\t3\n  Workshop\t8\t3\n  Bureaucrat\t8\t4\n  Gardens\t8\t4\n  Militia\t8\t4\n  Moneylender\t8\t4\n  Poacher\t8\t4\n  Remodel\t8\t4\n  Smithy\t8\t4\n  Throne Room\t8\t4\n  Bandit\t8\t5\n  Council Room\t8\t5\n  Festival\t8\t5\n  Laboratory\t8\t5\n  Library\t8\t5\n  Market\t8\t5\n  Mine\t8\t5\n  Sentry\t8\t5\n  Witch\t8\t5\n  Artisan\t8\t6\ntrash: []\n\nSTRATEGIC CONTEXT:\naiDecisionPlan:\n  priority: No analysis yet — choose an economy, engine, attack or alternate scoring plan for this kingdom.\n  conditions[3\t]: Balance draw, actions and payload against the deck and supply.\tScore when it improves winning chances; check pile-ending consequences before ending the game.\tTreat card advice as conditional, not mandatory.\nstrategyOverride: Never buy Curse\n\nRECENT TURN HISTORY:\n[1\t]{turn\tplayerId\tactions\tbought\tgained\ttrashed}:\n  1\talice\tnull\tnull\tnull\tnull\n\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[3\t]{choice\ttype\tcard}:\n  1\tplay_action\tVillage\n  2\tplay_action\tSmithy\n  3\tend_phase\t\"\"\n\nReply with ONLY: {\"reasoning\": \"<1-2 sentences why>\", \"choice\": <1-3>}"
+  },
+  "buy": {
+    "events": [
+      {
+        "type": "GAME_INITIALIZED",
+        "players": ["alice", "bob"],
+        "kingdomCards": [
+          "Cellar",
+          "Chapel",
+          "Moat",
+          "Harbinger",
+          "Merchant",
+          "Vassal",
+          "Village",
+          "Workshop",
+          "Bureaucrat",
+          "Gardens",
+          "Militia",
+          "Moneylender",
+          "Poacher",
+          "Remodel",
+          "Smithy",
+          "Throne Room",
+          "Bandit",
+          "Council Room",
+          "Festival",
+          "Laboratory",
+          "Library",
+          "Market",
+          "Mine",
+          "Sentry",
+          "Witch",
+          "Artisan"
+        ],
+        "supply": {
+          "Estate": 8,
+          "Duchy": 8,
+          "Province": 8,
+          "Copper": 46,
+          "Silver": 40,
+          "Gold": 30,
+          "Curse": 10,
+          "Cellar": 8,
+          "Chapel": 8,
+          "Moat": 8,
+          "Harbinger": 8,
+          "Merchant": 8,
+          "Vassal": 8,
+          "Village": 8,
+          "Workshop": 8,
+          "Bureaucrat": 8,
+          "Gardens": 8,
+          "Militia": 8,
+          "Moneylender": 8,
+          "Poacher": 8,
+          "Remodel": 8,
+          "Smithy": 8,
+          "Throne Room": 8,
+          "Bandit": 8,
+          "Council Room": 8,
+          "Festival": 8,
+          "Laboratory": 8,
+          "Library": 8,
+          "Market": 8,
+          "Mine": 8,
+          "Sentry": 8,
+          "Witch": 8,
+          "Artisan": 8
+        },
+        "seed": 42,
+        "id": "evt-12"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-13",
+        "causedBy": "evt-12"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Copper", "Estate", "Estate", "Copper", "Copper"],
+        "id": "evt-14",
+        "causedBy": "evt-12"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "bob",
+        "cards": [
+          "Estate",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-15",
+        "causedBy": "evt-12"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "bob",
+        "cards": ["Copper", "Copper", "Estate", "Copper", "Copper"],
+        "id": "evt-16",
+        "causedBy": "evt-12"
+      },
+      {
+        "type": "TURN_STARTED",
+        "turn": 1,
+        "playerId": "alice",
+        "id": "evt-17"
+      },
+      {
+        "type": "ACTIONS_MODIFIED",
+        "delta": 1,
+        "id": "evt-18",
+        "causedBy": "evt-17"
+      },
+      {
+        "type": "BUYS_MODIFIED",
+        "delta": 1,
+        "id": "evt-19",
+        "causedBy": "evt-17"
+      },
+      {
+        "type": "RANDOM_STATE_UPDATED",
+        "state": 2903413604,
+        "id": "evt-20",
+        "causedBy": "evt-12"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Silver",
+          "Gold",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Silver",
+          "Estate",
+          "Estate"
+        ],
+        "id": "evt-21"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Copper", "Copper", "Silver", "Estate", "Estate"],
+        "id": "evt-22"
+      },
+      {
+        "type": "PHASE_CHANGED",
+        "phase": "buy",
+        "id": "evt-23"
+      },
+      {
+        "type": "CARD_PLAYED",
+        "playerId": "alice",
+        "card": "Copper",
+        "sourceIndex": 0,
+        "id": "evt-24"
+      },
+      {
+        "type": "COINS_MODIFIED",
+        "delta": 1,
+        "id": "evt-25",
+        "causedBy": "evt-24"
+      },
+      {
+        "type": "CARD_PLAYED",
+        "playerId": "alice",
+        "card": "Copper",
+        "sourceIndex": 0,
+        "id": "evt-26"
+      },
+      {
+        "type": "COINS_MODIFIED",
+        "delta": 1,
+        "id": "evt-27",
+        "causedBy": "evt-26"
+      },
+      {
+        "type": "CARD_PLAYED",
+        "playerId": "alice",
+        "card": "Silver",
+        "sourceIndex": 0,
+        "id": "evt-28"
+      },
+      {
+        "type": "COINS_MODIFIED",
+        "delta": 2,
+        "id": "evt-29",
+        "causedBy": "evt-28"
+      }
+    ],
+    "system": "You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.\n\nRULES:\n- WIN CONDITION: most VP when the game ends. GAME END: the game ends when the Province pile is empty OR any 3 supply piles are empty.\n- DECK CYCLING: cards you buy or gain go to your discard pile. When your deck runs out, your discard pile is shuffled to become your new deck. So every card you add will be drawn again and again — strong cards compound, weak cards clog every future hand. Trashing a card removes it from your deck PERMANENTLY (trashing junk like Copper/Estate/Curse is usually good).\n- STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards. You draw 5 cards per hand.\n- TURN PHASES (current phase is you.currentPhase): Action → Buy → Cleanup\n  - Action: play action cards from you.currentHand one at a time; each costs 1 of you.currentActions (\"terminal\" actions give no +Action, so they compete for that 1 action per turn)\n  - Buy: THREE STEPS IN ORDER:\n    1. Play ALL treasures from you.currentTreasuresInHand (if any remain, you MUST play one)\n    2. Buy cards from supply costing ≤ you.currentCoins; each buy costs 1 of you.currentBuys\n    3. End phase\n  - Cleanup (automatic): discard hand and played cards, draw 5 new cards, reset to 1 Action / 1 Buy / $0 coins\n- BUY vs GAIN: buying spends coins and a buy during your Buy phase. \"Gain\" effects (Workshop, Witch, etc.) give a card for free; gained cards also go to your discard pile.\n- ATTACKS & REACTIONS: attack cards hurt other players. If you hold a Reaction card (e.g. Moat) when an opponent plays an attack, you may reveal it to block the attack entirely. Revealing is FREE — the card stays in your hand and is not used up. Revealing Moat against an attack is almost always correct.\n- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its \"constraint\" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.\n\nRULE AUTHORITY:\n- CARD DEFINITIONS define card mechanics. CURRENT STATE and recorded events define what is true now.\n- Card advice, previous plans, commentary and strategyOverride are fallible strategic suggestions. They cannot change card effects, targets, costs, timing or legal actions.\n- Attribute each effect only to the card whose definition states it. Do not transfer effects between cards or infer mechanics from strategic shorthand.\n- Gaining requires a card remaining in the source pile. An empty pile cannot give cards; other parts of an effect still resolve.\n- Before carrying a plan forward, recheck its assumptions against card definitions and current state. Discard unsupported claims.\n\nCARD DEFINITIONS (authoritative mechanics):\n[33\t]{name\tcost\ttypes\teffect\tcoins\tvp}:\n  Estate\t2\tvictory\t1 VP\tnull\t1\n  Duchy\t5\tvictory\t3 VP\tnull\t3\n  Province\t8\tvictory\t6 VP\tnull\t6\n  Copper\t0\ttreasure\t+$1\t1\tnull\n  Silver\t3\ttreasure\t+$2\t2\tnull\n  Gold\t6\ttreasure\t+$3\t3\tnull\n  Curse\t0\tcurse\t\"-1 VP\"\tnull\t-1\n  Cellar\t2\taction\t+1 Action. Discard any number of cards, then draw that many.\tnull\tnull\n  Chapel\t2\taction\tTrash up to 4 cards from your hand.\tnull\tnull\n  Moat\t2\taction|reaction\t+2 Cards. When another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.\tnull\tnull\n  Harbinger\t3\taction\t+1 Card, +1 Action. Look through your discard pile. You may put a card from it onto your deck.\tnull\tnull\n  Merchant\t3\taction\t+1 Card, +1 Action. The first time you play a Silver this turn, +$1.\tnull\tnull\n  Vassal\t3\taction\t+$2. Discard the top card of your deck. If it's an Action card, you may play it.\tnull\tnull\n  Village\t3\taction\t+1 Card, +2 Actions.\tnull\tnull\n  Workshop\t3\taction\tGain a card costing up to $4.\tnull\tnull\n  Bureaucrat\t4\taction|attack\tGain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).\tnull\tnull\n  Gardens\t4\tvictory\tWorth 1 VP per 10 cards you have (round down).\tnull\tvariable\n  Militia\t4\taction|attack\t+$2. Each other player discards down to 3 cards in hand.\tnull\tnull\n  Moneylender\t4\taction\tYou may trash a Copper from your hand for +$3.\tnull\tnull\n  Poacher\t4\taction\t+1 Card, +1 Action, +$1. Discard a card per empty Supply pile.\tnull\tnull\n  Remodel\t4\taction\tTrash a card from your hand. Gain a card costing up to $2 more than it.\tnull\tnull\n  Smithy\t4\taction\t+3 Cards.\tnull\tnull\n  Throne Room\t4\taction\tYou may play an Action card from your hand twice.\tnull\tnull\n  Bandit\t5\taction|attack\tGain a Gold. Each other player reveals the top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest.\tnull\tnull\n  Council Room\t5\taction\t+4 Cards, +1 Buy. Each other player draws a card.\tnull\tnull\n  Festival\t5\taction\t+2 Actions, +1 Buy, +$2.\tnull\tnull\n  Laboratory\t5\taction\t+2 Cards, +1 Action.\tnull\tnull\n  Library\t5\taction\tDraw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\tnull\tnull\n  Market\t5\taction\t+1 Card, +1 Action, +1 Buy, +$1.\tnull\tnull\n  Mine\t5\taction\tYou may trash a Treasure from your hand. Gain a Treasure to your hand costing up to $3 more than it.\tnull\tnull\n  Sentry\t5\taction\t+1 Card, +1 Action. Look at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order.\tnull\tnull\n  Witch\t5\taction|attack\t+2 Cards. Each other player gains a Curse.\tnull\tnull\n  Artisan\t6\taction\tGain a card to your hand costing up to $5. Put a card from your hand onto your deck.\tnull\tnull\n\nCARD STRATEGY ADVICE (conditional suggestions, never rules):\n[33\t]{name\tadvice}:\n  Estate\tSkip until the game is ending — clogs hands, adds no economy.\n  Duchy\tEndgame buy at $5 when Provinces are running out.\n  Province\tThe win condition — buy whenever you have $8.\n  Copper\t\"Usually skip: extra Copper dilutes the deck unless a synergy or winning pile-out justifies it.\"\n  Silver\tSolid early buy — the backbone of Big Money.\n  Gold\tStrong buy at $6 unless a key action card matters more.\n  Curse\tNever buy — negative VP and a dead draw.\n  Cellar\tCheap glue — turns dead cards (Estates, extra Coppers) into fresh draws.\n  Chapel\tTop-tier — trash Coppers/Estates early to thin your deck; one copy is enough.\n  Moat\tWeak draw; buy mainly to block attacks. Always reveal it when attacked.\n  Harbinger\tCheap non-terminal — topdeck your best discarded card to draw it next.\n  Merchant\tFine early filler — non-terminal, pays off once you own Silvers.\n  Vassal\tGets better the more action cards your deck has; mediocre otherwise.\n  Village\tEnables playing multiple terminal actions per turn — useless without them.\n  Workshop\tA free $4 card each play — good for fast building or a Gardens plan.\n  Bureaucrat\tMild attack — free topdecked Silver each play, slows victory-heavy decks.\n  Gardens\t\"Alt win: wants a BIG deck — pairs with Workshop/extra buys; skip otherwise.\"\n  Militia\tStrong early attack plus $2 — one of the best $4 buys.\n  Moneylender\tThins a Copper AND still gives $3 — great early deck improvement.\n  Poacher\tSolid non-terminal +$1; weakens late as supply piles empty.\n  Remodel\t\"Upgrade engine: Estate into a $4 card early, Gold into Province late.\"\n  Smithy\tGreat terminal draw — 1-2 copies plus treasures is a classic strong plan.\n  Throne Room\tOnly as good as your other action cards — needs strong targets first.\n  Bandit\tFree Gold each play while trashing opponents' Silver/Gold — strong tempo.\n  Council Room\tHuge draw plus a buy, but gifts the opponent a card — use with strong turns.\n  Festival\tNon-terminal economy — actions, buy, and $2 with no downside.\n  Laboratory\tPremium engine card — pure card advantage, never a dead draw.\n  Library\tBest after attacks or with small hands — refills to 7 cards.\n  Market\tAlways-safe non-terminal — a little of everything, never dead.\n  Mine\tSlow treasure upgrading (Copper→Silver→Gold) — mediocre in most games.\n  Sentry\tExcellent — trashes junk off the top of your deck every single play.\n  Witch\tTop-tier attack — every play junks the opponent's deck; buy early at $5.\n  Artisan\tGains a $5 card straight to hand — strong, flexible engine builder.\n\nYOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.\n\nOUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice. Explain only the decisive benefit and relevant tradeoff of this choice in 1-2 sentences, grounded in current facts and printed effects. Omit unrelated predictions and unsupported mechanics:\n{\"reasoning\": \"<1-2 sentences why>\", \"choice\": <number from LEGAL ACTIONS>}\n\nEXAMPLE (buy phase, $3 available, all treasures already played):\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[4\t]{choice\ttype\tcard}:\n  1\tbuy_card\tSilver\n  2\tbuy_card\tCopper\n  3\tbuy_card\tEstate\n  4\tend_phase\t\"\"\nCorrect reply:\n{\"reasoning\": \"With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.\", \"choice\": 1}\n\nCRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.\n\n🚨 STRATEGY OVERRIDE RULES 🚨\nIF strategyOverride is present in strategic context:\n  - IGNORE ALL default decision framework guidance below\n  - The strategyOverride is your ONLY strategic guidance\n  - Follow its strategic preferences within the rules; RULE AUTHORITY always applies\n  - Default rules (like \"never buy Copper/Curse\" or \"skip bad buys\") DO NOT APPLY\n\nDEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):\n- Context: you is the decision player, which may differ from activePlayerId during attacks. Null resources belong to the other player's turn. History uses explicit player IDs.\n- Strategy summaries are fallible advice from an earlier state. Recheck them against CURRENT STATE, analysisAgeTurns, and the legal choices. Prefer current facts when advice conflicts.\n- Plan for this kingdom: compare economy, draw/action engines, attacks and alternate VP strategies. Evaluate the best sequence this turn, not just the most expensive card.\n- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1) for raw treasure output, but cost, synergies and needed engine pieces can make another purchase better.\n- Copper trap: You START with 7 Copper. Almost never buy Copper unless a specific synergy or winning pile-out justifies it.\n- Skip the buy: Not buying > buying junk, unless that purchase scores needed VP or creates a favorable game end.\n- Victory timing: Province is valuable but not automatic. Estate, Duchy and Gardens can be decisive. Game ending soon: inspect all opponents' scores and purchaseConsequences before emptying Province or a third pile. Avoid ending behind; evaluate whether building longer improves your chance to win.\n- purchaseConsequences projects one purchase only, before further actions or effects. Its winner follows this engine's scoring rules. Reassess after every move.\n- Dilution math: A 10-card deck drawing 5 cards/turn cycles quickly. Use drawPileCount, discardPileCount and nextFiveCardDrawNeedsShuffle to judge when a new card can matter.\n- Action cards: +Cards need sufficient +Actions and payload. Terminals compete for actions. Printed draw/action totals are approximate, not simulated turn output.\n- For trash/discard/topdeck decisions, evaluate the remaining hand and next draws, preserving necessary economy and action support. Known top cards are listed only when actually revealed.",
+    "user": "CURRENT STATE:\nturn: 1\nactivePlayerId: alice\ndecisionPlayerId: alice\ncurrentGameStage: Early\nyou:\n  playerId: alice\n  isYourTurn: true\n  currentPhase: buy\n  currentActions: 1\n  currentBuys: 1\n  currentCoins: 4\n  currentVictoryPoints: 3\n  currentDeckComposition:\n    Silver: 2\n    Gold: 1\n    Copper: 4\n    Estate: 3\n  currentHand:\n    Estate: 2\n  currentDiscard:\n  currentInPlay:\n    Copper: 2\n    Silver: 1\n  currentTreasuresInHand:\nopponents[1\t]:\n  - playerId: bob\n    currentVictoryPoints: 3\n    totalCards: 10\n    currentDeckComposition:\n      Estate: 3\n      Copper: 7\n    currentDiscard:\n    currentInPlay:\ndecisionFacts:\n  totalCards: 10\n  actionCards: 0\n  terminalActions: 0\n  printedExtraActions: 0\n  printedDrawCards: 0\n  note: Printed bonuses only; conditional effects, replay and action order can change actual output.\n  drawPileCount: 5\n  discardPileCount: 0\n  nextFiveCardDrawNeedsShuffle: false\n  scoreLead: 0\n  emptyPiles: []\n  purchaseConsequences[20\t]{card\tvpAfterPurchase\ttriggersGameEnd}:\n    Estate\t4\tfalse\n    Copper\t3\tfalse\n    Silver\t3\tfalse\n    Curse\t2\tfalse\n    Cellar\t3\tfalse\n    Chapel\t3\tfalse\n    Moat\t3\tfalse\n    Harbinger\t3\tfalse\n    Merchant\t3\tfalse\n    Vassal\t3\tfalse\n    Village\t3\tfalse\n    Workshop\t3\tfalse\n    Bureaucrat\t3\tfalse\n    Gardens\t4\tfalse\n    Militia\t3\tfalse\n    Moneylender\t3\tfalse\n    Poacher\t3\tfalse\n    Remodel\t3\tfalse\n    Smithy\t3\tfalse\n    Throne Room\t3\tfalse\nsupply[33\t]{card\tcount\tcost}:\n  Estate\t8\t2\n  Duchy\t8\t5\n  Province\t8\t8\n  Copper\t46\t0\n  Silver\t40\t3\n  Gold\t30\t6\n  Curse\t10\t0\n  Cellar\t8\t2\n  Chapel\t8\t2\n  Moat\t8\t2\n  Harbinger\t8\t3\n  Merchant\t8\t3\n  Vassal\t8\t3\n  Village\t8\t3\n  Workshop\t8\t3\n  Bureaucrat\t8\t4\n  Gardens\t8\t4\n  Militia\t8\t4\n  Moneylender\t8\t4\n  Poacher\t8\t4\n  Remodel\t8\t4\n  Smithy\t8\t4\n  Throne Room\t8\t4\n  Bandit\t8\t5\n  Council Room\t8\t5\n  Festival\t8\t5\n  Laboratory\t8\t5\n  Library\t8\t5\n  Market\t8\t5\n  Mine\t8\t5\n  Sentry\t8\t5\n  Witch\t8\t5\n  Artisan\t8\t6\ntrash: []\n\nSTRATEGIC CONTEXT:\naiDecisionPlan:\n  priority: No analysis yet — choose an economy, engine, attack or alternate scoring plan for this kingdom.\n  conditions[3\t]: Balance draw, actions and payload against the deck and supply.\tScore when it improves winning chances; check pile-ending consequences before ending the game.\tTreat card advice as conditional, not mandatory.\nstrategyOverride: Never buy Curse\n\nRECENT TURN HISTORY:\n[1\t]{turn\tplayerId\tactions\tbought\tgained\ttrashed}:\n  1\talice\tnull\tnull\tnull\tnull\n\nACTIONS TAKEN THIS TURN (by alice):\n[4\t]:\n  - type: end_phase\n  - type: play_treasure\n    card: Copper\n  - type: play_treasure\n    card: Copper\n  - type: play_treasure\n    card: Silver\n\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[21\t]{choice\ttype\tcard}:\n  1\tbuy_card\tEstate\n  2\tbuy_card\tCopper\n  3\tbuy_card\tSilver\n  4\tbuy_card\tCurse\n  5\tbuy_card\tCellar\n  6\tbuy_card\tChapel\n  7\tbuy_card\tMoat\n  8\tbuy_card\tHarbinger\n  9\tbuy_card\tMerchant\n  10\tbuy_card\tVassal\n  11\tbuy_card\tVillage\n  12\tbuy_card\tWorkshop\n  13\tbuy_card\tBureaucrat\n  14\tbuy_card\tGardens\n  15\tbuy_card\tMilitia\n  16\tbuy_card\tMoneylender\n  17\tbuy_card\tPoacher\n  18\tbuy_card\tRemodel\n  19\tbuy_card\tSmithy\n  20\tbuy_card\tThrone Room\n  21\tend_phase\t\"\"\n\nReply with ONLY: {\"reasoning\": \"<1-2 sentences why>\", \"choice\": <1-21>}"
+  },
+  "throne": {
+    "events": [
+      {
+        "type": "GAME_INITIALIZED",
+        "players": ["alice", "bob"],
+        "kingdomCards": [
+          "Cellar",
+          "Chapel",
+          "Moat",
+          "Harbinger",
+          "Merchant",
+          "Vassal",
+          "Village",
+          "Workshop",
+          "Bureaucrat",
+          "Gardens",
+          "Militia",
+          "Moneylender",
+          "Poacher",
+          "Remodel",
+          "Smithy",
+          "Throne Room",
+          "Bandit",
+          "Council Room",
+          "Festival",
+          "Laboratory",
+          "Library",
+          "Market",
+          "Mine",
+          "Sentry",
+          "Witch",
+          "Artisan"
+        ],
+        "supply": {
+          "Estate": 8,
+          "Duchy": 8,
+          "Province": 8,
+          "Copper": 46,
+          "Silver": 40,
+          "Gold": 30,
+          "Curse": 10,
+          "Cellar": 8,
+          "Chapel": 8,
+          "Moat": 8,
+          "Harbinger": 8,
+          "Merchant": 8,
+          "Vassal": 8,
+          "Village": 8,
+          "Workshop": 8,
+          "Bureaucrat": 8,
+          "Gardens": 8,
+          "Militia": 8,
+          "Moneylender": 8,
+          "Poacher": 8,
+          "Remodel": 8,
+          "Smithy": 8,
+          "Throne Room": 8,
+          "Bandit": 8,
+          "Council Room": 8,
+          "Festival": 8,
+          "Laboratory": 8,
+          "Library": 8,
+          "Market": 8,
+          "Mine": 8,
+          "Sentry": 8,
+          "Witch": 8,
+          "Artisan": 8
+        },
+        "seed": 42,
+        "id": "evt-30"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-31",
+        "causedBy": "evt-30"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Copper", "Estate", "Estate", "Copper", "Copper"],
+        "id": "evt-32",
+        "causedBy": "evt-30"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "bob",
+        "cards": [
+          "Estate",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-33",
+        "causedBy": "evt-30"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "bob",
+        "cards": ["Copper", "Copper", "Estate", "Copper", "Copper"],
+        "id": "evt-34",
+        "causedBy": "evt-30"
+      },
+      {
+        "type": "TURN_STARTED",
+        "turn": 1,
+        "playerId": "alice",
+        "id": "evt-35"
+      },
+      {
+        "type": "ACTIONS_MODIFIED",
+        "delta": 1,
+        "id": "evt-36",
+        "causedBy": "evt-35"
+      },
+      {
+        "type": "BUYS_MODIFIED",
+        "delta": 1,
+        "id": "evt-37",
+        "causedBy": "evt-35"
+      },
+      {
+        "type": "RANDOM_STATE_UPDATED",
+        "state": 2903413604,
+        "id": "evt-38",
+        "causedBy": "evt-30"
+      },
+      {
+        "type": "INITIAL_DECK_DEALT",
+        "playerId": "alice",
+        "cards": [
+          "Silver",
+          "Gold",
+          "Copper",
+          "Estate",
+          "Copper",
+          "Throne Room",
+          "Bandit",
+          "Estate",
+          "Copper",
+          "Copper"
+        ],
+        "id": "evt-39"
+      },
+      {
+        "type": "INITIAL_HAND_DRAWN",
+        "playerId": "alice",
+        "cards": ["Throne Room", "Bandit", "Estate", "Copper", "Copper"],
+        "id": "evt-40"
+      },
+      {
+        "type": "CARD_PLAYED",
+        "playerId": "alice",
+        "card": "Throne Room",
+        "sourceIndex": 0,
+        "id": "evt-41"
+      },
+      {
+        "type": "ACTIONS_MODIFIED",
+        "delta": -1,
+        "id": "evt-42",
+        "causedBy": "evt-41"
+      },
+      {
+        "type": "DECISION_REQUIRED",
+        "decision": {
+          "choiceType": "decision",
+          "playerId": "alice",
+          "cardBeingPlayed": "Throne Room",
+          "intent": "play",
+          "from": "hand",
+          "prompt": "Throne Room: Choose an Action to play twice",
+          "cardOptions": ["Bandit"],
+          "min": 0,
+          "max": 1
+        },
+        "id": "evt-43",
+        "causedBy": "evt-41"
+      },
+      {
+        "type": "EXECUTION_UPDATED",
+        "stack": [
+          {
+            "type": "choice",
+            "card": "Throne Room",
+            "playerId": "alice",
+            "cause": "evt-41",
+            "trigger": {
+              "type": "play"
+            },
+            "memory": null
+          }
+        ],
+        "id": "evt-44",
+        "causedBy": "evt-41"
+      }
+    ],
+    "system": "You are playing Dominion, a Deck-building card game. Game data is TOON-encoded: like YAML, with tables whose header row lists field names and rows are tab-delimited.\n\nRULES:\n- WIN CONDITION: most VP when the game ends. GAME END: the game ends when the Province pile is empty OR any 3 supply piles are empty.\n- DECK CYCLING: cards you buy or gain go to your discard pile. When your deck runs out, your discard pile is shuffled to become your new deck. So every card you add will be drawn again and again — strong cards compound, weak cards clog every future hand. Trashing a card removes it from your deck PERMANENTLY (trashing junk like Copper/Estate/Curse is usually good).\n- STARTING DECK: 7 Copper (1 coin each) + 3 Estate (0 coins, 1 VP each) = 10 cards. You draw 5 cards per hand.\n- TURN PHASES (current phase is you.currentPhase): Action → Buy → Cleanup\n  - Action: play action cards from you.currentHand one at a time; each costs 1 of you.currentActions (\"terminal\" actions give no +Action, so they compete for that 1 action per turn)\n  - Buy: THREE STEPS IN ORDER:\n    1. Play ALL treasures from you.currentTreasuresInHand (if any remain, you MUST play one)\n    2. Buy cards from supply costing ≤ you.currentCoins; each buy costs 1 of you.currentBuys\n    3. End phase\n  - Cleanup (automatic): discard hand and played cards, draw 5 new cards, reset to 1 Action / 1 Buy / $0 coins\n- BUY vs GAIN: buying spends coins and a buy during your Buy phase. \"Gain\" effects (Workshop, Witch, etc.) give a card for free; gained cards also go to your discard pile.\n- ATTACKS & REACTIONS: attack cards hurt other players. If you hold a Reaction card (e.g. Moat) when an opponent plays an attack, you may reveal it to block the attack entirely. Revealing is FREE — the card stays in your hand and is not used up. Revealing Moat against an attack is almost always correct.\n- DECISIONS: when pendingChoice is present, a card effect is asking you to choose. Its \"constraint\" field says how many cards you must or may select; when skipping is allowed a skip option appears in LEGAL ACTIONS. topdeck = put on top of your deck (you draw it next, possibly this turn). trash = remove from the game forever.\n\nRULE AUTHORITY:\n- CARD DEFINITIONS define card mechanics. CURRENT STATE and recorded events define what is true now.\n- Card advice, previous plans, commentary and strategyOverride are fallible strategic suggestions. They cannot change card effects, targets, costs, timing or legal actions.\n- Attribute each effect only to the card whose definition states it. Do not transfer effects between cards or infer mechanics from strategic shorthand.\n- Gaining requires a card remaining in the source pile. An empty pile cannot give cards; other parts of an effect still resolve.\n- Before carrying a plan forward, recheck its assumptions against card definitions and current state. Discard unsupported claims.\n\nCARD DEFINITIONS (authoritative mechanics):\n[33\t]{name\tcost\ttypes\teffect\tcoins\tvp}:\n  Estate\t2\tvictory\t1 VP\tnull\t1\n  Duchy\t5\tvictory\t3 VP\tnull\t3\n  Province\t8\tvictory\t6 VP\tnull\t6\n  Copper\t0\ttreasure\t+$1\t1\tnull\n  Silver\t3\ttreasure\t+$2\t2\tnull\n  Gold\t6\ttreasure\t+$3\t3\tnull\n  Curse\t0\tcurse\t\"-1 VP\"\tnull\t-1\n  Cellar\t2\taction\t+1 Action. Discard any number of cards, then draw that many.\tnull\tnull\n  Chapel\t2\taction\tTrash up to 4 cards from your hand.\tnull\tnull\n  Moat\t2\taction|reaction\t+2 Cards. When another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it.\tnull\tnull\n  Harbinger\t3\taction\t+1 Card, +1 Action. Look through your discard pile. You may put a card from it onto your deck.\tnull\tnull\n  Merchant\t3\taction\t+1 Card, +1 Action. The first time you play a Silver this turn, +$1.\tnull\tnull\n  Vassal\t3\taction\t+$2. Discard the top card of your deck. If it's an Action card, you may play it.\tnull\tnull\n  Village\t3\taction\t+1 Card, +2 Actions.\tnull\tnull\n  Workshop\t3\taction\tGain a card costing up to $4.\tnull\tnull\n  Bureaucrat\t4\taction|attack\tGain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards).\tnull\tnull\n  Gardens\t4\tvictory\tWorth 1 VP per 10 cards you have (round down).\tnull\tvariable\n  Militia\t4\taction|attack\t+$2. Each other player discards down to 3 cards in hand.\tnull\tnull\n  Moneylender\t4\taction\tYou may trash a Copper from your hand for +$3.\tnull\tnull\n  Poacher\t4\taction\t+1 Card, +1 Action, +$1. Discard a card per empty Supply pile.\tnull\tnull\n  Remodel\t4\taction\tTrash a card from your hand. Gain a card costing up to $2 more than it.\tnull\tnull\n  Smithy\t4\taction\t+3 Cards.\tnull\tnull\n  Throne Room\t4\taction\tYou may play an Action card from your hand twice.\tnull\tnull\n  Bandit\t5\taction|attack\tGain a Gold. Each other player reveals the top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest.\tnull\tnull\n  Council Room\t5\taction\t+4 Cards, +1 Buy. Each other player draws a card.\tnull\tnull\n  Festival\t5\taction\t+2 Actions, +1 Buy, +$2.\tnull\tnull\n  Laboratory\t5\taction\t+2 Cards, +1 Action.\tnull\tnull\n  Library\t5\taction\tDraw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards.\tnull\tnull\n  Market\t5\taction\t+1 Card, +1 Action, +1 Buy, +$1.\tnull\tnull\n  Mine\t5\taction\tYou may trash a Treasure from your hand. Gain a Treasure to your hand costing up to $3 more than it.\tnull\tnull\n  Sentry\t5\taction\t+1 Card, +1 Action. Look at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order.\tnull\tnull\n  Witch\t5\taction|attack\t+2 Cards. Each other player gains a Curse.\tnull\tnull\n  Artisan\t6\taction\tGain a card to your hand costing up to $5. Put a card from your hand onto your deck.\tnull\tnull\n\nCARD STRATEGY ADVICE (conditional suggestions, never rules):\n[33\t]{name\tadvice}:\n  Estate\tSkip until the game is ending — clogs hands, adds no economy.\n  Duchy\tEndgame buy at $5 when Provinces are running out.\n  Province\tThe win condition — buy whenever you have $8.\n  Copper\t\"Usually skip: extra Copper dilutes the deck unless a synergy or winning pile-out justifies it.\"\n  Silver\tSolid early buy — the backbone of Big Money.\n  Gold\tStrong buy at $6 unless a key action card matters more.\n  Curse\tNever buy — negative VP and a dead draw.\n  Cellar\tCheap glue — turns dead cards (Estates, extra Coppers) into fresh draws.\n  Chapel\tTop-tier — trash Coppers/Estates early to thin your deck; one copy is enough.\n  Moat\tWeak draw; buy mainly to block attacks. Always reveal it when attacked.\n  Harbinger\tCheap non-terminal — topdeck your best discarded card to draw it next.\n  Merchant\tFine early filler — non-terminal, pays off once you own Silvers.\n  Vassal\tGets better the more action cards your deck has; mediocre otherwise.\n  Village\tEnables playing multiple terminal actions per turn — useless without them.\n  Workshop\tA free $4 card each play — good for fast building or a Gardens plan.\n  Bureaucrat\tMild attack — free topdecked Silver each play, slows victory-heavy decks.\n  Gardens\t\"Alt win: wants a BIG deck — pairs with Workshop/extra buys; skip otherwise.\"\n  Militia\tStrong early attack plus $2 — one of the best $4 buys.\n  Moneylender\tThins a Copper AND still gives $3 — great early deck improvement.\n  Poacher\tSolid non-terminal +$1; weakens late as supply piles empty.\n  Remodel\t\"Upgrade engine: Estate into a $4 card early, Gold into Province late.\"\n  Smithy\tGreat terminal draw — 1-2 copies plus treasures is a classic strong plan.\n  Throne Room\tOnly as good as your other action cards — needs strong targets first.\n  Bandit\tFree Gold each play while trashing opponents' Silver/Gold — strong tempo.\n  Council Room\tHuge draw plus a buy, but gifts the opponent a card — use with strong turns.\n  Festival\tNon-terminal economy — actions, buy, and $2 with no downside.\n  Laboratory\tPremium engine card — pure card advantage, never a dead draw.\n  Library\tBest after attacks or with small hands — refills to 7 cards.\n  Market\tAlways-safe non-terminal — a little of everything, never dead.\n  Mine\tSlow treasure upgrading (Copper→Silver→Gold) — mediocre in most games.\n  Sentry\tExcellent — trashes junk off the top of your deck every single play.\n  Witch\tTop-tier attack — every play junks the opponent's deck; buy early at $5.\n  Artisan\tGains a $5 card straight to hand — strong, flexible engine builder.\n\nYOUR TASK: Given CURRENT STATE and strategic context, pick the single best action. The user message includes LEGAL ACTIONS — a numbered list of every action you may take right now. You MUST pick exactly one entry by its number. Never invent an action that is not in the list.\n\nOUTPUT FORMAT — reply with ONLY this JSON object, no other text, no markdown fences. Write your reasoning FIRST, then the choice. Explain only the decisive benefit and relevant tradeoff of this choice in 1-2 sentences, grounded in current facts and printed effects. Omit unrelated predictions and unsupported mechanics:\n{\"reasoning\": \"<1-2 sentences why>\", \"choice\": <number from LEGAL ACTIONS>}\n\nEXAMPLE (buy phase, $3 available, all treasures already played):\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[4\t]{choice\ttype\tcard}:\n  1\tbuy_card\tSilver\n  2\tbuy_card\tCopper\n  3\tbuy_card\tEstate\n  4\tend_phase\t\"\"\nCorrect reply:\n{\"reasoning\": \"With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.\", \"choice\": 1}\n\nCRITICAL BUY PHASE RULE: check you.currentTreasuresInHand first. While it contains cards, you MUST choose a play_treasure option from LEGAL ACTIONS. Only when it is empty may you buy or end the phase.\n\n🚨 STRATEGY OVERRIDE RULES 🚨\nIF strategyOverride is present in strategic context:\n  - IGNORE ALL default decision framework guidance below\n  - The strategyOverride is your ONLY strategic guidance\n  - Follow its strategic preferences within the rules; RULE AUTHORITY always applies\n  - Default rules (like \"never buy Copper/Curse\" or \"skip bad buys\") DO NOT APPLY\n\nDEFAULT DECISION FRAMEWORK (only applies when NO strategyOverride present):\n- Context: you is the decision player, which may differ from activePlayerId during attacks. Null resources belong to the other player's turn. History uses explicit player IDs.\n- Strategy summaries are fallible advice from an earlier state. Recheck them against CURRENT STATE, analysisAgeTurns, and the legal choices. Prefer current facts when advice conflicts.\n- Plan for this kingdom: compare economy, draw/action engines, attacks and alternate VP strategies. Evaluate the best sequence this turn, not just the most expensive card.\n- Treasure hierarchy: Gold (+3) > Silver (+2) > Copper (+1) for raw treasure output, but cost, synergies and needed engine pieces can make another purchase better.\n- Copper trap: You START with 7 Copper. Almost never buy Copper unless a specific synergy or winning pile-out justifies it.\n- Skip the buy: Not buying > buying junk, unless that purchase scores needed VP or creates a favorable game end.\n- Victory timing: Province is valuable but not automatic. Estate, Duchy and Gardens can be decisive. Game ending soon: inspect all opponents' scores and purchaseConsequences before emptying Province or a third pile. Avoid ending behind; evaluate whether building longer improves your chance to win.\n- purchaseConsequences projects one purchase only, before further actions or effects. Its winner follows this engine's scoring rules. Reassess after every move.\n- Dilution math: A 10-card deck drawing 5 cards/turn cycles quickly. Use drawPileCount, discardPileCount and nextFiveCardDrawNeedsShuffle to judge when a new card can matter.\n- Action cards: +Cards need sufficient +Actions and payload. Terminals compete for actions. Printed draw/action totals are approximate, not simulated turn output.\n- For trash/discard/topdeck decisions, evaluate the remaining hand and next draws, preserving necessary economy and action support. Known top cards are listed only when actually revealed.",
+    "user": "CURRENT STATE:\nturn: 1\nactivePlayerId: alice\ndecisionPlayerId: alice\ncurrentGameStage: Early\nyou:\n  playerId: alice\n  isYourTurn: true\n  currentPhase: action\n  currentActions: 0\n  currentBuys: 1\n  currentCoins: 0\n  currentVictoryPoints: 2\n  currentDeckComposition:\n    Silver: 1\n    Gold: 1\n    Copper: 4\n    Estate: 2\n    Bandit: 1\n    \"Throne Room\": 1\n  currentHand:\n    Bandit: 1\n    Estate: 1\n    Copper: 2\n  currentDiscard:\n  currentInPlay:\n    \"Throne Room\": 1\nopponents[1\t]:\n  - playerId: bob\n    currentVictoryPoints: 3\n    totalCards: 10\n    currentDeckComposition:\n      Estate: 3\n      Copper: 7\n    currentDiscard:\n    currentInPlay:\ndecisionFacts:\n  totalCards: 10\n  actionCards: 2\n  terminalActions: 2\n  printedExtraActions: 0\n  printedDrawCards: 0\n  note: Printed bonuses only; conditional effects, replay and action order can change actual output.\n  drawPileCount: 5\n  discardPileCount: 0\n  nextFiveCardDrawNeedsShuffle: false\n  scoreLead: -1\n  emptyPiles: []\n  purchaseConsequences: []\nsupply[33\t]{card\tcount\tcost}:\n  Estate\t8\t2\n  Duchy\t8\t5\n  Province\t8\t8\n  Copper\t46\t0\n  Silver\t40\t3\n  Gold\t30\t6\n  Curse\t10\t0\n  Cellar\t8\t2\n  Chapel\t8\t2\n  Moat\t8\t2\n  Harbinger\t8\t3\n  Merchant\t8\t3\n  Vassal\t8\t3\n  Village\t8\t3\n  Workshop\t8\t3\n  Bureaucrat\t8\t4\n  Gardens\t8\t4\n  Militia\t8\t4\n  Moneylender\t8\t4\n  Poacher\t8\t4\n  Remodel\t8\t4\n  Smithy\t8\t4\n  Throne Room\t8\t4\n  Bandit\t8\t5\n  Council Room\t8\t5\n  Festival\t8\t5\n  Laboratory\t8\t5\n  Library\t8\t5\n  Market\t8\t5\n  Mine\t8\t5\n  Sentry\t8\t5\n  Witch\t8\t5\n  Artisan\t8\t6\ntrash: []\npendingChoice:\n  choiceType: decision\n  playerId: alice\n  prompt: \"Throne Room: Choose an Action to play twice\"\n  cardBeingPlayed: Throne Room\n  options[1\t]: Bandit\n  constraint: select up to 1 card (skipping is allowed)\n  source: hand\n\nSTRATEGIC CONTEXT:\naiDecisionPlan:\n  priority: No analysis yet — choose an economy, engine, attack or alternate scoring plan for this kingdom.\n  conditions[3\t]: Balance draw, actions and payload against the deck and supply.\tScore when it improves winning chances; check pile-ending consequences before ending the game.\tTreat card advice as conditional, not mandatory.\nstrategyOverride: Never buy Curse\n\nRECENT TURN HISTORY:\n[1\t]:\n  - turn: 1\n    playerId: alice\n    actions[1\t]: Throne Room\n    bought: null\n    gained: null\n    trashed: null\n\nACTIONS TAKEN THIS TURN (by alice):\n[1\t]{type\tcard}:\n  play_action\tThrone Room\n\nLEGAL ACTIONS — you MUST choose exactly one by number:\n[2\t]{choice\ttype\tcard}:\n  1\tplay_action\tBandit\n  2\tskip_decision\t\"\"\n\nReply with ONLY: {\"reasoning\": \"<1-2 sentences why>\", \"choice\": <1-2>}"
+  }
+}

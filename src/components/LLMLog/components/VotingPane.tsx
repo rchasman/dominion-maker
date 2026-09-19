@@ -91,8 +91,8 @@ function buildVoteGroups(
     if (!status.action) return voteGroups;
     const top = status.action;
     const topSignature = JSON.stringify(stripReasoning(top));
-    const votes = status.distribution ?? [{ action: top, weight: 1 }];
-    return votes.reduce((groups, { action, weight }) => {
+    const votes = status.distribution ?? [{ move: top, weight: 1 }];
+    return votes.reduce((groups, { move: action, weight }) => {
       const signature = JSON.stringify(stripReasoning(action));
       const isTop = signature === topSignature;
       const existing = groups.get(signature) ?? {

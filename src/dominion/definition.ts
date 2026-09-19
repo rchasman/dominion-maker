@@ -8,6 +8,7 @@ import { getLegalActions } from "../agent/legal-actions";
 import { formatActionDescription, hasCardField } from "../lib/action-utils";
 import { isSimpleTreasure } from "../data/cards";
 import { moveToCommand } from "./move-to-command";
+import { promptRow } from "./moves";
 import { dominionHeuristic } from "./heuristic";
 import { dominionCompound } from "./compound";
 import { dominionLogContext } from "./log-context";
@@ -40,10 +41,7 @@ export const dominionGame: GameDefinition<DominionShape> = {
   moveToCommand,
   moveKey: move => JSON.stringify(stripReasoning(move)),
   describeMove: formatActionDescription,
-  promptRow: move => ({
-    type: move.type,
-    card: hasCardField(move) ? move.card : "",
-  }),
+  promptRow,
   prompt: () => {
     throw new Error("prompt wired in Task 4");
   },

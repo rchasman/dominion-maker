@@ -3,7 +3,8 @@
  */
 
 import type { GameState, CardName, PlayerId } from "../types/game-state";
-import type { Action, WeightedVote } from "../types/action";
+import type { Action } from "../types/action";
+import type { WeightedVote } from "../core/consensus/types";
 import type { DominionEngine } from "../engine";
 import type { CommandResult } from "../commands/types";
 import type { ModelProvider } from "../config/models";
@@ -26,7 +27,7 @@ type GenerateActionParams = {
  */
 export async function generateActionViaBackend(
   params: GenerateActionParams,
-): Promise<{ action: Action; distribution: WeightedVote[] }> {
+): Promise<{ action: Action; distribution: WeightedVote<Action>[] }> {
   const {
     provider,
     currentState,
@@ -66,7 +67,7 @@ export async function generateActionViaBackend(
 
   return {
     action: data.action,
-    distribution: data.distribution ?? [{ action: data.action, weight: 1 }],
+    distribution: data.distribution ?? [{ move: data.action, weight: 1 }],
   };
 }
 

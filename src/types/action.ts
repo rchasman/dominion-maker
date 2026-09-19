@@ -29,9 +29,6 @@ export type Action =
       reasoning?: string;
     };
 
-/** One model's probability mass on one action; a plain vote is weight 1 */
-export type WeightedVote = { action: Action; weight: number };
-
 /**
  * Omit that distributes over union members, preserving each variant's
  * own fields (plain Omit collapses a union to its shared keys).

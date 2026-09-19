@@ -2,7 +2,8 @@
 // Vite dev server proxies /api/* to our handler via middleware
 // Production uses Vercel serverless functions
 
-import type { Action, WeightedVote } from "../types/action";
+import type { Action } from "../types/action";
+import type { WeightedVote } from "../core/consensus/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 
 interface GenerateActionRequest {
@@ -16,7 +17,7 @@ interface GenerateActionRequest {
 
 interface GenerateActionResponse {
   action?: Action;
-  distribution?: WeightedVote[];
+  distribution?: WeightedVote<Action>[];
   error?: number;
   message?: string;
 }

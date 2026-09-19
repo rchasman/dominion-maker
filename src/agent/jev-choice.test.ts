@@ -268,9 +268,9 @@ describe("jevDistribution", () => {
       LEGAL,
     );
     expect(votes).toEqual([
-      { action: { type: "play_treasure", card: "Copper" }, weight: 0.1 },
-      { action: { type: "buy_card", card: "Silver" }, weight: 0.7 },
-      { action: { type: "end_phase" }, weight: 0.2 },
+      { move: { type: "play_treasure", card: "Copper" }, weight: 0.1 },
+      { move: { type: "buy_card", card: "Silver" }, weight: 0.7 },
+      { move: { type: "end_phase" }, weight: 0.2 },
     ]);
   });
 
@@ -282,7 +282,7 @@ describe("jevDistribution", () => {
     expect(votes).toHaveLength(1);
     expect(votes[0]).toMatchObject({
       weight: 1,
-      action: { type: "end_phase" },
+      move: { type: "end_phase" },
     });
   });
 });

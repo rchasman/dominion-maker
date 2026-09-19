@@ -1,6 +1,10 @@
 import { CARDS } from "../data/cards";
 import { encodeToon } from "../lib/toon";
-import { formatLegalActions, replyShape } from "./choice-parsing";
+import {
+  formatNumberedMoves,
+  replyShape,
+} from "../core/consensus/numbered-choice";
+import { promptRow } from "../dominion/moves";
 import type { CardName } from "../types/game-state";
 
 // Only cards in the current game's supply
@@ -58,12 +62,15 @@ ${buildCardStrategyTable(supply)}`;
 // Built by the same formatter as the real list so the example never drifts
 const EXAMPLE_SECTION = `EXAMPLE (buy phase, $3 available, all treasures already played):
 LEGAL ACTIONS — you MUST choose exactly one by number:
-${formatLegalActions([
-  { type: "buy_card", card: "Silver" },
-  { type: "buy_card", card: "Copper" },
-  { type: "buy_card", card: "Estate" },
-  { type: "end_phase" },
-])}
+${formatNumberedMoves(
+  [
+    { type: "buy_card", card: "Silver" },
+    { type: "buy_card", card: "Copper" },
+    { type: "buy_card", card: "Estate" },
+    { type: "end_phase" },
+  ],
+  promptRow,
+)}
 Correct reply:
 {"reasoning": "With $3 the best buy is Silver: it strengthens every future hand, while Copper or an early Estate would dilute the deck.", "choice": 1}`;
 

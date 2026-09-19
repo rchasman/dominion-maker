@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { generateObject, NoObjectGeneratedError, wrapLanguageModel } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { choiceSchema } from "./choice-parsing";
+import { choiceSchema } from "../core/consensus/numbered-choice";
 import { promptJsonMiddleware } from "./model-output";
 
 describe("prompted JSON model compatibility", () => {
