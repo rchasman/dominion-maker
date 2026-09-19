@@ -23,6 +23,50 @@ import { decisionSummary, optionFacts } from "./jev-decision-facts";
 // plain objects with named fields and each option carries its own card advice.
 
 export const JEV_QUESTION_ID = "action";
+export const JEV_PHASE_ID = "gamePhase";
+export const JEV_OPPONENT_ID = "opponentDeckStronger";
+
+export const GAME_PHASE_LEVELS = [
+  "build: keep improving the deck's economy and engine, victory cards would only clog it",
+  "transition: start mixing in Provinces or Duchies while still adding economy",
+  "green: buy victory points now, the game ends too soon for new economy to pay off",
+] as const;
+
+// Speculative companions to the action question. Same state, same call,
+// evaluated in parallel, so they cost tokens but almost no latency.
+export function buildJevReadQuestions() {
+  return {
+    [JEV_PHASE_ID]: {
+      type: "score" as const,
+      instructions:
+        "Which phase of the game is `currentState.you` in right now, judging by `currentState`, `decisionSummary` and how close the game is to ending?",
+      criteria: GAME_PHASE_LEVELS,
+    },
+    [JEV_OPPONENT_ID]: {
+      type: "boolean" as const,
+      instructions:
+        "Is the opponent's deck (see `currentState.opponents`) currently stronger than `currentState.you`'s deck at producing coins, draws and victory points per turn?",
+      criteria: {
+        true: "The opponent's deck would win more turns than yours from here.",
+        false: "Your deck is at least as strong as the opponent's.",
+      },
+    },
+  };
+}
+
+export type JevGameRead = {
+  /** 0..2 along GAME_PHASE_LEVELS */
+  gamePhase: number;
+  /** P(true) that the opponent's deck is stronger */
+  opponentDeckStronger: number;
+};
+
+const PHASE_LABELS = ["build", "transition", "green"] as const;
+
+export function describeGameRead(read: JevGameRead): string {
+  const nearest = PHASE_LABELS[Math.round(read.gamePhase)] ?? "transition";
+  return `Game read: ${nearest} phase (${read.gamePhase.toFixed(1)} of 2); opponent's deck stronger: ${formatPercent(read.opponentDeckStronger)}.`;
+}
 
 const ACTION_VERBS: Record<Action["type"], string> = {
   play_action: "play",
@@ -251,6 +295,7 @@ export type JevVote = {
   action: Action;
   distribution: WeightedVote[];
   answer: JevChoiceAnswer;
+  read: JevGameRead;
   /** TypeSafe's distribution-concentration statistic for the pick, 0-1 */
   confidence: number | undefined;
 };
@@ -286,15 +331,25 @@ export async function askJev(params: {
         stateParams.currentState,
         legalActions,
       ),
+      ...buildJevReadQuestions(),
     },
     maxRetries: 2,
     ...(abortSignal ? { abortSignal } : {}),
   });
   const answer = answers[JEV_QUESTION_ID];
+  const read: JevGameRead = {
+    gamePhase: answers[JEV_PHASE_ID].score,
+    opponentDeckStronger: answers[JEV_OPPONENT_ID].probability,
+  };
+  const picked = jevAnswerToAction(answer, legalActions);
   return {
-    action: jevAnswerToAction(answer, legalActions),
+    action: {
+      ...picked,
+      reasoning: `${picked.reasoning} ${describeGameRead(read)}`,
+    },
     distribution: jevDistribution(answer, legalActions),
     answer,
+    read,
     confidence: readTypesafeConfidence(providerMetadata),
   };
 }

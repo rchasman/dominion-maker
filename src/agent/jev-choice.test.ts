@@ -4,6 +4,9 @@ import {
   buildJevState,
   jevAnswerToAction,
   jevDistribution,
+  describeGameRead,
+  buildJevReadQuestions,
+  GAME_PHASE_LEVELS,
 } from "./jev-choice";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
@@ -278,5 +281,26 @@ describe("jevDistribution", () => {
       weight: 1,
       action: { type: "end_phase" },
     });
+  });
+});
+
+describe("game read companions", () => {
+  it("asks a three-level phase score and an opponent-strength boolean", () => {
+    const questions = buildJevReadQuestions();
+    expect(questions.gamePhase.type).toBe("score");
+    expect(questions.gamePhase.criteria).toHaveLength(3);
+    expect(GAME_PHASE_LEVELS[2]).toContain("green");
+    expect(questions.opponentDeckStronger.type).toBe("boolean");
+  });
+
+  it("names the nearest phase and the opponent probability on one line", () => {
+    expect(
+      describeGameRead({ gamePhase: 1.3, opponentDeckStronger: 0.31 }),
+    ).toBe(
+      "Game read: transition phase (1.3 of 2); opponent's deck stronger: 31%.",
+    );
+    expect(
+      describeGameRead({ gamePhase: 0.2, opponentDeckStronger: 0.9 }),
+    ).toContain("build phase");
   });
 });
