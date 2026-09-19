@@ -16,6 +16,7 @@ import {
   llmLogs$,
   playerStrategies$,
   gameMode$,
+  isProcessing$,
 } from "./game-signals";
 
 /**
@@ -26,6 +27,7 @@ export function useStartGame(
 ): () => void {
   return useCallback(() => {
     abortOngoingConsensus();
+    isProcessing$.value = false;
     invalidateStrategyAnalysis();
     clearGameStateStorage();
 

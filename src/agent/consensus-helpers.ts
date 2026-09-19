@@ -216,7 +216,10 @@ export const handleModelResult = (
     onComplete,
   } = context;
 
-  if (abortController.signal.aborted) return;
+  if (abortController.signal.aborted) {
+    onComplete();
+    return;
+  }
 
   if (modelResult.result) {
     const signature = createActionSignature(modelResult.result);

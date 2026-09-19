@@ -78,24 +78,6 @@ export const GAME_MODE_CONFIG: Record<
   },
 };
 
-const EXPECTED_PLAYER_COUNT = 2;
-
-/**
- * Convert existing players when switching to full mode
- * Preserves player identities: "human" → "player", "ai" stays as is
- */
-export function convertToFullModePlayers(
-  existingPlayers: PlayerId[],
-): PlayerId[] {
-  if (existingPlayers.length !== EXPECTED_PLAYER_COUNT) {
-    return getPlayersForMode("full");
-  }
-
-  return existingPlayers.map(
-    (id): PlayerId => (id === "human" ? "player" : id),
-  );
-}
-
 /**
  * Strategy interface for AI behavior
  * Strategies dispatch commands to the DominionEngine

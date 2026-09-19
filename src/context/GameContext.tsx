@@ -168,7 +168,7 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
     engineRef,
   });
 
-  useAutoPhaseAdvance(engineRef);
+  useAutoPhaseAdvance(gameMode, engineRef);
 
   return <>{children}</>;
 }
