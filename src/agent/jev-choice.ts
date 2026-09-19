@@ -273,9 +273,8 @@ export function buildJevState(params: {
   currentState: GameState;
   strategySummary?: string | undefined;
   customStrategy?: string | undefined;
-  humanChoice?: { selectedCards: string[] } | undefined;
 }): JsonObject {
-  const { currentState, strategySummary, customStrategy, humanChoice } = params;
+  const { currentState, strategySummary, customStrategy } = params;
   const recentTurns = summarizeRecentTurns(currentState);
   return toJsonObject({
     rules: GAME_RULES,
@@ -293,7 +292,6 @@ export function buildJevState(params: {
     ...(currentState.turnHistory.length > 0
       ? { actionsThisTurn: currentState.turnHistory }
       : {}),
-    ...(humanChoice ? { humanChoice: humanChoice.selectedCards } : {}),
   });
 }
 
@@ -389,7 +387,6 @@ export async function askJev(params: {
   legalActions: Action[];
   strategySummary?: string | undefined;
   customStrategy?: string | undefined;
-  humanChoice?: { selectedCards: string[] } | undefined;
   abortSignal?: AbortSignal | undefined;
 }): Promise<JevVote> {
   const { modelId, legalActions, abortSignal, ...stateParams } = params;

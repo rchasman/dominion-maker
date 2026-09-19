@@ -49,7 +49,7 @@ describe("Consensus System", () => {
     global.fetch = mock(async () => {
       await votes[requestIndex++]!.promise;
       return Response.json({
-        action: { type: "discard_card", card: "Estate" },
+        move: { type: "discard_card", card: "Estate" },
       });
     }) as unknown as typeof fetch;
 
@@ -137,7 +137,7 @@ describe("Consensus System", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              action: {
+              move: {
                 type: "play_action",
                 card: "Smithy",
                 reasoning: "Test reasoning",
@@ -241,7 +241,7 @@ describe("Consensus System", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              action,
+              move: action,
             }),
         });
       }

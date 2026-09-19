@@ -12,6 +12,7 @@ import { promptRow } from "./moves";
 import { dominionHeuristic } from "./heuristic";
 import { dominionCompound } from "./compound";
 import { dominionLogContext } from "./log-context";
+import { dominionEvaluate, dominionPrompt } from "./prompt";
 
 export type DominionShape = {
   state: GameState;
@@ -42,9 +43,8 @@ export const dominionGame: GameDefinition<DominionShape> = {
   moveKey: move => JSON.stringify(stripReasoning(move)),
   describeMove: formatActionDescription,
   promptRow,
-  prompt: () => {
-    throw new Error("prompt wired in Task 4");
-  },
+  prompt: dominionPrompt,
+  evaluate: dominionEvaluate,
   logContext: dominionLogContext,
   compound: dominionCompound,
   heuristic: dominionHeuristic,

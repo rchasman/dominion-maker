@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
-import { api } from "./client";
+import { api, createApiClient } from "./client";
 import type { Action } from "../types/action";
 
 // bun's mock() lacks fetch's static properties (preconnect), so cast for assignment
@@ -286,261 +286,104 @@ describe("api.api.generate-action", () => {
     global.fetch = originalFetch;
   });
 
-  describe("post method", () => {
-    it("successfully calls generate-action endpoint with valid response", async () => {
-      const mockAction: Action = {
-        type: "play_action",
-        card: "Village",
-      };
+  const request = {
+    game: "dominion" as const,
+    provider: "openai",
+    currentState: { players: [] },
+  };
 
-      const mockResponse = {
-        action: mockAction,
-      };
-
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify(mockResponse), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      );
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: { players: [] },
-      });
-
-      expect(result.data).toEqual(mockResponse);
-      expect(result.error).toBe(null);
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/generate-action",
-        expect.objectContaining({
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+  it("posts to the endpoint and returns the move payload", async () => {
+    const move: Action = { type: "play_action", card: "Village" };
+    global.fetch = mockFetch(
+      async () =>
+        new Response(JSON.stringify({ move }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         }),
-      );
-    });
+    );
 
-    it("includes all request parameters in fetch body", async () => {
-      const requestBody = {
-        provider: "anthropic",
-        currentState: { score: 50 },
-        humanChoice: { selectedCards: ["gold", "silver"] },
-        legalActions: [{ type: "play-card", card: "gold" }],
-        strategySummary: "Buy expensive cards",
-        customStrategy: "Aggressive strategy",
-      };
+    const result = await api.api["generate-action"].post(request);
 
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
-      );
+    expect(result.data).toEqual({ move });
+    expect(result.error).toBe(null);
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/generate-action",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  });
 
-      await api.api["generate-action"].post(requestBody);
+  it("includes every request parameter in the fetch body", async () => {
+    const body = {
+      ...request,
+      actionId: "t1-buy-1",
+      playerStrategies: { human: { gameplan: "Big Money" } },
+      customStrategy: "Buy Gold at 6",
+    };
+    global.fetch = mockFetch(
+      async () => new Response(JSON.stringify({}), { status: 200 }),
+    );
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/generate-action",
-        expect.objectContaining({
-          body: JSON.stringify(requestBody),
+    await api.api["generate-action"].post(body);
+
+    const callArgs = (global.fetch as any).mock.calls[0];
+    expect(JSON.parse(callArgs[1].body)).toEqual(body);
+  });
+
+  it("returns the server message on an error response", async () => {
+    global.fetch = mockFetch(
+      async () =>
+        new Response(JSON.stringify({ error: 500, message: "Failed" }), {
+          status: 500,
         }),
-      );
+    );
+    const result = await api.api["generate-action"].post(request);
+    expect(result.data).toBe(null);
+    expect(result.error).toEqual({ value: "Failed" });
+  });
+
+  it("falls back to a generic message when the error has none", async () => {
+    global.fetch = mockFetch(
+      async () => new Response(JSON.stringify({ error: 500 }), { status: 500 }),
+    );
+    const result = await api.api["generate-action"].post(request);
+    expect(result.error).toEqual({ value: "Request failed" });
+  });
+
+  it("reports a network failure as the error value", async () => {
+    global.fetch = mockFetch(async () => {
+      throw new Error("Network error");
     });
+    const result = await api.api["generate-action"].post(request);
+    expect(result.data).toBe(null);
+    expect(result.error?.value).toContain("Network error");
+  });
 
-    it("handles error response with error message", async () => {
-      const errorMessage = "Failed to generate action";
-      global.fetch = mockFetch(
-        async () =>
-          new Response(
-            JSON.stringify({
-              error: 500,
-              message: errorMessage,
-            }),
-            {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-      );
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: {},
-      });
-
-      expect(result.data).toBe(null);
-      expect(result.error).toEqual({ value: errorMessage });
+  it("merges custom fetch options", async () => {
+    global.fetch = mockFetch(
+      async () => new Response(JSON.stringify({}), { status: 200 }),
+    );
+    const customHeaders = { Authorization: "Bearer token123" };
+    await api.api["generate-action"].post(request, {
+      fetch: { headers: customHeaders },
     });
+    const callArgs = (global.fetch as any).mock.calls[0];
+    expect(callArgs[1].headers).toEqual(expect.objectContaining(customHeaders));
+  });
 
-    it("handles error response without message", async () => {
-      global.fetch = mockFetch(
-        async () =>
-          new Response(
-            JSON.stringify({
-              error: 400,
-            }),
-            {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-      );
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: {},
-      });
-
-      expect(result.data).toBe(null);
-      expect(result.error).toEqual({ value: "Request failed" });
-    });
-
-    it("handles network error during fetch", async () => {
-      const errorMessage = "Network unavailable";
-      global.fetch = mockFetch(async () => {
-        throw new Error(errorMessage);
-      });
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: {},
-      });
-
-      expect(result.data).toBe(null);
-      expect(result.error).toEqual({ value: `Error: ${errorMessage}` });
-    });
-
-    it("handles timeout error", async () => {
-      global.fetch = mockFetch(async () => {
-        throw new Error("API timeout");
-      });
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: {},
-      });
-
-      expect(result.data).toBe(null);
-      expect(result.error).toEqual({ value: "Error: API timeout" });
-    });
-
-    it("merges custom fetch options", async () => {
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
-      );
-
-      const customHeaders = { Authorization: "Bearer token123" };
-      await api.api["generate-action"].post(
-        { provider: "openai", currentState: {} },
-        { fetch: { headers: customHeaders } },
-      );
-
-      const callArgs = (global.fetch as any).mock.calls[0];
-      expect(callArgs[1].headers).toEqual(
-        expect.objectContaining(customHeaders),
-      );
-    });
-
-    it("handles humanChoice with multiple selected cards", async () => {
-      const requestBody = {
-        provider: "openai",
-        currentState: {},
-        humanChoice: { selectedCards: ["gold", "silver", "copper", "estate"] },
-      };
-
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
-      );
-
-      await api.api["generate-action"].post(requestBody);
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/generate-action",
-        expect.objectContaining({
-          body: JSON.stringify(requestBody),
-        }),
-      );
-    });
-
-    it("handles multiple legal actions", async () => {
-      const requestBody = {
-        provider: "openai",
-        currentState: {},
-        legalActions: [
-          { type: "play-card", card: "gold" },
-          { type: "play-card", card: "silver" },
-          { type: "buy-card", card: "province" },
-          { type: "end-turn" },
-        ],
-      };
-
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
-      );
-
-      await api.api["generate-action"].post(requestBody);
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/generate-action",
-        expect.objectContaining({
-          body: JSON.stringify(requestBody),
-        }),
-      );
-    });
-
-    it("handles response without action field", async () => {
-      global.fetch = mockFetch(
-        async () =>
-          new Response(JSON.stringify({}), {
-            status: 200,
-          }),
-      );
-
-      const result = await api.api["generate-action"].post({
-        provider: "openai",
-        currentState: {},
-      });
-
-      expect(result.data).toEqual({});
-      expect(result.error).toBe(null);
-    });
-
-    it("handles different provider types", async () => {
-      const providers = ["openai", "anthropic", "custom"];
-
-      for (const provider of providers) {
-        global.fetch = mockFetch(
-          async () =>
-            new Response(JSON.stringify({}), {
-              status: 200,
-            }),
-        );
-
-        await api.api["generate-action"].post({
-          provider,
-          currentState: {},
-        });
-
-        expect(global.fetch).toHaveBeenCalledWith(
-          "/api/generate-action",
-          expect.objectContaining({
-            method: "POST",
-          }),
-        );
-      }
-    });
+  it("prefixes the base URL when one is given", async () => {
+    global.fetch = mockFetch(
+      async () => new Response(JSON.stringify({}), { status: 200 }),
+    );
+    await createApiClient("https://example.test").api["generate-action"].post(
+      request,
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://example.test/api/generate-action",
+      expect.anything(),
+    );
   });
 });
 
@@ -568,6 +411,7 @@ describe("api structure", () => {
       currentState: {},
     });
     const generatePromise = api.api["generate-action"].post({
+      game: "dominion",
       provider: "openai",
       currentState: {},
     });

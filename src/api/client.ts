@@ -7,16 +7,16 @@ import type { WeightedVote } from "../core/consensus/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 
 interface GenerateActionRequest {
+  game: "dominion";
   provider: string;
-  actionId?: string;
+  actionId?: string | undefined;
   currentState: unknown;
-  humanChoice?: { selectedCards: string[] };
-  strategySummary?: string;
-  customStrategy?: string;
+  playerStrategies?: Record<string, unknown> | undefined;
+  customStrategy?: string | undefined;
 }
 
 interface GenerateActionResponse {
-  action?: Action;
+  move?: Action;
   distribution?: WeightedVote<Action>[];
   error?: number;
   message?: string;
@@ -46,97 +46,104 @@ interface AnalyzeStrategyResponse {
   message?: string;
 }
 
-export const api = {
-  api: {
-    "analyze-strategy": {
-      post: async (
-        body: AnalyzeStrategyRequest,
-        options?: { fetch?: RequestInit },
-      ) => {
-        try {
-          const response = await fetch("/api/analyze-strategy", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-            ...options?.fetch,
-          });
+/** `baseUrl` is empty in the browser (same origin) and the API origin in the PartyKit worker */
+export function createApiClient(baseUrl = "") {
+  return {
+    api: {
+      "analyze-strategy": {
+        post: async (
+          body: AnalyzeStrategyRequest,
+          options?: { fetch?: RequestInit },
+        ) => {
+          try {
+            const response = await fetch(`${baseUrl}/api/analyze-strategy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+              ...options?.fetch,
+            });
 
-          const data = (await response.json()) as AnalyzeStrategyResponse;
+            const data = (await response.json()) as AnalyzeStrategyResponse;
 
-          if (!response.ok) {
+            if (!response.ok) {
+              return {
+                data: null,
+                error: { value: data.message || "Request failed" },
+              };
+            }
+
+            return { data, error: null };
+          } catch (err) {
+            return { data: null, error: { value: String(err) } };
+          }
+        },
+      },
+      "verify-action": {
+        post: async (
+          body: VerifyActionRequest,
+          options?: { fetch?: RequestInit },
+        ) => {
+          try {
+            const response = await fetch(`${baseUrl}/api/verify-action`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+              ...options?.fetch,
+            });
+            const data = (await response.json()) as VerifyActionResponse;
+            if (!response.ok) {
+              return {
+                data: null,
+                error: {
+                  value: data.message || data.error || "Request failed",
+                },
+              };
+            }
+            return { data, error: null };
+          } catch (error) {
             return {
               data: null,
-              error: { value: data.message || "Request failed" },
+              error: {
+                value: error instanceof Error ? error.message : "Network error",
+              },
             };
           }
-
-          return { data, error: null };
-        } catch (err) {
-          return { data: null, error: { value: String(err) } };
-        }
+        },
       },
-    },
-    "verify-action": {
-      post: async (
-        body: VerifyActionRequest,
-        options?: { fetch?: RequestInit },
-      ) => {
-        try {
-          const response = await fetch("/api/verify-action", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-            ...options?.fetch,
-          });
-          const data = (await response.json()) as VerifyActionResponse;
-          if (!response.ok) {
-            return {
-              data: null,
-              error: { value: data.message || data.error || "Request failed" },
-            };
+      "generate-action": {
+        post: async (
+          body: GenerateActionRequest,
+          options?: { fetch?: RequestInit },
+        ) => {
+          try {
+            const response = await fetch(`${baseUrl}/api/generate-action`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+              ...options?.fetch,
+            });
+
+            const data = (await response.json()) as GenerateActionResponse;
+
+            if (!response.ok) {
+              return {
+                data: null,
+                error: { value: data.message || "Request failed" },
+              };
+            }
+
+            return { data, error: null };
+          } catch (err) {
+            return { data: null, error: { value: String(err) } };
           }
-          return { data, error: null };
-        } catch (error) {
-          return {
-            data: null,
-            error: {
-              value: error instanceof Error ? error.message : "Network error",
-            },
-          };
-        }
+        },
       },
     },
-    "generate-action": {
-      post: async (
-        body: GenerateActionRequest,
-        options?: { fetch?: RequestInit },
-      ) => {
-        try {
-          const response = await fetch("/api/generate-action", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-            ...options?.fetch,
-          });
+  };
+}
 
-          const data = (await response.json()) as GenerateActionResponse;
-
-          if (!response.ok) {
-            return {
-              data: null,
-              error: { value: data.message || "Request failed" },
-            };
-          }
-
-          return { data, error: null };
-        } catch (err) {
-          return { data: null, error: { value: String(err) } };
-        }
-      },
-    },
-  },
-};
+export const api = createApiClient();

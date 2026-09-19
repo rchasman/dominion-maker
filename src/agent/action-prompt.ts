@@ -14,15 +14,9 @@ export function buildUserMessage(params: {
   currentState: GameState;
   recentTurnsStr: string;
   legalActions: Action[];
-  humanChoice?: { selectedCards: string[] } | undefined;
 }): string {
-  const {
-    strategicContext,
-    currentState,
-    recentTurnsStr,
-    legalActions,
-    humanChoice,
-  } = params;
+  const { strategicContext, currentState, recentTurnsStr, legalActions } =
+    params;
 
   // Optimize state by converting arrays to counts
   const optimizedState = optimizeStateForAI(currentState);
@@ -37,10 +31,6 @@ export function buildUserMessage(params: {
         ]
       : [];
 
-  const humanChoiceSection = humanChoice
-    ? [`Human chose: ${encodeToon(humanChoice.selectedCards)}`]
-    : [];
-
   const legalActionsSection = [
     `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatNumberedMoves(legalActions, promptRow)}`,
     replyFormatInstruction(legalActions.length),
@@ -51,7 +41,6 @@ export function buildUserMessage(params: {
     `STRATEGIC CONTEXT:\n${strategicContext}`,
     ...(recentTurnsStr ? [recentTurnsStr] : []),
     ...turnHistorySection,
-    ...humanChoiceSection,
     ...legalActionsSection,
   ];
 

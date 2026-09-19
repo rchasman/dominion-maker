@@ -12,10 +12,7 @@ import { ALL_FAST_MODELS } from "../core/consensus/roster";
 import { dominionGame } from "../dominion/definition";
 import { reasoningOf } from "../dominion/moves";
 import { agentLogger } from "../lib/logger";
-import {
-  generateActionViaBackend,
-  verifyConsensusWinner,
-} from "./game-agent-helpers";
+import { httpDecideMove, httpVerifyMove } from "./http-decide-move";
 import {
   DEFAULT_MODEL_SETTINGS,
   buildModelsFromSettings,
@@ -82,34 +79,12 @@ export async function advanceGameStateWithConsensus(
       customStrategy: config.customStrategy ?? "",
     },
     {
-      decideMove: async ({
-        provider,
-        state,
-        actionId,
-        playerStrategies,
-        customStrategy,
-        signal,
-      }) => {
-        const { action, distribution } = await generateActionViaBackend({
-          provider,
-          currentState: state,
-          actionId,
-          signal,
-          strategySummary: JSON.stringify(playerStrategies),
-          customStrategy,
-        });
-        return { move: action, distribution };
-      },
-      ...(config.logger !== undefined && { logger: config.logger }),
+      decideMove: httpDecideMove(),
+      ...(config.logger !== undefined && {
+        logger: config.logger,
+        verifyMove: httpVerifyMove("", config.logger),
+      }),
       getPlayerStrategies: () => parseStrategies(config.strategySummary),
-      verifyMove: (state, move, actionId, customStrategy) =>
-        verifyConsensusWinner({
-          currentState: state,
-          action: move,
-          actionId,
-          customStrategy,
-          logger: config.logger,
-        }),
       reasoningOf,
     },
   );

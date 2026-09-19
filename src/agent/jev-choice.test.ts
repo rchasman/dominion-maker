@@ -181,16 +181,14 @@ describe("buildJevState", () => {
     expect(JSON.stringify(jevState)).not.toContain("\t");
   });
 
-  it("carries the custom strategy override and the human choice when given", () => {
+  it("carries the custom strategy override when given", () => {
     const jevState = buildJevState({
       currentState: buyPhaseState(),
       customStrategy: "Always buy Province at $8",
-      humanChoice: { selectedCards: ["Moat"] },
     });
 
     expect(jevState).toMatchObject({
       strategy: { strategyOverride: "Always buy Province at $8" },
-      humanChoice: ["Moat"],
     });
   });
 });

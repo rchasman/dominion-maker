@@ -1,5 +1,5 @@
 import { actionRequestSchema, readRequest } from "./_request";
-import { buildUserMessage } from "../src/agent/action-prompt";
+import { GAMES } from "./_games";
 import {
   generateObject,
   gateway,
@@ -10,23 +10,16 @@ import type { ModelMessage } from "ai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState } from "../src/types/game-state";
-import { buildSystemPrompt } from "../src/agent/system-prompt";
 import {
   choiceSchema,
   choiceToMove,
   replyFormatInstruction,
 } from "../src/core/consensus/numbered-choice";
 import { withReasoning } from "../src/dominion/moves";
-import { getLegalActions } from "../src/agent/legal-actions";
 import { MODELS, type ModelConfig } from "../src/config/models";
-import {
-  buildStrategicContext,
-  formatTurnHistoryForAnalysis,
-} from "../src/agent/strategic-context";
 import { apiLogger } from "../src/lib/logger";
 import { env } from "../src/lib/env";
 import { promptJsonMiddleware } from "../src/agent/model-output";
-import { askJev } from "../src/agent/jev-choice";
 
 // HTTP Status Codes
 const HTTP_BAD_REQUEST = 400;
@@ -108,10 +101,10 @@ function getDevToolsMiddleware(
 }
 
 interface RequestBody {
+  game: keyof typeof GAMES;
   provider: string;
   currentState: GameState;
-  humanChoice?: { selectedCards: string[] } | undefined;
-  strategySummary?: string | undefined;
+  playerStrategies?: Record<string, unknown> | undefined;
   customStrategy?: string | undefined;
   actionId?: string | undefined; // For grouping consensus votes in devtools
 }
@@ -121,24 +114,19 @@ async function processGenerationRequest(
   body: RequestBody,
   res: VercelResponse,
 ): Promise<VercelResponse> {
-  const {
-    provider: bodyProvider,
-    currentState,
-    humanChoice,
-    strategySummary,
-    customStrategy,
-    actionId,
-  } = body;
-  const provider = bodyProvider;
-
-  if (!provider || !currentState) {
-    return res
-      .status(HTTP_BAD_REQUEST)
-      .json({ error: "Missing required fields: provider, currentState" });
-  }
+  const { provider, currentState, actionId } = body;
+  const { game } = GAMES[body.game];
+  const playerStrategies = body.playerStrategies ?? {};
+  const customStrategy = body.customStrategy ?? "";
 
   // Derived server-side so the numbering can never disagree with the state
-  const legalActions = getLegalActions(currentState);
+  const player = game.whoMustAct(currentState);
+  if (player === null) {
+    return res
+      .status(HTTP_BAD_REQUEST)
+      .json({ error: "Nobody has to act in the current state" });
+  }
+  const legalActions = game.legalMoves(currentState, player);
   if (legalActions.length === 0) {
     return res
       .status(HTTP_BAD_REQUEST)
@@ -150,26 +138,26 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
-  if (config.evaluation) {
-    const { action, distribution } = await askJev({
-      modelId: config.fullName,
-      currentState,
-      legalActions,
-      strategySummary,
-      customStrategy,
-      ...(humanChoice ? { humanChoice } : {}),
-    });
-    return res.status(HTTP_OK).json({ action, distribution, strategySummary });
-  }
-
-  // Format recent turn history (last 3 turns) from log with TOON encoding
-  const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
-
-  const strategicContext = buildStrategicContext(
-    currentState,
-    strategySummary,
+  const promptInput = {
+    state: currentState,
+    player,
+    moves: legalActions,
+    playerStrategies,
     customStrategy,
-  );
+  };
+
+  if (config.evaluation) {
+    if (!game.evaluate) {
+      return res
+        .status(HTTP_BAD_REQUEST)
+        .json({ error: "This game has no evaluation model" });
+    }
+    const { move, distribution } = await game.evaluate({
+      ...promptInput,
+      modelId: config.fullName,
+    });
+    return res.status(HTTP_OK).json({ move, distribution });
+  }
 
   const devTools = getDevToolsMiddleware(actionId);
   const middleware = [
@@ -181,15 +169,7 @@ async function processGenerationRequest(
     ? wrapLanguageModel({ model: baseModel, middleware })
     : baseModel;
 
-  const userMessage = buildUserMessage({
-    strategicContext,
-    currentState,
-    recentTurnsStr,
-    legalActions,
-    ...(humanChoice ? { humanChoice } : {}),
-  });
-
-  const systemPrompt = buildSystemPrompt(currentState.supply);
+  const { system: systemPrompt, user: userMessage } = game.prompt(promptInput);
 
   // No text repair by design — invalid replies get one corrective retry and
   // habitual misformatters surface as warns (roster live-verified 2026-09)
@@ -224,8 +204,8 @@ async function processGenerationRequest(
   };
 
   try {
-    const action = await attempt([{ role: "user", content: userMessage }]);
-    return res.status(HTTP_OK).json({ action, strategySummary });
+    const move = await attempt([{ role: "user", content: userMessage }]);
+    return res.status(HTTP_OK).json({ move });
   } catch (err) {
     if (!NoObjectGeneratedError.isInstance(err)) {
       return generationFailed(err as Error);
@@ -239,7 +219,7 @@ async function processGenerationRequest(
     );
 
     try {
-      const action = await attempt([
+      const move = await attempt([
         { role: "user", content: userMessage },
         { role: "assistant", content: err.text ?? "" },
         {
@@ -247,7 +227,7 @@ async function processGenerationRequest(
           content: `Your previous reply was invalid: ${reason}. ${replyFormatInstruction(legalActions.length)}`,
         },
       ]);
-      return res.status(HTTP_OK).json({ action, strategySummary });
+      return res.status(HTTP_OK).json({ move });
     } catch (retryErr) {
       if (!NoObjectGeneratedError.isInstance(retryErr)) {
         return generationFailed(retryErr as Error);

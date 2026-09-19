@@ -152,6 +152,35 @@ describe("llmController", () => {
     expect(types.filter(t => t === "consensus-voting")).toHaveLength(2);
   });
 
+  it("keeps each model's reasoning in the voting log", async () => {
+    const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
+    const entries: LLMLogEntryInput[] = [];
+    const controller = llmController(
+      dominionGame,
+      { ...DEFAULT_LLM_SEAT, consensusCount: 1, models: ["gpt-5.4-mini"] },
+      {
+        decideMove: pick({
+          type: "play_action",
+          card: "Smithy",
+          reasoning: "Test reasoning",
+        }),
+        getPlayerStrategies: noStrategies,
+        logger: entry => {
+          entries.push(entry);
+        },
+        reasoningOf: move => move.reasoning,
+      },
+    );
+    await controller.decide(engine, "alice", signal());
+    const voting = entries.find(e => e.type === "consensus-voting");
+    const results = voting?.data?.["allResults"];
+    expect(Array.isArray(results)).toBe(true);
+    if (!Array.isArray(results)) return;
+    expect(results[0]).toMatchObject({
+      reasonings: [{ provider: "gpt-5.4-mini", reasoning: "Test reasoning" }],
+    });
+  });
+
   it("reads the strategies fresh on every decision", async () => {
     const engine = fixture(["Village", "Smithy", "Copper", "Copper", "Estate"]);
     const box: { strategies: Record<string, unknown> } = {
