@@ -641,9 +641,9 @@ export async function advanceGameStateWithConsensus(
       data: { action: actionDesc, turn: currentState.turn },
     });
 
-    const success = executeActionWithEngine(engine, action, playerId);
-    if (!success) {
-      agentLogger.error(`Failed to execute: ${actionDesc}`);
+    const result = executeActionWithEngine(engine, action, playerId);
+    if (!result.ok) {
+      agentLogger.error(`Failed to execute: ${actionDesc}: ${result.error}`);
     }
     return;
   }
@@ -739,10 +739,10 @@ export async function advanceGameStateWithConsensus(
 
   // Execute winner action via engine
   const actionDesc = formatActionDescription(winner.action);
-  const success = executeActionWithEngine(engine, winner.action, playerId);
+  const result = executeActionWithEngine(engine, winner.action, playerId);
 
-  if (!success) {
-    agentLogger.error(`Failed to execute: ${actionDesc}`);
+  if (!result.ok) {
+    agentLogger.error(`Failed to execute: ${actionDesc}: ${result.error}`);
   }
 
   const overallDuration = performance.now() - overallStart;

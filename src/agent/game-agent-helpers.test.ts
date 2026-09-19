@@ -5,6 +5,8 @@ import {
 } from "./game-agent-helpers";
 import type { GameState } from "../types/game-state";
 import { DominionEngine } from "../engine";
+import { getLegalActions } from "./legal-actions";
+import { KINGDOM_CARDS } from "../data/cards";
 
 describe("generateActionViaBackend", () => {
   it("should call API with correct parameters", async () => {
@@ -109,7 +111,7 @@ describe("executeActionWithEngine", () => {
       "player1",
     );
 
-    expect(result).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("should execute play_treasure", () => {
@@ -124,7 +126,7 @@ describe("executeActionWithEngine", () => {
       "player1",
     );
 
-    expect(result).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("should execute buy_card", () => {
@@ -140,7 +142,7 @@ describe("executeActionWithEngine", () => {
       "player1",
     );
 
-    expect(result).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("should execute end_phase", () => {
@@ -154,7 +156,7 @@ describe("executeActionWithEngine", () => {
       "player1",
     );
 
-    expect(result).toBe(true);
+    expect(result.ok).toBe(true);
   });
 
   it("should throw error for action without required card", () => {
@@ -168,5 +170,49 @@ describe("executeActionWithEngine", () => {
         "player1",
       ),
     ).toThrow("play_action requires card");
+  });
+});
+
+describe("executeActionWithEngine during a pending play decision", () => {
+  function engineWithThroneRoomDecision(): DominionEngine {
+    const engine = new DominionEngine();
+    engine.startGame(["ai", "human"], KINGDOM_CARDS, 42);
+    engine.applyExternalEvents([
+      {
+        type: "INITIAL_DECK_DEALT",
+        playerId: "ai",
+        cards: ["Copper", "Copper", "Throne Room", "Bandit", "Estate"],
+      },
+      {
+        type: "INITIAL_HAND_DRAWN",
+        playerId: "ai",
+        cards: ["Throne Room", "Bandit", "Estate"],
+      },
+    ]);
+    const played = engine.playAction("ai", "Throne Room");
+    if (!played.ok) throw new Error(played.error);
+    return engine;
+  }
+
+  it("offers play_action for the Throne Room target", () => {
+    const engine = engineWithThroneRoomDecision();
+    expect(getLegalActions(engine.state)).toEqual([
+      { type: "play_action", card: "Bandit" },
+      { type: "skip_decision" },
+    ]);
+  });
+
+  it("submits play_action as the decision answer instead of a new play", () => {
+    const engine = engineWithThroneRoomDecision();
+
+    const result = executeActionWithEngine(
+      engine,
+      { type: "play_action", card: "Bandit" },
+      "ai",
+    );
+
+    expect(result.ok).toBe(true);
+    expect(engine.state.pendingChoice).toBeNull();
+    expect(engine.state.players.ai!.inPlay).toEqual(["Throne Room", "Bandit"]);
   });
 });
