@@ -11,13 +11,21 @@ const caseState = (id: string) => {
 describe("decisionSummary", () => {
   it("names the score position and game-end proximity instead of leaving Jev to subtract", () => {
     const behind = decisionSummary(caseState("endgame-behind-dont-end"));
-    expect(behind.scorePosition).toBe("behind by a Province or more");
-    expect(behind.gameEnd).toBe("the game can end on the next purchase");
+    expect(behind.scorePosition).toBe("behind by one Province or more");
+    expect(behind.gameEnd).toBe(
+      "at least one purchase available right now ends the game",
+    );
 
     const opening = decisionSummary(caseState("open-4"));
     expect(opening.scorePosition).toBe("tied on victory points");
-    expect(opening.gameEnd).toBe("the game is not close to ending");
-    expect(opening.deckMoney).toBe("thin on money");
+    expect(opening.gameEnd).toBe(
+      "no purchase available right now ends the game",
+    );
+    expect(opening).not.toHaveProperty("deckMoney");
+
+    expect(decisionSummary(caseState("militia-discard")).gameEnd).toBe(
+      "no purchase is being decided right now",
+    );
   });
 });
 
@@ -44,10 +52,10 @@ describe("optionFacts", () => {
     ).toContain("+2 Actions");
   });
 
-  it("says when an empty Curse pile neuters a curser", () => {
+  it("says when a pile a card's text names is empty, for any card", () => {
     const state = caseState("empty-curses-no-witch");
-    expect(optionFacts(state, { type: "buy_card", card: "Witch" })).toContain(
-      "Curse pile is empty",
+    expect(optionFacts(state, { type: "buy_card", card: "Witch" })).toBe(
+      "The Curse pile is empty, so the part of this card that gives Curse does nothing.",
     );
     expect(optionFacts(state, { type: "buy_card", card: "Market" })).toBeNull();
     expect(

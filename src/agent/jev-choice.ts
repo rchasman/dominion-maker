@@ -30,7 +30,7 @@ const JEV_OPPONENT_ID = "opponentDeckStronger";
 
 export const GAME_PHASE_LEVELS = [
   "build: keep improving the deck's economy and engine, victory cards would only clog it",
-  "transition: start mixing in Provinces or Duchies while still adding economy",
+  "transition: start mixing in victory cards while still adding economy",
   "green: buy victory points now, the game ends too soon for new economy to pay off",
 ] as const;
 
@@ -219,12 +219,12 @@ function jevInstructions(state: GameState, legalActions: Action[]): string {
     return `${pending.cardBeingPlayed ?? "A card effect"} asks you to ${verb} a card (\`currentState.pendingChoice\` gives the exact constraint). Which card should you ${verb} now?${skip} ${AUTHORITY}`;
   }
   if (state.phase === "action") {
-    return `It is your Action phase with ${state.actions} action${state.actions === 1 ? "" : "s"} left. Which action card should you play now, or should you end the phase and move to buying? Cards that give +Actions go before terminal cards. ${AUTHORITY}`;
+    return `It is your Action phase with ${state.actions} action${state.actions === 1 ? "" : "s"} left. Which action card should you play now, or should you end the phase and move to buying? ${AUTHORITY}`;
   }
   if (
     offeredToJev(legalActions).every(o => o.action.type === "play_treasure")
   ) {
-    return `It is your Buy phase and you still hold treasures. Which treasure should you play next? Every treasure in hand gets played before buying; the order rarely matters. ${AUTHORITY}`;
+    return `It is your Buy phase and you still hold treasures. Which treasure should you play next? Every treasure in hand gets played before buying. ${AUTHORITY}`;
   }
   return `It is your Buy phase with ${state.coins} coins and ${state.buys} buy${state.buys === 1 ? "" : "s"}. Which card should you buy now, or should you end the phase without buying? ${AUTHORITY}`;
 }
