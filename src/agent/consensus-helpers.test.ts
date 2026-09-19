@@ -6,6 +6,7 @@ import {
   checkEarlyConsensus,
   handleModelSuccess,
   handleModelError,
+  handleModelResult,
   isActionValid,
   selectConsensusWinner,
   MODEL_TIMEOUT_MS,
@@ -758,4 +759,42 @@ it("preserves different explanations from repeated instances of one model", () =
     "Economy",
     "Action balance",
   ]);
+});
+
+describe("handleModelResult", () => {
+  const aborted = (): AbortController => {
+    const controller = new AbortController();
+    controller.abort();
+    return controller;
+  };
+
+  it("still reports completion after the consensus was aborted", () => {
+    const onComplete = mock(() => {});
+    const onEarlyConsensus = mock(() => {});
+
+    handleModelResult(
+      {
+        provider: "gpt-5.4-mini",
+        result: null,
+        error: new Error("aborted"),
+        duration: 1,
+      },
+      {
+        currentState: createGame(["human", "ai"]).state,
+        actionId: "t1",
+        abortController: aborted(),
+        voteGroups: new Map(),
+        completedResultsMap: new Map(),
+        aheadByK: 2,
+        pendingModels: new Set(),
+        modelStartTimes: new Map(),
+        providers: ["gpt-5.4-mini"],
+        onEarlyConsensus,
+        onComplete,
+      },
+    );
+
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(onEarlyConsensus).not.toHaveBeenCalled();
+  });
 });
