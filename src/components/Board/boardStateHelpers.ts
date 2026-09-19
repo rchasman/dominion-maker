@@ -25,6 +25,7 @@ export interface BoardState {
   localPlayerId: PlayerId;
   opponentPlayerId: PlayerId;
   isLocalPlayerTurn: boolean;
+  canLocalPlayerAct: boolean;
   canBuy: boolean;
   opponent: GameState["players"][PlayerId];
   localPlayer: GameState["players"][PlayerId];
@@ -60,8 +61,12 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   const isLocalPlayerTurn =
     !isSpectator && displayState.activePlayerId === resolvedLocalPlayerId;
 
+  const isLocalPlayerAI = isAIControlled(gameMode, resolvedLocalPlayerId);
+
+  const canLocalPlayerAct = isLocalPlayerTurn && !isLocalPlayerAI;
+
   const canBuy = canBuyCards(
-    isLocalPlayerTurn,
+    canLocalPlayerAct,
     displayState.phase,
     displayState.buys,
     isPreviewMode,
@@ -80,14 +85,12 @@ export function computeBoardState(params: BoardStateParams): BoardState {
   const hint = getHintText({
     displayState,
     localPlayerId: resolvedLocalPlayerId,
-    isLocalPlayerTurn,
+    isLocalPlayerTurn: canLocalPlayerAct,
     hasPlayableActions,
     hasTreasuresInHand,
   });
 
   const isOpponentAI = isAIControlled(gameMode, opponentPlayerId);
-
-  const isLocalPlayerAI = isAIControlled(gameMode, resolvedLocalPlayerId);
 
   const result: BoardState = {
     displayState,
@@ -95,6 +98,7 @@ export function computeBoardState(params: BoardStateParams): BoardState {
     localPlayerId: resolvedLocalPlayerId,
     opponentPlayerId,
     isLocalPlayerTurn,
+    canLocalPlayerAct,
     canBuy,
     opponent,
     localPlayer,

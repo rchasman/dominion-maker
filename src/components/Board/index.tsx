@@ -65,12 +65,13 @@ export function Board({ onBackToHome }: BoardProps) {
   const localPlayerId = boardState.localPlayerId;
 
   const hasPendingDecision =
+    !boardState.isLocalPlayerAI &&
     !!boardState.displayState.pendingChoice &&
     boardState.displayState.pendingChoice.playerId === localPlayerId;
 
   const callbacks = createBoardCallbacks({
     isPreviewMode,
-    isLocalPlayerTurn: boardState.isLocalPlayerTurn,
+    isLocalPlayerTurn: boardState.canLocalPlayerAct,
     hasPendingDecision,
     localPlayerId,
     phase: boardState.displayState.phase,
