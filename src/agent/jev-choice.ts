@@ -12,7 +12,6 @@ import {
   DECISION_GUIDANCE,
   RULE_AUTHORITY,
   cardDefinitionRows,
-  cardStrategyRows,
 } from "./system-prompt";
 import { buildStrategicFacts, summarizeRecentTurns } from "./strategic-context";
 import { decisionSummary, optionFacts } from "./jev-decision-facts";
@@ -168,7 +167,6 @@ export function buildJevState(params: {
     ruleAuthority: RULE_AUTHORITY,
     decisionGuidance: DECISION_GUIDANCE,
     cardDefinitions: cardDefinitionRows(currentState.supply),
-    cardStrategyAdvice: cardStrategyRows(currentState.supply),
     currentState: optimizeStateForAI(currentState),
     decisionSummary: decisionSummary(currentState),
     strategy: buildStrategicFacts(

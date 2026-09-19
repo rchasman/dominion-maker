@@ -162,7 +162,7 @@ describe("buildJevState", () => {
     expect(jevState.rules).toContain("WIN CONDITION");
     expect(jevState.ruleAuthority).toContain("RULE AUTHORITY");
     expect(Array.isArray(jevState.cardDefinitions)).toBe(true);
-    expect(Array.isArray(jevState.cardStrategyAdvice)).toBe(true);
+    expect(jevState).not.toHaveProperty("cardStrategyAdvice");
     expect(jevState.currentState).toMatchObject({
       you: { currentCoins: 0, currentPhase: "buy" },
     });
