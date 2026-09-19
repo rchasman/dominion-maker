@@ -137,14 +137,15 @@ export function buildPublicPlayerSummaries(state: GameState) {
   });
 }
 
+/** Printed "+N Action" / "+N Card" style bonus from the card text */
+export const printedBonus = (card: CardName, kind: string) =>
+  Number(
+    CARDS[card].description.match(new RegExp(`\\+(\\d+) ${kind}`, "i"))?.[1] ??
+      0,
+  );
+
 function deckFacts(cards: CardName[]) {
   const actions = cards.filter(card => CARDS[card].types.includes("action"));
-  const printedBonus = (card: CardName, kind: string) =>
-    Number(
-      CARDS[card].description.match(
-        new RegExp(`\\+(\\d+) ${kind}`, "i"),
-      )?.[1] ?? 0,
-    );
   return {
     totalCards: cards.length,
     actionCards: actions.length,
@@ -163,7 +164,7 @@ function deckFacts(cards: CardName[]) {
 }
 
 /** One-buy projection using the engine's scoring and ending rules; no hidden draws. */
-function purchaseConsequences(state: GameState) {
+export function purchaseConsequences(state: GameState) {
   if (state.pendingChoice || state.phase !== "buy") return [];
   const player = state.players[state.activePlayerId];
   if (!player) return [];

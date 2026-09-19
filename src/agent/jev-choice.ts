@@ -14,6 +14,7 @@ import {
   cardStrategyRows,
 } from "./system-prompt";
 import { buildStrategicFacts, summarizeRecentTurns } from "./strategic-context";
+import { decisionSummary, optionFacts } from "./jev-decision-facts";
 
 // Jev (TypeSafe's System One model) answers a typed Choice question instead of
 // writing JSON with reasoning. Every legal action becomes one option; the
@@ -61,19 +62,21 @@ function jevOptionKey(index: number, action: Action): string {
   return `${index + 1}. ${describeLegalAction(action)}`;
 }
 
-function describeOption(action: Action): string | null {
+function describeOption(state: GameState, action: Action): string | null {
   const note = ACTION_NOTES[action.type];
+  const facts = optionFacts(state, action);
   if (!hasCardField(action)) return note ?? null;
   const card = CARDS[action.card];
   if (!card) return note ? `${action.card}. ${note}` : action.card;
   return [
     `${card.name} (cost ${card.cost}, ${card.types.join("/")}): ${card.description}`,
+    ...(facts ? [facts] : []),
     ...(note ? [note] : []),
     `Advice: ${card.strategy}`,
   ].join(" ");
 }
 
-export function buildJevQuestion(legalActions: Action[]) {
+export function buildJevQuestion(state: GameState, legalActions: Action[]) {
   return {
     type: "choice" as const,
     instructions:
@@ -81,7 +84,7 @@ export function buildJevQuestion(legalActions: Action[]) {
     criteria: Object.fromEntries(
       legalActions.map((action, index) => [
         jevOptionKey(index, action),
-        describeOption(action),
+        describeOption(state, action),
       ]),
     ),
   };
@@ -128,6 +131,7 @@ export function buildJevState(params: {
     cardDefinitions: cardDefinitionRows(currentState.supply),
     cardStrategyAdvice: cardStrategyRows(currentState.supply),
     currentState: optimizeStateForAI(currentState),
+    decisionSummary: decisionSummary(currentState),
     strategy: buildStrategicFacts(
       currentState,
       strategySummary,
@@ -220,7 +224,12 @@ export async function askJev(params: {
   const { answers, providerMetadata } = await experimental_evaluate({
     model: gateway.evaluationModel(modelId),
     state: buildJevState(stateParams),
-    questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
+    questions: {
+      [JEV_QUESTION_ID]: buildJevQuestion(
+        stateParams.currentState,
+        legalActions,
+      ),
+    },
     maxRetries: 2,
     ...(abortSignal ? { abortSignal } : {}),
   });

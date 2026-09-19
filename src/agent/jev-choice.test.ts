@@ -50,7 +50,7 @@ const buyPhaseState = (): GameState => ({
 });
 
 describe("buildJevQuestion", () => {
-  const question = buildJevQuestion(LEGAL);
+  const question = buildJevQuestion(buyPhaseState(), LEGAL);
 
   it("offers one numbered option per legal action, so duplicate cards stay distinct", () => {
     expect(Object.keys(question.criteria)).toEqual([
@@ -80,7 +80,7 @@ describe("buildJevQuestion", () => {
 
 describe("buildJevQuestion option advice", () => {
   it("puts the card's strategy advice on the option so Jev needs no lookup", () => {
-    const question = buildJevQuestion(LEGAL);
+    const question = buildJevQuestion(buyPhaseState(), LEGAL);
     expect(question.criteria["3. buy Silver"]).toContain("Advice:");
     expect(question.criteria["3. buy Silver"]).toContain(CARDS.Silver.strategy);
   });
