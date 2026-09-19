@@ -1,18 +1,23 @@
+import type { JSONValue } from "ai";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { hasCardField } from "../lib/action-utils";
-import { encodeToon } from "../lib/toon";
-import { optimizeStateForAI, getDecisionPlayerId } from "./state-projection";
+import { optimizeStateForAI } from "./state-projection";
 import {
   GAME_RULES,
   DECISION_GUIDANCE,
-  buildCardReference,
+  RULE_AUTHORITY,
+  cardDefinitionRows,
+  cardStrategyRows,
 } from "./system-prompt";
+import { buildStrategicFacts, summarizeRecentTurns } from "./strategic-context";
 
 // Jev (TypeSafe's System One model) answers a typed Choice question instead of
 // writing JSON with reasoning. Every legal action becomes one option; the
 // answer maps back to the action by its number. No text parsing, no retry.
+// Jev reads JSON, not TOON, and loses accuracy on indirection, so the state is
+// plain objects with named fields and each option carries its own card advice.
 
 export const JEV_QUESTION_ID = "action";
 
@@ -58,17 +63,19 @@ function describeOption(action: Action): string | null {
   const note = ACTION_NOTES[action.type];
   if (!hasCardField(action)) return note ?? null;
   const card = CARDS[action.card];
-  const cardText = card
-    ? `${card.name} (cost ${card.cost}, ${card.types.join("/")}): ${card.description}`
-    : action.card;
-  return note ? `${cardText} ${note}` : cardText;
+  if (!card) return note ? `${action.card}. ${note}` : action.card;
+  return [
+    `${card.name} (cost ${card.cost}, ${card.types.join("/")}): ${card.description}`,
+    ...(note ? [note] : []),
+    `Advice: ${card.strategy}`,
+  ].join(" ");
 }
 
 export function buildJevQuestion(legalActions: Action[]) {
   return {
     type: "choice" as const,
     instructions:
-      "Which one of these legal actions should the player `you` in `currentState` take right now to maximise their chance of winning this game of Dominion? Follow `rules` and `cardReference`; use `strategicContext` and `decisionGuidance` as advice.",
+      "Which one of these legal actions should the player `currentState.you` take right now to maximise their chance of winning this game of Dominion? `rules`, `ruleAuthority` and `cardDefinitions` are binding. `strategy`, `decisionGuidance` and the advice in each option are fallible suggestions; when `strategy.strategyOverride` is present it replaces `decisionGuidance`.",
     criteria: Object.fromEntries(
       legalActions.map((action, index) => [
         jevOptionKey(index, action),
@@ -78,29 +85,58 @@ export function buildJevQuestion(legalActions: Action[]) {
   };
 }
 
+type JsonObject = { [key: string]: JSONValue };
+
+// The projection types carry `unknown` fields; the evaluation API wants proven JSON.
+// Undefined entries are dropped the way JSON.stringify would drop them.
+function toJsonValue(value: unknown): JSONValue {
+  if (value === null || value === undefined) return null;
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(toJsonValue);
+  if (typeof value === "object") return toJsonObject(value);
+  throw new Error(`Jev state cannot hold a ${typeof value}`);
+}
+
+function toJsonObject(value: object): JsonObject {
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, toJsonValue(entry)]),
+  );
+}
+
 export function buildJevState(params: {
   currentState: GameState;
-  strategicContext: string;
-  recentTurnsStr: string;
+  strategySummary?: string | undefined;
+  customStrategy?: string | undefined;
   humanChoice?: { selectedCards: string[] } | undefined;
-}) {
-  const { currentState, strategicContext, recentTurnsStr, humanChoice } =
-    params;
-  return {
+}): JsonObject {
+  const { currentState, strategySummary, customStrategy, humanChoice } = params;
+  const recentTurns = summarizeRecentTurns(currentState);
+  return toJsonObject({
     rules: GAME_RULES,
+    ruleAuthority: RULE_AUTHORITY,
     decisionGuidance: DECISION_GUIDANCE,
-    cardReference: buildCardReference(currentState.supply),
-    decisionPlayer: getDecisionPlayerId(currentState),
-    currentState: encodeToon(optimizeStateForAI(currentState)),
-    strategicContext,
-    ...(recentTurnsStr ? { recentTurns: recentTurnsStr } : {}),
+    cardDefinitions: cardDefinitionRows(currentState.supply),
+    cardStrategyAdvice: cardStrategyRows(currentState.supply),
+    currentState: optimizeStateForAI(currentState),
+    strategy: buildStrategicFacts(
+      currentState,
+      strategySummary,
+      customStrategy,
+    ),
+    ...(recentTurns.length > 0 ? { recentTurns } : {}),
     ...(currentState.turnHistory.length > 0
-      ? { actionsThisTurn: encodeToon(currentState.turnHistory) }
+      ? { actionsThisTurn: currentState.turnHistory }
       : {}),
-    ...(humanChoice
-      ? { humanChoice: encodeToon(humanChoice.selectedCards) }
-      : {}),
-  };
+    ...(humanChoice ? { humanChoice: humanChoice.selectedCards } : {}),
+  });
 }
 
 type JevChoiceAnswer = {

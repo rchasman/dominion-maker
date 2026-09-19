@@ -6,6 +6,7 @@ import {
 } from "./jev-choice";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
+import { CARDS } from "../data/cards";
 
 const LEGAL: Action[] = [
   { type: "play_treasure", card: "Copper" },
@@ -73,38 +74,56 @@ describe("buildJevQuestion", () => {
 
   it("asks a single literal question about the decision player", () => {
     expect(question.type).toBe("choice");
-    expect(question.instructions).toContain("`you`");
+    expect(question.instructions).toContain("`currentState.you`");
+  });
+});
+
+describe("buildJevQuestion option advice", () => {
+  it("puts the card's strategy advice on the option so Jev needs no lookup", () => {
+    const question = buildJevQuestion(LEGAL);
+    expect(question.criteria["3. buy Silver"]).toContain("Advice:");
+    expect(question.criteria["3. buy Silver"]).toContain(CARDS.Silver.strategy);
   });
 });
 
 describe("buildJevState", () => {
-  it("packs rules, card reference, projected state and strategy under named fields", () => {
-    const state = buyPhaseState();
-    const jevState = buildJevState({
-      currentState: state,
-      strategicContext: "gameplan: money",
-      recentTurnsStr: "",
-    });
+  it("sends plain JSON objects, not TOON strings", () => {
+    const jevState = buildJevState({ currentState: buyPhaseState() });
 
+    expect(typeof jevState).toBe("object");
+    if (
+      jevState === null ||
+      typeof jevState !== "object" ||
+      Array.isArray(jevState)
+    ) {
+      throw new Error("state must be an object");
+    }
     expect(jevState.rules).toContain("WIN CONDITION");
-    expect(jevState.cardReference).toContain("CARD DEFINITIONS");
-    expect(jevState.strategicContext).toBe("gameplan: money");
-    expect(jevState.currentState).toContain("currentGameStage");
+    expect(jevState.ruleAuthority).toContain("RULE AUTHORITY");
+    expect(Array.isArray(jevState.cardDefinitions)).toBe(true);
+    expect(Array.isArray(jevState.cardStrategyAdvice)).toBe(true);
+    expect(jevState.currentState).toMatchObject({
+      you: { currentCoins: 0, currentPhase: "buy" },
+    });
+    expect(jevState.strategy).toMatchObject({
+      aiDecisionPlan: { priority: expect.any(String) },
+    });
     expect(jevState).not.toHaveProperty("recentTurns");
     expect(jevState).not.toHaveProperty("humanChoice");
+    expect(JSON.stringify(jevState)).not.toContain("\t");
   });
 
-  it("includes the human choice when one was made", () => {
-    const state = buyPhaseState();
+  it("carries the custom strategy override and the human choice when given", () => {
     const jevState = buildJevState({
-      currentState: state,
-      strategicContext: "",
-      recentTurnsStr: "turn 1: ...",
+      currentState: buyPhaseState(),
+      customStrategy: "Always buy Province at $8",
       humanChoice: { selectedCards: ["Moat"] },
     });
 
-    expect(jevState.recentTurns).toBe("turn 1: ...");
-    expect(jevState.humanChoice).toContain("Moat");
+    expect(jevState).toMatchObject({
+      strategy: { strategyOverride: "Always buy Province at $8" },
+      humanChoice: ["Moat"],
+    });
   });
 });
 

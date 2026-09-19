@@ -155,6 +155,23 @@ async function processGenerationRequest(
     return res.status(HTTP_BAD_REQUEST).json({ error: "Invalid provider" });
   }
 
+  if (config.evaluation) {
+    // Jev's rate limits move with demand; a 429 should not fail the vote outright
+    const { answers } = await experimental_evaluate({
+      model: gateway.evaluationModel(config.fullName),
+      state: buildJevState({
+        currentState,
+        strategySummary,
+        customStrategy,
+        ...(humanChoice ? { humanChoice } : {}),
+      }),
+      questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
+      maxRetries: 2,
+    });
+    const action = jevAnswerToAction(answers[JEV_QUESTION_ID], legalActions);
+    return res.status(HTTP_OK).json({ action, strategySummary });
+  }
+
   // Format recent turn history (last 3 turns) from log with TOON encoding
   const recentTurnsStr = formatTurnHistoryForAnalysis(currentState);
 
@@ -163,22 +180,6 @@ async function processGenerationRequest(
     strategySummary,
     customStrategy,
   );
-
-  if (config.evaluation) {
-    const { answers } = await experimental_evaluate({
-      model: gateway.evaluationModel(config.fullName),
-      state: buildJevState({
-        currentState,
-        strategicContext,
-        recentTurnsStr,
-        ...(humanChoice ? { humanChoice } : {}),
-      }),
-      questions: { [JEV_QUESTION_ID]: buildJevQuestion(legalActions) },
-      maxRetries: 0,
-    });
-    const action = jevAnswerToAction(answers[JEV_QUESTION_ID], legalActions);
-    return res.status(HTTP_OK).json({ action, strategySummary });
-  }
 
   const devTools = getDevToolsMiddleware(actionId);
   const middleware = [
