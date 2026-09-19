@@ -21,7 +21,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:5174",
+        target: `http://127.0.0.1:${process.env.API_PORT ?? "5174"}`,
         changeOrigin: true,
       },
     },
@@ -65,15 +65,16 @@ export default defineConfig({
           }
 
           // Game runtime: entire game system (engine + AI + state)
-          // Includes engine, commands, cards, strategies, consensus, GameContext
+          // Includes engine, commands, cards, core, consensus, GameContext
           if (
             id.includes("/engine/") ||
             id.includes("/commands/") ||
             id.includes("/cards/") ||
             id.includes("/data/cards") ||
             id.includes("/agent/") ||
-            id.includes("/strategies/") ||
-            id.includes("use-ai-automation") ||
+            id.includes("/core/") ||
+            id.includes("/dominion/") ||
+            id.includes("use-seat-driver") ||
             id.includes("GameContext")
           ) {
             return "game-runtime";
