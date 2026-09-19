@@ -1,80 +1,11 @@
 import { lazy, Suspense } from "preact/compat";
-import type { GameMode } from "../../types/game-mode";
-import { GAME_MODE_CONFIG } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/game-agent";
+import type { ControllerConfig, Seats } from "../../core/seats";
 import type { LLMLogEntry } from "../LLMLog";
-import {
-  FONT_WEIGHT_NORMAL,
-  FONT_WEIGHT_BOLD,
-  FULL_PERCENT,
-} from "./constants";
+import { FULL_PERCENT } from "./constants";
 
 const LLMLog = lazy(() =>
   import("../LLMLog").then(m => ({ default: m.LLMLog })),
 );
-
-interface GameModeSwitcherProps {
-  gameMode: GameMode;
-  onGameModeChange: (mode: GameMode) => void;
-}
-
-export function GameModeSwitcher({
-  gameMode,
-  onGameModeChange,
-}: GameModeSwitcherProps) {
-  return (
-    <div style={{ marginBlockEnd: "var(--space-3)" }}>
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--color-text-secondary)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.05rem",
-          }}
-        >
-          Mode:
-        </span>
-        {(["engine", "hybrid", "full"] as const).map(mode => (
-          <button
-            key={mode}
-            onClick={() => onGameModeChange(mode)}
-            style={{
-              padding: "3px 8px",
-              fontSize: "0.65rem",
-              fontWeight:
-                gameMode === mode ? FONT_WEIGHT_BOLD : FONT_WEIGHT_NORMAL,
-              background:
-                gameMode === mode ? "var(--color-victory-dark)" : "transparent",
-              color: gameMode === mode ? "#fff" : "var(--color-text-secondary)",
-              border: "1px solid",
-              borderColor:
-                gameMode === mode
-                  ? "var(--color-victory)"
-                  : "var(--color-border-secondary)",
-              cursor: "pointer",
-              textTransform: "uppercase",
-              letterSpacing: "0.05rem",
-              fontFamily: "inherit",
-              borderRadius: "3px",
-            }}
-          >
-            {GAME_MODE_CONFIG[mode].name}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 interface GameActionButtonsProps {
   onNewGame?: () => void;
@@ -169,10 +100,9 @@ export function GameActionButtons({
 
 interface LLMLogSectionProps {
   llmLogs: LLMLogEntry[];
-  gameMode: GameMode;
+  seats: Seats;
   gameLogHeight: number;
-  modelSettings?: ModelSettings;
-  onModelSettingsChange?: (settings: ModelSettings) => void;
+  onSeatChange?: (player: string, config: ControllerConfig) => void;
 }
 
 function LLMLogFallback() {
@@ -194,10 +124,9 @@ function LLMLogFallback() {
 
 export function LLMLogSection({
   llmLogs,
-  gameMode,
+  seats,
   gameLogHeight,
-  modelSettings,
-  onModelSettingsChange,
+  onSeatChange,
 }: LLMLogSectionProps) {
   return (
     <div
@@ -213,14 +142,8 @@ export function LLMLogSection({
       <Suspense fallback={<LLMLogFallback />}>
         <LLMLog
           entries={llmLogs}
-          gameMode={gameMode}
-          {...(modelSettings &&
-            onModelSettingsChange && {
-              modelSettings: {
-                settings: modelSettings,
-                onChange: onModelSettingsChange,
-              },
-            })}
+          seats={seats}
+          {...(onSeatChange !== undefined && { onSeatChange })}
         />
       </Suspense>
     </div>
@@ -228,8 +151,6 @@ export function LLMLogSection({
 }
 
 interface GameControlsSectionProps {
-  gameMode: GameMode;
-  onGameModeChange?: (mode: GameMode) => void;
   onNewGame?: () => void;
   onEndGame?: () => void;
   onBackToHome?: () => void;
@@ -237,8 +158,6 @@ interface GameControlsSectionProps {
 }
 
 export function GameControlsSection({
-  gameMode,
-  onGameModeChange,
   onNewGame,
   onEndGame,
   onBackToHome,
@@ -252,13 +171,6 @@ export function GameControlsSection({
         background: "var(--color-bg-surface)",
       }}
     >
-      {!isSpectator && onGameModeChange && (
-        <GameModeSwitcher
-          gameMode={gameMode}
-          onGameModeChange={onGameModeChange}
-        />
-      )}
-
       <GameActionButtons
         {...(!isSpectator && onNewGame !== undefined && { onNewGame })}
         {...(!isSpectator && onEndGame !== undefined && { onEndGame })}

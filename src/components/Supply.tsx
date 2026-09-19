@@ -8,7 +8,7 @@ import { run } from "../lib/run";
 import { DISABLED_BUTTON_OPACITY } from "./Board/constants";
 import { canSkipDecision } from "../lib/decision-utils";
 import { useAnimationSafe } from "../animation";
-import { gameMode$, localPlayerId$ } from "../context/game-signals";
+import { seats$, localPlayerId$ } from "../context/game-signals";
 import { getPlayerPerspective } from "../lib/player-utils";
 import { isDecisionChoice } from "../types/pending-choice";
 
@@ -306,7 +306,7 @@ export function Supply({
   // Derive local player ID from signals and state
   const { localPlayerId } = getPlayerPerspective(
     state,
-    gameMode$.value,
+    seats$.value,
     localPlayerId$.value,
   );
 

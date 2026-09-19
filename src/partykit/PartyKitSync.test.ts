@@ -155,15 +155,16 @@ describe("PartyKitSync", () => {
   });
 
   describe("start_singleplayer message", () => {
-    it("should send start_singleplayer with game mode", () => {
-      const gameMode = "engine";
+    it("carries the local table's seats so spectators see who plays", () => {
       const msg: GameClientMessage = {
         type: "start_singleplayer",
-        gameMode,
+        seats: { human: { kind: "human" }, ai: { kind: "heuristic" } },
       };
 
       expect(msg.type).toBe("start_singleplayer");
-      expect(msg.gameMode).toBe("engine");
+      if (msg.type === "start_singleplayer") {
+        expect(msg.seats["ai"]?.kind).toBe("heuristic");
+      }
     });
   });
 

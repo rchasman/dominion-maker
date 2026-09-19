@@ -5,8 +5,7 @@
 
 // Timing constants (in milliseconds)
 export const TIMING = {
-  AI_TURN_DELAY: 500,
-  AI_DECISION_DELAY: 500,
+  AI_STEP_DELAY: 500,
   AUTO_ADVANCE_DELAY: 300,
 } as const;
 

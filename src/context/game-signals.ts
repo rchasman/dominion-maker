@@ -11,40 +11,55 @@ import type { GameState, CardName } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
-import type { GameMode, GameStrategy } from "../types/game-mode";
 import type { PlayerStrategyData } from "../types/player-strategy";
-import type { ModelSettings } from "../agent/types";
-import type { LLMLogEntry } from "../components/LLMLog";
+import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
+import { firstHumanSeat, withSeat } from "../core/seats";
+import type { LLMLogEntry } from "../components/LLMLog/types";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
 import {
   hasPlayableActions as computeHasPlayableActions,
   hasTreasuresInHand as computeHasTreasuresInHand,
 } from "./derived-state";
-import { DEFAULT_MODEL_SETTINGS } from "../agent/types";
 
 // ---------------------------------------------------------------------------
 // Core state signals
 // ---------------------------------------------------------------------------
 export const gameState$ = signal<GameState | null>(null);
 export const events$ = signal<GameEvent[]>([]);
-export const gameMode$ = signal<GameMode>("engine");
+/** Who controls each player: the stored truth that replaced GameMode */
+export const seats$ = signal<Seats>({});
+export const appMode$ = signal<"local" | "multiplayer">("local");
+/** Multiplayer only: this client's player id. Local games derive it from seats. */
 export const localPlayerId$ = signal<string | null>(null);
+/** Seat whose LLM settings panel should open, if any */
+export const settingsSeat$ = signal<string | null>(null);
+/** The LLM config each seat last had, so handing a seat back to an LLM restores its roster */
+export const rememberedLlm$ = signal<Record<string, LlmSeatConfig>>({});
 export const isProcessing$ = signal(false);
 export const isLoading$ = signal(false);
 export const playerStrategies$ = signal<PlayerStrategyData>({});
-export const modelSettings$ = signal<ModelSettings>(DEFAULT_MODEL_SETTINGS);
-export const strategy$ = signal<GameStrategy | null>(null);
+
+/** The seat a human at this client acts for: their own id in multiplayer, else the first human seat */
+export const localHumanSeat$ = computed<string | null>(() =>
+  appMode$.value === "multiplayer"
+    ? localPlayerId$.value
+    : firstHumanSeat(seats$.value, gameState$.value?.playerOrder ?? []),
+);
+
+export const setSeat$ = signal<
+  ((player: string, config: ControllerConfig) => void) | null
+>(null);
 
 // ---------------------------------------------------------------------------
 // Derived signals (match the same logic as GameContext useMemo calls)
 // ---------------------------------------------------------------------------
 export const hasPlayableActions$ = computed(() =>
-  computeHasPlayableActions(gameState$.value),
+  computeHasPlayableActions(gameState$.value, localHumanSeat$.value),
 );
 
 export const hasTreasuresInHand$ = computed(() =>
-  computeHasTreasuresInHand(gameState$.value),
+  computeHasTreasuresInHand(gameState$.value, localHumanSeat$.value),
 );
 
 // ---------------------------------------------------------------------------
@@ -84,10 +99,10 @@ export const pendingUndo$ = signal<PendingUndoRequest | null>(null);
 // Setup / config action signals
 // ---------------------------------------------------------------------------
 export const startGame$ = signal<(() => void) | null>(null);
-export const setGameMode$ = signal<((mode: GameMode) => void) | null>(null);
-export const setModelSettings$ = signal<
-  ((settings: Partial<ModelSettings>) => void) | null
->(null);
+
+export function updateSeat(player: string, config: ControllerConfig): void {
+  seats$.value = withSeat(seats$.value, player, config);
+}
 export const getStateAtEvent$ = signal<
   ((eventId: string) => GameState | Promise<GameState>) | null
 >(null);
@@ -104,6 +119,7 @@ export const chatMessages$ = signal<ChatMessageData[]>([]);
 export const sendChat$ = signal<((message: string) => void) | null>(null);
 export const spectatorCount$ = signal(0);
 export const isSpectator$ = signal(false);
+export const isHost$ = signal(false);
 export const localPlayerName$ = signal<string | undefined>();
 export const players$ = signal<Array<{ id: string; name: string }>>([]);
 

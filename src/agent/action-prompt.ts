@@ -2,7 +2,11 @@ import type { GameState } from "../types/game-state";
 import type { Action } from "../types/action";
 import { optimizeStateForAI } from "./state-projection";
 import { encodeToon } from "../lib/toon";
-import { formatLegalActions, replyFormatInstruction } from "./choice-parsing";
+import {
+  formatNumberedMoves,
+  replyFormatInstruction,
+} from "../core/consensus/numbered-choice";
+import { promptRow } from "../dominion/moves";
 
 // Build user message with context
 export function buildUserMessage(params: {
@@ -10,15 +14,9 @@ export function buildUserMessage(params: {
   currentState: GameState;
   recentTurnsStr: string;
   legalActions: Action[];
-  humanChoice?: { selectedCards: string[] } | undefined;
 }): string {
-  const {
-    strategicContext,
-    currentState,
-    recentTurnsStr,
-    legalActions,
-    humanChoice,
-  } = params;
+  const { strategicContext, currentState, recentTurnsStr, legalActions } =
+    params;
 
   // Optimize state by converting arrays to counts
   const optimizedState = optimizeStateForAI(currentState);
@@ -33,12 +31,8 @@ export function buildUserMessage(params: {
         ]
       : [];
 
-  const humanChoiceSection = humanChoice
-    ? [`Human chose: ${encodeToon(humanChoice.selectedCards)}`]
-    : [];
-
   const legalActionsSection = [
-    `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatLegalActions(legalActions)}`,
+    `LEGAL ACTIONS — you MUST choose exactly one by number:\n${formatNumberedMoves(legalActions, promptRow)}`,
     replyFormatInstruction(legalActions.length),
   ];
 
@@ -47,7 +41,6 @@ export function buildUserMessage(params: {
     `STRATEGIC CONTEXT:\n${strategicContext}`,
     ...(recentTurnsStr ? [recentTurnsStr] : []),
     ...turnHistorySection,
-    ...humanChoiceSection,
     ...legalActionsSection,
   ];
 

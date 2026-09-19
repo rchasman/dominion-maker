@@ -9,6 +9,7 @@ import { useState, useEffect } from "preact/hooks";
 import { usePartyLobby } from "../../partykit/usePartyLobby";
 import { PlayerGrid } from "./PlayerGrid";
 import { GameRoom } from "./GameRoom";
+import { generateRoomId } from "../../lib/room-id";
 import { generatePlayerName } from "../../lib/name-generator";
 
 type Screen = "lobby" | "game";
@@ -148,6 +149,18 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     // usePartyLobby will automatically reconnect with new name
   };
 
+  const handlePlayVsAi = () => {
+    const newRoomId = generateRoomId();
+    setRoomId(newRoomId);
+    setMyLastGameRoomId(newRoomId);
+    setIsSpectator(false);
+    localStorage.setItem(
+      STORAGE_KEYS.ACTIVE_GAME,
+      JSON.stringify({ roomId: newRoomId, isSpectator: false }),
+    );
+    setScreen("game");
+  };
+
   const handleSpectateGame = (gameRoomId: string) => {
     // Check if this is the game you were just in
     const wasMyGame = gameRoomId === myLastGameRoomId;
@@ -241,6 +254,24 @@ export function GameLobby({ onBack }: GameLobbyProps) {
           marginTop: "var(--space-4)",
         }}
       >
+        {lobby.isConnected && (
+          <button
+            onClick={handlePlayVsAi}
+            style={{
+              padding: "var(--space-2) var(--space-3)",
+              fontSize: "0.75rem",
+              background: "transparent",
+              color: "var(--color-text-tertiary)",
+              border: "1px solid var(--color-border-primary)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              borderRadius: "4px",
+            }}
+            title="Open a room and seat an AI opponent"
+          >
+            Play vs AI online
+          </button>
+        )}
         {lobby.isConnected && (
           <button
             onClick={handleRerollName}

@@ -1,7 +1,7 @@
 /** Mirrors a local game to a host-owned room for public spectating. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import PartySocket from "partysocket";
-import { events$, gameState$, gameMode$ } from "../context/game-signals";
+import { events$, gameState$, seats$ } from "../context/game-signals";
 import { generateRoomId } from "../lib/room-id";
 import { generatePlayerName } from "../lib/name-generator";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
@@ -16,7 +16,7 @@ const PARTYKIT_HOST =
 export function PartyKitSync() {
   const events = events$.value;
   const state = gameState$.value;
-  const gameMode = gameMode$.value;
+  const seats = seats$.value;
   const gameIdentity = events[0]?.id;
   const socketRef = useRef<PartySocket | null>(null);
   const [joined, setJoined] = useState(false);
@@ -56,7 +56,7 @@ export function PartyKitSync() {
           socket.send(
             JSON.stringify({
               type: "start_singleplayer",
-              gameMode: gameMode$.peek(),
+              seats: seats$.peek(),
             }),
           );
         setJoined(true);
@@ -97,12 +97,14 @@ export function PartyKitSync() {
     socket.send(JSON.stringify({ type: "sync_events", events }));
   }, [events, joined]);
 
+  // Spectators label each seat from the same truth the local board uses
   useEffect(() => {
-    if (joined)
-      socketRef.current?.send(
-        JSON.stringify({ type: "change_game_mode", gameMode }),
-      );
-  }, [gameMode, joined]);
+    const socket = socketRef.current;
+    if (!joined || !socket || socket.readyState !== WebSocket.OPEN) return;
+    Object.entries(seats).map(([playerId, controller]) =>
+      socket.send(JSON.stringify({ type: "set_seat", playerId, controller })),
+    );
+  }, [seats, joined]);
 
   useEffect(() => {
     if (joined && state?.gameOver)

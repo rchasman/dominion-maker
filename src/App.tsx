@@ -1,8 +1,11 @@
 import { useState, useEffect } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
-import type { GameMode } from "./types/game-mode";
 import { StartScreen } from "./components/StartScreen";
-import { STORAGE_KEYS } from "./context/storage-utils";
+import {
+  loadSeatPreset,
+  saveSeatPreset,
+  type SeatPreset,
+} from "./context/seat-presets";
 import { uiLogger } from "./lib/logger";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -38,21 +41,7 @@ function App() {
     return "menu";
   });
 
-  // Game mode selection (engine/hybrid/full) - synced to localStorage
-  const [gameMode, setGameMode] = useState<GameMode>(() => {
-    try {
-      const savedMode = localStorage.getItem(STORAGE_KEYS.MODE);
-      if (savedMode) {
-        const parsed = JSON.parse(savedMode) as string;
-        if (["engine", "hybrid", "full"].includes(parsed)) {
-          return parsed as GameMode;
-        }
-      }
-    } catch {
-      // Invalid JSON, use default
-    }
-    return "engine";
-  });
+  const [preset, setPreset] = useState<SeatPreset>(() => loadSeatPreset());
 
   // Sync app mode to localStorage
   useEffect(() => {
@@ -63,14 +52,9 @@ function App() {
     }
   }, [mode]);
 
-  // Sync game mode to localStorage (GameProvider will read this on mount)
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify(gameMode));
-    } catch {
-      // Storage unavailable
-    }
-  }, [gameMode]);
+    saveSeatPreset(preset);
+  }, [preset]);
 
   // Preload game modules when on menu (loads in background while user reads)
   useEffect(() => {
@@ -84,8 +68,8 @@ function App() {
   if (mode === "menu") {
     return (
       <StartScreen
-        gameMode={gameMode}
-        onGameModeChange={setGameMode}
+        preset={preset}
+        onPresetChange={setPreset}
         onStartSinglePlayer={() => setMode("singleplayer")}
         onStartMultiplayer={() => setMode("multiplayer")}
       />

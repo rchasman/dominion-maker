@@ -1,5 +1,6 @@
 import { TurnNavigationButtons } from "./TurnNavigationButtons";
 import { SettingsButton } from "./SettingsButton";
+import type { LlmSeat } from "../types";
 
 interface HeaderProps {
   turnsCount: number;
@@ -11,6 +12,34 @@ interface HeaderProps {
   isModelSettingsExpanded: boolean;
   setIsModelSettingsExpanded: (expanded: boolean) => void;
   hasModelSettings: boolean;
+  llmSeats: LlmSeat[];
+  selectedSeat: string | null;
+  onSelectSeat: (playerId: string) => void;
+}
+
+function SeatPicker({
+  llmSeats,
+  selectedSeat,
+  onSelectSeat,
+}: Pick<HeaderProps, "llmSeats" | "selectedSeat" | "onSelectSeat">) {
+  if (llmSeats.length < 2) return null;
+  return (
+    <select
+      className="seat-selector"
+      aria-label="LLM seat to configure"
+      value={selectedSeat ?? ""}
+      onChange={event => {
+        const target = event.currentTarget;
+        if (target instanceof HTMLSelectElement) onSelectSeat(target.value);
+      }}
+    >
+      {llmSeats.map(seat => (
+        <option key={seat.playerId} value={seat.playerId}>
+          {seat.playerId}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export function Header({
@@ -23,6 +52,9 @@ export function Header({
   isModelSettingsExpanded,
   setIsModelSettingsExpanded,
   hasModelSettings,
+  llmSeats,
+  selectedSeat,
+  onSelectSeat,
 }: HeaderProps) {
   return (
     <div
@@ -53,6 +85,13 @@ export function Header({
           }}
         >
           <span style={{ flex: 1 }}>Consensus Viewer</span>
+          {hasModelSettings && (
+            <SeatPicker
+              llmSeats={llmSeats}
+              selectedSeat={selectedSeat}
+              onSelectSeat={onSelectSeat}
+            />
+          )}
           {hasModelSettings && (
             <SettingsButton
               isExpanded={isModelSettingsExpanded}

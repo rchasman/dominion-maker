@@ -6,6 +6,7 @@ import type {
   PlayerId,
 } from "../types/game-state";
 import type { PendingChoice } from "../events/types";
+import type { ComponentChildren } from "preact";
 import { getSubPhase } from "../lib/state-helpers";
 import { PlayerLabelSection } from "./PlayerArea/PlayerLabelSection";
 import { InPlaySection } from "./PlayerArea/InPlaySection";
@@ -19,6 +20,7 @@ import {
 interface PlayerAreaProps {
   player: PlayerState;
   label: string;
+  headerControl?: ComponentChildren;
   vpCount?: number | undefined;
   isActive: boolean;
   showCards: boolean; // If false, show card counts instead of actual cards
@@ -144,6 +146,7 @@ function HandAndDeckGrid({
 export function PlayerArea({
   player,
   label,
+  headerControl,
   vpCount,
   isActive,
   showCards,
@@ -205,6 +208,7 @@ export function PlayerArea({
           />
           <PlayerLabelSection
             label={label}
+            {...(headerControl !== undefined && { headerControl })}
             playerId={playerId}
             loading={loading}
             playerStrategy={playerStrategy}
@@ -220,6 +224,7 @@ export function PlayerArea({
         <>
           <PlayerLabelSection
             label={label}
+            {...(headerControl !== undefined && { headerControl })}
             playerId={playerId}
             loading={loading}
             playerStrategy={playerStrategy}

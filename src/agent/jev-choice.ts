@@ -1,7 +1,8 @@
 import { experimental_evaluate, gateway } from "ai";
 import type { JSONValue } from "ai";
 import { z } from "zod";
-import type { Action, WeightedVote } from "../types/action";
+import type { Action } from "../types/action";
+import type { WeightedVote } from "../core/consensus/types";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { hasCardField } from "../lib/action-utils";
@@ -272,9 +273,8 @@ export function buildJevState(params: {
   currentState: GameState;
   strategySummary?: string | undefined;
   customStrategy?: string | undefined;
-  humanChoice?: { selectedCards: string[] } | undefined;
 }): JsonObject {
-  const { currentState, strategySummary, customStrategy, humanChoice } = params;
+  const { currentState, strategySummary, customStrategy } = params;
   const recentTurns = summarizeRecentTurns(currentState);
   return toJsonObject({
     rules: GAME_RULES,
@@ -292,7 +292,6 @@ export function buildJevState(params: {
     ...(currentState.turnHistory.length > 0
       ? { actionsThisTurn: currentState.turnHistory }
       : {}),
-    ...(humanChoice ? { humanChoice: humanChoice.selectedCards } : {}),
   });
 }
 
@@ -346,9 +345,9 @@ export function jevAnswerToAction(
 export function jevDistribution(
   answer: JevChoiceAnswer,
   legalActions: Action[],
-): WeightedVote[] {
+): WeightedVote<Action>[] {
   if (!answer.probabilities) {
-    return [{ action: jevAnswerToAction(answer, legalActions), weight: 1 }];
+    return [{ move: jevAnswerToAction(answer, legalActions), weight: 1 }];
   }
   return Object.entries(answer.probabilities)
     .filter(([, weight]) => weight >= MIN_VOTE_WEIGHT)
@@ -357,13 +356,13 @@ export function jevDistribution(
         (action, i) => jevOptionKey(i, action) === key,
       );
       const legal = legalActions[index];
-      return legal ? [{ action: legal, weight }] : [];
+      return legal ? [{ move: legal, weight }] : [];
     });
 }
 
 export type JevVote = {
   action: Action;
-  distribution: WeightedVote[];
+  distribution: WeightedVote<Action>[];
   answer: JevChoiceAnswer;
   read: JevGameRead;
   /** TypeSafe's distribution-concentration statistic for the pick, 0-1 */
@@ -388,7 +387,6 @@ export async function askJev(params: {
   legalActions: Action[];
   strategySummary?: string | undefined;
   customStrategy?: string | undefined;
-  humanChoice?: { selectedCards: string[] } | undefined;
   abortSignal?: AbortSignal | undefined;
 }): Promise<JevVote> {
   const { modelId, legalActions, abortSignal, ...stateParams } = params;

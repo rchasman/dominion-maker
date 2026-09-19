@@ -15,8 +15,7 @@ import {
 import { getCardColor } from "../lib/card-colors";
 import { CARDS } from "../data/cards";
 import type { ComponentChildren } from "preact";
-import type { GameMode } from "../types/game-mode";
-import { GAME_MODE_CONFIG } from "../types/game-mode";
+import { isHumanSeat } from "../core/seats";
 import {
   renderCardCounts,
   getAggregatedCount,
@@ -24,7 +23,12 @@ import {
   renderReasoning,
 } from "./LogEntry/renderHelpers";
 import { countCards } from "../lib/card-array-utils";
-import { gameState$, players$, gameMode$ } from "../context/game-signals";
+import {
+  gameState$,
+  players$,
+  appMode$,
+  seats$,
+} from "../context/game-signals";
 import { getPlayerColor, formatPlayerName } from "../lib/board-utils";
 import { run } from "../lib/run";
 
@@ -39,7 +43,6 @@ interface LogEntryProps {
   isLast?: boolean;
   parentPrefix?: string;
   viewer?: "human" | "ai";
-  gameMode?: GameMode;
   rootPlayerId?: PlayerId | undefined;
 }
 
@@ -90,7 +93,6 @@ function TurnHeaderPlayerName({
 }) {
   const gameState = gameState$.value;
   const players = players$.value;
-  const gameMode = gameMode$.value;
   const playerName = players?.find(p => p.id === playerId)?.name;
   const displayName = run(() => {
     if (playerName) {
@@ -102,7 +104,7 @@ function TurnHeaderPlayerName({
   });
 
   // Only use initials in multiplayer mode
-  const isMultiplayer = gameMode === "multiplayer";
+  const isMultiplayer = appMode$.value === "multiplayer";
   const initials = getInitials(displayName.replace(" (AI)", ""));
   const finalDisplay = run(() => {
     if (isMultiplayer) {
@@ -462,17 +464,14 @@ function renderSpendCoins(
 
 // Renderer mapping for entry types
 const ENTRY_RENDERERS = {
-  "turn-start": (entry: LogEntryType, ctx: { gameMode?: GameMode }) => {
+  "turn-start": (entry: LogEntryType) => {
     const turnStartEntry = entry as Extract<
       LogEntryType,
       { type: "turn-start" }
     >;
-    const isAI =
-      ctx.gameMode && ctx.gameMode !== "multiplayer"
-        ? GAME_MODE_CONFIG[ctx.gameMode].isAIPlayer(
-            String(turnStartEntry.playerId ?? ""),
-          )
-        : undefined;
+    const isAI = !isHumanSeat(
+      seats$.value[String(turnStartEntry.playerId ?? "")],
+    );
     return renderTurnStart(turnStartEntry, isAI);
   },
   "turn-end": (entry: LogEntryType) =>
@@ -572,13 +571,11 @@ function LogEntryContent({
   entry,
   depth = 0,
   viewer = "human",
-  gameMode,
   rootPlayerId,
 }: {
   entry: LogEntryType;
   depth?: number;
   viewer?: "human" | "ai";
-  gameMode?: GameMode;
   rootPlayerId?: PlayerId | undefined;
 }) {
   const renderer = ENTRY_RENDERERS[entry.type];
@@ -586,7 +583,6 @@ function LogEntryContent({
     renderer(entry, {
       depth,
       viewer,
-      ...(gameMode !== undefined && { gameMode }),
       ...(rootPlayerId !== undefined && { rootPlayerId }),
     })
   ) : (
@@ -597,7 +593,6 @@ function LogEntryContent({
 type RenderContext = {
   depth: number;
   viewer: "human" | "ai";
-  gameMode: GameMode | undefined;
   parentPrefix: string;
   rootPlayerId: PlayerId | undefined;
 };
@@ -615,7 +610,6 @@ function renderChildren(
       parentPrefix={ctx.parentPrefix}
       viewer={ctx.viewer}
       rootPlayerId={ctx.rootPlayerId}
-      {...(ctx.gameMode !== undefined && { gameMode: ctx.gameMode })}
     />
   ));
 }
@@ -633,9 +627,6 @@ function renderHeaderEntry(props: {
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
           rootPlayerId={props.ctx.rootPlayerId}
-          {...(props.ctx.gameMode !== undefined && {
-            gameMode: props.ctx.gameMode,
-          })}
         />
       </div>
       {renderChildren(props.childrenToRender, {
@@ -679,9 +670,6 @@ function renderRegularEntry(props: {
           depth={props.ctx.depth}
           viewer={props.ctx.viewer}
           rootPlayerId={props.ctx.rootPlayerId}
-          {...(props.ctx.gameMode !== undefined && {
-            gameMode: props.ctx.gameMode,
-          })}
         />
       </div>
       {renderChildren(props.childrenToRender, {
@@ -699,7 +687,6 @@ export function LogEntry({
   isLast = true,
   parentPrefix = "",
   viewer = "human",
-  gameMode,
   rootPlayerId,
 }: LogEntryProps) {
   const childrenToRender = entry.children?.filter(
@@ -719,7 +706,6 @@ export function LogEntry({
   const ctx: RenderContext = {
     depth,
     viewer,
-    gameMode,
     parentPrefix,
     rootPlayerId: effectiveRootPlayerId,
   };

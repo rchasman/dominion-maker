@@ -8,6 +8,7 @@ import {
   pendingUndo$,
   approveUndo$,
   denyUndo$,
+  isHost$,
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
 import { GameSidebar } from "./GameSidebar";
@@ -15,9 +16,10 @@ import { GameOverModal } from "./GameOverModal";
 import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
-import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/game-agent";
+import type { ControllerConfig, Seats } from "../../core/seats";
+import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
+import { SeatSelector } from "../SeatSelector";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
@@ -42,10 +44,9 @@ interface BoardContentProps {
   game: {
     events: GameEvent[];
     isProcessing: boolean;
-    gameMode: GameMode;
-    setGameMode?: (mode: GameMode) => void;
-    modelSettings: ModelSettings;
-    setModelSettings: (settings: ModelSettings) => void;
+    appMode: "local" | "multiplayer";
+    seats: Seats;
+    setSeat: ((player: string, config: ControllerConfig) => void) | undefined;
     playerStrategies: PlayerStrategyData;
     buyCard: (card: CardName) => void;
     playAllTreasures: () => void;
@@ -183,6 +184,24 @@ export function BoardContent({
     });
   });
 
+  const setSeat = game.setSeat;
+  const isHost = isHost$.value;
+  const canEditSeat = (playerId: PlayerId): boolean =>
+    game.appMode === "local" ||
+    playerId === contextLocalPlayerId ||
+    (isHost && !isHumanSeat(game.seats[playerId]));
+  const seatControl =
+    setSeat === undefined || isPreviewMode
+      ? null
+      : (playerId: PlayerId) => (
+          <SeatSelector
+            playerId={playerId}
+            config={game.seats[playerId] ?? HUMAN_SEAT}
+            onChange={config => setSeat(playerId, config)}
+            disabled={!canEditSeat(playerId)}
+          />
+        );
+
   // Wrap buyCard to add flying animation from supply to discard
   const animatedBuyCard = useCallback(
     (card: CardName) => {
@@ -263,6 +282,9 @@ export function BoardContent({
         <PlayerArea
           player={opponent}
           label={opponentDisplayName}
+          {...(seatControl !== null && {
+            headerControl: seatControl(opponentPlayerId),
+          })}
           vpCount={opponentVP}
           isActive={!isLocalPlayerTurn}
           showCards={true}
@@ -295,6 +317,9 @@ export function BoardContent({
 
         <MainPlayerArea
           localPlayer={localPlayer}
+          {...(seatControl !== null && {
+            headerControl: seatControl(localPlayerId),
+          })}
           localPlayerVP={localPlayerVP}
           isLocalPlayerTurn={isLocalPlayerTurn}
           isLocalPlayerAI={isLocalPlayerAI}
@@ -313,13 +338,10 @@ export function BoardContent({
         state={displayState}
         events={game.events}
         isProcessing={game.isProcessing}
-        gameMode={game.gameMode}
-        {...(game.setGameMode !== undefined && {
-          onGameModeChange: game.setGameMode,
-        })}
+        appMode={game.appMode}
+        seats={game.seats}
+        {...(game.setSeat !== undefined && { onSeatChange: game.setSeat })}
         localPlayer={localPlayerId}
-        modelSettings={game.modelSettings}
-        onModelSettingsChange={game.setModelSettings}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
         onRequestUndo={onRequestUndo}

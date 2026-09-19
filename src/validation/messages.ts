@@ -8,6 +8,7 @@ import {
   pendingChoiceSchema,
 } from "./game-state";
 import type { GameEvent } from "../events/types";
+import { botConfigSchema, controllerConfigSchema, seatsSchema } from "./seats";
 import type {
   GameClientMessage,
   LobbyClientMessage,
@@ -127,7 +128,6 @@ export const gameEventSchema = z.custom<GameEvent>(value => {
 });
 const name = z.string().trim().min(1).max(80);
 const token = z.string().min(20).max(200).optional();
-const mode = z.enum(["engine", "hybrid", "full"]);
 const gameMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("join"),
@@ -140,15 +140,21 @@ const gameMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("start_game"),
     kingdomCards: cards.optional(),
-    botPlayerIds: z.array(id).optional(),
+    bots: z
+      .array(z.object({ name, controller: botConfigSchema }))
+      .max(3)
+      .optional(),
   }),
   z.object({
     type: z.literal("start_singleplayer"),
-    botName: name.optional(),
+    seats: seatsSchema,
     kingdomCards: cards.optional(),
-    gameMode: mode.optional(),
   }),
-  z.object({ type: z.literal("change_game_mode"), gameMode: mode }),
+  z.object({
+    type: z.literal("set_seat"),
+    playerId: id,
+    controller: controllerConfigSchema,
+  }),
   z.object({
     type: z.literal("sync_events"),
     events: z.array(gameEventSchema).min(1).max(20000),

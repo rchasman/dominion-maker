@@ -2,8 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { handleApiRequest } from "../../api/_router";
 import { actionRequestSchema, analysisRequestSchema } from "../../api/_request";
 import { createGame } from "../engine";
-import { generateActionViaBackend } from "../agent/game-agent-helpers";
-import { api } from "./client";
+import { httpDecideMove } from "../agent/http-decide-move";
 import { MODELS } from "../config/models";
 
 describe("API request boundaries", () => {
@@ -11,13 +10,19 @@ describe("API request boundaries", () => {
     const currentState = createGame(["human", "ai"], undefined, 42).state;
     for (const model of MODELS) {
       expect(
-        actionRequestSchema.safeParse({ provider: model.id, currentState })
-          .success,
+        actionRequestSchema.safeParse({
+          game: "dominion",
+          provider: model.id,
+          currentState,
+        }).success,
       ).toBe(true);
     }
     expect(
-      actionRequestSchema.safeParse({ provider: "grok-4.5", currentState })
-        .success,
+      actionRequestSchema.safeParse({
+        game: "dominion",
+        provider: "grok-4.5",
+        currentState,
+      }).success,
     ).toBe(false);
   });
   it("rejects malformed JSON and wrong shapes on every endpoint", async () => {
@@ -63,6 +68,7 @@ describe("API request boundaries", () => {
     const state = createGame(["human", "ai"], undefined, 42).state;
     expect(
       actionRequestSchema.safeParse({
+        game: "dominion",
         provider: "gpt-5.4-mini",
         currentState: state,
         actionId: "round-1",
@@ -83,30 +89,48 @@ describe("API request boundaries", () => {
     ).toBe(false);
     expect(
       actionRequestSchema.safeParse({
+        game: "dominion",
         provider: "constructor",
         currentState: state,
       }).success,
     ).toBe(false);
-  });
-  it("forwards the consensus action ID to the backend", async () => {
-    const original = api.api["generate-action"].post;
-    const calls: unknown[] = [];
-    api.api["generate-action"].post = body => {
-      calls.push(body);
-      return Promise.resolve({
-        data: { action: { type: "end_phase" } },
-        error: null,
-      });
-    };
-    try {
-      await generateActionViaBackend({
+    expect(
+      actionRequestSchema.safeParse({
         provider: "gpt-5.4-mini",
-        currentState: createGame(["human", "ai"]).state,
+        currentState: state,
+      }).success,
+    ).toBe(false);
+  });
+  it("forwards the game, strategies and consensus action ID to the backend", async () => {
+    const originalFetch = global.fetch;
+    const bodies: unknown[] = [];
+    const stub: typeof fetch = Object.assign(
+      (_input: URL | RequestInfo, init?: RequestInit) => {
+        const raw = init?.body;
+        bodies.push(typeof raw === "string" ? JSON.parse(raw) : raw);
+        return Promise.resolve(Response.json({ move: { type: "end_phase" } }));
+      },
+      { preconnect: originalFetch.preconnect },
+    );
+    global.fetch = stub;
+    try {
+      const result = await httpDecideMove()({
+        provider: "gpt-5.4-mini",
+        state: createGame(["human", "ai"]).state,
         actionId: "game-turn-round",
+        playerStrategies: { human: { gameplan: "BM" } },
+        customStrategy: "Buy Gold",
+        signal: new AbortController().signal,
       });
-      expect(calls[0]).toHaveProperty("actionId", "game-turn-round");
+      expect(result.move).toEqual({ type: "end_phase" });
+      expect(bodies[0]).toMatchObject({
+        game: "dominion",
+        actionId: "game-turn-round",
+        playerStrategies: { human: { gameplan: "BM" } },
+        customStrategy: "Buy Gold",
+      });
     } finally {
-      api.api["generate-action"].post = original;
+      global.fetch = originalFetch;
     }
   });
 });

@@ -11,6 +11,7 @@ function roomHarness() {
   const messages = new Map<string, GameServerMessage[]>();
   const room = {
     id: "test",
+    env: {},
     getConnections: () => sockets.values(),
     broadcast: (message: string) => {
       for (const socket of sockets.values()) socket.send(message);

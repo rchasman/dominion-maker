@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import {
-  loadGameMode,
   loadEvents,
   loadLLMLogs,
-  loadModelSettings,
   loadPlayerStrategies,
-  clearGameStorage,
+  loadSeats,
   clearGameStateStorage,
   STORAGE_KEYS,
 } from "./storage-utils";
+import { DEFAULT_LLM_SEAT, HUMAN_SEAT } from "../core/seats";
 import type { GameEvent } from "../events/types";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type {
@@ -48,44 +47,33 @@ describe("storage-utils", () => {
     mockLocalStorage.clear();
   });
 
-  describe("loadGameMode", () => {
-    it("should return 'engine' as default when nothing is stored", () => {
-      expect(loadGameMode()).toBe("engine");
+  describe("loadSeats", () => {
+    it("returns null when nothing is stored", () => {
+      expect(loadSeats()).toBeNull();
     });
 
-    it("should return 'engine' when stored value is null", () => {
-      localStorage.removeItem(STORAGE_KEYS.MODE);
-      expect(loadGameMode()).toBe("engine");
+    it("round-trips a seats record", () => {
+      const seats = { human: HUMAN_SEAT, ai: DEFAULT_LLM_SEAT };
+      localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(seats));
+      expect(loadSeats()).toEqual(seats);
     });
 
-    it("should return stored game mode when valid", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("hybrid"));
-      expect(loadGameMode()).toBe("hybrid");
+    it("returns null for malformed JSON", () => {
+      localStorage.setItem(STORAGE_KEYS.SEATS, "not-json");
+      expect(loadSeats()).toBeNull();
     });
 
-    it("should return stored game mode 'full'", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("full"));
-      expect(loadGameMode()).toBe("full");
-    });
-
-    it("should return stored game mode 'multiplayer'", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("multiplayer"));
-      expect(loadGameMode()).toBe("multiplayer");
-    });
-
-    it("should return 'engine' when stored mode is invalid", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("invalid_mode"));
-      expect(loadGameMode()).toBe("engine");
-    });
-
-    it("should return 'engine' when stored mode is not valid JSON", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, "not-json");
-      expect(loadGameMode()).toBe("engine");
-    });
-
-    it("should return 'engine' when stored mode is a number", () => {
-      localStorage.setItem(STORAGE_KEYS.MODE, "42");
-      expect(loadGameMode()).toBe("engine");
+    it("rejects an unknown model id and an unknown kind", () => {
+      localStorage.setItem(
+        STORAGE_KEYS.SEATS,
+        JSON.stringify({ ai: { ...DEFAULT_LLM_SEAT, models: ["nope"] } }),
+      );
+      expect(loadSeats()).toBeNull();
+      localStorage.setItem(
+        STORAGE_KEYS.SEATS,
+        JSON.stringify({ ai: { kind: "remote" } }),
+      );
+      expect(loadSeats()).toBeNull();
     });
   });
 
@@ -164,77 +152,6 @@ describe("storage-utils", () => {
     });
   });
 
-  describe("loadModelSettings", () => {
-    it("should return null when no settings are stored", () => {
-      expect(loadModelSettings()).toBeNull();
-    });
-
-    it("should return null when storage value is invalid JSON", () => {
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, "not-json");
-      expect(loadModelSettings()).toBeNull();
-    });
-
-    it("should return parsed settings with enabledModels as Set", () => {
-      const testSettings = {
-        enabledModels: ["claude-haiku", "claude-sonnet"],
-        consensusCount: 3,
-        customStrategy: "test-strategy",
-      };
-      localStorage.setItem(
-        STORAGE_KEYS.MODEL_SETTINGS,
-        JSON.stringify(testSettings),
-      );
-      const settings = loadModelSettings();
-      expect(settings).not.toBeNull();
-      if (settings) {
-        expect(settings.enabledModels instanceof Set).toBe(true);
-        expect(Array.from(settings.enabledModels)).toEqual([
-          "claude-haiku",
-          "claude-sonnet",
-        ]);
-        expect(settings.consensusCount).toBe(3);
-        expect(settings.customStrategy).toBe("test-strategy");
-      }
-    });
-
-    it("should default customStrategy to empty string when not provided", () => {
-      const testSettings = {
-        enabledModels: ["openai"],
-        consensusCount: 2,
-      };
-      localStorage.setItem(
-        STORAGE_KEYS.MODEL_SETTINGS,
-        JSON.stringify(testSettings),
-      );
-      const settings = loadModelSettings();
-      expect(settings).not.toBeNull();
-      if (settings) {
-        expect(settings.customStrategy).toBe("");
-      }
-    });
-
-    it("should handle empty enabledModels array", () => {
-      const testSettings = {
-        enabledModels: [],
-        consensusCount: 1,
-      };
-      localStorage.setItem(
-        STORAGE_KEYS.MODEL_SETTINGS,
-        JSON.stringify(testSettings),
-      );
-      const settings = loadModelSettings();
-      expect(settings).not.toBeNull();
-      if (settings) {
-        expect(settings.enabledModels.size).toBe(0);
-      }
-    });
-
-    it("should return null when stored value is null string", () => {
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, "null");
-      expect(loadModelSettings()).toBeNull();
-    });
-  });
-
   describe("loadPlayerStrategies", () => {
     it("should return empty record when no strategies are stored", () => {
       expect(loadPlayerStrategies()).toEqual({});
@@ -283,58 +200,21 @@ describe("storage-utils", () => {
     });
   });
 
-  describe("clearGameStorage", () => {
-    it("should remove all game-related storage keys", () => {
-      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("hybrid"));
-      localStorage.setItem(STORAGE_KEYS.LLM_LOGS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, JSON.stringify({}));
-      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, "TestPlayer");
-
-      clearGameStorage();
-
-      expect(localStorage.getItem(STORAGE_KEYS.EVENTS)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.MODE)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.LLM_LOGS)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.STRATEGIES)).toBeNull();
-      expect(localStorage.getItem(STORAGE_KEYS.MODEL_SETTINGS)).toBeNull();
-    });
-
-    it("should not affect other localStorage keys", () => {
-      localStorage.setItem("other-key", "other-value");
-      localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([]));
-
-      clearGameStorage();
-
-      expect(localStorage.getItem("other-key")).toBe("other-value");
-    });
-
-    it("should be safe to call when storage is empty", () => {
-      expect(() => clearGameStorage()).not.toThrow();
-    });
-  });
-
   describe("clearGameStateStorage", () => {
-    it("should remove game state storage keys but preserve mode and settings", () => {
+    it("removes the saved game, its seats included, but keeps the player name", () => {
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.MODE, JSON.stringify("hybrid"));
+      localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify({}));
       localStorage.setItem(STORAGE_KEYS.LLM_LOGS, JSON.stringify([]));
       localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.MODEL_SETTINGS, JSON.stringify({}));
+      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, "TestPlayer");
 
       clearGameStateStorage();
 
       expect(localStorage.getItem(STORAGE_KEYS.EVENTS)).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEYS.SEATS)).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.LLM_LOGS)).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.STRATEGIES)).toBeNull();
-      // Mode and settings should still be there
-      expect(localStorage.getItem(STORAGE_KEYS.MODE)).toBe(
-        JSON.stringify("hybrid"),
-      );
-      expect(localStorage.getItem(STORAGE_KEYS.MODEL_SETTINGS)).toBe(
-        JSON.stringify({}),
-      );
+      expect(localStorage.getItem(STORAGE_KEYS.PLAYER_NAME)).toBe("TestPlayer");
     });
 
     it("should be safe to call when storage is empty", () => {
@@ -345,9 +225,8 @@ describe("storage-utils", () => {
   describe("STORAGE_KEYS constant", () => {
     it("should have all required keys defined", () => {
       expect(STORAGE_KEYS.EVENTS).toBeDefined();
-      expect(STORAGE_KEYS.MODE).toBeDefined();
+      expect(STORAGE_KEYS.SEATS).toBeDefined();
       expect(STORAGE_KEYS.LLM_LOGS).toBeDefined();
-      expect(STORAGE_KEYS.MODEL_SETTINGS).toBeDefined();
       expect(STORAGE_KEYS.STRATEGIES).toBeDefined();
       expect(STORAGE_KEYS.PLAYER_NAME).toBeDefined();
     });

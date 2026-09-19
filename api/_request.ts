@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "./_http";
-import { gameStateSchema, cardsSchema } from "../src/validation/game-state";
+import { gameStateSchema } from "../src/validation/game-state";
 import { MODEL_MAP } from "../src/config/models";
 
 const text = z.string().trim().min(1).max(20000);
@@ -16,10 +16,10 @@ const strategy = z
   })
   .passthrough();
 export const actionRequestSchema = z.object({
+  game: z.literal("dominion"),
   provider: z.string().refine(provider => Object.hasOwn(MODEL_MAP, provider)),
   currentState: gameStateSchema,
-  humanChoice: z.object({ selectedCards: cardsSchema }).optional(),
-  strategySummary: z.string().max(100000).optional(),
+  playerStrategies: z.record(z.string(), strategy).optional(),
   customStrategy: z.string().max(20000).optional(),
   actionId: z.string().max(200).optional(),
 });

@@ -1,5 +1,13 @@
 import type { ModelProvider } from "../../config/models";
-import type { Action, WeightedVote } from "../../types/action";
+import type { Action } from "../../types/action";
+import type {
+  LLMLogEntryInput,
+  WeightedVote,
+} from "../../core/consensus/types";
+import type { LlmSeatConfig } from "../../core/seats";
+
+/** An LLM-controlled seat and its config, as the settings panel edits it */
+export type LlmSeat = { playerId: string; config: LlmSeatConfig };
 import type {
   CardName,
   Phase,
@@ -59,26 +67,11 @@ export interface TimingData {
   parallelDuration: number;
 }
 
-export interface LLMLogEntry {
+export type LLMLogEntry = LLMLogEntryInput & {
   id: string;
   timestamp: number;
-  type:
-    | "ai-turn-start"
-    | "error"
-    | "consensus-start"
-    | "consensus-compare"
-    | "consensus-step-error"
-    | "consensus-voting"
-    | "consensus-skipped"
-    | "consensus-model-pending"
-    | "consensus-model-complete"
-    | "consensus-model-aborted"
-    | "consensus-verdict"
-    | "ai-decision-resolving";
-  message: string;
-  data?: Record<string, unknown>;
   children?: LLMLogEntry[];
-}
+};
 
 /** Jev's second opinion on the winner; probabilities, not verdicts */
 export interface ConsensusVerdict {
@@ -105,7 +98,7 @@ export interface ModelStatus {
   completed: boolean;
   aborted?: boolean | undefined;
   action?: Action | undefined;
-  distribution?: WeightedVote[] | undefined;
+  distribution?: WeightedVote<Action>[] | undefined;
 }
 
 export interface PendingData {

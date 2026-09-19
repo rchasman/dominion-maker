@@ -1,10 +1,10 @@
-import type { ModelSettings } from "../agent/types";
-import { AVAILABLE_MODELS } from "../agent/types";
+import type { LlmSeatConfig } from "../core/seats";
+import { AVAILABLE_MODELS } from "../core/consensus/roster";
 import { MODELS, type ModelConfig, type ModelProvider } from "../config/models";
 
 interface ModelPickerProps {
-  settings: ModelSettings;
-  onChange: (settings: ModelSettings) => void;
+  settings: LlmSeatConfig;
+  onChange: (settings: LlmSeatConfig) => void;
 }
 
 // Constants
@@ -301,35 +301,20 @@ const ProviderSection = ({
 };
 
 export function ModelPicker({ settings, onChange }: ModelPickerProps) {
-  const handleModelToggle = (model: ModelProvider): void => {
-    const newEnabled = new Set(settings.enabledModels);
-    if (newEnabled.has(model)) {
-      newEnabled.delete(model);
-    } else {
-      newEnabled.add(model);
-    }
-    const updated: ModelSettings = {
-      enabledModels: newEnabled,
-      consensusCount: settings.consensusCount,
-    };
-    onChange(updated);
-  };
+  const enabledModels = new Set(settings.models);
+  const withModels = (models: ModelProvider[]): void =>
+    onChange({ ...settings, models });
 
-  const handleSelectAll = (): void => {
-    const updated: ModelSettings = {
-      enabledModels: new Set(AVAILABLE_MODELS),
-      consensusCount: settings.consensusCount,
-    };
-    onChange(updated);
-  };
+  const handleModelToggle = (model: ModelProvider): void =>
+    withModels(
+      enabledModels.has(model)
+        ? settings.models.filter(id => id !== model)
+        : [...settings.models, model],
+    );
 
-  const handleSelectNone = (): void => {
-    const updated: ModelSettings = {
-      enabledModels: new Set<ModelProvider>(),
-      consensusCount: settings.consensusCount,
-    };
-    onChange(updated);
-  };
+  const handleSelectAll = (): void => withModels([...AVAILABLE_MODELS]);
+
+  const handleSelectNone = (): void => withModels([]);
 
   const modelsByProvider = groupModelsByProvider(AVAILABLE_MODELS);
   const sortedProviders = sortProviders(Object.keys(modelsByProvider));
@@ -343,7 +328,7 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
       }}
     >
       <Header
-        enabledCount={settings.enabledModels.size}
+        enabledCount={enabledModels.size}
         totalCount={AVAILABLE_MODELS.length}
         onSelectAll={handleSelectAll}
         onSelectNone={handleSelectNone}
@@ -355,12 +340,12 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
             key={provider}
             provider={provider}
             models={models}
-            enabledModels={settings.enabledModels}
+            enabledModels={enabledModels}
             onToggle={handleModelToggle}
           />
         ) : null;
       })}
-      {settings.enabledModels.size === ZERO_MODELS && (
+      {enabledModels.size === ZERO_MODELS && (
         <div
           style={{
             padding: "var(--space-2)",

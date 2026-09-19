@@ -5,7 +5,6 @@ import type {
   LogEntry as LogEntryType,
 } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
-import type { GameMode } from "../../types/game-mode";
 import { LogEntry } from "../LogEntry";
 import { aggregateLogEntries } from "../../lib/board-utils";
 
@@ -13,14 +12,12 @@ interface LogEntryWithUndoProps {
   entry: LogEntryType & { eventId?: string; eventIds?: string[] };
   onRequestUndo?: (eventId: string) => void;
   lastEventId?: string;
-  gameMode?: GameMode;
 }
 
 function LogEntryWithUndo({
   entry,
   onRequestUndo,
   lastEventId,
-  gameMode,
 }: LogEntryWithUndoProps) {
   const eventId = entry.eventId;
   const eventIds = entry.eventIds;
@@ -49,7 +46,7 @@ function LogEntryWithUndo({
       }}
     >
       <div style={{ flex: 1 }}>
-        <LogEntry entry={entry} {...(gameMode !== undefined && { gameMode })} />
+        <LogEntry entry={entry} />
       </div>
       {hasUndo && (
         <button
@@ -86,7 +83,7 @@ interface GameLogSectionProps {
   events?: GameEvent[];
   isProcessing: boolean;
   onRequestUndo?: (eventId: string) => void;
-  gameMode: GameMode;
+  hasLlmSeat: boolean;
   gameLogHeight: number;
   turnStatusIndicator: ComponentChildren;
 }
@@ -96,7 +93,7 @@ export function GameLogSection({
   events,
   isProcessing,
   onRequestUndo,
-  gameMode,
+  hasLlmSeat,
   gameLogHeight,
   turnStatusIndicator,
 }: GameLogSectionProps) {
@@ -119,11 +116,8 @@ export function GameLogSection({
   return (
     <div
       style={{
-        height:
-          gameMode === "hybrid" || gameMode === "full"
-            ? `${gameLogHeight}%`
-            : "auto",
-        flex: gameMode === "hybrid" || gameMode === "full" ? "none" : 1,
+        height: hasLlmSeat ? `${gameLogHeight}%` : "auto",
+        flex: hasLlmSeat ? "none" : 1,
         minBlockSize: 0,
         display: "flex",
         flexDirection: "column",
@@ -167,7 +161,6 @@ export function GameLogSection({
             entry={entry}
             {...(onRequestUndo !== undefined && { onRequestUndo })}
             {...(lastEventId !== undefined && { lastEventId })}
-            gameMode={gameMode}
           />
         ))}
         {turnStatusIndicator}

@@ -42,18 +42,26 @@ describe("derived-state utilities", () => {
 
   describe("hasPlayableActions", () => {
     it("should return false when gameState is null", () => {
-      expect(hasPlayableActions(null)).toBe(false);
+      expect(hasPlayableActions(null, "human")).toBe(false);
     });
 
     it("should return false when gameState is undefined", () => {
       // Deliberately out-of-contract: verify the runtime guard handles undefined
       const state = undefined as unknown as GameState | null;
-      expect(hasPlayableActions(state)).toBe(false);
+      expect(hasPlayableActions(state, "human")).toBe(false);
     });
 
     it("should return false when player does not exist", () => {
       const state = createMockGameState();
       expect(hasPlayableActions(state, "nonexistent")).toBe(false);
+    });
+
+    it("returns false when nobody at this client is a human seat", () => {
+      const state = createMockGameState({
+        actions: 1,
+        players: { human: mockPlayer(["Village"]), ai: mockPlayer() },
+      });
+      expect(hasPlayableActions(state, null)).toBe(false);
     });
 
     it("should return false when hand is empty", () => {
@@ -100,17 +108,6 @@ describe("derived-state utilities", () => {
       expect(hasPlayableActions(state, "human")).toBe(true);
     });
 
-    it("should default to human player when playerId is not provided", () => {
-      const state = createMockGameState({
-        actions: 1,
-        players: {
-          human: mockPlayer(["Village"]),
-          ai: mockPlayer(),
-        },
-      });
-      expect(hasPlayableActions(state)).toBe(true);
-    });
-
     it("should handle multiple action cards in hand", () => {
       const state = createMockGameState({
         actions: 2,
@@ -136,13 +133,13 @@ describe("derived-state utilities", () => {
 
   describe("hasTreasuresInHand", () => {
     it("should return false when gameState is null", () => {
-      expect(hasTreasuresInHand(null)).toBe(false);
+      expect(hasTreasuresInHand(null, "human")).toBe(false);
     });
 
     it("should return false when gameState is undefined", () => {
       // Deliberately out-of-contract: verify the runtime guard handles undefined
       const state = undefined as unknown as GameState | null;
-      expect(hasTreasuresInHand(state)).toBe(false);
+      expect(hasTreasuresInHand(state, "human")).toBe(false);
     });
 
     it("should return false when player does not exist", () => {
@@ -218,16 +215,6 @@ describe("derived-state utilities", () => {
         },
       });
       expect(hasTreasuresInHand(state, "human")).toBe(true);
-    });
-
-    it("should default to human player when playerId is not provided", () => {
-      const state = createMockGameState({
-        players: {
-          human: mockPlayer(["Gold"]),
-          ai: mockPlayer(),
-        },
-      });
-      expect(hasTreasuresInHand(state)).toBe(true);
     });
 
     it("should work for non-human players", () => {

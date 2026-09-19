@@ -1,4 +1,3 @@
-import type { GameMode } from "../../../types/game-mode";
 import type { Turn, ConsensusDecision } from "../types";
 import type { PaneType } from "./PaneTabSwitcher";
 import { EmptyState } from "./EmptyState";
@@ -10,7 +9,7 @@ interface MainContentProps {
   currentTurn: Turn | undefined;
   currentDecision: ConsensusDecision | undefined;
   currentActionIndex: number;
-  gameMode: GameMode;
+  hasLlmSeats: boolean;
   activePane: PaneType;
   setActivePane: (pane: PaneType) => void;
   hasPrevAction: boolean;
@@ -25,7 +24,7 @@ export function MainContent({
   currentTurn,
   currentDecision,
   currentActionIndex,
-  gameMode,
+  hasLlmSeats,
   activePane,
   setActivePane,
   hasPrevAction,
@@ -35,7 +34,7 @@ export function MainContent({
   now,
 }: MainContentProps) {
   if (turns.length === 0) {
-    return <EmptyState gameMode={gameMode} />;
+    return <EmptyState hasLlmSeats={hasLlmSeats} />;
   }
 
   if (

@@ -231,6 +231,26 @@ body {
   color: #fff;
 }
 
+/* Who controls a seat: shown in every player header */
+.seat-selector {
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.seat-selector:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* Game log undo button - show on hover */
 .log-entry-with-undo .undo-button {
   opacity: 0;

@@ -1,11 +1,11 @@
-import type { ModelSettings } from "../../../agent/types";
+import type { LlmSeatConfig } from "../../../core/seats";
 import { ModelPicker } from "../../ModelPicker";
 import { run } from "../../../lib/run";
 import { useState, useEffect, useRef } from "preact/hooks";
 
 interface ModelSettingsPanelProps {
-  settings: ModelSettings;
-  onChange: (settings: ModelSettings) => void;
+  settings: LlmSeatConfig;
+  onChange: (settings: LlmSeatConfig) => void;
 }
 
 interface ConversationEntry {
@@ -190,7 +190,7 @@ export function ModelSettingsPanel({
 
   // Handle strategy changes with debounce
   useEffect(() => {
-    const strategy = settings.customStrategy?.trim();
+    const strategy = settings.customStrategy.trim();
 
     if (!strategy) {
       setShowConfirmation(false);
@@ -313,7 +313,7 @@ export function ModelSettingsPanel({
         </label>
         <textarea
           id="custom-strategy"
-          value={settings.customStrategy || ""}
+          value={settings.customStrategy}
           onChange={e => {
             const target = e.target as HTMLTextAreaElement;
             onChange({

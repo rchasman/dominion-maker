@@ -29,6 +29,7 @@ function renderMarkdown(text: string): ComponentChildren {
 
 interface PlayerLabelSectionProps {
   label: string;
+  headerControl?: ComponentChildren;
   playerId?: string | undefined;
   loading: boolean;
   playerStrategy?:
@@ -464,6 +465,7 @@ function PhaseIndicator({
 
 export function PlayerLabelSection({
   label,
+  headerControl,
   playerId,
   loading,
   playerStrategy,
@@ -521,6 +523,7 @@ export function PlayerLabelSection({
         {...(playerStrategy !== undefined && { playerStrategy })}
         setReference={setReference}
       />
+      {headerControl}
       {isOpen &&
         hasStrategy &&
         renderStrategyTooltip({

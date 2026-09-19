@@ -1,16 +1,14 @@
 import type { GameEvent } from "../../events/types";
-import type { GameMode } from "../../types/game-mode";
-import type { ModelSettings } from "../../agent/game-agent";
+import type { ControllerConfig, Seats } from "../../core/seats";
 import type { CardName, GameState } from "../../types/game-state";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 
 export function createGameProps(gameContext: {
   events: GameEvent[];
   isProcessing: boolean;
-  gameMode: GameMode;
-  setGameMode: ((mode: GameMode) => void) | undefined;
-  modelSettings: ModelSettings;
-  setModelSettings: (settings: ModelSettings) => void;
+  appMode: "local" | "multiplayer";
+  seats: Seats;
+  setSeat: ((player: string, config: ControllerConfig) => void) | undefined;
   playerStrategies: PlayerStrategyData;
   buyCard: (card: CardName) => void;
   playAllTreasures: () => void;
@@ -21,13 +19,9 @@ export function createGameProps(gameContext: {
   return {
     events: gameContext.events,
     isProcessing: gameContext.isProcessing,
-    gameMode: gameContext.gameMode,
-    ...(gameContext.gameMode !== "multiplayer" &&
-      gameContext.setGameMode !== undefined && {
-        setGameMode: gameContext.setGameMode,
-      }),
-    modelSettings: gameContext.modelSettings,
-    setModelSettings: gameContext.setModelSettings,
+    appMode: gameContext.appMode,
+    seats: gameContext.seats,
+    setSeat: gameContext.setSeat,
     playerStrategies: gameContext.playerStrategies,
     buyCard: gameContext.buyCard,
     playAllTreasures: gameContext.playAllTreasures,

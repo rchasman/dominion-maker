@@ -4,25 +4,22 @@
  */
 
 import { useState } from "preact/hooks";
-import { DEFAULT_MODEL_SETTINGS } from "../agent/game-agent";
 import { DominionEngine } from "../engine";
 import { uiLogger } from "../lib/logger";
 import {
-  loadGameMode,
   loadEvents,
   loadLLMLogs,
-  loadModelSettings,
   loadPlayerStrategies,
+  loadSeats,
   STORAGE_KEYS,
 } from "./storage-utils";
 import {
   gameState$,
   events$,
-  gameMode$,
   isLoading$,
   llmLogs$,
-  modelSettings$,
   playerStrategies$,
+  seats$,
 } from "./game-signals";
 
 interface GameStorageResult {
@@ -36,21 +33,23 @@ interface GameStorageResult {
 export function useGameStorage(): GameStorageResult {
   const [storage] = useState<GameStorageResult>(() => {
     try {
-      const gameMode = loadGameMode();
       const restoredLlmLogs = loadLLMLogs();
-      const restoredModelSettings =
-        loadModelSettings() ?? DEFAULT_MODEL_SETTINGS;
       const restoredPlayerStrategies = loadPlayerStrategies();
+      const savedSeats = loadSeats();
 
       // Write restored config to signals
-      gameMode$.value = gameMode;
       llmLogs$.value = restoredLlmLogs;
-      modelSettings$.value = restoredModelSettings;
       playerStrategies$.value = restoredPlayerStrategies;
       isLoading$.value = false;
 
       const savedEvents = loadEvents();
-      if (savedEvents) {
+      if (savedEvents && !savedSeats) {
+        uiLogger.info("Saved game had no seats, starting fresh");
+        localStorage.removeItem(STORAGE_KEYS.EVENTS);
+        return { engineRef: null };
+      }
+      if (savedEvents && savedSeats) {
+        seats$.value = savedSeats;
         try {
           const engine = new DominionEngine();
           engine.loadEvents(savedEvents);

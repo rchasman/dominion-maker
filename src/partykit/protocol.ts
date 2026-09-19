@@ -5,12 +5,23 @@
  */
 import type { GameState, CardName, PlayerId } from "../types/game-state";
 import type { GameEvent, DecisionChoice } from "../events/types";
+import type {
+  ControllerConfig,
+  ControllerKind,
+  LlmSeatConfig,
+  Seats,
+} from "../core/seats";
 
 export type { PlayerId };
+
+/** A seat a bot may hold: everything except human */
+export type BotConfig = { kind: "heuristic" } | LlmSeatConfig;
 
 export interface PlayerInfo {
   name: string;
   playerId: PlayerId;
+  /** Kind only: an LLM seat's roster and strategy stay with its owner */
+  controller: ControllerKind;
 }
 
 // ============================================
@@ -94,14 +105,13 @@ export type GameClientMessage =
       reconnectToken?: string;
     }
   | { type: "spectate"; name: string; clientId?: string }
-  | { type: "start_game"; kingdomCards?: CardName[]; botPlayerIds?: PlayerId[] }
   | {
-      type: "start_singleplayer";
-      botName?: string;
+      type: "start_game";
       kingdomCards?: CardName[];
-      gameMode?: string;
+      bots?: Array<{ name: string; controller: BotConfig }>;
     }
-  | { type: "change_game_mode"; gameMode: string }
+  | { type: "start_singleplayer"; seats: Seats; kingdomCards?: CardName[] }
+  | { type: "set_seat"; playerId: PlayerId; controller: ControllerConfig }
   | { type: "sync_events"; events: GameEvent[] }
   | { type: "play_action"; card: CardName }
   | { type: "play_treasure"; card: CardName }

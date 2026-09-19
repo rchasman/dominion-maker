@@ -4,14 +4,15 @@
  * Uses a single PartySocket connection via MultiplayerProvider.
  * Shows waiting room or game board based on game state.
  */
-import { useMemo } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
+import type { BotConfig } from "../../partykit/protocol";
+import { DEFAULT_LLM_SEAT } from "../../core/seats";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
-import type { GameMode } from "../../types/game-mode";
 import { AnimationProvider } from "../../animation";
 
 interface GameRoomProps {
@@ -19,9 +20,6 @@ interface GameRoomProps {
   playerName: string;
   clientId: string;
   isSpectator: boolean;
-  isSinglePlayer?: boolean;
-  gameMode?: GameMode;
-  onGameModeChange?: (mode: GameMode) => void;
   onBack: () => void;
   onResign?: () => void;
 }
@@ -31,21 +29,11 @@ export function GameRoom({
   playerName,
   clientId,
   isSpectator,
-  isSinglePlayer = false,
-  gameMode = "engine",
-  onGameModeChange,
   onBack,
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({
-    roomId,
-    playerName,
-    clientId,
-    isSpectator,
-    isSinglePlayer,
-    gameMode,
-  });
+  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
 
   // Sync multiplayer state into signals
   // usePartyGame has no processing concept; the context derives spinners from
@@ -54,16 +42,6 @@ export function GameRoom({
     game: { ...game, isProcessing: false },
     playerName,
     isSpectator,
-    isSinglePlayer,
-    gameMode,
-    onGameModeChange: (mode: GameMode) => {
-      if (isSinglePlayer) {
-        game.changeGameMode(mode);
-      }
-      if (onGameModeChange) {
-        onGameModeChange(mode);
-      }
-    },
   });
 
   // Handle resignation
@@ -105,7 +83,7 @@ export function GameRoom({
             onLeave={handleResign}
           />
         )}
-        {game.gameEndReason && !isSinglePlayer && (
+        {game.gameEndReason && (
           <GameOverNotification
             message={game.gameEndReason}
             onClose={() => {
@@ -117,6 +95,8 @@ export function GameRoom({
       </AnimationProvider>
     );
   }
+
+  const alone = game.isHost && game.players.length < 2;
 
   // Show loading modal over skeleton
   return (
@@ -135,6 +115,13 @@ export function GameRoom({
         >
           {isSpectator ? "Waiting for game..." : "Starting game..."}
         </div>
+        {alone && (
+          <AddAiOpponent
+            onStart={controller =>
+              game.startGame(undefined, [{ name: "AI Opponent", controller }])
+            }
+          />
+        )}
         {game.error && (
           <div
             style={{
@@ -166,6 +153,59 @@ export function GameRoom({
           Leave
         </button>
       </BaseModal>
+    </div>
+  );
+}
+
+function AddAiOpponent({
+  onStart,
+}: {
+  onStart: (controller: BotConfig) => void;
+}) {
+  const [kind, setKind] = useState<BotConfig["kind"]>("heuristic");
+  const controller: BotConfig =
+    kind === "llm" ? DEFAULT_LLM_SEAT : { kind: "heuristic" };
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--space-3)",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: "var(--space-4)",
+      }}
+    >
+      <select
+        className="seat-selector"
+        aria-label="AI opponent kind"
+        value={kind}
+        onChange={event => {
+          const target = event.currentTarget;
+          if (!(target instanceof HTMLSelectElement)) return;
+          setKind(target.value === "llm" ? "llm" : "heuristic");
+        }}
+      >
+        <option value="heuristic">Rules bot</option>
+        <option value="llm">LLM</option>
+      </select>
+      <button
+        onClick={() => onStart(controller)}
+        style={{
+          padding: "var(--space-2) var(--space-4)",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          background: "var(--color-victory-dark)",
+          color: "#fff",
+          border: "1px solid var(--color-victory)",
+          cursor: "pointer",
+          fontFamily: "inherit",
+          borderRadius: "4px",
+          textTransform: "uppercase",
+          letterSpacing: "0.05rem",
+        }}
+      >
+        Add AI opponent and start
+      </button>
     </div>
   );
 }

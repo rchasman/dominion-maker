@@ -10,7 +10,6 @@ import type { CardName, GameState } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import type { LLMLogEntry } from "../components/LLMLog";
-import type { GameStrategy } from "../types/game-mode";
 import {
   fetchStrategyAnalysis,
   invalidateStrategyAnalysis,
@@ -70,7 +69,6 @@ interface GameActions {
  */
 export function useGameActions(
   engineRef: MutableRefObject<DominionEngine | null>,
-  strategy: GameStrategy,
 ): GameActions {
   const playAction = useCallback(
     (card: CardName): CommandResult => {
@@ -185,7 +183,6 @@ export function useGameActions(
       }
 
       invalidateStrategyAnalysis();
-      strategy.setStrategySummary?.(undefined);
       playerStrategies$.value = {};
       executeUndo(engine, toEventId);
       const eventsAfterUndo = engine.eventLog.length;
@@ -196,14 +193,10 @@ export function useGameActions(
 
       // Refetch strategy analysis for the new game state after undo
       if (stateAfterUndo.turn >= MIN_TURN_FOR_STRATEGY) {
-        void fetchStrategyAnalysis(
-          stateAfterUndo,
-          strategy,
-          playerStrategies$.value,
-        );
+        void fetchStrategyAnalysis(stateAfterUndo, playerStrategies$.value);
       }
     },
-    [engineRef, strategy],
+    [engineRef],
   );
 
   const getStateAtEvent = useCallback(
