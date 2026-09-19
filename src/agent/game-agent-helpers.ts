@@ -9,7 +9,7 @@ import type { CommandResult } from "../commands/types";
 import type { ModelProvider } from "../config/models";
 import { api } from "../api/client";
 import { agentLogger } from "../lib/logger";
-import { isDecisionChoice } from "../types/pending-choice";
+import { moveToCommand } from "../dominion/move-to-command";
 
 type GenerateActionParams = {
   provider: ModelProvider;
@@ -119,75 +119,14 @@ export function verifyConsensusWinner(params: VerifyParams): void {
     });
 }
 
-/**
- * Execute an action by dispatching the matching command to the engine.
- * play_action doubles as the answer to a "play" decision (Throne Room, Vassal).
- */
+/** Dispatch the command a legal move maps to */
 export function executeActionWithEngine(
   engine: DominionEngine,
   action: Action,
   playerId: PlayerId,
 ): CommandResult {
-  switch (action.type) {
-    case "play_action":
-      if (!action.card) throw new Error("play_action requires card");
-      if (isDecisionChoice(engine.state.pendingChoice)) {
-        return engine.dispatch(
-          {
-            type: "SUBMIT_DECISION",
-            playerId,
-            choice: { selectedCards: [action.card] },
-          },
-          playerId,
-        );
-      }
-      return engine.dispatch(
-        { type: "PLAY_ACTION", playerId, card: action.card },
-        playerId,
-      );
-    case "play_treasure":
-      if (!action.card) throw new Error("play_treasure requires card");
-      return engine.dispatch(
-        { type: "PLAY_TREASURE", playerId, card: action.card },
-        playerId,
-      );
-    case "buy_card":
-      if (!action.card) throw new Error("buy_card requires card");
-      return engine.dispatch(
-        { type: "BUY_CARD", playerId, card: action.card },
-        playerId,
-      );
-    case "reveal_reaction":
-      if (!action.card) throw new Error("reveal_reaction requires card");
-      return engine.dispatch(
-        { type: "REVEAL_REACTION", playerId, card: action.card },
-        playerId,
-      );
-    case "decline_reaction":
-      return engine.dispatch({ type: "DECLINE_REACTION", playerId }, playerId);
-    case "skip_decision":
-      return engine.dispatch({ type: "SKIP_DECISION", playerId }, playerId);
-    case "end_phase":
-      return engine.dispatch({ type: "END_PHASE", playerId }, playerId);
-    case "discard_card":
-    case "trash_card":
-    case "topdeck_card":
-    case "gain_card":
-      // Multi-action decisions are handled by multi-round consensus
-      // This path is only for simple single-card decisions
-      if (!action.card) throw new Error(`${action.type} requires card`);
-      return engine.dispatch(
-        {
-          type: "SUBMIT_DECISION",
-          playerId,
-          choice: { selectedCards: [action.card] },
-        },
-        playerId,
-      );
-    default:
-      return {
-        ok: false,
-        error: `Unknown action type: ${String(action.type)}`,
-      };
-  }
+  return engine.dispatch(
+    moveToCommand(engine.state, action, playerId),
+    playerId,
+  );
 }
