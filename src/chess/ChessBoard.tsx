@@ -57,6 +57,8 @@ export interface ChessBoardProps {
   entries: LLMLogEntry[];
   /** The seat this client plays; the board flips when it is Black */
   localPlayerId: string | null;
+  /** Player ids read as names where a player is named; ids alone otherwise */
+  playerNames?: Record<string, string>;
   onMove: (san: string) => void;
   /** Omitted where the table is not this client's to change */
   onSeatChange?: (player: string, config: ControllerConfig) => void;
@@ -87,9 +89,12 @@ const movePairs = (moves: readonly string[]) =>
     black: moves[index * 2 + 1] ?? "",
   }));
 
-const resultText = (state: ChessState): string | null => {
+const resultText = (
+  state: ChessState,
+  names: Record<string, string>,
+): string | null => {
   if (!state.gameOver) return null;
-  const winner = state.winnerId;
+  const winner = names[state.winnerId ?? ""] ?? state.winnerId;
   if (state.result === "stalemate") return "Draw by stalemate";
   if (state.result === "draw") return "Draw";
   if (state.result === "checkmate") return `Checkmate. ${winner} wins.`;
@@ -107,6 +112,7 @@ export function ChessBoard({
   seats,
   entries,
   localPlayerId,
+  playerNames = {},
   onMove,
   onSeatChange,
   seatOptions = DEFAULT_SEAT_OPTIONS,
@@ -370,7 +376,7 @@ export function ChessBoard({
           </div>
         ))}
 
-        {resultText(state) !== null && (
+        {resultText(state, playerNames) !== null && (
           <div
             role="status"
             style={{
@@ -381,7 +387,7 @@ export function ChessBoard({
               fontWeight: 700,
             }}
           >
-            {resultText(state)}
+            {resultText(state, playerNames)}
           </div>
         )}
 

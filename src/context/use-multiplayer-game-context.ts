@@ -20,7 +20,7 @@ import type { PlayerInfoEntry } from "../types/player-info";
 import type { CommandResult, GameCommand } from "../commands/types";
 import type { PendingUndoRequest } from "../engine/engine";
 import type { ControllerConfig, ControllerKind } from "../core/seats";
-import { HEURISTIC_SEAT, HUMAN_SEAT, sameConfig } from "../core/seats";
+import { HUMAN_SEAT, sameConfig, seatFromKind } from "../core/seats";
 import { dominionModule } from "../dominion/module";
 import { multiplayerLogger } from "../lib/logger";
 import { useStrategyAnalysisFromEvents } from "./use-strategy-analysis";
@@ -249,17 +249,12 @@ export function useMultiplayerGameContext({
   // Other seats arrive as kinds only; this client's own LLM config stays here
   const [ownSeat, setOwnSeat] = useState<ControllerConfig>(HUMAN_SEAT);
   useEffect(() => {
-    const seatFor = (kind: ControllerKind): ControllerConfig => {
-      if (kind === "heuristic") return HEURISTIC_SEAT;
-      if (kind === "llm") return dominionModule.defaultLlmSeat;
-      return HUMAN_SEAT;
-    };
     seats$.value = Object.fromEntries(
       game.players.map(p => [
         p.playerId,
         p.playerId === playerId && ownSeat.kind === p.controller
           ? ownSeat
-          : seatFor(p.controller),
+          : seatFromKind(p.controller, dominionModule.defaultLlmSeat),
       ]),
     );
   }, [game.players, playerId, ownSeat]);

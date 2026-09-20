@@ -84,6 +84,50 @@ describe("GameRoom", () => {
     expect(root.textContent).toContain("cannot read");
 
     settled(() => render(null, root));
+
+    // The same room component mounts the chess board when the room plays chess
+    const { createChessGame } = await import("../../chess/engine");
+    const chess = createChessGame(["p1", "p2"]);
+    settled(() => {
+      render(
+        <GameRoom
+          roomId="chess-room"
+          game="chess"
+          playerName="Alice"
+          clientId="client-1"
+          isSpectator={false}
+          onBack={() => undefined}
+        />,
+        root,
+      );
+    });
+    const chessSocket = FakeSocket.forRoom("chess-room");
+    settled(() => chessSocket.emit("open", {}));
+    expect(chessSocket.parsed()[0]).toMatchObject({
+      type: "join",
+      game: "chess",
+    });
+    settled(() => {
+      chessSocket.deliver({
+        type: "joined",
+        playerId: "p1",
+        isSpectator: false,
+        isHost: true,
+      });
+      chessSocket.deliver({
+        type: "full_state",
+        game: "chess",
+        state: wire(chess.state),
+        events: wire([...chess.eventLog]),
+        playerInfo: {
+          p1: { id: "p1", name: "Alice", type: "human", connected: true },
+        },
+      });
+    });
+    expect(root.querySelectorAll("[data-square]").length).toBe(64);
+    expect(root.textContent).toContain("White to move");
+
+    settled(() => render(null, root));
     root.remove();
     gameState$.value = null;
   });

@@ -1,35 +1,34 @@
 /**
  * Game Room - Pre-game lobby and in-game wrapper
  *
- * Uses a single PartySocket connection via MultiplayerProvider.
- * Shows waiting room or game board based on game state.
+ * One PartySocket connection per room. The room's game picks the board and
+ * the adapter that turns the room's opaque state into a game state, so each
+ * game owns its own hooks and only the chrome is shared.
  */
-import type { ComponentChildren } from "preact";
-import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
-import type { BotConfig } from "../../partykit/protocol";
-import type { LlmSeatConfig } from "../../core/seats";
-import type { GameId } from "../../game-ids";
 import { moduleFor } from "../../games";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
-import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
 import { gameState$ } from "../../context/game-signals";
 import { AnimationProvider } from "../../animation";
+import { ChessRoom } from "./ChessRoom";
+import {
+  GameOverNotification,
+  SpectatorBadge,
+  UNREADABLE_GAME,
+  WaitingRoom,
+  useRoomChrome,
+  type RoomProps,
+} from "./room-chrome";
 
-interface GameRoomProps {
-  roomId: string;
-  game: GameId;
-  playerName: string;
-  clientId: string;
-  isSpectator: boolean;
-  onBack: () => void;
-  onResign?: () => void;
+export function GameRoom(props: RoomProps) {
+  if (props.game === "chess") return <ChessRoom {...props} />;
+  return <DominionRoom {...props} />;
 }
 
-export function GameRoom({
+function DominionRoom({
   roomId,
   game,
   playerName,
@@ -37,8 +36,7 @@ export function GameRoom({
   isSpectator,
   onBack,
   onResign,
-}: GameRoomProps) {
-  // Single connection - used for both waiting room and game
+}: RoomProps) {
   const room = usePartyGame({
     roomId,
     game,
@@ -50,27 +48,12 @@ export function GameRoom({
   // Sync multiplayer state into signals
   useMultiplayerGameContext({ game: room, playerName, isSpectator });
 
-  // Handle resignation
-  const handleResign = () => {
-    if (!isSpectator && room.playerId) {
-      room.resign();
-    }
-    if (onResign) {
-      onResign();
-    } else {
-      onBack();
-    }
-  };
-
-  // Get disconnected opponent (if any)
-  const disconnectedOpponent = useMemo(() => {
-    if (isSpectator || !room.playerId) return null;
-
-    const opponent = Array.from(room.disconnectedPlayers.entries()).find(
-      ([playerId]) => playerId !== room.playerId,
-    );
-    return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
-  }, [room.disconnectedPlayers, room.playerId, isSpectator]);
+  const { leave, disconnectedOpponent } = useRoomChrome({
+    room,
+    isSpectator,
+    onBack,
+    ...(onResign !== undefined && { onResign }),
+  });
 
   // Both preconditions, and neither alone. The room's own state says this room
   // has a game; the parsed one says this client can read it. gameState$ is
@@ -86,12 +69,12 @@ export function GameRoom({
 
     return (
       <AnimationProvider>
-        <Board onBackToHome={handleResign} />
+        <Board onBackToHome={leave} />
         {isSpectator && <SpectatorBadge />}
         {disconnectedOpponent && (
           <DisconnectModal
             playerName={disconnectedOpponent.playerName}
-            onLeave={handleResign}
+            onLeave={leave}
           />
         )}
         {room.gameEndReason && (
@@ -107,187 +90,16 @@ export function GameRoom({
     );
   }
 
-  const alone = room.isHost && room.players.length < 2;
-
-  // Show loading modal over skeleton
   return (
-    <div style={{ position: "relative" }}>
-      <BoardSkeleton />
-      <BaseModal>
-        <div
-          style={{
-            fontSize: "1.25rem",
-            color: "var(--color-gold)",
-            textShadow: "var(--shadow-glow-gold)",
-            letterSpacing: "0.1rem",
-            textTransform: "uppercase",
-            marginBottom: "var(--space-4)",
-          }}
-        >
-          {isSpectator ? "Waiting for game..." : "Starting game..."}
-        </div>
-        {alone && (
-          <AddAiOpponent
-            defaultLlm={moduleFor(game).defaultLlmSeat}
-            onStart={controller =>
-              room.startGame(undefined, [{ name: "AI Opponent", controller }])
-            }
-          />
-        )}
-        {unreadableState && (
-          <ErrorNote>
-            This room sent a game this client cannot read. Leave and rejoin, or
-            reload to pick up a newer version.
-          </ErrorNote>
-        )}
-        {room.error && <ErrorNote>{room.error}</ErrorNote>}
-        <button
-          onClick={handleResign}
-          style={{
-            padding: "var(--space-2) var(--space-4)",
-            fontSize: "0.75rem",
-            background: "transparent",
-            color: "var(--color-text-tertiary)",
-            border: "1px solid var(--color-border-primary)",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            borderRadius: "4px",
-          }}
-        >
-          Leave
-        </button>
-      </BaseModal>
-    </div>
-  );
-}
-
-function ErrorNote({ children }: { children: ComponentChildren }) {
-  return (
-    <div
-      style={{
-        padding: "var(--space-3)",
-        background: "rgba(220, 38, 38, 0.2)",
-        border: "1px solid rgba(220, 38, 38, 0.5)",
-        borderRadius: "4px",
-        color: "#fca5a5",
-        fontSize: "0.75rem",
-        marginBottom: "var(--space-4)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function AddAiOpponent({
-  defaultLlm,
-  onStart,
-}: {
-  defaultLlm: LlmSeatConfig;
-  onStart: (controller: BotConfig) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        marginBottom: "var(--space-4)",
-      }}
-    >
-      <button
-        onClick={() => onStart(defaultLlm)}
-        style={{
-          padding: "var(--space-2) var(--space-4)",
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          background: "var(--color-victory-dark)",
-          color: "#fff",
-          border: "1px solid var(--color-victory)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          borderRadius: "4px",
-          textTransform: "uppercase",
-          letterSpacing: "0.05rem",
-        }}
-      >
-        Add AI opponent and start
-      </button>
-    </div>
-  );
-}
-
-function SpectatorBadge() {
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: "var(--space-4)",
-        right: "var(--space-4)",
-        padding: "var(--space-2) var(--space-4)",
-        background: "rgba(0, 0, 0, 0.8)",
-        border: "1px solid var(--color-border-primary)",
-        borderRadius: "4px",
-        color: "var(--color-text-secondary)",
-        fontSize: "0.75rem",
-        textTransform: "uppercase",
-        letterSpacing: "0.1rem",
-        zIndex: 1000,
-      }}
-    >
-      Spectating
-    </div>
-  );
-}
-
-interface GameOverNotificationProps {
-  message: string;
-  onClose: () => void;
-}
-
-function GameOverNotification({ message, onClose }: GameOverNotificationProps) {
-  return (
-    <BaseModal zIndex={2000}>
-      <h2
-        style={{
-          margin: 0,
-          marginBottom: "var(--space-4)",
-          fontSize: "1.5rem",
-          color: "var(--color-victory)",
-          textTransform: "uppercase",
-          letterSpacing: "0.125rem",
-        }}
-      >
-        Victory!
-      </h2>
-      <p
-        style={{
-          margin: 0,
-          marginBottom: "var(--space-6)",
-          color: "var(--color-text-primary)",
-          fontSize: "1rem",
-        }}
-      >
-        {message}
-      </p>
-      <button
-        onClick={onClose}
-        style={{
-          padding: "var(--space-3) var(--space-6)",
-          fontSize: "0.875rem",
-          fontWeight: 600,
-          background:
-            "linear-gradient(180deg, var(--color-victory-darker) 0%, var(--color-victory-dark) 100%)",
-          color: "#fff",
-          border: "2px solid var(--color-victory)",
-          cursor: "pointer",
-          textTransform: "uppercase",
-          letterSpacing: "0.1rem",
-          fontFamily: "inherit",
-          boxShadow: "var(--shadow-lg)",
-        }}
-      >
-        Return to Lobby
-      </button>
-    </BaseModal>
+    <WaitingRoom
+      isSpectator={isSpectator}
+      alone={room.isHost && room.players.length < 2}
+      defaultLlm={moduleFor(game).defaultLlmSeat}
+      onStart={controller =>
+        room.startGame(undefined, [{ name: "AI Opponent", controller }])
+      }
+      notes={[unreadableState ? UNREADABLE_GAME : null, room.error]}
+      onLeave={leave}
+    />
   );
 }
