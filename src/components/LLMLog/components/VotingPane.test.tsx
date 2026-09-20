@@ -48,6 +48,30 @@ describe("vote explanations", () => {
     render(null, root);
   });
 
+  it("counts a model whose answer carried no probability mass", () => {
+    const root = document.createElement("div");
+    const empty = new Map(
+      Array.from(statuses(), ([index, status]) => [
+        index,
+        { ...status, distribution: [] },
+      ]),
+    );
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={empty}
+        totalModels={4}
+        legalActions={["buy_card(Gold)"]}
+      />,
+      root,
+    );
+    expect(root.textContent).toContain("gpt-5.4-nano");
+    expect(
+      root.querySelector('[aria-label="50% vote share"]')?.textContent,
+    ).toBe("50%");
+    render(null, root);
+  });
+
   it("does not report legality when legal actions are unavailable", () => {
     const root = document.createElement("div");
     render(<VotingPane data={null} liveStatuses={statuses()} />, root);

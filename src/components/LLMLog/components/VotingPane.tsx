@@ -91,7 +91,9 @@ function buildVoteGroups(
     if (!status.action) return voteGroups;
     const top = status.action;
     const topSignature = JSON.stringify(stripReasoning(top));
-    const votes = status.distribution ?? [{ move: top, weight: 1 }];
+    // A text model answers with no probability mass, so its pick is one vote
+    const spread = status.distribution ?? [];
+    const votes = spread.length > 0 ? spread : [{ move: top, weight: 1 }];
     return votes.reduce((groups, { move: action, weight }) => {
       const signature = JSON.stringify(stripReasoning(action));
       const isTop = signature === topSignature;
