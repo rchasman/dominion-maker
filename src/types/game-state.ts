@@ -265,7 +265,6 @@ export type GameState = {
   // Player tracking
   playerOrder: PlayerId[]; // Turn order for N-player games (always set by GAME_INITIALIZED)
   playerInfo?: Record<PlayerId, PlayerInfoEntry>; // Player names, types, connection status
-  isMultiplayer?: boolean; // Flag to indicate multiplayer mode
 };
 
 export type HumanChoice = {
