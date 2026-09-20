@@ -16,12 +16,15 @@ const serverMessage = z.custom<GameServerMessage>(
  * One PartyKit room wired to plain objects. Every server test drives the real
  * `GameServer` through this, so the sockets and the room are the only fakes.
  */
-export function roomHarness(resolveModule?: ResolveModule) {
+export function roomHarness(
+  resolveModule?: ResolveModule,
+  env: Record<string, unknown> = {},
+) {
   const sockets = new Map<string, ConnLike>();
   const messages = new Map<string, GameServerMessage[]>();
   const room: RoomLike = {
     id: "test",
-    env: {},
+    env,
     getConnections: () => sockets.values(),
     broadcast: message => {
       Array.from(sockets.values()).map(socket => socket.send(message));

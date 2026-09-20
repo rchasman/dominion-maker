@@ -13,7 +13,11 @@ import type {
   GameServerMessage,
 } from "./protocol";
 import type { PlayerInfoEntry } from "../types/player-info";
-import { gameMessageSchema, lobbyMessageSchema } from "../validation/messages";
+import {
+  consensusLogEntrySchema,
+  gameMessageSchema,
+  lobbyMessageSchema,
+} from "../validation/messages";
 
 /**
  * Protocol Type Tests
@@ -21,7 +25,51 @@ import { gameMessageSchema, lobbyMessageSchema } from "../validation/messages";
  * Tests type definitions and discriminated unions for type safety.
  */
 
+const stampedEntry = {
+  id: "log-1",
+  timestamp: 1_700_000_000_000,
+  type: "consensus-voting",
+  message: "◉ Voting: winner e4 (3/5)",
+  data: { playerId: "w", votingDuration: 900 },
+};
+
 describe("Protocol Types", () => {
+  describe("consensus_log", () => {
+    it("carries one stamped log entry to a connection", () => {
+      const message: GameServerMessage = {
+        type: "consensus_log",
+        entry: {
+          id: "log-1",
+          timestamp: 1_700_000_000_000,
+          type: "consensus-voting",
+          message: "◉ Voting: winner e4 (3/5)",
+          data: { playerId: "w" },
+        },
+      };
+      expect(message.type).toBe("consensus_log");
+    });
+
+    it("accepts a stamped entry", () => {
+      expect(consensusLogEntrySchema.safeParse(stampedEntry).success).toBe(
+        true,
+      );
+    });
+
+    it("refuses an entry that is unstamped, unknown or padded", () => {
+      const { timestamp, ...unstamped } = stampedEntry;
+      expect(timestamp).toBeGreaterThan(0);
+      expect(consensusLogEntrySchema.safeParse(unstamped).success).toBe(false);
+      expect(
+        consensusLogEntrySchema.safeParse({ ...stampedEntry, type: "gossip" })
+          .success,
+      ).toBe(false);
+      expect(
+        consensusLogEntrySchema.safeParse({ ...stampedEntry, children: [] })
+          .success,
+      ).toBe(false);
+    });
+  });
+
   describe("PlayerId", () => {
     it("should be a string type", () => {
       const playerId: PlayerId = "player-123";

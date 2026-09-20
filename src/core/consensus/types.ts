@@ -1,18 +1,22 @@
 import type { ModelProvider } from "../../config/models";
 import type { TokenUsage } from "./cost";
 
-type LLMLogEntryType =
-  | "ai-turn-start"
-  | "error"
-  | "consensus-start"
-  | "consensus-step-error"
-  | "consensus-voting"
-  | "consensus-skipped"
-  | "consensus-model-pending"
-  | "consensus-model-complete"
-  | "consensus-model-aborted"
-  | "consensus-verdict"
-  | "ai-decision-resolving";
+/** Every kind of entry the consensus viewer renders; the wire schema reads this */
+export const LLM_LOG_ENTRY_TYPES = [
+  "ai-turn-start",
+  "error",
+  "consensus-start",
+  "consensus-step-error",
+  "consensus-voting",
+  "consensus-skipped",
+  "consensus-model-pending",
+  "consensus-model-complete",
+  "consensus-model-aborted",
+  "consensus-verdict",
+  "ai-decision-resolving",
+] as const;
+
+type LLMLogEntryType = (typeof LLM_LOG_ENTRY_TYPES)[number];
 
 export type LLMLogEntryInput = {
   type: LLMLogEntryType;

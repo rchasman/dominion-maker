@@ -19,11 +19,13 @@ import type {
   PlayerId,
 } from "./protocol";
 import type { PlayerInfoEntry } from "../types/player-info";
+import type { LLMLogEntryInput } from "../core/consensus/types";
 import type { ControllerConfig, Seats } from "../core/seats";
 import { HUMAN_SEAT, isHumanSeat } from "../core/seats";
 import type { Controller } from "../core/controller";
 import { heuristicController } from "../core/controller";
 import { llmController } from "../core/llm-controller";
+import { stampLogEntry } from "../core/consensus/log";
 import { createControllerCache } from "../core/controller-cache";
 import { driveEngine } from "../core/driver";
 import { httpDecideMove } from "../agent/http-decide-move";
@@ -150,6 +152,7 @@ export default class GameServer implements Party.Server {
         return llmController(module.definition, config, {
           decideMove: httpDecideMove(module, this.apiOrigin),
           getPlayerStrategies: () => ({}),
+          logger: entry => this.relayConsensusLog(entry),
         });
       }),
     };
@@ -1046,6 +1049,12 @@ export default class GameServer implements Party.Server {
    * One viewer's copy of a state-carrying message: the module decides what
    * this viewer may see, and `seen` is the history that view is built from.
    */
+  /** Whose eyes this connection sees through; a spectator sees nobody's */
+  private viewerFor(conn: ConnLike): string | null {
+    const player = this.connections.get(conn.id);
+    return player && !player.isSpectator ? player.clientId : null;
+  }
+
   private sendState(
     conn: ConnLike,
     head: StateHead,
@@ -1054,8 +1063,7 @@ export default class GameServer implements Party.Server {
   ) {
     const game = this.game;
     if (!game) return;
-    const player = this.connections.get(conn.id);
-    const viewer = player && !player.isSpectator ? player.clientId : null;
+    const viewer = this.viewerFor(conn);
     const payload = {
       game: game.id,
       state: state === null ? null : game.module.view(state, seen, viewer),
@@ -1079,6 +1087,21 @@ export default class GameServer implements Party.Server {
   ) {
     for (const conn of this.room.getConnections())
       this.sendState(conn, head, state, seen);
+  }
+
+  /**
+   * A room's LLM seats vote on the server, so the votes reach the viewer only
+   * if the room sends them. Each connection gets the module's projection.
+   */
+  private relayConsensusLog(entry: LLMLogEntryInput): void {
+    const game = this.game;
+    if (!game) return;
+    const stamped = stampLogEntry(entry);
+    for (const conn of this.room.getConnections()) {
+      const projected =
+        game.module.viewLogEntry?.(stamped, this.viewerFor(conn)) ?? stamped;
+      this.send(conn, { type: "consensus_log", entry: projected });
+    }
   }
 
   private send(conn: ConnLike, msg: GameServerMessage) {

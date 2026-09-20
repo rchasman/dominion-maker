@@ -2,6 +2,8 @@ import { z } from "zod";
 import { gameIdSchema } from "../game-ids";
 import { idSchema as id } from "./game-state";
 import { botConfigSchema, controllerConfigSchema, seatsSchema } from "./seats";
+import { LLM_LOG_ENTRY_TYPES } from "../core/consensus/types";
+import type { LLMLogEntry } from "../core/consensus/types";
 import type {
   GameClientMessage,
   LobbyClientMessage,
@@ -83,6 +85,20 @@ const gameMessage = z.discriminatedUnion("type", [
 export const gameMessageSchema = z.custom<GameClientMessage>(
   value => gameMessage.safeParse(value).success,
 );
+/** The entry a room relays; its `data` stays the acting game's business */
+const consensusLogEntry = z
+  .object({
+    id,
+    timestamp: z.number(),
+    type: z.enum(LLM_LOG_ENTRY_TYPES),
+    message: z.string().max(10000),
+    data: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+export const consensusLogEntrySchema = z.custom<LLMLogEntry>(
+  value => consensusLogEntry.safeParse(value).success,
+);
+
 const lobbyMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("join_lobby"), name, clientId: id }).strict(),
   z

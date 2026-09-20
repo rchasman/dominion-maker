@@ -6,6 +6,7 @@
  * `unknown` and the room's `GameModule` validates and projects them.
  */
 import type { GameId } from "../game-ids";
+import type { LLMLogEntry } from "../core/consensus/types";
 import type { PlayerInfoEntry } from "../types/player-info";
 import type { PlayerId } from "../types/basic-types";
 import type {
@@ -163,4 +164,6 @@ export type GameServerMessage =
   | { type: "error"; message: string }
   | { type: "game_ended"; reason: string }
   | { type: "chat"; message: ChatMessageData }
-  | { type: "chat_history"; messages: ChatMessageData[] };
+  | { type: "chat_history"; messages: ChatMessageData[] }
+  /** One seat's consensus log entry, already projected for this connection */
+  | { type: "consensus_log"; entry: LLMLogEntry };
