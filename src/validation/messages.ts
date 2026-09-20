@@ -34,7 +34,11 @@ const gameMessage = z.discriminatedUnion("type", [
       .max(3)
       .optional(),
   }),
-  z.object({ type: z.literal("start_singleplayer"), seats: seatsSchema }),
+  z.object({
+    type: z.literal("start_singleplayer"),
+    seats: seatsSchema,
+    options: z.unknown().optional(),
+  }),
   z.object({
     type: z.literal("set_seat"),
     playerId: id,

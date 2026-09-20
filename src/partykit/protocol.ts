@@ -136,7 +136,7 @@ export type GameClientMessage =
       options?: unknown;
       bots?: Array<{ name: string; controller: BotConfig }>;
     }
-  | { type: "start_singleplayer"; seats: Seats }
+  | { type: "start_singleplayer"; seats: Seats; options?: unknown }
   | { type: "set_seat"; playerId: PlayerId; controller: ControllerConfig }
   | { type: "sync_events"; events: unknown[] }
   /** The room's module parses `command` with its own `commandSchema` */

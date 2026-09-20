@@ -236,12 +236,16 @@ describe("Protocol Types", () => {
       expect(msg.type).toBe("start_game");
     });
 
-    it("should accept start_singleplayer message", () => {
+    it("start_singleplayer carries seats and opaque options", () => {
       const msg: GameClientMessage = {
         type: "start_singleplayer",
         seats: { human: { kind: "human" } },
+        options: { kingdomCards: ["Village"] },
       };
       expect(msg.type).toBe("start_singleplayer");
+      if (msg.type === "start_singleplayer") {
+        expect(msg.options).toEqual({ kingdomCards: ["Village"] });
+      }
     });
 
     it("should accept start_game with bot seats", () => {
@@ -489,9 +493,15 @@ describe("gameMessageSchema", () => {
     ).toBe(true);
   });
 
-  it("accepts start_singleplayer with seats alone", () => {
+  it("accepts start_singleplayer with and without options", () => {
+    const seats = { human: { kind: "human" } };
+    expect(parses({ type: "start_singleplayer", seats })).toBe(true);
     expect(
-      parses({ type: "start_singleplayer", seats: { human: { kind: "human" } } }),
+      parses({
+        type: "start_singleplayer",
+        seats,
+        options: { kingdomCards: ["Village"] },
+      }),
     ).toBe(true);
   });
 
