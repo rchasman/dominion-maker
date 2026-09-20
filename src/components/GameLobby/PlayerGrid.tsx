@@ -8,6 +8,8 @@ import type {
   ActiveGame,
   PlayerId,
 } from "../../partykit/protocol";
+import type { GameId } from "../../games";
+import { moduleFor } from "../../games";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor, PLAYER_COLORS } from "../../lib/board-utils";
 import { run } from "../../lib/run";
@@ -63,7 +65,7 @@ interface PlayerGridProps {
   getIncomingRequest: (playerId: PlayerId) => GameRequest | undefined;
   onRequestGame: (targetId: string) => void;
   onAcceptRequest: (requestId: string) => void;
-  onSpectateGame: (roomId: string) => void;
+  onSpectateGame: (roomId: string, game: GameId) => void;
 }
 
 export function PlayerGrid({
@@ -269,7 +271,7 @@ export function PlayerGrid({
                 key={game.roomId}
                 game={game}
                 isMyGame={game.roomId === myLastGameRoomId}
-                onClick={() => onSpectateGame(game.roomId)}
+                onClick={() => onSpectateGame(game.roomId, game.game)}
                 playerColors={playerColors}
               />
             ))}
@@ -521,7 +523,7 @@ function GameCircle({
           fontWeight: isMyGame ? FONT_WEIGHT_MY_GAME : FONT_WEIGHT_OTHER,
         }}
       >
-        {isMyGame ? "Rejoin" : "Watch"}
+        {isMyGame ? "Rejoin" : "Watch"} {moduleFor(game.game).name}
       </span>
     </button>
   );

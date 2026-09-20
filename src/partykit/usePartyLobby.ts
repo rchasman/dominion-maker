@@ -25,6 +25,7 @@ type RequestState = "none" | "sent" | "received";
 interface MatchedGame {
   roomId: string;
   opponentName: string;
+  game: GameId;
 }
 
 interface UsePartyLobbyReturn {
@@ -109,6 +110,7 @@ export function usePartyLobby(
           setMatchedGame({
             roomId: msg.roomId,
             opponentName: msg.opponentName,
+            game: msg.game,
           });
           break;
         case "error":

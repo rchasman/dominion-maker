@@ -7,7 +7,9 @@
 import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
-import { DEFAULT_LLM_SEAT } from "../../core/seats";
+import type { LlmSeatConfig } from "../../core/seats";
+import type { GameId } from "../../games";
+import { moduleFor } from "../../games";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
@@ -17,6 +19,7 @@ import { AnimationProvider } from "../../animation";
 
 interface GameRoomProps {
   roomId: string;
+  game: GameId;
   playerName: string;
   clientId: string;
   isSpectator: boolean;
@@ -26,6 +29,7 @@ interface GameRoomProps {
 
 export function GameRoom({
   roomId,
+  game,
   playerName,
   clientId,
   isSpectator,
@@ -33,21 +37,15 @@ export function GameRoom({
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
+  const room = usePartyGame({ roomId, game, playerName, clientId, isSpectator });
 
   // Sync multiplayer state into signals
-  // usePartyGame has no processing concept; the context derives spinners from
-  // isConnected, so a constant false preserves the previous (absent) value.
-  useMultiplayerGameContext({
-    game: { ...game, isProcessing: false },
-    playerName,
-    isSpectator,
-  });
+  useMultiplayerGameContext({ game: room, playerName, isSpectator });
 
   // Handle resignation
   const handleResign = () => {
-    if (!isSpectator && game.playerId) {
-      game.resign();
+    if (!isSpectator && room.playerId) {
+      room.resign();
     }
     if (onResign) {
       onResign();
@@ -58,18 +56,18 @@ export function GameRoom({
 
   // Get disconnected opponent (if any)
   const disconnectedOpponent = useMemo(() => {
-    if (isSpectator || !game.playerId) return null;
+    if (isSpectator || !room.playerId) return null;
 
-    const opponent = Array.from(game.disconnectedPlayers.entries()).find(
-      ([playerId]) => playerId !== game.playerId,
+    const opponent = Array.from(room.disconnectedPlayers.entries()).find(
+      ([playerId]) => playerId !== room.playerId,
     );
     return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
-  }, [game.disconnectedPlayers, game.playerId, isSpectator]);
+  }, [room.disconnectedPlayers, room.playerId, isSpectator]);
 
   // Show game board if game has started
-  if (game.gameState) {
+  if (room.state) {
     // Wait for playerId to be set before rendering Board
-    if (!isSpectator && !game.playerId) {
+    if (!isSpectator && !room.playerId) {
       return <BoardSkeleton />;
     }
 
@@ -83,9 +81,9 @@ export function GameRoom({
             onLeave={handleResign}
           />
         )}
-        {game.gameEndReason && (
+        {room.gameEndReason && (
           <GameOverNotification
-            message={game.gameEndReason}
+            message={room.gameEndReason}
             onClose={() => {
               localStorage.removeItem("dominion_active_game");
               onBack();
@@ -96,7 +94,7 @@ export function GameRoom({
     );
   }
 
-  const alone = game.isHost && game.players.length < 2;
+  const alone = room.isHost && room.players.length < 2;
 
   // Show loading modal over skeleton
   return (
@@ -117,12 +115,13 @@ export function GameRoom({
         </div>
         {alone && (
           <AddAiOpponent
+            defaultLlm={moduleFor(game).defaultLlmSeat}
             onStart={controller =>
-              game.startGame(undefined, [{ name: "AI Opponent", controller }])
+              room.startGame(undefined, [{ name: "AI Opponent", controller }])
             }
           />
         )}
-        {game.error && (
+        {room.error && (
           <div
             style={{
               padding: "var(--space-3)",
@@ -134,7 +133,7 @@ export function GameRoom({
               marginBottom: "var(--space-4)",
             }}
           >
-            {game.error}
+            {room.error}
           </div>
         )}
         <button
@@ -158,8 +157,10 @@ export function GameRoom({
 }
 
 function AddAiOpponent({
+  defaultLlm,
   onStart,
 }: {
+  defaultLlm: LlmSeatConfig;
   onStart: (controller: BotConfig) => void;
 }) {
   return (
@@ -171,7 +172,7 @@ function AddAiOpponent({
       }}
     >
       <button
-        onClick={() => onStart(DEFAULT_LLM_SEAT)}
+        onClick={() => onStart(defaultLlm)}
         style={{
           padding: "var(--space-2) var(--space-4)",
           fontSize: "0.75rem",
