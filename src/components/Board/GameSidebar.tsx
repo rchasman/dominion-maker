@@ -2,6 +2,7 @@ import type { GameState } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import { hasLlmSeat } from "../../core/seats";
+import { presetOf, type SeatPreset } from "../../context/seat-presets";
 import {
   llmLogs$,
   spectatorCount$,
@@ -148,6 +149,7 @@ interface GameSidebarProps {
   appMode: "local" | "multiplayer";
   seats: Seats;
   onSeatChange?: (player: string, config: ControllerConfig) => void;
+  onPresetChange?: (preset: SeatPreset) => void;
   localPlayer?: string; // The player viewing this UI (e.g., "human", "player0")
   onNewGame?: () => void; // Optional (single-player)
   onEndGame?: () => void; // Optional (multiplayer)
@@ -162,6 +164,7 @@ export function GameSidebar({
   appMode,
   seats,
   onSeatChange,
+  onPresetChange,
   localPlayer = "human",
   onNewGame,
   onEndGame,
@@ -233,6 +236,8 @@ export function GameSidebar({
       {(appMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
 
       <GameControlsSection
+        activePreset={presetOf(seats)}
+        {...(onPresetChange !== undefined && { onPresetChange })}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}

@@ -4,7 +4,7 @@
  * Uses a single PartySocket connection via MultiplayerProvider.
  * Shows waiting room or game board based on game state.
  */
-import { useMemo, useState } from "preact/hooks";
+import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
 import { DEFAULT_LLM_SEAT } from "../../core/seats";
@@ -162,34 +162,16 @@ function AddAiOpponent({
 }: {
   onStart: (controller: BotConfig) => void;
 }) {
-  const [kind, setKind] = useState<BotConfig["kind"]>("heuristic");
-  const controller: BotConfig =
-    kind === "llm" ? DEFAULT_LLM_SEAT : { kind: "heuristic" };
   return (
     <div
       style={{
         display: "flex",
-        gap: "var(--space-3)",
-        alignItems: "center",
         justifyContent: "center",
         marginBottom: "var(--space-4)",
       }}
     >
-      <select
-        className="seat-selector"
-        aria-label="AI opponent kind"
-        value={kind}
-        onChange={event => {
-          const target = event.currentTarget;
-          if (!(target instanceof HTMLSelectElement)) return;
-          setKind(target.value === "llm" ? "llm" : "heuristic");
-        }}
-      >
-        <option value="heuristic">Rules bot</option>
-        <option value="llm">LLM</option>
-      </select>
       <button
-        onClick={() => onStart(controller)}
+        onClick={() => onStart(DEFAULT_LLM_SEAT)}
         style={{
           padding: "var(--space-2) var(--space-4)",
           fontSize: "0.75rem",

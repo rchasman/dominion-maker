@@ -34,7 +34,9 @@ import {
   requestUndo$,
   getStateAtEvent$,
   startGame$,
+  seats$,
   setSeat$,
+  setSeats$,
   updateSeat,
 } from "./game-signals";
 
@@ -72,6 +74,9 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
   });
 
   setSeat$.value = updateSeat;
+  setSeats$.value = seats => {
+    seats$.value = seats;
+  };
 
   useStrategyAnalysis(engineRef);
 

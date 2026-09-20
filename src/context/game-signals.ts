@@ -103,6 +103,8 @@ export const startGame$ = signal<(() => void) | null>(null);
 export function updateSeat(player: string, config: ControllerConfig): void {
   seats$.value = withSeat(seats$.value, player, config);
 }
+
+export const setSeats$ = signal<((seats: Seats) => void) | null>(null);
 export const getStateAtEvent$ = signal<
   ((eventId: string) => GameState | Promise<GameState>) | null
 >(null);

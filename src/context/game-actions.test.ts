@@ -26,47 +26,47 @@ describe("game-actions", () => {
 
   describe("executePlayAction", () => {
     it("should dispatch PLAY_ACTION command to engine", () => {
-      const result = executePlayAction(engine, "Village");
+      const result = executePlayAction(engine, "human", "Village");
 
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
-      const result = executePlayAction(engine, "Smithy");
+      const result = executePlayAction(engine, "human", "Smithy");
       expect(result).toBeDefined();
     });
   });
 
   describe("executePlayTreasure", () => {
     it("should dispatch PLAY_TREASURE command to engine", () => {
-      const result = executePlayTreasure(engine, "Copper");
+      const result = executePlayTreasure(engine, "human", "Copper");
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
-      const result = executePlayTreasure(engine, "Gold");
+      const result = executePlayTreasure(engine, "human", "Gold");
       expect(result).toBeDefined();
     });
   });
 
   describe("executeUnplayTreasure", () => {
     it("should dispatch UNPLAY_TREASURE command to engine", () => {
-      const result = executeUnplayTreasure(engine, "Copper");
+      const result = executeUnplayTreasure(engine, "human", "Copper");
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
-      const result = executeUnplayTreasure(engine, "Silver");
+      const result = executeUnplayTreasure(engine, "human", "Silver");
       expect(result).toBeDefined();
     });
   });
 
   describe("executePlayAllTreasures", () => {
     it("should return CommandResult with ok property", () => {
-      const result = executePlayAllTreasures(engine, engine.state);
+      const result = executePlayAllTreasures(engine, "human", engine.state);
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
       if (result.ok) {
@@ -83,7 +83,7 @@ describe("game-actions", () => {
           ai: engine.state.players.ai!,
         },
       };
-      const result = executePlayAllTreasures(engine, invalidState);
+      const result = executePlayAllTreasures(engine, "human", invalidState);
       expect(result.ok).toBe(false);
       if (result.ok) throw new Error("expected error result");
       expect(result.error).toBeDefined();
@@ -100,7 +100,11 @@ describe("game-actions", () => {
           },
         },
       };
-      const result = executePlayAllTreasures(engine, stateWithEmptyHand);
+      const result = executePlayAllTreasures(
+        engine,
+        "human",
+        stateWithEmptyHand,
+      );
       expect(result).toBeDefined();
     });
 
@@ -115,39 +119,43 @@ describe("game-actions", () => {
           },
         },
       };
-      const result = executePlayAllTreasures(engine, stateWithTreasures);
+      const result = executePlayAllTreasures(
+        engine,
+        "human",
+        stateWithTreasures,
+      );
       expect(result).toBeDefined();
     });
   });
 
   describe("executeBuyCard", () => {
     it("should dispatch BUY_CARD command to engine", () => {
-      const result = executeBuyCard(engine, "Village");
+      const result = executeBuyCard(engine, "human", "Village");
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
-      const result = executeBuyCard(engine, "Estate");
+      const result = executeBuyCard(engine, "human", "Estate");
       expect(result).toBeDefined();
     });
   });
 
   describe("executeEndPhase", () => {
     it("should dispatch END_PHASE command to engine", () => {
-      const result = executeEndPhase(engine);
+      const result = executeEndPhase(engine, "human");
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
-      const result = executeEndPhase(engine);
+      const result = executeEndPhase(engine, "human");
       expect(result).toBeDefined();
     });
 
     it("should not throw when ending phase", () => {
       expect(() => {
-        executeEndPhase(engine);
+        executeEndPhase(engine, "human");
       }).not.toThrow();
     });
   });
@@ -155,14 +163,14 @@ describe("game-actions", () => {
   describe("executeSubmitDecision", () => {
     it("should dispatch SUBMIT_DECISION command to engine", () => {
       const choice: DecisionChoice = { selectedCards: ["Copper"] };
-      const result = executeSubmitDecision(engine, choice);
+      const result = executeSubmitDecision(engine, "human", choice);
       expect(result).toBeDefined();
       expect(typeof result.ok).toBe("boolean");
     });
 
     it("should use 'human' as default playerId", () => {
       const choice = { selectedCards: [] };
-      const result = executeSubmitDecision(engine, choice);
+      const result = executeSubmitDecision(engine, "human", choice);
       expect(result).toBeDefined();
     });
   });
@@ -171,7 +179,7 @@ describe("game-actions", () => {
     it("should call undoToEvent on engine with provided eventId", () => {
       const initialEventCount = engine.eventLog.length;
       // Create some events first
-      executePlayAllTreasures(engine, engine.state);
+      executePlayAllTreasures(engine, "human", engine.state);
       expect(engine.eventLog.length).toBeGreaterThanOrEqual(initialEventCount);
 
       // Get an event ID
@@ -213,19 +221,23 @@ describe("game-actions", () => {
 
   describe("GameActionResult interface", () => {
     it("should be compatible with all action return values", () => {
-      const playActionResult = executePlayAction(engine, "Village");
+      const playActionResult = executePlayAction(engine, "human", "Village");
       expect(playActionResult).toBeDefined();
 
-      const playTreasureResult = executePlayTreasure(engine, "Copper");
+      const playTreasureResult = executePlayTreasure(engine, "human", "Copper");
       expect(playTreasureResult).toBeDefined();
 
-      const playAllResult = executePlayAllTreasures(engine, engine.state);
+      const playAllResult = executePlayAllTreasures(
+        engine,
+        "human",
+        engine.state,
+      );
       expect(typeof playAllResult.ok).toBe("boolean");
 
-      const buyResult = executeBuyCard(engine, "Estate");
+      const buyResult = executeBuyCard(engine, "human", "Estate");
       expect(buyResult).toBeDefined();
 
-      const endPhaseResult = executeEndPhase(engine);
+      const endPhaseResult = executeEndPhase(engine, "human");
       expect(endPhaseResult).toBeDefined();
     });
   });
@@ -234,10 +246,10 @@ describe("game-actions", () => {
     it("should maintain engine consistency across multiple commands", () => {
       const eventCountBefore = engine.eventLog.length;
 
-      executePlayAllTreasures(engine, engine.state);
+      executePlayAllTreasures(engine, "human", engine.state);
       expect(engine.eventLog.length).toBeGreaterThanOrEqual(eventCountBefore);
 
-      executeEndPhase(engine);
+      executeEndPhase(engine, "human");
       expect(engine.eventLog.length).toBeGreaterThanOrEqual(eventCountBefore);
 
       const currentState = engine.state;
@@ -248,7 +260,7 @@ describe("game-actions", () => {
       const initialEventCount = engine.eventLog.length;
       const initialEventId = engine.eventLog[initialEventCount - 1]?.id;
 
-      executePlayAllTreasures(engine, engine.state);
+      executePlayAllTreasures(engine, "human", engine.state);
       const countAfterPlay = engine.eventLog.length;
 
       if (initialEventId) {

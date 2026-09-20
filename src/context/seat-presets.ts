@@ -20,26 +20,39 @@ const versus = (opponent: Seats[string]) => (players: PlayerId[]) =>
 
 export const SEAT_PRESETS: Record<SeatPreset, Preset> = {
   rules: {
-    name: "Rules bot",
-    description: "You against a hard-coded rules bot. No LLM calls are made.",
+    name: "Engine",
+    description: "Hard-coded rules engine with simple random AI",
     players: () => ["human", "ai"],
     seats: versus(HEURISTIC_SEAT),
   },
   hybrid: {
     name: "Hybrid",
     description:
-      "You against an LLM seat. Several models vote on every move it makes.",
+      "Human vs AI - AI opponent uses MAKER consensus voting (multiple models vote on each decision)",
     players: () => ["human", "ai"],
     seats: versus(DEFAULT_LLM_SEAT),
   },
   watch: {
-    name: "Watch",
-    description: "Two LLM seats play each other. Sit back and watch.",
+    name: "Full",
+    description: "AI vs AI - Watch both players use MAKER consensus voting",
     players: () => generateAINames(),
     seats: players =>
       Object.fromEntries(players.map(id => [id, DEFAULT_LLM_SEAT])),
   },
 };
+
+/** The preset a table matches, for the sidebar switcher; null for a mixed table */
+export function presetOf(seats: Seats): SeatPreset | null {
+  const kinds = Object.values(seats).map(seat => seat.kind);
+  if (kinds.length === 0) return null;
+  const humans = kinds.filter(kind => kind === "human").length;
+  if (humans === 0) return kinds.every(kind => kind === "llm") ? "watch" : null;
+  if (humans !== 1) return null;
+  const others = kinds.filter(kind => kind !== "human");
+  if (others.every(kind => kind === "heuristic")) return "rules";
+  if (others.every(kind => kind === "llm")) return "hybrid";
+  return null;
+}
 
 export const SEAT_PRESET_NAMES = Object.keys(SEAT_PRESETS).filter(
   (name): name is SeatPreset => name in SEAT_PRESETS,

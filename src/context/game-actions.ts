@@ -4,7 +4,7 @@
  */
 
 import type { DominionEngine } from "../engine";
-import type { CardName, GameState } from "../types/game-state";
+import type { PlayerId, CardName, GameState } from "../types/game-state";
 import type { DecisionChoice, GameEvent } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { isTreasureCard } from "../data/cards";
@@ -24,15 +24,16 @@ export interface GameActionResult {
  */
 export function executePlayAction(
   engine: DominionEngine,
+  playerId: PlayerId,
   card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
       type: "PLAY_ACTION",
-      playerId: "human",
+      playerId,
       card,
     },
-    "human",
+    playerId,
   );
 }
 
@@ -41,15 +42,16 @@ export function executePlayAction(
  */
 export function executePlayTreasure(
   engine: DominionEngine,
+  playerId: PlayerId,
   card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
       type: "PLAY_TREASURE",
-      playerId: "human",
+      playerId,
       card,
     },
-    "human",
+    playerId,
   );
 }
 
@@ -58,15 +60,16 @@ export function executePlayTreasure(
  */
 export function executeUnplayTreasure(
   engine: DominionEngine,
+  playerId: PlayerId,
   card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
       type: "UNPLAY_TREASURE",
-      playerId: "human",
+      playerId,
       card,
     },
-    "human",
+    playerId,
   );
 }
 
@@ -76,24 +79,25 @@ export function executeUnplayTreasure(
  */
 export function executePlayAllTreasures(
   engine: DominionEngine,
+  playerId: PlayerId,
   gameState: GameState,
 ): CommandResult {
-  const humanState = gameState.players.human;
-  if (!humanState) {
-    return { ok: false, error: "No human player" };
+  const playerState = gameState.players[playerId];
+  if (!playerState) {
+    return { ok: false, error: `No such player: ${playerId}` };
   }
 
-  const treasures = humanState.hand.filter(isTreasureCard);
+  const treasures = playerState.hand.filter(isTreasureCard);
 
   // Use reduce to track any errors while playing treasures
   const hasError = treasures.reduce((errorOccurred, treasure) => {
     const result = engine.dispatch(
       {
         type: "PLAY_TREASURE",
-        playerId: "human",
+        playerId,
         card: treasure,
       },
-      "human",
+      playerId,
     );
 
     if (!result.ok) {
@@ -114,28 +118,32 @@ export function executePlayAllTreasures(
  */
 export function executeBuyCard(
   engine: DominionEngine,
+  playerId: PlayerId,
   card: CardName,
 ): CommandResult {
   return engine.dispatch(
     {
       type: "BUY_CARD",
-      playerId: "human",
+      playerId,
       card,
     },
-    "human",
+    playerId,
   );
 }
 
 /**
  * End current phase
  */
-export function executeEndPhase(engine: DominionEngine): CommandResult {
+export function executeEndPhase(
+  engine: DominionEngine,
+  playerId: PlayerId,
+): CommandResult {
   return engine.dispatch(
     {
       type: "END_PHASE",
-      playerId: "human",
+      playerId,
     },
-    "human",
+    playerId,
   );
 }
 
@@ -144,15 +152,16 @@ export function executeEndPhase(engine: DominionEngine): CommandResult {
  */
 export function executeSubmitDecision(
   engine: DominionEngine,
+  playerId: PlayerId,
   choice: DecisionChoice,
 ): CommandResult {
   return engine.dispatch(
     {
       type: "SUBMIT_DECISION",
-      playerId: "human",
+      playerId,
       choice,
     },
-    "human",
+    playerId,
   );
 }
 
