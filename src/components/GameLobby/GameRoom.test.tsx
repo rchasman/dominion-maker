@@ -125,7 +125,8 @@ describe("GameRoom", () => {
       });
     });
     expect(root.querySelectorAll("[data-square]").length).toBe(64);
-    expect(root.textContent).toContain("White to move");
+    // A room knows the player's name, so the board says who is to move
+    expect(root.textContent).toContain("Alice to move");
 
     // A chess state this client cannot read says so on screen too
     settled(() =>

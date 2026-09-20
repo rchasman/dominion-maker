@@ -95,6 +95,50 @@ describe("the chess board", () => {
     expect(picked).toEqual(["cxd8=Q+"]);
     expect(root.querySelectorAll("[data-promotion]").length).toBe(0);
 
+    // A new position closes a picker the last position opened
+    click(root, '[data-square="c7"]');
+    click(root, '[data-square="d8"]');
+    expect(root.querySelectorAll("[data-promotion]").length).toBe(4);
+    const fresh = createChessGame([...CHESS_PLAYERS]);
+    settled(() =>
+      render(
+        <ChessBoard
+          state={fresh.state}
+          seats={SEATS}
+          entries={[]}
+          localPlayerId="w"
+          onMove={san => picked.push(san)}
+        />,
+        root,
+      ),
+    );
+    expect(root.querySelectorAll("[data-promotion]").length).toBe(0);
+    expect(picked).toEqual(["cxd8=Q+"]);
+
+    // The banner names a colour, never the raw player id
+    const mated = createChessGame([...CHESS_PLAYERS]);
+    for (const [ply, san] of ["f3", "e5", "g4", "Qh4#"].entries()) {
+      const result = mated.dispatch({
+        type: "MOVE",
+        playerId: ply % 2 === 0 ? "w" : "b",
+        san,
+      });
+      if (!result.ok) throw new Error(`${san}: ${result.error}`);
+    }
+    settled(() =>
+      render(
+        <ChessBoard
+          state={mated.state}
+          seats={SEATS}
+          entries={[]}
+          localPlayerId="w"
+          onMove={() => undefined}
+        />,
+        root,
+      ),
+    );
+    expect(root.textContent).toContain("Checkmate. Black wins.");
+
     render(null, root);
     root.remove();
   });

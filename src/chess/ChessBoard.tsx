@@ -1,4 +1,4 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { Chess } from "chess.js";
 import type { ControllerConfig, ControllerKind, Seats } from "../core/seats";
 import { HUMAN_SEAT, hasLlmSeat } from "../core/seats";
@@ -89,12 +89,20 @@ const movePairs = (moves: readonly string[]) =>
     black: moves[index * 2 + 1] ?? "",
   }));
 
+/** A player is their colour, unless the caller knows a name for the id */
+const nameOf = (
+  state: ChessState,
+  names: Record<string, string>,
+  id: string,
+): string => names[id] ?? (id === state.playerOrder[0] ? "White" : "Black");
+
 const resultText = (
   state: ChessState,
   names: Record<string, string>,
 ): string | null => {
   if (!state.gameOver) return null;
-  const winner = names[state.winnerId ?? ""] ?? state.winnerId;
+  const winner =
+    state.winnerId === null ? null : nameOf(state, names, state.winnerId);
   if (state.result === "stalemate") return "Draw by stalemate";
   if (state.result === "draw") return "Draw";
   if (state.result === "checkmate") return `Checkmate. ${winner} wins.`;
@@ -124,6 +132,13 @@ export function ChessBoard({
 }: ChessBoardProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+
+  // A new position is a new set of legal moves: a picker or a selection the
+  // last position opened would send a move this one does not have.
+  useEffect(() => {
+    setPending(null);
+    setSelected(null);
+  }, [state.fen]);
 
   const replay = useMemo(() => {
     const chess = new Chess();
@@ -351,7 +366,7 @@ export function ChessBoard({
           minWidth: 0,
         }}
       >
-        {state.playerOrder.map((playerId, index) => (
+        {state.playerOrder.map(playerId => (
           <div
             key={playerId}
             style={{
@@ -362,7 +377,7 @@ export function ChessBoard({
             }}
           >
             <span style={{ fontWeight: 600 }}>
-              {index === 0 ? "White" : "Black"}
+              {nameOf(state, playerNames, playerId)}
               {mover === playerId ? " to move" : ""}
             </span>
             <SeatSelector
