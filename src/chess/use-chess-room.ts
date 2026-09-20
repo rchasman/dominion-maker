@@ -13,14 +13,14 @@ import type { ChessCommand, ChessState } from "./shape";
 const UNREADABLE = "This room sent a position this client cannot read.";
 
 /** What the room hook gives this adapter, all of it game-agnostic */
-export interface ChessRoom {
+interface ChessRoom {
   /** The room module's projected state; null until the game starts */
   state: unknown;
   playerId: string | null;
   sendCommand: (command: unknown) => void;
 }
 
-export interface ChessRoomGame {
+interface ChessRoomGame {
   state: ChessState | null;
   /** Set when the room sent a state this client cannot read */
   error: string | null;

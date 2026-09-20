@@ -9,7 +9,7 @@ import { loadChessEngine } from "./engine";
 import { chessEventSchema } from "./schemas";
 import type { ChessEvent, ChessState } from "./shape";
 
-export const CHESS_EVENTS_KEY = "dominion-maker-chess-events";
+const CHESS_EVENTS_KEY = "dominion-maker-chess-events";
 /** Chess keeps its own table: Dominion's seats name Dominion's players */
 const CHESS_SEATS_KEY = "dominion-maker-chess-seats";
 

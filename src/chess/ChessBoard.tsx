@@ -51,7 +51,7 @@ type Piece = { square: string; type: string; color: string };
 
 type Pending = { from: string; to: string; options: ChessMove[] };
 
-export interface ChessBoardProps {
+interface ChessBoardProps {
   state: ChessState;
   seats: Seats;
   entries: LLMLogEntry[];
@@ -62,7 +62,6 @@ export interface ChessBoardProps {
   onMove: (san: string) => void;
   /** Omitted where the table is not this client's to change */
   onSeatChange?: (player: string, config: ControllerConfig) => void;
-  seatOptions?: readonly ControllerKind[];
   onNewGame?: () => void;
   onTakeBack?: () => void;
   onResign?: () => void;
@@ -140,7 +139,6 @@ export function ChessBoard({
   playerNames = {},
   onMove,
   onSeatChange,
-  seatOptions = DEFAULT_SEAT_OPTIONS,
   onNewGame,
   onTakeBack,
   onResign,
@@ -398,7 +396,7 @@ export function ChessBoard({
             <SeatSelector
               playerId={playerId}
               config={seats[playerId] ?? HUMAN_SEAT}
-              options={seatOptions}
+              options={DEFAULT_SEAT_OPTIONS}
               defaultLlm={chessModule.defaultLlmSeat}
               onChange={config => onSeatChange?.(playerId, config)}
               disabled={onSeatChange === undefined}
