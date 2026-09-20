@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { LLMLogEntry } from "./consensus/types";
 import type { EngineOf, GameDefinition, GameShape } from "./game-definition";
 import type { LlmSeatConfig, Seats } from "./seats";
 
@@ -33,6 +34,11 @@ export interface GameModule<G extends GameShape> {
     viewerId: string | null,
   ): G["state"];
   publicEvents(events: readonly G["event"][]): G["event"][];
+  /**
+   * What one viewer may see of a seat's consensus log entry. Absent for a
+   * perfect-information game, where every entry travels whole.
+   */
+  viewLogEntry?(entry: LLMLogEntry, viewerId: string | null): LLMLogEntry;
   /** True when clients must replace their log instead of appending */
   needsFullResync(events: readonly G["event"][]): boolean;
   /** Runs on the server after an accepted command */

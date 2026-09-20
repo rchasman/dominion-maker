@@ -9,6 +9,7 @@ import { actionSchema } from "../validation/action";
 import { multiplayerLogger } from "../lib/logger";
 import { dominionGame } from "./definition";
 import type { DominionOptions, DominionShape } from "./shape";
+import { viewLogEntry } from "./log-view";
 import { playerView, publicEvents } from "./view";
 
 const optionsSchema: z.ZodType<DominionOptions> = z
@@ -36,6 +37,7 @@ export const dominionModule: GameModule<DominionShape> = {
   optionsSchema,
   view: playerView,
   publicEvents,
+  viewLogEntry,
   needsFullResync: events => events.some(e => e.type === "UNDO_EXECUTED"),
   afterCommand: (engine, events, seats) => {
     const requested = events.find(event => event.type === "UNDO_REQUESTED");
