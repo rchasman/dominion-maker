@@ -3,6 +3,7 @@ import { registerHappyDom } from "../../../happy-dom.test-fixture";
 import { render } from "preact";
 import { VotingPane } from "./VotingPane";
 import type { ModelStatus } from "../types";
+import type { Action } from "../../../types/action";
 
 beforeAll(registerHappyDom);
 function statuses(): Map<number, ModelStatus> {
@@ -79,6 +80,41 @@ describe("vote explanations", () => {
       root.querySelector('[aria-label="Legality unchecked"]')?.textContent,
     ).toBe("—");
     expect(root.textContent).not.toContain("Legal action");
+    render(null, root);
+  });
+
+  it("leaves legality unchecked for a move it cannot name", () => {
+    // The pane types every game's move as a Dominion Action, so a chess move
+    // reaches it shaped like this and no Dominion formatting fits it
+    const chessMove: Action = JSON.parse('{"san":"Nc6","from":"b8","to":"c6"}');
+    const root = document.createElement("div");
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={
+          new Map([
+            [
+              0,
+              {
+                provider: "gpt-5.4-nano",
+                index: 0,
+                startTime: 0,
+                completed: true,
+                success: true,
+                action: chessMove,
+                distribution: [],
+              },
+            ],
+          ])
+        }
+        legalActions={["Nc6", "Nf6"]}
+      />,
+      root,
+    );
+    expect(
+      root.querySelector('[aria-label="Legality unchecked"]')?.textContent,
+    ).toBe("—");
+    expect(root.querySelector('[aria-label="Invalid action"]')).toBeNull();
     render(null, root);
   });
 

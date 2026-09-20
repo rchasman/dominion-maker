@@ -49,8 +49,13 @@ function JevVerdictLine({ verdict }: { verdict: ConsensusVerdict }) {
 // Constants for layout calculations
 const PIXELS_PER_CHAR_VOTE: number = 7;
 
-// Format action to match legalActions string format
-function formatActionForValidation(action: Action): string {
+/**
+ * Format action to match legalActions string format. Null for a move this
+ * formatter cannot name, such as a chess move: claiming such a move is
+ * illegal would be a false accusation against every model that picked it.
+ */
+function formatActionForValidation(action: Action): string | null {
+  if (typeof action.type !== "string") return null;
   if (action.type === "end_phase") return "end_phase";
   if (action.type === "choose_from_options") {
     return `choose[${(action as { optionIndex?: number }).optionIndex}]`;
@@ -64,7 +69,9 @@ function isActionValidFromStrings(
   legalActions: string[] | undefined,
 ): boolean | undefined {
   if (!legalActions) return undefined; // No validation data available
-  return legalActions.includes(formatActionForValidation(action));
+  const formatted = formatActionForValidation(action);
+  if (formatted === null) return undefined;
+  return legalActions.includes(formatted);
 }
 const PIXELS_PER_CHAR_PERCENTAGE: number = 7.5;
 const PIXELS_PER_VOTER_CIRCLE: number = 11;
