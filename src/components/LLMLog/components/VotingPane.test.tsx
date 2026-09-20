@@ -1,15 +1,18 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { registerHappyDom } from "../../../happy-dom.test-fixture";
 import { render } from "preact";
 import { VotingPane } from "./VotingPane";
 import type { ModelStatus } from "../types";
+import type { Action } from "../../../types/action";
+import { stripReasoning } from "../../../types/action";
+import { formatActionDescription } from "../../../lib/action-utils";
 
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
-afterAll(async () => {
-  await GlobalRegistrator.unregister();
-});
+beforeAll(registerHappyDom);
+/** What the core stamps on a Dominion result: its own key and its own words */
+const dominionKey = (action: Action) => JSON.stringify(stripReasoning(action));
+
+const GOLD: Action = { type: "buy_card", card: "Gold" };
+const GOLD_LABEL = formatActionDescription(GOLD);
 
 function statuses(): Map<number, ModelStatus> {
   return new Map(
@@ -22,6 +25,8 @@ function statuses(): Map<number, ModelStatus> {
         completed: true,
         success: true,
         action: { type: "buy_card", card: "Gold", reasoning },
+        key: dominionKey(GOLD),
+        label: GOLD_LABEL,
       },
     ]),
   );
@@ -35,7 +40,7 @@ describe("vote explanations", () => {
         data={null}
         liveStatuses={statuses()}
         totalModels={4}
-        legalActions={["buy_card(Gold)"]}
+        legalKeys={[dominionKey(GOLD)]}
       />,
       root,
     );
@@ -46,6 +51,9 @@ describe("vote explanations", () => {
       "✓",
     );
     expect(root.textContent).toContain("gpt-5.4-nano");
+    // The pane prints the game's own words, as the reasoning pane already does
+    expect(root.textContent).toContain("buy_card(Gold)");
+    expect(root.textContent).not.toContain('"card"');
     const details = root.querySelector("details")!;
     expect(details.textContent).toContain("Action balance");
     expect(details.open).toBe(false);
@@ -54,7 +62,34 @@ describe("vote explanations", () => {
     render(null, root);
   });
 
-  it("does not report legality when legal actions are unavailable", () => {
+  it("counts a model whose answer carried no probability mass", () => {
+    const root = document.createElement("div");
+    const empty = new Map(
+      Array.from(statuses(), ([index, status]) => [
+        index,
+        { ...status, distribution: [] },
+      ]),
+    );
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={empty}
+        totalModels={4}
+        legalKeys={[dominionKey(GOLD)]}
+      />,
+      root,
+    );
+    expect(root.textContent).toContain("gpt-5.4-nano");
+    expect(
+      root.querySelector('[aria-label="50% vote share"]')?.textContent,
+    ).toBe("50%");
+    render(null, root);
+  });
+
+  // A game saved before the core stamped keys restores from storage with
+  // neither a key nor a legal list. Crossing out every vote in it would be
+  // the same false accusation the move key was introduced to stop.
+  it("reports no legality for an entry logged before keys were stamped", () => {
     const root = document.createElement("div");
     render(<VotingPane data={null} liveStatuses={statuses()} />, root);
     expect(
@@ -64,10 +99,93 @@ describe("vote explanations", () => {
     render(null, root);
   });
 
+  it("judges a chess vote by its own move key", () => {
+    // The pane types every game's move as a Dominion Action, so a chess move
+    // reaches it shaped like this, keyed by the SAN its own game chose
+    const nc6: Action = JSON.parse('{"san":"Nc6","from":"b8","to":"c6"}');
+    const nf6: Action = JSON.parse('{"san":"Nf6","from":"g8","to":"f6"}');
+    const chessStatus = (index: number, action: Action, key: string) => ({
+      provider: "gpt-5.4-nano" as const,
+      index,
+      startTime: 0,
+      completed: true,
+      success: true,
+      action,
+      key,
+      label: key,
+      distribution: [
+        { move: action, weight: 0.75, key, label: key },
+        { move: nf6, weight: 0.25, key: "Nf6", label: "Nf6" },
+      ],
+    });
+    const root = document.createElement("div");
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={
+          new Map([
+            [0, chessStatus(0, nc6, "Nc6")],
+            [1, chessStatus(1, nc6, "Nc6")],
+          ])
+        }
+        totalModels={2}
+        legalKeys={["Nc6", "Nf6"]}
+      />,
+      root,
+    );
+    expect(root.querySelector('[aria-label="Invalid action"]')).toBeNull();
+    expect(root.querySelectorAll('[aria-label="Valid action"]').length).toBe(2);
+    expect(root.textContent).toContain("Nc6");
+    expect(root.textContent).toContain("Nf6");
+    expect(root.textContent).not.toContain('"san"');
+    expect(
+      root.querySelector('[aria-label="75% vote share"]')?.textContent,
+    ).toBe("75%");
+    expect(
+      root.querySelector('[aria-label="25% vote share"]')?.textContent,
+    ).toBe("25%");
+    render(null, root);
+  });
+
+  it("calls a chess move illegal only when its key is not legal", () => {
+    const ke2: Action = JSON.parse('{"san":"Ke2","from":"e1","to":"e2"}');
+    const root = document.createElement("div");
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={
+          new Map([
+            [
+              0,
+              {
+                provider: "gpt-5.4-nano" as const,
+                index: 0,
+                startTime: 0,
+                completed: true,
+                success: true,
+                action: ke2,
+                key: "Ke2",
+                label: "Ke2",
+                distribution: [],
+              },
+            ],
+          ])
+        }
+        legalKeys={["Nc6", "Nf6"]}
+      />,
+      root,
+    );
+    expect(
+      root.querySelector('[aria-label="Invalid action"]')?.textContent,
+    ).toBe("✗");
+    expect(root.textContent).toContain("Ke2");
+    render(null, root);
+  });
+
   it("marks an illegal action with a cross", () => {
     const root = document.createElement("div");
     render(
-      <VotingPane data={null} liveStatuses={statuses()} legalActions={[]} />,
+      <VotingPane data={null} liveStatuses={statuses()} legalKeys={[]} />,
       root,
     );
     expect(

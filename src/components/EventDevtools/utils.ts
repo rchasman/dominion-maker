@@ -1,14 +1,12 @@
-import type { GameEvent } from "../../events/types";
-
-const PROMPT_PREVIEW_MAX_LENGTH = 30;
+import type { DevtoolsEvent } from "./adapter";
 
 /**
  * Calculate display index with readable logic
  */
-export function getDisplayIndex(
+export function getDisplayIndex<E extends DevtoolsEvent>(
   scrubberIndex: number | null,
   selectedEventId: string | null,
-  events: GameEvent[],
+  events: E[],
 ): number | null {
   // Scrubber takes precedence
   if (scrubberIndex !== null) {
@@ -26,41 +24,4 @@ export function getDisplayIndex(
   }
 
   return null;
-}
-
-/**
- * Format event for display
- */
-export function formatEvent(event: GameEvent): string {
-  const formatDelta = (delta: number) =>
-    delta >= 0 ? `+${delta}` : String(delta);
-
-  switch (event.type) {
-    case "CARD_DRAWN":
-      return `${event.playerId} drew ${event.card}`;
-    case "CARD_PLAYED":
-      return `${event.playerId} played ${event.card}`;
-    case "CARD_DISCARDED":
-      return `${event.playerId} discarded ${event.card}`;
-    case "CARD_GAINED":
-      return `${event.playerId} gained ${event.card} to ${event.to}`;
-    case "TURN_STARTED":
-      return `Turn ${event.turn} - ${event.playerId}`;
-    case "PHASE_CHANGED":
-      return `Phase: ${event.phase}`;
-    case "ACTIONS_MODIFIED":
-      return `Actions ${formatDelta(event.delta)}`;
-    case "BUYS_MODIFIED":
-      return `Buys ${formatDelta(event.delta)}`;
-    case "COINS_MODIFIED":
-      return `Coins ${formatDelta(event.delta)}`;
-    case "DECISION_REQUIRED":
-      return `Decision: ${event.decision.prompt.slice(0, PROMPT_PREVIEW_MAX_LENGTH)}...`;
-    case "DECISION_RESOLVED":
-      return `Decision: ${event.choice.selectedCards.join(", ") || "(skip)"}`;
-    case "GAME_ENDED":
-      return `Winner: ${event.winnerId}`;
-    default:
-      return event.type;
-  }
 }

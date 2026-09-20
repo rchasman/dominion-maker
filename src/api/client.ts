@@ -8,17 +8,16 @@ import type { WeightedVote } from "../core/consensus/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 
 interface GenerateActionRequest {
-  game: "dominion";
+  game: string;
   provider: string;
-  actionId?: string | undefined;
   currentState: unknown;
   playerStrategies?: Record<string, unknown> | undefined;
   customStrategy?: string | undefined;
 }
 
 interface GenerateActionResponse {
-  move?: Action;
-  distribution?: WeightedVote<Action>[];
+  move?: unknown;
+  distribution?: WeightedVote<unknown>[];
   usage?: TokenUsage;
   error?: number;
   message?: string;

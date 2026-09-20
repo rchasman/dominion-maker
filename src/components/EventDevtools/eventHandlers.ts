@@ -1,11 +1,11 @@
 import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
+import type { DevtoolsEvent } from "./adapter";
 import { useScrubberHandlers } from "./scrubberHandlers";
 
-interface HandlerDeps {
-  events: GameEvent[];
-  rootEvents: GameEvent[];
+interface HandlerDeps<E extends DevtoolsEvent> {
+  events: E[];
+  rootEvents: E[];
   selectedEventId: string | null;
   scrubberIndex: number | null;
   isPlaying: boolean;
@@ -20,7 +20,10 @@ interface HandlerActions {
   setIsPlaying: Dispatch<StateUpdater<boolean>>;
 }
 
-export function useEventHandlers(deps: HandlerDeps, actions: HandlerActions) {
+export function useEventHandlers<E extends DevtoolsEvent>(
+  deps: HandlerDeps<E>,
+  actions: HandlerActions,
+) {
   const {
     events,
     rootEvents,
@@ -40,7 +43,7 @@ export function useEventHandlers(deps: HandlerDeps, actions: HandlerActions) {
   );
 
   const handleEventClick = useCallback(
-    (event: GameEvent, eventIndex: number, isScrubberPosition: boolean) => {
+    (event: E, eventIndex: number, isScrubberPosition: boolean) => {
       const isSelected =
         selectedEventId === event.id || scrubberIndex === eventIndex;
       const newSelectedId =

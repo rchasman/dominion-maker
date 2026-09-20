@@ -33,6 +33,10 @@ interface DecisionActionProps {
   now: number;
 }
 
+/** A relayed entry's data is unknown-shaped until something checks it */
+const isKeyList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(item => typeof item === "string");
+
 export function DecisionAction({
   currentTurn,
   currentDecision,
@@ -93,13 +97,9 @@ export function DecisionAction({
           ) || 0
         }
         now={now}
-        {...(currentDecision.votingEntry.data?.gameState !== undefined &&
-          (currentDecision.votingEntry.data.gameState as GameStateSnapshot)
-            .legalActions !== undefined && {
-            legalActions: (
-              currentDecision.votingEntry.data.gameState as GameStateSnapshot
-            ).legalActions,
-          })}
+        {...(isKeyList(currentDecision.votingEntry.data?.["legalKeys"]) && {
+          legalKeys: currentDecision.votingEntry.data["legalKeys"],
+        })}
       />
     </>
   );

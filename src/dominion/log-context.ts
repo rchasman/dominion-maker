@@ -1,5 +1,4 @@
 import type { GameState, PlayerId } from "../types/game-state";
-import type { Action } from "../types/action";
 import type { LogContext } from "../core/game-definition";
 import { getHandComposition } from "../data/cards";
 import { isDecisionChoice } from "../types/pending-choice";
@@ -12,17 +11,10 @@ const EMPTY_PLAYER = {
   inPlaySourceIndices: [],
 };
 
-const describe = (move: Action): string => {
-  if (move.type === "end_phase") return "end_phase";
-  if (move.type === "choose_from_options") return `choose[${move.optionIndex}]`;
-  return `${move.type}(${move.card})`;
-};
-
 /** The payload the consensus viewer renders; keys match the pre-seats log entries */
 export function dominionLogContext(
   state: GameState,
   playerId: PlayerId,
-  moves: Action[],
 ): LogContext {
   const player = state.players[playerId];
   const hand = player?.hand ?? [];
@@ -43,8 +35,6 @@ export function dominionLogContext(
       inPlay: player?.inPlay ?? [],
       handCounts: getHandComposition(hand),
       turnHistory: state.turnHistory,
-      legalActionsCount: moves.length,
-      legalActions: moves.map(describe),
       ...(decision && {
         prompt: decision.prompt,
         decisionType: decision.cardBeingPlayed,

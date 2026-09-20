@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "./_http";
 import { gameStateSchema } from "../src/validation/game-state";
+import { actionSchema } from "../src/validation/action";
+import { chessModule } from "../src/chess/module";
+import { dominionModule } from "../src/dominion/module";
+import type { GameShape } from "../src/core/game-definition";
+import type { GameModule } from "../src/core/game-module";
+import type { GameId } from "../src/game-ids";
 import { MODEL_MAP } from "../src/config/models";
 
 const text = z.string().trim().min(1).max(20000);
@@ -15,22 +21,30 @@ const strategy = z
     recommendation: z.string(),
   })
   .passthrough();
-export const actionRequestSchema = z.object({
-  game: z.literal("dominion"),
-  provider: z.string().refine(provider => Object.hasOwn(MODEL_MAP, provider)),
-  currentState: gameStateSchema,
-  playerStrategies: z.record(z.string(), strategy).optional(),
-  customStrategy: z.string().max(20000).optional(),
-});
+/**
+ * One arm per registered game, so its own state schema guards its own
+ * requests. The module is passed rather than looked up by id: only that keeps
+ * `game` and `currentState` correlated for the handler that narrows the union.
+ */
+const actionRequestArm = <K extends GameId, G extends GameShape>(
+  game: K,
+  module: GameModule<G>,
+) =>
+  z.object({
+    game: z.literal(game),
+    provider: z.string().refine(provider => Object.hasOwn(MODEL_MAP, provider)),
+    currentState: module.stateSchema,
+    playerStrategies: z.record(z.string(), strategy).optional(),
+    customStrategy: z.string().max(20000).optional(),
+  });
+export const actionRequestSchema = z.discriminatedUnion("game", [
+  actionRequestArm("dominion", dominionModule),
+  actionRequestArm("chess", chessModule),
+]);
+export type ActionRequest = z.infer<typeof actionRequestSchema>;
 export const verifyRequestSchema = z.object({
   currentState: gameStateSchema,
-  action: z
-    .object({
-      type: z.string(),
-      card: z.string().nullish(),
-      optionIndex: z.number().optional(),
-    })
-    .passthrough(),
+  action: actionSchema,
   customStrategy: z.string().max(20000).optional(),
 });
 export const analysisRequestSchema = z.object({

@@ -4,9 +4,11 @@ import type { Engine } from "./engine";
 
 export type GameShape = {
   state: unknown;
-  event: unknown;
+  /** Every event carries an optional id once appended; the server slices history by it */
+  event: { id?: string | undefined };
   command: unknown;
   move: unknown;
+  options: unknown;
   playerId: string;
 };
 
@@ -65,6 +67,10 @@ export interface GameDefinition<G extends GameShape> {
   describeMove(move: G["move"]): string;
   /** One row of the numbered table the models pick from */
   promptRow(move: G["move"]): Record<string, string | number>;
+  /** Attaches a model's explanation to the move it picked */
+  withReasoning(move: G["move"], reasoning: string): G["move"];
+  /** Reads a model's explanation back off a move for the voting log */
+  reasoningOf(move: G["move"]): string | undefined;
   prompt(input: PromptInput<G>): { system: string; user: string };
   logContext(
     state: G["state"],

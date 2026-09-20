@@ -4,7 +4,7 @@ import { getAllCards } from "../lib/board-utils";
 import { buildLogFromEvents } from "../events/log-builder";
 
 /** Public event allowlist: private draws, choices, shuffle order and RNG never cross the wire. */
-export function publicEvents(events: GameEvent[]): GameEvent[] {
+export function publicEvents(events: readonly GameEvent[]): GameEvent[] {
   return events.filter(event =>
     [
       "TURN_STARTED",
@@ -37,7 +37,7 @@ export function publicEvents(events: GameEvent[]): GameEvent[] {
 
 export function playerView(
   state: GameState,
-  events: GameEvent[],
+  events: readonly GameEvent[],
   viewerId: string | null,
 ): GameState {
   // Build explicitly: future private engine fields must not silently become public.
@@ -105,6 +105,5 @@ export function playerView(
     activeEffects: state.activeEffects,
     playerOrder: state.playerOrder,
     ...(state.playerInfo ? { playerInfo: state.playerInfo } : {}),
-    isMultiplayer: true,
   };
 }

@@ -1,644 +1,222 @@
-import { describe, it, expect } from "bun:test";
-import type {
-  GameServerMessage,
-  GameClientMessage,
-  PlayerId,
-  ChatMessageData,
-} from "./protocol";
-import type { CardName } from "../types/game-state";
-import type { GameEvent } from "../events/types";
-import type { PendingUndoRequest } from "../engine/engine";
+import { beforeAll, describe, expect, it, mock } from "bun:test";
+import { registerHappyDom, settled } from "../happy-dom.test-fixture";
+import { FakeSocket } from "./fake-socket.test-fixture";
 
-/**
- * Unit tests for usePartyGame hook
- *
- * Tests the hook's state management, message handling, and undo computation logic.
- */
+await mock.module("partysocket", () => ({ default: FakeSocket }));
 
+beforeAll(registerHappyDom);
+
+// One sequential test: the fake socket registry is module-level state
 describe("usePartyGame", () => {
-  describe("computePendingUndo", () => {
-    it("should return null when no undo events exist", () => {
-      const events: GameEvent[] = [
-        {
-          id: "e1",
-          type: "GAME_INITIALIZED",
-          players: ["p1", "p2"],
-          kingdomCards: [],
-          supply: {},
-        },
-      ];
+  it("names its game on join and carries every move in one command message", async () => {
+    const { render, h } = await import("preact");
+    const { usePartyGame } = await import("./usePartyGame");
+    const { gameMessageSchema } = await import("../validation/messages");
 
-      // Simulate the computation
-      let pendingRequest: PendingUndoRequest | null = null;
+    type Room = ReturnType<typeof usePartyGame>;
+    const rendered: Room[] = [];
+    const room = (): Room => {
+      const latest = rendered.at(-1);
+      if (!latest) throw new Error("the hook never rendered");
+      return latest;
+    };
+    const Probe = (props: { isSpectator: boolean; roomId: string }) => {
+      rendered.push(
+        usePartyGame({
+          roomId: props.roomId,
+          playerName: "Alice",
+          clientId: "client-1",
+          game: "dominion",
+          isSpectator: props.isSpectator,
+        }),
+      );
+      return null;
+    };
 
-      for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i]!;
-        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
-          pendingRequest = null;
-          break;
-        }
-        if (event.type === "UNDO_REQUESTED") {
-          pendingRequest = {
-            requestId: "test",
-            byPlayer: "p1",
-            toEventId: "e1",
-            approvals: new Set<PlayerId>(),
-            needed: 1,
-          };
-          break;
-        }
-      }
+    const root = document.createElement("div");
+    document.body.appendChild(root);
 
-      expect(pendingRequest).toBeNull();
+    settled(() =>
+      render(h(Probe, { isSpectator: false, roomId: "play-room" }), root),
+    );
+    const socket = FakeSocket.forRoom("play-room");
+    settled(() => socket.emit("open", {}));
+
+    expect(socket.parsed()[0]).toEqual({
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "client-1",
     });
 
-    it("should return null when undo was executed", () => {
-      const events: GameEvent[] = [
-        {
-          id: "e1",
-          type: "UNDO_REQUESTED",
-          requestId: "req1",
-          byPlayer: "p1",
-          toEventId: "e0",
-        },
-        {
-          id: "e2",
-          type: "UNDO_EXECUTED",
-          fromEventId: "e1",
-          toEventId: "e0",
-        },
-      ];
+    // Every Dominion verb the protocol dropped now rides inside one command
+    const command = { type: "PLAY_ACTION", playerId: "p1", card: "Village" };
+    room().sendCommand(command);
+    const sentCommand = socket.parsed()[1];
+    expect(sentCommand).toEqual({ type: "command", command });
+    expect(gameMessageSchema.safeParse(sentCommand).success).toBe(true);
 
-      let pendingRequest: PendingUndoRequest | null = null;
-
-      for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i]!;
-        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
-          pendingRequest = null;
-          break;
-        }
-      }
-
-      expect(pendingRequest).toBeNull();
+    room().startGame({ seed: 7 }, [
+      { name: "AI Opponent", controller: { kind: "heuristic" } },
+    ]);
+    expect(socket.parsed()[2]).toEqual({
+      type: "start_game",
+      options: { seed: 7 },
+      bots: [{ name: "AI Opponent", controller: { kind: "heuristic" } }],
     });
 
-    it("should return null when undo was denied", () => {
-      const events: GameEvent[] = [
-        {
-          id: "e1",
-          type: "UNDO_REQUESTED",
-          requestId: "req1",
-          byPlayer: "p1",
-          toEventId: "e0",
-        },
-        {
-          id: "e2",
-          type: "UNDO_DENIED",
-          requestId: "req1",
-          byPlayer: "p2",
-        },
-      ];
-
-      let pendingRequest: PendingUndoRequest | null = null;
-
-      for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i]!;
-        if (event.type === "UNDO_EXECUTED" || event.type === "UNDO_DENIED") {
-          pendingRequest = null;
-          break;
-        }
-      }
-
-      expect(pendingRequest).toBeNull();
-    });
-
-    it("should return pending request when undo requested but not resolved", () => {
-      const events: GameEvent[] = [
-        {
-          id: "e1",
-          type: "UNDO_REQUESTED",
-          requestId: "req1",
-          byPlayer: "p1",
-          toEventId: "e0",
-        },
-      ];
-
-      let pendingRequest: PendingUndoRequest | null = null;
-
-      for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i]!;
-        if (event.type === "UNDO_REQUESTED") {
-          pendingRequest = {
-            requestId: event.requestId,
-            byPlayer: event.byPlayer,
-            toEventId: event.toEventId,
-            approvals: new Set<PlayerId>(),
-            needed: 1,
-          };
-          break;
-        }
-      }
-
-      expect(pendingRequest).not.toBeNull();
-      expect(pendingRequest?.requestId).toBe("req1");
-      expect(pendingRequest?.byPlayer).toBe("p1");
-    });
-
-    it("should count approvals after request", () => {
-      const events: GameEvent[] = [
-        {
-          id: "e1",
-          type: "UNDO_REQUESTED",
-          requestId: "req1",
-          byPlayer: "p1",
-          toEventId: "e0",
-        },
-        {
-          id: "e2",
-          type: "UNDO_APPROVED",
-          requestId: "req1",
-          byPlayer: "p2",
-        },
-      ];
-
-      let pendingRequest: PendingUndoRequest | null = null;
-      let requestIndex = -1;
-
-      for (let i = events.length - 1; i >= 0; i--) {
-        const event = events[i]!;
-        if (event.type === "UNDO_REQUESTED") {
-          requestIndex = i;
-          pendingRequest = {
-            requestId: event.requestId,
-            byPlayer: event.byPlayer,
-            toEventId: event.toEventId,
-            approvals: new Set<PlayerId>(),
-            needed: 1,
-          };
-          break;
-        }
-      }
-
-      if (pendingRequest && requestIndex >= 0) {
-        for (let j = requestIndex + 1; j < events.length; j++) {
-          const laterEvent = events[j]!;
-          if (
-            laterEvent.type === "UNDO_APPROVED" &&
-            laterEvent.requestId === pendingRequest.requestId
-          ) {
-            pendingRequest.approvals.add(laterEvent.byPlayer);
-          }
-        }
-      }
-
-      expect(pendingRequest?.approvals.size).toBe(1);
-      expect(pendingRequest?.approvals.has("p2")).toBe(true);
-    });
-  });
-
-  describe("state management", () => {
-    it("should track connection state", () => {
-      let isConnected = false;
-
-      isConnected = true;
-      expect(isConnected).toBe(true);
-
-      isConnected = false;
-      expect(isConnected).toBe(false);
-    });
-
-    it("should track join state", () => {
-      let isJoined = false;
-      let playerId: PlayerId | null = null;
-      let isSpectator = false;
-      let isHost = false;
-
-      const msg: GameServerMessage = {
+    // State, log and player info arrive opaque and are handed on untouched
+    settled(() => {
+      socket.deliver({
         type: "joined",
-        playerId: "player-123",
+        playerId: "p1",
         isSpectator: false,
         isHost: true,
-      };
-
-      if (msg.type === "joined") {
-        isJoined = true;
-        playerId = msg.playerId;
-        isSpectator = msg.isSpectator;
-        isHost = msg.isHost;
-      }
-
-      expect(isJoined).toBe(true);
-      expect(playerId).toBe("player-123");
-      expect(isSpectator).toBe(false);
-      expect(isHost).toBe(true);
-    });
-
-    it("should track players list", () => {
-      let players: Array<{ name: string; playerId: PlayerId }> = [];
-
-      const msg: GameServerMessage = {
-        type: "player_list",
-        players: [
-          { name: "Player 1", playerId: "p1", controller: "human" },
-          { name: "Player 2", playerId: "p2", controller: "heuristic" },
-        ],
-      };
-
-      if (msg.type === "player_list") {
-        players = msg.players;
-      }
-
-      expect(players).toHaveLength(2);
-      expect(players[0]?.name).toBe("Player 1");
-    });
-
-    it("should track spectator count", () => {
-      let spectatorCount = 0;
-
-      const msg: GameServerMessage = {
-        type: "spectator_count",
-        count: 5,
-      };
-
-      if (msg.type === "spectator_count") {
-        spectatorCount = msg.count;
-      }
-
-      expect(spectatorCount).toBe(5);
-    });
-
-    it("should handle game_started message", () => {
-      let gameState: any = null;
-      let events: GameEvent[] = [];
-
-      const msg: GameServerMessage = {
-        type: "game_started",
-        state: { test: "state" } as any,
-        events: [{ id: "e1", type: "GAME_STARTED" } as any],
-      };
-
-      if (msg.type === "game_started") {
-        gameState = msg.state;
-        events = msg.events;
-      }
-
-      expect(gameState).not.toBeNull();
-      expect(events).toHaveLength(1);
-    });
-
-    it("should handle events message and append events", () => {
-      let events: GameEvent[] = [{ id: "e1" } as any];
-
-      const msg: GameServerMessage = {
-        type: "events",
-        events: [{ id: "e2" } as any, { id: "e3" } as any],
-        state: {} as any,
-      };
-
-      if (msg.type === "events") {
-        events = [...events, ...msg.events];
-      }
-
-      expect(events).toHaveLength(3);
-      expect(events[2]?.id).toBe("e3");
-    });
-
-    it("should handle full_state message and replace events", () => {
-      let events: GameEvent[] = [{ id: "e1" } as any];
-
-      const msg: GameServerMessage = {
+      });
+      socket.deliver({
         type: "full_state",
-        events: [{ id: "e2" } as any],
-        state: {} as any,
-      };
-
-      if (msg.type === "full_state") {
-        events = msg.events;
-      }
-
-      expect(events).toHaveLength(1);
-      expect(events[0]?.id).toBe("e2");
-    });
-
-    it("should track disconnected players", () => {
-      const disconnectedPlayers = new Map<PlayerId, string>();
-
-      const msg: GameServerMessage = {
-        type: "player_disconnected",
-        playerName: "Player 1",
-        playerId: "p1",
-      };
-
-      if (msg.type === "player_disconnected") {
-        disconnectedPlayers.set(msg.playerId, msg.playerName);
-      }
-
-      expect(disconnectedPlayers.get("p1")).toBe("Player 1");
-    });
-
-    it("should remove reconnected players from disconnected list", () => {
-      const disconnectedPlayers = new Map<PlayerId, string>([
-        ["p1", "Player 1"],
-      ]);
-
-      const msg: GameServerMessage = {
-        type: "player_reconnected",
-        playerName: "Player 1",
-        playerId: "p1",
-      };
-
-      if (msg.type === "player_reconnected") {
-        disconnectedPlayers.delete(msg.playerId);
-      }
-
-      expect(disconnectedPlayers.has("p1")).toBe(false);
-    });
-
-    it("should track chat messages", () => {
-      let chatMessages: ChatMessageData[] = [];
-
-      const msg: GameServerMessage = {
-        type: "chat",
-        message: {
-          id: "msg-1",
-          senderName: "Player",
-          content: "Hello",
-          timestamp: Date.now(),
+        game: "dominion",
+        state: { turn: 1 },
+        events: [{ id: "e1" }],
+        playerInfo: {
+          p1: { id: "p1", name: "Alice", type: "human", connected: true },
         },
-      };
+      });
+    });
+    expect(room().playerId).toBe("p1");
+    expect(room().game).toBe("dominion");
+    expect(room().state).toEqual({ turn: 1 });
+    expect(room().events).toEqual([{ id: "e1" }]);
+    expect(room().playerInfo?.p1?.name).toBe("Alice");
 
-      if (msg.type === "chat") {
-        chatMessages = [...chatMessages, msg.message];
-      }
+    settled(() =>
+      socket.deliver({
+        type: "events",
+        game: "dominion",
+        state: { turn: 2 },
+        events: [{ id: "e2" }],
+        playerInfo: {},
+      }),
+    );
+    expect(room().events).toEqual([{ id: "e1" }, { id: "e2" }]);
 
-      expect(chatMessages).toHaveLength(1);
-      expect(chatMessages[0]?.content).toBe("Hello");
+    // History asks the room and resolves with whatever the room replies
+    const preview = room().getStateAtEvent("e1");
+    expect(socket.parsed().at(-1)).toEqual({
+      type: "preview_state",
+      eventId: "e1",
+    });
+    socket.deliver({
+      type: "preview_state",
+      eventId: "e1",
+      game: "dominion",
+      state: { turn: 1 },
+      playerInfo: {},
+    });
+    expect(await preview).toEqual({ turn: 1 });
+
+    settled(() => render(null, root));
+
+    // A spectator names the game too, or the room cannot place them
+    settled(() =>
+      render(h(Probe, { isSpectator: true, roomId: "watch-room" }), root),
+    );
+    const spectatorSocket = FakeSocket.forRoom("watch-room");
+    settled(() => spectatorSocket.emit("open", {}));
+    expect(spectatorSocket.parsed()[0]).toEqual({
+      type: "spectate",
+      name: "Alice",
+      game: "dominion",
+      clientId: "client-1",
     });
 
-    it("should load chat history", () => {
-      let chatMessages: ChatMessageData[] = [];
-
-      const msg: GameServerMessage = {
-        type: "chat_history",
-        messages: [
-          {
-            id: "msg-1",
-            senderName: "P1",
-            content: "Hi",
-            timestamp: Date.now(),
-          },
-          {
-            id: "msg-2",
-            senderName: "P2",
-            content: "Hello",
-            timestamp: Date.now(),
-          },
-        ],
-      };
-
-      if (msg.type === "chat_history") {
-        chatMessages = msg.messages;
-      }
-
-      expect(chatMessages).toHaveLength(2);
-    });
+    render(null, root);
+    root.remove();
   });
 
-  describe("command actions", () => {
-    it("should prevent spectators from acting", () => {
-      const isSpectator = true;
-      const result = isSpectator
-        ? { ok: false, error: "Spectators cannot act" }
-        : { ok: true, events: [] };
+  it("collects the room's consensus entries and drops them on a rejoin", async () => {
+    const { render, h } = await import("preact");
+    const { usePartyGame } = await import("./usePartyGame");
 
-      expect(result.ok).toBe(false);
-      expect(result.error).toBe("Spectators cannot act");
+    type Room = ReturnType<typeof usePartyGame>;
+    const rendered: Room[] = [];
+    const room = (): Room => {
+      const latest = rendered.at(-1);
+      if (!latest) throw new Error("the hook never rendered");
+      return latest;
+    };
+    const Probe = () => {
+      rendered.push(
+        usePartyGame({
+          roomId: "votes-room",
+          playerName: "Alice",
+          clientId: "client-1",
+          game: "chess",
+        }),
+      );
+      return null;
+    };
+
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    settled(() => render(h(Probe, {}), root));
+    const socket = FakeSocket.forRoom("votes-room");
+    settled(() => socket.emit("open", {}));
+
+    const entry = {
+      id: "log-1",
+      timestamp: 1_700_000_000_000,
+      type: "consensus-voting" as const,
+      message: "◉ Voting: winner e4 (3/5)",
+      data: { playerId: "w" },
+    };
+    settled(() => socket.deliver({ type: "consensus_log", entry }));
+    expect(room().consensusLog).toEqual([entry]);
+
+    // A malformed entry is dropped, never appended half-read
+    const malformed = JSON.stringify({
+      type: "consensus_log",
+      entry: { ...entry, id: "log-2", type: "gossip" },
     });
+    settled(() => socket.emit("message", { data: malformed }));
+    expect(room().consensusLog).toEqual([entry]);
 
-    it("should allow players to act", () => {
-      const isSpectator = false;
-      const result = isSpectator
-        ? { ok: false, error: "Spectators cannot act" }
-        : { ok: true, events: [] };
+    // A resync mid-game must not wipe the decision the viewer is reading
+    settled(() =>
+      socket.deliver({
+        type: "full_state",
+        game: "chess",
+        state: { fen: "start" },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(room().consensusLog).toEqual([entry]);
 
-      expect(result.ok).toBe(true);
-    });
+    // A new game starts on an empty viewer
+    settled(() =>
+      socket.deliver({
+        type: "game_started",
+        game: "chess",
+        state: { fen: "start" },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(room().consensusLog).toEqual([]);
 
-    it("should create play_action message", () => {
-      const msg: GameClientMessage = {
-        type: "play_action",
-        card: "Village",
-      };
+    settled(() => socket.deliver({ type: "consensus_log", entry }));
+    settled(() =>
+      socket.deliver({
+        type: "joined",
+        playerId: "w",
+        isSpectator: false,
+        isHost: true,
+      }),
+    );
+    expect(room().consensusLog).toEqual([]);
 
-      expect(msg.type).toBe("play_action");
-      expect(msg.card).toBe("Village");
-    });
-
-    it("should create play_treasure message", () => {
-      const msg: GameClientMessage = {
-        type: "play_treasure",
-        card: "Copper",
-      };
-
-      expect(msg.type).toBe("play_treasure");
-      expect(msg.card).toBe("Copper");
-    });
-
-    it("should create play_all_treasures message", () => {
-      const msg: GameClientMessage = {
-        type: "play_all_treasures",
-      };
-
-      expect(msg.type).toBe("play_all_treasures");
-    });
-
-    it("should create buy_card message", () => {
-      const msg: GameClientMessage = {
-        type: "buy_card",
-        card: "Silver",
-      };
-
-      expect(msg.type).toBe("buy_card");
-      expect(msg.card).toBe("Silver");
-    });
-
-    it("should create end_phase message", () => {
-      const msg: GameClientMessage = {
-        type: "end_phase",
-      };
-
-      expect(msg.type).toBe("end_phase");
-    });
-
-    it("should create submit_decision message", () => {
-      const msg: GameClientMessage = {
-        type: "submit_decision",
-        choice: { selectedCards: ["Copper"] },
-      };
-
-      expect(msg.type).toBe("submit_decision");
-      expect(msg.choice.selectedCards).toEqual(["Copper"]);
-    });
-
-    it("should create request_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "request_undo",
-        toEventId: "event-123",
-        reason: "Misclick",
-      };
-
-      expect(msg.type).toBe("request_undo");
-      expect(msg.toEventId).toBe("event-123");
-      expect(msg.reason).toBe("Misclick");
-    });
-
-    it("should create approve_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "approve_undo",
-        requestId: "req-123",
-      };
-
-      expect(msg.type).toBe("approve_undo");
-      expect(msg.requestId).toBe("req-123");
-    });
-
-    it("should create deny_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "deny_undo",
-        requestId: "req-123",
-      };
-
-      expect(msg.type).toBe("deny_undo");
-      expect(msg.requestId).toBe("req-123");
-    });
-
-    it("should create resign message", () => {
-      const msg: GameClientMessage = {
-        type: "resign",
-      };
-
-      expect(msg.type).toBe("resign");
-    });
-
-    it("should create leave message", () => {
-      const msg: GameClientMessage = {
-        type: "leave",
-      };
-
-      expect(msg.type).toBe("leave");
-    });
-
-    it("should create chat message", () => {
-      const msg: GameClientMessage = {
-        type: "chat",
-        message: {
-          id: "msg-1",
-          senderName: "Player",
-          content: "Hello",
-          timestamp: Date.now(),
-        },
-      };
-
-      expect(msg.type).toBe("chat");
-      expect(msg.message.content).toBe("Hello");
-    });
-  });
-
-  describe("start and seat messages", () => {
-    it("starts a game with optional kingdom cards and bot seats", () => {
-      const kingdomCards: CardName[] = ["Village", "Smithy"];
-      const msg: GameClientMessage = {
-        type: "start_game",
-        kingdomCards,
-        bots: [{ name: "AI Opponent", controller: { kind: "heuristic" } }],
-      };
-
-      expect(msg.type).toBe("start_game");
-      if (msg.type === "start_game") {
-        expect(msg.kingdomCards).toEqual(["Village", "Smithy"]);
-        expect(msg.bots?.[0]?.controller.kind).toBe("heuristic");
-      }
-    });
-
-    it("swaps a seat's controller", () => {
-      const msg: GameClientMessage = {
-        type: "set_seat",
-        playerId: "p1",
-        controller: { kind: "human" },
-      };
-      expect(msg.type).toBe("set_seat");
-    });
-  });
-
-  describe("PARTYKIT_HOST configuration", () => {
-    it("should use localhost:1999 for localhost", () => {
-      const hostname = "localhost";
-      const host =
-        hostname === "localhost"
-          ? "localhost:1999"
-          : "dominion-maker.rchasman.partykit.dev";
-
-      expect(host).toBe("localhost:1999");
-    });
-
-    it("should use production host for non-localhost", () => {
-      const hostname: string = "example.com";
-      const host =
-        hostname === "localhost"
-          ? "localhost:1999"
-          : "dominion-maker.rchasman.partykit.dev";
-
-      expect(host).toBe("dominion-maker.rchasman.partykit.dev");
-    });
-  });
-
-  describe("error handling", () => {
-    it("should handle transient errors without ending game", () => {
-      let error: string | null = null;
-      const gameEndReason: string | null = null;
-
-      const msg: GameServerMessage = {
-        type: "error",
-        message: "Invalid move",
-      };
-
-      if (msg.type === "error") {
-        error = msg.message;
-        // gameEndReason stays null for transient errors
-      }
-
-      expect(error).toBe("Invalid move");
-      expect(gameEndReason).toBeNull();
-    });
-
-    it("should handle game_ended message", () => {
-      let gameEndReason: string | null = null;
-
-      const msg: GameServerMessage = {
-        type: "game_ended",
-        reason: "Player resigned",
-      };
-
-      if (msg.type === "game_ended") {
-        gameEndReason = msg.reason;
-      }
-
-      expect(gameEndReason).toBe("Player resigned");
-    });
-
-    it("should handle player_resigned message", () => {
-      let gameEndReason: string | null = null;
-
-      const msg: GameServerMessage = {
-        type: "player_resigned",
-        playerName: "Player 1",
-      };
-
-      if (msg.type === "player_resigned") {
-        gameEndReason = `${msg.playerName} resigned. You win!`;
-      }
-
-      expect(gameEndReason).toBe("Player 1 resigned. You win!");
-    });
+    render(null, root);
+    root.remove();
   });
 });

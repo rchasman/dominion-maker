@@ -3,7 +3,10 @@ import { handleApiRequest } from "../../api/_router";
 import { actionRequestSchema, analysisRequestSchema } from "../../api/_request";
 import { createGame } from "../engine";
 import { httpDecideMove } from "../agent/http-decide-move";
+import { dominionModule } from "../dominion/module";
 import { MODELS } from "../config/models";
+import type { Action } from "../types/action";
+import type { WeightedVote } from "../core/consensus/types";
 
 describe("API request boundaries", () => {
   it("accepts every catalog model and rejects one the gateway refuses", () => {
@@ -115,7 +118,7 @@ describe("API request boundaries", () => {
     );
     global.fetch = stub;
     try {
-      const result = await httpDecideMove()({
+      const result = await httpDecideMove(dominionModule)({
         provider: "gpt-5.4-mini",
         state: createGame(["human", "ai"]).state,
         actionId: "game-turn-round",
@@ -130,6 +133,71 @@ describe("API request boundaries", () => {
         customStrategy: "Buy Gold",
       });
       expect(bodies[0]).not.toHaveProperty("actionId");
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it("parses the winning move and every distribution vote with the module's schema", async () => {
+    const originalFetch = global.fetch;
+    const reply: { move: Action; distribution: WeightedVote<Action>[] } = {
+      move: { type: "buy_card", card: "Silver", reasoning: "money first" },
+      distribution: [
+        { move: { type: "buy_card", card: "Silver" }, weight: 0.7 },
+        { move: { type: "end_phase" }, weight: 0.3 },
+      ],
+    };
+    global.fetch = Object.assign(() => Promise.resolve(Response.json(reply)), {
+      preconnect: originalFetch.preconnect,
+    });
+    try {
+      const result = await httpDecideMove(dominionModule)({
+        provider: "gpt-5.4-mini",
+        state: createGame(["human", "ai"]).state,
+        actionId: "round",
+        playerStrategies: {},
+        customStrategy: "",
+        signal: new AbortController().signal,
+      });
+      expect(result.move).toEqual(reply.move);
+      expect(result.distribution).toEqual(reply.distribution);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it("throws when the reply carries a move shape the game does not know", async () => {
+    const replies = [
+      { move: { type: "teleport" } },
+      {
+        move: { type: "end_phase" },
+        distribution: [{ move: { type: "teleport" }, weight: 1 }],
+      },
+    ];
+    const originalFetch = global.fetch;
+    try {
+      const thrown = await Promise.all(
+        replies.map(async reply => {
+          global.fetch = Object.assign(
+            () => Promise.resolve(Response.json(reply)),
+            { preconnect: originalFetch.preconnect },
+          );
+          return httpDecideMove(dominionModule)({
+            provider: "gpt-5.4-mini",
+            state: createGame(["human", "ai"]).state,
+            actionId: "round",
+            playerStrategies: {},
+            customStrategy: "",
+            signal: new AbortController().signal,
+          }).then(
+            () => null,
+            (error: unknown) => error,
+          );
+        }),
+      );
+      expect(thrown.filter(error => error !== null)).toHaveLength(
+        replies.length,
+      );
     } finally {
       global.fetch = originalFetch;
     }

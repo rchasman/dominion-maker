@@ -26,6 +26,16 @@ export const DEFAULT_LLM_SEAT: LlmSeatConfig = {
   customStrategy: "",
 };
 
+/** A room reports seats as kinds only; the LLM roster stays on the server */
+export const seatFromKind = (
+  kind: ControllerKind,
+  defaultLlm: LlmSeatConfig,
+): ControllerConfig => {
+  if (kind === "heuristic") return HEURISTIC_SEAT;
+  if (kind === "llm") return defaultLlm;
+  return HUMAN_SEAT;
+};
+
 /** A missing seat counts as human so the driver never acts for an unknown player */
 export const isHumanSeat = (config: ControllerConfig | undefined): boolean =>
   config === undefined || config.kind === "human";

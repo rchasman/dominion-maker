@@ -4,10 +4,19 @@ import { MODELS, type ModelConfig } from "../src/config/models";
 import { getLegalActions } from "../src/agent/legal-actions";
 import { verifyWithJev } from "../src/agent/jev-choice";
 import { apiLogger } from "../src/lib/logger";
+import type { Action } from "../src/types/action";
 
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_INTERNAL_ERROR = 500;
+
+/** Both sides are narrowed so each variant compares its own fields */
+const sameMove = (legal: Action, proposed: Action): boolean =>
+  proposed.type === "choose_from_options"
+    ? legal.type === "choose_from_options" &&
+      legal.optionIndex === proposed.optionIndex
+    : legal.type === proposed.type &&
+      (legal.card ?? null) === (proposed.card ?? null);
 
 // Second opinion on a consensus winner from the evaluation model. The action
 // must be legal in the state so the server can type it from its own list.
@@ -25,13 +34,9 @@ export default async function handler(
       .json({ error: "No evaluation model configured" });
   }
   const proposed = body.action;
-  const action = getLegalActions(body.currentState).find(legal => {
-    if (legal.type !== proposed.type) return false;
-    if (legal.type === "choose_from_options") {
-      return legal.optionIndex === proposed.optionIndex;
-    }
-    return (legal.card ?? null) === (proposed.card ?? null);
-  });
+  const action = getLegalActions(body.currentState).find(legal =>
+    sameMove(legal, proposed),
+  );
   if (!action) {
     return res
       .status(HTTP_BAD_REQUEST)

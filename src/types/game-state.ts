@@ -1,22 +1,12 @@
 // Import basic types for internal use
 import type { CardName, PlayerId } from "./basic-types";
 import type { PendingChoice } from "./pending-choice";
+import type { PlayerInfoEntry } from "./player-info";
 
 // Re-export basic types
 export type { CardName, PlayerId } from "./basic-types";
 
 export type Phase = "action" | "buy" | "cleanup";
-
-// Player type (human or AI-controlled)
-export type PlayerType = "human" | "ai";
-
-// Player info for multiplayer (optional extension)
-export type PlayerInfo = {
-  id: string;
-  name: string;
-  type: PlayerType;
-  connected?: boolean;
-};
 
 // Turn sub-phases for handling interruptions (attacks, reactions, etc.)
 export type TurnSubPhase = "opponent_decision" | "awaiting_reaction" | null;
@@ -274,8 +264,7 @@ export type GameState = {
 
   // Player tracking
   playerOrder: PlayerId[]; // Turn order for N-player games (always set by GAME_INITIALIZED)
-  playerInfo?: Record<PlayerId, PlayerInfo>; // Player names, types, connection status
-  isMultiplayer?: boolean; // Flag to indicate multiplayer mode
+  playerInfo?: Record<PlayerId, PlayerInfoEntry>; // Player names, types, connection status
 };
 
 export type HumanChoice = {

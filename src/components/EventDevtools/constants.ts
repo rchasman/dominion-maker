@@ -1,62 +1,3 @@
-type EventCategory = "all" | "turns" | "cards" | "resources" | "decisions";
-
-export type { EventCategory };
-
-// Color mapping for event types
-export const EVENT_COLORS: Record<string, string> = {
-  // Setup
-  GAME_INITIALIZED: "#22c55e",
-  INITIAL_DECK_DEALT: "#22c55e",
-  INITIAL_HAND_DRAWN: "#22c55e",
-
-  // Turn structure
-  TURN_STARTED: "#f59e0b",
-  PHASE_CHANGED: "#f59e0b",
-
-  // Card movements
-  CARDS_DRAWN: "#3b82f6",
-  CARD_PLAYED: "#8b5cf6",
-  CARDS_DISCARDED: "#6b7280",
-  CARDS_TRASHED: "#ef4444",
-  CARD_GAINED: "#10b981",
-  CARDS_REVEALED: "#06b6d4",
-  DECK_SHUFFLED: "#a855f7",
-  CARDS_PUT_ON_DECK: "#6366f1",
-
-  // Resources
-  ACTIONS_MODIFIED: "#eab308",
-  BUYS_MODIFIED: "#84cc16",
-  COINS_MODIFIED: "#fbbf24",
-
-  // Decisions
-  DECISION_REQUIRED: "#f97316",
-  DECISION_RESOLVED: "#22d3ee",
-
-  // Game end
-  GAME_ENDED: "#dc2626",
-
-  // Undo
-  UNDO_REQUESTED: "#f472b6",
-  UNDO_APPROVED: "#34d399",
-  UNDO_DENIED: "#f87171",
-  UNDO_EXECUTED: "#c084fc",
-};
-
-export const CATEGORY_FILTERS: Record<EventCategory, string[]> = {
-  all: [],
-  turns: ["TURN_STARTED", "PHASE_CHANGED", "GAME_ENDED"],
-  cards: [
-    "CARD_DRAWN",
-    "CARD_PLAYED",
-    "CARD_DISCARDED",
-    "CARD_TRASHED",
-    "CARD_GAINED",
-    "DECK_SHUFFLED",
-  ],
-  resources: ["ACTIONS_MODIFIED", "BUYS_MODIFIED", "COINS_MODIFIED"],
-  decisions: ["DECISION_REQUIRED", "DECISION_RESOLVED"],
-};
-
 const PADDING_SMALL = 2;
 const PADDING_MEDIUM = 4;
 const PADDING_LARGE = 6;
@@ -144,16 +85,6 @@ export const styles = {
     padding: `${PADDING_SMALL}px ${PADDING_LARGE}px`,
     borderRadius: `${BORDER_RADIUS_XL}px`,
     fontSize: `${FONT_SIZE_TINY}px`,
-  },
-  liveButton: {
-    padding: `${PADDING_MEDIUM}px ${PADDING_EXTRA_LARGE}px`,
-    background: "#22c55e",
-    border: "none",
-    borderRadius: `${BORDER_RADIUS_MEDIUM}px`,
-    color: "white",
-    cursor: "pointer",
-    fontSize: `${FONT_SIZE_SMALL}px`,
-    fontWeight: 600,
   },
   scrubber: {
     padding: `${PADDING_EXTRA_LARGE}px ${PADDING_XXL}px`,
@@ -343,28 +274,10 @@ export const styles = {
     overflowY: "scroll",
     padding: `${PADDING_EXTRA_LARGE}px`,
   },
-  stateContent: {
-    display: "flex",
-    flexDirection: "column",
-    gap: `${PADDING_EXTRA_LARGE}px`,
-  },
-  stateSection: {
-    padding: `${PADDING_EXTRA_LARGE}px`,
-    background: "#16162a",
-    borderRadius: `${BORDER_RADIUS_MEDIUM}px`,
-  },
-  stateSectionTitle: {
-    color: "#6366f1",
-    fontWeight: 600,
-    marginBottom: `${PADDING_MEDIUM}px`,
-  },
-  stateRow: {
-    display: "flex",
-    gap: `${PADDING_EXTRA_LARGE}px`,
-    color: "#6b7280",
-    padding: `${PADDING_SMALL}px 0`,
-  },
-  stateValue: {
+  stateJson: {
+    margin: 0,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
     color: "#e0e0e8",
   },
   diffContent: {

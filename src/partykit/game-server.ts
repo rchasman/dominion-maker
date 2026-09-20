@@ -1,35 +1,65 @@
-import { gameMessageSchema, parseMessage } from "../validation/messages";
-import { playerView, publicEvents } from "./player-view";
-import { projectState } from "../events/project";
 /**
  * PartyKit Game Server
  *
- * Runs DominionEngine authoritatively. Players connect via WebSocket,
- * send commands, receive events. Spectators can watch but not act.
+ * Runs one registered game authoritatively. The first `join` fixes the room's
+ * `GameModule`; everything game-specific (rules, schemas, privacy view) flows
+ * through it. Players connect via WebSocket, send commands, receive events.
+ * Spectators can watch but not act.
  */
 import type * as Party from "partykit/server";
-import { DominionEngine } from "../engine/engine";
-import type { CardName } from "../types/game-state";
-import type { GameEvent } from "../events/types";
-import type { CommandResult } from "../commands/types";
+import type { z } from "zod";
+import { gameMessageSchema, parseMessage } from "../validation/messages";
+import type { GameShape } from "../core/game-definition";
+import type { EventEngine, GameModule } from "../core/game-module";
 import type {
   BotConfig,
-  GameClientMessage,
   GameServerMessage,
   GameUpdateMessage,
   ChatMessageData,
   PlayerId,
 } from "./protocol";
+import type { PlayerInfoEntry } from "../types/player-info";
+import type { LLMLogEntryInput } from "../core/consensus/types";
 import type { ControllerConfig, Seats } from "../core/seats";
 import { HUMAN_SEAT, isHumanSeat } from "../core/seats";
 import type { Controller } from "../core/controller";
 import { heuristicController } from "../core/controller";
-import { llmController } from "../core/llm-controller";
+import { llmController, type DecideMove } from "../core/llm-controller";
+import { stampLogEntry } from "../core/consensus/log";
 import { createControllerCache } from "../core/controller-cache";
 import { driveEngine } from "../core/driver";
-import { dominionGame, type DominionShape } from "../dominion/definition";
-import { reasoningOf } from "../dominion/moves";
 import { httpDecideMove } from "../agent/http-decide-move";
+import { moduleFor } from "../games";
+import type { GameId } from "../game-ids";
+
+/** One event as the room handles it: opaque apart from the id it is sliced by */
+type RoomEvent = GameShape["event"];
+
+type RoomModule = GameModule<GameShape>;
+
+/** How a game id becomes a module; tests pass their own registry */
+export type ResolveModule = (id: GameId) => RoomModule;
+
+/** How a seat's models are reached; tests pass their own transport */
+export type ResolveDecideMove = (module: RoomModule) => DecideMove<GameShape>;
+
+/** The game this room plays, fixed by the first join */
+type RoomGame = {
+  id: GameId;
+  module: RoomModule;
+  controllerFor: (
+    config: ControllerConfig,
+    player: string,
+  ) => Controller<GameShape> | null;
+};
+
+/** The non-state half of a server message that ships a projected state */
+type StateHead =
+  | {
+      type: "game_started" | "events" | "full_state";
+      events: readonly RoomEvent[];
+    }
+  | { type: "preview_state"; eventId: string };
 
 interface PlayerConnection {
   id: string;
@@ -60,58 +90,100 @@ const MAX_PLAYERS = 2;
 
 const MAX_CHAT_MESSAGES = 100;
 
+const firstIssue = (error: z.ZodError): string =>
+  error.issues[0]?.message ?? "Invalid input";
+
+const playerEntry = (
+  id: string,
+  name: string,
+  seat: ControllerConfig | undefined,
+): [string, PlayerInfoEntry] => [
+  id,
+  { id, name, type: isHumanSeat(seat) ? "human" : "ai", connected: true },
+];
+
 export default class GameServer implements Party.Server {
-  private engine: DominionEngine | null = null;
+  private game: RoomGame | null = null;
+  private engine: EventEngine<GameShape> | null = null;
   private connections: Map<string, PlayerConnection> = new Map();
   /** Who controls each seat, keyed by player id */
   private seats: Seats = {};
   private driving: Promise<void> | null = null;
   private driveAbort: AbortController | null = null;
-  private readonly controllerFor: (
-    config: ControllerConfig,
-    player: string,
-  ) => Controller<DominionShape> | null;
+  private readonly apiOrigin: string;
   private hostConnectionId: string | null = null;
   private hostClientId: string | null = null;
   private isStarted = false;
   private localMirror = false;
   private reconnectTokens = new Map<string, string>();
   private chatMessages: ChatMessageData[] = []; // Chat history
-  private playerInfo: Record<
-    PlayerId,
-    { id: PlayerId; name: string; type: "human" | "ai"; connected: boolean }
-  > = {}; // Track player info separately from engine state
+  private playerInfo: Record<PlayerId, PlayerInfoEntry> = {}; // Track player info separately from engine state
   private spectatorTimeoutId: ReturnType<typeof setTimeout> | null = null; // Timeout for kicking spectators
 
   readonly room: RoomLike;
+  private readonly resolveModule: ResolveModule;
+  private readonly resolveDecideMove: ResolveDecideMove;
 
-  constructor(room: RoomLike) {
+  constructor(
+    room: RoomLike,
+    resolveModule: ResolveModule = moduleFor,
+    resolveDecideMove?: ResolveDecideMove,
+  ) {
     this.room = room;
-    const apiOrigin =
+    this.resolveModule = resolveModule;
+    this.apiOrigin =
       typeof room.env["API_ORIGIN"] === "string" ? room.env["API_ORIGIN"] : "";
-    this.controllerFor = createControllerCache<DominionShape>(config => {
-      if (config.kind === "human") return null;
-      if (config.kind === "heuristic") return heuristicController(dominionGame);
-      return llmController(dominionGame, config, {
-        decideMove: httpDecideMove(apiOrigin),
-        getPlayerStrategies: () => ({}),
-        reasoningOf,
+    this.resolveDecideMove =
+      resolveDecideMove ?? (module => httpDecideMove(module, this.apiOrigin));
+  }
+
+  /**
+   * The room plays one game: the first joiner picks it, everyone else must
+   * name the same one.
+   */
+  private useGame(conn: ConnLike, id: GameId): RoomGame | null {
+    const current = this.game;
+    if (current) {
+      if (current.id === id) return current;
+      this.send(conn, {
+        type: "error",
+        message: `This room is playing ${current.module.name}`,
       });
-    });
+      return null;
+    }
+    const module = this.resolveModule(id);
+    const game: RoomGame = {
+      id,
+      module,
+      controllerFor: createControllerCache<GameShape>(config => {
+        if (config.kind === "human") return null;
+        if (config.kind === "heuristic")
+          return heuristicController(module.definition);
+        return llmController(module.definition, config, {
+          decideMove: this.resolveDecideMove(module),
+          getPlayerStrategies: () => ({}),
+          logger: entry => this.relayConsensusLog(entry),
+        });
+      }),
+    };
+    this.game = game;
+    return game;
   }
 
   /** Bots wait for nobody: whenever a non-human seat must act, drive it */
   private driveBots(): void {
     const engine = this.engine;
-    if (this.localMirror || !engine || !this.isStarted || this.driving) return;
-    const next = dominionGame.whoMustAct(engine.state);
+    const game = this.game;
+    if (this.localMirror || !engine || !game || !this.isStarted || this.driving)
+      return;
+    const next = game.module.definition.whoMustAct(engine.state);
     if (next === null || isHumanSeat(this.seats[next])) return;
     const abort = new AbortController();
     this.driveAbort = abort;
     this.driving = driveEngine(engine, {
-      game: dominionGame,
+      game: game.module.definition,
       getSeats: () => this.seats,
-      controllerFor: this.controllerFor,
+      controllerFor: game.controllerFor,
       stepDelayMs: 0,
       signal: abort.signal,
       logError: message => console.error(`[GameServer] ${message}`),
@@ -125,6 +197,14 @@ export default class GameServer implements Party.Server {
   /** Resolves when the current bot run ends; null when no bot is acting */
   get botsDriving(): Promise<void> | null {
     return this.driving;
+  }
+
+  /** True once nobody may act again; the lobby stops listing a finished game */
+  private isFinished(): boolean {
+    const engine = this.engine;
+    const game = this.game;
+    if (!engine || !game) return false;
+    return game.module.definition.whoMustAct(engine.state) === null;
   }
 
   onConnect(conn: Party.Connection) {
@@ -213,6 +293,7 @@ export default class GameServer implements Party.Server {
         this.handleJoin(
           sender,
           conn,
+          msg.game,
           msg.name,
           msg.clientId,
           msg.isBot,
@@ -220,13 +301,13 @@ export default class GameServer implements Party.Server {
         );
         break;
       case "spectate":
-        this.handleSpectate(sender, conn, msg.name, msg.clientId);
+        this.handleSpectate(sender, conn, msg.game, msg.name, msg.clientId);
         break;
       case "start_game":
-        this.handleStartGame(sender, msg.kingdomCards, msg.bots ?? []);
+        this.handleStartGame(sender, msg.options, msg.bots ?? []);
         break;
       case "start_singleplayer":
-        this.handleStartSinglePlayer(sender, msg.seats, msg.kingdomCards);
+        this.handleStartSinglePlayer(sender, msg.seats, msg.options);
         break;
       case "set_seat":
         this.handleSetSeat(sender, conn, msg.playerId, msg.controller);
@@ -234,29 +315,12 @@ export default class GameServer implements Party.Server {
       case "sync_events":
         this.handleSyncEvents(sender, msg.events);
         break;
-      case "play_action":
-      case "play_treasure":
-      case "play_all_treasures":
-      case "buy_card":
-      case "end_phase":
-      case "submit_decision":
-      case "request_undo":
-      case "approve_undo":
-      case "deny_undo":
-        this.handleGameCommand(sender, conn, msg);
+      case "command":
+        this.handleGameCommand(sender, conn, msg.command);
         break;
-      case "preview_state": {
-        const events = [...(this.engine?.eventLog ?? [])];
-        const index = events.findIndex(event => event.id === msg.eventId);
-        const state =
-          index < 0 ? null : projectState(events.slice(0, index + 1));
-        this.send(sender, {
-          type: "preview_state",
-          eventId: msg.eventId,
-          state,
-        });
+      case "preview_state":
+        this.handlePreviewState(sender, msg.eventId);
         break;
-      }
       case "resign":
         this.handleResign(sender, conn);
         break;
@@ -266,6 +330,24 @@ export default class GameServer implements Party.Server {
       case "chat":
         this.handleChat(sender, msg.message);
         break;
+    }
+  }
+
+  private handlePreviewState(conn: ConnLike, eventId: string) {
+    const game = this.game;
+    if (!game) return;
+    const events = [...(this.engine?.eventLog ?? [])];
+    const index = events.findIndex(event => event.id === eventId);
+    const prefix = events.slice(0, index + 1);
+    if (index < 0) {
+      this.sendState(conn, { type: "preview_state", eventId }, null, prefix);
+      return;
+    }
+    try {
+      const state = game.module.loadEngine(prefix).state;
+      this.sendState(conn, { type: "preview_state", eventId }, state, prefix);
+    } catch {
+      this.send(conn, { type: "error", message: "Failed to load history" });
     }
   }
 
@@ -290,6 +372,7 @@ export default class GameServer implements Party.Server {
   private handleJoin(
     conn: ConnLike,
     player: PlayerConnection,
+    gameId: GameId,
     name: string,
     clientId?: string,
     isBot?: boolean,
@@ -312,7 +395,9 @@ export default class GameServer implements Party.Server {
       });
       return;
     }
-    if (this.isStarted && this.engine) {
+    const engine = this.engine;
+    if (this.isStarted && engine) {
+      if (!this.useGame(conn, gameId)) return;
       const existingPlayerId =
         clientId && knownToken && this.playerInfo[clientId] ? clientId : null;
       if (existingPlayerId) {
@@ -333,9 +418,10 @@ export default class GameServer implements Party.Server {
         player.isSpectator = false;
 
         // Update name in playerInfo
-        if (this.playerInfo[existingPlayerId]) {
-          this.playerInfo[existingPlayerId].name = name;
-          this.playerInfo[existingPlayerId].connected = true;
+        const info = this.playerInfo[existingPlayerId];
+        if (info) {
+          info.name = name;
+          info.connected = true;
         }
 
         this.send(conn, {
@@ -347,16 +433,12 @@ export default class GameServer implements Party.Server {
           ...(knownToken ? { reconnectToken: knownToken } : {}),
         });
 
-        // Send full state with playerInfo included
-        const stateWithPlayerInfo = {
-          ...this.engine.state,
-          playerInfo: this.playerInfo,
-        };
-        this.send(conn, {
-          type: "full_state",
-          state: stateWithPlayerInfo,
-          events: [...this.engine.eventLog],
-        });
+        this.sendState(
+          conn,
+          { type: "full_state", events: engine.eventLog },
+          engine.state,
+          engine.eventLog,
+        );
 
         // Send chat history
         if (this.chatMessages.length > 0) {
@@ -408,6 +490,10 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    // Only a joiner who gets a seat fixes the room's game
+    const game = this.useGame(conn, gameId);
+    if (!game) return;
+
     const token = knownToken ?? crypto.randomUUID();
     this.reconnectTokens.set(actualClientId, token);
 
@@ -438,22 +524,23 @@ export default class GameServer implements Party.Server {
 
     // Auto-start when 2 players join (from lobby matchmaking)
     if (this.getPlayerCount() === 2 && !this.isStarted) {
-      this.autoStartGame();
+      this.localMirror = false;
+      // A lobby match carries no options: the module's defaults decide the setup
+      const accepted = this.acceptOptions(conn, game, {});
+      if (accepted) this.startEngine(game, this.getPlayers(), accepted.value);
     }
-  }
-
-  private autoStartGame() {
-    this.localMirror = false;
-    const players = this.getPlayers();
-    if (players.length < 2) return;
-    this.startEngine(players);
   }
 
   private handleStartSinglePlayer(
     conn: ConnLike,
     seats: Seats,
-    kingdomCards?: CardName[],
+    options: unknown,
   ) {
+    const game = this.game;
+    if (!game) {
+      this.send(conn, { type: "error", message: "Join a game first" });
+      return;
+    }
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
       return;
@@ -473,6 +560,9 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    const accepted = this.acceptOptions(conn, game, options);
+    if (!accepted) return;
+
     // The host's own engine is authoritative; this room only mirrors it for
     // spectators, so seats are labels keyed by the local game's player ids.
     this.localMirror = true;
@@ -484,43 +574,24 @@ export default class GameServer implements Party.Server {
     });
     this.seats = seats;
 
-    const engine = new DominionEngine();
+    const engine = game.module.createEngine(
+      [humanPlayer.clientId, botConnectionId],
+      accepted.value,
+    );
     this.engine = engine;
-    engine.startGame([humanPlayer.clientId, botConnectionId], kingdomCards);
     this.isStarted = true;
 
     this.playerInfo = Object.fromEntries(
-      Object.entries(seats).map(([id, seat]) => [
-        id,
-        {
-          id,
-          name: id,
-          type: isHumanSeat(seat) ? "human" : "ai",
-          connected: true,
-        } as const,
-      ]),
+      Object.entries(seats).map(([id, seat]) => playerEntry(id, id, seat)),
     );
 
-    engine.subscribe((events, state) => {
-      const stateWithPlayerInfo = { ...state, playerInfo: this.playerInfo };
-      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
-      if (hasUndoExecuted) {
-        this.broadcast({
-          type: "full_state",
-          state: stateWithPlayerInfo,
-          events: [...engine.eventLog],
-        });
-      } else {
-        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
-      }
-      if (state.gameOver) void this.updateLobby();
-    });
+    this.subscribe(game, engine);
 
-    this.broadcast({
-      type: "game_started",
-      state: { ...engine.state, playerInfo: this.playerInfo },
-      events: [...engine.eventLog],
-    });
+    this.broadcastState(
+      { type: "game_started", events: engine.eventLog },
+      engine.state,
+      engine.eventLog,
+    );
     this.broadcastPlayerList();
     void this.updateLobby();
   }
@@ -567,28 +638,43 @@ export default class GameServer implements Party.Server {
     this.driveBots();
   }
 
-  private handleSyncEvents(conn: ConnLike, events: GameEvent[]) {
-    if (conn.id !== this.hostConnectionId || !this.localMirror) {
+  private handleSyncEvents(conn: ConnLike, rawEvents: unknown[]) {
+    const game = this.game;
+    const engine = this.engine;
+    if (conn.id !== this.hostConnectionId || !this.localMirror || !game) {
       this.send(conn, {
         type: "error",
         message: "Only a local-game host can sync events",
       });
       return;
     }
-    if (!this.engine || !this.isStarted) {
+    if (!engine || !this.isStarted) {
       this.send(conn, { type: "error", message: "Game not started" });
+      return;
+    }
+
+    const parsed = rawEvents.map(event =>
+      game.module.eventSchema.safeParse(event),
+    );
+    const events = parsed.flatMap(result =>
+      result.success ? [result.data] : [],
+    );
+    if (events.length !== parsed.length) {
+      this.send(conn, { type: "error", message: "Failed to sync events" });
       return;
     }
 
     try {
       // Local-game hosts send a complete snapshot, including rewinds; multiplayer never accepts this path.
-      if (events[0]?.type !== "GAME_INITIALIZED")
-        throw new Error("Expected complete event history");
-      const projected = projectState(events);
-      if (Object.keys(projected.players).length !== 2)
+      const loaded = game.module.loadEngine(events);
+      if (game.module.definition.players(loaded.state).length !== 2)
         throw new Error("Invalid player count");
-      this.engine.loadEvents(events);
-      this.broadcast({ type: "full_state", state: this.engine.state, events });
+      engine.loadEvents(events);
+      this.broadcastState(
+        { type: "full_state", events },
+        engine.state,
+        engine.eventLog,
+      );
       void this.updateLobby();
     } catch {
       this.send(conn, { type: "error", message: "Failed to sync events" });
@@ -598,6 +684,7 @@ export default class GameServer implements Party.Server {
   private handleSpectate(
     conn: ConnLike,
     player: PlayerConnection,
+    gameId: GameId,
     name: string,
     clientId?: string,
   ) {
@@ -612,6 +699,7 @@ export default class GameServer implements Party.Server {
       conn.close();
       return;
     }
+    if (!this.useGame(conn, gameId)) return;
 
     player.name = name;
     player.clientId = clientId || crypto.randomUUID();
@@ -625,12 +713,14 @@ export default class GameServer implements Party.Server {
       isHost: false,
     });
 
-    if (this.engine) {
-      this.send(conn, {
-        type: "full_state",
-        state: this.engine.state,
-        events: [...this.engine.eventLog],
-      });
+    const engine = this.engine;
+    if (engine) {
+      this.sendState(
+        conn,
+        { type: "full_state", events: engine.eventLog },
+        engine.state,
+        engine.eventLog,
+      );
     }
 
     // Send chat history
@@ -657,61 +747,80 @@ export default class GameServer implements Party.Server {
     return clientId;
   }
 
-  private startEngine(players: PlayerConnection[], kingdomCards?: CardName[]) {
-    const playerIds = players.map(p => p.clientId);
-    const engine = new DominionEngine();
+  /** Broadcast every accepted batch, and tell the lobby when the game ends */
+  private subscribe(game: RoomGame, engine: EventEngine<GameShape>): void {
+    engine.subscribe((events, state) => {
+      this.broadcastState(
+        game.module.needsFullResync(events)
+          ? { type: "full_state", events: engine.eventLog }
+          : { type: "events", events },
+        state,
+        engine.eventLog,
+      );
+      if (game.module.definition.whoMustAct(state) === null)
+        void this.updateLobby();
+    });
+  }
+
+  /**
+   * Validated options, or null once the sender has been told why not. Every
+   * refusal must happen before the room is changed: a half-started room stays
+   * broken for every later attempt.
+   */
+  private acceptOptions(
+    conn: ConnLike,
+    game: RoomGame,
+    options: unknown,
+  ): { value: GameShape["options"] } | null {
+    const parsed = game.module.optionsSchema.safeParse(options ?? {});
+    if (parsed.success) return { value: parsed.data };
+    this.send(conn, { type: "error", message: firstIssue(parsed.error) });
+    return null;
+  }
+
+  private startEngine(
+    game: RoomGame,
+    players: PlayerConnection[],
+    options: GameShape["options"],
+  ): void {
+    const engine = game.module.createEngine(
+      players.map(p => p.clientId),
+      options,
+    );
     this.engine = engine;
-    engine.startGame(playerIds, kingdomCards);
     this.isStarted = true;
 
     this.playerInfo = Object.fromEntries(
-      players.map(p => [
-        p.clientId,
-        {
-          id: p.clientId,
-          name: p.name,
-          type: isHumanSeat(this.seats[p.clientId]) ? "human" : "ai",
-          connected: true,
-        } as const,
-      ]),
+      players.map(p => playerEntry(p.clientId, p.name, this.seats[p.clientId])),
     );
 
-    engine.subscribe((events, state) => {
-      const stateWithPlayerInfo = { ...state, playerInfo: this.playerInfo };
-      // If undo was executed, send full state to sync all clients
-      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
-      if (hasUndoExecuted) {
-        this.broadcast({
-          type: "full_state",
-          state: stateWithPlayerInfo,
-          events: [...engine.eventLog],
-        });
-      } else {
-        this.broadcast({ type: "events", events, state: stateWithPlayerInfo });
-      }
-      if (state.gameOver) void this.updateLobby();
-    });
+    this.subscribe(game, engine);
 
-    this.broadcast({
-      type: "game_started",
-      state: { ...engine.state, playerInfo: this.playerInfo },
-      events: [...engine.eventLog],
-    });
+    this.broadcastState(
+      { type: "game_started", events: engine.eventLog },
+      engine.state,
+      engine.eventLog,
+    );
     this.broadcastPlayerList();
     void this.updateLobby();
   }
 
   private handleStartGame(
     conn: ConnLike,
-    kingdomCards: CardName[] | undefined,
+    options: unknown,
     bots: Array<{ name: string; controller: BotConfig }>,
   ) {
+    const game = this.game;
+    if (!game) {
+      this.send(conn, { type: "error", message: "Join a game first" });
+      return;
+    }
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
       return;
     }
 
-    if (this.isStarted && !this.engine?.state.gameOver) {
+    if (this.isStarted && !this.isFinished()) {
       this.send(conn, { type: "error", message: "Game already started" });
       return;
     }
@@ -727,17 +836,22 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    const accepted = this.acceptOptions(conn, game, options);
+    if (!accepted) return;
+
     bots.map(bot => this.addBotConnection(bot.name, bot.controller));
-    this.startEngine(this.getPlayers(), kingdomCards);
+    this.startEngine(game, this.getPlayers(), accepted.value);
     this.driveBots();
   }
 
   private handleGameCommand(
     conn: ConnLike,
     player: PlayerConnection,
-    msg: GameClientMessage,
+    command: unknown,
   ) {
-    if (!this.engine || !this.isStarted) {
+    const game = this.game;
+    const engine = this.engine;
+    if (!engine || !game || !this.isStarted) {
       this.send(conn, { type: "error", message: "Game not started" });
       return;
     }
@@ -748,58 +862,24 @@ export default class GameServer implements Party.Server {
     }
 
     const playerId = player.clientId;
-    if (!playerId || player.isSpectator) {
+    if (!playerId) {
       this.send(conn, { type: "error", message: "Not a player" });
       return;
     }
 
-    let result: CommandResult;
-
-    switch (msg.type) {
-      case "play_action":
-        result = this.engine.playAction(playerId, msg.card);
-        break;
-      case "play_treasure":
-        result = this.engine.playTreasure(playerId, msg.card);
-        break;
-      case "play_all_treasures":
-        result = this.engine.playAllTreasures(playerId);
-        break;
-      case "buy_card":
-        result = this.engine.buyCard(playerId, msg.card);
-        break;
-      case "end_phase":
-        result = this.engine.endPhase(playerId);
-        break;
-      case "submit_decision":
-        result = this.engine.submitDecision(playerId, msg.choice);
-        break;
-      case "request_undo":
-        result = this.engine.requestUndo(playerId, msg.toEventId, msg.reason);
-        break;
-      case "approve_undo":
-        result = this.engine.approveUndo(playerId, msg.requestId);
-        break;
-      case "deny_undo":
-        result = this.engine.denyUndo(playerId, msg.requestId);
-        break;
-      default:
-        return;
+    const parsed = game.module.commandSchema.safeParse(command);
+    if (!parsed.success) {
+      this.send(conn, { type: "error", message: firstIssue(parsed.error) });
+      return;
     }
 
+    const result = engine.dispatch(parsed.data, playerId);
     if (!result.ok) {
       this.send(conn, { type: "error", message: result.error });
       return;
     }
 
-    if (msg.type === "request_undo") {
-      const requestId = this.engine.undoRequest?.requestId;
-      if (requestId) {
-        Object.entries(this.seats)
-          .filter(([, seat]) => !isHumanSeat(seat))
-          .map(([botId]) => this.engine?.approveUndo(botId, requestId));
-      }
-    }
+    game.module.afterCommand?.(engine, result.events, this.seats);
     this.driveBots();
   }
 
@@ -975,36 +1055,76 @@ export default class GameServer implements Party.Server {
     });
   }
 
-  private send(conn: ConnLike, msg: GameServerMessage) {
-    if ("state" in msg && msg.state) {
-      const player = this.connections.get(conn.id);
-      const viewer = player && !player.isSpectator ? player.clientId : null;
-      const events = [...(this.engine?.eventLog ?? [])];
-      const visibleEvents =
-        msg.type === "preview_state"
-          ? events.slice(0, events.findIndex(e => e.id === msg.eventId) + 1)
-          : events;
-      conn.send(
-        JSON.stringify({
-          ...msg,
-          state: playerView(msg.state, visibleEvents, viewer),
-          ...("events" in msg ? { events: publicEvents(msg.events) } : {}),
-        }),
-      );
-      return;
+  /** Whose eyes this connection sees through; a spectator sees nobody's */
+  private viewerFor(conn: ConnLike): string | null {
+    const player = this.connections.get(conn.id);
+    return player && !player.isSpectator ? player.clientId : null;
+  }
+
+  /**
+   * One viewer's copy of a state-carrying message: the module decides what
+   * this viewer may see, and `seen` is the history that view is built from.
+   */
+  private sendState(
+    conn: ConnLike,
+    head: StateHead,
+    state: unknown,
+    seen: readonly RoomEvent[],
+  ) {
+    const game = this.game;
+    if (!game) return;
+    const viewer = this.viewerFor(conn);
+    const payload = {
+      game: game.id,
+      state: state === null ? null : game.module.view(state, seen, viewer),
+      playerInfo: this.playerInfo,
+    };
+    const message =
+      head.type === "preview_state"
+        ? { type: head.type, eventId: head.eventId, ...payload }
+        : {
+            type: head.type,
+            events: game.module.publicEvents(head.events),
+            ...payload,
+          };
+    conn.send(JSON.stringify(message));
+  }
+
+  private broadcastState(
+    head: StateHead,
+    state: unknown,
+    seen: readonly RoomEvent[],
+  ) {
+    for (const conn of this.room.getConnections())
+      this.sendState(conn, head, state, seen);
+  }
+
+  /**
+   * A room's LLM seats vote on the server, so the votes reach the viewer only
+   * if the room sends them. Each connection gets the module's projection.
+   */
+  private relayConsensusLog(entry: LLMLogEntryInput): void {
+    const game = this.game;
+    if (!game) return;
+    const stamped = stampLogEntry(entry);
+    for (const conn of this.room.getConnections()) {
+      const projected =
+        game.module.viewLogEntry?.(stamped, this.viewerFor(conn)) ?? stamped;
+      this.send(conn, { type: "consensus_log", entry: projected });
     }
+  }
+
+  private send(conn: ConnLike, msg: GameServerMessage) {
     conn.send(JSON.stringify(msg));
   }
 
   private broadcast(msg: GameServerMessage) {
-    if ("state" in msg) {
-      for (const conn of this.room.getConnections()) this.send(conn, msg);
-      return;
-    }
     this.room.broadcast(JSON.stringify(msg));
   }
 
   private async updateLobby() {
+    const game = this.game;
+    if (!game) return;
     const lobby = this.room.context.parties.lobby!;
     const lobbyRoom = lobby.get("main");
 
@@ -1025,12 +1145,10 @@ export default class GameServer implements Party.Server {
     const update: GameUpdateMessage = {
       type: "game_update",
       roomId: this.room.id,
+      game: game.id,
       players,
       spectatorCount: this.getSpectatorCount(),
-      isActive:
-        this.isStarted &&
-        players.length > 0 &&
-        !(this.engine?.state.gameOver ?? false),
+      isActive: this.isStarted && players.length > 0 && !this.isFinished(),
       isSinglePlayer: players.some(p => p.isBot),
     };
 

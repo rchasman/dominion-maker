@@ -1,15 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
-import type { GameState } from "../../types/game-state";
 
-interface PreviewState {
-  state: GameState | null;
+interface PreviewState<S> {
+  state: S | null;
   error: string | null;
   isLoading: boolean;
 }
 
-interface ResolvedPreview {
+interface ResolvedPreview<S> {
   eventId: string;
-  state: GameState | null;
+  state: S | null;
   error: string | null;
 }
 
@@ -22,11 +21,11 @@ const errorMessage = (error: unknown): string =>
  * the previously resolved state stays visible so the board never falls back
  * to live state or unmounts between scrubber steps.
  */
-export function usePreviewState(
+export function usePreviewState<S>(
   previewEventId: string | null,
-  getStateAtEvent: (eventId: string) => GameState | Promise<GameState>,
-): PreviewState {
-  const [resolved, setResolved] = useState<ResolvedPreview | null>(null);
+  getStateAtEvent: (eventId: string) => S | Promise<S>,
+): PreviewState<S> {
+  const [resolved, setResolved] = useState<ResolvedPreview<S> | null>(null);
 
   useEffect(() => {
     if (!previewEventId) {
@@ -35,7 +34,7 @@ export function usePreviewState(
     }
 
     const request = { active: true };
-    const settle = (next: ResolvedPreview) => {
+    const settle = (next: ResolvedPreview<S>) => {
       if (request.active) setResolved(next);
     };
 

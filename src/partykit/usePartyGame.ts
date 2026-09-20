@@ -1,13 +1,12 @@
 /**
  * PartyKit Game Connection Hook
  *
- * Connects to a game room and provides the same interface as the local GameContext.
+ * Connects to a game room and relays the room protocol. Nothing here knows
+ * which game the room runs: state, events and commands stay opaque and the
+ * caller's game adapter gives them meaning.
  */
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import PartySocket from "partysocket";
-import type { GameState, CardName } from "../types/game-state";
-import type { GameEvent, DecisionChoice } from "../events/types";
-import type { CommandResult } from "../commands/types";
 import type {
   BotConfig,
   PlayerId,
@@ -16,59 +15,25 @@ import type {
   GameServerMessage,
   ChatMessageData,
 } from "./protocol";
+import type { PlayerInfoEntry } from "../types/player-info";
+import type { LLMLogEntry } from "../core/consensus/types";
+import { consensusLogEntrySchema } from "../validation/messages";
+import { multiplayerLogger } from "../lib/logger";
+import type { GameId } from "../game-ids";
 import type { ControllerConfig } from "../core/seats";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
-import type { PendingUndoRequest } from "../engine/engine";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
     ? "localhost:1999"
     : "dominion-maker.rchasman.partykit.dev";
 
-/**
- * Compute pending undo request from event log
- */
-function computePendingUndo(events: GameEvent[]): PendingUndoRequest | null {
-  // Find the most recent undo lifecycle event (request, denial, or execution)
-  const lastIndex = events.reduce(
-    (acc, e, i) =>
-      e.type === "UNDO_REQUESTED" ||
-      e.type === "UNDO_DENIED" ||
-      e.type === "UNDO_EXECUTED"
-        ? i
-        : acc,
-    -1,
-  );
-  const request = lastIndex === -1 ? undefined : events[lastIndex];
-
-  // No request, or the most recent request was already completed
-  if (!request || request.type !== "UNDO_REQUESTED") {
-    return null;
-  }
-
-  // Collect approvals after this request
-  const approvals = events
-    .slice(lastIndex + 1)
-    .flatMap(e =>
-      e.type === "UNDO_APPROVED" && e.requestId === request.requestId
-        ? [e.byPlayer]
-        : [],
-    );
-
-  return {
-    requestId: request.requestId,
-    byPlayer: request.byPlayer,
-    toEventId: request.toEventId,
-    ...(request.reason !== undefined && { reason: request.reason }),
-    approvals: new Set<PlayerId>(approvals),
-    needed: 1, // In 2-player, only 1 approval needed
-  };
-}
-
 interface UsePartyGameOptions {
   roomId: string;
   playerName: string;
   clientId: string;
+  /** The game this client expects the room to run */
+  game: GameId;
   isSpectator?: boolean;
 }
 
@@ -79,34 +44,31 @@ interface PartyGameState {
   isSpectator: boolean;
   players: PlayerInfo[];
   spectatorCount: number;
-  gameState: GameState | null;
-  events: GameEvent[];
+  /** The game the room reports running; null until the first state arrives */
+  game: GameId | null;
+  /** The room module's projected state; null until the game starts */
+  state: unknown;
+  events: unknown[];
+  playerInfo: Record<PlayerId, PlayerInfoEntry> | null;
   error: string | null;
   gameEndReason: string | null; // Set only when game permanently ends
   isHost: boolean;
   disconnectedPlayers: Map<PlayerId, string>;
   chatMessages: ChatMessageData[];
-  pendingUndo: PendingUndoRequest | null;
+  /** The room's own consensus entries, already projected for this connection */
+  consensusLog: LLMLogEntry[];
 }
 
 interface PartyGameActions {
   startGame: (
-    kingdomCards?: CardName[],
+    options?: unknown,
     bots?: Array<{ name: string; controller: BotConfig }>,
   ) => void;
   setSeat: (playerId: PlayerId, controller: ControllerConfig) => void;
-  playAction: (card: CardName) => CommandResult;
-  playTreasure: (card: CardName) => CommandResult;
-  playAllTreasures: () => CommandResult;
-  buyCard: (card: CardName) => CommandResult;
-  endPhase: () => CommandResult;
-  submitDecision: (choice: DecisionChoice) => CommandResult;
-  requestUndo: (toEventId: string, reason?: string) => void;
-  approveUndo: (requestId: string) => void;
-  denyUndo: (requestId: string) => void;
+  sendCommand: (command: unknown) => void;
   resign: () => void;
   leave: () => void;
-  getStateAtEvent: (eventId: string) => Promise<GameState>;
+  getStateAtEvent: (eventId: string) => Promise<unknown>;
   sendChat: (message: ChatMessageData) => void;
 }
 
@@ -114,22 +76,21 @@ export function usePartyGame({
   roomId,
   playerName,
   clientId,
+  game: requestedGame,
   isSpectator = false,
 }: UsePartyGameOptions): PartyGameState & PartyGameActions {
   const socketRef = useRef<PartySocket | null>(null);
-  const eventsRef = useRef<GameEvent[]>([]);
+  const eventsRef = useRef<unknown[]>([]);
   const previews = useRef(
     new Map<
       string,
       {
-        resolve: (state: GameState) => void;
+        resolve: (state: unknown) => void;
         reject: (error: Error) => void;
         timer: ReturnType<typeof setTimeout>;
       }
     >(),
   );
-  // Use ref to track spectator status without causing action functions to recreate
-  const isSpectatorRef = useRef(false);
 
   const [state, setState] = useState<PartyGameState>({
     isConnected: false,
@@ -138,20 +99,17 @@ export function usePartyGame({
     isSpectator: false,
     players: [],
     spectatorCount: 0,
-    gameState: null,
+    game: null,
+    state: null,
     events: [],
+    playerInfo: null,
     error: null,
     gameEndReason: null,
     isHost: false,
     disconnectedPlayers: new Map(),
     chatMessages: [],
-    pendingUndo: null,
+    consensusLog: [],
   });
-
-  // Sync ref with state
-  useEffect(() => {
-    isSpectatorRef.current = state.isSpectator;
-  }, [state.isSpectator]);
 
   useEffect(() => {
     const pendingPreviews = previews.current;
@@ -166,10 +124,11 @@ export function usePartyGame({
       setState(s => ({ ...s, isConnected: true }));
       const reconnectToken = loadReconnectToken(roomId, clientId);
       const msg: GameClientMessage = isSpectator
-        ? { type: "spectate", name: playerName, clientId }
+        ? { type: "spectate", name: playerName, game: requestedGame, clientId }
         : {
             type: "join",
             name: playerName,
+            game: requestedGame,
             clientId,
             ...(reconnectToken ? { reconnectToken } : {}),
           };
@@ -205,7 +164,7 @@ export function usePartyGame({
     };
     // handleMessage is stable (no dependencies) so we don't need it in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, playerName, clientId, isSpectator]);
+  }, [roomId, playerName, clientId, requestedGame, isSpectator]);
 
   const handleMessage = useCallback((msg: GameServerMessage) => {
     switch (msg.type) {
@@ -214,14 +173,18 @@ export function usePartyGame({
         if (pending) {
           clearTimeout(pending.timer);
           previews.current.delete(msg.eventId);
-          if (msg.state) pending.resolve(msg.state);
-          else pending.reject(new Error("History checkpoint no longer exists"));
+          if (msg.state === null)
+            pending.reject(new Error("History checkpoint no longer exists"));
+          else pending.resolve(msg.state);
         }
         break;
       }
       case "joined":
+        // A fresh seat in the room starts on an empty viewer; the server keeps
+        // no history, so anything held here belongs to an earlier connection
         setState(s => ({
           ...s,
+          consensusLog: [],
           isJoined: true,
           playerId: msg.playerId,
           isSpectator: msg.isSpectator,
@@ -241,7 +204,10 @@ export function usePartyGame({
         eventsRef.current = msg.events;
         setState(s => ({
           ...s,
-          gameState: msg.state,
+          consensusLog: [],
+          game: msg.game,
+          state: msg.state,
+          playerInfo: msg.playerInfo,
           events: msg.events,
         }));
         break;
@@ -250,9 +216,10 @@ export function usePartyGame({
         eventsRef.current = [...eventsRef.current, ...msg.events];
         setState(s => ({
           ...s,
-          gameState: msg.state,
+          game: msg.game,
+          state: msg.state,
+          playerInfo: msg.playerInfo,
           events: eventsRef.current,
-          pendingUndo: computePendingUndo(eventsRef.current),
         }));
         break;
 
@@ -260,9 +227,10 @@ export function usePartyGame({
         eventsRef.current = msg.events;
         setState(s => ({
           ...s,
-          gameState: msg.state,
+          game: msg.game,
+          state: msg.state,
+          playerInfo: msg.playerInfo,
           events: msg.events,
-          pendingUndo: computePendingUndo(msg.events),
         }));
         break;
 
@@ -319,6 +287,19 @@ export function usePartyGame({
           chatMessages: msg.messages,
         }));
         break;
+
+      case "consensus_log": {
+        const parsed = consensusLogEntrySchema.safeParse(msg.entry);
+        if (!parsed.success) {
+          multiplayerLogger.warn(
+            `Room sent a consensus entry this client cannot read: ${parsed.error.message}`,
+          );
+          break;
+        }
+        const entry = parsed.data;
+        setState(s => ({ ...s, consensusLog: [...s.consensusLog, entry] }));
+        break;
+      }
     }
   }, []);
 
@@ -328,12 +309,12 @@ export function usePartyGame({
 
   const startGame = useCallback(
     (
-      kingdomCards?: CardName[],
+      options?: unknown,
       bots?: Array<{ name: string; controller: BotConfig }>,
     ) => {
       send({
         type: "start_game",
-        ...(kingdomCards !== undefined && { kingdomCards }),
+        ...(options !== undefined && { options }),
         ...(bots !== undefined && bots.length > 0 && { bots }),
       });
     },
@@ -347,87 +328,10 @@ export function usePartyGame({
     [send],
   );
 
-  const playAction = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) {
-        return { ok: false, error: "Spectators cannot act" };
-      }
-      send({ type: "play_action", card });
-      return { ok: true, events: [] };
-    },
-    [send],
-  );
-
-  const playTreasure = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) {
-        return { ok: false, error: "Spectators cannot act" };
-      }
-      send({ type: "play_treasure", card });
-      return { ok: true, events: [] };
-    },
-    [send],
-  );
-
-  const playAllTreasures = useCallback((): CommandResult => {
-    if (isSpectatorRef.current) {
-      return { ok: false, error: "Spectators cannot act" };
-    }
-    send({ type: "play_all_treasures" });
-    return { ok: true, events: [] };
-  }, [send]);
-
-  const buyCard = useCallback(
-    (card: CardName): CommandResult => {
-      if (isSpectatorRef.current) {
-        return { ok: false, error: "Spectators cannot act" };
-      }
-      send({ type: "buy_card", card });
-      return { ok: true, events: [] };
-    },
-    [send],
-  );
-
-  const endPhase = useCallback((): CommandResult => {
-    if (isSpectatorRef.current) {
-      return { ok: false, error: "Spectators cannot act" };
-    }
-    send({ type: "end_phase" });
-    return { ok: true, events: [] };
-  }, [send]);
-
-  const submitDecision = useCallback(
-    (choice: DecisionChoice): CommandResult => {
-      if (isSpectatorRef.current) {
-        return { ok: false, error: "Spectators cannot act" };
-      }
-      send({ type: "submit_decision", choice });
-      return { ok: true, events: [] };
-    },
-    [send],
-  );
-
-  const requestUndo = useCallback(
-    (toEventId: string, reason?: string) => {
-      send({
-        type: "request_undo",
-        toEventId,
-        ...(reason !== undefined && { reason }),
-      });
-    },
-    [send],
-  );
-
-  const approveUndo = useCallback(
-    (requestId: string) => {
-      send({ type: "approve_undo", requestId });
-    },
-    [send],
-  );
-
-  const denyUndo = useCallback(
-    (requestId: string) => {
-      send({ type: "deny_undo", requestId });
+  /** The room's module validates the payload; this hook never reads it */
+  const sendCommand = useCallback(
+    (command: unknown) => {
+      send({ type: "command", command });
     },
     [send],
   );
@@ -448,7 +352,7 @@ export function usePartyGame({
   );
 
   const getStateAtEvent = useCallback(
-    (eventId: string): Promise<GameState> => {
+    (eventId: string): Promise<unknown> => {
       const socket = socketRef.current;
       if (!socket || socket.readyState !== WebSocket.OPEN)
         return Promise.reject(new Error("Not connected"));
@@ -482,15 +386,7 @@ export function usePartyGame({
     ...state,
     startGame,
     setSeat,
-    playAction,
-    playTreasure,
-    playAllTreasures,
-    buyCard,
-    endPhase,
-    submitDecision,
-    requestUndo,
-    approveUndo,
-    denyUndo,
+    sendCommand,
     resign,
     leave,
     getStateAtEvent,

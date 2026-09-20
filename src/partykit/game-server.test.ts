@@ -1,683 +1,338 @@
 import { describe, it, expect } from "bun:test";
-import type { GameUpdateMessage, ChatMessageData } from "./protocol";
+import { roomHarness, type RoomHarness } from "./room-harness.test-fixture";
+import type { ConnLike } from "./game-server";
+import { dominionModule } from "../dominion/module";
+import { countingModule } from "./counting-module.test-fixture";
+import { GAMES } from "../games";
 
-/**
- * Unit tests for GameServer
- *
- * Tests server logic, state management, and message handling.
- * Full server integration is tested separately.
- */
-
-describe("GameServer", () => {
-  describe("constants", () => {
-    it("should have MAX_PLAYERS limit", () => {
-      const MAX_PLAYERS = 2;
-      expect(MAX_PLAYERS).toBe(2);
-    });
-
-    it("should have MAX_CHAT_MESSAGES limit", () => {
-      const MAX_CHAT_MESSAGES = 100;
-      expect(MAX_CHAT_MESSAGES).toBe(100);
-    });
+const joinAs = (h: RoomHarness, socket: ConnLike, clientId: string) =>
+  h.send(socket, {
+    type: "join",
+    name: clientId,
+    game: "dominion",
+    clientId,
   });
 
-  describe("player connection state", () => {
-    it("should track player connection properties", () => {
-      const player = {
-        id: "conn-123",
-        name: "Player 1",
-        clientId: "client-123",
-        isSpectator: false,
-        isBot: false,
-      };
-
-      expect(player.id).toBe("conn-123");
-      expect(player.name).toBe("Player 1");
-      expect(player.clientId).toBe("client-123");
-      expect(player.isSpectator).toBe(false);
-    });
-
-    it("should support bot players", () => {
-      const botPlayer = {
-        id: "bot-conn",
-        name: "AI",
-        clientId: "bot-123",
-        isSpectator: false,
-        isBot: true,
-      };
-
-      expect(botPlayer.isBot).toBe(true);
-    });
+const startAgainstBot = (h: RoomHarness, options?: unknown) => {
+  const host = h.connect("host");
+  joinAs(h, host, "alice");
+  h.send(h.connect("ignored"), { type: "leave" });
+  h.send(host, {
+    type: "start_game",
+    ...(options === undefined ? {} : { options }),
+    bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
   });
+  return host;
+};
 
-  describe("player count logic", () => {
-    it("should count only non-spectator players", () => {
-      const connections = [
-        { clientId: "c1", isSpectator: false },
-        { clientId: "c2", isSpectator: false },
-        { clientId: "c3", isSpectator: true },
-      ];
+const stateOf = (value: unknown) => dominionModule.stateSchema.parse(value);
 
-      const playerCount = connections.filter(c => !c.isSpectator).length;
-
-      expect(playerCount).toBe(2);
+describe("a room plays one registered game", () => {
+  it("refuses a join that does not name the room's game", () => {
+    const h = roomHarness();
+    const stranger = h.connect("stranger");
+    h.raw(stranger, JSON.stringify({ type: "join", name: "Zed", game: "go" }));
+    expect(h.lastOf(stranger)).toMatchObject({
+      type: "error",
+      message: "Invalid message",
     });
 
-    it("should require clientId to be counted", () => {
-      const connections = [
-        { clientId: "c1", isSpectator: false },
-        { clientId: null, isSpectator: false },
-      ];
-
-      const playerCount = connections.filter(
-        c => c.clientId && !c.isSpectator,
-      ).length;
-
-      expect(playerCount).toBe(1);
-    });
-  });
-
-  describe("spectator count logic", () => {
-    it("should count only spectators", () => {
-      const connections = [
-        { isSpectator: true },
-        { isSpectator: true },
-        { isSpectator: false },
-      ];
-
-      const spectatorCount = connections.filter(c => c.isSpectator).length;
-
-      expect(spectatorCount).toBe(2);
-    });
-  });
-
-  describe("human connection count", () => {
-    it("should count spectators as human", () => {
-      const connections = [{ isSpectator: true }];
-
-      const humanCount = connections.filter(conn => {
-        if (conn.isSpectator) return true;
-        return false;
-      }).length;
-
-      expect(humanCount).toBe(1);
-    });
-
-    it("should count non-bot players as human", () => {
-      const connections = [
-        { clientId: "c1", isSpectator: false },
-        { clientId: "c2", isSpectator: false },
-      ];
-      const botPlayers = new Set<string>();
-
-      const humanCount = connections.filter(
-        conn => conn.isSpectator || !botPlayers.has(conn.clientId),
-      ).length;
-
-      expect(humanCount).toBe(2);
-    });
-
-    it("should not count bot players as human", () => {
-      const connections = [
-        { clientId: "c1", isSpectator: false },
-        { clientId: "bot1", isSpectator: false },
-      ];
-      const botPlayers = new Set<string>(["bot1"]);
-
-      const humanCount = connections.filter(
-        conn =>
-          conn.isSpectator || (conn.clientId && !botPlayers.has(conn.clientId)),
-      ).length;
-
-      expect(humanCount).toBe(1);
-    });
-  });
-
-  describe("full mode detection", () => {
-    it("should detect full mode when all players are bots", () => {
-      const players = [{ clientId: "bot1" }, { clientId: "bot2" }];
-      const botPlayers = new Set<string>(["bot1", "bot2"]);
-
-      const isFullMode =
-        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
-
-      expect(isFullMode).toBe(true);
-    });
-
-    it("should not be full mode when some humans exist", () => {
-      const players = [{ clientId: "human1" }, { clientId: "bot1" }];
-      const botPlayers = new Set<string>(["bot1"]);
-
-      const isFullMode =
-        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
-
-      expect(isFullMode).toBe(false);
-    });
-
-    it("should not be full mode when no players", () => {
-      const players: any[] = [];
-      const botPlayers = new Set<string>();
-
-      const isFullMode =
-        players.length > 0 && players.every(p => botPlayers.has(p.clientId));
-
-      expect(isFullMode).toBe(false);
-    });
-  });
-
-  describe("host assignment", () => {
-    it("should assign first player as host", () => {
-      let hostConnectionId: string | null = null;
-      let hostClientId: string | null = null;
-
-      const connectionId = "conn-1";
-      const clientId = "client-1";
-
-      if (!hostConnectionId) {
-        hostConnectionId = connectionId;
-        hostClientId = clientId;
-      }
-
-      expect(hostConnectionId).toBe("conn-1");
-      expect(hostClientId).toBe("client-1");
-    });
-
-    it("should not reassign host if already set", () => {
-      let hostConnectionId: string | null = "conn-1";
-      let hostClientId: string | null = "client-1";
-
-      const newConnectionId = "conn-2";
-      const newClientId = "client-2";
-
-      if (!hostConnectionId) {
-        hostConnectionId = newConnectionId;
-        hostClientId = newClientId;
-      }
-
-      expect(hostConnectionId).toBe("conn-1");
-      expect(hostClientId).toBe("client-1");
-    });
-  });
-
-  describe("auto-start logic", () => {
-    it("should auto-start when 2 players join", () => {
-      const playerCount = 2;
-      const isStarted = false;
-      const shouldAutoStart = playerCount === 2 && !isStarted;
-
-      expect(shouldAutoStart).toBe(true);
-    });
-
-    it("should not auto-start with 1 player", () => {
-      const playerCount: number = 1;
-      const isStarted = false;
-      const shouldAutoStart = playerCount === 2 && !isStarted;
-
-      expect(shouldAutoStart).toBe(false);
-    });
-
-    it("should not auto-start if already started", () => {
-      const playerCount = 2;
-      const isStarted = true;
-      const shouldAutoStart = playerCount === 2 && !isStarted;
-
-      expect(shouldAutoStart).toBe(false);
-    });
-  });
-
-  describe("player rejoining", () => {
-    it("should find player by clientId", () => {
-      const playerInfo: Record<string, any> = {
-        "client-123": { name: "Player 1", id: "client-123" },
-      };
-
-      const clientId = "client-123";
-      const found = playerInfo[clientId] ? clientId : null;
-
-      expect(found).toBe("client-123");
-    });
-
-    it("should not find player with wrong clientId", () => {
-      const playerInfo: Record<string, any> = {
-        "client-123": { name: "Player 1" },
-      };
-
-      const clientId = "client-456";
-      const found = playerInfo[clientId] ? clientId : null;
-
-      expect(found).toBeNull();
-    });
-
-    it("should find player by name as fallback", () => {
-      const playerInfo: Record<string, any> = {
-        "client-123": { name: "Player 1", id: "client-123" },
-      };
-
-      const targetName = "Player 1";
-      let found: string | null = null;
-
-      for (const [clientId, info] of Object.entries(playerInfo)) {
-        if (info.name === targetName) {
-          found = clientId;
-          break;
-        }
-      }
-
-      expect(found).toBe("client-123");
-    });
-  });
-
-  describe("spectator restrictions", () => {
-    it("should block spectators when less than 2 players", () => {
-      const playerCount: number = 1;
-      const canSpectate = playerCount >= 2;
-
-      expect(canSpectate).toBe(false);
-    });
-
-    it("should allow spectators when 2+ players", () => {
-      const playerCount = 2;
-      const canSpectate = playerCount >= 2;
-
-      expect(canSpectate).toBe(true);
-    });
-  });
-
-  describe("game validation", () => {
-    it("should require host to start game", () => {
-      const connectionId: string = "conn-2";
-      const hostConnectionId = "conn-1";
-      const canStart = connectionId === hostConnectionId;
-
-      expect(canStart).toBe(false);
-    });
-
-    it("should allow host to start game", () => {
-      const connectionId = "conn-1";
-      const hostConnectionId = "conn-1";
-      const canStart = connectionId === hostConnectionId;
-
-      expect(canStart).toBe(true);
-    });
-
-    it("should prevent starting already started game", () => {
-      const isStarted = true;
-      const canStart = !isStarted;
-
-      expect(canStart).toBe(false);
-    });
-
-    it("should require at least 2 players", () => {
-      const playerCount: number = 1;
-      const canStart = playerCount >= 2;
-
-      expect(canStart).toBe(false);
-    });
-
-    it("should require exactly 1 player for single-player", () => {
-      const playerCount: number = 1;
-      const canStartSinglePlayer = playerCount === 1;
-
-      expect(canStartSinglePlayer).toBe(true);
-    });
-  });
-
-  describe("spectator actions", () => {
-    it("should block spectators from game commands", () => {
-      const isSpectator = true;
-      const canAct = !isSpectator;
-
-      expect(canAct).toBe(false);
-    });
-
-    it("should allow players to execute commands", () => {
-      const isSpectator = false;
-      const canAct = !isSpectator;
-
-      expect(canAct).toBe(true);
-    });
-  });
-
-  describe("chat messages", () => {
-    it("should store chat messages", () => {
-      const messages: ChatMessageData[] = [];
-      const newMessage: ChatMessageData = {
-        id: "msg-1",
-        senderName: "Player",
-        content: "Hello",
-        timestamp: Date.now(),
-      };
-
-      messages.push(newMessage);
-
-      expect(messages).toHaveLength(1);
-      expect(messages[0]?.content).toBe("Hello");
-    });
-
-    it("should limit chat history to MAX_CHAT_MESSAGES", () => {
-      const MAX_CHAT_MESSAGES = 100;
-      const messages: ChatMessageData[] = Array.from(
-        { length: 101 },
-        (_, i) => ({
-          id: `msg-${i}`,
-          senderName: "Player",
-          content: `Message ${i}`,
-          timestamp: Date.now(),
-        }),
+    const host = h.connect("host");
+    joinAs(h, host, "alice");
+    // Every other registered game must bounce off this Dominion room, so a
+    // third game is covered the day it joins the registry.
+    const others = Object.keys(GAMES).filter(id => id !== "dominion");
+    expect(others.length).toBeGreaterThan(0);
+    others.map(id => {
+      const other = h.connect(`other-${id}`);
+      h.raw(
+        other,
+        JSON.stringify({ type: "join", name: "Zed", game: id, clientId: id }),
       );
-
-      const trimmed = messages.slice(-MAX_CHAT_MESSAGES);
-
-      expect(trimmed).toHaveLength(100);
-      expect(trimmed[0]?.content).toBe("Message 1");
+      expect(h.lastOf(other)).toMatchObject({
+        type: "error",
+        message: "This room is playing Dominion",
+      });
     });
   });
 
-  describe("game end conditions", () => {
-    it("should end game when all players disconnect", () => {
-      const playerCount = 0;
-      const shouldEnd = playerCount === 0;
-
-      expect(shouldEnd).toBe(true);
+  it("does not let a refused join fix the room's game", () => {
+    const h = roomHarness();
+    const refused = h.connect("refused");
+    // No clientId: this connection never gets a seat
+    h.send(refused, { type: "join", name: "Zed", game: "dominion" });
+    expect(h.lastOf(refused)).toMatchObject({
+      type: "error",
+      message: "clientId required",
     });
 
-    it("should end game when only bots remain (non-full mode)", () => {
-      const players = [{ clientId: "bot1" }];
-      const botPlayers = new Set<string>(["bot1"]);
-      const humanCount = 0;
-      const isFullMode = false;
+    const host = h.connect("host");
+    joinAs(h, host, "alice");
+    expect(h.lastOf(host)?.type).not.toBe("error");
+  });
 
-      const shouldEnd =
-        players.every(p => botPlayers.has(p.clientId)) &&
-        humanCount === 0 &&
-        !isFullMode;
+  it("names the room's game on every state it ships", () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    const started = h.seen(host).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    expect(started.game).toBe("dominion");
+    expect(Object.values(started.playerInfo).map(info => info.type)).toEqual([
+      "human",
+      "ai",
+    ]);
+  });
+});
 
-      expect(shouldEnd).toBe(true);
+describe("a room runs whatever module it was given", () => {
+  // The registry is injected, so this room answers "dominion" with a counting
+  // game: proof that nothing below `useGame` knows which game it is running.
+  const countingRoom = () => {
+    const h = roomHarness(() => countingModule);
+    const first = h.connect("first");
+    const second = h.connect("second");
+    joinAs(h, first, "a");
+    joinAs(h, second, "b");
+    return { h, first, second };
+  };
+
+  it("starts a counting game and plays it through commands", () => {
+    const { h, first } = countingRoom();
+    const started = h.seen(first).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    expect(started.state).toEqual({
+      seats: ["a", "b"],
+      total: 0,
+      turn: "a",
+      over: false,
     });
 
-    it("should not end game in full mode even with only bots", () => {
-      const isFullMode = true;
-      const humanCount = 0;
-
-      const shouldEnd = humanCount === 0 && !isFullMode;
-
-      expect(shouldEnd).toBe(false);
+    h.send(first, {
+      type: "command",
+      command: { type: "ADD", by: "a", add: 2 },
     });
-
-    it("should end game when player resigns and only 1 remains", () => {
-      const playerCount: number = 1;
-      const isStarted = true;
-      const shouldEnd = playerCount < 2 && isStarted;
-
-      expect(shouldEnd).toBe(true);
-    });
-
-    it("should end game when host leaves pre-game", () => {
-      const isStarted = false;
-      const connectionId = "conn-1";
-      const hostConnectionId = "conn-1";
-
-      const shouldEnd = !isStarted && connectionId === hostConnectionId;
-
-      expect(shouldEnd).toBe(true);
+    expect(h.statesOf(first).at(-1)).toEqual({
+      seats: ["a", "b"],
+      total: 2,
+      turn: "b",
+      over: false,
     });
   });
 
-  describe("spectator timeout", () => {
-    it("should schedule timeout when players leave but spectators remain", () => {
-      const playerCount = 0;
-      const spectatorCount = 3;
-      const shouldScheduleTimeout = playerCount === 0 && spectatorCount > 0;
-
-      expect(shouldScheduleTimeout).toBe(true);
+  it("refuses a counting command the counting module rejects", () => {
+    const { h, first } = countingRoom();
+    h.send(first, {
+      type: "command",
+      command: { type: "ADD", by: "a", add: 9 },
     });
-
-    it("should not schedule timeout when players remain", () => {
-      const playerCount: number = 1;
-      const spectatorCount = 3;
-      const shouldScheduleTimeout = playerCount === 0 && spectatorCount > 0;
-
-      expect(shouldScheduleTimeout).toBe(false);
-    });
-
-    it("should not schedule timeout when no spectators", () => {
-      const playerCount = 0;
-      const spectatorCount = 0;
-      const shouldScheduleTimeout = playerCount === 0 && spectatorCount > 0;
-
-      expect(shouldScheduleTimeout).toBe(false);
+    expect(h.lastOf(first)).toMatchObject({
+      type: "error",
+      message: "Invalid command",
     });
   });
 
-  describe("bot connection cleanup", () => {
-    it("should remove bot connections", () => {
-      const connections = new Map([
-        ["conn-1", { clientId: "human1", isBot: false }],
-        ["conn-2", { clientId: "bot1", isBot: true }],
-        ["conn-3", { clientId: "bot2", isBot: true }],
-      ]);
-      const botPlayers = new Set<string>(["bot1", "bot2"]);
+  it("refuses options the counting module does not take", () => {
+    const h = roomHarness(() => countingModule);
+    const host = h.connect("host");
+    joinAs(h, host, "a");
+    h.send(host, {
+      type: "start_game",
+      options: { seed: 1 },
+      bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+    });
+    expect(h.lastOf(host)).toMatchObject({
+      type: "error",
+      message: "The counting game takes no options",
+    });
+  });
+});
 
-      const botConnectionIds = [...connections.entries()]
-        .filter(([_, conn]) => conn.clientId && botPlayers.has(conn.clientId))
-        .map(([id]) => id);
+describe("the room module validates what crosses the wire", () => {
+  it("refuses start_game options its module rejects, and starts on a retry", () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    joinAs(h, host, "alice");
+    const bots: Array<{ name: string; controller: { kind: "heuristic" } }> = [
+      { name: "Bot", controller: { kind: "heuristic" } },
+    ];
 
-      botConnectionIds.map(id => connections.delete(id));
+    h.send(host, {
+      type: "start_game",
+      options: { seed: "not a number" },
+      bots,
+    });
+    expect(h.lastOf(host)?.type).toBe("error");
+    expect(h.countOf(host, "game_started")).toBe(0);
 
-      expect(connections.size).toBe(1);
-      expect(connections.has("conn-1")).toBe(true);
+    // A refusal must leave the room startable: same host, same bot list
+    h.send(host, { type: "start_game", options: { seed: 42 }, bots });
+    expect(h.countOf(host, "game_started")).toBe(1);
+  });
+
+  it("refuses a sync_events log that does not hold two players", () => {
+    const h = roomHarness(() => countingModule);
+    const host = h.connect("host");
+    joinAs(h, host, "a");
+    h.send(host, {
+      type: "start_singleplayer",
+      seats: { a: { kind: "human" }, b: { kind: "heuristic" } },
+    });
+
+    h.send(host, {
+      type: "sync_events",
+      events: [{ type: "STARTED", seats: ["a"], id: "count-0" }],
+    });
+    expect(h.lastOf(host)).toMatchObject({
+      type: "error",
+      message: "Failed to sync events",
+    });
+
+    h.send(host, {
+      type: "sync_events",
+      events: [{ type: "STARTED", seats: ["a", "b"], id: "count-0" }],
+    });
+    expect(h.lastOf(host)?.type).toBe("full_state");
+  });
+
+  it("refuses a command its module rejects", () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    h.send(host, { type: "command", command: { type: "FLY_AWAY" } });
+    expect(h.lastOf(host)).toMatchObject({
+      type: "error",
+      message: "Invalid command",
+    });
+  });
+});
+
+describe("history preview", () => {
+  it("replays a prefix of the log, not the whole log", async () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    await h.settle();
+    h.send(host, {
+      type: "command",
+      command: { type: "END_PHASE", playerId: "alice" },
+    });
+    h.send(host, {
+      type: "command",
+      command: { type: "END_PHASE", playerId: "alice" },
+    });
+    await h.settle();
+
+    const started = h.seen(host).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    const firstTurn = started.events
+      .map(event => dominionModule.eventSchema.parse(event))
+      .find(event => event.type === "TURN_STARTED");
+    if (!firstTurn?.id) throw new Error("Missing turn");
+    expect(stateOf(h.statesOf(host).at(-1)).turn).toBeGreaterThanOrEqual(3);
+
+    h.send(host, { type: "preview_state", eventId: firstTurn.id });
+    const preview = h.lastOf(host);
+    if (preview?.type !== "preview_state") throw new Error("Missing preview");
+    expect(stateOf(preview.state).turn).toBe(1);
+  });
+
+  it("answers a preview it cannot replay with an error", () => {
+    const h = roomHarness(() => ({
+      ...countingModule,
+      loadEngine: () => {
+        throw new Error("cannot load");
+      },
+    }));
+    const first = h.connect("first");
+    const second = h.connect("second");
+    joinAs(h, first, "a");
+    joinAs(h, second, "b");
+    h.send(first, { type: "preview_state", eventId: "count-0" });
+    expect(h.lastOf(first)).toMatchObject({
+      type: "error",
+      message: "Failed to load history",
     });
   });
 
-  describe("game update message", () => {
-    it("should create proper game update message", () => {
-      const update: GameUpdateMessage = {
-        type: "game_update",
-        roomId: "room-123",
-        players: [
-          { name: "Player 1", isBot: false, isConnected: true },
-          { name: "AI", isBot: true, isConnected: true },
-        ],
-        spectatorCount: 2,
-        isActive: true,
-        isSinglePlayer: true,
-      };
-
-      expect(update.type).toBe("game_update");
-      expect(update.players).toHaveLength(2);
-      expect(update.isActive).toBe(true);
-      expect(update.isSinglePlayer).toBe(true);
-    });
-
-    it("should mark game as inactive when game over", () => {
-      const isStarted = true;
-      const gameOver = true;
-      const playerCount = 2;
-
-      const isActive = isStarted && playerCount > 0 && !gameOver;
-
-      expect(isActive).toBe(false);
-    });
-
-    it("should mark game as inactive when no players", () => {
-      const isStarted = true;
-      const gameOver = false;
-      const playerCount = 0;
-
-      const isActive = isStarted && playerCount > 0 && !gameOver;
-
-      expect(isActive).toBe(false);
-    });
-
-    it("should detect single-player from bot presence", () => {
-      const players = [
-        { name: "Player", isBot: false },
-        { name: "AI", isBot: true },
-      ];
-
-      const isSinglePlayer = players.some(p => p.isBot);
-
-      expect(isSinglePlayer).toBe(true);
-    });
+  it("answers a preview of an event it does not hold with no state", () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    h.send(host, { type: "preview_state", eventId: "evt-nowhere" });
+    const preview = h.lastOf(host);
+    if (preview?.type !== "preview_state") throw new Error("Missing preview");
+    expect(preview.state).toBeNull();
   });
+});
 
-  describe("mode change validation", () => {
-    it("should allow host to change mode", () => {
-      const connectionId = "conn-1";
-      const hostConnectionId = "conn-1";
-      const canChange = connectionId === hostConnectionId;
+describe("the room module acts after an accepted command", () => {
+  it("lets the module's afterCommand approve an undo for the bot seat", async () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    await h.settle();
+    const started = h.seen(host).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    const turnStarted = started.events
+      .map(event => dominionModule.eventSchema.parse(event))
+      .find(event => event.type === "TURN_STARTED");
+    if (!turnStarted?.id) throw new Error("Missing turn");
 
-      expect(canChange).toBe(true);
+    h.send(host, {
+      type: "command",
+      command: {
+        type: "REQUEST_UNDO",
+        playerId: "alice",
+        toEventId: turnStarted.id,
+      },
     });
 
-    it("should not allow non-host to change mode", () => {
-      const connectionId: string = "conn-2";
-      const hostConnectionId = "conn-1";
-      const canChange = connectionId === hostConnectionId;
-
-      expect(canChange).toBe(false);
-    });
-
-    it("should only allow mode change in single-player", () => {
-      const playerCount = 2;
-      const botCount = 1;
-      const isSinglePlayer = botCount > 0;
-
-      const canChange = playerCount === 2 && isSinglePlayer;
-
-      expect(canChange).toBe(true);
-    });
-
-    it("should not allow mode change in multiplayer", () => {
-      const playerCount = 2;
-      const botCount = 0;
-      const isSinglePlayer = botCount > 0;
-
-      const canChange = playerCount === 2 && isSinglePlayer;
-
-      expect(canChange).toBe(false);
-    });
+    const types = h
+      .seen(host)
+      .flatMap(m =>
+        "events" in m
+          ? m.events.map(event => dominionModule.eventSchema.parse(event).type)
+          : [],
+      );
+    expect(types).toContain("UNDO_APPROVED");
+    expect(types).toContain("UNDO_EXECUTED");
   });
+});
 
-  describe("player info tracking", () => {
-    it("should track player metadata", () => {
-      const playerInfo: Record<string, any> = {
-        "client-1": {
-          id: "client-1",
-          name: "Player 1",
-          type: "human",
-          connected: true,
-        },
-      };
+describe("setup never crosses the room wire", () => {
+  const playerListOf = (h: RoomHarness, socket: ConnLike) =>
+    h
+      .seen(socket)
+      .flatMap(m => (m.type === "player_list" ? [m.players] : []))
+      .at(-1);
 
-      expect(playerInfo["client-1"]?.name).toBe("Player 1");
-      expect(playerInfo["client-1"]?.type).toBe("human");
-      expect(playerInfo["client-1"]?.connected).toBe(true);
+  it("refuses a START_GAME command and leaves the live game standing", () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    const guest = h.connect("guest");
+    joinAs(h, host, "alice");
+    joinAs(h, guest, "bob");
+    h.send(host, { type: "start_game" });
+    expect(h.countOf(host, "game_started")).toBe(1);
+
+    const active = stateOf(h.statesOf(host).at(-1)).activePlayerId;
+    const seat = active === "alice" ? host : guest;
+    const before = {
+      players: playerListOf(h, host),
+      shipped: h.countOf(host, "game_started", "events", "full_state"),
+      log: h.statesOf(host).length,
+    };
+
+    h.send(seat, {
+      type: "command",
+      command: { type: "START_GAME", players: ["mallory", active], seed: 7 },
     });
 
-    it("should mark disconnected players", () => {
-      const playerInfo: Record<string, any> = {
-        "client-1": {
-          id: "client-1",
-          name: "Player 1",
-          type: "human",
-          connected: true,
-        },
-      };
-
-      playerInfo["client-1"]!.connected = false;
-
-      expect(playerInfo["client-1"]?.connected).toBe(false);
-    });
-
-    it("should mark reconnected players", () => {
-      const playerInfo: Record<string, any> = {
-        "client-1": {
-          id: "client-1",
-          name: "Player 1",
-          type: "human",
-          connected: false,
-        },
-      };
-
-      playerInfo["client-1"]!.connected = true;
-
-      expect(playerInfo["client-1"]?.connected).toBe(true);
-    });
-
-    it("should differentiate human and AI players", () => {
-      const playerInfo: Record<string, any> = {
-        human1: { type: "human" },
-        bot1: { type: "ai" },
-      };
-
-      expect(playerInfo.human1?.type).toBe("human");
-      expect(playerInfo.bot1?.type).toBe("ai");
-    });
-  });
-
-  describe("undo handling", () => {
-    it("should send full_state when undo executed", () => {
-      const events = [{ type: "UNDO_REQUESTED" }, { type: "UNDO_EXECUTED" }];
-
-      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
-
-      expect(hasUndoExecuted).toBe(true);
-    });
-
-    it("should send regular events when no undo", () => {
-      const events = [{ type: "TURN_STARTED" }, { type: "CARD_PLAYED" }];
-
-      const hasUndoExecuted = events.some(e => e.type === "UNDO_EXECUTED");
-
-      expect(hasUndoExecuted).toBe(false);
-    });
-  });
-
-  describe("disconnect timeout", () => {
-    it("should allow disconnected player to rejoin", () => {
-      const existingPlayerId = "client-123";
-      const canRejoin = !!existingPlayerId;
-
-      expect(canRejoin).toBe(true);
-    });
-  });
-
-  describe("resign handling", () => {
-    it("should convert resigning player to spectator", () => {
-      let isSpectator = false;
-
-      // Simulate resign
-      isSpectator = true;
-
-      expect(isSpectator).toBe(true);
-    });
-
-    it("should remove player from playerInfo on resign", () => {
-      const playerInfo: Record<string, any> = {
-        "client-1": { name: "Player 1" },
-      };
-
-      delete playerInfo["client-1"];
-
-      expect(playerInfo["client-1"]).toBeUndefined();
-    });
-  });
-
-  describe("multiplayer leave handling", () => {
-    it("should end game when any player leaves multiplayer", () => {
-      const remainingPlayers = [{ clientId: "human1" }];
-      const botPlayers = new Set<string>();
-
-      const humanPlayerCount = remainingPlayers.filter(
-        p => !botPlayers.has(p.clientId),
-      ).length;
-      const isMultiplayer = humanPlayerCount > 0;
-
-      // In multiplayer, any leave ends game
-      const shouldEnd = isMultiplayer;
-
-      expect(shouldEnd).toBe(true);
-    });
+    expect(h.lastOf(seat)?.type).toBe("error");
+    expect(h.countOf(host, "game_started", "events", "full_state")).toBe(
+      before.shipped,
+    );
+    expect(h.statesOf(host).length).toBe(before.log);
+    expect(playerListOf(h, host)).toEqual(before.players);
+    expect(stateOf(h.statesOf(host).at(-1)).playerOrder).toEqual([
+      "alice",
+      "bob",
+    ]);
   });
 });

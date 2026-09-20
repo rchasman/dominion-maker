@@ -1,11 +1,30 @@
 import { nowMs } from "../clock";
 import type { ModelProvider } from "../../config/models";
-import type { LLMLogger, ModelResult, VoteGroup } from "./types";
+import type { LLMLogEntry, LLMLogger, ModelResult, VoteGroup } from "./types";
 import type { ConsensusWinnerResult, MoveKey } from "./vote";
 import { isMoveLegal } from "./vote";
 import { formatVoteCount } from "../../lib/vote-format";
 
 export const PERCENTAGE_MULTIPLIER = 100;
+
+/**
+ * Every entry names the seat it belongs to, so a viewer that is not that seat
+ * can be shown a projection of it instead of the whole thing.
+ */
+export function loggerForPlayer(
+  logger: LLMLogger | undefined,
+  playerId: string,
+): LLMLogger | undefined {
+  if (!logger) return undefined;
+  return entry => logger({ ...entry, data: { ...entry.data, playerId } });
+}
+
+/** A logger entry ready to store: stamped where it was produced */
+export function stampLogEntry(
+  entry: Omit<LLMLogEntry, "id" | "timestamp">,
+): LLMLogEntry {
+  return { ...entry, id: crypto.randomUUID(), timestamp: Date.now() };
+}
 
 type Describe<M> = (move: M) => string;
 
@@ -14,9 +33,10 @@ export function logConsensusStart<M>(params: {
   payload: Record<string, unknown>;
   providers: ModelProvider[];
   moves: M[];
+  moveKey: MoveKey<M>;
   logger?: LLMLogger | undefined;
 }): void {
-  const { payload, providers, moves, logger } = params;
+  const { payload, providers, moves, moveKey, logger } = params;
   logger?.({
     type: "consensus-start",
     message: `Starting consensus with ${providers.length} models`,
@@ -24,7 +44,7 @@ export function logConsensusStart<M>(params: {
       providers,
       totalModels: providers.length,
       phase: payload["phase"],
-      legalActionsCount: moves.length,
+      legalKeys: moves.map(moveKey),
       turn: payload["turn"],
       gameState: payload,
     },
@@ -71,7 +91,10 @@ export function logVotingResults<M>(
       : `◉ Voting: winner ${actionDesc} (${formatVoteCount(winner.count)}/${votesConsidered})`,
     data: {
       actionId,
+      legalKeys: moves.map(moveKey),
       topResult: {
+        key: winner.key,
+        label: describeMove(winner.move),
         action: winner.move,
         votes: winner.count,
         voters: winner.voters,
@@ -81,6 +104,8 @@ export function logVotingResults<M>(
         earlyConsensus: validEarlyConsensus,
       },
       allResults: rankedGroups.map(group => ({
+        key: group.key,
+        label: describeMove(group.move),
         action: group.move,
         votes: group.count,
         voters: group.voters,

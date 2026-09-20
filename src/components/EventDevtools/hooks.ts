@@ -1,13 +1,13 @@
 import type { StateUpdater, MutableRef, Dispatch } from "preact/hooks";
 import { useEffect, useRef, useCallback } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
+import type { DevtoolsEvent } from "./adapter";
 
 const PLAYBACK_INTERVAL_MS = 500;
 
-interface PlaybackConfig {
+interface PlaybackConfig<E extends DevtoolsEvent> {
   isPlaying: boolean;
-  rootEvents: GameEvent[];
-  events: GameEvent[];
+  rootEvents: E[];
+  events: E[];
   onScrub: ((eventId: string | null) => void) | undefined;
 }
 
@@ -69,7 +69,10 @@ export function useScrubberScroll(
   }, [scrubberIndex, listRefInternalRef]);
 }
 
-export function usePlayback(config: PlaybackConfig, actions: PlaybackActions) {
+export function usePlayback<E extends DevtoolsEvent>(
+  config: PlaybackConfig<E>,
+  actions: PlaybackActions,
+) {
   const { isPlaying, rootEvents, events, onScrub } = config;
   const { setScrubberIndex, setIsPlaying } = actions;
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);

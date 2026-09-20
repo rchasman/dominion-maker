@@ -1,9 +1,9 @@
-import type { GameEvent } from "../../events/types";
+import type { DevtoolsEvent } from "./adapter";
 import { styles } from "./constants";
 
-interface TimelineScrubberProps {
-  rootEvents: GameEvent[];
-  events: GameEvent[];
+interface TimelineScrubberProps<E extends DevtoolsEvent> {
+  rootEvents: E[];
+  events: E[];
   scrubberIndex: number | null;
   isPlaying: boolean;
   onRewindToBeginning: () => void;
@@ -26,7 +26,7 @@ function getScrubberLabel(
 /**
  * Timeline scrubber controls
  */
-export function TimelineScrubber({
+export function TimelineScrubber<E extends DevtoolsEvent>({
   rootEvents,
   events,
   scrubberIndex,
@@ -35,7 +35,7 @@ export function TimelineScrubber({
   onPlayPause,
   onScrubberChange,
   onResetScrubber,
-}: TimelineScrubberProps) {
+}: TimelineScrubberProps<E>) {
   if (rootEvents.length === 0) {
     return null;
   }

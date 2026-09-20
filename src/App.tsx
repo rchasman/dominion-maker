@@ -5,7 +5,9 @@ import {
   loadSeatPreset,
   saveSeatPreset,
   type SeatPreset,
-} from "./context/seat-presets";
+} from "./core/seat-presets";
+import { loadGameChoice, saveGameChoice } from "./context/game-choice";
+import type { GameId } from "./game-ids";
 import { uiLogger } from "./lib/logger";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -14,13 +16,17 @@ const singlePlayerImport = () =>
   import("./SinglePlayerApp").then(m => ({ default: m.SinglePlayerApp }));
 const gameLobbyImport = () =>
   import("./components/GameLobby").then(m => ({ default: m.GameLobby }));
+const chessImport = () =>
+  import("./chess/ChessApp").then(m => ({ default: m.ChessApp }));
 
 const SinglePlayerApp = lazy(singlePlayerImport);
 const GameLobby = lazy(gameLobbyImport);
+const ChessApp = lazy(chessImport);
 
 // Preload game modules after menu renders (best of both worlds)
 const preloadSinglePlayer = () => void singlePlayerImport();
 const preloadMultiplayer = () => void gameLobbyImport();
+const preloadChess = () => void chessImport();
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -42,6 +48,11 @@ function App() {
   });
 
   const [preset, setPreset] = useState<SeatPreset>(() => loadSeatPreset());
+  const [game, setGame] = useState<GameId>(() => loadGameChoice());
+
+  useEffect(() => {
+    saveGameChoice(game);
+  }, [game]);
 
   // Sync app mode to localStorage
   useEffect(() => {
@@ -58,16 +69,19 @@ function App() {
 
   // Preload game modules when on menu (loads in background while user reads)
   useEffect(() => {
-    if (mode === "menu") {
-      preloadSinglePlayer();
-      preloadMultiplayer();
-    }
-  }, [mode]);
+    if (mode !== "menu") return;
+    if (game === "chess") preloadChess();
+    else preloadSinglePlayer();
+    // Either game reaches multiplayer through the same lobby
+    preloadMultiplayer();
+  }, [mode, game]);
 
   // Main menu - no GameProvider needed!
   if (mode === "menu") {
     return (
       <StartScreen
+        game={game}
+        onGameChange={setGame}
         preset={preset}
         onPresetChange={setPreset}
         onStartSinglePlayer={() => setMode("singleplayer")}
@@ -118,7 +132,11 @@ function App() {
         )}
       >
         <Suspense fallback={<LoadingScreen />}>
-          <SinglePlayerApp onBackToHome={() => setMode("menu")} />
+          {game === "chess" ? (
+            <ChessApp onBackToHome={() => setMode("menu")} />
+          ) : (
+            <SinglePlayerApp onBackToHome={() => setMode("menu")} />
+          )}
         </Suspense>
       </ErrorBoundary>
     );

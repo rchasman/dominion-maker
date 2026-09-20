@@ -1,10 +1,10 @@
 import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
+import type { DevtoolsEvent } from "./adapter";
 
-interface ScrubberDeps {
-  events: GameEvent[];
-  rootEvents: GameEvent[];
+interface ScrubberDeps<E extends DevtoolsEvent> {
+  events: E[];
+  rootEvents: E[];
   scrubberIndex: number | null;
   isPlaying: boolean;
   playIntervalRef: MutableRef<NodeJS.Timeout | null>;
@@ -28,9 +28,9 @@ function stopPlayback(
   }
 }
 
-function useHandleScrubberChange(
-  rootEvents: GameEvent[],
-  events: GameEvent[],
+function useHandleScrubberChange<E extends DevtoolsEvent>(
+  rootEvents: E[],
+  events: E[],
   onScrub: ((eventId: string | null) => void) | undefined,
   setScrubberIndex: Dispatch<StateUpdater<number | null>>,
 ) {
@@ -52,9 +52,9 @@ function useHandleScrubberChange(
   );
 }
 
-function useHandleRewindToBeginning(
-  rootEvents: GameEvent[],
-  events: GameEvent[],
+function useHandleRewindToBeginning<E extends DevtoolsEvent>(
+  rootEvents: E[],
+  events: E[],
   onScrub: ((eventId: string | null) => void) | undefined,
   setScrubberIndex: Dispatch<StateUpdater<number | null>>,
 ) {
@@ -70,8 +70,8 @@ function useHandleRewindToBeginning(
   }, [rootEvents, events, onScrub, setScrubberIndex]);
 }
 
-export function useScrubberHandlers(
-  deps: ScrubberDeps,
+export function useScrubberHandlers<E extends DevtoolsEvent>(
+  deps: ScrubberDeps<E>,
   actions: ScrubberActions,
 ) {
   const {

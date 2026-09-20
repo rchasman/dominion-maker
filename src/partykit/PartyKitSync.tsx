@@ -41,6 +41,7 @@ export function PartyKitSync() {
         JSON.stringify({
           type: "join",
           name,
+          game: "dominion",
           clientId,
           ...(reconnectToken ? { reconnectToken } : {}),
         }),

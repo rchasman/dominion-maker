@@ -11,6 +11,9 @@ import { PlayerGrid } from "./PlayerGrid";
 import { GameRoom } from "./GameRoom";
 import { generateRoomId } from "../../lib/room-id";
 import { generatePlayerName } from "../../lib/name-generator";
+import type { GameId } from "../../game-ids";
+import { gameIdSchema } from "../../game-ids";
+import { loadGameChoice } from "../../context/game-choice";
 
 type Screen = "lobby" | "game";
 
@@ -27,8 +30,10 @@ const STORAGE_KEYS = {
 interface ActiveGameStorage {
   roomId: string;
   isSpectator: boolean;
+  game: GameId;
 }
 
+/** An entry without a game names no room to rejoin, so it reads as absent */
 function parseActiveGameStorage(json: string): ActiveGameStorage | null {
   try {
     const parsed = JSON.parse(json) as unknown;
@@ -38,9 +43,17 @@ function parseActiveGameStorage(json: string): ActiveGameStorage | null {
       "roomId" in parsed &&
       typeof parsed.roomId === "string" &&
       "isSpectator" in parsed &&
-      typeof parsed.isSpectator === "boolean"
+      typeof parsed.isSpectator === "boolean" &&
+      "game" in parsed
     ) {
-      return parsed as ActiveGameStorage;
+      const game = gameIdSchema.safeParse(parsed.game);
+      return game.success
+        ? {
+            roomId: parsed.roomId,
+            isSpectator: parsed.isSpectator,
+            game: game.data,
+          }
+        : null;
     }
     return null;
   } catch {
@@ -60,6 +73,9 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     return id;
   })[0];
 
+  // The game chosen on the start screen is what a new room plays
+  const selectedGame = useState<GameId>(() => loadGameChoice())[0];
+
   const [playerName, setPlayerName] = useState(() => {
     // If in active game, use stored name for stability
     const activeGame = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
@@ -72,25 +88,18 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
     return name;
   });
-  const [roomId, setRoomId] = useState<string | null>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    if (!stored) return null;
-    const parsed = parseActiveGameStorage(stored);
-    return parsed?.roomId ?? null;
-  });
-  const [isSpectator, setIsSpectator] = useState<boolean>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    if (!stored) return false;
-    const parsed = parseActiveGameStorage(stored);
-    return parsed?.isSpectator ?? false;
-  });
+  // Storage is read once; a stored game missing its game id reads as absent
+  const stored = useState(() => {
+    const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    return raw === null ? null : parseActiveGameStorage(raw);
+  })[0];
+  const [roomId, setRoomId] = useState<string | null>(stored?.roomId ?? null);
+  const [gameId, setGameId] = useState<GameId | null>(stored?.game ?? null);
+  const [isSpectator, setIsSpectator] = useState<boolean>(
+    stored?.isSpectator ?? false,
+  );
   const [myLastGameRoomId, setMyLastGameRoomId] = useState<string | null>(
-    () => {
-      const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-      if (!stored) return null;
-      const parsed = parseActiveGameStorage(stored);
-      return parsed?.roomId ?? null;
-    },
+    stored?.roomId ?? null,
   );
 
   // Auto-reconnect to active game on mount
@@ -108,15 +117,16 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   // Navigate to game when matched (only trigger once per match)
   useEffect(() => {
     if (lobby.matchedGame && screen === "lobby") {
-      const roomId = lobby.matchedGame.roomId;
+      const { roomId, game } = lobby.matchedGame;
       setRoomId(roomId);
+      setGameId(game);
       setMyLastGameRoomId(roomId);
       setIsSpectator(false);
 
       // Persist to localStorage
       localStorage.setItem(
         STORAGE_KEYS.ACTIVE_GAME,
-        JSON.stringify({ roomId, isSpectator: false }),
+        JSON.stringify({ roomId, isSpectator: false, game }),
       );
 
       setScreen("game");
@@ -126,18 +136,19 @@ export function GameLobby({ onBack }: GameLobbyProps) {
 
   // Persist active game state changes
   useEffect(() => {
-    if (roomId && screen === "game") {
+    if (roomId && gameId && screen === "game") {
       localStorage.setItem(
         STORAGE_KEYS.ACTIVE_GAME,
-        JSON.stringify({ roomId, isSpectator }),
+        JSON.stringify({ roomId, isSpectator, game: gameId }),
       );
     }
-  }, [roomId, isSpectator, screen]);
+  }, [roomId, gameId, isSpectator, screen]);
 
   const handleLeaveRoom = () => {
     // Clear from localStorage - this is a resignation
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_GAME);
     setRoomId(null);
+    setGameId(null);
     setIsSpectator(false);
     setScreen("lobby");
   };
@@ -152,36 +163,43 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   const handlePlayVsAi = () => {
     const newRoomId = generateRoomId();
     setRoomId(newRoomId);
+    setGameId(selectedGame);
     setMyLastGameRoomId(newRoomId);
     setIsSpectator(false);
     localStorage.setItem(
       STORAGE_KEYS.ACTIVE_GAME,
-      JSON.stringify({ roomId: newRoomId, isSpectator: false }),
+      JSON.stringify({
+        roomId: newRoomId,
+        isSpectator: false,
+        game: selectedGame,
+      }),
     );
     setScreen("game");
   };
 
-  const handleSpectateGame = (gameRoomId: string) => {
+  const handleSpectateGame = (gameRoomId: string, game: GameId) => {
     // Check if this is the game you were just in
     const wasMyGame = gameRoomId === myLastGameRoomId;
 
     setRoomId(gameRoomId);
+    setGameId(game);
     setIsSpectator(!wasMyGame);
 
     // Persist
     localStorage.setItem(
       STORAGE_KEYS.ACTIVE_GAME,
-      JSON.stringify({ roomId: gameRoomId, isSpectator: !wasMyGame }),
+      JSON.stringify({ roomId: gameRoomId, isSpectator: !wasMyGame, game }),
     );
 
     setScreen("game");
   };
 
   // In game
-  if (screen === "game" && roomId) {
+  if (screen === "game" && roomId && gameId) {
     return (
       <GameRoom
         roomId={roomId}
+        game={gameId}
         playerName={playerName}
         clientId={clientId}
         isSpectator={isSpectator}
@@ -241,7 +259,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
         isConnected={lobby.isConnected}
         getRequestState={lobby.getRequestState}
         getIncomingRequest={lobby.getIncomingRequest}
-        onRequestGame={lobby.requestGame}
+        onRequestGame={targetId => lobby.requestGame(targetId, selectedGame)}
         onAcceptRequest={lobby.acceptRequest}
         onSpectateGame={handleSpectateGame}
       />

@@ -1,74 +1,14 @@
 import { describe, it, expect } from "bun:test";
 import { driveEngine } from "./driver";
-import type { GameDefinition } from "./game-definition";
-import type { Engine, CommandResult } from "./engine";
 import type { Controller } from "./controller";
-import type { Seats } from "./seats";
-
-type P = "a" | "b";
-type State = { n: number; turn: P; over: boolean };
-type Ev = { type: "ADDED"; by: P; add: number };
-type Cmd = { add: number; by: P };
-type G = { state: State; event: Ev; command: Cmd; move: Cmd; playerId: P };
-
-const game: GameDefinition<G> = {
-  id: "count",
-  whoMustAct: s => (s.over ? null : s.turn),
-  players: () => ["a", "b"],
-  legalMoves: (_s, p) => [
-    { add: 1, by: p },
-    { add: 2, by: p },
-  ],
-  moveToCommand: (_s, m) => m,
-  moveKey: m => String(m.add),
-  describeMove: m => `add ${m.add}`,
-  promptRow: m => ({ add: m.add }),
-  prompt: () => ({ system: "", user: "" }),
-  logContext: s => ({
-    turnId: `${s.turn}-${s.n}`,
-    isChoice: false,
-    payload: {},
-  }),
-};
-
-type TestEngine = Engine<State, Ev, Cmd, P> & { log: Ev[] };
-
-function makeEngine(
-  reject: (command: Cmd) => string | null = () => null,
-): TestEngine {
-  const log: Ev[] = [];
-  const box = { state: { n: 0, turn: "a", over: false } as State };
-  return {
-    log,
-    get state() {
-      return box.state;
-    },
-    get eventLog() {
-      return log;
-    },
-    dispatch(command: Cmd, actor?: P): CommandResult<Ev> {
-      if (actor !== box.state.turn)
-        return { ok: false, error: "Not your turn" };
-      const why = reject(command);
-      if (why) return { ok: false, error: why };
-      const ev: Ev = { type: "ADDED", by: command.by, add: command.add };
-      log.push(ev);
-      const n = box.state.n + command.add;
-      box.state = { n, turn: box.state.turn === "a" ? "b" : "a", over: n >= 5 };
-      return { ok: true, events: [ev] };
-    },
-  };
-}
-
-const adder = (add: number): Controller<G> => ({
-  decide: (_e, player) => Promise.resolve({ add, by: player }),
-});
-
-const bothBots: Seats<P> = {
-  a: { kind: "heuristic" },
-  b: { kind: "heuristic" },
-};
-const bHuman: Seats<P> = { a: { kind: "heuristic" }, b: { kind: "human" } };
+import {
+  adder,
+  bHuman,
+  bothBots,
+  game,
+  makeEngine,
+  type G,
+} from "./counting-game.test-fixture";
 
 describe("driveEngine", () => {
   it("drives non-human seats and stops when a human must act", async () => {
@@ -154,7 +94,7 @@ describe("driveEngine", () => {
       stepDelayMs: 0,
       signal: new AbortController().signal,
     });
-    expect(engine.log).toEqual([{ type: "ADDED", by: "a", add: 2 }]);
+    expect(engine.log).toEqual([{ type: "ADDED", playerId: "a", add: 2 }]);
     expect(counter.decisions).toBe(1);
   });
 

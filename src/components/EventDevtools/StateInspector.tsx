@@ -1,11 +1,9 @@
-import type { GameState } from "../../types/game-state";
 import { styles } from "./constants";
-import { StateView } from "./StateView";
 import { StateDiff } from "./StateDiff";
 
 interface StateInspectorProps {
-  selectedState: GameState | null;
-  prevState: GameState | null;
+  selectedState: unknown;
+  prevState: unknown;
   scrubberIndex: number | null;
   displayIndex: number | null;
   showDiff: boolean;
@@ -20,7 +18,7 @@ export function StateInspector({
   showDiff,
   onToggleDiff,
 }: StateInspectorProps) {
-  if (!selectedState) return null;
+  if (selectedState === null || selectedState === undefined) return null;
 
   return (
     <div style={styles.inspector}>
@@ -41,10 +39,12 @@ export function StateInspector({
         </button>
       </div>
       <div style={styles.stateView}>
-        {showDiff && prevState ? (
+        {showDiff && prevState !== null && prevState !== undefined ? (
           <StateDiff prev={prevState} next={selectedState} />
         ) : (
-          <StateView state={selectedState} />
+          <pre style={styles.stateJson}>
+            {JSON.stringify(selectedState, null, 2)}
+          </pre>
         )}
       </div>
     </div>

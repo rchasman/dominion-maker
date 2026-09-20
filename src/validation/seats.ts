@@ -6,14 +6,16 @@ const modelId = z.custom<ModelProvider>(
   "Unknown model id",
 );
 
-const humanSeatSchema = z.object({ kind: z.literal("human") });
-const heuristicSeatSchema = z.object({ kind: z.literal("heuristic") });
-const llmSeatSchema = z.object({
-  kind: z.literal("llm"),
-  models: z.array(modelId).max(50),
-  consensusCount: z.number().int().min(1).max(50),
-  customStrategy: z.string().max(20000),
-});
+const humanSeatSchema = z.object({ kind: z.literal("human") }).strict();
+const heuristicSeatSchema = z.object({ kind: z.literal("heuristic") }).strict();
+const llmSeatSchema = z
+  .object({
+    kind: z.literal("llm"),
+    models: z.array(modelId).max(50),
+    consensusCount: z.number().int().min(1).max(50),
+    customStrategy: z.string().max(20000),
+  })
+  .strict();
 
 export const controllerConfigSchema = z.discriminatedUnion("kind", [
   humanSeatSchema,

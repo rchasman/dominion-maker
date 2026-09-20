@@ -42,11 +42,18 @@ const shuffle = <T>(items: T[]): T[] =>
 function buildRosterFrom(
   enabledModels: ModelProvider[],
   consensusCount: number,
+  isAllowed: (id: ModelProvider) => boolean,
 ): ModelProvider[] {
-  const enabled = Array.from(new Set(enabledModels));
+  const enabled = Array.from(new Set(enabledModels.filter(isAllowed)));
   if (enabled.length === 0) {
     uiLogger.warn("No models enabled, falling back to the fast preset");
-    return buildRosterFrom([...FAST_PRESET.models], FAST_PRESET.consensusCount);
+    if (!FAST_PRESET.models.some(isAllowed))
+      throw new Error("No model in the default roster can play this game");
+    return buildRosterFrom(
+      [...FAST_PRESET.models],
+      FAST_PRESET.consensusCount,
+      isAllowed,
+    );
   }
   const unlimited = enabled.filter(
     id => findModelConfig(id)?.maxInstances === undefined,
@@ -77,5 +84,11 @@ function buildRosterFrom(
   return shuffle(models);
 }
 
-export const buildRoster = (config: LlmSeatConfig): ModelProvider[] =>
-  buildRosterFrom(config.models, config.consensusCount);
+/** A game without an `evaluate` step has nothing for an evaluation model to do */
+export const buildRoster = (
+  config: LlmSeatConfig,
+  { allowEvaluation }: { allowEvaluation: boolean },
+): ModelProvider[] =>
+  buildRosterFrom(config.models, config.consensusCount, id =>
+    allowEvaluation ? true : findModelConfig(id)?.evaluation === undefined,
+  );

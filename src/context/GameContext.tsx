@@ -8,8 +8,7 @@
 import { useRef } from "preact/hooks";
 import type { ComponentChildren } from "preact";
 import type { DominionEngine } from "../engine";
-import type { LLMLogEntry } from "../components/LLMLog";
-import type { LLMLogEntryInput, LLMLogger } from "../core/consensus/types";
+import type { LLMLogger } from "../core/consensus/types";
 import { useGameActions } from "./use-game-actions";
 import { useSeatDriver } from "./use-seat-driver";
 import { useAutoEndActionPhase } from "./use-auto-end-action-phase";
@@ -20,7 +19,7 @@ import { useStorageSync } from "./use-storage-sync";
 import { useAnimationSafe } from "../animation";
 import {
   appMode$,
-  llmLogs$,
+  appendLlmLog,
   localHumanSeat$,
   playAction$,
   playTreasure$,
@@ -40,18 +39,6 @@ import {
   updateSeat,
 } from "./game-signals";
 
-function createLLMLogEntry(
-  entry: LLMLogEntryInput,
-  eventCount: number | undefined,
-): LLMLogEntry {
-  return {
-    ...entry,
-    id: `${Date.now()}-${Math.random()}`,
-    timestamp: Date.now(),
-    data: { ...entry.data, eventCount },
-  };
-}
-
 export function GameProvider({ children }: { children: ComponentChildren }) {
   const storage = useGameStorage();
   const engineRef = useRef<DominionEngine | null>(storage.engineRef);
@@ -66,11 +53,7 @@ export function GameProvider({ children }: { children: ComponentChildren }) {
 
   // LLM Logger - stable reference that reads current engine when called
   const loggerRef = useRef<LLMLogger>(entry => {
-    const engine = engineRef.current;
-    llmLogs$.value = [
-      ...llmLogs$.value,
-      createLLMLogEntry(entry, engine?.eventLog.length),
-    ];
+    appendLlmLog(entry, engineRef.current?.eventLog.length);
   });
 
   setSeat$.value = updateSeat;

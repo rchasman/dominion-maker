@@ -6,7 +6,6 @@
  */
 
 import { signal, computed, batch } from "@preact/signals";
-import type { DominionEngine } from "../engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
@@ -14,7 +13,8 @@ import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
 import { firstHumanSeat, withSeat } from "../core/seats";
-import type { LLMLogEntry } from "../components/LLMLog/types";
+import type { LLMLogEntry, LLMLogEntryInput } from "../core/consensus/types";
+import { stampLogEntry } from "../core/consensus/log";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
 import {
@@ -114,12 +114,25 @@ export const getStateAtEvent$ = signal<
 // ---------------------------------------------------------------------------
 export const llmLogs$ = signal<LLMLogEntry[]>([]);
 
+/**
+ * One local seat's entry, stamped and appended. A room's entries arrive
+ * already stamped by the server, so they are assigned to the signal whole.
+ */
+export function appendLlmLog(
+  entry: LLMLogEntryInput,
+  eventCount: number | undefined,
+): void {
+  llmLogs$.value = [
+    ...llmLogs$.value,
+    { ...stampLogEntry(entry), data: { ...entry.data, eventCount } },
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Multiplayer-specific signals (defaults match single-player)
 // ---------------------------------------------------------------------------
 export const chatMessages$ = signal<ChatMessageData[]>([]);
 export const sendChat$ = signal<((message: string) => void) | null>(null);
-export const spectatorCount$ = signal(0);
 export const isSpectator$ = signal(false);
 export const isHost$ = signal(false);
 export const localPlayerName$ = signal<string | undefined>();
@@ -132,7 +145,10 @@ export const players$ = signal<Array<{ id: string; name: string }>>([]);
  * Atomically sync engine state into signals.
  * This is the single source of truth for state updates after engine commands.
  */
-export function syncEngineToSignals(engine: DominionEngine): void {
+export function syncEngineToSignals(engine: {
+  eventLog: readonly GameEvent[];
+  state: GameState;
+}): void {
   batch(() => {
     events$.value = [...engine.eventLog];
     gameState$.value = engine.state;

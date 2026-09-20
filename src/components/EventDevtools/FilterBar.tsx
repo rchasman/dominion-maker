@@ -1,23 +1,21 @@
-import type { EventCategory } from "./constants";
 import { styles } from "./constants";
 
 interface FilterBarProps {
-  filter: EventCategory;
-  onFilterChange: (filter: EventCategory) => void;
+  categories: readonly string[];
+  filter: string;
+  onFilterChange: (filter: string) => void;
 }
 
-const EVENT_CATEGORY_OPTIONS: EventCategory[] = [
-  "all",
-  "turns",
-  "cards",
-  "resources",
-  "decisions",
-];
+const ALL_EVENTS = "all";
 
-export function FilterBar({ filter, onFilterChange }: FilterBarProps) {
+export function FilterBar({
+  categories,
+  filter,
+  onFilterChange,
+}: FilterBarProps) {
   return (
     <div style={styles.filters}>
-      {EVENT_CATEGORY_OPTIONS.map(cat => (
+      {[ALL_EVENTS, ...categories].map(cat => (
         <button
           key={cat}
           onClick={() => onFilterChange(cat)}

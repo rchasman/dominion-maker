@@ -152,6 +152,63 @@ describe("llmController", () => {
     expect(types.filter(t => t === "consensus-voting")).toHaveLength(2);
   });
 
+  it("names the acting seat on every log entry", async () => {
+    const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
+    const entries: LLMLogEntryInput[] = [];
+    const controller = llmController(
+      dominionGame,
+      { ...DEFAULT_LLM_SEAT, consensusCount: 1, models: ["gpt-5.4-mini"] },
+      {
+        decideMove: pick({ type: "play_action", card: "Smithy" }),
+        getPlayerStrategies: noStrategies,
+        logger: entry => {
+          entries.push(entry);
+        },
+      },
+    );
+    await controller.decide(engine, "alice", signal());
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.every(entry => entry.data?.["playerId"] === "alice")).toBe(
+      true,
+    );
+  });
+
+  it("stamps the game's own key and words on each result", async () => {
+    const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
+    const entries: LLMLogEntryInput[] = [];
+    const smithy: Action = { type: "play_action", card: "Smithy" };
+    const controller = llmController(
+      dominionGame,
+      { ...DEFAULT_LLM_SEAT, consensusCount: 1, models: ["gpt-5.4-mini"] },
+      {
+        decideMove: () =>
+          Promise.resolve({
+            move: smithy,
+            distribution: [{ move: smithy, weight: 1 }],
+          }),
+        getPlayerStrategies: noStrategies,
+        logger: entry => {
+          entries.push(entry);
+        },
+      },
+    );
+    await controller.decide(engine, "alice", signal());
+    const key = dominionGame.moveKey(smithy);
+    const label = dominionGame.describeMove(smithy);
+    const voting = entries.find(e => e.type === "consensus-voting");
+    const legalKeys = voting?.data?.["legalKeys"];
+    expect(Array.isArray(legalKeys) && legalKeys).toContain(key);
+    expect(voting?.data?.["topResult"]).toMatchObject({ key, label });
+    const results = voting?.data?.["allResults"];
+    expect(Array.isArray(results) && results[0]).toMatchObject({ key, label });
+    const complete = entries.find(e => e.type === "consensus-model-complete");
+    expect(complete?.data?.["key"]).toBe(key);
+    expect(complete?.data?.["label"]).toBe(label);
+    expect(complete?.data?.["distribution"]).toMatchObject([{ key, label }]);
+    const start = entries.find(e => e.type === "consensus-start");
+    expect(Array.isArray(start?.data?.["legalKeys"])).toBe(true);
+  });
+
   it("keeps each model's reasoning in the voting log", async () => {
     const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
     const entries: LLMLogEntryInput[] = [];
@@ -168,7 +225,6 @@ describe("llmController", () => {
         logger: entry => {
           entries.push(entry);
         },
-        reasoningOf: move => move.reasoning,
       },
     );
     await controller.decide(engine, "alice", signal());

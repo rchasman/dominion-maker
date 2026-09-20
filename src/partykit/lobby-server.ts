@@ -18,7 +18,18 @@ import type {
   LobbyServerMessage,
   PlayerId,
 } from "./protocol";
+import type { GameId } from "../game-ids";
 import { generateRoomId } from "../lib/room-id";
+
+/** What the lobby needs from a connection; tests supply a plain object */
+export type LobbyConnLike = Pick<Party.Connection, "id" | "send">;
+
+/** What the lobby needs from its room; tests supply a plain object */
+export type LobbyRoomLike = {
+  id: string;
+  broadcast(message: string): void;
+  getConnection(id: string): LobbyConnLike | undefined;
+};
 
 interface ConnectedPlayer {
   id: string;
@@ -33,9 +44,9 @@ export default class LobbyServer implements Party.Server {
   private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> =
     new Map();
 
-  readonly room: Party.Room;
+  readonly room: LobbyRoomLike;
 
-  constructor(room: Party.Room) {
+  constructor(room: LobbyRoomLike) {
     this.room = room;
   }
 
@@ -44,6 +55,10 @@ export default class LobbyServer implements Party.Server {
   }
 
   onClose(conn: Party.Connection) {
+    this.disconnect(conn);
+  }
+
+  disconnect(conn: LobbyConnLike) {
     const player = this.players.get(conn.id);
     if (!player) return;
 
@@ -66,6 +81,10 @@ export default class LobbyServer implements Party.Server {
   }
 
   onMessage(message: string, sender: Party.Connection) {
+    this.handleMessage(message, sender);
+  }
+
+  handleMessage(message: string, sender: LobbyConnLike) {
     const msg = parseMessage(message, lobbyMessageSchema);
     if (!msg) {
       this.send(sender, { type: "error", message: "Invalid message" });
@@ -77,7 +96,7 @@ export default class LobbyServer implements Party.Server {
         this.handleJoinLobby(sender, msg.name, msg.clientId);
         break;
       case "request_game":
-        this.handleRequestGame(sender, msg.targetId);
+        this.handleRequestGame(sender, msg.targetId, msg.game);
         break;
       case "accept_request":
         this.handleAcceptRequest(sender, msg.requestId);
@@ -89,14 +108,19 @@ export default class LobbyServer implements Party.Server {
   }
 
   async onRequest(req: Party.Request): Promise<Response> {
-    if (req.method === "POST") {
-      const body = parseMessage(await req.text(), gameUpdateSchema);
+    return this.handleRequest(req.method, await req.text());
+  }
+
+  handleRequest(method: string, payload: string): Response {
+    if (method === "POST") {
+      const body = parseMessage(payload, gameUpdateSchema);
       if (!body) return new Response("Invalid request", { status: 400 });
 
       if (body.type === "game_update") {
         if (body.isActive) {
           this.activeGames.set(body.roomId, {
             roomId: body.roomId,
+            game: body.game,
             players: body.players,
             spectatorCount: body.spectatorCount,
             isSinglePlayer: body.isSinglePlayer,
@@ -112,11 +136,7 @@ export default class LobbyServer implements Party.Server {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  private handleJoinLobby(
-    conn: Party.Connection,
-    name: string,
-    clientId: string,
-  ) {
+  private handleJoinLobby(conn: LobbyConnLike, name: string, clientId: string) {
     // Check if this clientId is already connected (deduplication)
     const existingPlayer = [...this.players.entries()].find(
       ([, p]) => p.clientId === clientId,
@@ -161,7 +181,11 @@ export default class LobbyServer implements Party.Server {
     this.broadcastPlayers();
   }
 
-  private handleRequestGame(conn: Party.Connection, targetId: string) {
+  private handleRequestGame(
+    conn: LobbyConnLike,
+    targetId: string,
+    game: GameId,
+  ) {
     const fromPlayer = this.players.get(conn.id);
     const toPlayer = this.players.get(targetId);
 
@@ -199,13 +223,14 @@ export default class LobbyServer implements Party.Server {
       id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       fromId: conn.id,
       toId: targetId,
+      game,
     };
 
     this.requests.set(request.id, request);
     this.broadcastRequests();
   }
 
-  private handleAcceptRequest(conn: Party.Connection, requestId: string) {
+  private handleAcceptRequest(conn: LobbyConnLike, requestId: string) {
     const request = this.requests.get(requestId);
     if (!request) {
       this.send(conn, { type: "error", message: "Request not found" });
@@ -231,7 +256,7 @@ export default class LobbyServer implements Party.Server {
     this.startGame(request, fromPlayer, toPlayer);
   }
 
-  private handleCancelRequest(conn: Party.Connection, requestId: string) {
+  private handleCancelRequest(conn: LobbyConnLike, requestId: string) {
     const request = this.requests.get(requestId);
     if (!request) return;
 
@@ -274,6 +299,7 @@ export default class LobbyServer implements Party.Server {
         type: "game_matched",
         roomId,
         opponentName: player2.name,
+        game: request.game,
       });
     }
 
@@ -282,6 +308,7 @@ export default class LobbyServer implements Party.Server {
         type: "game_matched",
         roomId,
         opponentName: player1.name,
+        game: request.game,
       });
     }
 
@@ -330,7 +357,7 @@ export default class LobbyServer implements Party.Server {
     this.broadcast({ type: "active_games", games: this.getActiveGamesList() });
   }
 
-  private send(conn: Party.Connection, msg: LobbyServerMessage) {
+  private send(conn: LobbyConnLike, msg: LobbyServerMessage) {
     conn.send(JSON.stringify(msg));
   }
 

@@ -1,123 +1,48 @@
 import { useRef, useEffect } from "preact/hooks";
 import type { ComponentChildren } from "preact";
-import type {
-  GameState,
-  LogEntry as LogEntryType,
-} from "../../types/game-state";
-import type { GameEvent } from "../../events/types";
-import { LogEntry } from "../LogEntry";
-import { aggregateLogEntries } from "../../lib/board-utils";
-
-interface LogEntryWithUndoProps {
-  entry: LogEntryType & { eventId?: string; eventIds?: string[] };
-  onRequestUndo?: (eventId: string) => void;
-  lastEventId?: string;
-}
-
-function LogEntryWithUndo({
-  entry,
-  onRequestUndo,
-  lastEventId,
-}: LogEntryWithUndoProps) {
-  const eventId = entry.eventId;
-  const eventIds = entry.eventIds;
-
-  const targetEventId =
-    eventIds && eventIds.length > 0 ? eventIds[eventIds.length - 1] : eventId;
-
-  const isCurrentState = targetEventId === lastEventId;
-
-  const hasUndo =
-    onRequestUndo &&
-    (eventId || (eventIds && eventIds.length > 0)) &&
-    !isCurrentState;
-
-  return (
-    <div
-      className="log-entry-with-undo"
-      style={{
-        color: "var(--color-text-secondary)",
-        marginBlockEnd: "var(--space-2)",
-        lineHeight: 1.4,
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "var(--space-2)",
-        position: "relative",
-      }}
-    >
-      <div style={{ flex: 1 }}>
-        <LogEntry entry={entry} />
-      </div>
-      {hasUndo && (
-        <button
-          className="undo-button"
-          onClick={e => {
-            e.stopPropagation();
-            if (targetEventId) onRequestUndo(targetEventId);
-          }}
-          style={{
-            padding: 0,
-            background: "transparent",
-            border: "none",
-            color: "#22c55e",
-            cursor: "pointer",
-            fontSize: "1rem",
-            lineHeight: 1,
-            marginTop: "2px",
-          }}
-          title={
-            eventIds && eventIds.length > 1
-              ? `Undo all ${eventIds.length}`
-              : "Undo to here"
-          }
-        >
-          ⎌
-        </button>
-      )}
-    </div>
-  );
-}
 
 interface GameLogSectionProps {
-  state: GameState;
-  events?: GameEvent[];
-  isProcessing: boolean;
-  onRequestUndo?: (eventId: string) => void;
-  hasLlmSeat: boolean;
+  /**
+   * How many entries the rows were built from. The log follows the newest row
+   * only when this grows: a game that rebuilds its state on every projection
+   * would otherwise yank a reader who had scrolled back up.
+   */
+  entryCount: number;
+  hasConsensusPanel: boolean;
   gameLogHeight: number;
-  turnStatusIndicator: ComponentChildren;
+  turnStatus: ComponentChildren;
+  children: ComponentChildren;
 }
 
+/** The "Game log" frame every game shares; the rows inside are the game's own */
 export function GameLogSection({
-  state,
-  events,
-  isProcessing,
-  onRequestUndo,
-  hasLlmSeat,
+  entryCount,
+  hasConsensusPanel,
   gameLogHeight,
-  turnStatusIndicator,
+  turnStatus,
+  children,
 }: GameLogSectionProps) {
   const gameLogScrollRef = useRef<HTMLDivElement>(null);
+  // Below any count, so a restored game opens at its newest row
+  const lastEntryCount = useRef(-1);
 
   useEffect(() => {
-    if (gameLogScrollRef.current) {
-      requestAnimationFrame(() => {
-        if (gameLogScrollRef.current) {
-          gameLogScrollRef.current.scrollTop =
-            gameLogScrollRef.current.scrollHeight;
-        }
-      });
-    }
-  }, [state.log, isProcessing]);
-
-  const lastEventId =
-    events && events.length > 0 ? events[events.length - 1]?.id : undefined;
+    const grew = entryCount > lastEntryCount.current;
+    lastEntryCount.current = entryCount;
+    if (!grew || !gameLogScrollRef.current) return;
+    requestAnimationFrame(() => {
+      if (gameLogScrollRef.current) {
+        gameLogScrollRef.current.scrollTop =
+          gameLogScrollRef.current.scrollHeight;
+      }
+    });
+  }, [entryCount]);
 
   return (
     <div
       style={{
-        height: hasLlmSeat ? `${gameLogHeight}%` : "auto",
-        flex: hasLlmSeat ? "none" : 1,
+        height: hasConsensusPanel ? `${gameLogHeight}%` : "auto",
+        flex: hasConsensusPanel ? "none" : 1,
         minBlockSize: 0,
         display: "flex",
         flexDirection: "column",
@@ -155,15 +80,8 @@ export function GameLogSection({
           overflowWrap: "break-word",
         }}
       >
-        {aggregateLogEntries(state.log).map((entry, i) => (
-          <LogEntryWithUndo
-            key={i}
-            entry={entry}
-            {...(onRequestUndo !== undefined && { onRequestUndo })}
-            {...(lastEventId !== undefined && { lastEventId })}
-          />
-        ))}
-        {turnStatusIndicator}
+        {children}
+        {turnStatus}
       </div>
     </div>
   );

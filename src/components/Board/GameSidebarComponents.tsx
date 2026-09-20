@@ -6,19 +6,28 @@ import {
   FONT_WEIGHT_BOLD,
   FULL_PERCENT,
 } from "./constants";
-import {
-  SEAT_PRESETS,
-  SEAT_PRESET_NAMES,
-  type SeatPreset,
-} from "../../context/seat-presets";
+import type { SeatPreset } from "../../core/seat-presets";
+
+/** The table shapes a game offers, and which one the current table matches */
+export interface SidebarPresets {
+  names: readonly SeatPreset[];
+  label: (preset: SeatPreset) => string;
+  active: SeatPreset | null;
+  /** Omitted where the table is not this client's to reseat */
+  onChange?: (preset: SeatPreset) => void;
+}
 
 interface GameModeSwitcherProps {
+  names: readonly SeatPreset[];
+  label: (preset: SeatPreset) => string;
   activePreset: SeatPreset | null;
   onPresetChange: (preset: SeatPreset) => void;
 }
 
-/** Engine / Hybrid / Full: reseat the whole table in one click */
-export function GameModeSwitcher({
+/** Reseat the whole table in one click, under whatever names the game gives */
+function GameModeSwitcher({
+  names,
+  label,
   activePreset,
   onPresetChange,
 }: GameModeSwitcherProps) {
@@ -44,7 +53,7 @@ export function GameModeSwitcher({
         >
           Mode:
         </span>
-        {SEAT_PRESET_NAMES.map(preset => {
+        {names.map(preset => {
           const isActive = activePreset === preset;
           return (
             <button
@@ -69,7 +78,7 @@ export function GameModeSwitcher({
                 borderRadius: "3px",
               }}
             >
-              {SEAT_PRESETS[preset].name}
+              {label(preset)}
             </button>
           );
         })}
@@ -84,14 +93,12 @@ const LLMLog = lazy(() =>
 
 interface GameActionButtonsProps {
   onNewGame?: () => void;
-  onEndGame?: () => void;
   onBackToHome?: () => void;
   isSpectator?: boolean;
 }
 
-export function GameActionButtons({
+function GameActionButtons({
   onNewGame,
-  onEndGame,
   onBackToHome,
   isSpectator = false,
 }: GameActionButtonsProps) {
@@ -135,14 +142,9 @@ export function GameActionButtons({
         </button>
       )}
 
-      {(onEndGame || onBackToHome) && (
+      {onBackToHome && (
         <button
-          onClick={() => {
-            const callback = onEndGame || onBackToHome;
-            if (callback) {
-              callback();
-            }
-          }}
+          onClick={onBackToHome}
           style={{
             padding: "var(--space-2) var(--space-3)",
             background: "transparent",
@@ -226,22 +228,19 @@ export function LLMLogSection({
 }
 
 interface GameControlsSectionProps {
-  activePreset: SeatPreset | null;
-  onPresetChange?: (preset: SeatPreset) => void;
+  presets: SidebarPresets;
   onNewGame?: () => void;
-  onEndGame?: () => void;
   onBackToHome?: () => void;
   isSpectator?: boolean;
 }
 
 export function GameControlsSection({
-  activePreset,
-  onPresetChange,
+  presets,
   onNewGame,
-  onEndGame,
   onBackToHome,
   isSpectator = false,
 }: GameControlsSectionProps) {
+  const onPresetChange = presets.onChange;
   return (
     <div
       style={{
@@ -252,14 +251,15 @@ export function GameControlsSection({
     >
       {!isSpectator && onPresetChange && (
         <GameModeSwitcher
-          activePreset={activePreset}
+          names={presets.names}
+          label={presets.label}
+          activePreset={presets.active}
           onPresetChange={onPresetChange}
         />
       )}
 
       <GameActionButtons
         {...(!isSpectator && onNewGame !== undefined && { onNewGame })}
-        {...(!isSpectator && onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
         isSpectator={isSpectator}
       />

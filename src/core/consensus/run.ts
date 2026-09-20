@@ -14,20 +14,22 @@ import { run } from "../../lib/run";
 
 const MODEL_TIMEOUT_MS = 30_000;
 
-type HandlerParams = {
+type HandlerParams<M> = {
   provider: ModelProvider;
   index: number;
   modelStart: number;
+  moveKey: MoveKey<M>;
+  describeMove: (move: M) => string;
   logger?: LLMLogger | undefined;
 };
 
 const handleModelSuccess = <M>(
   move: M,
-  params: HandlerParams,
+  params: HandlerParams<M>,
   distribution: WeightedVote<M>[] = [{ move, weight: 1 }],
   usage?: TokenUsage,
 ): ModelResult<M> => {
-  const { provider, index, modelStart, logger } = params;
+  const { provider, index, modelStart, moveKey, describeMove, logger } = params;
   const modelDuration = nowMs() - modelStart;
   logger?.({
     type: "consensus-model-complete",
@@ -36,8 +38,15 @@ const handleModelSuccess = <M>(
       provider,
       index,
       duration: modelDuration,
+      key: moveKey(move),
+      label: describeMove(move),
       action: move,
-      distribution,
+      // The viewer groups by key and prints the label, so each share carries both
+      distribution: distribution.map(vote => ({
+        ...vote,
+        key: moveKey(vote.move),
+        label: describeMove(vote.move),
+      })),
       success: true,
       ...(usage ? { usage } : {}),
     },
@@ -54,7 +63,7 @@ const handleModelSuccess = <M>(
 
 const handleModelError = <M>(
   error: unknown,
-  params: HandlerParams,
+  params: HandlerParams<M>,
 ): ModelResult<M> => {
   const { provider, index, modelStart, logger } = params;
   const modelDuration = nowMs() - modelStart;
@@ -104,6 +113,7 @@ type RunModelsParams<S, M> = {
   aheadByK: number;
   decideMove: DecideMoveFor<S, M>;
   moveKey: MoveKey<M>;
+  describeMove: (move: M) => string;
   logger?: LLMLogger | undefined;
   signal: AbortSignal;
 };
@@ -124,7 +134,8 @@ export function runModelsInParallel<S, M>(
 ): Promise<RunModelsResult<M>> {
   const { providers, state, actionId, playerStrategies, customStrategy } =
     params;
-  const { aheadByK, decideMove, moveKey, logger, signal } = params;
+  const { aheadByK, decideMove, moveKey, describeMove, logger, signal } =
+    params;
 
   const voteGroups = new Map<string, VoteGroup<M>>();
   const completedResultsMap = new Map<number, ModelResult<M>>();
@@ -204,10 +215,12 @@ export function runModelsInParallel<S, M>(
         );
         const abortHandler = () => modelAbort.abort();
         runAbort.signal.addEventListener("abort", abortHandler);
-        const handlerParams: HandlerParams = {
+        const handlerParams: HandlerParams<M> = {
           provider,
           index,
           modelStart,
+          moveKey,
+          describeMove,
           ...(logger !== undefined && { logger }),
         };
 

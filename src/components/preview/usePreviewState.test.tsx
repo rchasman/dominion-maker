@@ -1,17 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { registerHappyDom } from "../../happy-dom.test-fixture";
 import { render } from "preact";
 import type { GameState } from "../../types/game-state";
 import { createEmptyState } from "../../events/project";
 import { usePreviewState } from "./usePreviewState";
 
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
-
-afterAll(async () => {
-  await GlobalRegistrator.unregister();
-});
+beforeAll(registerHappyDom);
 
 const POLL_MS = 5;
 const TIMEOUT_MS = 1000;
@@ -38,7 +32,7 @@ function mountProbe(
   getStateAtEvent: (eventId: string) => GameState | Promise<GameState>,
 ) {
   const root = document.createElement("div");
-  const seen: Array<ReturnType<typeof usePreviewState>> = [];
+  const seen: Array<ReturnType<typeof usePreviewState<GameState>>> = [];
 
   function Probe({ previewEventId }: { previewEventId: string | null }) {
     const result = usePreviewState(previewEventId, getStateAtEvent);

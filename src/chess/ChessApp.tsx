@@ -1,0 +1,255 @@
+import { lazy, Suspense } from "preact/compat";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
+import type { LLMLogger } from "../core/consensus/types";
+import { firstHumanSeat } from "../core/seats";
+import {
+  appMode$,
+  appendLlmLog,
+  isProcessing$,
+  llmLogs$,
+  players$,
+  seats$,
+  updateSeat,
+} from "../context/game-signals";
+import {
+  loadSeatPreset,
+  saveSeatPreset,
+  type SeatPreset,
+} from "../core/seat-presets";
+import { uiLogger } from "../lib/logger";
+import { BoardLayout, GameAreaLayout } from "../components/Board/BoardLayout";
+import { usePreviewMode } from "../components/preview/usePreviewMode";
+import { usePreviewState } from "../components/preview/usePreviewState";
+import { GameSidebar } from "../components/Board/GameSidebar";
+import { TurnStatusIndicator } from "../components/Board/TurnStatusIndicator";
+import { ChessBoard } from "./ChessBoard";
+import {
+  ChessLogRows,
+  chessMoverColor,
+  chessPresets,
+  chessTurnStatus,
+} from "./sidebar";
+import {
+  chessEvents$,
+  chessState$,
+  clearStoredChessGame,
+  loadChessSeats,
+  restoreChessEngine,
+  saveChessEvents,
+  saveChessSeats,
+  syncChessEngine,
+} from "./context";
+import { chessDevtoolsAdapter, chessStateAt } from "./devtools";
+import { createChessGame, type ChessEngine } from "./engine";
+import { CHESS_SEAT_PRESETS, chessSeats } from "./presets";
+import type { ChessState } from "./shape";
+import { CHESS_PLAYERS } from "./seat";
+import { useChessSeatDriver } from "./use-chess-seat-driver";
+
+const EventDevtools = lazy(() =>
+  import("../components/EventDevtools").then(m => ({
+    default: m.EventDevtools,
+  })),
+);
+
+const CHESS_SEAT_NAMES = [
+  { id: "w", name: "White" },
+  { id: "b", name: "Black" },
+];
+
+export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
+  const engineRef = useRef<ChessEngine | null>(null);
+
+  useState(() => {
+    const restored = restoreChessEngine();
+    const engine = restored ?? createChessGame([...CHESS_PLAYERS]);
+    engineRef.current = engine;
+    seats$.value = chessSeats(
+      restored !== null,
+      loadChessSeats(),
+      loadSeatPreset(),
+    );
+    llmLogs$.value = [];
+    isProcessing$.value = false;
+    appMode$.value = "local";
+    players$.value = CHESS_SEAT_NAMES;
+    syncChessEngine(engine);
+    return null;
+  });
+
+  const loggerRef = useRef<LLMLogger>(entry => {
+    appendLlmLog(entry, engineRef.current?.eventLog.length);
+  });
+
+  const state = chessState$.value;
+  const events = chessEvents$.value;
+  const seats = seats$.value;
+  const localHuman = firstHumanSeat<string>(seats, [...CHESS_PLAYERS]);
+
+  useEffect(() => {
+    if (events.length > 0) saveChessEvents(events);
+  }, [events]);
+
+  useEffect(() => {
+    if (Object.keys(seats).length > 0) saveChessSeats(seats);
+  }, [seats]);
+
+  // Leaving for the menu drops the game, so the next start honours the preset
+  useEffect(
+    () => () => {
+      clearStoredChessGame();
+      players$.value = [];
+    },
+    [],
+  );
+
+  useChessSeatDriver(engineRef, loggerRef.current, localHuman);
+
+  const { previewEventId, enterPreview, exitPreview, isPreviewMode } =
+    usePreviewMode();
+  const [showDevtools, setShowDevtools] = useState(false);
+
+  const stateAt = useMemo(() => chessStateAt(events), [events]);
+  const getStateAtEvent = useCallback(
+    (eventId: string): ChessState => {
+      const index = events.findIndex(event => event.id === eventId);
+      if (index < 0) throw new Error("That event is not in this game");
+      return stateAt(index);
+    },
+    [events, stateAt],
+  );
+  const preview = usePreviewState(previewEventId, getStateAtEvent);
+  const devtoolsAdapter = useMemo(
+    () => chessDevtoolsAdapter(events, stateAt),
+    [events, stateAt],
+  );
+
+  if (state === null) return null;
+
+  const dispatch = (command: Parameters<ChessEngine["dispatch"]>[0]) => {
+    const engine = engineRef.current;
+    if (engine === null) return;
+    const result = engine.dispatch(command);
+    if (!result.ok) {
+      uiLogger.error("Chess command refused", { error: result.error });
+      return;
+    }
+    syncChessEngine(engine);
+  };
+
+  const newGame = () => {
+    exitPreview();
+    clearStoredChessGame();
+    llmLogs$.value = [];
+    isProcessing$.value = false;
+    const engine = createChessGame([...CHESS_PLAYERS]);
+    engineRef.current = engine;
+    syncChessEngine(engine);
+  };
+
+  /**
+   * Rewind to just before the human's own last move, so the human is to move
+   * again. Stopping anywhere else hands the position straight back to the bot,
+   * which replays the same move and makes the button look broken.
+   */
+  const takeBack = () => {
+    const engine = engineRef.current;
+    if (engine === null || localHuman === null) return;
+    exitPreview();
+    const log = engine.eventLog;
+    const index = log.reduce<number>(
+      (last, event, at) =>
+        "playerId" in event && event.playerId === localHuman ? at : last,
+      -1,
+    );
+    if (index < 0) return;
+    isProcessing$.value = false;
+    engine.truncateTo(index);
+    syncChessEngine(engine);
+  };
+
+  /**
+   * Keeps the position the scrubber is showing and drops what came after it,
+   * so the game carries on from the event the player chose.
+   */
+  const branchFrom = (eventId: string) => {
+    const engine = engineRef.current;
+    if (engine === null) return;
+    const index = events.findIndex(event => event.id === eventId);
+    if (index < 0) return;
+    exitPreview();
+    isProcessing$.value = false;
+    engine.truncateTo(index + 1);
+    syncChessEngine(engine);
+  };
+
+  const changePreset = (preset: SeatPreset) => {
+    seats$.value = CHESS_SEAT_PRESETS[preset].seats(CHESS_PLAYERS);
+    saveSeatPreset(preset);
+  };
+
+  const displayState = preview.state ?? state;
+
+  return (
+    <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
+      <GameAreaLayout align="center" isPreviewMode={isPreviewMode}>
+        <ChessBoard
+          state={displayState}
+          seats={seats}
+          localPlayerId={localHuman}
+          disabled={isPreviewMode}
+          onMove={san => {
+            if (localHuman === null) return;
+            dispatch({ type: "MOVE", playerId: localHuman, san });
+          }}
+          {...(!isPreviewMode && { onSeatChange: updateSeat })}
+          {...(localHuman !== null &&
+            !isPreviewMode && {
+              onTakeBack: takeBack,
+              onResign: () =>
+                dispatch({ type: "RESIGN", playerId: localHuman }),
+            })}
+        />
+      </GameAreaLayout>
+
+      <GameSidebar
+        log={<ChessLogRows moves={displayState.moves} />}
+        logEntryCount={displayState.moves.length}
+        turnStatus={
+          <TurnStatusIndicator
+            status={chessTurnStatus(
+              displayState,
+              seats,
+              localHuman,
+              isProcessing$.value,
+            )}
+            color={chessMoverColor(displayState)}
+          />
+        }
+        appMode="local"
+        seats={seats}
+        {...(!isPreviewMode && { onSeatChange: updateSeat })}
+        presets={chessPresets(seats, changePreset)}
+        onNewGame={newGame}
+        onBackToHome={onBackToHome}
+      />
+
+      <Suspense fallback={null}>
+        <EventDevtools
+          events={events}
+          adapter={devtoolsAdapter}
+          isOpen={showDevtools}
+          onToggle={() => setShowDevtools(!showDevtools)}
+          onBranchFrom={branchFrom}
+          onScrub={enterPreview}
+        />
+      </Suspense>
+    </BoardLayout>
+  );
+}

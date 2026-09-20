@@ -50,7 +50,6 @@ export function useGameStorage(): GameStorageResult {
         return { engineRef: null };
       }
       if (savedEvents && savedSeats) {
-        seats$.value = savedSeats;
         try {
           const engine = new DominionEngine();
           engine.loadEvents(savedEvents);
@@ -60,6 +59,8 @@ export function useGameStorage(): GameStorageResult {
             clearGameStateStorage();
             return { engineRef: null };
           }
+
+          seats$.value = savedSeats;
 
           uiLogger.info(`Restored game from ${savedEvents.length} events`);
 

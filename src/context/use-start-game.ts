@@ -8,7 +8,8 @@ import { useCallback } from "preact/hooks";
 import { DominionEngine } from "../engine";
 import { uiLogger } from "../lib/logger";
 import { clearGameStateStorage } from "./storage-utils";
-import { SEAT_PRESETS, loadSeatPreset } from "./seat-presets";
+import { SEAT_PRESETS } from "./seat-presets";
+import { loadSeatPreset } from "../core/seat-presets";
 import {
   syncEngineToSignals,
   events$,
