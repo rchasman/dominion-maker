@@ -1,4 +1,5 @@
 import { experimental_evaluate, gateway } from "ai";
+import type { TokenUsage } from "../core/consensus/cost";
 import type { JSONValue } from "ai";
 import { z } from "zod";
 import type { Action } from "../types/action";
@@ -362,6 +363,7 @@ export function jevDistribution(
 
 export type JevVote = {
   action: Action;
+  usage: TokenUsage;
   distribution: WeightedVote<Action>[];
   answer: JevChoiceAnswer;
   read: JevGameRead;
@@ -391,7 +393,7 @@ export async function askJev(params: {
 }): Promise<JevVote> {
   const { modelId, legalActions, abortSignal, ...stateParams } = params;
   // Jev's rate limits move with demand; a 429 should not fail the vote outright
-  const { answers, providerMetadata } = await experimental_evaluate({
+  const { answers, providerMetadata, usage } = await experimental_evaluate({
     model: gateway.evaluationModel(modelId),
     state: buildJevState(stateParams),
     questions: {
@@ -411,6 +413,10 @@ export async function askJev(params: {
   };
   const picked = jevAnswerToAction(answer, legalActions);
   return {
+    usage: {
+      inputTokens: usage.inputTokens ?? 0,
+      outputTokens: usage.outputTokens ?? 0,
+    },
     action: {
       ...picked,
       reasoning: `${picked.reasoning} ${describeGameRead(read)}`,

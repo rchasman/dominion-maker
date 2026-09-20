@@ -1,3 +1,4 @@
+import type { TokenUsage } from "./consensus/cost";
 import type { WeightedVote } from "./consensus/types";
 import type { Engine } from "./engine";
 
@@ -74,8 +75,10 @@ export interface GameDefinition<G extends GameShape> {
     state: G["state"],
     player: G["playerId"],
   ): CompoundDecision<G> | null;
-  evaluate?(
-    input: EvaluateInput<G>,
-  ): Promise<{ move: G["move"]; distribution: WeightedVote<G["move"]>[] }>;
+  evaluate?(input: EvaluateInput<G>): Promise<{
+    move: G["move"];
+    distribution: WeightedVote<G["move"]>[];
+    usage: TokenUsage;
+  }>;
   heuristic?(state: G["state"], player: G["playerId"]): G["command"];
 }
