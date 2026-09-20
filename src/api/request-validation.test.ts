@@ -147,10 +147,9 @@ describe("API request boundaries", () => {
         { move: { type: "end_phase" }, weight: 0.3 },
       ],
     };
-    global.fetch = Object.assign(
-      () => Promise.resolve(Response.json(reply)),
-      { preconnect: originalFetch.preconnect },
-    );
+    global.fetch = Object.assign(() => Promise.resolve(Response.json(reply)), {
+      preconnect: originalFetch.preconnect,
+    });
     try {
       const result = await httpDecideMove(dominionModule)({
         provider: "gpt-5.4-mini",

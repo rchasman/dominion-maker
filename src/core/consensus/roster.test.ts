@@ -52,7 +52,12 @@ describe("buildRoster", () => {
       allowEvaluation: false,
     });
     expect(roster).not.toContain("jev");
-    expect(roster).toEqual(["grok-4-fast", "grok-4-fast", "grok-4-fast", "grok-4-fast"]);
+    expect(roster).toEqual([
+      "grok-4-fast",
+      "grok-4-fast",
+      "grok-4-fast",
+      "grok-4-fast",
+    ]);
   });
   it("keeps no evaluation model on the fallback path either", () => {
     const roster = buildRoster(seat(["jev"], 3), { allowEvaluation: false });

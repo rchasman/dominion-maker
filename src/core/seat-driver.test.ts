@@ -20,7 +20,8 @@ const STEP_WINDOW_MS = 100;
 async function waitFor(label: string, condition: () => boolean) {
   const deadline = Date.now() + TIMEOUT_MS;
   while (!condition()) {
-    if (Date.now() > deadline) throw new Error(`Timed out waiting for ${label}`);
+    if (Date.now() > deadline)
+      throw new Error(`Timed out waiting for ${label}`);
     await new Promise(resolve => setTimeout(resolve, POLL_MS));
   }
 }
@@ -85,7 +86,10 @@ describe("createSeatDriver", () => {
     const seatsRef = { current: bHuman };
     const stops = attach(seatsRef, 0);
     stops.driver.update(stops.engine.state, seatsRef.current);
-    await waitFor("processing to clear", () => stops.processing.at(-1) === false);
+    await waitFor(
+      "processing to clear",
+      () => stops.processing.at(-1) === false,
+    );
     expect(stops.engine.state.n).toBe(1);
     expect(stops.processing).toEqual([true, false]);
     stops.driver.dispose();

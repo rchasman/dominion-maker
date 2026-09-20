@@ -55,7 +55,8 @@ export function makeEngine(
       return log;
     },
     dispatch(command: Cmd, actor?: P): CommandResult<Ev> {
-      if (actor !== box.state.turn) return { ok: false, error: "Not your turn" };
+      if (actor !== box.state.turn)
+        return { ok: false, error: "Not your turn" };
       const why = reject(command);
       if (why) return { ok: false, error: why };
       const ev: Ev = { type: "ADDED", playerId: command.by, add: command.add };

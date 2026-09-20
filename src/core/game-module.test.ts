@@ -124,7 +124,14 @@ const countingModule: GameModule<G> = {
   createEngine: (players, options) =>
     countingEngine(
       options.start > 0
-        ? [{ type: "ADDED", by: players[0] ?? "a", add: options.start, id: "e0" }]
+        ? [
+            {
+              type: "ADDED",
+              by: players[0] ?? "a",
+              add: options.start,
+              id: "e0",
+            },
+          ]
         : [],
     ),
   loadEngine: events => countingEngine(events),

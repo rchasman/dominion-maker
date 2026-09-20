@@ -50,9 +50,7 @@ describe("dominionModule", () => {
       ["INITIAL_HAND_DRAWN", "DECK_SHUFFLED", "RANDOM_STATE_UPDATED"].includes(
         type,
       );
-    const privateInLog = engine.eventLog.filter(event =>
-      isPrivate(event.type),
-    );
+    const privateInLog = engine.eventLog.filter(event => isPrivate(event.type));
     expect(privateInLog.length).toBeGreaterThan(0);
     expect(
       dominionModule
@@ -149,7 +147,8 @@ describe("dominionModule", () => {
       }).success,
     ).toBe(true);
     expect(
-      dominionModule.moveSchema.safeParse({ type: "buy_card", nope: 1 }).success,
+      dominionModule.moveSchema.safeParse({ type: "buy_card", nope: 1 })
+        .success,
     ).toBe(false);
     expect(dominionModule.optionsSchema.safeParse({ seed: 2 }).success).toBe(
       true,
