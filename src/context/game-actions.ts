@@ -1,23 +1,14 @@
 /**
- * Game action functions extracted from GameContext
+ * Game action functions for a local session
  * Pure functions that dispatch commands to the engine
  */
 
 import type { DominionEngine } from "../engine";
 import type { PlayerId, CardName, GameState } from "../types/game-state";
-import type { DecisionChoice, GameEvent } from "../events/types";
+import type { DecisionChoice } from "../events/types";
 import type { CommandResult } from "../commands/types";
 import { isTreasureCard } from "../data/cards";
 import { uiLogger } from "../lib/logger";
-
-/**
- * Result of a game action that updates state
- */
-export interface GameActionResult {
-  success: boolean;
-  events: GameEvent[];
-  state: GameState;
-}
 
 /**
  * Play an action card
