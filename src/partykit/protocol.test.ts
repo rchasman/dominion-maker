@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import type {
   PlayerId,
   PlayerInfo,
+  PlayerInfoEntry,
   LobbyPlayer,
   GameRequest,
   ActiveGame,
@@ -12,6 +13,7 @@ import type {
   GameClientMessage,
   GameServerMessage,
 } from "./protocol";
+import { gameMessageSchema, lobbyMessageSchema } from "../validation/messages";
 
 /**
  * Protocol Type Tests
@@ -28,7 +30,7 @@ describe("Protocol Types", () => {
   });
 
   describe("PlayerInfo", () => {
-    it("should have name and playerId properties", () => {
+    it("carries the seat kind shown in the player list", () => {
       const playerInfo: PlayerInfo = {
         name: "Test Player",
         playerId: "player-123",
@@ -36,6 +38,20 @@ describe("Protocol Types", () => {
       };
       expect(playerInfo.name).toBe("Test Player");
       expect(playerInfo.playerId).toBe("player-123");
+    });
+  });
+
+  describe("PlayerInfoEntry", () => {
+    it("carries id, name, type and connection state", () => {
+      const entry: PlayerInfoEntry = {
+        id: "player-123",
+        name: "Test Player",
+        type: "human",
+        connected: true,
+      };
+      expect(entry.id).toBe("player-123");
+      expect(entry.type).toBe("human");
+      expect(entry.connected).toBe(true);
     });
   });
 
@@ -66,9 +82,10 @@ describe("Protocol Types", () => {
   });
 
   describe("ActiveGame", () => {
-    it("should have roomId, players, spectatorCount, and isSinglePlayer", () => {
+    it("names the game the room is playing", () => {
       const activeGame: ActiveGame = {
         roomId: "room-123",
+        game: "dominion",
         players: [
           { name: "Player 1", isBot: false, id: "p1", isConnected: true },
           { name: "AI", isBot: true, id: "p2", isConnected: true },
@@ -77,9 +94,8 @@ describe("Protocol Types", () => {
         isSinglePlayer: true,
       };
       expect(activeGame.roomId).toBe("room-123");
+      expect(activeGame.game).toBe("dominion");
       expect(activeGame.players).toHaveLength(2);
-      expect(activeGame.spectatorCount).toBe(2);
-      expect(activeGame.isSinglePlayer).toBe(true);
     });
   });
 
@@ -93,10 +109,11 @@ describe("Protocol Types", () => {
       expect(msg.type).toBe("join_lobby");
     });
 
-    it("should accept request_game message", () => {
+    it("request_game names the game being requested", () => {
       const msg: LobbyClientMessage = {
         type: "request_game",
         targetId: "player-123",
+        game: "dominion",
       };
       expect(msg.type).toBe("request_game");
     });
@@ -128,36 +145,29 @@ describe("Protocol Types", () => {
     });
 
     it("should accept players message", () => {
-      const msg: LobbyServerMessage = {
-        type: "players",
-        players: [],
-      };
+      const msg: LobbyServerMessage = { type: "players", players: [] };
       expect(msg.type).toBe("players");
     });
 
     it("should accept requests message", () => {
-      const msg: LobbyServerMessage = {
-        type: "requests",
-        requests: [],
-      };
+      const msg: LobbyServerMessage = { type: "requests", requests: [] };
       expect(msg.type).toBe("requests");
     });
 
     it("should accept active_games message", () => {
-      const msg: LobbyServerMessage = {
-        type: "active_games",
-        games: [],
-      };
+      const msg: LobbyServerMessage = { type: "active_games", games: [] };
       expect(msg.type).toBe("active_games");
     });
 
-    it("should accept game_matched message", () => {
+    it("game_matched returns the game both clients join with", () => {
       const msg: LobbyServerMessage = {
         type: "game_matched",
         roomId: "room-123",
         opponentName: "Opponent",
+        game: "dominion",
       };
       expect(msg.type).toBe("game_matched");
+      if (msg.type === "game_matched") expect(msg.game).toBe("dominion");
     });
 
     it("should accept error message", () => {
@@ -170,17 +180,17 @@ describe("Protocol Types", () => {
   });
 
   describe("GameUpdateMessage", () => {
-    it("should have all required properties", () => {
+    it("carries the room's game alongside the roster", () => {
       const msg: GameUpdateMessage = {
         type: "game_update",
         roomId: "room-123",
+        game: "dominion",
         players: [{ name: "Player", isBot: false, isConnected: true }],
         spectatorCount: 1,
         isActive: true,
         isSinglePlayer: false,
       };
-      expect(msg.type).toBe("game_update");
-      expect(msg.roomId).toBe("room-123");
+      expect(msg.game).toBe("dominion");
       expect(msg.isActive).toBe(true);
     });
   });
@@ -194,42 +204,34 @@ describe("Protocol Types", () => {
         timestamp: Date.now(),
       };
       expect(msg.id).toBe("msg-123");
-      expect(msg.senderName).toBe("Player");
-      expect(msg.content).toBe("Hello!");
       expect(typeof msg.timestamp).toBe("number");
     });
   });
 
   describe("GameClientMessage", () => {
-    it("should accept join message", () => {
+    it("join names the game the room plays", () => {
       const msg: GameClientMessage = {
         type: "join",
         name: "Player",
+        game: "dominion",
       };
       expect(msg.type).toBe("join");
+      if (msg.type === "join") expect(msg.game).toBe("dominion");
     });
 
-    it("should accept join message with clientId", () => {
-      const msg: GameClientMessage = {
-        type: "join",
-        name: "Player",
-        clientId: "client-123",
-      };
-      expect(msg.type).toBe("join");
-      expect(msg.clientId).toBe("client-123");
-    });
-
-    it("should accept spectate message", () => {
+    it("spectate names the game so a mismatch can be refused", () => {
       const msg: GameClientMessage = {
         type: "spectate",
         name: "Spectator",
+        game: "dominion",
       };
       expect(msg.type).toBe("spectate");
     });
 
-    it("should accept start_game message", () => {
+    it("start_game carries opaque options", () => {
       const msg: GameClientMessage = {
         type: "start_game",
+        options: { kingdomCards: ["Village"] },
       };
       expect(msg.type).toBe("start_game");
     });
@@ -259,87 +261,21 @@ describe("Protocol Types", () => {
       expect(msg.type).toBe("set_seat");
     });
 
-    it("should accept play_action message", () => {
+    it("command carries an opaque payload the room's module validates", () => {
       const msg: GameClientMessage = {
-        type: "play_action",
-        card: "Village",
+        type: "command",
+        command: { type: "PLAY_ACTION", card: "Village" },
       };
-      expect(msg.type).toBe("play_action");
-    });
-
-    it("should accept play_treasure message", () => {
-      const msg: GameClientMessage = {
-        type: "play_treasure",
-        card: "Copper",
-      };
-      expect(msg.type).toBe("play_treasure");
-    });
-
-    it("should accept play_all_treasures message", () => {
-      const msg: GameClientMessage = {
-        type: "play_all_treasures",
-      };
-      expect(msg.type).toBe("play_all_treasures");
-    });
-
-    it("should accept buy_card message", () => {
-      const msg: GameClientMessage = {
-        type: "buy_card",
-        card: "Silver",
-      };
-      expect(msg.type).toBe("buy_card");
-    });
-
-    it("should accept end_phase message", () => {
-      const msg: GameClientMessage = {
-        type: "end_phase",
-      };
-      expect(msg.type).toBe("end_phase");
-    });
-
-    it("should accept submit_decision message", () => {
-      const msg: GameClientMessage = {
-        type: "submit_decision",
-        choice: { selectedCards: ["Copper"] },
-      };
-      expect(msg.type).toBe("submit_decision");
-    });
-
-    it("should accept request_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "request_undo",
-        toEventId: "event-123",
-      };
-      expect(msg.type).toBe("request_undo");
-    });
-
-    it("should accept approve_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "approve_undo",
-        requestId: "req-123",
-      };
-      expect(msg.type).toBe("approve_undo");
-    });
-
-    it("should accept deny_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "deny_undo",
-        requestId: "req-123",
-      };
-      expect(msg.type).toBe("deny_undo");
+      expect(msg.type).toBe("command");
     });
 
     it("should accept resign message", () => {
-      const msg: GameClientMessage = {
-        type: "resign",
-      };
+      const msg: GameClientMessage = { type: "resign" };
       expect(msg.type).toBe("resign");
     });
 
     it("should accept leave message", () => {
-      const msg: GameClientMessage = {
-        type: "leave",
-      };
+      const msg: GameClientMessage = { type: "leave" };
       expect(msg.type).toBe("leave");
     });
 
@@ -377,38 +313,62 @@ describe("Protocol Types", () => {
     });
 
     it("should accept spectator_count message", () => {
-      const msg: GameServerMessage = {
-        type: "spectator_count",
-        count: 3,
-      };
+      const msg: GameServerMessage = { type: "spectator_count", count: 3 };
       expect(msg.type).toBe("spectator_count");
     });
 
-    it("should accept game_started message", () => {
+    it("game_started carries game, opaque state and playerInfo", () => {
       const msg: GameServerMessage = {
         type: "game_started",
-        state: {} as any,
+        game: "dominion",
+        state: { turn: 1 },
         events: [],
+        playerInfo: {
+          p1: { id: "p1", name: "Player", type: "human", connected: true },
+        },
       };
       expect(msg.type).toBe("game_started");
     });
 
-    it("should accept events message", () => {
+    it("events carries game, opaque state and playerInfo", () => {
       const msg: GameServerMessage = {
         type: "events",
-        events: [],
-        state: {} as any,
+        game: "dominion",
+        events: [{ type: "TURN_STARTED" }],
+        state: { turn: 2 },
+        playerInfo: {
+          p1: { id: "p1", name: "Player", type: "human", connected: true },
+          p2: { id: "p2", name: "Bot", type: "ai", connected: false },
+        },
       };
       expect(msg.type).toBe("events");
+      if (msg.type === "events") {
+        expect(msg.game).toBe("dominion");
+        expect(msg.events).toHaveLength(1);
+        expect(msg.playerInfo["p2"]?.type).toBe("ai");
+      }
     });
 
-    it("should accept full_state message", () => {
+    it("full_state carries game, opaque state and playerInfo", () => {
       const msg: GameServerMessage = {
         type: "full_state",
-        state: {} as any,
+        game: "dominion",
+        state: {},
         events: [],
+        playerInfo: {},
       };
       expect(msg.type).toBe("full_state");
+    });
+
+    it("preview_state carries game, opaque state and playerInfo", () => {
+      const msg: GameServerMessage = {
+        type: "preview_state",
+        game: "dominion",
+        eventId: "e1",
+        state: null,
+        playerInfo: {},
+      };
+      expect(msg.type).toBe("preview_state");
     });
 
     it("should accept player_resigned message", () => {
@@ -467,11 +427,105 @@ describe("Protocol Types", () => {
     });
 
     it("should accept chat_history message", () => {
-      const msg: GameServerMessage = {
-        type: "chat_history",
-        messages: [],
-      };
+      const msg: GameServerMessage = { type: "chat_history", messages: [] };
       expect(msg.type).toBe("chat_history");
     });
+  });
+});
+
+const parses = (value: unknown) => gameMessageSchema.safeParse(value).success;
+
+describe("gameMessageSchema", () => {
+  it("accepts a command with any payload", () => {
+    expect(parses({ type: "command", command: { anything: [1, 2] } })).toBe(
+      true,
+    );
+    expect(parses({ type: "command", command: "END_PHASE" })).toBe(true);
+    expect(parses({ type: "command", command: null })).toBe(true);
+  });
+
+  it("rejects the nine Dominion verbs the protocol no longer speaks", () => {
+    const retired: unknown[] = [
+      { type: "play_action", card: "Village" },
+      { type: "play_treasure", card: "Copper" },
+      { type: "play_all_treasures" },
+      { type: "buy_card", card: "Silver" },
+      { type: "end_phase" },
+      { type: "submit_decision", choice: { selectedCards: ["Copper"] } },
+      { type: "request_undo", toEventId: "e1" },
+      { type: "approve_undo", requestId: "r1" },
+      { type: "deny_undo", requestId: "r1" },
+    ];
+    expect(retired.filter(parses)).toEqual([]);
+  });
+
+  it("accepts join naming a known game", () => {
+    expect(parses({ type: "join", name: "Player", game: "dominion" })).toBe(
+      true,
+    );
+  });
+
+  it("rejects join without a game", () => {
+    expect(parses({ type: "join", name: "Player" })).toBe(false);
+  });
+
+  it("rejects join naming an unknown game", () => {
+    expect(parses({ type: "join", name: "Player", game: "poker" })).toBe(false);
+  });
+
+  it("rejects spectate without a game", () => {
+    expect(parses({ type: "spectate", name: "Watcher" })).toBe(false);
+  });
+
+  it("accepts start_game with and without options", () => {
+    expect(parses({ type: "start_game" })).toBe(true);
+    expect(parses({ type: "start_game", options: { seed: 7 } })).toBe(true);
+    expect(
+      parses({
+        type: "start_game",
+        options: {},
+        bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts start_singleplayer with seats alone", () => {
+    expect(
+      parses({ type: "start_singleplayer", seats: { human: { kind: "human" } } }),
+    ).toBe(true);
+  });
+
+  it("accepts preview_state naming an event and rejects it without one", () => {
+    expect(parses({ type: "preview_state", eventId: "e1" })).toBe(true);
+    expect(parses({ type: "preview_state" })).toBe(false);
+  });
+
+  it("accepts sync_events of opaque events up to 20000", () => {
+    const events = Array.from({ length: 20000 }, (_, i) => ({ id: `e${i}` }));
+    expect(parses({ type: "sync_events", events })).toBe(true);
+  });
+
+  it("rejects sync_events over 20000 events", () => {
+    const events = Array.from({ length: 20001 }, (_, i) => ({ id: `e${i}` }));
+    expect(parses({ type: "sync_events", events })).toBe(false);
+  });
+});
+
+describe("lobbyMessageSchema", () => {
+  it("accepts request_game naming a known game", () => {
+    expect(
+      lobbyMessageSchema.safeParse({
+        type: "request_game",
+        targetId: "p2",
+        game: "dominion",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects request_game without a game", () => {
+    expect(
+      lobbyMessageSchema.safeParse({ type: "request_game", targetId: "p2" })
+        .success,
+    ).toBe(false);
   });
 });

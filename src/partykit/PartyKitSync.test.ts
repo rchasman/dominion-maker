@@ -73,10 +73,11 @@ describe("PartyKitSync", () => {
       const msg: GameClientMessage = {
         type: "join",
         name: playerName,
+        game: "dominion",
       };
 
       expect(msg.type).toBe("join");
-      expect(msg.name).toBe("Test Player");
+      if (msg.type === "join") expect(msg.name).toBe("Test Player");
     });
   });
 
@@ -198,7 +199,7 @@ describe("PartyKitSync", () => {
       };
 
       expect(msg.events).toHaveLength(1);
-      expect(msg.events[0]?.id).toBe("e3");
+      expect(msg.events[0]).toEqual({ id: "e3" });
     });
   });
 

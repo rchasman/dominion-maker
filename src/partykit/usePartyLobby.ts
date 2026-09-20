@@ -13,6 +13,7 @@ import type {
   LobbyServerMessage,
   PlayerId,
 } from "./protocol";
+import type { GameId } from "../games";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -38,7 +39,7 @@ interface UsePartyLobbyReturn {
   getRequestState: (playerId: PlayerId) => RequestState;
   getIncomingRequest: (playerId: PlayerId) => GameRequest | undefined;
 
-  requestGame: (targetId: string) => void;
+  requestGame: (targetId: string, game: GameId) => void;
   acceptRequest: (requestId: string) => void;
   cancelRequest: (requestId: string) => void;
   clearMatchedGame: () => void;
@@ -156,8 +157,8 @@ export function usePartyLobby(
     [myId, requests],
   );
 
-  const requestGame = useCallback((targetId: string) => {
-    const msg: LobbyClientMessage = { type: "request_game", targetId };
+  const requestGame = useCallback((targetId: string, game: GameId) => {
+    const msg: LobbyClientMessage = { type: "request_game", targetId, game };
     socketRef.current?.send(JSON.stringify(msg));
   }, []);
 

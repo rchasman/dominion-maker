@@ -2,9 +2,11 @@
  * PartyKit Protocol Types
  *
  * Shared types between server and client for type-safe messaging.
+ * The protocol is game-agnostic: commands, state and events travel as
+ * `unknown` and the room's `GameModule` validates and projects them.
  */
-import type { GameState, CardName, PlayerId } from "../types/game-state";
-import type { GameEvent, DecisionChoice } from "../events/types";
+import type { GameId } from "../games";
+import type { PlayerId } from "../types/basic-types";
 import type {
   ControllerConfig,
   ControllerKind,
@@ -17,11 +19,20 @@ export type { PlayerId };
 /** A seat a bot may hold: everything except human */
 export type BotConfig = { kind: "heuristic" } | LlmSeatConfig;
 
+/** One row of the `player_list` message: who holds a seat right now */
 export interface PlayerInfo {
   name: string;
   playerId: PlayerId;
   /** Kind only: an LLM seat's roster and strategy stay with its owner */
   controller: ControllerKind;
+}
+
+/** One entry of the `playerInfo` record carried beside a projected state */
+export interface PlayerInfoEntry {
+  id: string;
+  name: string;
+  type: "human" | "ai";
+  connected: boolean;
 }
 
 // ============================================
@@ -42,6 +53,7 @@ export interface GameRequest {
 
 export interface ActiveGame {
   roomId: string;
+  game: GameId;
   players: Array<{
     name: string;
     isBot?: boolean;
@@ -55,7 +67,7 @@ export interface ActiveGame {
 // Client -> Lobby Server
 export type LobbyClientMessage =
   | { type: "join_lobby"; name: string; clientId: string }
-  | { type: "request_game"; targetId: string }
+  | { type: "request_game"; targetId: string; game: GameId }
   | { type: "accept_request"; requestId: string }
   | { type: "cancel_request"; requestId: string };
 
@@ -65,13 +77,19 @@ export type LobbyServerMessage =
   | { type: "players"; players: LobbyPlayer[] }
   | { type: "requests"; requests: GameRequest[] }
   | { type: "active_games"; games: ActiveGame[] }
-  | { type: "game_matched"; roomId: string; opponentName: string }
+  | {
+      type: "game_matched";
+      roomId: string;
+      opponentName: string;
+      game: GameId;
+    }
   | { type: "error"; message: string };
 
 // Internal: Game Server -> Lobby Server (via HTTP)
 export interface GameUpdateMessage {
   type: "game_update";
   roomId: string;
+  game: GameId;
   players: Array<{
     name: string;
     isBot?: boolean;
@@ -95,33 +113,34 @@ export interface ChatMessageData {
   timestamp: number;
 }
 
+/** Carried by every message that ships a module-projected state */
+interface StatePayload {
+  game: GameId;
+  state: unknown;
+  playerInfo: Record<PlayerId, PlayerInfoEntry>;
+}
+
 // Client -> Game Server
 export type GameClientMessage =
   | {
       type: "join";
       name: string;
+      game: GameId;
       clientId?: string;
       isBot?: boolean;
       reconnectToken?: string;
     }
-  | { type: "spectate"; name: string; clientId?: string }
+  | { type: "spectate"; name: string; game: GameId; clientId?: string }
   | {
       type: "start_game";
-      kingdomCards?: CardName[];
+      options?: unknown;
       bots?: Array<{ name: string; controller: BotConfig }>;
     }
-  | { type: "start_singleplayer"; seats: Seats; kingdomCards?: CardName[] }
+  | { type: "start_singleplayer"; seats: Seats }
   | { type: "set_seat"; playerId: PlayerId; controller: ControllerConfig }
-  | { type: "sync_events"; events: GameEvent[] }
-  | { type: "play_action"; card: CardName }
-  | { type: "play_treasure"; card: CardName }
-  | { type: "play_all_treasures" }
-  | { type: "buy_card"; card: CardName }
-  | { type: "end_phase" }
-  | { type: "submit_decision"; choice: DecisionChoice }
-  | { type: "request_undo"; toEventId: string; reason?: string }
-  | { type: "approve_undo"; requestId: string }
-  | { type: "deny_undo"; requestId: string }
+  | { type: "sync_events"; events: unknown[] }
+  /** The room's module parses `command` with its own `commandSchema` */
+  | { type: "command"; command: unknown }
   | { type: "preview_state"; eventId: string }
   | { type: "resign" }
   | { type: "leave" }
@@ -137,12 +156,12 @@ export type GameServerMessage =
       reconnectToken?: string;
       gameStarted?: boolean;
     }
-  | { type: "preview_state"; eventId: string; state: GameState | null }
+  | ({ type: "preview_state"; eventId: string } & StatePayload)
   | { type: "player_list"; players: PlayerInfo[] }
   | { type: "spectator_count"; count: number }
-  | { type: "game_started"; state: GameState; events: GameEvent[] }
-  | { type: "events"; events: GameEvent[]; state: GameState }
-  | { type: "full_state"; state: GameState; events: GameEvent[] }
+  | ({ type: "game_started"; events: unknown[] } & StatePayload)
+  | ({ type: "events"; events: unknown[] } & StatePayload)
+  | ({ type: "full_state"; events: unknown[] } & StatePayload)
   | { type: "player_resigned"; playerName: string }
   | { type: "player_disconnected"; playerName: string; playerId: PlayerId }
   | { type: "player_reconnected"; playerName: string; playerId: PlayerId }

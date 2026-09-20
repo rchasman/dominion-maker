@@ -5,7 +5,6 @@ import type {
   PlayerId,
   ChatMessageData,
 } from "./protocol";
-import type { CardName } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { PendingUndoRequest } from "../engine/engine";
 
@@ -268,13 +267,15 @@ describe("usePartyGame", () => {
     });
 
     it("should handle game_started message", () => {
-      let gameState: any = null;
-      let events: GameEvent[] = [];
+      let gameState: unknown = null;
+      let events: unknown[] = [];
 
       const msg: GameServerMessage = {
         type: "game_started",
-        state: { test: "state" } as any,
-        events: [{ id: "e1", type: "GAME_STARTED" } as any],
+        game: "dominion",
+        state: { test: "state" },
+        events: [{ id: "e1", type: "GAME_STARTED" }],
+        playerInfo: {},
       };
 
       if (msg.type === "game_started") {
@@ -287,12 +288,14 @@ describe("usePartyGame", () => {
     });
 
     it("should handle events message and append events", () => {
-      let events: GameEvent[] = [{ id: "e1" } as any];
+      let events: unknown[] = [{ id: "e1" }];
 
       const msg: GameServerMessage = {
         type: "events",
-        events: [{ id: "e2" } as any, { id: "e3" } as any],
-        state: {} as any,
+        game: "dominion",
+        events: [{ id: "e2" }, { id: "e3" }],
+        state: {},
+        playerInfo: {},
       };
 
       if (msg.type === "events") {
@@ -300,16 +303,18 @@ describe("usePartyGame", () => {
       }
 
       expect(events).toHaveLength(3);
-      expect(events[2]?.id).toBe("e3");
+      expect(events[2]).toEqual({ id: "e3" });
     });
 
     it("should handle full_state message and replace events", () => {
-      let events: GameEvent[] = [{ id: "e1" } as any];
+      let events: unknown[] = [{ id: "e1" }];
 
       const msg: GameServerMessage = {
         type: "full_state",
-        events: [{ id: "e2" } as any],
-        state: {} as any,
+        game: "dominion",
+        events: [{ id: "e2" }],
+        state: {},
+        playerInfo: {},
       };
 
       if (msg.type === "full_state") {
@@ -317,7 +322,7 @@ describe("usePartyGame", () => {
       }
 
       expect(events).toHaveLength(1);
-      expect(events[0]?.id).toBe("e2");
+      expect(events[0]).toEqual({ id: "e2" });
     });
 
     it("should track disconnected players", () => {
@@ -424,94 +429,6 @@ describe("usePartyGame", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("should create play_action message", () => {
-      const msg: GameClientMessage = {
-        type: "play_action",
-        card: "Village",
-      };
-
-      expect(msg.type).toBe("play_action");
-      expect(msg.card).toBe("Village");
-    });
-
-    it("should create play_treasure message", () => {
-      const msg: GameClientMessage = {
-        type: "play_treasure",
-        card: "Copper",
-      };
-
-      expect(msg.type).toBe("play_treasure");
-      expect(msg.card).toBe("Copper");
-    });
-
-    it("should create play_all_treasures message", () => {
-      const msg: GameClientMessage = {
-        type: "play_all_treasures",
-      };
-
-      expect(msg.type).toBe("play_all_treasures");
-    });
-
-    it("should create buy_card message", () => {
-      const msg: GameClientMessage = {
-        type: "buy_card",
-        card: "Silver",
-      };
-
-      expect(msg.type).toBe("buy_card");
-      expect(msg.card).toBe("Silver");
-    });
-
-    it("should create end_phase message", () => {
-      const msg: GameClientMessage = {
-        type: "end_phase",
-      };
-
-      expect(msg.type).toBe("end_phase");
-    });
-
-    it("should create submit_decision message", () => {
-      const msg: GameClientMessage = {
-        type: "submit_decision",
-        choice: { selectedCards: ["Copper"] },
-      };
-
-      expect(msg.type).toBe("submit_decision");
-      expect(msg.choice.selectedCards).toEqual(["Copper"]);
-    });
-
-    it("should create request_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "request_undo",
-        toEventId: "event-123",
-        reason: "Misclick",
-      };
-
-      expect(msg.type).toBe("request_undo");
-      expect(msg.toEventId).toBe("event-123");
-      expect(msg.reason).toBe("Misclick");
-    });
-
-    it("should create approve_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "approve_undo",
-        requestId: "req-123",
-      };
-
-      expect(msg.type).toBe("approve_undo");
-      expect(msg.requestId).toBe("req-123");
-    });
-
-    it("should create deny_undo message", () => {
-      const msg: GameClientMessage = {
-        type: "deny_undo",
-        requestId: "req-123",
-      };
-
-      expect(msg.type).toBe("deny_undo");
-      expect(msg.requestId).toBe("req-123");
-    });
-
     it("should create resign message", () => {
       const msg: GameClientMessage = {
         type: "resign",
@@ -545,17 +462,16 @@ describe("usePartyGame", () => {
   });
 
   describe("start and seat messages", () => {
-    it("starts a game with optional kingdom cards and bot seats", () => {
-      const kingdomCards: CardName[] = ["Village", "Smithy"];
+    it("starts a game with opaque options and bot seats", () => {
       const msg: GameClientMessage = {
         type: "start_game",
-        kingdomCards,
+        options: { kingdomCards: ["Village", "Smithy"] },
         bots: [{ name: "AI Opponent", controller: { kind: "heuristic" } }],
       };
 
       expect(msg.type).toBe("start_game");
       if (msg.type === "start_game") {
-        expect(msg.kingdomCards).toEqual(["Village", "Smithy"]);
+        expect(msg.options).toEqual({ kingdomCards: ["Village", "Smithy"] });
         expect(msg.bots?.[0]?.controller.kind).toBe("heuristic");
       }
     });

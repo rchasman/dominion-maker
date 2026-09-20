@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { DominionEngine } from "../engine";
 import { dominionGame } from "../dominion/definition";
-import { gameEventSchema } from "../validation/messages";
+import { gameEventSchema } from "../validation/events";
 
 // Captured from master before the consensus core moved. The live roster
 // sweep recorded in memory stays valid only while these bytes do not change.

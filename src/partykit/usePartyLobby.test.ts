@@ -83,6 +83,7 @@ describe("usePartyLobby", () => {
         type: "game_matched",
         roomId: "room-123",
         opponentName: "Opponent",
+        game: "dominion",
       };
 
       if (msg.type === "game_matched") {
