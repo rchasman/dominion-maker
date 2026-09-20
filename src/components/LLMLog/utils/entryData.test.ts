@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { MODEL_IDS } from "../../../config/models";
-import { readMove, readPending, readProvider, readVotes } from "./entryData";
+import {
+  readMove,
+  readPending,
+  readProvider,
+  readUsage,
+  readVotes,
+} from "./entryData";
 
 /**
  * Both names come from the roster itself: one it ships and one it cannot,
@@ -34,5 +40,12 @@ describe("reading a log entry's data", () => {
     const spread = [{ move: { san: "Nc6" }, weight: 1, key: "Nc6" }];
     expect(readVotes(spread)).toMatchObject(spread);
     expect(readVotes([{ move: { san: "Nc6" } }])).toBeUndefined();
+  });
+
+  it("reads a token count and refuses a half-reported one", () => {
+    const usage = { inputTokens: 3180, outputTokens: 62 };
+    expect(readUsage(usage)).toEqual(usage);
+    expect(readUsage({ inputTokens: 3180 })).toBeUndefined();
+    expect(readUsage("3180")).toBeUndefined();
   });
 });
