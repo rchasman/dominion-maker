@@ -12,6 +12,11 @@ beforeAll(registerHappyDom);
 
 const SEATS = { w: HUMAN_SEAT, b: HEURISTIC_SEAT };
 
+const headerOrder = (root: HTMLElement) =>
+  [...root.querySelectorAll("[data-chess-player]")].map(el =>
+    el.getAttribute("data-chess-player"),
+  );
+
 const click = (root: HTMLElement, selector: string) => {
   const target = root.querySelector(selector);
   if (!(target instanceof Element)) throw new Error(`no ${selector}`);
@@ -46,6 +51,8 @@ describe("the chess board", () => {
 
     settled(mount);
     expect(root.querySelectorAll("[data-square]").length).toBe(64);
+    // White's own view puts Black's header on top and White's underneath
+    expect(headerOrder(root)).toEqual(["b", "w"]);
 
     click(root, '[data-square="e2"]');
     expect(root.querySelectorAll("[data-legal-target]").length).toBe(2);
@@ -170,6 +177,8 @@ describe("the chess board", () => {
     );
 
     expect(root.querySelectorAll("[data-square]").length).toBe(64);
+    // The board flips for Black, and the headers flip with it
+    expect(headerOrder(root)).toEqual(["w", "b"]);
     // The pawn stands where the FEN puts it, not where a fresh game would
     expect(root.querySelector('[data-square="e4"]')?.textContent).toContain(
       "\u2659",
