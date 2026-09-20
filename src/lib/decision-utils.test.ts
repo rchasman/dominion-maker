@@ -1,6 +1,10 @@
 import { describe, it, expect } from "bun:test";
-import { canSkipDecision, shouldSelectCard } from "./decision-utils";
-import type { GameState } from "../types/game-state";
+import {
+  canSkipDecision,
+  resolveSelectedCards,
+  shouldSelectCard,
+} from "./decision-utils";
+import type { CardName, GameState } from "../types/game-state";
 
 describe("decision-utils", () => {
   describe("canSkipDecision", () => {
@@ -164,6 +168,82 @@ describe("decision-utils", () => {
       const result = shouldSelectCard(0, [], pendingChoice);
       expect(result.shouldToggleOff).toBe(false);
       expect(result.canAdd).toBe(true);
+    });
+  });
+
+  describe("resolveSelectedCards", () => {
+    const hand: CardName[] = [
+      "Copper",
+      "Copper",
+      "Silver",
+      "Copper",
+      "Council Room",
+    ];
+
+    it("resolves indices against the hand for a hand choice", () => {
+      const decision: GameState["pendingChoice"] = {
+        choiceType: "decision",
+        playerId: "human",
+        prompt: "Trash a card",
+        cardBeingPlayed: "Chapel",
+        from: "hand",
+        cardOptions: ["Silver", "Council Room"],
+      };
+      expect(resolveSelectedCards(decision, hand, [2, 4])).toEqual([
+        "Silver",
+        "Council Room",
+      ]);
+    });
+
+    it("resolves indices against the hand when the choice has no source", () => {
+      const decision: GameState["pendingChoice"] = {
+        choiceType: "decision",
+        playerId: "human",
+        prompt: "Discard cards",
+        cardBeingPlayed: "Cellar",
+        cardOptions: ["Copper"],
+      };
+      expect(resolveSelectedCards(decision, hand, [0])).toEqual(["Copper"]);
+    });
+
+    it("resolves indices against cardOptions for a discard choice", () => {
+      const decision: GameState["pendingChoice"] = {
+        choiceType: "decision",
+        playerId: "human",
+        prompt: "Harbinger: topdeck a card",
+        cardBeingPlayed: "Harbinger",
+        from: "discard",
+        cardOptions: ["Silver", "Remodel", "Estate"],
+        min: 0,
+        max: 1,
+      };
+      expect(resolveSelectedCards(decision, hand, [1])).toEqual(["Remodel"]);
+    });
+
+    it("resolves indices against cardOptions for a revealed choice", () => {
+      const decision: GameState["pendingChoice"] = {
+        choiceType: "decision",
+        playerId: "human",
+        prompt: "Bandit: trash a treasure",
+        cardBeingPlayed: "Bandit",
+        from: "revealed",
+        cardOptions: ["Gold", "Silver"],
+        min: 1,
+        max: 1,
+      };
+      expect(resolveSelectedCards(decision, hand, [0])).toEqual(["Gold"]);
+    });
+
+    it("drops indices outside the source", () => {
+      const decision: GameState["pendingChoice"] = {
+        choiceType: "decision",
+        playerId: "human",
+        prompt: "Harbinger: topdeck a card",
+        cardBeingPlayed: "Harbinger",
+        from: "discard",
+        cardOptions: ["Silver"],
+      };
+      expect(resolveSelectedCards(decision, hand, [3])).toEqual([]);
     });
   });
 });

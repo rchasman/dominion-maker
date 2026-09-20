@@ -4,6 +4,7 @@ import type { PendingChoice } from "../../events/types";
 import { Card } from "../Card";
 import { CARDS } from "../../data/cards";
 import { useAnimationSafe } from "../../animation";
+import { selectsFromHand } from "../../lib/decision-utils";
 
 const PLACEHOLDER_HAND_SIZE = 5;
 
@@ -74,12 +75,8 @@ function isHandCardDisabled(context: CardDisabledContext): boolean {
 
   if (!isInteractive) return true;
 
-  // If player has pending decision from hand, allow card selection (even if not active player)
-  if (
-    pendingChoice &&
-    pendingChoice.playerId === playerId &&
-    pendingChoice.from === "hand"
-  ) {
+  if (pendingChoice && pendingChoice.playerId === playerId) {
+    if (!selectsFromHand(pendingChoice)) return true;
     const cardOptions = pendingChoice.cardOptions ?? [];
     return cardOptions.length > 0 && !cardOptions.includes(card);
   }
@@ -153,10 +150,7 @@ function HandCardRenderer({
   inverted: boolean;
 }) {
   const isSelected =
-    (!pendingChoice ||
-      pendingChoice.from === "hand" ||
-      pendingChoice.from === "discard") &&
-    selectedCardIndices.includes(index);
+    selectsFromHand(pendingChoice) && selectedCardIndices.includes(index);
 
   const cardIdPrefix = inverted ? "hand-opponent" : "hand";
 
