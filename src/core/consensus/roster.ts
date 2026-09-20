@@ -2,27 +2,12 @@ import type { ModelConfig, ModelProvider } from "../../config/models";
 import { MODEL_IDS, MODELS } from "../../config/models";
 import type { LlmSeatConfig } from "../seats";
 import { uiLogger } from "../../lib/logger";
+import { FAST_PRESET } from "./presets";
 
 const findModelConfig = (modelId: ModelProvider): ModelConfig | undefined =>
   MODELS.find(m => m.id === modelId);
 
 export const AVAILABLE_MODELS: ModelProvider[] = [...MODEL_IDS];
-
-/** Cheapest instances for cost-effective consensus (duplicates allowed) */
-const ALL_FAST_MODELS: ModelProvider[] = [
-  "gpt-5.4-nano",
-  "gpt-5.4-nano",
-  "glm-4.7-flash",
-  "grok-4-fast",
-  "gpt-5.4-mini",
-  "gpt-5.4-nano",
-  "gemini-3.1-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-3.1-flash-lite",
-  "deepseek-v4-pro",
-  "glm-4.7-flash",
-  "qwen3.5-flash",
-];
 
 type Tally = {
   models: ModelProvider[];
@@ -60,8 +45,8 @@ function buildRosterFrom(
 ): ModelProvider[] {
   const enabled = Array.from(new Set(enabledModels));
   if (enabled.length === 0) {
-    uiLogger.warn("No models enabled, using defaults");
-    return ALL_FAST_MODELS;
+    uiLogger.warn("No models enabled, falling back to the fast preset");
+    return buildRosterFrom([...FAST_PRESET.models], FAST_PRESET.consensusCount);
   }
   const unlimited = enabled.filter(
     id => findModelConfig(id)?.maxInstances === undefined,

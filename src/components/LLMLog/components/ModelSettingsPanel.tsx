@@ -1,4 +1,6 @@
 import type { LlmSeatConfig } from "../../../core/seats";
+import type { ConsensusPreset } from "../../../core/consensus/presets";
+import { CONSENSUS_PRESETS } from "../../../core/consensus/presets";
 import { ModelPicker } from "../../ModelPicker";
 import { run } from "../../../lib/run";
 import { useState, useEffect, useRef } from "preact/hooks";
@@ -17,6 +19,55 @@ interface ConversationEntry {
 const STORAGE_KEY = "dominion-strategy-conversation";
 const TYPING_DEBOUNCE_MS = 2000;
 
+function ConsensusPresets({
+  onApply,
+}: {
+  onApply: (preset: ConsensusPreset) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-2)",
+        paddingTop: "var(--space-4)",
+      }}
+    >
+      <label
+        style={{
+          fontSize: "0.6875rem",
+          fontWeight: 600,
+          color: "var(--color-text-secondary)",
+          textTransform: "uppercase",
+        }}
+      >
+        Presets
+      </label>
+      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+        {CONSENSUS_PRESETS.map(preset => (
+          <button
+            key={preset.id}
+            onClick={() => onApply(preset)}
+            title={preset.description}
+            style={{
+              fontSize: "0.625rem",
+              padding: "var(--space-1) var(--space-3)",
+              background: "transparent",
+              border: "1px solid var(--color-border)",
+              borderRadius: "3px",
+              color: "var(--color-text-secondary)",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ConsensusCountSlider({
   value,
   onChange,
@@ -30,7 +81,6 @@ function ConsensusCountSlider({
         display: "flex",
         flexDirection: "column",
         gap: "var(--space-2)",
-        paddingTop: "var(--space-4)",
       }}
     >
       <label
@@ -271,6 +321,16 @@ export function ModelSettingsPanel({
         overflow: "auto",
       }}
     >
+      <ConsensusPresets
+        onApply={preset =>
+          onChange({
+            ...settings,
+            models: [...preset.models],
+            consensusCount: preset.consensusCount,
+          })
+        }
+      />
+
       <ConsensusCountSlider
         value={settings.consensusCount}
         onChange={count => onChange({ ...settings, consensusCount: count })}
