@@ -181,6 +181,31 @@ describe("usePartyGame", () => {
     settled(() => socket.emit("message", { data: malformed }));
     expect(room().consensusLog).toEqual([entry]);
 
+    // A resync mid-game must not wipe the decision the viewer is reading
+    settled(() =>
+      socket.deliver({
+        type: "full_state",
+        game: "chess",
+        state: { fen: "start" },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(room().consensusLog).toEqual([entry]);
+
+    // A new game starts on an empty viewer
+    settled(() =>
+      socket.deliver({
+        type: "game_started",
+        game: "chess",
+        state: { fen: "start" },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(room().consensusLog).toEqual([]);
+
+    settled(() => socket.deliver({ type: "consensus_log", entry }));
     settled(() =>
       socket.deliver({
         type: "joined",
