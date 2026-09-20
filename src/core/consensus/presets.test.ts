@@ -59,12 +59,42 @@ describe("consensus presets", () => {
   });
 });
 
+/**
+ * Providers with no model that can carry a vote. Diverse gives each house one
+ * vote and nothing else, so an unreliable pick means that house abstains.
+ * A provider belongs here or in the preset, never neither.
+ */
+const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {
+  xiaomi: "fastest model medians 56s, well past the 30s vote timeout",
+  inclusionai: "its only model failed 6 of 12 live calls",
+};
+
 describe("the diverse preset", () => {
-  // Deliberate tripwire: adding a provider to MODELS must also update this preset.
-  it("names every provider exactly once", () => {
-    const providers = DIVERSE_PRESET.models.map(id => configOf(id)?.provider);
+  const providersOf = (ids: readonly string[]) =>
+    ids.map(id => configOf(id)?.provider);
+
+  it("never votes the same provider twice", () => {
+    const providers = providersOf(DIVERSE_PRESET.models);
     expect(new Set(providers).size).toBe(providers.length);
-    expect(new Set(providers)).toEqual(new Set(MODELS.map(m => m.provider)));
+  });
+
+  // Deliberate tripwire: a provider that appears in the catalog must either get
+  // a pick here or an explicit reason it cannot carry a vote. A refresh that
+  // adds a house fails this until someone measures it and decides.
+  it("rules on every provider the catalog offers", () => {
+    const catalog = new Set(MODELS.map(m => m.provider));
+    const ruled = new Set([
+      ...providersOf(DIVERSE_PRESET.models),
+      ...Object.keys(DIVERSE_EXCLUDED_PROVIDERS),
+    ]);
+    expect([...catalog].filter(p => !ruled.has(p))).toEqual([]);
+  });
+
+  it("excludes no provider it also votes", () => {
+    const voted = new Set(providersOf(DIVERSE_PRESET.models));
+    expect(
+      Object.keys(DIVERSE_EXCLUDED_PROVIDERS).filter(p => voted.has(p)),
+    ).toEqual([]);
   });
 
   it("gives each provider one vote", () => {
