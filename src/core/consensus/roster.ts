@@ -46,10 +46,7 @@ function buildRosterFrom(
   const enabled = Array.from(new Set(enabledModels));
   if (enabled.length === 0) {
     uiLogger.warn("No models enabled, falling back to the fast preset");
-    return buildRosterFrom(
-      [...FAST_PRESET.models],
-      FAST_PRESET.consensusCount,
-    );
+    return buildRosterFrom([...FAST_PRESET.models], FAST_PRESET.consensusCount);
   }
   const unlimited = enabled.filter(
     id => findModelConfig(id)?.maxInstances === undefined,
