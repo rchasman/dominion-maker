@@ -5,7 +5,7 @@
  */
 import type { EventDevtoolsAdapter } from "../components/EventDevtools/adapter";
 import { loadChessEngine } from "./engine";
-import type { ChessEvent } from "./shape";
+import type { ChessEvent, ChessState } from "./shape";
 
 const MOVES = "moves";
 const GAME = "game";
@@ -49,7 +49,7 @@ function chessEventLabels(
 /** The position after the first `index + 1` events, replayed here */
 export const chessStateAt =
   (events: readonly ChessEvent[]) =>
-  (index: number): unknown =>
+  (index: number): ChessState =>
     loadChessEngine(events.slice(0, index + 1)).state;
 
 export function chessDevtoolsAdapter(

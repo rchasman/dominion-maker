@@ -46,7 +46,7 @@ import {
   syncChessEngine,
 } from "./context";
 import { chessDevtoolsAdapter, chessStateAt } from "./devtools";
-import { createChessGame, loadChessEngine, type ChessEngine } from "./engine";
+import { createChessGame, type ChessEngine } from "./engine";
 import { CHESS_SEAT_PRESETS, chessSeats } from "./presets";
 import type { ChessState } from "./shape";
 import { CHESS_PLAYERS } from "./seat";
@@ -120,9 +120,9 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
     (eventId: string): ChessState => {
       const index = events.findIndex(event => event.id === eventId);
       if (index < 0) throw new Error("That event is not in this game");
-      return loadChessEngine(events.slice(0, index + 1)).state;
+      return stateAt(index);
     },
-    [events],
+    [events, stateAt],
   );
   const preview = usePreviewState(previewEventId, getStateAtEvent);
   const devtoolsAdapter = useMemo(
@@ -206,7 +206,6 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
           disabled={isPreviewMode}
           onMove={san => {
             if (localHuman === null) return;
-            exitPreview();
             dispatch({ type: "MOVE", playerId: localHuman, san });
           }}
           {...(!isPreviewMode && { onSeatChange: updateSeat })}

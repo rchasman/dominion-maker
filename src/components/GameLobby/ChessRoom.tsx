@@ -62,8 +62,7 @@ export function ChessRoom({
     sendCommand: room.sendCommand,
     getStateAtEvent: room.getStateAtEvent,
   });
-  const { previewEventId, enterPreview, exitPreview, isPreviewMode } =
-    usePreviewMode();
+  const { previewEventId, enterPreview, isPreviewMode } = usePreviewMode();
   const [showDevtools, setShowDevtools] = useState(false);
   const { events: chessEvents, stateAtEvent } = chess;
   const preview = usePreviewState(previewEventId, stateAtEvent);
@@ -138,10 +137,7 @@ export function ChessRoom({
               seats={seats}
               localPlayerId={chess.localPlayerId}
               playerNames={playerNames}
-              onMove={san => {
-                exitPreview();
-                chess.move(san);
-              }}
+              onMove={chess.move}
               disabled={!room.isConnected || isPreviewMode}
               {...(room.playerId !== null &&
                 !isPreviewMode && {

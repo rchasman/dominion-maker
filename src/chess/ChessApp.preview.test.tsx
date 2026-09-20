@@ -15,6 +15,16 @@ const settledAsync = async () => {
   settled(() => {});
 };
 
+const clickButton = (root: HTMLElement, title: string) => {
+  const target = [...root.querySelectorAll("button")].find(
+    button => button.getAttribute("title") === title,
+  );
+  if (target === undefined) throw new Error(`no button titled ${title}`);
+  settled(() => {
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
 const click = (root: HTMLElement, selector: string) => {
   const target = root.querySelector(selector);
   if (!(target instanceof Element)) throw new Error(`no ${selector}`);
@@ -43,47 +53,65 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/** One sequential test: the chess app writes the shared seat signals */
+/** A game already two plies old, so the scrubber has a past to show */
+const seedTwoPlies = () => {
+  const seeded = [
+    ["w", "e4"],
+    ["b", "e5"],
+  ].reduce(
+    (engine, move) => {
+      const [playerId, san] = move;
+      if (playerId === undefined || san === undefined)
+        throw new Error("a move is a player and a san");
+      const result = engine.dispatch({ type: "MOVE", playerId, san });
+      if (!result.ok) throw new Error(result.error);
+      return engine;
+    },
+    createChessGame([...CHESS_PLAYERS]),
+  );
+  localStorage.setItem(
+    "dominion-maker-chess-events",
+    JSON.stringify([...seeded.eventLog]),
+  );
+};
+
+const openDevtools = async (root: HTMLElement) => {
+  // The panel loads on demand, as it does for Dominion
+  await import("../components/EventDevtools");
+  await settledAsync();
+  const toggle = [...root.querySelectorAll("button")].find(button =>
+    button.textContent?.includes("{ }"),
+  );
+  settled(() => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  return [...root.querySelectorAll("[data-event-index]")];
+};
+
+const mountApp = () => {
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  settled(() => {
+    render(<ChessApp onBackToHome={() => {}} />, root);
+  });
+  settled(() => {
+    seats$.value = { w: HUMAN_SEAT, b: HUMAN_SEAT };
+  });
+  return root;
+};
+
+/** One sequential test each: the chess app writes the shared seat signals */
 describe("scrubbing the local chess game", () => {
   it("shows the past position, refuses clicks, and leaves on a move", async () => {
     localStorage.clear();
-    // A game already two plies old, so the scrubber has a past to show
-    const seeded = createChessGame([...CHESS_PLAYERS]);
-    for (const [playerId, san] of [
-      ["w", "e4"],
-      ["b", "e5"],
-    ] as const) {
-      const result = seeded.dispatch({ type: "MOVE", playerId, san });
-      if (!result.ok) throw new Error(result.error);
-    }
-    localStorage.setItem(
-      "dominion-maker-chess-events",
-      JSON.stringify([...seeded.eventLog]),
-    );
-    const root = document.createElement("div");
-    document.body.appendChild(root);
-    settled(() => {
-      render(<ChessApp onBackToHome={() => {}} />, root);
-    });
-    settled(() => {
-      seats$.value = { w: HUMAN_SEAT, b: HUMAN_SEAT };
-    });
+    seedTwoPlies();
+    const root = mountApp();
 
     expect(chessEvents$.value.length).toBe(3);
     expect(pieceAt(root, "e4")).not.toBe("");
 
-    // The panel loads on demand, as it does for Dominion
-    await import("../components/EventDevtools");
-    await settledAsync();
-
     // The devtools open from their own floating button, as Dominion's do
-    const toggle = [...root.querySelectorAll("button")].find(button =>
-      button.textContent?.includes("{ }"),
-    );
-    settled(() => {
-      toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    const rows = [...root.querySelectorAll("[data-event-index]")];
+    const rows = await openDevtools(root);
     expect(rows.map(row => row.textContent).join(" ")).toContain("1. e4");
 
     // Scrub to the latest move: the position is the live one, and White is to
@@ -105,10 +133,43 @@ describe("scrubbing the local chess game", () => {
     expect(pieceAt(root, "e7")).not.toBe("");
 
     // Leaving preview hands the live position back, and a move lands
-    click(root, '[title="Jump to live"]');
+    clickButton(root, "Jump to live");
     expect(root.textContent).not.toContain("PREVIEW MODE");
     move(root, "d2", "d4");
     expect(chessEvents$.value.length).toBe(4);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("branches from the event on show and takes back exclusively", async () => {
+    localStorage.clear();
+    seedTwoPlies();
+    const root = mountApp();
+    expect(chessEvents$.value.length).toBe(3);
+
+    const rows = await openDevtools(root);
+    settled(() => {
+      rows[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(root.textContent).toContain("PREVIEW MODE");
+
+    // Branching keeps the event on show: three events become two
+    clickButton(root, "Branch from here");
+    expect(chessEvents$.value.length).toBe(2);
+    expect(chessEvents$.value.at(-1)).toMatchObject({ san: "e4" });
+    expect(root.textContent).not.toContain("PREVIEW MODE");
+    expect(pieceAt(root, "e4")).not.toBe("");
+
+    // Take back drops the human's own last move, so it stops one short
+    const takeBack = [...root.querySelectorAll("button")].find(
+      button => button.textContent === "Take back",
+    );
+    settled(() => {
+      takeBack?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(chessEvents$.value.length).toBe(1);
+    expect(pieceAt(root, "e4")).toBe("");
 
     render(null, root);
     root.remove();

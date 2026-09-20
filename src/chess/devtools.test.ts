@@ -6,13 +6,16 @@ import { CHESS_PLAYERS } from "./seat";
 import type { ChessEvent } from "./shape";
 
 const played = (sans: string[]): ChessEvent[] => {
-  const engine = createChessGame([...CHESS_PLAYERS]);
-  sans.forEach((san, ply) => {
-    const playerId = CHESS_PLAYERS[ply % 2];
-    if (playerId === undefined) throw new Error("two players, always");
-    const result = engine.dispatch({ type: "MOVE", playerId, san });
-    if (!result.ok) throw new Error(result.error);
-  });
+  const engine = sans.reduce(
+    (built, san, ply) => {
+      const playerId = CHESS_PLAYERS[ply % 2];
+      if (playerId === undefined) throw new Error("two players, always");
+      const result = built.dispatch({ type: "MOVE", playerId, san });
+      if (!result.ok) throw new Error(result.error);
+      return built;
+    },
+    createChessGame([...CHESS_PLAYERS]),
+  );
   return [...engine.eventLog];
 };
 
