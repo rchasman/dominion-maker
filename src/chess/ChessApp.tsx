@@ -156,7 +156,7 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
 
   return (
     <BoardLayout>
-      <GameAreaLayout>
+      <GameAreaLayout align="center">
         <ChessBoard
           state={state}
           seats={seats}

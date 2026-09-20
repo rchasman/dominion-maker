@@ -109,7 +109,7 @@ export function ChessRoom({
     return (
       <>
         <BoardLayout>
-          <GameAreaLayout>
+          <GameAreaLayout align="center">
             <ChessBoard
               state={chess.state}
               seats={seats}

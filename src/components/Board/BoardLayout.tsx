@@ -67,11 +67,18 @@ export function BoardLayout({
 
 interface GameAreaLayoutProps {
   isPreviewMode?: boolean;
+  /**
+   * "fill" spreads every row across the area. "center" sizes the area to its
+   * widest row and centres the lot, so a board held to a square keeps the rows
+   * above and below it at its own width instead of letting them run wide.
+   */
+  align?: "fill" | "center";
   children: ComponentChildren;
 }
 
 export function GameAreaLayout({
   isPreviewMode = false,
+  align = "fill",
   children,
 }: GameAreaLayoutProps) {
   return (
@@ -79,6 +86,10 @@ export function GameAreaLayout({
       style={{
         display: "grid",
         gridTemplateRows: "auto 1fr auto",
+        ...(align === "center" && {
+          gridTemplateColumns: "minmax(0, auto)",
+          justifyContent: "center",
+        }),
         rowGap: "var(--space-2)",
         padding: "var(--space-3)",
         minInlineSize: 0,
