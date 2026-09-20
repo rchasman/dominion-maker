@@ -85,7 +85,10 @@ describe("matchmaking carries the game", () => {
     expect(forBob.opponentName).toBe("Alice");
   });
 
-  it("matches a mutual request on the game the waiting request named", () => {
+  // Two different games cannot be named while only one game is registered.
+  // This proves the mutual path answers both sides with the waiting request's
+  // game; which game wins when they differ is PR B's call.
+  it("matches two players who requested each other, with no accept step", () => {
     const h = lobbyHarness();
     const alice = h.join("a", "Alice");
     const bob = h.join("b", "Bob");

@@ -1,80 +1,31 @@
 import { describe, it, expect } from "bun:test";
-import GameServer, { type ConnLike, type RoomLike } from "./game-server";
-import type { GameServerMessage, GameClientMessage } from "./protocol";
+import { roomHarness, type RoomHarness } from "./room-test-harness";
+import type { ConnLike } from "./game-server";
 import { dominionModule } from "../dominion/module";
+import { countingModule } from "./counting-module.test-fixture";
 import { GAMES } from "../games";
 
-function roomHarness() {
-  const sockets = new Map<string, ConnLike>();
-  const messages = new Map<string, GameServerMessage[]>();
-  const room: RoomLike = {
-    id: "test",
-    env: {},
-    getConnections: () => sockets.values(),
-    broadcast: message => {
-      Array.from(sockets.values()).map(socket => socket.send(message));
-    },
-    context: {
-      parties: {
-        lobby: {
-          get: () => ({ fetch: () => Promise.resolve(new Response("OK")) }),
-        },
-      },
-    },
-  };
-  const server = new GameServer(room);
-  const connect = (id: string): ConnLike => {
-    messages.set(id, []);
-    const socket: ConnLike = {
-      id,
-      send: message => {
-        if (typeof message === "string") {
-          messages.get(id)?.push(JSON.parse(message));
-        }
-      },
-      close: () => {
-        sockets.delete(id);
-      },
-    };
-    sockets.set(id, socket);
-    server.connect(socket);
-    return socket;
-  };
-  const send = (socket: ConnLike, message: GameClientMessage) =>
-    server.handleMessage(JSON.stringify(message), socket);
-  const raw = (socket: ConnLike, message: string) =>
-    server.handleMessage(message, socket);
-  const seen = (socket: ConnLike) => messages.get(socket.id) ?? [];
-  const lastOf = (socket: ConnLike) => seen(socket).at(-1);
-  const eventTypes = (socket: ConnLike) =>
-    seen(socket).flatMap(m =>
-      "events" in m
-        ? m.events.map(event => dominionModule.eventSchema.parse(event).type)
-        : [],
-    );
-  const latestTurn = (socket: ConnLike) => {
-    const state = seen(socket)
-      .flatMap(m => ("state" in m && m.state ? [m.state] : []))
-      .at(-1);
-    return dominionModule.stateSchema.parse(state).turn;
-  };
-  return { server, connect, send, raw, seen, lastOf, eventTypes, latestTurn };
-}
-
-const startAgainstBot = (h: ReturnType<typeof roomHarness>) => {
-  const host = h.connect("host");
-  h.send(host, {
+const joinAs = (h: RoomHarness, socket: ConnLike, clientId: string) =>
+  h.send(socket, {
     type: "join",
-    name: "Alice",
+    name: clientId,
     game: "dominion",
-    clientId: "alice",
+    clientId,
   });
+
+const startAgainstBot = (h: RoomHarness, options?: unknown) => {
+  const host = h.connect("host");
+  joinAs(h, host, "alice");
+  h.send(h.connect("ignored"), { type: "leave" });
   h.send(host, {
     type: "start_game",
+    ...(options === undefined ? {} : { options }),
     bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
   });
   return host;
 };
+
+const stateOf = (value: unknown) => dominionModule.stateSchema.parse(value);
 
 describe("a room plays one registered game", () => {
   it("refuses a join that does not name the room's game", () => {
@@ -87,12 +38,7 @@ describe("a room plays one registered game", () => {
     });
 
     const host = h.connect("host");
-    h.send(host, {
-      type: "join",
-      name: "Alice",
-      game: "dominion",
-      clientId: "alice",
-    });
+    joinAs(h, host, "alice");
     // Every other registered game must bounce off this Dominion room.
     Object.keys(GAMES)
       .filter(id => id !== "dominion")
@@ -109,6 +55,21 @@ describe("a room plays one registered game", () => {
       });
   });
 
+  it("does not let a refused join fix the room's game", () => {
+    const h = roomHarness();
+    const refused = h.connect("refused");
+    // No clientId: this connection never gets a seat
+    h.send(refused, { type: "join", name: "Zed", game: "dominion" });
+    expect(h.lastOf(refused)).toMatchObject({
+      type: "error",
+      message: "clientId required",
+    });
+
+    const host = h.connect("host");
+    joinAs(h, host, "alice");
+    expect(h.lastOf(host)?.type).not.toBe("error");
+  });
+
   it("names the room's game on every state it ships", () => {
     const h = roomHarness();
     const host = startAgainstBot(h);
@@ -122,40 +83,114 @@ describe("a room plays one registered game", () => {
   });
 });
 
+describe("a room runs whatever module it was given", () => {
+  // The registry is injected, so this room answers "dominion" with a counting
+  // game: proof that nothing below `useGame` knows which game it is running.
+  const countingRoom = () => {
+    const h = roomHarness(() => countingModule);
+    const first = h.connect("first");
+    const second = h.connect("second");
+    joinAs(h, first, "a");
+    joinAs(h, second, "b");
+    return { h, first, second };
+  };
+
+  it("starts a counting game and plays it through commands", () => {
+    const { h, first } = countingRoom();
+    const started = h.seen(first).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    expect(started.state).toEqual({
+      seats: ["a", "b"],
+      total: 0,
+      turn: "a",
+      over: false,
+    });
+
+    h.send(first, {
+      type: "command",
+      command: { type: "ADD", by: "a", add: 2 },
+    });
+    expect(h.statesOf(first).at(-1)).toEqual({
+      seats: ["a", "b"],
+      total: 2,
+      turn: "b",
+      over: false,
+    });
+  });
+
+  it("refuses a counting command the counting module rejects", () => {
+    const { h, first } = countingRoom();
+    h.send(first, {
+      type: "command",
+      command: { type: "ADD", by: "a", add: 9 },
+    });
+    expect(h.lastOf(first)).toMatchObject({
+      type: "error",
+      message: "Invalid command",
+    });
+  });
+
+  it("refuses options the counting module does not take", () => {
+    const h = roomHarness(() => countingModule);
+    const host = h.connect("host");
+    joinAs(h, host, "a");
+    h.send(host, {
+      type: "start_game",
+      options: { seed: 1 },
+      bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+    });
+    expect(h.lastOf(host)).toMatchObject({
+      type: "error",
+      message: "The counting game takes no options",
+    });
+  });
+});
+
 describe("the room module validates what crosses the wire", () => {
-  it("refuses start_game options its module rejects", () => {
+  it("refuses start_game options its module rejects, and starts on a retry", () => {
     const h = roomHarness();
     const host = h.connect("host");
-    h.send(host, {
-      type: "join",
-      name: "Alice",
-      game: "dominion",
-      clientId: "alice",
-    });
+    joinAs(h, host, "alice");
+    const bots: Array<{ name: string; controller: { kind: "heuristic" } }> = [
+      { name: "Bot", controller: { kind: "heuristic" } },
+    ];
+
     h.send(host, {
       type: "start_game",
       options: { seed: "not a number" },
-      bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+      bots,
     });
     expect(h.lastOf(host)?.type).toBe("error");
-    expect(h.seen(host).some(m => m.type === "game_started")).toBe(false);
+    expect(h.countOf(host, "game_started")).toBe(0);
+
+    // A refusal must leave the room startable: same host, same bot list
+    h.send(host, { type: "start_game", options: { seed: 42 }, bots });
+    expect(h.countOf(host, "game_started")).toBe(1);
   });
 
-  it("accepts start_game options its module allows", () => {
-    const h = roomHarness();
+  it("refuses a sync_events log that does not hold two players", () => {
+    const h = roomHarness(() => countingModule);
     const host = h.connect("host");
+    joinAs(h, host, "a");
     h.send(host, {
-      type: "join",
-      name: "Alice",
-      game: "dominion",
-      clientId: "alice",
+      type: "start_singleplayer",
+      seats: { a: { kind: "human" }, b: { kind: "heuristic" } },
     });
+
     h.send(host, {
-      type: "start_game",
-      options: { seed: 42 },
-      bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+      type: "sync_events",
+      events: [{ type: "STARTED", seats: ["a"], id: "count-0" }],
     });
-    expect(h.seen(host).some(m => m.type === "game_started")).toBe(true);
+    expect(h.lastOf(host)).toMatchObject({
+      type: "error",
+      message: "Failed to sync events",
+    });
+
+    h.send(host, {
+      type: "sync_events",
+      events: [{ type: "STARTED", seats: ["a", "b"], id: "count-0" }],
+    });
+    expect(h.lastOf(host)?.type).toBe("full_state");
   });
 
   it("refuses a command its module rejects", () => {
@@ -173,19 +208,16 @@ describe("history preview", () => {
   it("replays a prefix of the log, not the whole log", async () => {
     const h = roomHarness();
     const host = startAgainstBot(h);
-    const settle = async () => {
-      await h.server.botsDriving;
-      await new Promise(resolve => setTimeout(resolve, 0));
-      await h.server.botsDriving;
-    };
-    await settle();
-    const endPhase: GameClientMessage = {
+    await h.settle();
+    h.send(host, {
       type: "command",
       command: { type: "END_PHASE", playerId: "alice" },
-    };
-    h.send(host, endPhase);
-    h.send(host, endPhase);
-    await settle();
+    });
+    h.send(host, {
+      type: "command",
+      command: { type: "END_PHASE", playerId: "alice" },
+    });
+    await h.settle();
 
     const started = h.seen(host).find(m => m.type === "game_started");
     if (started?.type !== "game_started") throw new Error("Missing game");
@@ -193,14 +225,12 @@ describe("history preview", () => {
       .map(event => dominionModule.eventSchema.parse(event))
       .find(event => event.type === "TURN_STARTED");
     if (!firstTurn?.id) throw new Error("Missing turn");
-
-    const turnNow = h.latestTurn(host);
-    expect(turnNow).toBeGreaterThanOrEqual(3);
+    expect(stateOf(h.statesOf(host).at(-1)).turn).toBeGreaterThanOrEqual(3);
 
     h.send(host, { type: "preview_state", eventId: firstTurn.id });
     const preview = h.lastOf(host);
     if (preview?.type !== "preview_state") throw new Error("Missing preview");
-    expect(dominionModule.stateSchema.parse(preview.state).turn).toBe(1);
+    expect(stateOf(preview.state).turn).toBe(1);
   });
 
   it("answers a preview of an event it does not hold with no state", () => {
@@ -217,7 +247,7 @@ describe("the room module acts after an accepted command", () => {
   it("lets the module's afterCommand approve an undo for the bot seat", async () => {
     const h = roomHarness();
     const host = startAgainstBot(h);
-    await h.server.botsDriving;
+    await h.settle();
     const started = h.seen(host).find(m => m.type === "game_started");
     if (started?.type !== "game_started") throw new Error("Missing game");
     const turnStarted = started.events
@@ -234,7 +264,14 @@ describe("the room module acts after an accepted command", () => {
       },
     });
 
-    expect(h.eventTypes(host)).toContain("UNDO_APPROVED");
-    expect(h.eventTypes(host)).toContain("UNDO_EXECUTED");
+    const types = h
+      .seen(host)
+      .flatMap(m =>
+        "events" in m
+          ? m.events.map(event => dominionModule.eventSchema.parse(event).type)
+          : [],
+      );
+    expect(types).toContain("UNDO_APPROVED");
+    expect(types).toContain("UNDO_EXECUTED");
   });
 });
