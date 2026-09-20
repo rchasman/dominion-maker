@@ -5,7 +5,7 @@ import {
   useCardActions,
   useBuyCardHandler,
 } from "./hooks";
-import { usePreviewMode } from "./usePreviewMode";
+import { usePreviewMode } from "../preview/usePreviewMode";
 import { useBoardHandlers } from "./useBoardHandlers";
 import { preloadKingdomCards } from "../../lib/image-preload";
 import type { CardName } from "../../types/game-state";

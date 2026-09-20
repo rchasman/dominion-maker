@@ -4,7 +4,7 @@ import { createBoardCallbacks } from "./useBoardCallbacks";
 import { createGameProps } from "./createGameProps";
 import { useBoardSetup } from "./useBoardSetup";
 import { BoardContent } from "./BoardContent";
-import { usePreviewState } from "./usePreviewState";
+import { usePreviewState } from "../preview/usePreviewState";
 
 interface BoardProps {
   onBackToHome?: () => void;

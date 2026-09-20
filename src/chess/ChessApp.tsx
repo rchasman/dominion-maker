@@ -24,8 +24,8 @@ import {
 } from "../core/seat-presets";
 import { uiLogger } from "../lib/logger";
 import { BoardLayout, GameAreaLayout } from "../components/Board/BoardLayout";
-import { usePreviewMode } from "../components/Board/usePreviewMode";
-import { usePreviewState } from "../components/Board/usePreviewState";
+import { usePreviewMode } from "../components/preview/usePreviewMode";
+import { usePreviewState } from "../components/preview/usePreviewState";
 import { GameSidebar } from "../components/Board/GameSidebar";
 import { TurnStatusIndicator } from "../components/Board/TurnStatusIndicator";
 import { ChessBoard } from "./ChessBoard";
