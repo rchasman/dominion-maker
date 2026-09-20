@@ -94,6 +94,7 @@ export function logVotingResults<M>(
       legalKeys: moves.map(moveKey),
       topResult: {
         key: winner.key,
+        label: describeMove(winner.move),
         action: winner.move,
         votes: winner.count,
         voters: winner.voters,
@@ -104,6 +105,7 @@ export function logVotingResults<M>(
       },
       allResults: rankedGroups.map(group => ({
         key: group.key,
+        label: describeMove(group.move),
         action: group.move,
         votes: group.count,
         voters: group.voters,

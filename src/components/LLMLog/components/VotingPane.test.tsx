@@ -5,12 +5,14 @@ import { VotingPane } from "./VotingPane";
 import type { ModelStatus } from "../types";
 import type { Action } from "../../../types/action";
 import { stripReasoning } from "../../../types/action";
+import { formatActionDescription } from "../../../lib/action-utils";
 
 beforeAll(registerHappyDom);
-/** Dominion's own move key, which is what the core stamps on each result */
+/** What the core stamps on a Dominion result: its own key and its own words */
 const dominionKey = (action: Action) => JSON.stringify(stripReasoning(action));
 
 const GOLD: Action = { type: "buy_card", card: "Gold" };
+const GOLD_LABEL = formatActionDescription(GOLD);
 
 function statuses(): Map<number, ModelStatus> {
   return new Map(
@@ -23,6 +25,8 @@ function statuses(): Map<number, ModelStatus> {
         completed: true,
         success: true,
         action: { type: "buy_card", card: "Gold", reasoning },
+        key: dominionKey(GOLD),
+        label: GOLD_LABEL,
       },
     ]),
   );
@@ -47,6 +51,9 @@ describe("vote explanations", () => {
       "✓",
     );
     expect(root.textContent).toContain("gpt-5.4-nano");
+    // The pane prints the game's own words, as the reasoning pane already does
+    expect(root.textContent).toContain("buy_card(Gold)");
+    expect(root.textContent).not.toContain('"card"');
     const details = root.querySelector("details")!;
     expect(details.textContent).toContain("Action balance");
     expect(details.open).toBe(false);
@@ -79,7 +86,10 @@ describe("vote explanations", () => {
     render(null, root);
   });
 
-  it("does not report legality when legal actions are unavailable", () => {
+  // A game saved before the core stamped keys restores from storage with
+  // neither a key nor a legal list. Crossing out every vote in it would be
+  // the same false accusation the move key was introduced to stop.
+  it("reports no legality for an entry logged before keys were stamped", () => {
     const root = document.createElement("div");
     render(<VotingPane data={null} liveStatuses={statuses()} />, root);
     expect(
@@ -102,9 +112,10 @@ describe("vote explanations", () => {
       success: true,
       action,
       key,
+      label: key,
       distribution: [
-        { move: action, weight: 0.75, key },
-        { move: nf6, weight: 0.25, key: "Nf6" },
+        { move: action, weight: 0.75, key, label: key },
+        { move: nf6, weight: 0.25, key: "Nf6", label: "Nf6" },
       ],
     });
     const root = document.createElement("div");
@@ -124,6 +135,9 @@ describe("vote explanations", () => {
     );
     expect(root.querySelector('[aria-label="Invalid action"]')).toBeNull();
     expect(root.querySelectorAll('[aria-label="Valid action"]').length).toBe(2);
+    expect(root.textContent).toContain("Nc6");
+    expect(root.textContent).toContain("Nf6");
+    expect(root.textContent).not.toContain('"san"');
     expect(
       root.querySelector('[aria-label="75% vote share"]')?.textContent,
     ).toBe("75%");
@@ -151,6 +165,7 @@ describe("vote explanations", () => {
                 success: true,
                 action: ke2,
                 key: "Ke2",
+                label: "Ke2",
                 distribution: [],
               },
             ],
@@ -163,6 +178,7 @@ describe("vote explanations", () => {
     expect(
       root.querySelector('[aria-label="Invalid action"]')?.textContent,
     ).toBe("✗");
+    expect(root.textContent).toContain("Ke2");
     render(null, root);
   });
 

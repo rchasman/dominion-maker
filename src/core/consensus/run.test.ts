@@ -24,6 +24,7 @@ const base = (
   aheadByK: 2,
   decideMove,
   moveKey: key,
+  describeMove: key,
   signal,
 });
 

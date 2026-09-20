@@ -58,7 +58,11 @@ const PIXELS_PER_CHAR_VOTE: number = 7;
 const keyOf = (action: Action, stamped: string | undefined): string =>
   stamped ?? JSON.stringify(stripReasoning(action));
 
-/** Undefined when the entry named no legal keys, which reads as unchecked */
+/**
+ * Every game's vote is judged the same way: its key is legal or it is not.
+ * The one undefined case is an entry logged before the core stamped keys,
+ * restored from storage, which names no legal moves to judge against.
+ */
 const isKeyLegal = (
   key: string,
   legalKeys: string[] | undefined,
@@ -72,6 +76,7 @@ const FONT_WEIGHT_BOLD: number = 700;
 
 type PaneVoteGroup = {
   key: string;
+  label: string | undefined;
   action: Action;
   votes: number;
   voters: string[];
@@ -92,12 +97,15 @@ function buildVoteGroups(
     // A text model answers with no probability mass, so its pick is one vote
     const spread = status.distribution ?? [];
     const votes: LoggedVote[] =
-      spread.length > 0 ? spread : [{ move: top, weight: 1, key: status.key }];
-    return votes.reduce((groups, { move: action, weight, key }) => {
+      spread.length > 0
+        ? spread
+        : [{ move: top, weight: 1, key: status.key, label: status.label }];
+    return votes.reduce((groups, { move: action, weight, key, label }) => {
       const signature = keyOf(action, key);
       const isTop = signature === topSignature;
       const existing = groups.get(signature) ?? {
         key: signature,
+        label,
         action,
         votes: 0,
         voters: [],
@@ -218,6 +226,7 @@ export function VotingPane({
         .filter(g => g.voters.length > 0 || g.votes >= MIN_VISIBLE_VOTES)
         .map(g => ({
           action: g.action,
+          label: g.label,
           votes: g.votes,
           voters: g.voters,
           valid: g.valid,
@@ -287,6 +296,7 @@ export function VotingPane({
 interface VoteResultItemProps {
   result: {
     action: Action;
+    label?: string | undefined;
     votes: number;
     voters: string[];
     valid?: boolean | undefined;
@@ -310,7 +320,10 @@ function VoteResultItem({
   verdict,
 }: VoteResultItemProps) {
   const percentage = (result.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
-  const actionStr = JSON.stringify(stripReasoning(result.action));
+  // The game named this move at log time; only an entry older than that stamp
+  // falls back to the shape the pane used to build for itself
+  const actionStr =
+    result.label ?? JSON.stringify(stripReasoning(result.action));
   const isValid = result.valid;
   const groupedVoters = groupVotersWithColors(result.voters);
   const barWidthPx = (percentage / PERCENTAGE_MULTIPLIER) * barAreaWidth;

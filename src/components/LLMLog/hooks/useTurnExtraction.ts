@@ -145,6 +145,7 @@ function handleConsensusModelComplete(
   status.completed = true;
   status.action = data.action as Action | undefined;
   status.key = data.key as string | undefined;
+  status.label = data.label as string | undefined;
   status.distribution = data.distribution as LoggedVote[] | undefined;
   status.aborted = data.aborted as boolean | undefined;
   status.usage = data.usage as TokenUsage | undefined;

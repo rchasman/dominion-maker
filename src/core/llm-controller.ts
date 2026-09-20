@@ -76,6 +76,7 @@ export function llmController<G extends GameShape>(
         aheadByK,
         decideMove: deps.decideMove,
         moveKey: move => game.moveKey(move),
+        describeMove: move => game.describeMove(move),
         logger,
         signal,
       });

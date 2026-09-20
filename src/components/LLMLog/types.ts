@@ -34,12 +34,16 @@ export interface GameStateSnapshot {
 }
 
 /** One share of a model's probability mass, keyed by the game's own move key */
-export type LoggedVote = WeightedVote<Action> & { key?: string | undefined };
+export type LoggedVote = WeightedVote<Action> & {
+  key?: string | undefined;
+  label?: string | undefined;
+};
 
 // Voting result for a single action
 export interface VotingResult {
-  /** The game's own key for this move; the viewer never re-derives one */
+  /** The game's own key and description; the viewer never re-derives either */
   key?: string | undefined;
+  label?: string | undefined;
   action: Action;
   votes: number;
   voters: PlayerId[];
@@ -89,6 +93,7 @@ export interface ModelStatus {
   aborted?: boolean | undefined;
   action?: Action | undefined;
   key?: string | undefined;
+  label?: string | undefined;
   distribution?: LoggedVote[] | undefined;
   usage?: TokenUsage | undefined;
 }
