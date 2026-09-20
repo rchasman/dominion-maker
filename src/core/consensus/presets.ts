@@ -48,21 +48,26 @@ const BALANCED_MODELS = [
 
 // One model per provider. Spread beats price here: a shared blind spot is what
 // consensus voting is supposed to catch, and same-house models share theirs.
+// Each house's pick is its fastest model, measured 2026-09-20 over the real
+// /api/generate-action path: 3 samples per model, 11 concurrent calls held
+// constant, ranked on "no sample over the 30s vote timeout" then median.
+// jev, grok-4-fast and step-3.5-flash are the only model their house ships.
+// Re-run the measurement before trusting these picks; gateway routing moves.
 const DIVERSE_MODELS = [
   "jev",
   "claude-haiku",
   "gpt-5.4-mini",
-  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
   "grok-4-fast",
-  "deepseek-v4-pro",
-  "glm-5.2",
-  "qwen3.8-flash",
-  "llama-4-maverick",
-  "nemotron-3.5-lightning",
+  "deepseek-v4-flash",
+  "glm-4.7",
+  "qwen3-coder-30b-a3b",
+  "llama-3.3-70b",
+  "nemotron-nano-12b-v2-vl",
   "step-3.5-flash",
-  "kimi-k3",
+  "kimi-k3-fast",
   "inkling-small",
-  "ministral-8b",
+  "ministral-3b",
 ] as const satisfies readonly ModelProvider[];
 
 // Frontier models. Most cap at 3 instances; claude-sonnet is uncapped and
