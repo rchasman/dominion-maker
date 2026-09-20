@@ -6,11 +6,14 @@ import type { ModelConfig } from "../../config/models";
 import { MODELS, MODEL_IDS } from "../../config/models";
 
 const rosterFor = (preset: (typeof CONSENSUS_PRESETS)[number]) =>
-  buildRoster({
-    ...DEFAULT_LLM_SEAT,
-    models: [...preset.models],
-    consensusCount: preset.consensusCount,
-  });
+  buildRoster(
+    {
+      ...DEFAULT_LLM_SEAT,
+      models: [...preset.models],
+      consensusCount: preset.consensusCount,
+    },
+    { allowEvaluation: true },
+  );
 
 const configOf = (id: string): ModelConfig | undefined =>
   MODELS.find(m => m.id === id);
