@@ -112,18 +112,31 @@ describe("the chess definition answers what the driver asks", () => {
   it("describes the position for the consensus viewer", () => {
     const engine = createChessGame([WHITE, BLACK]);
     play(engine, ["e4", "e5", "Nf3"]);
-    const context = chessGame.logContext(
-      engine.state,
-      BLACK,
-      chessGame.legalMoves(engine.state, BLACK),
-    );
-    expect(context.turnId).toBe("3");
+    const legal = chessGame.legalMoves(engine.state, BLACK);
+    const context = chessGame.logContext(engine.state, BLACK, legal);
+    expect(context.turnId).toBe(`${BLACK}-3`);
     expect(context.isChoice).toBe(false);
     expect(context.payload).toEqual({
+      turn: 2,
+      phase: "move",
+      activePlayerId: BLACK,
       fen: engine.state.fen,
-      sideToMove: BLACK,
-      moveNumber: 2,
+      moves: ["e4", "e5", "Nf3"],
+      legalActions: legal.map(move => move.san),
       lastMove: "Nf3",
     });
+  });
+
+  it("names the turn and the phase the consensus action id is built from", () => {
+    // `t${turn}-${phase}-...` reads "tundefined-undefined" without these two.
+    const engine = createChessGame([WHITE, BLACK]);
+    const { payload } = chessGame.logContext(
+      engine.state,
+      WHITE,
+      chessGame.legalMoves(engine.state, WHITE),
+    );
+    expect(typeof payload["turn"]).toBe("number");
+    expect(payload["turn"]).toBe(1);
+    expect(payload["phase"]).toBe("move");
   });
 });
