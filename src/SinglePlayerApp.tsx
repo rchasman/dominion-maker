@@ -1,16 +1,19 @@
 /**
  * SinglePlayerApp - Lazy-loaded wrapper for single player mode
  *
- * Runs game locally (instant start) and syncs to PartyKit in background for spectating.
+ * Opens one local Dominion session for as long as this screen is mounted and
+ * mirrors it to PartyKit in the background for spectating.
  */
 
-import { lazy, Suspense, useEffect } from "preact/compat";
-import { GameProvider } from "./context/GameContext";
-import { gameState$, isLoading$, startGame$ } from "./context/game-signals";
+import { lazy, Suspense, useEffect, useMemo } from "preact/compat";
 import { BoardSkeleton } from "./components/Board/BoardSkeleton";
 import { PartyKitSync } from "./partykit/PartyKitSync";
 import { STORAGE_KEYS } from "./context/storage-utils";
-import { AnimationProvider } from "./animation";
+import { useStorageSync } from "./context/use-storage-sync";
+import { createLocalDominionSession } from "./context/create-local-dominion-session";
+import { loadDominionTable } from "./context/dominion-table";
+import { AnimationProvider, useAnimationSafe } from "./animation";
+import { SessionProvider, useDominionSession } from "./session/SessionContext";
 
 const Board = lazy(() =>
   import("./components/Board/index").then(m => ({ default: m.Board })),
@@ -21,35 +24,45 @@ interface SinglePlayerAppProps {
 }
 
 export function SinglePlayerApp({ onBackToHome }: SinglePlayerAppProps) {
-  // Clear game state when unmounting (going back to menu)
-  useEffect(() => {
-    return () => {
-      localStorage.removeItem(STORAGE_KEYS.EVENTS);
-    };
-  }, []);
-
   return (
     <AnimationProvider>
-      <GameProvider>
-        <SinglePlayerGame onBackToHome={onBackToHome} />
-      </GameProvider>
+      <LocalSession onBackToHome={onBackToHome} />
     </AnimationProvider>
   );
 }
 
-function SinglePlayerGame({ onBackToHome }: { onBackToHome: () => void }) {
-  const gameState = gameState$.value;
-  const isLoading = isLoading$.value;
-  const startGame = startGame$.value;
+function LocalSession({ onBackToHome }: SinglePlayerAppProps) {
+  const queueAnimationAsync = useAnimationSafe()?.queueAnimationAsync;
+  const session = useMemo(
+    () =>
+      createLocalDominionSession(loadDominionTable(), {
+        animation: queueAnimationAsync ? { queueAnimationAsync } : null,
+      }),
+    [queueAnimationAsync],
+  );
 
-  if (isLoading) {
-    return <BoardSkeleton />;
-  }
+  return (
+    <SessionProvider session={session}>
+      <SinglePlayerGame onBackToHome={onBackToHome} />
+    </SessionProvider>
+  );
+}
 
-  if (!gameState) {
-    startGame?.();
-    return null;
-  }
+function SinglePlayerGame({ onBackToHome }: SinglePlayerAppProps) {
+  const session = useDominionSession();
+  if (session.mode !== "local")
+    throw new Error("SinglePlayerGame needs a local session");
+  useStorageSync(session);
+  // Leaving for the menu abandons the game; the next visit starts a fresh one.
+  // Registered after the storage sync so its final flush lands first.
+  useEffect(
+    () => () => {
+      localStorage.removeItem(STORAGE_KEYS.EVENTS);
+    },
+    [],
+  );
+
+  if (!session.state.value) return null;
 
   return (
     <>

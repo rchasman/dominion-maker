@@ -5,7 +5,7 @@
  */
 import { useMemo } from "preact/hooks";
 import type { EventDevtoolsAdapter } from "../EventDevtools/adapter";
-import { getStateAtEvent$ } from "../../context/game-signals";
+import { useDominionSession } from "../../session/SessionContext";
 import type { GameEvent } from "../../events/types";
 import { isRootCauseEvent } from "../../events/types";
 import { projectState } from "../../events/project";
@@ -121,19 +121,19 @@ function formatEvent(event: GameEvent): string {
 function dominionStateAt(
   events: GameEvent[],
   index: number,
-  getStateAtEvent: ((eventId: string) => unknown) | null,
+  getStateAtEvent: (eventId: string) => unknown,
 ): unknown {
   const isRemote = events.length > 0 && events[0]?.type !== "GAME_INITIALIZED";
   if (!isRemote) return projectState(events.slice(0, index + 1));
   const eventId = events[index]?.id;
-  if (!eventId || !getStateAtEvent) return null;
+  if (!eventId) return null;
   return Promise.resolve(getStateAtEvent(eventId));
 }
 
 export function useDominionDevtoolsAdapter(
   events: GameEvent[],
 ): EventDevtoolsAdapter<GameEvent> {
-  const getStateAtEvent = getStateAtEvent$.value;
+  const { getStateAtEvent } = useDominionSession();
   return useMemo(
     () => ({
       isRoot: event => isRootCauseEvent(event),

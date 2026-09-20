@@ -1,11 +1,25 @@
-import { beforeAll, describe, it, expect } from "bun:test";
+import { afterAll, beforeAll, describe, it, expect } from "bun:test";
 import { render } from "preact";
 import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
 import type { EventDevtoolsAdapter } from "../EventDevtools/adapter";
 import type { GameEvent } from "../../events/types";
+import { HUMAN_SEAT } from "../../core/seats";
+import { createLocalDominionSession } from "../../context/create-local-dominion-session";
+import { SessionProvider } from "../../session/SessionContext";
 import { useDominionDevtoolsAdapter } from "./devtoolsAdapter";
 
 beforeAll(registerHappyDom);
+
+/** The adapter reads history through the session the board is mounted in */
+const table = createLocalDominionSession(
+  {
+    kind: "new",
+    players: ["human", "ai"],
+    seats: { human: HUMAN_SEAT, ai: HUMAN_SEAT },
+  },
+  { animation: null, stepDelayMs: 0 },
+);
+afterAll(() => table.dispose());
 
 /** The adapter as the board builds it, through the hook that memoizes it */
 const adapterFor = (events: GameEvent[]): EventDevtoolsAdapter<GameEvent> => {
@@ -15,8 +29,15 @@ const adapterFor = (events: GameEvent[]): EventDevtoolsAdapter<GameEvent> => {
     built.push(useDominionDevtoolsAdapter(events));
     return null;
   };
+  // The provider disposes what it is given on unmount; the shared table must outlive each probe
+  const undisposable = { ...table, dispose: () => undefined };
   settled(() => {
-    render(<Probe />, root);
+    render(
+      <SessionProvider session={undisposable}>
+        <Probe />
+      </SessionProvider>,
+      root,
+    );
   });
   render(null, root);
   const adapter = built.at(-1);

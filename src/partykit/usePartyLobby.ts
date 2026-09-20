@@ -14,11 +14,7 @@ import type {
   PlayerId,
 } from "./protocol";
 import type { GameId } from "../game-ids";
-
-const PARTYKIT_HOST =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "localhost:1999"
-    : "dominion-maker.rchasman.partykit.dev";
+import { PARTYKIT_HOST } from "./host";
 
 type RequestState = "none" | "sent" | "received";
 

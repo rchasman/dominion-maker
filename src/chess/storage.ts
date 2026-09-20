@@ -1,4 +1,3 @@
-import { batch, signal } from "@preact/signals";
 import { z } from "zod";
 import type { Seats } from "../core/seats";
 import { uiLogger } from "../lib/logger";
@@ -7,14 +6,11 @@ import { seatsSchema } from "../validation/seats";
 import type { ChessEngine } from "./engine";
 import { loadChessEngine } from "./engine";
 import { chessEventSchema } from "./schemas";
-import type { ChessEvent, ChessState } from "./shape";
+import type { ChessEvent } from "./shape";
 
 const CHESS_EVENTS_KEY = "dominion-maker-chess-events";
 /** Chess keeps its own table: Dominion's seats name Dominion's players */
 const CHESS_SEATS_KEY = "dominion-maker-chess-seats";
-
-export const chessState$ = signal<ChessState | null>(null);
-export const chessEvents$ = signal<ChessEvent[]>([]);
 
 const storedLogSchema = z.array(chessEventSchema);
 
@@ -87,15 +83,4 @@ export function saveChessEvents(events: readonly ChessEvent[]): void {
   } catch (error) {
     uiLogger.warn("Could not save the chess game", { error });
   }
-}
-
-/** Writes the engine's log and state where the chess UI reads them */
-export function syncChessEngine(engine: {
-  eventLog: readonly ChessEvent[];
-  state: ChessState;
-}): void {
-  batch(() => {
-    chessEvents$.value = [...engine.eventLog];
-    chessState$.value = engine.state;
-  });
 }

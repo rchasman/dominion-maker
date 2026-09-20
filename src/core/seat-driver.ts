@@ -9,11 +9,11 @@ import { uiLogger } from "../lib/logger";
 type Running = { abort: AbortController; config: ControllerConfig };
 
 /** What the app plays for the events of one step; the signal cuts a flight short */
-type SeatAnimation<G extends GameShape> = {
+export type SeatAnimation<G extends GameShape> = {
   play(events: readonly G["event"][], signal: AbortSignal): Promise<void>;
 };
 
-export type SeatDriver<G extends GameShape> = {
+type SeatDriver<G extends GameShape> = {
   /** Call with every state or seats change; starts, keeps or aborts the driver */
   update(state: G["state"] | null, seats: Seats<G["playerId"]>): void;
   dispose(): void;
