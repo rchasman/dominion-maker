@@ -2,7 +2,6 @@ import { describe, it, expect } from "bun:test";
 import type {
   PlayerId,
   PlayerInfo,
-  PlayerInfoEntry,
   LobbyPlayer,
   GameRequest,
   ActiveGame,
@@ -13,6 +12,7 @@ import type {
   GameClientMessage,
   GameServerMessage,
 } from "./protocol";
+import type { PlayerInfoEntry } from "../types/player-info";
 import { gameMessageSchema, lobbyMessageSchema } from "../validation/messages";
 
 /**

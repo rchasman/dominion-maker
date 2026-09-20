@@ -2,7 +2,8 @@ import { z } from "zod";
 import type { VercelRequest, VercelResponse } from "./_http";
 import { gameStateSchema } from "../src/validation/game-state";
 import { actionSchema } from "../src/validation/action";
-import { moduleFor, type GameId } from "../src/games";
+import { moduleFor } from "../src/games";
+import type { GameId } from "../src/game-ids";
 import { MODEL_MAP } from "../src/config/models";
 
 const text = z.string().trim().min(1).max(20000);

@@ -18,7 +18,7 @@ import type {
   LobbyServerMessage,
   PlayerId,
 } from "./protocol";
-import type { GameId } from "../games";
+import type { GameId } from "../game-ids";
 import { generateRoomId } from "../lib/room-id";
 
 /** What the lobby needs from a connection; tests supply a plain object */

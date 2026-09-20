@@ -17,8 +17,8 @@ import type {
   GameUpdateMessage,
   ChatMessageData,
   PlayerId,
-  PlayerInfoEntry,
 } from "./protocol";
+import type { PlayerInfoEntry } from "../types/player-info";
 import type { ControllerConfig, Seats } from "../core/seats";
 import { HUMAN_SEAT, isHumanSeat } from "../core/seats";
 import type { Controller } from "../core/controller";
@@ -27,7 +27,8 @@ import { llmController } from "../core/llm-controller";
 import { createControllerCache } from "../core/controller-cache";
 import { driveEngine } from "../core/driver";
 import { httpDecideMove } from "../agent/http-decide-move";
-import { moduleFor, type GameId } from "../games";
+import { moduleFor } from "../games";
+import type { GameId } from "../game-ids";
 
 /** One event as the room handles it: opaque apart from the id it is sliced by */
 type RoomEvent = GameShape["event"];

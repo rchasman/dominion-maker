@@ -1,7 +1,7 @@
 // Import basic types for internal use
 import type { CardName, PlayerId } from "./basic-types";
 import type { PendingChoice } from "./pending-choice";
-import type { PlayerInfoEntry } from "../partykit/protocol";
+import type { PlayerInfoEntry } from "./player-info";
 
 // Re-export basic types
 export type { CardName, PlayerId } from "./basic-types";

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { gameIdSchema } from "../games";
+import { gameIdSchema } from "../game-ids";
 import { idSchema as id } from "./game-state";
 import { botConfigSchema, controllerConfigSchema, seatsSchema } from "./seats";
 import type {

@@ -15,7 +15,8 @@ import type {
   DecisionChoice,
 } from "../types/game-state";
 import type { GameEvent } from "../events/types";
-import type { ChatMessageData, PlayerInfoEntry } from "../partykit/protocol";
+import type { ChatMessageData } from "../partykit/protocol";
+import type { PlayerInfoEntry } from "../types/player-info";
 import type { CommandResult, GameCommand } from "../commands/types";
 import type { PendingUndoRequest } from "../engine/engine";
 import type { ControllerConfig, ControllerKind } from "../core/seats";

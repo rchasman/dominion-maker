@@ -5,7 +5,8 @@
  * The protocol is game-agnostic: commands, state and events travel as
  * `unknown` and the room's `GameModule` validates and projects them.
  */
-import type { GameId } from "../games";
+import type { GameId } from "../game-ids";
+import type { PlayerInfoEntry } from "../types/player-info";
 import type { PlayerId } from "../types/basic-types";
 import type {
   ControllerConfig,
@@ -25,14 +26,6 @@ export interface PlayerInfo {
   playerId: PlayerId;
   /** Kind only: an LLM seat's roster and strategy stay with its owner */
   controller: ControllerKind;
-}
-
-/** One entry of the `playerInfo` record carried beside a projected state */
-export interface PlayerInfoEntry {
-  id: string;
-  name: string;
-  type: "human" | "ai";
-  connected: boolean;
 }
 
 // ============================================

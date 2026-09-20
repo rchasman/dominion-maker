@@ -13,7 +13,7 @@ import type {
   LobbyServerMessage,
   PlayerId,
 } from "./protocol";
-import type { GameId } from "../games";
+import type { GameId } from "../game-ids";
 
 const PARTYKIT_HOST =
   typeof window !== "undefined" && window.location.hostname === "localhost"

@@ -8,7 +8,7 @@ import type {
   ActiveGame,
   PlayerId,
 } from "../../partykit/protocol";
-import type { GameId } from "../../games";
+import type { GameId } from "../../game-ids";
 import { moduleFor } from "../../games";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { getPlayerColor, PLAYER_COLORS } from "../../lib/board-utils";

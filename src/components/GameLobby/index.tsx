@@ -11,8 +11,8 @@ import { PlayerGrid } from "./PlayerGrid";
 import { GameRoom } from "./GameRoom";
 import { generateRoomId } from "../../lib/room-id";
 import { generatePlayerName } from "../../lib/name-generator";
-import type { GameId } from "../../games";
-import { gameIdSchema } from "../../games";
+import type { GameId } from "../../game-ids";
+import { gameIdSchema } from "../../game-ids";
 
 /** One game is registered today; PR B turns this into a picker */
 const SELECTED_GAME: GameId = "dominion";

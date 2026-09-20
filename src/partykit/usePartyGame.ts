@@ -11,12 +11,12 @@ import type {
   BotConfig,
   PlayerId,
   PlayerInfo,
-  PlayerInfoEntry,
   GameClientMessage,
   GameServerMessage,
   ChatMessageData,
 } from "./protocol";
-import type { GameId } from "../games";
+import type { PlayerInfoEntry } from "../types/player-info";
+import type { GameId } from "../game-ids";
 import type { ControllerConfig } from "../core/seats";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
 

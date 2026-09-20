@@ -8,7 +8,7 @@ import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
 import type { LlmSeatConfig } from "../../core/seats";
-import type { GameId } from "../../games";
+import type { GameId } from "../../game-ids";
 import { moduleFor } from "../../games";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
