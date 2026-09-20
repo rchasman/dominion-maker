@@ -15,6 +15,7 @@ import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
 import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
+import { gameState$ } from "../../context/game-signals";
 import { AnimationProvider } from "../../animation";
 
 interface GameRoomProps {
@@ -37,7 +38,13 @@ export function GameRoom({
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const room = usePartyGame({ roomId, game, playerName, clientId, isSpectator });
+  const room = usePartyGame({
+    roomId,
+    game,
+    playerName,
+    clientId,
+    isSpectator,
+  });
 
   // Sync multiplayer state into signals
   useMultiplayerGameContext({ game: room, playerName, isSpectator });
@@ -64,8 +71,9 @@ export function GameRoom({
     return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
   }, [room.disconnectedPlayers, room.playerId, isSpectator]);
 
-  // Show game board if game has started
-  if (room.state) {
+  // The board waits on the state the adapter parsed, not the raw one the room
+  // sent: a state this client cannot read must not reach the table at all.
+  if (gameState$.value) {
     // Wait for playerId to be set before rendering Board
     if (!isSpectator && !room.playerId) {
       return <BoardSkeleton />;
