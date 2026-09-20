@@ -469,6 +469,38 @@ describe("gameMessageSchema", () => {
     expect(parses({ type: "command", command: { anything: 1 } })).toBe(true);
   });
 
+  it("rejects extra fields inside a nested object", () => {
+    const message = {
+      id: "m1",
+      senderName: "Player",
+      content: "hi",
+      timestamp: 1,
+    };
+    expect(parses({ type: "chat", message })).toBe(true);
+    // handleChat spreads the message, so an unknown key would reach every client
+    expect(
+      parses({ type: "chat", message: { ...message, script: "<img>" } }),
+    ).toBe(false);
+
+    const bot = { name: "Bot", controller: { kind: "heuristic" } };
+    expect(parses({ type: "start_game", bots: [bot] })).toBe(true);
+    expect(parses({ type: "start_game", bots: [{ ...bot, seat: 2 }] })).toBe(
+      false,
+    );
+    expect(
+      parses({
+        type: "start_game",
+        bots: [{ name: "Bot", controller: { kind: "heuristic", spy: true } }],
+      }),
+    ).toBe(false);
+    expect(
+      parses({
+        type: "start_singleplayer",
+        seats: { a: { kind: "human", spy: true } },
+      }),
+    ).toBe(false);
+  });
+
   it("rejects the nine Dominion verbs the protocol no longer speaks", () => {
     const retired: unknown[] = [
       { type: "play_action", card: "Village" },

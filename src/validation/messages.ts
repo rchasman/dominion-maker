@@ -35,7 +35,7 @@ const gameMessage = z.discriminatedUnion("type", [
       type: z.literal("start_game"),
       options: z.unknown().optional(),
       bots: z
-        .array(z.object({ name, controller: botConfigSchema }))
+        .array(z.object({ name, controller: botConfigSchema }).strict())
         .max(3)
         .optional(),
     })
@@ -69,12 +69,14 @@ const gameMessage = z.discriminatedUnion("type", [
   z
     .object({
       type: z.literal("chat"),
-      message: z.object({
-        id,
-        senderName: name,
-        content: z.string().trim().min(1).max(4000),
-        timestamp: z.number(),
-      }),
+      message: z
+        .object({
+          id,
+          senderName: name,
+          content: z.string().trim().min(1).max(4000),
+          timestamp: z.number(),
+        })
+        .strict(),
     })
     .strict(),
 ]);
@@ -102,12 +104,14 @@ const gameUpdate = z.object({
   game: gameIdSchema,
   players: z
     .array(
-      z.object({
-        name,
-        isBot: z.boolean().optional(),
-        id: id.optional(),
-        isConnected: z.boolean().optional(),
-      }),
+      z
+        .object({
+          name,
+          isBot: z.boolean().optional(),
+          id: id.optional(),
+          isConnected: z.boolean().optional(),
+        })
+        .strict(),
     )
     .max(4),
   spectatorCount: count,
