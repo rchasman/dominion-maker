@@ -39,15 +39,19 @@ const PUBLIC_PAYLOAD_KEYS = [
   "buys",
   "coins",
   "inPlay",
-  "handCounts",
   "legalActionsCount",
   "decisionType",
 ] as const;
 
+/**
+ * `handCounts` splits the hidden hand into treasures and actions, which the
+ * state view never discloses. Only the size the table can count survives.
+ */
 const publicPayload = (payload: unknown): Payload => {
   if (!isRecord(payload)) return {};
   return {
     ...pick(payload, PUBLIC_PAYLOAD_KEYS),
+    handSize: countOf(payload["hand"]),
     activePlayerId: publicPlayer(payload["activePlayerId"]),
   };
 };

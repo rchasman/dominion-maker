@@ -50,6 +50,9 @@ const votingEntry: LLMLogEntry = {
 
 const seen = (entry: LLMLogEntry) => JSON.stringify(entry);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 describe("dominion viewLogEntry", () => {
   it("gives the acting seat its own entry whole", () => {
     expect(viewLogEntry(votingEntry, "bot")).toEqual(votingEntry);
@@ -71,12 +74,19 @@ describe("dominion viewLogEntry", () => {
     );
   });
 
-  it("keeps the counts, the winner and the timing the viewer needs", () => {
+  it("hides how the hidden hand splits and keeps only its size", () => {
+    const projected = viewLogEntry(votingEntry, "alice");
+    const state = projected.data?.["gameState"];
+    expect(isRecord(state) && state["handCounts"]).toBeUndefined();
+    expect(state).toMatchObject({ handSize: 5 });
+    expect(seen(projected)).not.toContain("treasures");
+  });
+
+  it("keeps the winner and the timing the viewer needs", () => {
     const projected = viewLogEntry(votingEntry, "alice");
     const state = projected.data?.["gameState"];
     expect(state).toMatchObject({
       turn: 3,
-      handCounts: { treasures: 2, actions: 1, total: 5 },
       activePlayerId: { handCount: 5, deckCount: 2, inPlay: ["Village"] },
     });
     expect(projected.data?.["topResult"]).toMatchObject({
