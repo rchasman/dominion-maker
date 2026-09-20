@@ -144,15 +144,8 @@ describe("the chess board", () => {
     );
     expect(root.textContent).toContain("Checkmate. Black wins.");
 
-    render(null, root);
-    root.remove();
-  });
-
-  it("draws the position the FEN names even when the log will not replay", () => {
-    const root = document.createElement("div");
-    document.body.appendChild(root);
-    // Schema-valid, and a room could send it: the SAN passes the schema, the
-    // engine that produced it did not. The board still owes the viewer a board.
+    // A room can send a schema-valid state whose SAN log no engine produced.
+    // The board still owes the viewer the position the FEN names.
     const unreplayable: ChessState = {
       fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
       playerOrder: ["w", "b"],
