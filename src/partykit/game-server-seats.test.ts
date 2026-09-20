@@ -3,6 +3,7 @@ import GameServer, { type ConnLike, type RoomLike } from "./game-server";
 import { createGame } from "../engine";
 import type { GameServerMessage, GameClientMessage } from "./protocol";
 import { dominionGame } from "../dominion/definition";
+import { dominionModule } from "../dominion/module";
 
 function roomHarness() {
   const sockets = new Map<string, ConnLike>();
@@ -43,11 +44,15 @@ function roomHarness() {
   const send = (socket: ConnLike, message: GameClientMessage) =>
     server.handleMessage(JSON.stringify(message), socket);
   const lastOf = (socket: ConnLike) => messages.get(socket.id)?.at(-1);
-  const latestState = (socket: ConnLike) =>
-    messages
+  const latestState = (socket: ConnLike) => {
+    const state = messages
       .get(socket.id)
       ?.flatMap(m => ("state" in m && m.state ? [m.state] : []))
       .at(-1);
+    return state === undefined
+      ? undefined
+      : dominionModule.stateSchema.parse(state);
+  };
   return { server, connect, send, messages, lastOf, latestState };
 }
 
@@ -55,7 +60,12 @@ describe("seats on the game server", () => {
   it("lets a lone host start against a rules bot that plays its own turns", async () => {
     const h = roomHarness();
     const host = h.connect("host");
-    h.send(host, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     h.send(host, { type: "start_game" });
     expect(h.lastOf(host)?.type).toBe("error");
 
@@ -68,7 +78,9 @@ describe("seats on the game server", () => {
       ?.find(m => m.type === "game_started");
     expect(started?.type).toBe("game_started");
     if (started?.type !== "game_started") return;
-    const botId = started.state.playerOrder.find(id => id !== "alice");
+    const botId = dominionModule.stateSchema
+      .parse(started.state)
+      .playerOrder.find(id => id !== "alice");
     expect(botId).toBeDefined();
     if (!botId) return;
 
@@ -89,8 +101,12 @@ describe("seats on the game server", () => {
     let state = h.latestState(host);
     expect(state && dominionGame.whoMustAct(state)).toBe("alice");
 
-    h.send(host, { type: "end_phase" });
-    h.send(host, { type: "end_phase" });
+    const endPhase: GameClientMessage = {
+      type: "command",
+      command: { type: "END_PHASE", playerId: "alice" },
+    };
+    h.send(host, endPhase);
+    h.send(host, endPhase);
     await settle();
     state = h.latestState(host);
     expect(state?.activePlayerId).toBe("alice");
@@ -101,8 +117,18 @@ describe("seats on the game server", () => {
     const h = roomHarness();
     const alice = h.connect("a");
     const bob = h.connect("b");
-    h.send(alice, { type: "join", name: "Alice", clientId: "alice" });
-    h.send(bob, { type: "join", name: "Bob", clientId: "bob" });
+    h.send(alice, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
+    h.send(bob, {
+      type: "join",
+      name: "Bob",
+      game: "dominion",
+      clientId: "bob",
+    });
     expect(h.messages.get(alice.id)?.some(m => m.type === "game_started")).toBe(
       true,
     );
@@ -142,7 +168,12 @@ describe("seats on the game server", () => {
   it("lets the host re-seat a bot and keeps the LLM roster off the wire", async () => {
     const h = roomHarness();
     const host = h.connect("host");
-    h.send(host, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     h.send(host, {
       type: "start_game",
       bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
@@ -152,7 +183,9 @@ describe("seats on the game server", () => {
       .get(host.id)
       ?.find(m => m.type === "game_started");
     if (started?.type !== "game_started") throw new Error("Missing game");
-    const botId = started.state.playerOrder.find(id => id !== "alice");
+    const botId = dominionModule.stateSchema
+      .parse(started.state)
+      .playerOrder.find(id => id !== "alice");
     if (!botId) throw new Error("Missing bot");
 
     h.send(host, {
@@ -185,7 +218,12 @@ describe("seats on the game server", () => {
   it("never drives a mirrored local game", () => {
     const h = roomHarness();
     const host = h.connect("host");
-    h.send(host, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     h.send(host, {
       type: "start_singleplayer",
       seats: { human: { kind: "human" }, ai: { kind: "heuristic" } },

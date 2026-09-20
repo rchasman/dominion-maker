@@ -4,6 +4,7 @@ import GameServer from "./game-server";
 import { createGame } from "../engine";
 import { playerView, publicEvents } from "../dominion/view";
 import { gameStateSchema } from "../validation/game-state";
+import { dominionModule } from "../dominion/module";
 import type { GameServerMessage, GameClientMessage } from "./protocol";
 
 function roomHarness() {
@@ -86,24 +87,40 @@ describe("multiplayer privacy and credentials", () => {
     const h = roomHarness();
     const alice = h.connect("socket-a");
     const bob = h.connect("socket-b");
-    h.send(alice, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(alice, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     const joined = h.messages.get(alice.id)!.find(m => m.type === "joined");
     if (joined?.type !== "joined") throw new Error("Missing join");
     expect(joined.reconnectToken).toBeTruthy();
-    h.send(bob, { type: "join", name: "Bob", clientId: "bob" });
+    h.send(bob, {
+      type: "join",
+      name: "Bob",
+      game: "dominion",
+      clientId: "bob",
+    });
     const started = h.messages
       .get(alice.id)!
       .find(m => m.type === "game_started");
     if (started?.type !== "game_started") throw new Error("Missing game");
-    expect(started.state.players.bob!.hand).toEqual([]);
-    expect(started.state.players.alice!.hand).toHaveLength(5);
+    const startedState = dominionModule.stateSchema.parse(started.state);
+    expect(startedState.players.bob!.hand).toEqual([]);
+    expect(startedState.players.alice!.hand).toHaveLength(5);
     expect(JSON.stringify(h.messages.get(bob.id))).not.toContain(
       joined.reconnectToken!,
     );
     const attacker = h.connect("attacker");
-    h.send(attacker, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(attacker, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     expect(h.messages.get(attacker.id)!.at(-1)?.type).toBe("error");
-    h.send(attacker, { type: "join", name: "Alice" });
+    h.send(attacker, { type: "join", name: "Alice", game: "dominion" });
     expect(h.messages.get(attacker.id)!.at(-1)?.type).toBe("error");
     h.send(alice, {
       type: "sync_events",
@@ -114,31 +131,34 @@ describe("multiplayer privacy and credentials", () => {
     h.send(rejoin, {
       type: "join",
       name: "Alice",
+      game: "dominion",
       clientId: "alice",
       reconnectToken: joined.reconnectToken!,
     });
     expect(
       h.messages.get(rejoin.id)!.some(m => m.type === "joined" && m.isHost),
     ).toBe(true);
-    h.send(rejoin, {
-      type: "preview_state",
-      eventId: started.events.at(-1)!.id!,
-    });
+    const lastEventId = dominionModule.eventSchema.parse(
+      started.events.at(-1),
+    ).id!;
+    h.send(rejoin, { type: "preview_state", eventId: lastEventId });
     const preview = h.messages.get(rejoin.id)!.at(-1);
     expect(preview?.type).toBe("preview_state");
     if (preview?.type === "preview_state")
-      expect(preview.state?.players.bob!.hand).toEqual([]);
+      expect(
+        dominionModule.stateSchema.parse(preview.state).players.bob!.hand,
+      ).toEqual([]);
     const spectator = h.connect("spectator");
-    h.send(spectator, { type: "spectate", name: "Viewer" });
+    h.send(spectator, { type: "spectate", name: "Viewer", game: "dominion" });
     const spectatorState = h.messages
       .get(spectator.id)!
       .find(m => m.type === "full_state");
     if (spectatorState?.type !== "full_state")
       throw new Error("Missing spectator state");
     expect(
-      Object.values(spectatorState.state.players).every(
-        p => p.hand.length === 0 && p.deck.length === 0,
-      ),
+      Object.values(
+        dominionModule.stateSchema.parse(spectatorState.state).players,
+      ).every(p => p.hand.length === 0 && p.deck.length === 0),
     ).toBe(true);
   });
 
@@ -154,7 +174,12 @@ describe("multiplayer privacy and credentials", () => {
       expect(() => h.server.onMessage(malformed, socket)).not.toThrow();
       expect(h.messages.get(socket.id)!.at(-1)?.type).toBe("error");
     }
-    h.send(socket, { type: "join", name: "Alice", clientId: "alice" });
+    h.send(socket, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
     expect(h.messages.get(socket.id)!.some(m => m.type === "joined")).toBe(
       true,
     );
