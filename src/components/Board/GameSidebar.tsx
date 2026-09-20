@@ -1,7 +1,7 @@
 import type { ComponentChildren } from "preact";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import { hasLlmSeat } from "../../core/seats";
-import { llmLogs$, spectatorCount$ } from "../../context/game-signals";
+import { llmLogs$ } from "../../context/game-signals";
 import {
   LLMLogSection,
   GameControlsSection,
@@ -86,7 +86,6 @@ export function GameSidebar({
   onBackToHome,
 }: GameSidebarProps) {
   const llmLogs = llmLogs$.value;
-  const spectatorCount = spectatorCount$.value;
 
   const showConsensus = hasLlmSeat(seats);
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
@@ -137,7 +136,7 @@ export function GameSidebar({
         />
       )}
 
-      {(appMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
+      {appMode === "multiplayer" && <ChatAccordion />}
 
       <GameControlsSection
         presets={presets}

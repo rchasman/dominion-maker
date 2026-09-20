@@ -38,7 +38,6 @@ import {
   sendChat$,
   localPlayerId$,
   localPlayerName$,
-  spectatorCount$,
   isSpectator$,
   players$,
   playAction$,
@@ -288,9 +287,6 @@ export function useMultiplayerGameContext({
   useEffect(() => {
     isSpectator$.value = isSpectator;
   }, [isSpectator]);
-  useEffect(() => {
-    spectatorCount$.value = game.spectatorCount;
-  }, [game.spectatorCount]);
   useEffect(() => {
     players$.value = game.players.map(p => ({ id: p.playerId, name: p.name }));
   }, [game.players]);
