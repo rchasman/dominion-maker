@@ -23,7 +23,7 @@ const GUIDANCE = `GUIDANCE:
  * models were live-verified against prose plus response_format rather than
  * response_format alone.
  */
-export function chessSystemPrompt(choiceCount: number): string {
+function systemPrompt(choiceCount: number): string {
   return `You are playing chess against one opponent. Moves are written in standard algebraic notation (SAN).
 
 The user message gives you the position as a FEN string and an ASCII board, the moves played recently, and LEGAL MOVES: a numbered table of every move you may play right now. Pick exactly one entry by its number. Never invent a move that is not in the table.
@@ -58,7 +58,7 @@ export function chessPrompt({
   ];
 
   return {
-    system: chessSystemPrompt(moves.length),
+    system: systemPrompt(moves.length),
     user: sections.join("\n\n"),
   };
 }
