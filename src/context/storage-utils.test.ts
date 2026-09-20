@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import {
+  beforeAll,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+} from "bun:test";
+import { registerHappyDom } from "../happy-dom.test-fixture";
 import {
   loadEvents,
   loadLLMLogs,
@@ -15,36 +23,15 @@ import type {
   PlayerStrategyData,
 } from "../types/player-strategy";
 
-// Mock localStorage for tests
-const mockStorage: Record<string, string> = {};
-
-const mockLocalStorage = {
-  getItem: (key: string) => mockStorage[key] ?? null,
-  setItem: (key: string, value: string) => {
-    mockStorage[key] = value;
-  },
-  removeItem: (key: string) => {
-    delete mockStorage[key];
-  },
-  clear: () => {
-    for (const key in mockStorage) {
-      delete mockStorage[key];
-    }
-  },
-};
-
-// Set global localStorage
-if (typeof global !== "undefined") {
-  (global as any).localStorage = mockLocalStorage;
-}
+beforeAll(registerHappyDom);
 
 describe("storage-utils", () => {
   beforeEach(() => {
-    mockLocalStorage.clear();
+    localStorage.clear();
   });
 
   afterEach(() => {
-    mockLocalStorage.clear();
+    localStorage.clear();
   });
 
   describe("loadSeats", () => {
@@ -144,7 +131,7 @@ describe("storage-utils", () => {
     });
 
     it("should return null when stored as null string (JSON.parse behavior)", () => {
-      mockLocalStorage.setItem(STORAGE_KEYS.LLM_LOGS, "null");
+      localStorage.setItem(STORAGE_KEYS.LLM_LOGS, "null");
       const result = loadLLMLogs() as LLMLogEntry[] | null;
       // JSON.parse("null") returns null literal, though TypeScript casts it to array
       // This is a limitation of the implementation - in practice, this shouldn't happen
@@ -193,7 +180,7 @@ describe("storage-utils", () => {
     });
 
     it("should return null when stored value is null string", () => {
-      mockLocalStorage.setItem(STORAGE_KEYS.STRATEGIES, "null");
+      localStorage.setItem(STORAGE_KEYS.STRATEGIES, "null");
       const result = loadPlayerStrategies() as PlayerStrategyData | null;
       // JSON.parse("null") returns null, not an array
       expect(result).toEqual(null);
