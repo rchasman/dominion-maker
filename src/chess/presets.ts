@@ -36,8 +36,8 @@ export const CHESS_SEAT_PRESETS: Record<SeatPreset, ChessPreset> = {
 /**
  * A restored game keeps the table it was played on. A fresh one takes the
  * chosen preset, so picking a preset on the start screen always applies.
- * Seats are shared storage, so a stored table that does not name both colours
- * belongs to the other game and is ignored either way.
+ * A stored table that does not name both colours is not a chess table, so it
+ * is ignored either way.
  */
 export function chessSeats(
   restored: boolean,

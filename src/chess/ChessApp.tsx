@@ -10,7 +10,6 @@ import {
   seats$,
   updateSeat,
 } from "../context/game-signals";
-import { loadSeats, STORAGE_KEYS } from "../context/storage-utils";
 import { loadSeatPreset } from "../context/seat-presets";
 import { uiLogger } from "../lib/logger";
 import { ChessBoard } from "./ChessBoard";
@@ -18,8 +17,10 @@ import {
   chessEvents$,
   chessState$,
   clearStoredChessGame,
+  loadChessSeats,
   restoreChessEngine,
   saveChessEvents,
+  saveChessSeats,
   syncChessEngine,
 } from "./context";
 import { createChessGame, type ChessEngine } from "./engine";
@@ -49,7 +50,11 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
     const restored = restoreChessEngine();
     const engine = restored ?? createChessGame([...CHESS_PLAYERS]);
     engineRef.current = engine;
-    seats$.value = chessSeats(restored !== null, loadSeats(), loadSeatPreset());
+    seats$.value = chessSeats(
+      restored !== null,
+      loadChessSeats(),
+      loadSeatPreset(),
+    );
     llmLogs$.value = [];
     isProcessing$.value = false;
     appMode$.value = "local";
@@ -75,12 +80,7 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   }, [events]);
 
   useEffect(() => {
-    if (Object.keys(seats).length === 0) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(seats));
-    } catch (error) {
-      uiLogger.warn("Could not save the chess table", { error });
-    }
+    if (Object.keys(seats).length > 0) saveChessSeats(seats);
   }, [seats]);
 
   // Leaving for the menu drops the game, so the next start honours the preset
