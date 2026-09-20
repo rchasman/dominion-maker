@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
 import type { CardName } from "../../types/game-state";
-import type { PendingChoice } from "../../events/types";
 import { Card } from "../Card";
 import { Pile } from "../Pile";
 import { useAnimationSafe } from "../../animation";
@@ -44,75 +43,12 @@ interface DeckDiscardSectionProps {
   discard: CardName[];
   loading: boolean;
   deckTopRevealed: boolean;
-  pendingChoice?:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined;
-  isInteractive: boolean;
-  onCardClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean;
 }
 
-function renderDiscardSelection(
-  discard: CardName[],
-  pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | undefined
-    | null,
-  onCardClick: ((card: CardName, index: number) => void) | undefined,
-) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "var(--space-1)",
-        maxInlineSize: "12rem",
-        justifyContent: "center",
-        padding: "var(--space-2)",
-        background: "rgba(16, 185, 129, 0.1)",
-        border: "2px dashed #10b981",
-        borderRadius: "4px",
-      }}
-    >
-      {discard.map((card, i) => {
-        const isOption = pendingChoice?.cardOptions?.includes(card) ?? true;
-        return (
-          <Card
-            key={`${card}-${i}`}
-            name={card}
-            size="small"
-            onClick={() => onCardClick?.(card, i)}
-            {...(isOption && { highlightMode: "gain" as const })}
-            disabled={!isOption}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function getDiscardContent(
-  discard: CardName[],
-  loading: boolean,
-  shouldShowDiscardSelection: boolean,
-  pendingChoiceAndClick: {
-    pendingChoice:
-      | Extract<PendingChoice, { choiceType: "decision" }>
-      | undefined
-      | null;
-    onCardClick: ((card: CardName, index: number) => void) | undefined;
-  },
-) {
+function getDiscardContent(discard: CardName[], loading: boolean) {
   if (loading) return <LoadingCardContent />;
   if (discard.length === 0) return <EmptyPileContent />;
-  if (shouldShowDiscardSelection) {
-    return renderDiscardSelection(
-      discard,
-      pendingChoiceAndClick.pendingChoice,
-      pendingChoiceAndClick.onCardClick,
-    );
-  }
   return <Pile cards={discard} pileType="discard" size="medium" />;
 }
 
@@ -122,9 +58,6 @@ export function DeckDiscardSection({
   discard,
   loading,
   deckTopRevealed,
-  pendingChoice,
-  isInteractive,
-  onCardClick,
   inverted = false,
 }: DeckDiscardSectionProps) {
   const animation = useAnimationSafe();
@@ -148,19 +81,7 @@ export function DeckDiscardSection({
     }
   }, [animation, inverted]);
 
-  const shouldShowDiscardSelection = Boolean(
-    pendingChoice && pendingChoice.from === "discard" && isInteractive,
-  );
-
-  const discardContent = getDiscardContent(
-    discard,
-    loading,
-    shouldShowDiscardSelection,
-    {
-      pendingChoice,
-      onCardClick,
-    },
-  );
+  const discardContent = getDiscardContent(discard, loading);
 
   const topDeckCard = deck[deck.length - 1];
   const knownDeckCards: CardName[] =

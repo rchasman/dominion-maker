@@ -133,9 +133,6 @@ function HandAndDeckGrid({
           discard={player.discard}
           loading={loading}
           deckTopRevealed={player.deckTopRevealed ?? false}
-          pendingChoice={pendingChoice}
-          isInteractive={isInteractive}
-          onCardClick={onCardClick}
           inverted={inverted}
         />
       )}

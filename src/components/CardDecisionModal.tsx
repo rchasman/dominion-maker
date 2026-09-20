@@ -1,6 +1,7 @@
 import { useState, useCallback } from "preact/hooks";
 import type { CardName, CardAction, CardActionId } from "../types/game-state";
 import { Card } from "./Card";
+import { DecisionPanelFrame } from "./DecisionPanelFrame";
 import {
   ActionIndicator,
   ReorderButtons,
@@ -204,66 +205,24 @@ export function CardDecisionModal({
   } = useCardDecisionState(cards, actions, requiresOrdering, onDataChange);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 100,
-        width: "min(700px, 90%)",
-        pointerEvents: "auto",
-      }}
-    >
-      <div
-        style={{
-          background: "rgba(26, 26, 46, 0.75)",
-          backdropFilter: "blur(12px)",
-          border: "2px solid rgb(205 133 63)",
-          padding: "var(--space-3)",
-          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
-          maxHeight: "50vh",
-          overflow: "auto",
-          position: "relative",
-        }}
-      >
-        <ModalLabel />
-        <CardGrid
-          cardOrder={cardOrder}
-          cards={cards}
-          actions={actions}
-          cardActions={cardActions}
-          draggedIndex={draggedIndex}
-          requiresOrdering={requiresOrdering}
-          needsOrdering={needsOrdering}
-          cardsToOrder={cardsToOrder}
-          onToggleCardAction={toggleCardAction}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onSetDraggedIndex={setDraggedIndex}
-          onReorder={handleReorder}
-        />
-      </div>
-    </div>
-  );
-}
-
-function ModalLabel() {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        top: "var(--space-1)",
-        left: "var(--space-2)",
-        fontSize: "0.625rem",
-        color: "rgb(205 133 63)",
-        fontWeight: 600,
-        textTransform: "uppercase",
-      }}
-    >
-      Decision
-    </div>
+    <DecisionPanelFrame label="Decision">
+      <CardGrid
+        cardOrder={cardOrder}
+        cards={cards}
+        actions={actions}
+        cardActions={cardActions}
+        draggedIndex={draggedIndex}
+        requiresOrdering={requiresOrdering}
+        needsOrdering={needsOrdering}
+        cardsToOrder={cardsToOrder}
+        onToggleCardAction={toggleCardAction}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onSetDraggedIndex={setDraggedIndex}
+        onReorder={handleReorder}
+      />
+    </DecisionPanelFrame>
   );
 }
 

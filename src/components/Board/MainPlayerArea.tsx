@@ -1,5 +1,6 @@
 import { PlayerArea } from "../PlayerArea";
 import { CardDecisionModal } from "../CardDecisionModal";
+import { CardChoicePanel } from "../CardChoicePanel";
 import { ReactionModal } from "../ReactionModal";
 import { formatPlayerName } from "../../lib/board-utils";
 import { getPlayerPerspective } from "../../lib/player-utils";
@@ -14,6 +15,7 @@ import type { GameState, CardName } from "../../types/game-state";
 import type { PlayerId } from "../../events/types";
 import type { ComplexDecisionData } from "./hooks";
 import { isDecisionChoice, isReactionChoice } from "../../types/pending-choice";
+import { selectsFromHand } from "../../lib/decision-utils";
 import { run } from "../../lib/run";
 
 interface MainPlayerAreaProps {
@@ -104,6 +106,20 @@ export function MainPlayerArea({
               requiresOrdering: displayState.pendingChoice.requiresOrdering,
             })}
             onDataChange={onComplexDecisionChange}
+          />
+        )}
+
+      {isDecisionChoice(displayState.pendingChoice) &&
+        !displayState.pendingChoice.actions &&
+        !selectsFromHand(displayState.pendingChoice) &&
+        displayState.pendingChoice.from !== "supply" &&
+        displayState.pendingChoice.playerId === localPlayerId &&
+        !isPreviewMode &&
+        onCardClick && (
+          <CardChoicePanel
+            pendingChoice={displayState.pendingChoice}
+            selectedCardIndices={selectedCardIndices}
+            onCardClick={onCardClick}
           />
         )}
 
