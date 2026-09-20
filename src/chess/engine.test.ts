@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { Chess } from "chess.js";
 import { createChessGame, loadChessEngine } from "./engine";
 import type { ChessEngine } from "./engine";
+import type { ChessEvent } from "./shape";
 
 const WHITE = "white";
 const BLACK = "black";
@@ -20,6 +21,41 @@ const play = (engine: ChessEngine, sans: string[]) =>
 const FOOLS_MATE = ["f3", "e5", "g4", "Qh4#"];
 // The start position recurs for the third time on the eighth ply.
 const THREEFOLD = ["Nf3", "Nf6", "Ng1", "Ng8", "Nf3", "Nf6", "Ng1", "Ng8"];
+// The shortest known stalemate: black has no legal move and is not in check.
+const STALEMATE = [
+  "e3",
+  "a5",
+  "Qh5",
+  "Ra6",
+  "Qxa5",
+  "h5",
+  "Qxc7",
+  "Rah6",
+  "h4",
+  "f6",
+  "Qxd7+",
+  "Kf7",
+  "Qxb7",
+  "Qd3",
+  "Qxb8",
+  "Qh7",
+  "Qxc8",
+  "Kg6",
+  "Qe6",
+];
+
+const logOf = (
+  players: [string, string],
+  entries: { playerId: string; san: string }[],
+): ChessEvent[] => [
+  { type: "GAME_INITIALIZED", players, id: "log-0" },
+  ...entries.map((entry, index) => ({
+    type: "MOVE" as const,
+    playerId: entry.playerId,
+    san: entry.san,
+    id: `log-${index + 1}`,
+  })),
+];
 
 describe("the chess engine records moves as events", () => {
   it("starts from the initial position with white to move", () => {
@@ -190,5 +226,43 @@ describe("the chess engine is restorable from its log", () => {
 
   it("refuses a log with no GAME_INITIALIZED event", () => {
     expect(() => loadChessEngine([])).toThrow();
+  });
+});
+
+describe("the chess engine distrusts a log it did not build", () => {
+  it("refuses a MOVE made by the player who is not to move", () => {
+    const log = logOf(
+      [WHITE, BLACK],
+      [
+        { playerId: WHITE, san: "e4" },
+        { playerId: WHITE, san: "e5" },
+      ],
+    );
+    expect(() => loadChessEngine(log)).toThrow(/e5/);
+  });
+
+  it("refuses a MOVE attributed to someone who is not playing", () => {
+    const log = logOf([WHITE, BLACK], [{ playerId: "kibitzer", san: "e4" }]);
+    expect(() => loadChessEngine(log)).toThrow(/kibitzer/);
+  });
+
+  it("refuses a RESIGNED from someone who is not playing", () => {
+    const log: ChessEvent[] = [
+      { type: "GAME_INITIALIZED", players: [WHITE, BLACK], id: "log-0" },
+      { type: "RESIGNED", playerId: "kibitzer", id: "log-1" },
+    ];
+    expect(() => loadChessEngine(log)).toThrow(/kibitzer/);
+  });
+
+  it("accepts a hand-built log whose movers are right", () => {
+    const entries = STALEMATE.map((san, index) => ({
+      playerId: index % 2 === 0 ? WHITE : BLACK,
+      san,
+    }));
+    const engine = loadChessEngine(logOf([WHITE, BLACK], entries));
+    expect(engine.state.result).toBe("stalemate");
+    expect(engine.state.gameOver).toBe(true);
+    expect(engine.state.winnerId).toBeNull();
+    expect(engine.state.inCheck).toBe(false);
   });
 });

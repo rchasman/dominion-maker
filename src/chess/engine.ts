@@ -60,17 +60,31 @@ const winnerOf = (
     return null;
   });
 
+/**
+ * A log can arrive from a host snapshot, so every mover is checked against the
+ * side to move. Without this a RESIGNED from a stranger hands white the game.
+ */
 const projectState = (events: readonly ChessEvent[]): ChessState => {
   const initialized = events.find(isInitialized);
   if (!initialized)
     throw new Error("A chess log must start with GAME_INITIALIZED");
+  const playerOrder = initialized.players;
   const board = new Chess();
   const moves = events.filter(isMoved).map(event => {
+    const expected = toMove(playerOrder, board);
+    if (event.playerId !== expected)
+      throw new Error(
+        `Chess log has ${event.playerId} playing ${event.san}, but it is ${expected} to move`,
+      );
     board.move(event.san);
     return event.san;
   });
-  const resignedBy = events.find(isResigned)?.playerId ?? null;
-  const playerOrder = initialized.players;
+  const resignation = events.find(isResigned);
+  if (resignation && !playerOrder.includes(resignation.playerId))
+    throw new Error(
+      `Chess log has a resignation from ${resignation.playerId}, who is not playing`,
+    );
+  const resignedBy = resignation?.playerId ?? null;
   const result = resultOf(board, resignedBy);
   return {
     fen: board.fen(),
@@ -87,8 +101,7 @@ const projectState = (events: readonly ChessEvent[]): ChessState => {
 const prefixOf = (events: readonly ChessEvent[]): string => {
   const first = events[0]?.id;
   if (first === undefined) return crypto.randomUUID();
-  const cut = first.lastIndexOf("-");
-  return cut < 0 ? first : first.slice(0, cut);
+  return /^(.*)-\d+$/.exec(first)?.[1] ?? first;
 };
 
 export class ChessEngine implements EventEngine<ChessShape> {
@@ -187,7 +200,7 @@ export class ChessEngine implements EventEngine<ChessShape> {
 
   private notify(events: ChessEvent[]): void {
     const state = this.state;
-    [...this.listeners].map(listener => listener(events, state));
+    for (const listener of this.listeners) listener(events, state);
   }
 }
 
