@@ -176,7 +176,8 @@ export function useMultiplayerGameContext({
   );
 
   const playAction = useCallback(
-    (card: CardName) => dispatch(id => ({ type: "PLAY_ACTION", playerId: id, card })),
+    (card: CardName) =>
+      dispatch(id => ({ type: "PLAY_ACTION", playerId: id, card })),
     [dispatch],
   );
   const playTreasure = useCallback(
@@ -189,7 +190,8 @@ export function useMultiplayerGameContext({
     [dispatch],
   );
   const buyCard = useCallback(
-    (card: CardName) => dispatch(id => ({ type: "BUY_CARD", playerId: id, card })),
+    (card: CardName) =>
+      dispatch(id => ({ type: "BUY_CARD", playerId: id, card })),
     [dispatch],
   );
   const endPhase = useCallback(

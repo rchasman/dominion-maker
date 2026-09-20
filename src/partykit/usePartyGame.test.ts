@@ -36,7 +36,9 @@ describe("usePartyGame", () => {
     const root = document.createElement("div");
     document.body.appendChild(root);
 
-    settled(() => render(h(Probe, { isSpectator: false, roomId: "play-room" }), root));
+    settled(() =>
+      render(h(Probe, { isSpectator: false, roomId: "play-room" }), root),
+    );
     const socket = FakeSocket.forRoom("play-room");
     settled(() => socket.emit("open", {}));
 
@@ -116,7 +118,9 @@ describe("usePartyGame", () => {
     settled(() => render(null, root));
 
     // A spectator names the game too, or the room cannot place them
-    settled(() => render(h(Probe, { isSpectator: true, roomId: "watch-room" }), root));
+    settled(() =>
+      render(h(Probe, { isSpectator: true, roomId: "watch-room" }), root),
+    );
     const spectatorSocket = FakeSocket.forRoom("watch-room");
     settled(() => spectatorSocket.emit("open", {}));
     expect(spectatorSocket.parsed()[0]).toEqual({

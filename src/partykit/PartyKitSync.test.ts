@@ -15,9 +15,8 @@ describe("PartyKitSync", () => {
     const { render, h } = await import("preact");
     const { createGame } = await import("../engine");
     const { PartyKitSync } = await import("./PartyKitSync");
-    const { events$, gameState$, seats$ } = await import(
-      "../context/game-signals"
-    );
+    const { events$, gameState$, seats$ } =
+      await import("../context/game-signals");
     const { HEURISTIC_SEAT, HUMAN_SEAT } = await import("../core/seats");
     const { gameMessageSchema } = await import("../validation/messages");
 

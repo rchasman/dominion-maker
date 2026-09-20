@@ -10,9 +10,8 @@ describe("useMultiplayerGameContext", () => {
     const { createGame } = await import("../engine");
     const { dominionModule } = await import("../dominion/module");
     const { multiplayerLogger } = await import("../lib/logger");
-    const { useMultiplayerGameContext } = await import(
-      "./use-multiplayer-game-context"
-    );
+    const { useMultiplayerGameContext } =
+      await import("./use-multiplayer-game-context");
     type Room = import("./use-multiplayer-game-context").MultiplayerRoom;
     const {
       gameState$,
@@ -25,7 +24,7 @@ describe("useMultiplayerGameContext", () => {
 
     const engine = createGame(["p1", "p2"], undefined, 42);
     /** Round-trips through JSON the way the room's wire does */
-    const wire = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+    const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
     const viewed: unknown = wire(
       dominionModule.view(engine.state, engine.eventLog, "p1"),
     );
@@ -113,13 +112,17 @@ describe("useMultiplayerGameContext", () => {
       },
     ]);
     expect(pendingUndo$.value).toBeNull();
-    settled(() => render(h(Probe, { room: { ...room, events: requested } }), root));
+    settled(() =>
+      render(h(Probe, { room: { ...room, events: requested } }), root),
+    );
     expect(pendingUndo$.value?.requestId).toBe("r1");
     expect(pendingUndo$.value?.byPlayer).toBe("p2");
 
     // A state this client cannot read is refused out loud, never half-applied
     const logged = spyOn(multiplayerLogger, "error");
-    settled(() => render(h(Probe, { room: { ...room, state: { nonsense: true } } }), root));
+    settled(() =>
+      render(h(Probe, { room: { ...room, state: { nonsense: true } } }), root),
+    );
     expect(gameState$.value).toBeNull();
     expect(logged).toHaveBeenCalled();
     logged.mockRestore();
