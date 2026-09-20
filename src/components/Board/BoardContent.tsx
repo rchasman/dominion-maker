@@ -302,9 +302,6 @@ export function BoardContent({
         <PlayerArea
           player={opponent}
           label={opponentDisplayName}
-          {...(seatControl !== null && {
-            headerControl: seatControl(opponentPlayerId),
-          })}
           vpCount={opponentVP}
           isActive={!isLocalPlayerTurn}
           showCards={true}
