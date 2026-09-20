@@ -7,6 +7,7 @@ import { useState } from "preact/hooks";
 import { DominionEngine } from "../engine";
 import { uiLogger } from "../lib/logger";
 import {
+  clearGameStateStorage,
   loadEvents,
   loadLLMLogs,
   loadPlayerStrategies,
@@ -53,6 +54,12 @@ export function useGameStorage(): GameStorageResult {
         try {
           const engine = new DominionEngine();
           engine.loadEvents(savedEvents);
+
+          if (engine.state.gameOver) {
+            uiLogger.info("Saved game had already ended, starting fresh");
+            clearGameStateStorage();
+            return { engineRef: null };
+          }
 
           uiLogger.info(`Restored game from ${savedEvents.length} events`);
 
