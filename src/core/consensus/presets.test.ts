@@ -47,6 +47,40 @@ describe("consensus presets", () => {
     });
   });
 
+  // Consensus only means something if the voters can fail independently, and
+  // same-house models fail together. Cheap and Fast rank on one axis each and
+  // would otherwise stack three models from whichever house happens to lead it.
+  it("seats at most two models from one provider", () => {
+    CONSENSUS_PRESETS.forEach(preset => {
+      const perProvider = preset.models.reduce<Record<string, number>>(
+        (acc, id) => {
+          const provider = configOf(id)?.provider ?? "";
+          return { ...acc, [provider]: (acc[provider] ?? 0) + 1 };
+        },
+        {},
+      );
+      expect(Math.max(...Object.values(perProvider))).toBeLessThanOrEqual(2);
+    });
+  });
+
+  // The cap alone does not settle it: a count that exceeds the list gives the
+  // leading entries an extra vote, so two models from one house sitting at the
+  // front would take a third of the roster between them.
+  it("gives no provider more than a quarter of the votes", () => {
+    CONSENSUS_PRESETS.filter(preset => preset.models.length > 1).forEach(
+      preset => {
+        const roster = rosterFor(preset);
+        const votes = roster.reduce<Record<string, number>>((acc, id) => {
+          const provider = configOf(id)?.provider ?? "";
+          return { ...acc, [provider]: (acc[provider] ?? 0) + 1 };
+        }, {});
+        expect(Math.max(...Object.values(votes))).toBeLessThanOrEqual(
+          preset.consensusCount / 4,
+        );
+      },
+    );
+  });
+
   it("keeps every preset within each model's maxInstances cap", () => {
     CONSENSUS_PRESETS.forEach(preset => {
       const roster = rosterFor(preset);

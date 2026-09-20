@@ -8,12 +8,13 @@ export interface ConsensusPreset {
   consensusCount: number;
 }
 
-// Price axis, nothing else: the cheapest models that can carry a vote.
-// Carrying a vote means zero failures and every sample under 20s, two thirds of
-// the 30s timeout. The margin is the point: a model measured at 25s over three
-// samples goes past 30s often enough to abstain, which is how step-3.5-flash
-// looked right up until it did. consensusCount is an exact multiple of the list
-// so every model gets the same number of votes.
+// Price axis, nothing else: the cheapest models that can carry a vote, at most
+// two per house. Carrying a vote means zero failures and every sample under
+// 20s, two thirds of the 30s timeout. The margin is the point: a model measured
+// at 25s over three samples goes past 30s often enough to abstain, which is how
+// step-3.5-flash looked right up until it did. consensusCount is an exact
+// multiple of the list, so every model gets the same number of votes and no
+// house holds more than a quarter of them.
 const CHEAP_MODELS = [
   "jev",
   "nova-micro",
@@ -21,23 +22,26 @@ const CHEAP_MODELS = [
   "mistral-nemo",
   "nemotron-3.5-lightning",
   "nova-lite",
-  "ministral-8b",
   "deepseek-v4-flash",
+  "gpt-5-nano",
 ] as const satisfies readonly ModelProvider[];
 
 // Latency axis, nothing else: the fastest models that can carry a vote,
-// whatever they cost. This is also the default seat, so it is the roster a new
-// game runs. consensusCount exceeds the list, so the leading entries take the
-// extra votes: order is weighting.
+// whatever they cost, at most two per house. This is also the default seat, so
+// it is the roster a new game runs.
+// consensusCount exceeds the list, so the four leading entries take the extra
+// votes. They are ordered one house apiece for that reason: sorting strictly by
+// latency would hand amazon a third of the vote through nova-micro and nova-lite
+// together.
 const FAST_MODELS = [
   "jev",
   "nova-micro",
-  "nova-lite",
   "gpt-4.1-mini-fast",
   "ministral-3b",
+  "nova-lite",
   "nemotron-3-super-120b-a12b",
   "gemini-3.5-flash-lite",
-  "nova-pro",
+  "gemma-4-26b-a4b-it",
 ] as const satisfies readonly ModelProvider[];
 
 // The mid-tier flagship of eight houses: stronger than the flash tier, far
