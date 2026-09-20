@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "preact/hooks";
 import type { ChatMessageData } from "../../../partykit/protocol";
-import { chatMessages$, sendChat$ } from "../../../context/game-signals";
+import { chatMessages$ } from "../../../context/game-signals";
+import { useSession } from "../../../session/SessionContext";
 import { getPlayerColor } from "../../../lib/board-utils";
 import { DISABLED_OPACITY } from "../../Board/constants";
 
@@ -223,7 +224,7 @@ function ChatInput({
 const EXPANDED_KEY = "dominion-chat-expanded";
 
 export function ChatAccordion() {
-  const sendChat = sendChat$.value;
+  const session = useSession();
   const chatMessages = chatMessages$.value;
 
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -236,14 +237,9 @@ export function ChatAccordion() {
     localStorage.setItem(EXPANDED_KEY, String(isExpanded));
   }, [isExpanded]);
 
-  const handleSend = (content: string) => {
-    const send = sendChat$.value;
-    if (!send) return;
-    send(content.trim());
-  };
-
-  // Don't render if no sendChat (not in multiplayer context)
-  if (!sendChat) return null;
+  // Chat is a room feature; a local table has nobody to talk to
+  if (session.mode !== "multiplayer") return null;
+  const handleSend = (content: string) => session.sendChat(content.trim());
 
   return (
     <div

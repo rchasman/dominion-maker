@@ -1,5 +1,5 @@
 /**
- * Storage utilities for GameContext
+ * Storage utilities for the saved local game
  * Handles localStorage operations with proper error handling
  */
 

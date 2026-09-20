@@ -64,7 +64,7 @@ function App() {
     }
   }, [mode]);
 
-  // Main menu - no GameProvider needed!
+  // Main menu - no game session open
   if (mode === "menu") {
     return (
       <StartScreen
@@ -76,7 +76,7 @@ function App() {
     );
   }
 
-  // Single player game - GameProvider loaded lazily with SinglePlayerApp
+  // Single player game - the local session opens with SinglePlayerApp
   if (mode === "singleplayer") {
     return (
       <ErrorBoundary

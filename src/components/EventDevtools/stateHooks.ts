@@ -1,4 +1,4 @@
-import { getStateAtEvent$ } from "../../context/game-signals";
+import { useSession } from "../../session/SessionContext";
 import type { GameState } from "../../types/game-state";
 import { useMemo, useEffect, useState } from "preact/hooks";
 import type { GameEvent } from "../../events/types";
@@ -22,7 +22,7 @@ export function useRootEvents(events: GameEvent[]) {
 }
 
 function useHistoricalState(events: GameEvent[], index: number | null) {
-  const getState = getStateAtEvent$.value;
+  const { getStateAtEvent: getState } = useSession();
   const eventId = index === null ? undefined : events[index]?.id;
   const remote = events.length > 0 && events[0]?.type !== "GAME_INITIALIZED";
   const [result, setResult] = useState<{
@@ -30,7 +30,7 @@ function useHistoricalState(events: GameEvent[], index: number | null) {
     state: GameState;
   } | null>(null);
   useEffect(() => {
-    if (!remote || !eventId || !getState) return;
+    if (!remote || !eventId) return;
     const request = { active: true };
     void Promise.resolve()
       .then(() => getState(eventId))

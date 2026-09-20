@@ -1,19 +1,22 @@
 /**
  * Game Room - Pre-game lobby and in-game wrapper
  *
- * Uses a single PartySocket connection via MultiplayerProvider.
- * Shows waiting room or game board based on game state.
+ * Opens one remote session for the room and shows the waiting room or the
+ * board depending on whether the game has started.
  */
 import { useMemo } from "preact/hooks";
-import { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
 import { DEFAULT_LLM_SEAT } from "../../core/seats";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
 import { BaseModal } from "../Modal/BaseModal";
-import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
 import { AnimationProvider } from "../../animation";
+import { createRemoteSession } from "../../session/create-remote-session";
+import {
+  SessionProvider,
+  useRemoteSession,
+} from "../../session/SessionContext";
 
 interface GameRoomProps {
   roomId: string;
@@ -33,20 +36,38 @@ export function GameRoom({
   onResign,
 }: GameRoomProps) {
   // Single connection - used for both waiting room and game
-  const game = usePartyGame({ roomId, playerName, clientId, isSpectator });
+  const session = useMemo(
+    () => createRemoteSession({ roomId, playerName, clientId, isSpectator }),
+    [roomId, playerName, clientId, isSpectator],
+  );
 
-  // Sync multiplayer state into signals
-  // usePartyGame has no processing concept; the context derives spinners from
-  // isConnected, so a constant false preserves the previous (absent) value.
-  useMultiplayerGameContext({
-    game: { ...game, isProcessing: false },
-    playerName,
-    isSpectator,
-  });
+  return (
+    <SessionProvider session={session}>
+      <RoomContent
+        isSpectator={isSpectator}
+        onBack={onBack}
+        {...(onResign !== undefined && { onResign })}
+      />
+    </SessionProvider>
+  );
+}
+
+function RoomContent({
+  isSpectator,
+  onBack,
+  onResign,
+}: Pick<GameRoomProps, "isSpectator" | "onBack" | "onResign">) {
+  const game = useRemoteSession();
+  const gameState = game.gameState.value;
+  const playerId = game.localPlayerId.value;
+  const disconnectedPlayers = game.disconnectedPlayers.value;
+  const gameEndReason = game.gameEndReason.value;
+  const error = game.error.value;
+  const alone = game.isHost.value && game.playerInfos.value.length < 2;
 
   // Handle resignation
   const handleResign = () => {
-    if (!isSpectator && game.playerId) {
+    if (!isSpectator && playerId) {
       game.resign();
     }
     if (onResign) {
@@ -58,18 +79,18 @@ export function GameRoom({
 
   // Get disconnected opponent (if any)
   const disconnectedOpponent = useMemo(() => {
-    if (isSpectator || !game.playerId) return null;
+    if (isSpectator || !playerId) return null;
 
-    const opponent = Array.from(game.disconnectedPlayers.entries()).find(
-      ([playerId]) => playerId !== game.playerId,
+    const opponent = [...disconnectedPlayers.entries()].find(
+      ([id]) => id !== playerId,
     );
     return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
-  }, [game.disconnectedPlayers, game.playerId, isSpectator]);
+  }, [disconnectedPlayers, playerId, isSpectator]);
 
   // Show game board if game has started
-  if (game.gameState) {
+  if (gameState) {
     // Wait for playerId to be set before rendering Board
-    if (!isSpectator && !game.playerId) {
+    if (!isSpectator && !playerId) {
       return <BoardSkeleton />;
     }
 
@@ -83,9 +104,9 @@ export function GameRoom({
             onLeave={handleResign}
           />
         )}
-        {game.gameEndReason && (
+        {gameEndReason && (
           <GameOverNotification
-            message={game.gameEndReason}
+            message={gameEndReason}
             onClose={() => {
               localStorage.removeItem("dominion_active_game");
               onBack();
@@ -95,8 +116,6 @@ export function GameRoom({
       </AnimationProvider>
     );
   }
-
-  const alone = game.isHost && game.players.length < 2;
 
   // Show loading modal over skeleton
   return (
@@ -122,7 +141,7 @@ export function GameRoom({
             }
           />
         )}
-        {game.error && (
+        {error && (
           <div
             style={{
               padding: "var(--space-3)",
@@ -134,7 +153,7 @@ export function GameRoom({
               marginBottom: "var(--space-4)",
             }}
           >
-            {game.error}
+            {error}
           </div>
         )}
         <button

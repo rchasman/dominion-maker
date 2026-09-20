@@ -9,19 +9,7 @@ import type { CardName } from "../../types/game-state";
 import type { CommandResult } from "../../commands/types";
 import { isDecisionChoice } from "../../types/pending-choice";
 import { uiLogger } from "../../lib/logger";
-import {
-  gameState$,
-  playAction$,
-  playTreasure$,
-  unplayTreasure$,
-  buyCard$,
-  submitDecision$,
-} from "../../context/game-signals";
-
-const uninitializedCommand = (): CommandResult => ({
-  ok: false,
-  error: "Game not initialized",
-});
+import { useSession } from "../../session/SessionContext";
 
 interface CardSelectionHook {
   selectedCardIndices: number[];
@@ -122,32 +110,40 @@ interface CardActionsHook {
 }
 
 export function useCardActions(): CardActionsHook {
-  const handlePlayAction = useCallback((card: CardName) => {
-    const fn = playAction$.value ?? uninitializedCommand;
-    const result = fn(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to play action:", result.error);
-    }
-    return result;
-  }, []);
+  const session = useSession();
 
-  const handlePlayTreasure = useCallback((card: CardName) => {
-    const fn = playTreasure$.value ?? uninitializedCommand;
-    const result = fn(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to play treasure:", result.error);
-    }
-    return result;
-  }, []);
+  const handlePlayAction = useCallback(
+    (card: CardName) => {
+      const result = session.playAction(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play action:", result.error);
+      }
+      return result;
+    },
+    [session],
+  );
 
-  const handleUnplayTreasure = useCallback((card: CardName) => {
-    const fn = unplayTreasure$.value ?? uninitializedCommand;
-    const result = fn(card);
-    if (!result.ok) {
-      uiLogger.error("Failed to unplay treasure:", result.error);
-    }
-    return result;
-  }, []);
+  const handlePlayTreasure = useCallback(
+    (card: CardName) => {
+      const result = session.playTreasure(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to play treasure:", result.error);
+      }
+      return result;
+    },
+    [session],
+  );
+
+  const handleUnplayTreasure = useCallback(
+    (card: CardName) => {
+      const result = session.unplayTreasure(card);
+      if (!result.ok) {
+        uiLogger.error("Failed to unplay treasure:", result.error);
+      }
+      return result;
+    },
+    [session],
+  );
 
   return {
     handlePlayAction,
@@ -162,10 +158,11 @@ export function useCardActions(): CardActionsHook {
  * Board (single-player) and Lobby (multiplayer) modes.
  */
 export function useBuyCardHandler(): (card: CardName) => CommandResult {
-  const pendingChoice = gameState$.value?.pendingChoice;
+  const session = useSession();
+  const pendingChoice = session.gameState.value?.pendingChoice;
   return useBuyCardLogic({
-    buyCard: buyCard$.value ?? uninitializedCommand,
-    submitDecision: submitDecision$.value ?? uninitializedCommand,
+    buyCard: session.buyCard,
+    submitDecision: session.submitDecision,
     pendingChoice: isDecisionChoice(pendingChoice) ? pendingChoice : null,
   });
 }

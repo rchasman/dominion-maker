@@ -1,37 +1,38 @@
 /**
- * Hook for syncing state to localStorage
- * Reads directly from signals instead of taking state params.
+ * Hook for syncing a local session's state to localStorage
  */
 
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 import { useSyncToLocalStorage } from "../hooks/useSyncToLocalStorage";
 import { clearGameStateStorage, STORAGE_KEYS } from "./storage-utils";
-import {
-  events$,
-  gameState$,
-  llmLogs$,
-  playerStrategies$,
-  seats$,
-} from "./game-signals";
+import type { GameSession } from "../session/game-session";
 
 // Keep only the last 10,000 entries to prevent localStorage quota exceeded errors
 const MAX_LLM_LOGS = 10000;
 
 /**
- * Hook to sync all game state from signals to localStorage.
  * A finished game is never persisted: once gameOver flips true, the saved
- * game is cleared instead, so reloading the app never resurrects it.
+ * game is cleared instead, so reloading the app never resurrects it. A new
+ * game at the same table clears the previous game's keys before its own
+ * writes land, so a reload never mixes the two.
  */
-export function useStorageSync(): void {
-  const events = events$.value;
-  const seats = seats$.value;
-  const llmLogs = llmLogs$.value;
-  const playerStrategies = playerStrategies$.value;
-  const gameOver = gameState$.value?.gameOver ?? false;
+export function useStorageSync(session: GameSession): void {
+  const events = session.events.value;
+  const seats = session.seats.value;
+  const llmLogs = session.llmLogs.value;
+  const playerStrategies = session.playerStrategies.value;
+  const gameOver = session.gameState.value?.gameOver ?? false;
+  const gameIdentity = events[0]?.id;
+  const previousIdentity = useRef(gameIdentity);
 
   useEffect(() => {
     if (gameOver) clearGameStateStorage();
   }, [gameOver]);
+
+  useEffect(() => {
+    if (previousIdentity.current !== gameIdentity) clearGameStateStorage();
+    previousIdentity.current = gameIdentity;
+  }, [gameIdentity]);
 
   useSyncToLocalStorage(STORAGE_KEYS.EVENTS, events, {
     shouldSync: events.length > 0 && !gameOver,

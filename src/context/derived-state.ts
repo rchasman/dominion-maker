@@ -1,5 +1,5 @@
 /**
- * Derived state utilities for GameContext
+ * Derived state utilities for game sessions
  * Pure functions that compute derived state from game state
  */
 

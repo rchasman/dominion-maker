@@ -1,140 +1,64 @@
 /**
- * Signal atoms for game state
+ * Module-level views over the current game session.
  *
- * Signals are the PRIMARY state owner for the game. All hooks write directly
- * to these signals; no useState -> useEffect -> signal mirroring.
+ * The session owns the state (see src/session). These computeds exist so
+ * components that still import them keep rendering; they are read-only, so
+ * nothing outside a session can write game state. Only one whole session or
+ * none is ever bound, never a mix of one session's fields and another's.
  */
 
-import { signal, computed, batch } from "@preact/signals";
-import type { DominionEngine } from "../engine";
-import type { GameState, CardName } from "../types/game-state";
-import type { DecisionChoice } from "../events/types";
-import type { GameEvent } from "../events/types";
-import type { CommandResult } from "../commands/types";
+import { signal, computed } from "@preact/signals";
+import type { LlmSeatConfig, Seats } from "../core/seats";
 import type { PlayerStrategyData } from "../types/player-strategy";
-import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
-import { firstHumanSeat, withSeat } from "../core/seats";
-import type { LLMLogEntry } from "../components/LLMLog/types";
-import type { ChatMessageData } from "../partykit/protocol";
-import type { PendingUndoRequest } from "../engine/engine";
-import {
-  hasPlayableActions as computeHasPlayableActions,
-  hasTreasuresInHand as computeHasTreasuresInHand,
-} from "./derived-state";
+import type { GameSession } from "../session/game-session";
+
+const currentSession$ = signal<GameSession | null>(null);
+
+export function bindSession(session: GameSession): void {
+  if (currentSession$.peek() !== session) currentSession$.value = session;
+}
+
+/** Unbind only the given session, so a newer one bound in the same commit stays */
+export function unbindSession(session: GameSession): void {
+  if (currentSession$.peek() === session) currentSession$.value = null;
+}
+
+const EMPTY: never[] = [];
+const NO_SEATS: Seats = {};
+const NO_STRATEGIES: PlayerStrategyData = {};
+
+const view = <T>(read: (session: GameSession) => T, fallback: T) =>
+  computed(() => {
+    const session = currentSession$.value;
+    return session ? read(session) : fallback;
+  });
+
+export const gameState$ = view(s => s.gameState.value, null);
+export const events$ = view(s => s.events.value, EMPTY);
+export const seats$ = view(s => s.seats.value, NO_SEATS);
+export const appMode$ = view(s => s.mode, "local");
+export const localPlayerId$ = view(s => s.localPlayerId.value, null);
+export const localHumanSeat$ = view(s => s.localHumanSeat.value, null);
+export const isProcessing$ = view(s => s.isProcessing.value, false);
+export const isLoading$ = view(s => s.isLoading.value, false);
+export const playerStrategies$ = view(
+  s => s.playerStrategies.value,
+  NO_STRATEGIES,
+);
+export const hasPlayableActions$ = view(s => s.hasPlayableActions.value, false);
+export const hasTreasuresInHand$ = view(s => s.hasTreasuresInHand.value, false);
+export const pendingUndo$ = view(s => s.pendingUndo.value, null);
+export const llmLogs$ = view(s => s.llmLogs.value, EMPTY);
+export const chatMessages$ = view(s => s.chatMessages.value, EMPTY);
+export const spectatorCount$ = view(s => s.spectatorCount.value, 0);
+export const isSpectator$ = view(s => s.isSpectator.value, false);
+export const isHost$ = view(s => s.isHost.value, false);
+export const players$ = view(s => s.players.value, EMPTY);
 
 // ---------------------------------------------------------------------------
-// Core state signals
+// UI preferences that outlive any one session
 // ---------------------------------------------------------------------------
-export const gameState$ = signal<GameState | null>(null);
-export const events$ = signal<GameEvent[]>([]);
-/** Who controls each player: the stored truth that replaced GameMode */
-export const seats$ = signal<Seats>({});
-export const appMode$ = signal<"local" | "multiplayer">("local");
-/** Multiplayer only: this client's player id. Local games derive it from seats. */
-export const localPlayerId$ = signal<string | null>(null);
 /** Seat whose LLM settings panel should open, if any */
 export const settingsSeat$ = signal<string | null>(null);
 /** The LLM config each seat last had, so handing a seat back to an LLM restores its roster */
 export const rememberedLlm$ = signal<Record<string, LlmSeatConfig>>({});
-export const isProcessing$ = signal(false);
-export const isLoading$ = signal(false);
-export const playerStrategies$ = signal<PlayerStrategyData>({});
-
-/** The seat a human at this client acts for: their own id in multiplayer, else the first human seat */
-export const localHumanSeat$ = computed<string | null>(() =>
-  appMode$.value === "multiplayer"
-    ? localPlayerId$.value
-    : firstHumanSeat(seats$.value, gameState$.value?.playerOrder ?? []),
-);
-
-export const setSeat$ = signal<
-  ((player: string, config: ControllerConfig) => void) | null
->(null);
-
-// ---------------------------------------------------------------------------
-// Derived signals (match the same logic as GameContext useMemo calls)
-// ---------------------------------------------------------------------------
-export const hasPlayableActions$ = computed(() =>
-  computeHasPlayableActions(gameState$.value, localHumanSeat$.value),
-);
-
-export const hasTreasuresInHand$ = computed(() =>
-  computeHasTreasuresInHand(gameState$.value, localHumanSeat$.value),
-);
-
-// ---------------------------------------------------------------------------
-// Action callback signals
-// ---------------------------------------------------------------------------
-export const playAction$ = signal<((card: CardName) => CommandResult) | null>(
-  null,
-);
-export const playTreasure$ = signal<((card: CardName) => CommandResult) | null>(
-  null,
-);
-export const unplayTreasure$ = signal<
-  ((card: CardName) => CommandResult) | null
->(null);
-export const playAllTreasures$ = signal<(() => CommandResult) | null>(null);
-export const buyCard$ = signal<((card: CardName) => CommandResult) | null>(
-  null,
-);
-export const endPhase$ = signal<(() => CommandResult) | null>(null);
-export const submitDecision$ = signal<
-  ((choice: DecisionChoice) => CommandResult) | null
->(null);
-export const revealReaction$ = signal<
-  ((card: CardName) => CommandResult) | null
->(null);
-export const declineReaction$ = signal<(() => CommandResult) | null>(null);
-
-// ---------------------------------------------------------------------------
-// Undo signals
-// ---------------------------------------------------------------------------
-export const requestUndo$ = signal<((toEventId: string) => void) | null>(null);
-export const approveUndo$ = signal<((requestId: string) => void) | null>(null);
-export const denyUndo$ = signal<((requestId: string) => void) | null>(null);
-export const pendingUndo$ = signal<PendingUndoRequest | null>(null);
-
-// ---------------------------------------------------------------------------
-// Setup / config action signals
-// ---------------------------------------------------------------------------
-export const startGame$ = signal<(() => void) | null>(null);
-
-export function updateSeat(player: string, config: ControllerConfig): void {
-  seats$.value = withSeat(seats$.value, player, config);
-}
-
-export const setSeats$ = signal<((seats: Seats) => void) | null>(null);
-export const getStateAtEvent$ = signal<
-  ((eventId: string) => GameState | Promise<GameState>) | null
->(null);
-
-// ---------------------------------------------------------------------------
-// LLM logs signal
-// ---------------------------------------------------------------------------
-export const llmLogs$ = signal<LLMLogEntry[]>([]);
-
-// ---------------------------------------------------------------------------
-// Multiplayer-specific signals (defaults match single-player)
-// ---------------------------------------------------------------------------
-export const chatMessages$ = signal<ChatMessageData[]>([]);
-export const sendChat$ = signal<((message: string) => void) | null>(null);
-export const spectatorCount$ = signal(0);
-export const isSpectator$ = signal(false);
-export const isHost$ = signal(false);
-export const localPlayerName$ = signal<string | undefined>();
-export const players$ = signal<Array<{ id: string; name: string }>>([]);
-
-// ---------------------------------------------------------------------------
-// Engine → signals sync helper
-// ---------------------------------------------------------------------------
-/**
- * Atomically sync engine state into signals.
- * This is the single source of truth for state updates after engine commands.
- */
-export function syncEngineToSignals(engine: DominionEngine): void {
-  batch(() => {
-    events$.value = [...engine.eventLog];
-    gameState$.value = engine.state;
-  });
-}

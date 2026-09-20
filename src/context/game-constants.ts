@@ -1,5 +1,5 @@
 /**
- * Constants for GameContext
+ * Timing and threshold constants for game sessions
  * Eliminates magic numbers and provides semantic meaning
  */
 
