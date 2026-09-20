@@ -122,11 +122,20 @@ describe("multiplayer privacy and credentials", () => {
     expect(h.messages.get(attacker.id)!.at(-1)?.type).toBe("error");
     h.send(attacker, { type: "join", name: "Alice", game: "dominion" });
     expect(h.messages.get(attacker.id)!.at(-1)?.type).toBe("error");
+    const beforeSync = h.messages
+      .get(alice.id)!
+      .filter(m => m.type === "full_state").length;
     h.send(alice, {
       type: "sync_events",
       events: [...createGame(["alice", "bob"]).eventLog],
     });
-    expect(h.messages.get(alice.id)!.at(-1)?.type).toBe("error");
+    expect(h.messages.get(alice.id)!.at(-1)).toMatchObject({
+      type: "error",
+      message: "Only a local-game host can sync events",
+    });
+    expect(
+      h.messages.get(alice.id)!.filter(m => m.type === "full_state").length,
+    ).toBe(beforeSync);
     const rejoin = h.connect("socket-a-new");
     h.send(rejoin, {
       type: "join",
@@ -166,6 +175,42 @@ describe("multiplayer privacy and credentials", () => {
         dominionModule.stateSchema.parse(spectatorState.state).players,
       ).every(p => p.hand.length === 0 && p.deck.length === 0),
     ).toBe(true);
+  });
+
+  it("rejects a local-game sync carrying a forged event", () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "dominion",
+      clientId: "alice",
+    });
+    h.send(host, {
+      type: "start_singleplayer",
+      seats: { human: { kind: "human" }, ai: { kind: "heuristic" } },
+    });
+    const log = [...createGame(["human", "ai"], undefined, 42).eventLog];
+    h.send(host, { type: "sync_events", events: log });
+    expect(h.messages.get(host.id)!.at(-1)?.type).toBe("full_state");
+
+    const accepted = h.messages
+      .get(host.id)!
+      .filter(m => m.type === "full_state" || m.type === "game_started").length;
+    h.send(host, {
+      type: "sync_events",
+      events: [...log, { type: "NOT_AN_EVENT", playerId: "human" }],
+    });
+    expect(h.messages.get(host.id)!.at(-1)).toMatchObject({
+      type: "error",
+      message: "Failed to sync events",
+    });
+    expect(
+      h.messages
+        .get(host.id)!
+        .filter(m => m.type === "full_state" || m.type === "game_started")
+        .length,
+    ).toBe(accepted);
   });
 
   it("returns an error for malformed messages without breaking the next join", () => {

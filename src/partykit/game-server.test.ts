@@ -2,7 +2,6 @@ import { describe, it, expect } from "bun:test";
 import GameServer, { type ConnLike, type RoomLike } from "./game-server";
 import type { GameServerMessage, GameClientMessage } from "./protocol";
 import { dominionModule } from "../dominion/module";
-import { createGame } from "../engine";
 import { GAMES } from "../games";
 
 function roomHarness() {
@@ -157,33 +156,6 @@ describe("the room module validates what crosses the wire", () => {
       bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
     });
     expect(h.seen(host).some(m => m.type === "game_started")).toBe(true);
-  });
-
-  it("refuses a sync_events batch holding an event its module rejects", () => {
-    const h = roomHarness();
-    const host = h.connect("host");
-    h.send(host, {
-      type: "join",
-      name: "Alice",
-      game: "dominion",
-      clientId: "alice",
-    });
-    h.send(host, {
-      type: "start_singleplayer",
-      seats: { human: { kind: "human" }, ai: { kind: "heuristic" } },
-    });
-    const log = [...createGame(["human", "ai"], undefined, 42).eventLog];
-    h.send(host, { type: "sync_events", events: log });
-    expect(h.lastOf(host)?.type).toBe("full_state");
-
-    h.send(host, {
-      type: "sync_events",
-      events: [...log, { type: "NOT_AN_EVENT" }],
-    });
-    expect(h.lastOf(host)).toMatchObject({
-      type: "error",
-      message: "Failed to sync events",
-    });
   });
 
   it("refuses a command its module rejects", () => {
