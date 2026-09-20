@@ -7,6 +7,13 @@ import {
   PROVIDER_COLORS,
   MODELS,
 } from "./models";
+import {
+  DENIED_MODELS,
+  DENIED_PROVIDERS,
+  ID_ALIASES,
+  MODEL_QUIRKS,
+  PROVIDER_COLORS_BY_NAME,
+} from "./model-overrides";
 
 describe("Model Configuration", () => {
   describe("getModelColor", () => {
@@ -88,5 +95,39 @@ describe("Model Configuration", () => {
       const proModel = MODELS.find(m => m.id === "gpt-5.4");
       expect(proModel?.maxInstances).toBe(3);
     });
+  });
+});
+
+describe("generated catalog and its overrides", () => {
+  it("has no duplicate short ids", () => {
+    const ids = MODELS.map(m => m.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("contains nothing the overrides deny", () => {
+    const denied = MODELS.filter(
+      m =>
+        DENIED_MODELS[m.fullName] !== undefined ||
+        DENIED_PROVIDERS[m.provider] !== undefined,
+    );
+    expect(denied.map(m => m.id)).toEqual([]);
+  });
+
+  // A stale override is invisible otherwise: it silently stops applying when the
+  // gateway renames or drops the model it keys off.
+  it("has no override pointing at a model the gateway no longer offers", () => {
+    const ids = new Set<string>(MODELS.map(m => m.id));
+    const fullNames = new Set<string>(MODELS.map(m => m.fullName));
+    expect(Object.keys(MODEL_QUIRKS).filter(id => !ids.has(id))).toEqual([]);
+    expect(
+      Object.keys(ID_ALIASES).filter(fullName => !fullNames.has(fullName)),
+    ).toEqual([]);
+  });
+
+  it("keeps every provider spelling the picker knows how to colour", () => {
+    const uncoloured = [
+      ...new Set(MODELS.map(m => m.provider)),
+    ].filter(provider => PROVIDER_COLORS_BY_NAME[provider] === undefined);
+    expect(uncoloured).toEqual([]);
   });
 });
