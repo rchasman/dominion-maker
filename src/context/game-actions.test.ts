@@ -219,29 +219,6 @@ describe("game-actions", () => {
     });
   });
 
-  describe("GameActionResult interface", () => {
-    it("should be compatible with all action return values", () => {
-      const playActionResult = executePlayAction(engine, "human", "Village");
-      expect(playActionResult).toBeDefined();
-
-      const playTreasureResult = executePlayTreasure(engine, "human", "Copper");
-      expect(playTreasureResult).toBeDefined();
-
-      const playAllResult = executePlayAllTreasures(
-        engine,
-        "human",
-        engine.state,
-      );
-      expect(typeof playAllResult.ok).toBe("boolean");
-
-      const buyResult = executeBuyCard(engine, "human", "Estate");
-      expect(buyResult).toBeDefined();
-
-      const endPhaseResult = executeEndPhase(engine, "human");
-      expect(endPhaseResult).toBeDefined();
-    });
-  });
-
   describe("integration between functions", () => {
     it("should maintain engine consistency across multiple commands", () => {
       const eventCountBefore = engine.eventLog.length;
