@@ -6,7 +6,6 @@
  */
 
 import { signal, computed, batch } from "@preact/signals";
-import type { DominionEngine } from "../engine";
 import type { GameState, CardName } from "../types/game-state";
 import type { DecisionChoice } from "../events/types";
 import type { GameEvent } from "../events/types";
@@ -132,7 +131,10 @@ export const players$ = signal<Array<{ id: string; name: string }>>([]);
  * Atomically sync engine state into signals.
  * This is the single source of truth for state updates after engine commands.
  */
-export function syncEngineToSignals(engine: DominionEngine): void {
+export function syncEngineToSignals(engine: {
+  eventLog: readonly GameEvent[];
+  state: GameState;
+}): void {
   batch(() => {
     events$.value = [...engine.eventLog];
     gameState$.value = engine.state;
