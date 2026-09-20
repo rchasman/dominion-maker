@@ -57,34 +57,6 @@ export function useCardSelection(): CardSelectionHook {
   };
 }
 
-interface PreviewModeHook {
-  previewEventId: string | null;
-  enterPreview: (eventId: string | null) => void;
-  exitPreview: () => void;
-  isPreviewMode: boolean;
-}
-
-export function usePreviewMode(): PreviewModeHook {
-  const [previewEventId, setPreviewEventId] = useState<string | null>(null);
-
-  const enterPreview = useCallback((eventId: string | null) => {
-    setPreviewEventId(eventId);
-  }, []);
-
-  const exitPreview = useCallback(() => {
-    setPreviewEventId(null);
-  }, []);
-
-  const isPreviewMode = previewEventId !== null;
-
-  return {
-    previewEventId,
-    enterPreview,
-    exitPreview,
-    isPreviewMode,
-  };
-}
-
 export interface ComplexDecisionData {
   cardActions: Record<number, string>;
   cardOrder?: number[];

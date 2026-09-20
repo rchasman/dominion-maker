@@ -32,7 +32,7 @@ function mountProbe(
   getStateAtEvent: (eventId: string) => GameState | Promise<GameState>,
 ) {
   const root = document.createElement("div");
-  const seen: Array<ReturnType<typeof usePreviewState>> = [];
+  const seen: Array<ReturnType<typeof usePreviewState<GameState>>> = [];
 
   function Probe({ previewEventId }: { previewEventId: string | null }) {
     const result = usePreviewState(previewEventId, getStateAtEvent);

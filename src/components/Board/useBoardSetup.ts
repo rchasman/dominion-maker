@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from "preact/hooks";
 import {
   useCardSelection,
-  usePreviewMode,
   useComplexDecision,
   useCardActions,
   useBuyCardHandler,
 } from "./hooks";
+import { usePreviewMode } from "./usePreviewMode";
 import { useBoardHandlers } from "./useBoardHandlers";
 import { preloadKingdomCards } from "../../lib/image-preload";
 import type { CardName } from "../../types/game-state";
