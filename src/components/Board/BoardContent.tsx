@@ -20,6 +20,7 @@ import type { ControllerConfig, ControllerKind, Seats } from "../../core/seats";
 import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { SeatSelector } from "../SeatSelector";
+import { dominionModule } from "../../dominion/module";
 import { SEAT_PRESETS, saveSeatPreset } from "../../context/seat-presets";
 import { setSeats$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
@@ -217,6 +218,7 @@ export function BoardContent({
               playerId={playerId}
               config={game.seats[playerId] ?? HUMAN_SEAT}
               options={seatOptions}
+              defaultLlm={dominionModule.defaultLlmSeat}
               onChange={config => setSeat(playerId, config)}
               disabled={!canEditSeat(playerId)}
             />

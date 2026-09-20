@@ -1,5 +1,9 @@
-import type { ControllerConfig, ControllerKind } from "../core/seats";
-import { DEFAULT_LLM_SEAT, HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
+import type {
+  ControllerConfig,
+  ControllerKind,
+  LlmSeatConfig,
+} from "../core/seats";
+import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
 import {
   gameState$,
   players$,
@@ -21,6 +25,8 @@ interface SeatSelectorProps {
   config: ControllerConfig;
   /** Which kinds this table offers: no Engine in a lobby room, no Manual in single player */
   options: readonly ControllerKind[];
+  /** The roster a brand new LLM seat starts with, from the game being played */
+  defaultLlm: LlmSeatConfig;
   onChange: (config: ControllerConfig) => void;
   disabled?: boolean;
 }
@@ -30,6 +36,7 @@ export function SeatSelector({
   playerId,
   config,
   options,
+  defaultLlm,
   onChange,
   disabled = false,
 }: SeatSelectorProps) {
@@ -55,7 +62,7 @@ export function SeatSelector({
       onChange(
         config.kind === "llm"
           ? config
-          : (rememberedLlm$.value[playerId] ?? DEFAULT_LLM_SEAT),
+          : (rememberedLlm$.value[playerId] ?? defaultLlm),
       );
       settingsSeat$.value = playerId;
     }

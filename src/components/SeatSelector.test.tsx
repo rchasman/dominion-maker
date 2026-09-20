@@ -35,6 +35,7 @@ describe("SeatSelector", () => {
           playerId="p1"
           config={config}
           options={["human", "llm"]}
+          defaultLlm={DEFAULT_LLM_SEAT}
           onChange={c => changes.push(c)}
         />,
         root,
