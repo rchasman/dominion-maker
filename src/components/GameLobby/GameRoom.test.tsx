@@ -127,6 +127,20 @@ describe("GameRoom", () => {
     expect(root.querySelectorAll("[data-square]").length).toBe(64);
     expect(root.textContent).toContain("White to move");
 
+    // A chess state this client cannot read says so on screen too
+    settled(() =>
+      chessSocket.deliver({
+        type: "full_state",
+        game: "chess",
+        state: { fen: 42 },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(root.textContent).toContain(
+      "This room sent a position this client cannot read.",
+    );
+
     settled(() => render(null, root));
     root.remove();
     gameState$.value = null;

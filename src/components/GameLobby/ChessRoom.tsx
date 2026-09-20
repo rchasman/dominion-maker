@@ -50,6 +50,13 @@ export function ChessRoom({
     ...(onResign !== undefined && { onResign }),
   });
 
+  // The log signal outlives a local game, and a room's LLM seats run on the
+  // server, so anything still in it belongs to a game this room never saw
+  useState(() => {
+    llmLogs$.value = [];
+    return null;
+  });
+
   // Other seats arrive as kinds only; this client's own LLM config stays here
   const [ownSeat, setOwnSeat] = useState<ControllerConfig>(HUMAN_SEAT);
   const seats = useMemo(
