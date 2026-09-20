@@ -34,6 +34,9 @@ type RoomEvent = GameShape["event"];
 
 type RoomModule = GameModule<GameShape>;
 
+/** How a game id becomes a module; tests pass their own registry */
+export type ResolveModule = (id: GameId) => RoomModule;
+
 /** The game this room plays, fixed by the first join */
 type RoomGame = {
   id: GameId;
@@ -112,9 +115,11 @@ export default class GameServer implements Party.Server {
   private spectatorTimeoutId: ReturnType<typeof setTimeout> | null = null; // Timeout for kicking spectators
 
   readonly room: RoomLike;
+  private readonly resolveModule: ResolveModule;
 
-  constructor(room: RoomLike) {
+  constructor(room: RoomLike, resolveModule: ResolveModule = moduleFor) {
     this.room = room;
+    this.resolveModule = resolveModule;
     this.apiOrigin =
       typeof room.env["API_ORIGIN"] === "string" ? room.env["API_ORIGIN"] : "";
   }
@@ -133,7 +138,7 @@ export default class GameServer implements Party.Server {
       });
       return null;
     }
-    const module: RoomModule = moduleFor(id);
+    const module = this.resolveModule(id);
     const game: RoomGame = {
       id,
       module,
@@ -351,7 +356,6 @@ export default class GameServer implements Party.Server {
     isBot?: boolean,
     reconnectToken?: string,
   ) {
-    if (!this.useGame(conn, gameId)) return;
     const knownToken = clientId
       ? this.reconnectTokens.get(clientId)
       : undefined;
@@ -371,6 +375,7 @@ export default class GameServer implements Party.Server {
     }
     const engine = this.engine;
     if (this.isStarted && engine) {
+      if (!this.useGame(conn, gameId)) return;
       const existingPlayerId =
         clientId && knownToken && this.playerInfo[clientId] ? clientId : null;
       if (existingPlayerId) {
@@ -463,6 +468,10 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    // Only a joiner who gets a seat fixes the room's game
+    const game = this.useGame(conn, gameId);
+    if (!game) return;
+
     const token = knownToken ?? crypto.randomUUID();
     this.reconnectTokens.set(actualClientId, token);
 
@@ -495,7 +504,8 @@ export default class GameServer implements Party.Server {
     if (this.getPlayerCount() === 2 && !this.isStarted) {
       this.localMirror = false;
       // A lobby match carries no options: the module's defaults decide the setup
-      this.startEngine(conn, this.getPlayers(), {});
+      const accepted = this.acceptOptions(conn, game, {});
+      if (accepted) this.startEngine(game, this.getPlayers(), accepted.value);
     }
   }
 
@@ -528,11 +538,8 @@ export default class GameServer implements Party.Server {
       return;
     }
 
-    const parsed = game.module.optionsSchema.safeParse(options ?? {});
-    if (!parsed.success) {
-      this.send(conn, { type: "error", message: firstIssue(parsed.error) });
-      return;
-    }
+    const accepted = this.acceptOptions(conn, game, options);
+    if (!accepted) return;
 
     // The host's own engine is authoritative; this room only mirrors it for
     // spectators, so seats are labels keyed by the local game's player ids.
@@ -547,7 +554,7 @@ export default class GameServer implements Party.Server {
 
     const engine = game.module.createEngine(
       [humanPlayer.clientId, botConnectionId],
-      parsed.data,
+      accepted.value,
     );
     this.engine = engine;
     this.isStarted = true;
@@ -659,7 +666,6 @@ export default class GameServer implements Party.Server {
     name: string,
     clientId?: string,
   ) {
-    if (!this.useGame(conn, gameId)) return;
     // CRITICAL FIX: Block spectators when only 1 player in room
     // Prevents spectating incomplete/waiting games
     const currentPlayerCount = this.getPlayerCount();
@@ -671,6 +677,7 @@ export default class GameServer implements Party.Server {
       conn.close();
       return;
     }
+    if (!this.useGame(conn, gameId)) return;
 
     player.name = name;
     player.clientId = clientId || crypto.randomUUID();
@@ -733,25 +740,30 @@ export default class GameServer implements Party.Server {
     });
   }
 
-  private startEngine(
+  /**
+   * Validated options, or null once the sender has been told why not. Every
+   * refusal must happen before the room is changed: a half-started room stays
+   * broken for every later attempt.
+   */
+  private acceptOptions(
     conn: ConnLike,
-    players: PlayerConnection[],
+    game: RoomGame,
     options: unknown,
-  ): void {
-    const game = this.game;
-    if (!game) {
-      this.send(conn, { type: "error", message: "Join a game first" });
-      return;
-    }
+  ): { value: GameShape["options"] } | null {
     const parsed = game.module.optionsSchema.safeParse(options ?? {});
-    if (!parsed.success) {
-      this.send(conn, { type: "error", message: firstIssue(parsed.error) });
-      return;
-    }
+    if (parsed.success) return { value: parsed.data };
+    this.send(conn, { type: "error", message: firstIssue(parsed.error) });
+    return null;
+  }
 
+  private startEngine(
+    game: RoomGame,
+    players: PlayerConnection[],
+    options: GameShape["options"],
+  ): void {
     const engine = game.module.createEngine(
       players.map(p => p.clientId),
-      parsed.data,
+      options,
     );
     this.engine = engine;
     this.isStarted = true;
@@ -776,6 +788,11 @@ export default class GameServer implements Party.Server {
     options: unknown,
     bots: Array<{ name: string; controller: BotConfig }>,
   ) {
+    const game = this.game;
+    if (!game) {
+      this.send(conn, { type: "error", message: "Join a game first" });
+      return;
+    }
     if (conn.id !== this.hostConnectionId) {
       this.send(conn, { type: "error", message: "Only host can start" });
       return;
@@ -797,8 +814,11 @@ export default class GameServer implements Party.Server {
       return;
     }
 
+    const accepted = this.acceptOptions(conn, game, options);
+    if (!accepted) return;
+
     bots.map(bot => this.addBotConnection(bot.name, bot.controller));
-    this.startEngine(conn, this.getPlayers(), options);
+    this.startEngine(game, this.getPlayers(), accepted.value);
     this.driveBots();
   }
 
