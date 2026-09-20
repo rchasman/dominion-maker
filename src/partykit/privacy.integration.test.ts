@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type * as Party from "partykit/server";
 import GameServer from "./game-server";
 import { createGame } from "../engine";
-import { playerView, publicEvents } from "./player-view";
+import { playerView, publicEvents } from "../dominion/view";
 import { gameStateSchema } from "../validation/game-state";
 import type { GameServerMessage, GameClientMessage } from "./protocol";
 

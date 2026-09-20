@@ -1,5 +1,6 @@
 import { gameMessageSchema, parseMessage } from "../validation/messages";
-import { playerView, publicEvents } from "./player-view";
+import { playerView, publicEvents } from "../dominion/view";
+import { dominionModule } from "../dominion/module";
 import { projectState } from "../events/project";
 /**
  * PartyKit Game Server
@@ -28,7 +29,6 @@ import { llmController } from "../core/llm-controller";
 import { createControllerCache } from "../core/controller-cache";
 import { driveEngine } from "../core/driver";
 import { dominionGame, type DominionShape } from "../dominion/definition";
-import { reasoningOf } from "../dominion/moves";
 import { httpDecideMove } from "../agent/http-decide-move";
 
 interface PlayerConnection {
@@ -93,9 +93,8 @@ export default class GameServer implements Party.Server {
       if (config.kind === "human") return null;
       if (config.kind === "heuristic") return heuristicController(dominionGame);
       return llmController(dominionGame, config, {
-        decideMove: httpDecideMove(apiOrigin),
+        decideMove: httpDecideMove(dominionModule, apiOrigin),
         getPlayerStrategies: () => ({}),
-        reasoningOf,
       });
     });
   }
