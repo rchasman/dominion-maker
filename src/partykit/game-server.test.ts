@@ -3,6 +3,7 @@ import { roomHarness, type RoomHarness } from "./room-harness.test-fixture";
 import type { ConnLike } from "./game-server";
 import { dominionModule } from "../dominion/module";
 import { countingModule } from "./counting-module.test-fixture";
+import { GAMES } from "../games";
 
 const joinAs = (h: RoomHarness, socket: ConnLike, clientId: string) =>
   h.send(socket, {
@@ -38,16 +39,20 @@ describe("a room plays one registered game", () => {
 
     const host = h.connect("host");
     joinAs(h, host, "alice");
-    const chessPlayer = h.connect("chess-player");
-    h.send(chessPlayer, {
-      type: "join",
-      name: "Zed",
-      game: "chess",
-      clientId: "zed",
-    });
-    expect(h.lastOf(chessPlayer)).toMatchObject({
-      type: "error",
-      message: "This room is playing Dominion",
+    // Every other registered game must bounce off this Dominion room, so a
+    // third game is covered the day it joins the registry.
+    const others = Object.keys(GAMES).filter(id => id !== "dominion");
+    expect(others.length).toBeGreaterThan(0);
+    others.map(id => {
+      const other = h.connect(`other-${id}`);
+      h.raw(
+        other,
+        JSON.stringify({ type: "join", name: "Zed", game: id, clientId: id }),
+      );
+      expect(h.lastOf(other)).toMatchObject({
+        type: "error",
+        message: "This room is playing Dominion",
+      });
     });
   });
 
