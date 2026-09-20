@@ -1,10 +1,9 @@
 import { useState, useEffect } from "preact/hooks";
 import { getModelColor } from "../../../config/models";
-import type { TimingData, ModelStatus } from "../types";
+import type { ModelStatus } from "../types";
 import { run } from "../../../lib/run";
 
 interface PerformancePaneProps {
-  data: TimingData | null | undefined;
   liveStatuses?: Map<number, ModelStatus>;
   now?: number;
 }
@@ -461,11 +460,7 @@ function calculateWidths(timings: TimingEntry[]) {
   return { timingWidth, modelNameWidth, barAreaWidth };
 }
 
-export function PerformancePane({
-  data,
-  liveStatuses,
-  now,
-}: PerformancePaneProps) {
+export function PerformancePane({ liveStatuses, now }: PerformancePaneProps) {
   const [fallbackTime] = useState(() => Date.now());
   const currentTime = now ?? fallbackTime;
 
@@ -476,7 +471,6 @@ export function PerformancePane({
   const timings: TimingEntry[] = run(() => {
     if (liveStatuses && liveStatuses.size > 0)
       return buildTimingsFromLiveStatuses(liveStatuses, currentTime);
-    if (data?.timings) return data.timings;
     return [];
   });
 

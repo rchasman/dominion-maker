@@ -1,10 +1,9 @@
 import { useMemo } from "preact/hooks";
 import type { ModelProvider } from "../../../config/models";
 import type { Action } from "../../../types/action";
+import type { TokenUsage } from "../../../core/consensus/cost";
 import type { WeightedVote } from "../../../core/consensus/types";
 import type { LLMLogEntry, Turn, PendingData } from "../types";
-
-const LOOKBACK_RANGE = 5;
 
 function extractCardName(prompt: string): string | null {
   const cardMatch = prompt.match(/^(\w+)(?:\s+attack)?:/i);
@@ -15,17 +14,6 @@ function createSubPhaseLabel(decisionType: unknown, prompt: string): string {
   const cardName = extractCardName(prompt);
   const typeStr = typeof decisionType === "string" ? decisionType : "decision";
   return cardName ? `Response to ${cardName}` : `AI ${typeStr}`;
-}
-
-function findTimingEntry(
-  entries: LLMLogEntry[],
-  currentIndex: number,
-): LLMLogEntry | undefined {
-  const startIndex = Math.max(0, currentIndex - LOOKBACK_RANGE);
-  return entries
-    .slice(startIndex, currentIndex)
-    .reverse()
-    .find(e => e.type === "consensus-compare");
 }
 
 interface TurnBuildState {
@@ -45,7 +33,7 @@ export function extractTurns(entries: LLMLogEntry[]): Turn[] {
     stepNumber: 0,
   };
 
-  entries.map((entry, i) => processEntry(entry, i, entries, state));
+  entries.map(entry => processEntry(entry, state));
 
   // Add the last turn if it has decisions OR is pending
   if (
@@ -158,6 +146,7 @@ function handleConsensusModelComplete(
   status.action = data.action as Action | undefined;
   status.distribution = data.distribution as WeightedVote<Action>[] | undefined;
   status.aborted = data.aborted as boolean | undefined;
+  status.usage = data.usage as TokenUsage | undefined;
 }
 
 function handleConsensusModelAborted(
@@ -184,8 +173,6 @@ function handleConsensusStepError(state: TurnBuildState): void {
 
 function handleConsensusVoting(
   entry: LLMLogEntry,
-  index: number,
-  entries: LLMLogEntry[],
   state: TurnBuildState,
 ): void {
   if (!state.buildingTurn) return;
@@ -193,7 +180,6 @@ function handleConsensusVoting(
   state.stepNumber++;
   state.buildingTurn.pending = false;
 
-  const timingEntry = findTimingEntry(entries, index);
   const modelStatusesSnapshot = state.buildingTurn.modelStatuses
     ? new Map(state.buildingTurn.modelStatuses)
     : undefined;
@@ -205,7 +191,6 @@ function handleConsensusVoting(
       id: entry.id,
       votingEntry: entry,
       ...(typeof actionId === "string" && { actionId }),
-      ...(timingEntry !== undefined && { timingEntry }),
       stepNumber: state.stepNumber,
       ...(modelStatusesSnapshot !== undefined && {
         modelStatuses: modelStatusesSnapshot,
@@ -238,12 +223,7 @@ function handleConsensusVerdict(
   if (decision) decision.verdict = verdict;
 }
 
-function processEntry(
-  entry: LLMLogEntry,
-  index: number,
-  entries: LLMLogEntry[],
-  state: TurnBuildState,
-): void {
+function processEntry(entry: LLMLogEntry, state: TurnBuildState): void {
   if (entry.type === "ai-turn-start") {
     handleAITurnStart(entry, state);
   } else if (entry.type === "ai-decision-resolving") {
@@ -257,7 +237,7 @@ function processEntry(
   } else if (entry.type === "consensus-model-aborted") {
     handleConsensusModelAborted(entry, state);
   } else if (entry.type === "consensus-voting") {
-    handleConsensusVoting(entry, index, entries, state);
+    handleConsensusVoting(entry, state);
   } else if (entry.type === "consensus-step-error") {
     handleConsensusStepError(state);
   } else if (entry.type === "consensus-verdict") {
