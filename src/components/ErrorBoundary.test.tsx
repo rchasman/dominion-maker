@@ -1,16 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { registerHappyDom } from "../happy-dom.test-fixture";
 import { render } from "preact";
 import { lazy, Suspense } from "preact/compat";
 import { ErrorBoundary, renderNothing } from "./ErrorBoundary";
 
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
-
-afterAll(async () => {
-  await GlobalRegistrator.unregister();
-});
+beforeAll(registerHappyDom);
 
 const waitForLazyRejection = () =>
   new Promise(resolve => setTimeout(resolve, 20));

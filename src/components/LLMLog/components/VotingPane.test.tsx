@@ -1,16 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { registerHappyDom } from "../../../happy-dom.test-fixture";
 import { render } from "preact";
 import { VotingPane } from "./VotingPane";
 import type { ModelStatus } from "../types";
 
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
-afterAll(async () => {
-  await GlobalRegistrator.unregister();
-});
-
+beforeAll(registerHappyDom);
 function statuses(): Map<number, ModelStatus> {
   return new Map(
     ["Economy", "Action balance"].map((reasoning, index) => [

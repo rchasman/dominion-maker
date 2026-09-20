@@ -1,18 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { GlobalRegistrator } from "@happy-dom/global-registrator";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { registerHappyDom } from "../happy-dom.test-fixture";
 import { render } from "preact";
 import { SeatSelector } from "./SeatSelector";
 import type { ControllerConfig, LlmSeatConfig } from "../core/seats";
 import { DEFAULT_LLM_SEAT } from "../core/seats";
 import { players$, rememberedLlm$ } from "../context/game-signals";
 
-beforeAll(() => {
-  GlobalRegistrator.register();
-});
-
-afterAll(async () => {
-  await GlobalRegistrator.unregister();
-});
+beforeAll(registerHappyDom);
 
 const pick = (root: HTMLElement, kind: string) => {
   const select = root.querySelector("select");
