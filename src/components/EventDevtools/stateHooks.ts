@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useState } from "preact/hooks";
+import { uiLogger } from "../../lib/logger";
 import type { DevtoolsEvent, EventDevtoolsAdapter } from "./adapter";
 
 const ALL_EVENTS = "all";
@@ -44,17 +45,19 @@ function useHistoricalState<E extends DevtoolsEvent>(
     const settle = (state: unknown) => {
       if (request.active) setResolved({ index, state });
     };
+    const failed = (error: unknown) => {
+      uiLogger.error("Could not read the state at that event", { error });
+      if (request.active) setResolved(null);
+    };
     try {
       const lookup = stateAt.call(adapter, index);
       if (lookup instanceof Promise) {
-        lookup.then(settle).catch(() => {
-          if (request.active) setResolved(null);
-        });
+        lookup.then(settle).catch(failed);
       } else {
         settle(lookup);
       }
-    } catch {
-      setResolved(null);
+    } catch (error: unknown) {
+      failed(error);
     }
     return () => {
       request.active = false;

@@ -28,21 +28,33 @@ const show = (value: unknown): string => {
     : text;
 };
 
-/** Top-level fields that differ, which is as far as a game-agnostic diff can see */
-function changesBetween(prev: unknown, next: unknown): StateChange[] {
+const MAX_DEPTH = 1;
+
+/**
+ * The fields that differ, named by path. One level of nesting is worth
+ * walking: a game keeps its players in a map, and "the players changed" says
+ * nothing. Below that the whole value reads as JSON.
+ */
+function changesBetween(
+  prev: unknown,
+  next: unknown,
+  path = "",
+  depth = 0,
+): StateChange[] {
   const before = asRecord(prev);
   const after = asRecord(next);
-  if (before === null || after === null) {
+  const named = path === "" ? "state" : path;
+  if (before === null || after === null || depth > MAX_DEPTH) {
     return show(prev) === show(next)
       ? []
-      : [{ path: "state", from: show(prev), to: show(next) }];
+      : [{ path: named, from: show(prev), to: show(next) }];
   }
   const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
-  return keys.flatMap(key =>
-    JSON.stringify(before[key]) === JSON.stringify(after[key])
-      ? []
-      : [{ path: key, from: show(before[key]), to: show(after[key]) }],
-  );
+  return keys.flatMap(key => {
+    if (JSON.stringify(before[key]) === JSON.stringify(after[key])) return [];
+    const keyPath = path === "" ? key : `${path}.${key}`;
+    return changesBetween(before[key], after[key], keyPath, depth + 1);
+  });
 }
 
 function renderDiffRow(change: StateChange, index: number) {

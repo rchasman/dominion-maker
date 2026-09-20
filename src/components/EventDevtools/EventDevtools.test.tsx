@@ -20,7 +20,7 @@ const adapter: EventDevtoolsAdapter<FakeEvent> = {
   category: event => (event.type === "MOVE" ? "moves" : "notes"),
   categories: ["moves", "notes"],
   colour: event => (event.type === "MOVE" ? "#111111" : "#222222"),
-  stateAt: index => ({ seen: index + 1 }),
+  stateAt: index => ({ seen: index + 1, players: { a: { moves: index } } }),
 };
 
 const mount = (
@@ -53,6 +53,27 @@ describe("the event devtools panel", () => {
     expect(chips).toContain("all");
     expect(chips).toContain("moves");
     expect(chips).toContain("notes");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("names the field that changed, one level in", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    mount(root, () => {});
+
+    const diff = [...root.querySelectorAll("button")].find(
+      button => button.textContent === "Diff",
+    );
+    settled(() => {
+      diff?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const rows = [...root.querySelectorAll("div")]
+      .map(row => row.textContent)
+      .filter(text => text?.startsWith("players.a"));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(root.textContent).toContain("seen");
 
     render(null, root);
     root.remove();

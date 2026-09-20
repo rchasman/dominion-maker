@@ -59,8 +59,10 @@ export function EventDevtools<E extends DevtoolsEvent>({
   const rootEvents = useRootEvents(events, adapter);
   const filteredEvents = useFilteredEvents(events, filter, adapter);
   const displayIndex = getDisplayIndex(scrubberIndex, selectedEventId, events);
-  const selectedState = useSelectedState(adapter, displayIndex);
-  const prevState = usePrevState(adapter, displayIndex);
+  // A shut panel shows no state, so it must not ask a host for any
+  const inspected = isOpen ? displayIndex : null;
+  const selectedState = useSelectedState(adapter, inspected);
+  const prevState = usePrevState(adapter, inspected);
 
   useAutoScroll(scrubberIndex, events.length, isOpen, listRefInternalRef);
   useScrubberScroll(scrubberIndex, listRefInternalRef);

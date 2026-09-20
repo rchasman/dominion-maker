@@ -214,6 +214,15 @@ describe("the Dominion devtools adapter labels", () => {
     expect(formatEvent(event)).toBe("Winner: human");
   });
 
+  it("falls back to the event type where it has nothing better to say", () => {
+    const event: GameEvent = {
+      id: "17",
+      type: "DECK_SHUFFLED",
+      playerId: "human",
+    };
+    expect(formatEvent(event)).toBe("DECK_SHUFFLED");
+  });
+
   it("should format delta with +0 for zero delta", () => {
     const event: GameEvent = {
       id: "18",

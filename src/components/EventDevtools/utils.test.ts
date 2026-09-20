@@ -1,19 +1,13 @@
 import { describe, it, expect } from "bun:test";
 import { getDisplayIndex } from "./utils";
-import type { GameEvent } from "../../events/types";
+import type { DevtoolsEvent } from "./adapter";
 
 describe("EventDevtools/utils", () => {
   describe("getDisplayIndex", () => {
-    const events: GameEvent[] = [
-      { id: "event-1", type: "TURN_STARTED", turn: 1, playerId: "human" },
-      { id: "event-2", type: "PHASE_CHANGED", phase: "action" },
-      {
-        id: "event-3",
-        type: "CARD_PLAYED",
-        playerId: "human",
-        card: "Village",
-        sourceIndex: 0,
-      },
+    const events: DevtoolsEvent[] = [
+      { id: "event-1", type: "MOVE" },
+      { id: "event-2", type: "NOTE", causedBy: "event-1" },
+      { id: "event-3", type: "MOVE" },
     ];
 
     it("should return scrubberIndex when provided", () => {
