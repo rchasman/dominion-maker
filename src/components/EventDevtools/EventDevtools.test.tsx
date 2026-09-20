@@ -35,7 +35,54 @@ const mount = (
   });
 };
 
+/** The same adapter, counting what the panel asks it for */
+const countingAdapter = (asked: number[]): EventDevtoolsAdapter<FakeEvent> => ({
+  ...adapter,
+  stateAt: index => {
+    asked.push(index);
+    return { seen: index + 1 };
+  },
+});
+
 describe("the event devtools panel", () => {
+  it("asks for no state while it is shut", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    const asked: number[] = [];
+
+    settled(() => {
+      render(
+        <EventDevtools
+          events={EVENTS}
+          adapter={countingAdapter(asked)}
+          isOpen={false}
+          onToggle={() => {}}
+        />,
+        root,
+      );
+    });
+    expect(asked).toEqual([]);
+    expect(root.querySelectorAll("[data-event-index]").length).toBe(0);
+
+    // Opening it asks for the latest state and the one before it
+    const opened: number[] = [];
+    settled(() => {
+      render(
+        <EventDevtools
+          events={EVENTS}
+          adapter={countingAdapter(opened)}
+          isOpen={true}
+          onToggle={() => {}}
+        />,
+        root,
+      );
+    });
+    expect(opened).toEqual([EVENTS.length - 1, EVENTS.length - 2]);
+
+    render(null, root);
+    root.remove();
+  });
+
   it("reads every event and the state through the adapter", () => {
     const root = document.createElement("div");
     document.body.appendChild(root);
