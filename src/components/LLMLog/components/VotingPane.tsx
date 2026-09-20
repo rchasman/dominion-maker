@@ -1,6 +1,5 @@
 import { VoteExplanations, type VoteExplanation } from "./VoteExplanations";
 import type { Action } from "../../../types/action";
-import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
 import type {
   ConsensusVotingData,
@@ -9,6 +8,7 @@ import type {
   ModelStatus,
 } from "../types";
 import { groupVotersWithColors } from "../utils/groupVoters";
+import { keyOf, labelOf } from "../utils/moveIdentity";
 import { run } from "../../../lib/run";
 import { VoteBar } from "./VoteBarComponents";
 import { formatVoteCount } from "../../../lib/vote-format";
@@ -50,13 +50,6 @@ function JevVerdictLine({ verdict }: { verdict: ConsensusVerdict }) {
 
 // Constants for layout calculations
 const PIXELS_PER_CHAR_VOTE: number = 7;
-
-/**
- * The game's own key for a move, stamped at log time. Entries logged before
- * the core stamped one fall back to the shape Dominion's own moveKey builds.
- */
-const keyOf = (action: Action, stamped: string | undefined): string =>
-  stamped ?? JSON.stringify(stripReasoning(action));
 
 /**
  * Every game's vote is judged the same way: its key is legal or it is not.
@@ -320,10 +313,7 @@ function VoteResultItem({
   verdict,
 }: VoteResultItemProps) {
   const percentage = (result.votes / maxVotes) * PERCENTAGE_MULTIPLIER;
-  // The game named this move at log time; only an entry older than that stamp
-  // falls back to the shape the pane used to build for itself
-  const actionStr =
-    result.label ?? JSON.stringify(stripReasoning(result.action));
+  const actionStr = labelOf(result.action, result.label);
   const isValid = result.valid;
   const groupedVoters = groupVotersWithColors(result.voters);
   const barWidthPx = (percentage / PERCENTAGE_MULTIPLIER) * barAreaWidth;

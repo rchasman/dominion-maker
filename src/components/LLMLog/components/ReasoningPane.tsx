@@ -1,10 +1,9 @@
 import { VoteExplanations } from "./VoteExplanations";
-import { stripReasoning } from "../../../types/action";
 import { getModelColor } from "../../../config/models";
 import type { Action } from "../../../types/action";
 import type { ConsensusVotingData, ModelStatus } from "../types";
-import { formatActionDescription } from "../../../lib/action-utils";
 import { groupVotersByModel } from "../utils/groupVoters";
+import { keyOf, labelOf } from "../utils/moveIdentity";
 
 interface ReasoningItem {
   provider: string;
@@ -13,6 +12,7 @@ interface ReasoningItem {
 
 interface ActionGroup {
   action: Action;
+  label?: string | undefined;
   voters: string[];
   reasonings: ReasoningItem[];
 }
@@ -58,6 +58,7 @@ function ReasoningDisplay({
 function ActionGroupDisplay({
   votes,
   action,
+  label,
   voters,
   reasonings,
   isWinner,
@@ -65,12 +66,13 @@ function ActionGroupDisplay({
 }: {
   votes: number;
   action: Action;
+  label?: string | undefined;
   voters: string[];
   reasonings: ReasoningItem[];
   isWinner: boolean;
   showBorder: boolean;
 }) {
-  const actionStr = formatActionDescription(action);
+  const actionStr = labelOf(action, label);
 
   return (
     <div
@@ -129,7 +131,7 @@ function LiveActionGroupDisplay({
   isWinner: boolean;
   showBorder: boolean;
 }) {
-  const actionStr = formatActionDescription(group.action);
+  const actionStr = labelOf(group.action, group.label);
 
   return (
     <div
@@ -201,11 +203,12 @@ function groupActionsBySignature(
 ): Map<string, ActionGroup> {
   return completedStatuses.reduce((acc, status) => {
     if (!status.action) return acc;
-    const signature = JSON.stringify(stripReasoning(status.action));
+    const signature = keyOf(status.action, status.key);
 
     const existingGroup = acc.get(signature);
     const group = existingGroup ?? {
       action: status.action,
+      label: status.label,
       voters: [],
       reasonings: [],
     };
@@ -242,6 +245,7 @@ export function ReasoningPane({
               key={idx}
               votes={result.votes}
               action={result.action}
+              label={result.label}
               voters={result.voters}
               reasonings={result.reasonings ?? []}
               isWinner={idx === 0}
