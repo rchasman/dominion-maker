@@ -394,7 +394,15 @@ export function Supply({
       </div>
 
       {/* Kingdom cards */}
-      <div style={{ gridArea: "kingdom", minInlineSize: 0 }}>
+      <div
+        style={{
+          gridArea: "kingdom",
+          minInlineSize: 0,
+          alignSelf: "stretch",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <div
           className="supply-label"
           style={{ color: "var(--color-text-primary)" }}
@@ -432,7 +440,9 @@ export function Supply({
             alignItems: "center",
             justifyContent: "flex-end",
             minBlockSize: ACTION_ROW_BLOCK_SIZE,
-            marginBlockStart: "var(--space-1)",
+            marginBlockStart: "auto",
+            paddingBlockStart: "var(--space-1)",
+            paddingInlineEnd: "var(--space-2)",
           }}
         >
           {(isPlayerActive || hasPendingDecision) &&
