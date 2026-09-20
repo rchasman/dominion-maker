@@ -1,5 +1,5 @@
 import type { GameModule } from "../core/game-module";
-import { DEFAULT_LLM_SEAT } from "../core/seats";
+import { CHESS_LLM_SEAT } from "./seat";
 import { chessGame } from "./definition";
 import { createChessGame, loadChessEngine } from "./engine";
 import {
@@ -26,10 +26,5 @@ export const chessModule: GameModule<ChessShape> = {
   // A batch that opens with the game's first event is the whole log, not an
   // append: a rewind has to reach clients as a replacement.
   needsFullResync: events => events[0]?.type === "GAME_INITIALIZED",
-  defaultLlmSeat: {
-    ...DEFAULT_LLM_SEAT,
-    // Jev judges a Dominion state it was taught; it has no chess opinion.
-    models: DEFAULT_LLM_SEAT.models.filter(model => model !== "jev"),
-    consensusCount: 6,
-  },
+  defaultLlmSeat: CHESS_LLM_SEAT,
 };

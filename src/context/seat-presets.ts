@@ -1,4 +1,4 @@
-import type { Seats } from "../core/seats";
+import type { ControllerConfig, Seats } from "../core/seats";
 import { DEFAULT_LLM_SEAT, HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
 import { generateAINames } from "../lib/ai-names";
 import type { PlayerId } from "../types/game-state";
@@ -13,10 +13,13 @@ type Preset = {
   seats: (players: PlayerId[]) => Seats;
 };
 
-const versus = (opponent: Seats[string]) => (players: PlayerId[]) =>
-  Object.fromEntries(
-    players.map((id, index) => [id, index === 0 ? HUMAN_SEAT : opponent]),
-  );
+/** A table where the first player is the human and everyone else is the opponent */
+export const versus =
+  (opponent: ControllerConfig) =>
+  (players: readonly string[]): Seats =>
+    Object.fromEntries(
+      players.map((id, index) => [id, index === 0 ? HUMAN_SEAT : opponent]),
+    );
 
 export const SEAT_PRESETS: Record<SeatPreset, Preset> = {
   rules: {
