@@ -21,7 +21,7 @@ type LLMLogEntryType = (typeof LLM_LOG_ENTRY_TYPES)[number];
 export type LLMLogEntryInput = {
   type: LLMLogEntryType;
   message: string;
-  data?: Record<string, unknown>;
+  data?: Record<string, unknown> | undefined;
 };
 
 /** One entry as the consensus viewer holds it, wherever it was stamped */

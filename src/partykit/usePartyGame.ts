@@ -18,6 +18,7 @@ import type {
 import type { PlayerInfoEntry } from "../types/player-info";
 import type { LLMLogEntry } from "../core/consensus/types";
 import { consensusLogEntrySchema } from "../validation/messages";
+import { multiplayerLogger } from "../lib/logger";
 import type { GameId } from "../game-ids";
 import type { ControllerConfig } from "../core/seats";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
@@ -289,7 +290,12 @@ export function usePartyGame({
 
       case "consensus_log": {
         const parsed = consensusLogEntrySchema.safeParse(msg.entry);
-        if (!parsed.success) break;
+        if (!parsed.success) {
+          multiplayerLogger.warn(
+            `Room sent a consensus entry this client cannot read: ${parsed.error.message}`,
+          );
+          break;
+        }
         const entry = parsed.data;
         setState(s => ({ ...s, consensusLog: [...s.consensusLog, entry] }));
         break;

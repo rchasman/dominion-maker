@@ -85,8 +85,12 @@ const gameMessage = z.discriminatedUnion("type", [
 export const gameMessageSchema = z.custom<GameClientMessage>(
   value => gameMessage.safeParse(value).success,
 );
-/** The entry a room relays; its `data` stays the acting game's business */
-const consensusLogEntry = z
+/**
+ * The entry a room relays; its `data` stays the acting game's business. This
+ * is the object schema itself, not a `z.custom` wrapper, so a refusal names
+ * the field that failed instead of saying only "invalid".
+ */
+export const consensusLogEntrySchema: z.ZodType<LLMLogEntry> = z
   .object({
     id,
     timestamp: z.number(),
@@ -95,9 +99,6 @@ const consensusLogEntry = z
     data: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
-export const consensusLogEntrySchema = z.custom<LLMLogEntry>(
-  value => consensusLogEntry.safeParse(value).success,
-);
 
 const lobbyMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("join_lobby"), name, clientId: id }).strict(),
