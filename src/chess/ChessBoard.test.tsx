@@ -35,7 +35,6 @@ describe("the chess board", () => {
         <ChessBoard
           state={engine.state}
           seats={SEATS}
-          entries={[]}
           localPlayerId="w"
           onMove={san => {
             sent.push(san);
@@ -81,7 +80,6 @@ describe("the chess board", () => {
         <ChessBoard
           state={promotion.state}
           seats={SEATS}
-          entries={[]}
           localPlayerId="w"
           onMove={san => picked.push(san)}
         />,
@@ -107,7 +105,6 @@ describe("the chess board", () => {
         <ChessBoard
           state={fresh.state}
           seats={SEATS}
-          entries={[]}
           localPlayerId="w"
           onMove={san => picked.push(san)}
         />,
@@ -135,7 +132,6 @@ describe("the chess board", () => {
         <ChessBoard
           state={mated.state}
           seats={SEATS}
-          entries={[]}
           localPlayerId="w"
           onMove={() => undefined}
         />,
@@ -166,7 +162,6 @@ describe("the chess board", () => {
         <ChessBoard
           state={unreplayable}
           seats={SEATS}
-          entries={[]}
           localPlayerId="b"
           onMove={() => undefined}
         />,

@@ -10,9 +10,22 @@ import {
   seats$,
   updateSeat,
 } from "../context/game-signals";
-import { loadSeatPreset } from "../context/seat-presets";
+import {
+  loadSeatPreset,
+  saveSeatPreset,
+  type SeatPreset,
+} from "../context/seat-presets";
 import { uiLogger } from "../lib/logger";
+import { BoardLayout, GameAreaLayout } from "../components/Board/BoardLayout";
+import { GameSidebar } from "../components/Board/GameSidebar";
+import { TurnStatusIndicator } from "../components/Board/TurnStatusIndicator";
 import { ChessBoard } from "./ChessBoard";
+import {
+  ChessLogRows,
+  chessMoverColor,
+  chessPresets,
+  chessTurnStatus,
+} from "./sidebar";
 import {
   chessEvents$,
   chessState$,
@@ -24,7 +37,7 @@ import {
   syncChessEngine,
 } from "./context";
 import { createChessGame, type ChessEngine } from "./engine";
-import { chessSeats } from "./presets";
+import { CHESS_SEAT_PRESETS, chessSeats } from "./presets";
 import { CHESS_PLAYERS } from "./seat";
 import { useChessSeatDriver } from "./use-chess-seat-driver";
 
@@ -136,23 +149,47 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
     syncChessEngine(engine);
   };
 
+  const changePreset = (preset: SeatPreset) => {
+    seats$.value = CHESS_SEAT_PRESETS[preset].seats(CHESS_PLAYERS);
+    saveSeatPreset(preset);
+  };
+
   return (
-    <ChessBoard
-      state={state}
-      seats={seats}
-      entries={llmLogs$.value}
-      localPlayerId={localHuman}
-      onMove={san => {
-        if (localHuman === null) return;
-        dispatch({ type: "MOVE", playerId: localHuman, san });
-      }}
-      onSeatChange={updateSeat}
-      onNewGame={newGame}
-      {...(localHuman !== null && {
-        onTakeBack: takeBack,
-        onResign: () => dispatch({ type: "RESIGN", playerId: localHuman }),
-      })}
-      onBack={onBackToHome}
-    />
+    <BoardLayout isPreviewMode={false} previewError={null}>
+      <GameAreaLayout isPreviewMode={false}>
+        <ChessBoard
+          state={state}
+          seats={seats}
+          localPlayerId={localHuman}
+          onMove={san => {
+            if (localHuman === null) return;
+            dispatch({ type: "MOVE", playerId: localHuman, san });
+          }}
+          onSeatChange={updateSeat}
+          {...(localHuman !== null && {
+            onTakeBack: takeBack,
+            onResign: () => dispatch({ type: "RESIGN", playerId: localHuman }),
+          })}
+        />
+      </GameAreaLayout>
+
+      <GameSidebar
+        log={<ChessLogRows moves={state.moves} />}
+        logEntries={state.moves}
+        turnStatus={
+          <TurnStatusIndicator
+            status={chessTurnStatus(state, seats, localHuman)}
+            color={chessMoverColor(state)}
+          />
+        }
+        isProcessing={isProcessing$.value}
+        appMode="local"
+        seats={seats}
+        onSeatChange={updateSeat}
+        presets={chessPresets(seats, changePreset)}
+        onNewGame={newGame}
+        onBackToHome={onBackToHome}
+      />
+    </BoardLayout>
   );
 }

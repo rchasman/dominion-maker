@@ -10,9 +10,18 @@ import type { ControllerConfig } from "../../core/seats";
 import { HUMAN_SEAT, sameConfig, seatFromKind } from "../../core/seats";
 import { moduleFor } from "../../games";
 import { ChessBoard } from "../../chess/ChessBoard";
+import {
+  ChessLogRows,
+  chessMoverColor,
+  chessPresets,
+  chessTurnStatus,
+} from "../../chess/sidebar";
 import { useChessRoom } from "../../chess/use-chess-room";
-import { llmLogs$, players$ } from "../../context/game-signals";
+import { isProcessing$, llmLogs$, players$ } from "../../context/game-signals";
+import { BoardLayout, GameAreaLayout } from "../Board/BoardLayout";
+import { GameSidebar } from "../Board/GameSidebar";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
+import { TurnStatusIndicator } from "../Board/TurnStatusIndicator";
 import { DisconnectModal } from "./DisconnectModal";
 import {
   GameOverNotification,
@@ -99,20 +108,43 @@ export function ChessRoom({
     if (!isSpectator && !room.playerId) return <BoardSkeleton />;
     return (
       <>
-        <ChessBoard
-          state={chess.state}
-          seats={seats}
-          entries={llmLogs$.value}
-          localPlayerId={chess.localPlayerId}
-          playerNames={playerNames}
-          onMove={chess.move}
-          disabled={!room.isConnected}
-          onBack={leave}
-          {...(room.playerId !== null && {
-            onSeatChange: changeSeat,
-            onResign: chess.resign,
-          })}
-        />
+        <BoardLayout isPreviewMode={false} previewError={null}>
+          <GameAreaLayout isPreviewMode={false}>
+            <ChessBoard
+              state={chess.state}
+              seats={seats}
+              localPlayerId={chess.localPlayerId}
+              playerNames={playerNames}
+              onMove={chess.move}
+              disabled={!room.isConnected}
+              {...(room.playerId !== null && {
+                onSeatChange: changeSeat,
+                onResign: chess.resign,
+              })}
+            />
+          </GameAreaLayout>
+
+          <GameSidebar
+            log={<ChessLogRows moves={chess.state.moves} />}
+            logEntries={chess.state.moves}
+            turnStatus={
+              <TurnStatusIndicator
+                status={chessTurnStatus(
+                  chess.state,
+                  seats,
+                  chess.localPlayerId,
+                )}
+                color={chessMoverColor(chess.state)}
+              />
+            }
+            isProcessing={isProcessing$.value}
+            appMode="multiplayer"
+            seats={seats}
+            {...(room.playerId !== null && { onSeatChange: changeSeat })}
+            presets={chessPresets(seats)}
+            onEndGame={leave}
+          />
+        </BoardLayout>
         {isSpectator && <SpectatorBadge />}
         {disconnectedOpponent && (
           <DisconnectModal

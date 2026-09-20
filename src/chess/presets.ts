@@ -33,6 +33,10 @@ export const CHESS_SEAT_PRESETS: Record<SeatPreset, ChessPreset> = {
   },
 };
 
+export const CHESS_SEAT_PRESET_NAMES = Object.keys(CHESS_SEAT_PRESETS).filter(
+  (name): name is SeatPreset => name in CHESS_SEAT_PRESETS,
+);
+
 /**
  * A restored game keeps the table it was played on. A fresh one takes the
  * chosen preset, so picking a preset on the start screen always applies.
