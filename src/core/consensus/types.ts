@@ -1,10 +1,10 @@
 import type { ModelProvider } from "../../config/models";
+import type { TokenUsage } from "./cost";
 
 type LLMLogEntryType =
   | "ai-turn-start"
   | "error"
   | "consensus-start"
-  | "consensus-compare"
   | "consensus-step-error"
   | "consensus-voting"
   | "consensus-skipped"
@@ -26,6 +26,8 @@ export type WeightedVote<M> = { move: M; weight: number };
 
 export type ModelResult<M> = {
   provider: ModelProvider;
+  /** Tokens this model billed for the decision, when the transport reported them */
+  usage?: TokenUsage;
   result: M | null;
   /** Probability mass per move; a text model's single pick is one vote of weight 1 */
   distribution: WeightedVote<M>[];
@@ -50,4 +52,8 @@ export type DecideMoveFor<S, M> = (input: {
   playerStrategies: Record<string, unknown>;
   customStrategy: string;
   signal: AbortSignal;
-}) => Promise<{ move: M; distribution: WeightedVote<M>[] }>;
+}) => Promise<{
+  move: M;
+  distribution: WeightedVote<M>[];
+  usage?: TokenUsage;
+}>;

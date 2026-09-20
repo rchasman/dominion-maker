@@ -1,4 +1,5 @@
 import { nowMs } from "../clock";
+import type { TokenUsage } from "./cost";
 import type { ModelProvider } from "../../config/models";
 import type {
   DecideMoveFor,
@@ -24,6 +25,7 @@ const handleModelSuccess = <M>(
   move: M,
   params: HandlerParams,
   distribution: WeightedVote<M>[] = [{ move, weight: 1 }],
+  usage?: TokenUsage,
 ): ModelResult<M> => {
   const { provider, index, modelStart, logger } = params;
   const modelDuration = nowMs() - modelStart;
@@ -37,6 +39,7 @@ const handleModelSuccess = <M>(
       action: move,
       distribution,
       success: true,
+      ...(usage ? { usage } : {}),
     },
   });
   return {
@@ -45,6 +48,7 @@ const handleModelSuccess = <M>(
     distribution,
     error: null,
     duration: modelDuration,
+    ...(usage ? { usage } : {}),
   };
 };
 
@@ -215,8 +219,8 @@ export function runModelsInParallel<S, M>(
           customStrategy,
           signal: modelAbort.signal,
         })
-          .then(({ move, distribution }) =>
-            handleModelSuccess(move, handlerParams, distribution),
+          .then(({ move, distribution, usage }) =>
+            handleModelSuccess(move, handlerParams, distribution, usage),
           )
           .catch((error: unknown) => handleModelError<M>(error, handlerParams))
           .then(modelResult => {

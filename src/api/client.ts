@@ -3,6 +3,7 @@
 // Production uses Vercel serverless functions
 
 import type { Action } from "../types/action";
+import type { TokenUsage } from "../core/consensus/cost";
 import type { WeightedVote } from "../core/consensus/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 
@@ -18,6 +19,7 @@ interface GenerateActionRequest {
 interface GenerateActionResponse {
   move?: Action;
   distribution?: WeightedVote<Action>[];
+  usage?: TokenUsage;
   error?: number;
   message?: string;
 }

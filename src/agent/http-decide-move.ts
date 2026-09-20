@@ -30,7 +30,11 @@ export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
     );
     if (error) throw new Error(error.value);
     if (!data?.move) throw new Error("Backend returned no move");
-    return { move: data.move, distribution: data.distribution ?? [] };
+    return {
+      move: data.move,
+      distribution: data.distribution ?? [],
+      ...(data.usage ? { usage: data.usage } : {}),
+    };
   };
 }
 
