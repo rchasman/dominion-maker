@@ -1,39 +1,19 @@
-import type { GameState } from "../../types/game-state";
-import type { GameEvent } from "../../events/types";
+import type { ComponentChildren } from "preact";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import { hasLlmSeat } from "../../core/seats";
-import { presetOf, type SeatPreset } from "../../context/seat-presets";
 import {
   llmLogs$,
   spectatorCount$,
   isSpectator$,
 } from "../../context/game-signals";
-import { getPlayerColor } from "../../lib/board-utils";
-import { getSubPhase } from "../../lib/state-helpers";
-import { CYCLING_GLYPH_INTERVAL_MS } from "./constants";
-import { LLMLogSection, GameControlsSection } from "./GameSidebarComponents";
+import {
+  LLMLogSection,
+  GameControlsSection,
+  type SidebarPresets,
+} from "./GameSidebarComponents";
 import { useResizeHandle } from "./useResizeHandle";
 import { GameLogSection } from "./GameLogSection";
 import { ChatAccordion } from "../LLMLog/components/ChatAccordion";
-import { useState, useEffect } from "preact/hooks";
-function CyclingSquare() {
-  const glyphs = ["▤", "▥", "▦"];
-  const [startTime] = useState(() => Date.now());
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(
-      () => setNow(Date.now()),
-      CYCLING_GLYPH_INTERVAL_MS,
-    );
-    return () => clearInterval(interval);
-  }, []);
-
-  const index =
-    Math.floor((now - startTime) / CYCLING_GLYPH_INTERVAL_MS) % glyphs.length;
-
-  return <span>{glyphs[index]}</span>;
-}
 
 interface ResizeHandleProps {
   isDragging: boolean;
@@ -76,106 +56,44 @@ function ResizeHandle({
   );
 }
 
-interface TurnStatusIndicatorProps {
-  isProcessing: boolean;
-  isLocalPlayerTurn: boolean;
-  subPhase: string | null;
-  activePlayerId: string;
-}
-
-function TurnStatusIndicator({
-  isProcessing,
-  isLocalPlayerTurn,
-  subPhase,
-  activePlayerId,
-}: TurnStatusIndicatorProps) {
-  if (
-    (isProcessing || subPhase === "opponent_decision") &&
-    !isLocalPlayerTurn
-  ) {
-    return (
-      <div
-        style={{
-          color: getPlayerColor(activePlayerId),
-          fontSize: "0.75rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          marginBlockStart: "var(--space-2)",
-          animation: "pulse 1.5s ease-in-out infinite",
-          fontStyle: "italic",
-        }}
-      >
-        <span
-          style={{
-            display: "inline-block",
-            animation: "spin 1s linear infinite",
-          }}
-        >
-          ⚙
-        </span>
-        <span>AI thinking...</span>
-      </div>
-    );
-  }
-
-  if (!isProcessing && isLocalPlayerTurn && subPhase !== "opponent_decision") {
-    return (
-      <div
-        style={{
-          color: getPlayerColor(activePlayerId),
-          fontSize: "0.75rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--space-2)",
-          marginBlockStart: "var(--space-2)",
-        }}
-      >
-        <span style={{ display: "inline-block" }}>
-          <CyclingSquare />
-        </span>
-        <span>Your turn...</span>
-      </div>
-    );
-  }
-
-  return null;
-}
-
 interface GameSidebarProps {
-  state: GameState;
-  events?: GameEvent[]; // Optional events array for clickable undo
+  /** The game's own log rows, rendered inside the shared "Game log" frame */
+  log: ComponentChildren;
+  /** What those rows were built from; a new identity scrolls the log down */
+  logEntries: readonly unknown[];
+  turnStatus?: ComponentChildren;
   isProcessing: boolean;
   appMode: "local" | "multiplayer";
   seats: Seats;
   onSeatChange?: (player: string, config: ControllerConfig) => void;
-  onPresetChange?: (preset: SeatPreset) => void;
-  localPlayer?: string; // The player viewing this UI (e.g., "human", "player0")
+  presets: SidebarPresets;
   onNewGame?: () => void; // Optional (single-player)
   onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
-  onRequestUndo?: (eventId: string) => void; // Makes log entries clickable for undo
 }
 
+/**
+ * Everything to the right of the game area, for any game: the log, the
+ * consensus viewer, chat and the table controls. The game supplies its log
+ * rows and its turn status and keeps the rest of the shell unchanged.
+ */
 export function GameSidebar({
-  state,
-  events,
+  log,
+  logEntries,
+  turnStatus = null,
   isProcessing,
   appMode,
   seats,
   onSeatChange,
-  onPresetChange,
-  localPlayer = "human",
+  presets,
   onNewGame,
   onEndGame,
   onBackToHome,
-  onRequestUndo,
 }: GameSidebarProps) {
   const llmLogs = llmLogs$.value;
   const spectatorCount = spectatorCount$.value;
   const isSpectator = isSpectator$.value;
 
-  const isLocalPlayerTurn = state.activePlayerId === localPlayer;
   const showConsensus = hasLlmSeat(seats);
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
     useResizeHandle();
@@ -193,21 +111,14 @@ export function GameSidebar({
       }}
     >
       <GameLogSection
-        state={state}
-        {...(events !== undefined && { events })}
+        entries={logEntries}
         isProcessing={isProcessing}
-        {...(onRequestUndo !== undefined && { onRequestUndo })}
-        hasLlmSeat={showConsensus}
+        hasConsensusPanel={showConsensus}
         gameLogHeight={gameLogHeight}
-        turnStatusIndicator={
-          <TurnStatusIndicator
-            isProcessing={isProcessing}
-            isLocalPlayerTurn={isLocalPlayerTurn}
-            subPhase={getSubPhase(state)}
-            activePlayerId={state.activePlayerId}
-          />
-        }
-      />
+        turnStatus={turnStatus}
+      >
+        {log}
+      </GameLogSection>
 
       {showConsensus && (
         <ResizeHandle
@@ -236,8 +147,7 @@ export function GameSidebar({
       {(appMode === "multiplayer" || spectatorCount > 0) && <ChatAccordion />}
 
       <GameControlsSection
-        activePreset={presetOf(seats)}
-        {...(onPresetChange !== undefined && { onPresetChange })}
+        presets={presets}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}

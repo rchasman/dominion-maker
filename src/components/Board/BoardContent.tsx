@@ -2,7 +2,7 @@ import { lazy, Suspense } from "preact/compat";
 import { useCallback } from "preact/hooks";
 import { Supply } from "../Supply";
 import { PlayerArea } from "../PlayerArea";
-import { formatPlayerName } from "../../lib/board-utils";
+import { formatPlayerName, getPlayerColor } from "../../lib/board-utils";
 import {
   players$,
   pendingUndo$,
@@ -12,6 +12,9 @@ import {
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
 import { GameSidebar } from "./GameSidebar";
+import { DominionLogRows } from "./DominionLogRows";
+import { TurnStatusIndicator, type TurnStatus } from "./TurnStatusIndicator";
+import { getSubPhase } from "../../lib/state-helpers";
 import { GameOverModal } from "./GameOverModal";
 import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
@@ -21,7 +24,13 @@ import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { SeatSelector } from "../SeatSelector";
 import { dominionModule } from "../../dominion/module";
-import { SEAT_PRESETS, saveSeatPreset } from "../../context/seat-presets";
+import {
+  SEAT_PRESETS,
+  SEAT_PRESET_NAMES,
+  presetOf,
+  saveSeatPreset,
+  type SeatPreset,
+} from "../../context/seat-presets";
 import { setSeats$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
@@ -191,11 +200,35 @@ export function BoardContent({
   const setSeats = setSeats$.value;
   const onPresetChange =
     game.appMode === "local" && setSeats !== null
-      ? (preset: keyof typeof SEAT_PRESETS) => {
+      ? (preset: SeatPreset) => {
           setSeats(SEAT_PRESETS[preset].seats(displayState.playerOrder));
           saveSeatPreset(preset);
         }
       : null;
+  const presets = {
+    names: SEAT_PRESET_NAMES,
+    label: (preset: SeatPreset) => SEAT_PRESETS[preset].name,
+    active: presetOf(game.seats),
+    ...(onPresetChange !== null && { onChange: onPresetChange }),
+  };
+  const subPhase = getSubPhase(displayState);
+  const isActiveSeatLocal = displayState.activePlayerId === localPlayerId;
+  const turnStatus: TurnStatus = run(() => {
+    if (
+      (game.isProcessing || subPhase === "opponent_decision") &&
+      !isActiveSeatLocal
+    ) {
+      return "thinking";
+    }
+    if (
+      !game.isProcessing &&
+      isActiveSeatLocal &&
+      subPhase !== "opponent_decision"
+    ) {
+      return "yours";
+    }
+    return null;
+  });
   const isHost = isHost$.value;
   const isLocalGame = game.appMode === "local";
   // Single player: you are always the human, so your own seat has no selector.
@@ -354,17 +387,27 @@ export function BoardContent({
       </GameAreaLayout>
 
       <GameSidebar
-        state={displayState}
-        events={game.events}
+        log={
+          <DominionLogRows
+            log={displayState.log}
+            events={game.events}
+            onRequestUndo={onRequestUndo}
+          />
+        }
+        logEntries={displayState.log}
+        turnStatus={
+          <TurnStatusIndicator
+            status={turnStatus}
+            color={getPlayerColor(displayState.activePlayerId)}
+          />
+        }
         isProcessing={game.isProcessing}
         appMode={game.appMode}
         seats={game.seats}
         {...(game.setSeat !== undefined && { onSeatChange: game.setSeat })}
-        {...(onPresetChange !== null && { onPresetChange })}
-        localPlayer={localPlayerId}
+        presets={presets}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
-        onRequestUndo={onRequestUndo}
       />
 
       {game.gameOver && game.winnerId && (
