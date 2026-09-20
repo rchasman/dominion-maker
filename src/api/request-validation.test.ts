@@ -102,7 +102,7 @@ describe("API request boundaries", () => {
       }).success,
     ).toBe(false);
   });
-  it("forwards the game, strategies and consensus action ID to the backend", async () => {
+  it("forwards the game and strategies to the backend", async () => {
     const originalFetch = global.fetch;
     const bodies: unknown[] = [];
     const stub: typeof fetch = Object.assign(
@@ -126,10 +126,10 @@ describe("API request boundaries", () => {
       expect(result.move).toEqual({ type: "end_phase" });
       expect(bodies[0]).toMatchObject({
         game: "dominion",
-        actionId: "game-turn-round",
         playerStrategies: { human: { gameplan: "BM" } },
         customStrategy: "Buy Gold",
       });
+      expect(bodies[0]).not.toHaveProperty("actionId");
     } finally {
       global.fetch = originalFetch;
     }

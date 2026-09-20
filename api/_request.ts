@@ -21,7 +21,6 @@ export const actionRequestSchema = z.object({
   currentState: gameStateSchema,
   playerStrategies: z.record(z.string(), strategy).optional(),
   customStrategy: z.string().max(20000).optional(),
-  actionId: z.string().max(200).optional(),
 });
 export const verifyRequestSchema = z.object({
   currentState: gameStateSchema,

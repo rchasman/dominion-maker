@@ -7,7 +7,6 @@ import {
   NoObjectGeneratedError,
 } from "ai";
 import type { ModelMessage } from "ai";
-import { devToolsMiddleware } from "@ai-sdk/devtools";
 import type { VercelRequest, VercelResponse } from "./_http";
 import type { GameState } from "../src/types/game-state";
 import {
@@ -37,76 +36,12 @@ if (!env.AI_GATEWAY_API_KEY) {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
-// Cache devtools middleware instances by actionId for consensus vote grouping
-// All votes for same action share one middleware = one devtools thread
-const middlewareCache = new Map<
-  string,
-  { middleware: ReturnType<typeof devToolsMiddleware>; lastUsed: number }
->();
-
-const SECONDS_PER_MINUTE = 60;
-const MILLISECONDS_PER_SECOND = 1000;
-const MINUTES_TO_MS = SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
-const CACHE_CLEANUP_MINUTES = 5;
-const CACHE_TTL_MINUTES = 10;
-const CACHE_CLEANUP_INTERVAL = CACHE_CLEANUP_MINUTES * MINUTES_TO_MS;
-const CACHE_TTL = CACHE_TTL_MINUTES * MINUTES_TO_MS;
-
-// Cleanup old middleware instances periodically
-function cleanupOldMiddleware(): void {
-  const now = Date.now();
-  const toDelete = Array.from(middlewareCache.entries())
-    .filter(([, value]) => now - value.lastUsed > CACHE_TTL)
-    .map(([key]) => key);
-
-  toDelete.map(key => middlewareCache.delete(key));
-}
-
-// Run cleanup periodically
-setInterval(cleanupOldMiddleware, CACHE_CLEANUP_INTERVAL);
-
-function getDevToolsMiddleware(
-  actionId?: string,
-): ReturnType<typeof devToolsMiddleware> | undefined {
-  // Only use devtools in development
-  if (env.NODE_ENV === "production") {
-    return undefined;
-  }
-
-  if (!actionId) {
-    // No grouping - create fresh middleware
-    return devToolsMiddleware();
-  }
-
-  // Get or create middleware for this action
-  // actionId includes gameId, so different games get different middleware
-  if (!middlewareCache.has(actionId)) {
-    middlewareCache.set(actionId, {
-      middleware: devToolsMiddleware(),
-      lastUsed: Date.now(),
-    });
-  } else {
-    // Update last used timestamp
-    const cached = middlewareCache.get(actionId);
-    if (cached) {
-      cached.lastUsed = Date.now();
-    }
-  }
-
-  const entry = middlewareCache.get(actionId);
-  if (!entry) {
-    throw new Error(`Middleware not found for action ${actionId}`);
-  }
-  return entry.middleware;
-}
-
 interface RequestBody {
   game: keyof typeof GAMES;
   provider: string;
   currentState: GameState;
   playerStrategies?: Record<string, unknown> | undefined;
   customStrategy?: string | undefined;
-  actionId?: string | undefined; // For grouping consensus votes in devtools
 }
 
 // Process request body and validate input
@@ -114,7 +49,7 @@ async function processGenerationRequest(
   body: RequestBody,
   res: VercelResponse,
 ): Promise<VercelResponse> {
-  const { provider, currentState, actionId } = body;
+  const { provider, currentState } = body;
   const { game } = GAMES[body.game];
   const playerStrategies = body.playerStrategies ?? {};
   const customStrategy = body.customStrategy ?? "";
@@ -159,15 +94,14 @@ async function processGenerationRequest(
     return res.status(HTTP_OK).json({ move, distribution });
   }
 
-  const devTools = getDevToolsMiddleware(actionId);
-  const middleware = [
-    ...(config.structuredOutput === "prompt" ? [promptJsonMiddleware] : []),
-    ...(devTools ? [devTools] : []),
-  ];
   const baseModel = gateway(config.fullName);
-  const model = middleware.length
-    ? wrapLanguageModel({ model: baseModel, middleware })
-    : baseModel;
+  const model =
+    config.structuredOutput === "prompt"
+      ? wrapLanguageModel({
+          model: baseModel,
+          middleware: [promptJsonMiddleware],
+        })
+      : baseModel;
 
   const { system: systemPrompt, user: userMessage } = game.prompt(promptInput);
 

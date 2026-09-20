@@ -12,7 +12,6 @@ export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
   return async ({
     provider,
     state,
-    actionId,
     playerStrategies,
     customStrategy,
     signal,
@@ -22,7 +21,6 @@ export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
         game: "dominion",
         provider,
         currentState: state,
-        actionId,
         playerStrategies,
         customStrategy,
       },
