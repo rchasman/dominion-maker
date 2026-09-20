@@ -48,7 +48,6 @@ export function PendingAction({
       <PaneContent
         activePane={activePane}
         votingData={null}
-        timingData={null}
         {...(currentTurn.modelStatuses !== undefined && {
           modelStatuses: currentTurn.modelStatuses,
         })}

@@ -1,3 +1,4 @@
+import type { TokenUsage } from "../../core/consensus/cost";
 import type { ModelProvider } from "../../config/models";
 import type { Action } from "../../types/action";
 import type {
@@ -61,12 +62,6 @@ export interface ConsensusVotingData {
   gameState: GameStateSnapshot;
 }
 
-// Timing data for model performance
-export interface TimingData {
-  timings: Array<{ provider: ModelProvider; duration: number }>;
-  parallelDuration: number;
-}
-
 export type LLMLogEntry = LLMLogEntryInput & {
   id: string;
   timestamp: number;
@@ -82,7 +77,6 @@ export interface ConsensusVerdict {
 export interface ConsensusDecision {
   id: string;
   votingEntry: LLMLogEntry;
-  timingEntry?: LLMLogEntry;
   stepNumber: number;
   modelStatuses?: Map<number, ModelStatus>;
   actionId?: string;
@@ -99,6 +93,7 @@ export interface ModelStatus {
   aborted?: boolean | undefined;
   action?: Action | undefined;
   distribution?: WeightedVote<Action>[] | undefined;
+  usage?: TokenUsage | undefined;
 }
 
 export interface PendingData {

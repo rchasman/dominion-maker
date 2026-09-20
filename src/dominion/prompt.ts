@@ -40,12 +40,12 @@ export async function dominionEvaluate({
   playerStrategies,
   customStrategy,
 }: EvaluateInput<DominionShape>) {
-  const { action, distribution } = await askJev({
+  const { action, distribution, usage } = await askJev({
     modelId,
     currentState: state,
     legalActions: moves,
     strategySummary: summarize(playerStrategies),
     customStrategy,
   });
-  return { move: action, distribution };
+  return { move: action, distribution, usage };
 }

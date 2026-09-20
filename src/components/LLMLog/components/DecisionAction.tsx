@@ -2,16 +2,23 @@ import type {
   Turn,
   ConsensusDecision,
   ConsensusVotingData,
-  TimingData,
   GameStateSnapshot,
 } from "../types";
 import type { PaneType } from "./PaneTabSwitcher";
 import { PaneTabSwitcher } from "./PaneTabSwitcher";
 import { PaneContent } from "./PaneContent";
 import { DecisionInfo } from "./DecisionInfo";
+import { costOf, formatCost } from "../../../core/consensus/cost";
 
 const MS_PER_SECOND = 1000;
 const TIMING_DECIMAL_PLACES = 2;
+
+/** Every model that answered this decision, at the catalog's rates */
+const decisionCost = (decision: ConsensusDecision): number =>
+  [...(decision.modelStatuses?.values() ?? [])].reduce(
+    (total, status) => total + costOf(status.provider, status.usage),
+    0,
+  );
 
 interface DecisionActionProps {
   currentTurn: Turn;
@@ -38,10 +45,12 @@ export function DecisionAction({
   handleNextAction,
   now,
 }: DecisionActionProps) {
-  const timing = `${(
-    (Number(currentDecision.timingEntry?.data?.parallelDuration) || 0) /
+  const seconds = `${(
+    (Number(currentDecision.votingEntry.data?.votingDuration) || 0) /
     MS_PER_SECOND
   ).toFixed(TIMING_DECIMAL_PLACES)}s`;
+  const cost = decisionCost(currentDecision);
+  const timing = cost > 0 ? `${seconds} · ${formatCost(cost)}` : seconds;
 
   return (
     <>
@@ -65,9 +74,6 @@ export function DecisionAction({
         votingData={
           currentDecision.votingEntry.data as unknown as ConsensusVotingData
         }
-        {...(currentDecision.timingEntry?.data !== undefined && {
-          timingData: currentDecision.timingEntry.data as unknown as TimingData,
-        })}
         {...(currentDecision.modelStatuses !== undefined && {
           modelStatuses: currentDecision.modelStatuses,
         })}

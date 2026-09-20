@@ -2,7 +2,6 @@ import type { PaneType } from "./PaneTabSwitcher";
 import type {
   ConsensusVotingData,
   ConsensusVerdict,
-  TimingData,
   ModelStatus,
   GameStateSnapshot,
 } from "../types";
@@ -14,7 +13,6 @@ import { GameStatePane } from "./GameStatePane";
 interface PaneContentProps {
   activePane: PaneType;
   votingData?: ConsensusVotingData | null;
-  timingData?: TimingData | null;
   modelStatuses?: Map<number, ModelStatus>;
   gameStateData?: GameStateSnapshot;
   totalModels?: number;
@@ -26,7 +24,6 @@ interface PaneContentProps {
 export function PaneContent({
   activePane,
   votingData,
-  timingData,
   modelStatuses,
   gameStateData,
   totalModels,
@@ -48,7 +45,6 @@ export function PaneContent({
     case "performance":
       return (
         <PerformancePane
-          data={timingData}
           {...(modelStatuses !== undefined && { liveStatuses: modelStatuses })}
           {...(now !== undefined && { now })}
         />

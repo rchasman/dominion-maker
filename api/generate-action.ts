@@ -16,6 +16,7 @@ import {
 } from "../src/core/consensus/numbered-choice";
 import { withReasoning } from "../src/dominion/moves";
 import { MODELS, type ModelConfig } from "../src/config/models";
+import { addUsage, type TokenUsage } from "../src/core/consensus/cost";
 import { apiLogger } from "../src/lib/logger";
 import { env } from "../src/lib/env";
 import { promptJsonMiddleware } from "../src/agent/model-output";
@@ -28,6 +29,15 @@ const HTTP_INTERNAL_ERROR = 500;
 // Error message display limits
 const ERROR_TEXT_PREVIEW_LONG = 500;
 const ERROR_TEXT_PREVIEW_SHORT = 200;
+
+const tokenUsage = (
+  usage:
+    | { inputTokens?: number | undefined; outputTokens?: number | undefined }
+    | undefined,
+): TokenUsage => ({
+  inputTokens: usage?.inputTokens ?? 0,
+  outputTokens: usage?.outputTokens ?? 0,
+});
 
 // Debug logging for deployment
 if (!env.AI_GATEWAY_API_KEY) {
@@ -87,11 +97,11 @@ async function processGenerationRequest(
         .status(HTTP_BAD_REQUEST)
         .json({ error: "This game has no evaluation model" });
     }
-    const { move, distribution } = await game.evaluate({
+    const { move, distribution, usage } = await game.evaluate({
       ...promptInput,
       modelId: config.fullName,
     });
-    return res.status(HTTP_OK).json({ move, distribution });
+    return res.status(HTTP_OK).json({ move, distribution, usage });
   }
 
   const baseModel = gateway(config.fullName);
@@ -109,7 +119,7 @@ async function processGenerationRequest(
   // habitual misformatters surface as warns (roster live-verified 2026-09)
   const schema = choiceSchema(legalActions.length);
   const attempt = async (messages: ModelMessage[]) => {
-    const { object } = await generateObject({
+    const { object, usage } = await generateObject({
       model,
       instructions: systemPrompt,
       messages,
@@ -125,7 +135,10 @@ async function processGenerationRequest(
         },
       },
     });
-    return choiceToMove(object, legalActions, withReasoning);
+    return {
+      move: choiceToMove(object, legalActions, withReasoning),
+      usage: tokenUsage(usage),
+    };
   };
 
   const generationFailed = (error: Error) => {
@@ -138,8 +151,10 @@ async function processGenerationRequest(
   };
 
   try {
-    const move = await attempt([{ role: "user", content: userMessage }]);
-    return res.status(HTTP_OK).json({ move });
+    const { move, usage } = await attempt([
+      { role: "user", content: userMessage },
+    ]);
+    return res.status(HTTP_OK).json({ move, usage });
   } catch (err) {
     if (!NoObjectGeneratedError.isInstance(err)) {
       return generationFailed(err as Error);
@@ -153,7 +168,7 @@ async function processGenerationRequest(
     );
 
     try {
-      const move = await attempt([
+      const retry = await attempt([
         { role: "user", content: userMessage },
         { role: "assistant", content: err.text ?? "" },
         {
@@ -161,7 +176,11 @@ async function processGenerationRequest(
           content: `Your previous reply was invalid: ${reason}. ${replyFormatInstruction(legalActions.length)}`,
         },
       ]);
-      return res.status(HTTP_OK).json({ move });
+      // The rejected attempt was billed too, so both are reported
+      return res.status(HTTP_OK).json({
+        move: retry.move,
+        usage: addUsage(tokenUsage(err.usage), retry.usage),
+      });
     } catch (retryErr) {
       if (!NoObjectGeneratedError.isInstance(retryErr)) {
         return generationFailed(retryErr as Error);
