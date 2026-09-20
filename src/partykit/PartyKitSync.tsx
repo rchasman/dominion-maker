@@ -7,11 +7,7 @@ import { generatePlayerName } from "../lib/name-generator";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
 import { multiplayerLogger } from "../lib/logger";
 import type { GameServerMessage } from "./protocol";
-
-const PARTYKIT_HOST =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "localhost:1999"
-    : "dominion-maker.rchasman.partykit.dev";
+import { PARTYKIT_HOST } from "./host";
 
 export function PartyKitSync() {
   const events = events$.value;
