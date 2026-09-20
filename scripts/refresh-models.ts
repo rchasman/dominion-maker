@@ -11,10 +11,12 @@ import {
   DEFAULT_PROVIDER_COLOR,
   DENIED_MODELS,
   DENIED_PROVIDERS,
+  GENERATOR_TAGS,
   ID_ALIASES,
   MODEL_QUIRKS,
   PROVIDER_ALIASES,
   PROVIDER_COLORS_BY_NAME,
+  SPECIALIST_PATTERNS,
 } from "../src/config/model-overrides";
 
 const GATEWAY_MODELS_URL = "https://ai-gateway.vercel.sh/v1/models";
@@ -28,6 +30,7 @@ type GatewayModel = {
   type: string;
   zdr: "all" | "some" | "none";
   modalities?: { output?: string[] };
+  tags?: string[];
   pricing?: { input?: string; output?: string };
 };
 
@@ -40,16 +43,18 @@ const shortId = (model: GatewayModel): string =>
 const providerOf = (model: GatewayModel): string =>
   PROVIDER_ALIASES[model.owned_by] ?? model.owned_by;
 
-/** Game moves come back as text. A model that only emits images cannot answer. */
-const emitsText = (model: GatewayModel): boolean => {
-  const out = model.modalities?.output;
-  return out === undefined || out.includes("text");
-};
+const isGenerator = (model: GatewayModel): boolean =>
+  (model.tags ?? []).some(tag => GENERATOR_TAGS.includes(tag)) ||
+  (model.modalities?.output ?? ["text"]).some(out => out !== "text");
+
+const isSpecialist = (model: GatewayModel): boolean =>
+  SPECIALIST_PATTERNS.some(pattern => pattern.test(model.id));
 
 const isPlayable = (model: GatewayModel): boolean =>
   (model.type === "language" || model.type === "evaluation") &&
   model.zdr !== "none" &&
-  emitsText(model) &&
+  !isGenerator(model) &&
+  !isSpecialist(model) &&
   DENIED_MODELS[model.id] === undefined &&
   DENIED_PROVIDERS[providerOf(model)] === undefined;
 

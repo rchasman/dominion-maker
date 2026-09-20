@@ -13,6 +13,7 @@ import {
   ID_ALIASES,
   MODEL_QUIRKS,
   PROVIDER_COLORS_BY_NAME,
+  SPECIALIST_PATTERNS,
 } from "./model-overrides";
 
 describe("Model Configuration", () => {
@@ -121,6 +122,18 @@ describe("generated catalog and its overrides", () => {
     expect(Object.keys(MODEL_QUIRKS).filter(id => !ids.has(id))).toEqual([]);
     expect(
       Object.keys(ID_ALIASES).filter(fullName => !fullNames.has(fullName)),
+    ).toEqual([]);
+  });
+
+  // The first pass at this filter only asked whether a model *can* emit text,
+  // which let image and video generators through: they emit both.
+  it("lists no generator or single-purpose specialist", () => {
+    const offenders = MODELS.filter(m =>
+      SPECIALIST_PATTERNS.some(pattern => pattern.test(m.fullName)),
+    );
+    expect(offenders.map(m => m.id)).toEqual([]);
+    expect(
+      MODELS.filter(m => /-image($|-)|image-gen/.test(m.fullName)),
     ).toEqual([]);
   });
 
