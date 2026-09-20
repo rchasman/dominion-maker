@@ -77,6 +77,30 @@ describe("the game sidebar", () => {
     // A table with no LLM seat keeps the consensus viewer out of the sidebar
     expect(root.textContent).not.toContain("Consensus Viewer");
 
+    // A spectator leaves rather than ends the game, and reseats nobody
+    settled(() =>
+      render(
+        <GameSidebar
+          log={<div>1. e4 e5</div>}
+          logEntryCount={2}
+          appMode="multiplayer"
+          seats={{ w: HUMAN_SEAT, b: HUMAN_SEAT }}
+          presets={{
+            names: ["watch", "hybrid"],
+            label: preset => LABELS[preset],
+            active: "hybrid",
+            onChange: preset => chosen.push(preset),
+          }}
+          isSpectator={true}
+          onBackToHome={() => undefined}
+        />,
+        root,
+      ),
+    );
+    expect(root.textContent).toContain("Leave Game");
+    expect(root.textContent).not.toContain("End Game");
+    expect(root.textContent).not.toContain("Gallery");
+
     render(null, root);
     root.remove();
   });

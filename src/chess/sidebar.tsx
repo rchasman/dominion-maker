@@ -46,16 +46,21 @@ export function ChessLogRows({ moves }: { moves: readonly string[] }) {
   );
 }
 
-/** A bot on the clock reads as thinking; the local human's own turn as theirs */
+/**
+ * A bot on the clock reads as thinking; the local human's own turn as theirs.
+ * A turn still being processed reads as neither, matching Dominion: the seat
+ * is nominally the human's, but the table is not theirs to act on yet.
+ */
 export function chessTurnStatus(
   state: ChessState,
   seats: Seats,
   localPlayerId: string | null,
+  isProcessing: boolean,
 ): TurnStatus {
   const mover = chessGame.whoMustAct(state);
   return run(() => {
     if (mover === null) return null;
-    if (mover === localPlayerId) return "yours";
+    if (mover === localPlayerId) return isProcessing ? null : "yours";
     return seats[mover]?.kind === "human" ? null : "thinking";
   });
 }

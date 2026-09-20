@@ -25,10 +25,7 @@ const click = (root: HTMLElement, selector: string) => {
   });
 };
 
-/**
- * One sequential test: the board mounts SeatSelector and LLMLog, both of which
- * read module-level signals.
- */
+/** One sequential test: the board mounts SeatSelector, which reads signals */
 describe("the chess board", () => {
   it("draws every square and sends the move the clicked squares name", () => {
     const root = document.createElement("div");

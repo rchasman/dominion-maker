@@ -9,6 +9,7 @@ import {
   approveUndo$,
   denyUndo$,
   isHost$,
+  isSpectator$,
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
 import { GameSidebar } from "./GameSidebar";
@@ -405,6 +406,7 @@ export function BoardContent({
         seats={game.seats}
         {...(game.setSeat !== undefined && { onSeatChange: game.setSeat })}
         presets={presets}
+        isSpectator={isSpectator$.value}
         {...(onNewGame !== undefined && { onNewGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
       />

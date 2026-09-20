@@ -93,14 +93,12 @@ const LLMLog = lazy(() =>
 
 interface GameActionButtonsProps {
   onNewGame?: () => void;
-  onEndGame?: () => void;
   onBackToHome?: () => void;
   isSpectator?: boolean;
 }
 
 function GameActionButtons({
   onNewGame,
-  onEndGame,
   onBackToHome,
   isSpectator = false,
 }: GameActionButtonsProps) {
@@ -144,14 +142,9 @@ function GameActionButtons({
         </button>
       )}
 
-      {(onEndGame || onBackToHome) && (
+      {onBackToHome && (
         <button
-          onClick={() => {
-            const callback = onEndGame || onBackToHome;
-            if (callback) {
-              callback();
-            }
-          }}
+          onClick={onBackToHome}
           style={{
             padding: "var(--space-2) var(--space-3)",
             background: "transparent",
@@ -237,7 +230,6 @@ export function LLMLogSection({
 interface GameControlsSectionProps {
   presets: SidebarPresets;
   onNewGame?: () => void;
-  onEndGame?: () => void;
   onBackToHome?: () => void;
   isSpectator?: boolean;
 }
@@ -245,7 +237,6 @@ interface GameControlsSectionProps {
 export function GameControlsSection({
   presets,
   onNewGame,
-  onEndGame,
   onBackToHome,
   isSpectator = false,
 }: GameControlsSectionProps) {
@@ -269,7 +260,6 @@ export function GameControlsSection({
 
       <GameActionButtons
         {...(!isSpectator && onNewGame !== undefined && { onNewGame })}
-        {...(!isSpectator && onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
         isSpectator={isSpectator}
       />

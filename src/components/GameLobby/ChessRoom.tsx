@@ -133,6 +133,8 @@ export function ChessRoom({
                   chess.state,
                   seats,
                   chess.localPlayerId,
+                  // A room's bots run on the server; no client turn is pending
+                  false,
                 )}
                 color={chessMoverColor(chess.state)}
               />
@@ -141,7 +143,8 @@ export function ChessRoom({
             seats={seats}
             {...(room.playerId !== null && { onSeatChange: changeSeat })}
             presets={chessPresets(seats)}
-            onEndGame={leave}
+            isSpectator={isSpectator}
+            onBackToHome={leave}
           />
         </BoardLayout>
         {isSpectator && <SpectatorBadge />}

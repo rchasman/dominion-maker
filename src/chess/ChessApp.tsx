@@ -178,7 +178,12 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
         logEntryCount={state.moves.length}
         turnStatus={
           <TurnStatusIndicator
-            status={chessTurnStatus(state, seats, localHuman)}
+            status={chessTurnStatus(
+              state,
+              seats,
+              localHuman,
+              isProcessing$.value,
+            )}
             color={chessMoverColor(state)}
           />
         }

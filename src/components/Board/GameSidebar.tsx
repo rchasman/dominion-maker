@@ -1,11 +1,7 @@
 import type { ComponentChildren } from "preact";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import { hasLlmSeat } from "../../core/seats";
-import {
-  llmLogs$,
-  spectatorCount$,
-  isSpectator$,
-} from "../../context/game-signals";
+import { llmLogs$, spectatorCount$ } from "../../context/game-signals";
 import {
   LLMLogSection,
   GameControlsSection,
@@ -66,8 +62,9 @@ interface GameSidebarProps {
   seats: Seats;
   onSeatChange?: (player: string, config: ControllerConfig) => void;
   presets: SidebarPresets;
+  /** A spectator gets no table controls and leaves rather than ends the game */
+  isSpectator?: boolean;
   onNewGame?: () => void; // Optional (single-player)
-  onEndGame?: () => void; // Optional (multiplayer)
   onBackToHome?: () => void;
 }
 
@@ -84,13 +81,12 @@ export function GameSidebar({
   seats,
   onSeatChange,
   presets,
+  isSpectator = false,
   onNewGame,
-  onEndGame,
   onBackToHome,
 }: GameSidebarProps) {
   const llmLogs = llmLogs$.value;
   const spectatorCount = spectatorCount$.value;
-  const isSpectator = isSpectator$.value;
 
   const showConsensus = hasLlmSeat(seats);
   const { sidebarRef, gameLogHeight, isDragging, setIsDragging } =
@@ -146,7 +142,6 @@ export function GameSidebar({
       <GameControlsSection
         presets={presets}
         {...(onNewGame !== undefined && { onNewGame })}
-        {...(onEndGame !== undefined && { onEndGame })}
         {...(onBackToHome !== undefined && { onBackToHome })}
         isSpectator={isSpectator}
       />
