@@ -11,26 +11,20 @@ await mock.module("../../data/card-urls", () => ({
 
 beforeAll(registerHappyDom);
 
-// One sequential test: the room reads and writes module-level signals
+// One sequential test: the fake socket registry and the session binding are module-level
 describe("GameRoom", () => {
-  it("keeps the last game off the table until this room sends its own", async () => {
+  it("puts a board on the table only for the room's own readable state, for either game", async () => {
     const { render } = await import("preact");
     const { createGame } = await import("../../engine");
     const { dominionModule } = await import("../../dominion/module");
     const { GameRoom } = await import("./GameRoom");
     const { gameState$ } = await import("../../context/game-signals");
 
-    const previous = createGame(["old1", "old2"], undefined, 7);
     const current = createGame(["p1", "p2"], undefined, 42);
     const wire = <T,>(value: T): T => structuredClone(value);
 
-    // A finished single-player game leaves its state in the module-level signal
-    gameState$.value = previous.state;
-
     const root = document.createElement("div");
     document.body.appendChild(root);
-    // The first paint is where a stale signal shows, because the adapter only
-    // clears it in an effect: read the DOM before act drains the effect queue.
     let firstPaint = "";
     settled(() => {
       render(
@@ -47,10 +41,14 @@ describe("GameRoom", () => {
       firstPaint = root.textContent ?? "";
     });
     expect(firstPaint).toContain("Starting game...");
+    expect(gameState$.value).toBeNull();
 
     const socket = FakeSocket.forRoom("stale-room");
     settled(() => socket.emit("open", {}));
-    expect(gameState$.value).toBeNull();
+    expect(socket.parsed()[0]).toMatchObject({
+      type: "join",
+      game: "dominion",
+    });
 
     // Only the room's own state puts a board on the table
     settled(() => {
@@ -83,7 +81,10 @@ describe("GameRoom", () => {
     );
     expect(root.textContent).toContain("cannot read");
 
+    // Leaving the room closes its connection and clears the table
     settled(() => render(null, root));
+    expect(socket.readyState).toBe(3);
+    expect(gameState$.value).toBeNull();
 
     // The same room component mounts the chess board when the room plays chess
     const { createChessGame } = await import("../../chess/engine");
@@ -127,6 +128,8 @@ describe("GameRoom", () => {
     expect(root.querySelectorAll("[data-square]").length).toBe(64);
     // A room knows the player's name, so the board says who is to move
     expect(root.textContent).toContain("Alice to move");
+    // Dominion's view of the table stays empty while chess is on it
+    expect(gameState$.value).toBeNull();
 
     // A chess state this client cannot read says so on screen too
     settled(() =>
@@ -143,7 +146,7 @@ describe("GameRoom", () => {
     );
 
     settled(() => render(null, root));
+    expect(chessSocket.readyState).toBe(3);
     root.remove();
-    gameState$.value = null;
   });
 });

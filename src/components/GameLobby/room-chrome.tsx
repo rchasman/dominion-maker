@@ -6,14 +6,11 @@
  */
 import type { ComponentChildren } from "preact";
 import { useCallback, useMemo } from "preact/hooks";
-import type { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
 import type { LlmSeatConfig } from "../../core/seats";
 import type { GameId } from "../../game-ids";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { BaseModal } from "../Modal/BaseModal";
-
-type PartyRoom = ReturnType<typeof usePartyGame>;
 
 export interface RoomProps {
   roomId: string;
@@ -30,18 +27,20 @@ export const UNREADABLE_GAME =
 
 /** Leaving a room is a resignation, and the opponent hears about it */
 export function useRoomChrome({
-  room,
+  playerId,
+  resign,
+  disconnectedPlayers,
   isSpectator,
   onBack,
   onResign,
 }: {
-  room: Pick<PartyRoom, "playerId" | "resign" | "disconnectedPlayers">;
+  playerId: string | null;
+  resign: () => void;
+  disconnectedPlayers: ReadonlyMap<string, string>;
   isSpectator: boolean;
   onBack: () => void;
   onResign?: () => void;
 }) {
-  const { playerId, resign, disconnectedPlayers } = room;
-
   const leave = useCallback(() => {
     if (!isSpectator && playerId) {
       resign();
@@ -55,7 +54,7 @@ export function useRoomChrome({
 
   const disconnectedOpponent = useMemo(() => {
     if (isSpectator || !playerId) return null;
-    const opponent = Array.from(disconnectedPlayers.entries()).find(
+    const opponent = [...disconnectedPlayers.entries()].find(
       ([id]) => id !== playerId,
     );
     return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;

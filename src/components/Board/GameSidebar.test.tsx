@@ -4,6 +4,9 @@ import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
 import { GameSidebar } from "./GameSidebar";
 import { HUMAN_SEAT } from "../../core/seats";
 import type { SeatPreset } from "../../core/seat-presets";
+import { createRemoteChessSession } from "../../chess/create-remote-chess-session";
+import { fakeRoom } from "../../session/fake-room.test-fixture";
+import { SessionProvider } from "../../session/SessionContext";
 
 beforeAll(registerHappyDom);
 
@@ -77,31 +80,42 @@ describe("the game sidebar", () => {
     // A table with no LLM seat keeps the consensus viewer out of the sidebar
     expect(root.textContent).not.toContain("Consensus Viewer");
 
-    // A spectator leaves rather than ends the game, and reseats nobody
+    // A spectator leaves rather than ends the game, and reseats nobody. A
+    // room's sidebar carries chat, which speaks through the room session.
+    const room = createRemoteChessSession({
+      roomId: "room-1",
+      playerName: "Watcher",
+      clientId: "c1",
+      isSpectator: true,
+      connect: fakeRoom().connect,
+    });
     settled(() =>
       render(
-        <GameSidebar
-          log={<div>1. e4 e5</div>}
-          logEntryCount={2}
-          appMode="multiplayer"
-          seats={{ w: HUMAN_SEAT, b: HUMAN_SEAT }}
-          presets={{
-            names: ["watch", "hybrid"],
-            label: preset => LABELS[preset],
-            active: "hybrid",
-            onChange: preset => chosen.push(preset),
-          }}
-          isSpectator={true}
-          onBackToHome={() => undefined}
-        />,
+        <SessionProvider session={room}>
+          <GameSidebar
+            log={<div>1. e4 e5</div>}
+            logEntryCount={2}
+            appMode="multiplayer"
+            seats={{ w: HUMAN_SEAT, b: HUMAN_SEAT }}
+            presets={{
+              names: ["watch", "hybrid"],
+              label: preset => LABELS[preset],
+              active: "hybrid",
+              onChange: preset => chosen.push(preset),
+            }}
+            isSpectator={true}
+            onBackToHome={() => undefined}
+          />
+        </SessionProvider>,
         root,
       ),
     );
     expect(root.textContent).toContain("Leave Game");
     expect(root.textContent).not.toContain("End Game");
     expect(root.textContent).not.toContain("Gallery");
+    expect(root.textContent).toContain("Chat");
 
-    render(null, root);
+    settled(() => render(null, root));
     root.remove();
   });
 });

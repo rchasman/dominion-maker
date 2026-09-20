@@ -9,21 +9,28 @@ beforeAll(registerHappyDom);
 /** generateRoomId's alphabet, the one handle on the room the mirror invents */
 const GENERATED_ROOM = /^[a-z2-9]{8}$/;
 
-// One sequential test: the mirror reads module-level signals
+// One sequential test: the mirror reads the one bound session through module signals
 describe("PartyKitSync", () => {
   it("mirrors the local Dominion game into a room it names as Dominion", async () => {
     const { render, h } = await import("preact");
-    const { createGame } = await import("../engine");
     const { PartyKitSync } = await import("./PartyKitSync");
-    const { events$, gameState$, seats$ } =
+    const { bindSession, unbindSession } =
       await import("../context/game-signals");
+    const { createLocalDominionSession } =
+      await import("../context/create-local-dominion-session");
     const { HEURISTIC_SEAT, HUMAN_SEAT } = await import("../core/seats");
     const { gameMessageSchema } = await import("../validation/messages");
 
-    const engine = createGame(["p1", "p2"], undefined, 42);
-    events$.value = [...engine.eventLog];
-    gameState$.value = engine.state;
-    seats$.value = { p1: HUMAN_SEAT, p2: HEURISTIC_SEAT };
+    const session = createLocalDominionSession(
+      {
+        kind: "new",
+        players: ["p1", "p2"],
+        seats: { p1: HUMAN_SEAT, p2: HEURISTIC_SEAT },
+        seed: 42,
+      },
+      { animation: null },
+    );
+    bindSession(session);
 
     const root = document.createElement("div");
     document.body.appendChild(root);
@@ -61,12 +68,15 @@ describe("PartyKitSync", () => {
         "type" in msg &&
         msg.type === "sync_events",
     );
-    expect(synced).toEqual({ type: "sync_events", events: engine.eventLog });
+    expect(synced).toEqual({
+      type: "sync_events",
+      events: session.events.value,
+    });
     expect(gameMessageSchema.safeParse(synced).success).toBe(true);
 
     render(null, root);
     root.remove();
-    events$.value = [];
-    gameState$.value = null;
+    unbindSession(session);
+    session.dispose();
   });
 });

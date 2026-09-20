@@ -2,11 +2,18 @@ import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { render } from "preact";
 import { registerHappyDom, settled } from "../happy-dom.test-fixture";
 import { ChessApp } from "./ChessApp";
-import { chessEvents$ } from "./context";
 import { createChessGame } from "./engine";
 import { CHESS_PLAYERS } from "./seat";
-import { seats$ } from "../context/game-signals";
 import { HUMAN_SEAT } from "../core/seats";
+
+const CHESS_EVENTS_KEY = "dominion-maker-chess-events";
+const CHESS_SEATS_KEY = "dominion-maker-chess-seats";
+
+/** The app saves the log after every change, so storage is the log the board plays from */
+const storedPlies = (): number => {
+  const saved = localStorage.getItem(CHESS_EVENTS_KEY);
+  return saved === null ? 0 : (JSON.parse(saved) as unknown[]).length;
+};
 
 beforeAll(registerHappyDom);
 
@@ -53,7 +60,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/** A game already two plies old, so the scrubber has a past to show */
+/** A game already two plies old on an all-human table, so the scrubber has a past to show and no bot answers */
 const seedTwoPlies = () => {
   const seeded = [
     ["w", "e4"],
@@ -69,9 +76,10 @@ const seedTwoPlies = () => {
     },
     createChessGame([...CHESS_PLAYERS]),
   );
+  localStorage.setItem(CHESS_EVENTS_KEY, JSON.stringify([...seeded.eventLog]));
   localStorage.setItem(
-    "dominion-maker-chess-events",
-    JSON.stringify([...seeded.eventLog]),
+    CHESS_SEATS_KEY,
+    JSON.stringify({ w: HUMAN_SEAT, b: HUMAN_SEAT }),
   );
 };
 
@@ -94,20 +102,17 @@ const mountApp = () => {
   settled(() => {
     render(<ChessApp onBackToHome={() => {}} />, root);
   });
-  settled(() => {
-    seats$.value = { w: HUMAN_SEAT, b: HUMAN_SEAT };
-  });
   return root;
 };
 
-/** One sequential test each: the chess app writes the shared seat signals */
+/** One sequential test each: the chess app binds the one module-level session */
 describe("scrubbing the local chess game", () => {
   it("shows the past position, refuses clicks, and leaves on a move", async () => {
     localStorage.clear();
     seedTwoPlies();
     const root = mountApp();
 
-    expect(chessEvents$.value.length).toBe(3);
+    expect(storedPlies()).toBe(3);
     expect(pieceAt(root, "e4")).not.toBe("");
 
     // The devtools open from their own floating button, as Dominion's do
@@ -122,7 +127,7 @@ describe("scrubbing the local chess game", () => {
     expect(root.textContent).toContain("PREVIEW MODE");
     const before = piecesOnBoard(root);
     move(root, "d2", "d4");
-    expect(chessEvents$.value.length).toBe(3);
+    expect(storedPlies()).toBe(3);
     expect(piecesOnBoard(root)).toBe(before);
 
     // Scrub back one move: the pawn is on e4 and e5 is empty again
@@ -136,7 +141,7 @@ describe("scrubbing the local chess game", () => {
     clickButton(root, "Jump to live");
     expect(root.textContent).not.toContain("PREVIEW MODE");
     move(root, "d2", "d4");
-    expect(chessEvents$.value.length).toBe(4);
+    expect(storedPlies()).toBe(4);
 
     render(null, root);
     root.remove();
@@ -146,7 +151,7 @@ describe("scrubbing the local chess game", () => {
     localStorage.clear();
     seedTwoPlies();
     const root = mountApp();
-    expect(chessEvents$.value.length).toBe(3);
+    expect(storedPlies()).toBe(3);
 
     const rows = await openDevtools(root);
     settled(() => {
@@ -156,8 +161,8 @@ describe("scrubbing the local chess game", () => {
 
     // Branching keeps the event on show: three events become two
     clickButton(root, "Branch from here");
-    expect(chessEvents$.value.length).toBe(2);
-    expect(chessEvents$.value.at(-1)).toMatchObject({ san: "e4" });
+    expect(storedPlies()).toBe(2);
+    expect(root.textContent).toContain("e4");
     expect(root.textContent).not.toContain("PREVIEW MODE");
     expect(pieceAt(root, "e4")).not.toBe("");
 
@@ -168,7 +173,7 @@ describe("scrubbing the local chess game", () => {
     settled(() => {
       takeBack?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(chessEvents$.value.length).toBe(1);
+    expect(storedPlies()).toBe(1);
     expect(pieceAt(root, "e4")).toBe("");
 
     render(null, root);

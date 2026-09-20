@@ -4,7 +4,13 @@ import { render } from "preact";
 import { SeatSelector } from "./SeatSelector";
 import type { ControllerConfig, LlmSeatConfig } from "../core/seats";
 import { DEFAULT_LLM_SEAT } from "../core/seats";
-import { players$, rememberedLlm$ } from "../context/game-signals";
+import {
+  bindSession,
+  rememberedLlm$,
+  unbindSession,
+} from "../context/game-signals";
+import { createRemoteDominionSession } from "../context/create-remote-dominion-session";
+import { fakeRoom } from "../session/fake-room.test-fixture";
 
 beforeAll(registerHappyDom);
 
@@ -16,10 +22,28 @@ const pick = (root: HTMLElement, kind: string) => {
   return select;
 };
 
-// One sequential test: the selector reads module-level signals
+/** A room whose player list names the seat */
+function roomWithAlice() {
+  const room = fakeRoom();
+  const session = createRemoteDominionSession({
+    roomId: "room-1",
+    playerName: "Alice",
+    clientId: "c1",
+    isSpectator: false,
+    connect: room.connect,
+  });
+  room.deliver({
+    type: "player_list",
+    players: [{ name: "Alice", playerId: "p1", controller: "llm" }],
+  });
+  return session;
+}
+
+// One sequential test: the selector reads the bound session through module signals
 describe("SeatSelector", () => {
   it("names the seat after the player and restores the LLM roster it had", () => {
-    players$.value = [{ id: "p1", name: "Alice" }];
+    const session = roomWithAlice();
+    bindSession(session);
     rememberedLlm$.value = {};
     const root = document.createElement("div");
     document.body.appendChild(root);
@@ -41,17 +65,21 @@ describe("SeatSelector", () => {
         root,
       );
 
-    mount(custom);
-    const select = pick(root, "human");
-    expect(select.getAttribute("aria-label")).toBe("Controller for Alice");
-    expect(changes.at(-1)).toEqual({ kind: "human" });
-    expect(rememberedLlm$.value["p1"]).toEqual(custom);
+    try {
+      mount(custom);
+      const select = pick(root, "human");
+      expect(select.getAttribute("aria-label")).toBe("Controller for Alice");
+      expect(changes.at(-1)).toEqual({ kind: "human" });
+      expect(rememberedLlm$.value["p1"]).toEqual(custom);
 
-    mount({ kind: "human" });
-    pick(root, "llm");
-    expect(changes.at(-1)).toEqual(custom);
-
-    render(null, root);
-    root.remove();
+      mount({ kind: "human" });
+      pick(root, "llm");
+      expect(changes.at(-1)).toEqual(custom);
+    } finally {
+      render(null, root);
+      root.remove();
+      unbindSession(session);
+      session.dispose();
+    }
   });
 });

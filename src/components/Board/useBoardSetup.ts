@@ -9,59 +9,29 @@ import { usePreviewMode } from "../preview/usePreviewMode";
 import { useBoardHandlers } from "./useBoardHandlers";
 import { preloadKingdomCards } from "../../lib/image-preload";
 import type { CardName } from "../../types/game-state";
-import type { CommandResult } from "../../commands/types";
-import {
-  gameState$,
-  events$,
-  endPhase$,
-  playAllTreasures$,
-  submitDecision$,
-  revealReaction$,
-  declineReaction$,
-  hasPlayableActions$,
-  hasTreasuresInHand$,
-  appMode$,
-  seats$,
-  setSeat$,
-  startGame$,
-  isProcessing$,
-  requestUndo$,
-  getStateAtEvent$,
-  playerStrategies$,
-  localPlayerId$,
-  isSpectator$,
-} from "../../context/game-signals";
-
-const uninitializedCommand = (): CommandResult => ({
-  ok: false,
-  error: "Game not initialized",
-});
+import { useDominionSession } from "../../session/SessionContext";
 
 export function useBoardSetup() {
+  const session = useDominionSession();
   const game = {
-    gameState: gameState$.value,
-    events: events$.value,
-    endPhase: endPhase$.value ?? uninitializedCommand,
-    playAllTreasures: playAllTreasures$.value ?? uninitializedCommand,
-    submitDecision: submitDecision$.value ?? uninitializedCommand,
-    revealReaction: revealReaction$.value ?? uninitializedCommand,
-    declineReaction: declineReaction$.value ?? uninitializedCommand,
-    hasPlayableActions: hasPlayableActions$.value,
-    hasTreasuresInHand: hasTreasuresInHand$.value,
-    appMode: appMode$.value,
-    seats: seats$.value,
-    setSeat: setSeat$.value ?? undefined,
-    startGame: startGame$.value ?? (() => {}),
-    isProcessing: isProcessing$.value,
-    requestUndo: requestUndo$.value ?? (() => {}),
-    getStateAtEvent:
-      getStateAtEvent$.value ??
-      (() => {
-        throw new Error("getStateAtEvent not initialized");
-      }),
-    playerStrategies: playerStrategies$.value,
-    localPlayerId: localPlayerId$.value,
-    isSpectator: isSpectator$.value,
+    gameState: session.state.value,
+    events: session.events.value,
+    endPhase: session.endPhase,
+    playAllTreasures: session.playAllTreasures,
+    submitDecision: session.submitDecision,
+    revealReaction: session.revealReaction,
+    declineReaction: session.declineReaction,
+    hasPlayableActions: session.hasPlayableActions.value,
+    hasTreasuresInHand: session.hasTreasuresInHand.value,
+    appMode: session.mode,
+    seats: session.seats.value,
+    setSeat: session.setSeat,
+    isProcessing: session.isProcessing.value,
+    requestUndo: session.requestUndo,
+    getStateAtEvent: session.getStateAtEvent,
+    playerStrategies: session.playerStrategies.value,
+    localPlayerId: session.localPlayerId.value,
+    isSpectator: session.isSpectator.value,
   };
   const {
     selectedCardIndices,
@@ -79,13 +49,13 @@ export function useBoardSetup() {
 
   const [showDevtools, setShowDevtools] = useState(false);
 
-  const { startGame, requestUndo } = game;
   const onNewGame = useCallback(() => {
     exitPreview();
     clearSelection();
-    startGame();
-  }, [startGame, exitPreview, clearSelection]);
+    session.startGame();
+  }, [session, exitPreview, clearSelection]);
 
+  const { requestUndo } = game;
   const handleRequestUndo = useCallback(
     (eventId: string) => {
       exitPreview();

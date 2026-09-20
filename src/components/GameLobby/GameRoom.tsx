@@ -1,18 +1,21 @@
 /**
  * Game Room - Pre-game lobby and in-game wrapper
  *
- * One PartySocket connection per room. The room's game picks the board and
- * the adapter that turns the room's opaque state into a game state, so each
- * game owns its own hooks and only the chrome is shared.
+ * One room session per room. The room's game picks the board and the session
+ * that turns the room's opaque state into a game state, so each game owns its
+ * own session and only the chrome is shared.
  */
-import { usePartyGame } from "../../partykit/usePartyGame";
+import { useMemo } from "preact/hooks";
 import { moduleFor } from "../../games";
 import { Board } from "../Board";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { DisconnectModal } from "./DisconnectModal";
-import { useMultiplayerGameContext } from "../../context/use-multiplayer-game-context";
-import { gameState$ } from "../../context/game-signals";
+import { createRemoteDominionSession } from "../../context/create-remote-dominion-session";
 import { AnimationProvider } from "../../animation";
+import {
+  SessionProvider,
+  useDominionSession,
+} from "../../session/SessionContext";
 import { ChessRoom } from "./ChessRoom";
 import {
   GameOverNotification,
@@ -33,42 +36,50 @@ export function GameRoom(props: RoomProps) {
   }
 }
 
-function DominionRoom({
-  roomId,
+function DominionRoom(props: RoomProps) {
+  const { roomId, playerName, clientId, isSpectator } = props;
+  const session = useMemo(
+    () =>
+      createRemoteDominionSession({
+        roomId,
+        playerName,
+        clientId,
+        isSpectator,
+      }),
+    [roomId, playerName, clientId, isSpectator],
+  );
+
+  return (
+    <SessionProvider session={session}>
+      <DominionRoomContent {...props} />
+    </SessionProvider>
+  );
+}
+
+function DominionRoomContent({
   game,
-  playerName,
-  clientId,
   isSpectator,
   onBack,
   onResign,
 }: RoomProps) {
-  const room = usePartyGame({
-    roomId,
-    game,
-    playerName,
-    clientId,
-    isSpectator,
-  });
+  const room = useDominionSession();
+  if (room.mode !== "multiplayer")
+    throw new Error("DominionRoomContent needs a room session");
 
-  // Sync multiplayer state into signals
-  useMultiplayerGameContext({ game: room, playerName, isSpectator });
-
+  const playerId = room.localPlayerId.value;
   const { leave, disconnectedOpponent } = useRoomChrome({
-    room,
+    playerId,
+    resign: room.resign,
+    disconnectedPlayers: room.disconnectedPlayers.value,
     isSpectator,
     onBack,
     ...(onResign !== undefined && { onResign }),
   });
 
-  // Both preconditions, and neither alone. The room's own state says this room
-  // has a game; the parsed one says this client can read it. gameState$ is
-  // module level and outlives a room, so on its own it shows the last game.
-  const parsedState = gameState$.value;
-  const unreadableState = room.state !== null && parsedState === null;
-
-  if (room.state && parsedState) {
+  const gameEndReason = room.gameEndReason.value;
+  if (room.state.value) {
     // Wait for playerId to be set before rendering Board
-    if (!isSpectator && !room.playerId) {
+    if (!isSpectator && !playerId) {
       return <BoardSkeleton />;
     }
 
@@ -82,9 +93,9 @@ function DominionRoom({
             onLeave={leave}
           />
         )}
-        {room.gameEndReason && (
+        {gameEndReason && (
           <GameOverNotification
-            message={room.gameEndReason}
+            message={gameEndReason}
             onClose={() => {
               localStorage.removeItem("dominion_active_game");
               onBack();
@@ -98,12 +109,12 @@ function DominionRoom({
   return (
     <WaitingRoom
       isSpectator={isSpectator}
-      alone={room.isHost && room.players.length < 2}
+      alone={room.isHost.value && room.players.value.length < 2}
       defaultLlm={moduleFor(game).defaultLlmSeat}
       onStart={controller =>
         room.startGame(undefined, [{ name: "AI Opponent", controller }])
       }
-      notes={[unreadableState ? UNREADABLE_GAME : null, room.error]}
+      notes={[room.unreadable.value ? UNREADABLE_GAME : null, room.error.value]}
       onLeave={leave}
     />
   );

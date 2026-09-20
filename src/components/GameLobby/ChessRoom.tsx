@@ -1,14 +1,12 @@
 /**
  * Chess Room - the chess board hosted in a generic PartyKit room
  *
- * Everything the board needs comes from the room: the position from the chess
- * adapter, the seats from the player list, the names from the player info.
+ * Everything the board needs comes from the room session: the position from
+ * the chess module's reading of the room, the seats from the player list, the
+ * names from the player info.
  */
 import { lazy, Suspense } from "preact/compat";
-import { useEffect, useMemo, useState } from "preact/hooks";
-import { usePartyGame } from "../../partykit/usePartyGame";
-import type { ControllerConfig } from "../../core/seats";
-import { HUMAN_SEAT, sameConfig, seatFromKind } from "../../core/seats";
+import { useMemo, useState } from "preact/hooks";
 import { moduleFor } from "../../games";
 import { ChessBoard } from "../../chess/ChessBoard";
 import {
@@ -18,8 +16,8 @@ import {
   chessTurnStatus,
 } from "../../chess/sidebar";
 import { chessDevtoolsAdapter } from "../../chess/devtools";
-import { useChessRoom } from "../../chess/use-chess-room";
-import { llmLogs$, players$ } from "../../context/game-signals";
+import { createRemoteChessSession } from "../../chess/create-remote-chess-session";
+import { SessionProvider, useSession } from "../../session/SessionContext";
 import { BoardLayout, GameAreaLayout } from "../Board/BoardLayout";
 import { usePreviewMode } from "../preview/usePreviewMode";
 import { usePreviewState } from "../preview/usePreviewState";
@@ -35,99 +33,72 @@ import {
   type RoomProps,
 } from "./room-chrome";
 
+const UNREADABLE = "This room sent a position this client cannot read.";
+
 const EventDevtools = lazy(() =>
   import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
 );
 
-export function ChessRoom({
-  roomId,
-  game,
-  playerName,
-  clientId,
-  isSpectator,
-  onBack,
-  onResign,
-}: RoomProps) {
-  const room = usePartyGame({
-    roomId,
-    game,
-    playerName,
-    clientId,
-    isSpectator,
-  });
-  const chess = useChessRoom({
-    state: room.state,
-    events: room.events,
-    playerId: room.playerId,
-    sendCommand: room.sendCommand,
-    getStateAtEvent: room.getStateAtEvent,
-  });
+export function ChessRoom(props: RoomProps) {
+  const { roomId, playerName, clientId, isSpectator } = props;
+  const session = useMemo(
+    () =>
+      createRemoteChessSession({ roomId, playerName, clientId, isSpectator }),
+    [roomId, playerName, clientId, isSpectator],
+  );
+
+  return (
+    <SessionProvider session={session}>
+      <ChessRoomContent {...props} />
+    </SessionProvider>
+  );
+}
+
+function ChessRoomContent({ game, isSpectator, onBack, onResign }: RoomProps) {
+  const room = useSession();
+  if (room.game !== "chess" || room.mode !== "multiplayer")
+    throw new Error("ChessRoomContent needs a chess room session");
+
   const { previewEventId, enterPreview, isPreviewMode } = usePreviewMode();
   const [showDevtools, setShowDevtools] = useState(false);
-  const { events: chessEvents, stateAtEvent } = chess;
-  const preview = usePreviewState(previewEventId, stateAtEvent);
+  const chessEvents = room.events.value;
+  const { getStateAtEvent } = room;
+  const preview = usePreviewState(previewEventId, getStateAtEvent);
   const devtoolsAdapter = useMemo(
     () =>
       chessDevtoolsAdapter(chessEvents, index => {
         const eventId = chessEvents[index]?.id;
         if (eventId === undefined) return null;
-        return stateAtEvent(eventId);
+        return getStateAtEvent(eventId);
       }),
-    [chessEvents, stateAtEvent],
+    [chessEvents, getStateAtEvent],
   );
+  const playerId = room.localPlayerId.value;
   const { leave, disconnectedOpponent } = useRoomChrome({
-    room,
+    playerId,
+    resign: room.resign,
+    disconnectedPlayers: room.disconnectedPlayers.value,
     isSpectator,
     onBack,
     ...(onResign !== undefined && { onResign }),
   });
 
-  // A room's LLM seats vote on the server, so the votes arrive over the wire
-  useEffect(() => {
-    llmLogs$.value = room.consensusLog;
-  }, [room.consensusLog]);
-
-  // Other seats arrive as kinds only; this client's own LLM config stays here
-  const [ownSeat, setOwnSeat] = useState<ControllerConfig>(HUMAN_SEAT);
-  const seats = useMemo(
-    () =>
-      Object.fromEntries(
-        room.players.map(p => [
-          p.playerId,
-          p.playerId === room.playerId && ownSeat.kind === p.controller
-            ? ownSeat
-            : seatFromKind(p.controller, moduleFor(game).defaultLlmSeat),
-        ]),
-      ),
-    [room.players, room.playerId, ownSeat, game],
-  );
-
-  // The seat selectors name a player, and a room's player ids are client ids
-  useEffect(() => {
-    players$.value = room.players.map(p => ({ id: p.playerId, name: p.name }));
-  }, [room.players]);
-
+  const seats = room.seats.value;
+  const playerInfo = room.playerInfo.value;
   const playerNames = useMemo(
     () =>
       Object.fromEntries(
-        Object.entries(room.playerInfo ?? {}).map(([id, info]) => [
-          id,
-          info.name,
-        ]),
+        Object.entries(playerInfo ?? {}).map(([id, info]) => [id, info.name]),
       ),
-    [room.playerInfo],
+    [playerInfo],
   );
 
-  const changeSeat = (player: string, controller: ControllerConfig) => {
-    if (player === room.playerId && !sameConfig(controller, ownSeat)) {
-      setOwnSeat(controller);
-    }
-    room.setSeat(player, controller);
-  };
-
-  if (chess.state !== null) {
-    if (!isSpectator && !room.playerId) return <BoardSkeleton />;
-    const shown = preview.state ?? chess.state;
+  const state = room.state.value;
+  const gameEndReason = room.gameEndReason.value;
+  if (state !== null) {
+    if (!isSpectator && !playerId) return <BoardSkeleton />;
+    const shown = preview.state ?? state;
+    const localHuman = room.localHumanSeat.value;
     return (
       <>
         <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
@@ -135,14 +106,14 @@ export function ChessRoom({
             <ChessBoard
               state={shown}
               seats={seats}
-              localPlayerId={chess.localPlayerId}
+              localPlayerId={localHuman}
               playerNames={playerNames}
-              onMove={chess.move}
-              disabled={!room.isConnected || isPreviewMode}
-              {...(room.playerId !== null &&
+              onMove={room.move}
+              disabled={!room.isConnected.value || isPreviewMode}
+              {...(playerId !== null &&
                 !isPreviewMode && {
-                  onSeatChange: changeSeat,
-                  onResign: chess.resign,
+                  onSeatChange: room.setSeat,
+                  onResign: room.resign,
                 })}
             />
           </GameAreaLayout>
@@ -155,7 +126,7 @@ export function ChessRoom({
                 status={chessTurnStatus(
                   shown,
                   seats,
-                  chess.localPlayerId,
+                  localHuman,
                   // A room's bots run on the server; no client turn is pending
                   false,
                 )}
@@ -164,8 +135,8 @@ export function ChessRoom({
             }
             appMode="multiplayer"
             seats={seats}
-            {...(room.playerId !== null &&
-              !isPreviewMode && { onSeatChange: changeSeat })}
+            {...(playerId !== null &&
+              !isPreviewMode && { onSeatChange: room.setSeat })}
             presets={chessPresets(seats)}
             isSpectator={isSpectator}
             onBackToHome={leave}
@@ -188,9 +159,9 @@ export function ChessRoom({
             onLeave={leave}
           />
         )}
-        {room.gameEndReason && (
+        {gameEndReason && (
           <GameOverNotification
-            message={room.gameEndReason}
+            message={gameEndReason}
             onClose={() => {
               localStorage.removeItem("dominion_active_game");
               onBack();
@@ -204,12 +175,12 @@ export function ChessRoom({
   return (
     <WaitingRoom
       isSpectator={isSpectator}
-      alone={room.isHost && room.players.length < 2}
+      alone={room.isHost.value && room.players.value.length < 2}
       defaultLlm={moduleFor(game).defaultLlmSeat}
       onStart={controller =>
         room.startGame(undefined, [{ name: "AI Opponent", controller }])
       }
-      notes={[chess.error, room.error]}
+      notes={[room.unreadable.value ? UNREADABLE : null, room.error.value]}
       onLeave={leave}
     />
   );

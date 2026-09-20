@@ -6,12 +6,11 @@ import { formatPlayerName, getPlayerColor } from "../../lib/board-utils";
 import {
   players$,
   pendingUndo$,
-  approveUndo$,
-  denyUndo$,
   isHost$,
   isSpectator$,
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
+import { useDominionSession } from "../../session/SessionContext";
 import { GameSidebar } from "./GameSidebar";
 import { DominionLogRows } from "./DominionLogRows";
 import { TurnStatusIndicator, type TurnStatus } from "./TurnStatusIndicator";
@@ -32,7 +31,6 @@ import {
   saveSeatPreset,
   type SeatPreset,
 } from "../../core/seat-presets";
-import { setSeats$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";
 import type { BoardState } from "./boardStateHelpers";
@@ -178,10 +176,9 @@ export function BoardContent({
     isLocalPlayerAI,
   } = boardState;
 
+  const session = useDominionSession();
   const players = players$.value;
   const pendingUndo = pendingUndo$.value;
-  const approveUndo = approveUndo$.value;
-  const denyUndo = denyUndo$.value;
   const contextLocalPlayerId = localPlayerId$$.value;
   const animation = useAnimationSafe();
   const devtoolsAdapter = useDominionDevtoolsAdapter(game.events);
@@ -200,11 +197,13 @@ export function BoardContent({
   });
 
   const setSeat = game.setSeat;
-  const setSeats = setSeats$.value;
+  // Only a local table is this client's to reseat as a whole
   const onPresetChange =
-    game.appMode === "local" && setSeats !== null
+    session.mode === "local"
       ? (preset: SeatPreset) => {
-          setSeats(SEAT_PRESETS[preset].seats(displayState.playerOrder));
+          session.setSeats(
+            SEAT_PRESETS[preset].seats(displayState.playerOrder),
+          );
           saveSeatPreset(preset);
         }
       : null;
@@ -429,8 +428,6 @@ export function BoardContent({
       )}
 
       {pendingUndo &&
-        approveUndo &&
-        denyUndo &&
         !game.gameOver &&
         contextLocalPlayerId !== pendingUndo.byPlayer && (
           <UndoRequestModal
@@ -441,8 +438,8 @@ export function BoardContent({
             }
             toEventId={pendingUndo.toEventId}
             events={game.events}
-            onApprove={approveUndo}
-            onDeny={denyUndo}
+            onApprove={session.approveUndo}
+            onDeny={session.denyUndo}
           />
         )}
 
