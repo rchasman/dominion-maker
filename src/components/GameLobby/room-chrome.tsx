@@ -13,7 +13,7 @@ import type { GameId } from "../../game-ids";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { BaseModal } from "../Modal/BaseModal";
 
-export type PartyRoom = ReturnType<typeof usePartyGame>;
+type PartyRoom = ReturnType<typeof usePartyGame>;
 
 export interface RoomProps {
   roomId: string;
@@ -121,7 +121,7 @@ export function WaitingRoom({
   );
 }
 
-export function ErrorNote({ children }: { children: ComponentChildren }) {
+function ErrorNote({ children }: { children: ComponentChildren }) {
   return (
     <div
       style={{
