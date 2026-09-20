@@ -52,7 +52,7 @@ const EVENT_COLORS: Record<string, string> = {
   UNDO_EXECUTED: "#c084fc",
 };
 
-export const DOMINION_EVENT_CATEGORIES = [
+const DOMINION_EVENT_CATEGORIES = [
   "turns",
   "cards",
   "resources",
@@ -80,7 +80,7 @@ const CATEGORY_OF_TYPE: Record<string, string> = Object.fromEntries(
 );
 
 /** Format event for display */
-export function formatEvent(event: GameEvent): string {
+function formatEvent(event: GameEvent): string {
   const formatDelta = (delta: number) =>
     delta >= 0 ? `+${delta}` : String(delta);
 
@@ -118,7 +118,7 @@ export function formatEvent(event: GameEvent): string {
  * A log that does not open with GAME_INITIALIZED is a room's redacted view,
  * which only the host can replay: the state comes back over the wire.
  */
-export function dominionStateAt(
+function dominionStateAt(
   events: GameEvent[],
   index: number,
   getStateAtEvent: ((eventId: string) => unknown) | null,

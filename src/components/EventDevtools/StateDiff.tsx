@@ -29,7 +29,7 @@ const show = (value: unknown): string => {
 };
 
 /** Top-level fields that differ, which is as far as a game-agnostic diff can see */
-export function changesBetween(prev: unknown, next: unknown): StateChange[] {
+function changesBetween(prev: unknown, next: unknown): StateChange[] {
   const before = asRecord(prev);
   const after = asRecord(next);
   if (before === null || after === null) {

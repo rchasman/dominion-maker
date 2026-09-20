@@ -26,7 +26,7 @@ const moveLabel = (ply: number, san: string): string => {
     : `${number}... ${san}`;
 };
 
-export function chessEventLabels(
+function chessEventLabels(
   events: readonly ChessEvent[],
 ): Map<ChessEvent, string> {
   return events.reduce(

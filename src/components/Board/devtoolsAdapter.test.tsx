@@ -1,10 +1,31 @@
-import { describe, it, expect } from "bun:test";
+import { beforeAll, describe, it, expect } from "bun:test";
+import { render } from "preact";
+import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
+import type { EventDevtoolsAdapter } from "../EventDevtools/adapter";
 import type { GameEvent } from "../../events/types";
-import {
-  DOMINION_EVENT_CATEGORIES,
-  dominionStateAt,
-  formatEvent,
-} from "./devtoolsAdapter";
+import { useDominionDevtoolsAdapter } from "./devtoolsAdapter";
+
+beforeAll(registerHappyDom);
+
+/** The adapter as the board builds it, through the hook that memoizes it */
+const adapterFor = (events: GameEvent[]): EventDevtoolsAdapter<GameEvent> => {
+  const root = document.createElement("div");
+  const built: EventDevtoolsAdapter<GameEvent>[] = [];
+  const Probe = () => {
+    built.push(useDominionDevtoolsAdapter(events));
+    return null;
+  };
+  settled(() => {
+    render(<Probe />, root);
+  });
+  render(null, root);
+  const adapter = built.at(-1);
+  if (adapter === undefined) throw new Error("the hook never rendered");
+  return adapter;
+};
+
+const formatEvent = (event: GameEvent): string =>
+  adapterFor([event]).label(event);
 
 const turnStarted: GameEvent = {
   id: "e1",
@@ -204,22 +225,45 @@ describe("the Dominion devtools adapter labels", () => {
 });
 
 describe("the Dominion devtools adapter", () => {
+  const adapter = () => adapterFor([turnStarted, causedDraw]);
+
   it("keeps today's filter chips", () => {
-    expect([...DOMINION_EVENT_CATEGORIES]).toEqual([
+    expect([...adapter().categories]).toEqual([
       "turns",
       "cards",
       "resources",
       "decisions",
     ]);
+    expect(adapter().category(turnStarted)).toBe("turns");
   });
 
   it("stops the scrubber on events nothing caused", () => {
-    expect(Boolean(turnStarted.causedBy)).toBe(false);
-    expect(Boolean(causedDraw.causedBy)).toBe(true);
+    expect(adapter().isRoot(turnStarted)).toBe(true);
+    expect(adapter().isRoot(causedDraw)).toBe(false);
   });
 
-  it("projects the local log up to and including the index", () => {
-    const state = dominionStateAt([], 0, null);
-    expect(state).not.toBeInstanceOf(Promise);
+  it("keeps a colour per event type", () => {
+    expect(adapter().colour(turnStarted)).toBe("#f59e0b");
+    expect(
+      adapter().colour({
+        id: "x",
+        type: "GAME_ENDED",
+        winnerId: "human",
+        scores: {},
+        reason: "provinces_empty",
+      }),
+    ).toBe("#dc2626");
+  });
+
+  it("projects a local log up to and including the index", () => {
+    const opened: GameEvent = {
+      id: "e0",
+      type: "GAME_INITIALIZED",
+      players: ["human", "ai"],
+      kingdomCards: ["Village"],
+      supply: { Village: 10 },
+    };
+    const local = adapterFor([opened, turnStarted, causedDraw]);
+    expect(local.stateAt?.(1)).toMatchObject({ turn: 1 });
   });
 });
