@@ -7,9 +7,16 @@ import type { Seats } from "./seats";
 
 type P = "a" | "b";
 type State = { n: number; turn: P; over: boolean };
-type Ev = { type: "ADDED"; by: P; add: number };
+type Ev = { type: "ADDED"; by: P; add: number; id?: string };
 type Cmd = { add: number; by: P };
-type G = { state: State; event: Ev; command: Cmd; move: Cmd; playerId: P };
+type G = {
+  state: State;
+  event: Ev;
+  command: Cmd;
+  move: Cmd;
+  options: null;
+  playerId: P;
+};
 
 const game: GameDefinition<G> = {
   id: "count",
@@ -23,6 +30,8 @@ const game: GameDefinition<G> = {
   moveKey: m => String(m.add),
   describeMove: m => `add ${m.add}`,
   promptRow: m => ({ add: m.add }),
+  withReasoning: m => m,
+  reasoningOf: () => undefined,
   prompt: () => ({ system: "", user: "" }),
   logContext: s => ({
     turnId: `${s.turn}-${s.n}`,

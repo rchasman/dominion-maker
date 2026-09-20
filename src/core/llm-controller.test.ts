@@ -168,7 +168,6 @@ describe("llmController", () => {
         logger: entry => {
           entries.push(entry);
         },
-        reasoningOf: move => move.reasoning,
       },
     );
     await controller.decide(engine, "alice", signal());

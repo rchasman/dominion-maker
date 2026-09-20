@@ -77,5 +77,14 @@ function buildRosterFrom(
   return shuffle(models);
 }
 
-export const buildRoster = (config: LlmSeatConfig): ModelProvider[] =>
-  buildRosterFrom(config.models, config.consensusCount);
+/** A game without an `evaluate` step has nothing for an evaluation model to do */
+export const buildRoster = (
+  config: LlmSeatConfig,
+  { allowEvaluation }: { allowEvaluation: boolean },
+): ModelProvider[] =>
+  buildRosterFrom(
+    allowEvaluation
+      ? config.models
+      : config.models.filter(id => findModelConfig(id)?.evaluation === undefined),
+    config.consensusCount,
+  );

@@ -24,8 +24,6 @@ type LlmControllerDeps<G extends GameShape> = {
     actionId: string,
     customStrategy: string,
   ) => void;
-  /** Reads a model's explanation off a move for the voting log */
-  reasoningOf?: (move: G["move"]) => string | undefined;
 };
 
 /**
@@ -42,8 +40,6 @@ export function llmController<G extends GameShape>(
   deps: LlmControllerDeps<G>,
 ): Controller<G> {
   const boundary = { lastTurnId: null as string | null };
-  const noReasoning = (): string | undefined => undefined;
-  const reasoningOf = deps.reasoningOf ?? noReasoning;
 
   const vote = async (
     state: G["state"],
@@ -53,7 +49,9 @@ export function llmController<G extends GameShape>(
     signal: AbortSignal,
     overallStart: number,
   ): Promise<G["move"]> => {
-    const providers = buildRoster(config);
+    const providers = buildRoster(config, {
+      allowEvaluation: game.evaluate !== undefined,
+    });
     const aheadByK = aheadByKFor(providers.length);
     const { payload } = game.logContext(state, player, moves);
     logConsensusStart({ payload, providers, moves, logger: deps.logger });
@@ -87,7 +85,7 @@ export function llmController<G extends GameShape>(
       payload,
       describeMove: move => game.describeMove(move),
       moveKey: move => game.moveKey(move),
-      reasoningOf,
+      reasoningOf: move => game.reasoningOf(move),
       logger: deps.logger,
     });
     deps.verifyMove?.(
