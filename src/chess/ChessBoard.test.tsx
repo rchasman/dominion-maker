@@ -5,6 +5,8 @@ import { ChessBoard } from "./ChessBoard";
 import { createChessGame } from "./engine";
 import { CHESS_PLAYERS } from "./seat";
 import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
+import { chessStateSchema } from "./schemas";
+import type { ChessState } from "./shape";
 
 beforeAll(registerHappyDom);
 
@@ -141,6 +143,48 @@ describe("the chess board", () => {
       ),
     );
     expect(root.textContent).toContain("Checkmate. Black wins.");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("draws the position the FEN names even when the log will not replay", () => {
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    // Schema-valid, and a room could send it: the SAN passes the schema, the
+    // engine that produced it did not. The board still owes the viewer a board.
+    const unreplayable: ChessState = {
+      fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      playerOrder: ["w", "b"],
+      moves: ["zzz"],
+      gameOver: false,
+      winnerId: null,
+      result: null,
+      inCheck: false,
+    };
+    expect(chessStateSchema.safeParse(unreplayable).success).toBe(true);
+
+    settled(() =>
+      render(
+        <ChessBoard
+          state={unreplayable}
+          seats={SEATS}
+          entries={[]}
+          localPlayerId="b"
+          onMove={() => undefined}
+        />,
+        root,
+      ),
+    );
+
+    expect(root.querySelectorAll("[data-square]").length).toBe(64);
+    // The pawn stands where the FEN puts it, not where a fresh game would
+    expect(root.querySelector('[data-square="e4"]')?.textContent).toContain(
+      "\u2659",
+    );
+    expect(root.querySelector('[data-square="e2"]')?.textContent).not.toContain(
+      "\u2659",
+    );
 
     render(null, root);
     root.remove();

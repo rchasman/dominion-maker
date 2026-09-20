@@ -96,6 +96,23 @@ const nameOf = (
   id: string,
 ): string => names[id] ?? (id === state.playerOrder[0] ? "White" : "Black");
 
+/**
+ * The squares the last move touched, from a replay of the log. The position
+ * itself comes from the FEN, so a log this client cannot replay costs the
+ * board its last-move tint and nothing else.
+ */
+const lastMoveOf = (
+  moves: readonly string[],
+): { from: string; to: string } | null => {
+  const chess = new Chess();
+  try {
+    for (const san of moves) chess.move(san);
+  } catch {
+    return null;
+  }
+  return chess.history({ verbose: true }).at(-1) ?? null;
+};
+
 const resultText = (
   state: ChessState,
   names: Record<string, string>,
@@ -140,22 +157,18 @@ export function ChessBoard({
     setSelected(null);
   }, [state.fen]);
 
-  const replay = useMemo(() => {
-    const chess = new Chess();
-    for (const san of state.moves) chess.move(san);
-    return chess;
-  }, [state]);
+  const board = useMemo(() => new Chess(state.fen), [state.fen]);
 
   const mover = chessGame.whoMustAct(state);
   const legalMoves = useMemo(
     () => (mover === null ? [] : chessGame.legalMoves(state, mover)),
     [state, mover],
   );
-  const pieces = piecesOf(replay.board());
-  const lastMove = replay.history({ verbose: true }).at(-1) ?? null;
+  const pieces = piecesOf(board.board());
+  const lastMove = useMemo(() => lastMoveOf(state.moves), [state.moves]);
   const checkedKing = run(() => {
     if (!state.inCheck) return null;
-    const side = replay.turn();
+    const side = board.turn();
     const entry = [...pieces.entries()].find(
       ([, piece]) => piece.type === "k" && piece.color === side,
     );
@@ -193,6 +206,8 @@ export function ChessBoard({
     }
     setPending({ from: selected, to: square, options: matches });
   };
+
+  const result = resultText(state, playerNames);
 
   const choosePromotion = (move: ChessMove) => {
     setPending(null);
@@ -391,7 +406,7 @@ export function ChessBoard({
           </div>
         ))}
 
-        {resultText(state, playerNames) !== null && (
+        {result !== null && (
           <div
             role="status"
             style={{
@@ -402,7 +417,7 @@ export function ChessBoard({
               fontWeight: 700,
             }}
           >
-            {resultText(state, playerNames)}
+            {result}
           </div>
         )}
 

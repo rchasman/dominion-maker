@@ -1,3 +1,4 @@
+import { validateFen } from "chess.js";
 import { z } from "zod";
 import type {
   ChessCommand,
@@ -43,8 +44,11 @@ export const chessCommandSchema: z.ZodType<ChessCommand> = z.discriminatedUnion(
   ],
 );
 
+/** A position chess.js refuses is one no board can draw, so it fails here */
+const readableFen = (fen: string): boolean => validateFen(fen).ok;
+
 export const chessStateSchema: z.ZodType<ChessState> = z.object({
-  fen: z.string().min(1).max(200),
+  fen: z.string().min(1).max(200).refine(readableFen, "Unreadable position"),
   playerOrder,
   moves: z.array(san).max(2000),
   gameOver: z.boolean(),
