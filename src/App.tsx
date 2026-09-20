@@ -70,11 +70,9 @@ function App() {
   // Preload game modules when on menu (loads in background while user reads)
   useEffect(() => {
     if (mode !== "menu") return;
-    if (game === "chess") {
-      preloadChess();
-      return;
-    }
-    preloadSinglePlayer();
+    if (game === "chess") preloadChess();
+    else preloadSinglePlayer();
+    // Either game reaches multiplayer through the same lobby
     preloadMultiplayer();
   }, [mode, game]);
 
