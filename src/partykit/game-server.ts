@@ -326,8 +326,16 @@ export default class GameServer implements Party.Server {
     const events = [...(this.engine?.eventLog ?? [])];
     const index = events.findIndex(event => event.id === eventId);
     const prefix = events.slice(0, index + 1);
-    const state = index < 0 ? null : game.module.loadEngine(prefix).state;
-    this.sendState(conn, { type: "preview_state", eventId }, state, prefix);
+    if (index < 0) {
+      this.sendState(conn, { type: "preview_state", eventId }, null, prefix);
+      return;
+    }
+    try {
+      const state = game.module.loadEngine(prefix).state;
+      this.sendState(conn, { type: "preview_state", eventId }, state, prefix);
+    } catch {
+      this.send(conn, { type: "error", message: "Failed to load history" });
+    }
   }
 
   private handleChat(sender: ConnLike, input: ChatMessageData) {

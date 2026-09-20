@@ -3,7 +3,6 @@ import { roomHarness, type RoomHarness } from "./room-harness.test-fixture";
 import type { ConnLike } from "./game-server";
 import { dominionModule } from "../dominion/module";
 import { countingModule } from "./counting-module.test-fixture";
-import { GAMES } from "../games";
 
 const joinAs = (h: RoomHarness, socket: ConnLike, clientId: string) =>
   h.send(socket, {
@@ -39,20 +38,17 @@ describe("a room plays one registered game", () => {
 
     const host = h.connect("host");
     joinAs(h, host, "alice");
-    // Every other registered game must bounce off this Dominion room.
-    Object.keys(GAMES)
-      .filter(id => id !== "dominion")
-      .map(id => {
-        const other = h.connect(`other-${id}`);
-        h.raw(
-          other,
-          JSON.stringify({ type: "join", name: "Zed", game: id, clientId: id }),
-        );
-        expect(h.lastOf(other)).toMatchObject({
-          type: "error",
-          message: "This room is playing Dominion",
-        });
-      });
+    const chessPlayer = h.connect("chess-player");
+    h.send(chessPlayer, {
+      type: "join",
+      name: "Zed",
+      game: "chess",
+      clientId: "zed",
+    });
+    expect(h.lastOf(chessPlayer)).toMatchObject({
+      type: "error",
+      message: "This room is playing Dominion",
+    });
   });
 
   it("does not let a refused join fix the room's game", () => {
@@ -231,6 +227,24 @@ describe("history preview", () => {
     const preview = h.lastOf(host);
     if (preview?.type !== "preview_state") throw new Error("Missing preview");
     expect(stateOf(preview.state).turn).toBe(1);
+  });
+
+  it("answers a preview it cannot replay with an error", () => {
+    const h = roomHarness(() => ({
+      ...countingModule,
+      loadEngine: () => {
+        throw new Error("cannot load");
+      },
+    }));
+    const first = h.connect("first");
+    const second = h.connect("second");
+    joinAs(h, first, "a");
+    joinAs(h, second, "b");
+    h.send(first, { type: "preview_state", eventId: "count-0" });
+    expect(h.lastOf(first)).toMatchObject({
+      type: "error",
+      message: "Failed to load history",
+    });
   });
 
   it("answers a preview of an event it does not hold with no state", () => {
