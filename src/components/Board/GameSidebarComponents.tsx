@@ -24,8 +24,8 @@ interface GameModeSwitcherProps {
   onPresetChange: (preset: SeatPreset) => void;
 }
 
-/** Engine / Hybrid / Full: reseat the whole table in one click */
-export function GameModeSwitcher({
+/** Reseat the whole table in one click, under whatever names the game gives */
+function GameModeSwitcher({
   names,
   label,
   activePreset,
@@ -98,7 +98,7 @@ interface GameActionButtonsProps {
   isSpectator?: boolean;
 }
 
-export function GameActionButtons({
+function GameActionButtons({
   onNewGame,
   onEndGame,
   onBackToHome,
