@@ -114,6 +114,9 @@ describe("the chess board", () => {
     );
     expect(root.querySelectorAll("[data-promotion]").length).toBe(0);
     expect(picked).toEqual(["cxd8=Q+"]);
+    // The board takes clicks again, on the new position's own legal moves
+    click(root, '[data-square="e2"]');
+    expect(root.querySelectorAll("[data-legal-target]").length).toBe(2);
 
     // The banner names a colour, never the raw player id
     const mated = createChessGame([...CHESS_PLAYERS]);

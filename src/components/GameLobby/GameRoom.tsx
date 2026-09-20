@@ -23,9 +23,14 @@ import {
   type RoomProps,
 } from "./room-chrome";
 
+/** Exhaustive on purpose: a third game must not fall through to Dominion */
 export function GameRoom(props: RoomProps) {
-  if (props.game === "chess") return <ChessRoom {...props} />;
-  return <DominionRoom {...props} />;
+  switch (props.game) {
+    case "chess":
+      return <ChessRoom {...props} />;
+    case "dominion":
+      return <DominionRoom {...props} />;
+  }
 }
 
 function DominionRoom({
