@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { roomHarness, type RoomHarness } from "./room-test-harness";
+import { roomHarness, type RoomHarness } from "./room-harness.test-fixture";
 import type { ConnLike } from "./game-server";
 import { dominionModule } from "../dominion/module";
 import { countingModule } from "./counting-module.test-fixture";

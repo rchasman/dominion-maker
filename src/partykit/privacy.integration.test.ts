@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { roomHarness } from "./room-test-harness";
+import { roomHarness } from "./room-harness.test-fixture";
 import { createGame } from "../engine";
 import { playerView, publicEvents } from "../dominion/view";
 import { gameStateSchema } from "../validation/game-state";

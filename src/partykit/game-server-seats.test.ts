@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { roomHarness } from "./room-test-harness";
+import { roomHarness } from "./room-harness.test-fixture";
 import type { ConnLike } from "./game-server";
 import type { GameClientMessage } from "./protocol";
 import { createGame } from "../engine";
