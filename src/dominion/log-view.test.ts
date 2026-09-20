@@ -138,4 +138,22 @@ describe("dominion viewLogEntry", () => {
       turn: 4,
     });
   });
+
+  it("replaces a message an unlisted entry type wrote in free text", () => {
+    // A rejected command stringifies the card it names into the message
+    const stepError: LLMLogEntry = {
+      id: "entry-4",
+      timestamp: 4,
+      type: "consensus-step-error",
+      message: 'bot: {"type":"PLAY_ACTION","card":"Chapel"} rejected',
+      data: { playerId: "bot", turn: 4 },
+    };
+    expect(viewLogEntry(stepError, "bot")).toEqual(stepError);
+    const opponent = viewLogEntry(stepError, "alice");
+    const spectator = viewLogEntry(stepError, null);
+    expect(seen(opponent)).not.toContain("Chapel");
+    expect(seen(spectator)).not.toContain("Chapel");
+    expect(opponent.message).toBe("consensus-step-error for bot");
+    expect(spectator.message).toBe(opponent.message);
+  });
 });

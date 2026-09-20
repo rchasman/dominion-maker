@@ -56,15 +56,27 @@ const publicPayload = (payload: unknown): Payload => {
   };
 };
 
-const redact = (type: string, data: Payload): Payload => {
-  if (type === "ai-turn-start")
-    return pick(data, ["playerId", "turn", "phase", "providers"]);
-  if (type === "ai-decision-resolving")
-    return pick(data, ["playerId", "turn", "decisionType"]);
-  if (type === "consensus-skipped")
-    return pick(data, ["playerId", "turn", "action"]);
-  if (type === "consensus-start")
-    return {
+/**
+ * One projection per entry type. A type absent from this map is projected
+ * blind: its data is stripped to the seat and its message replaced, because
+ * a message nobody has read can name a card nobody may see. A rejected
+ * command stringified into `consensus-step-error` is exactly that.
+ */
+type Project = (data: Payload) => Payload;
+
+const PROJECTIONS = new Map<string, Project>([
+  [
+    "ai-turn-start",
+    data => pick(data, ["playerId", "turn", "phase", "providers"]),
+  ],
+  [
+    "ai-decision-resolving",
+    data => pick(data, ["playerId", "turn", "decisionType"]),
+  ],
+  ["consensus-skipped", data => pick(data, ["playerId", "turn", "action"])],
+  [
+    "consensus-start",
+    data => ({
       ...pick(data, [
         "playerId",
         "providers",
@@ -74,36 +86,44 @@ const redact = (type: string, data: Payload): Payload => {
         "turn",
       ]),
       gameState: publicPayload(data["gameState"]),
-    };
-  if (type === "consensus-model-pending" || type === "consensus-model-aborted")
-    return pick(data, [
-      "playerId",
-      "provider",
-      "index",
-      "startTime",
-      "duration",
-    ]);
-  if (type === "consensus-model-complete")
-    return pick(data, [
-      "playerId",
-      "provider",
-      "index",
-      "duration",
-      "success",
-      "aborted",
-      "timeout",
-      "error",
-    ]);
-  if (type === "consensus-voting")
-    return {
+    }),
+  ],
+  [
+    "consensus-model-pending",
+    data => pick(data, ["playerId", "provider", "index", "startTime"]),
+  ],
+  [
+    "consensus-model-aborted",
+    data => pick(data, ["playerId", "provider", "index", "duration"]),
+  ],
+  [
+    "consensus-model-complete",
+    data =>
+      pick(data, [
+        "playerId",
+        "provider",
+        "index",
+        "duration",
+        "success",
+        "aborted",
+        "timeout",
+        "error",
+      ]),
+  ],
+  [
+    "consensus-voting",
+    data => ({
       ...pick(data, ["playerId", "actionId", "votingDuration", "currentPhase"]),
       // The winner is about to be played; the moves it beat never are
       ...pick(data, ["topResult"]),
       allResults: [],
       gameState: publicPayload(data["gameState"]),
-    };
-  return pick(data, ["playerId", "turn"]);
-};
+    }),
+  ],
+]);
+
+const seatOf = (data: Payload): string =>
+  typeof data["playerId"] === "string" ? data["playerId"] : "a seat";
 
 export function viewLogEntry(
   entry: LLMLogEntry,
@@ -111,5 +131,13 @@ export function viewLogEntry(
 ): LLMLogEntry {
   const data = entry.data ?? {};
   if (viewerId !== null && data["playerId"] === viewerId) return entry;
-  return { ...entry, data: redact(entry.type, data) };
+  const project = PROJECTIONS.get(entry.type);
+  if (!project) {
+    return {
+      ...entry,
+      message: `${entry.type} for ${seatOf(data)}`,
+      data: pick(data, ["playerId", "turn"]),
+    };
+  }
+  return { ...entry, data: project(data) };
 }
