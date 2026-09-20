@@ -5,7 +5,7 @@ import { z } from "zod";
  * anything that only needs to name a game can depend on it without pulling a
  * registry, an engine or a schema table in behind it.
  */
-export const GAME_IDS = { dominion: "dominion" } as const;
+export const GAME_IDS = { dominion: "dominion", chess: "chess" } as const;
 
 export type GameId = keyof typeof GAME_IDS;
 

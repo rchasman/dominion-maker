@@ -3,7 +3,10 @@ import {
   readRequest,
   type ActionRequest,
 } from "./_request";
-import { moduleFor } from "../src/games";
+import { chessModule } from "../src/chess/module";
+import { dominionModule } from "../src/dominion/module";
+import type { GameShape } from "../src/core/game-definition";
+import type { GameModule } from "../src/core/game-module";
 import {
   generateObject,
   gateway,
@@ -48,13 +51,32 @@ if (!env.AI_GATEWAY_API_KEY) {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
-// Process request body and validate input
-async function processGenerationRequest(
+/**
+ * One arm of the request union at a time: the module and the state it parsed
+ * have to reach the definition as one correlated pair, so the game is picked
+ * here and everything below it is generic.
+ */
+function processGenerationRequest(
   body: ActionRequest,
   res: VercelResponse,
 ): Promise<VercelResponse> {
-  const { provider, currentState } = body;
-  const game = moduleFor(body.game).definition;
+  switch (body.game) {
+    case "dominion":
+      return generateForGame(dominionModule, body.currentState, body, res);
+    case "chess":
+      return generateForGame(chessModule, body.currentState, body, res);
+  }
+}
+
+// Process request body and validate input
+async function generateForGame<G extends GameShape>(
+  module: GameModule<G>,
+  currentState: G["state"],
+  body: ActionRequest,
+  res: VercelResponse,
+): Promise<VercelResponse> {
+  const { provider } = body;
+  const game = module.definition;
   const playerStrategies = body.playerStrategies ?? {};
   const customStrategy = body.customStrategy ?? "";
 
