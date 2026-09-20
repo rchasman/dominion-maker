@@ -8,42 +8,50 @@ export interface ConsensusPreset {
   consensusCount: number;
 }
 
-// The bottom of the price list. consensusCount is an exact multiple of the
-// length so every model gets the same number of votes.
+// Price axis, nothing else: the cheapest models that can carry a vote.
+// Carrying a vote means zero failures and every sample under 20s, two thirds of
+// the 30s timeout. The margin is the point: a model measured at 25s over three
+// samples goes past 30s often enough to abstain, which is how step-3.5-flash
+// looked right up until it did. consensusCount is an exact multiple of the list
+// so every model gets the same number of votes.
 const CHEAP_MODELS = [
   "jev",
-  "nemotron-3.5-lightning",
+  "nova-micro",
   "ministral-3b",
-  "glm-4.7-flash",
-  "qwen3.5-flash",
-  "gpt-oss-120b",
+  "mistral-nemo",
+  "nemotron-3.5-lightning",
+  "nova-lite",
+  "ministral-8b",
   "deepseek-v4-flash",
-  "step-3.5-flash",
 ] as const satisfies readonly ModelProvider[];
 
-// Cheap, low-latency models. consensusCount exceeds the list, so the leading
-// entries take the extra votes: order is weighting.
+// Latency axis, nothing else: the fastest models that can carry a vote,
+// whatever they cost. This is also the default seat, so it is the roster a new
+// game runs. consensusCount exceeds the list, so the leading entries take the
+// extra votes: order is weighting.
 const FAST_MODELS = [
   "jev",
-  "grok-4-fast",
-  "gpt-5.4-nano",
-  "gpt-5.4-mini",
-  "gemini-3.1-flash-lite",
-  "deepseek-v4-pro",
-  "glm-4.7-flash",
-  "qwen3.5-flash",
+  "nova-micro",
+  "nova-lite",
+  "gpt-4.1-mini-fast",
+  "ministral-3b",
+  "nemotron-3-super-120b-a12b",
+  "gemini-3.5-flash-lite",
+  "nova-pro",
 ] as const satisfies readonly ModelProvider[];
 
-// Mid-tier models: better reasoning than the flash tier, far under frontier price.
+// The mid-tier flagship of eight houses: stronger than the flash tier, far
+// under frontier price, and each verified to answer inside the vote timeout.
+// One per provider, fastest first, so a house cannot dominate the vote.
 const BALANCED_MODELS = [
-  "claude-haiku",
+  "nova-pro",
+  "mistral-medium-3.5",
   "gpt-5.4-mini",
-  "gpt-5.6-terra",
-  "gemini-3.5-flash",
-  "glm-5.2",
-  "deepseek-v4-pro",
-  "qwen3.8-27b",
+  "minimax-m3",
+  "kimi-k2.6",
+  "claude-haiku",
   "inkling",
+  "qwen3.8-27b",
 ] as const satisfies readonly ModelProvider[];
 
 // One model per provider: the fastest of its house. Spread beats price here, a
@@ -54,12 +62,12 @@ const BALANCED_MODELS = [
 // Ranked from a live sweep of all 186 catalog models on 2026-09-20: 3 samples
 // each through the real /api/generate-action path, 20 concurrent calls held
 // constant. A model qualifies with zero failures and no sample past 30s, then
-// takes the lowest median; medians within 15% count as a tie and price breaks
-// it. Models specialised away from general answers (code completion, vision)
+// takes the lowest median, with every sample under 20s so there is margin
+// against the timeout; medians within 15% count as a tie and price breaks it. Models specialised away from general answers (code completion, vision)
 // are skipped for the same reason morph is denied outright.
 //
-// Two houses are absent on purpose: neither xiaomi nor inclusionai has a model
-// that can carry a vote. presets.test.ts holds that list and fails on any
+// Three houses are absent on purpose: none of xiaomi, inclusionai or stepfun
+// has a model that can carry a vote. presets.test.ts holds that list and fails on any
 // provider the catalog offers that nobody has ruled on.
 //
 // Re-run the sweep after a catalog refresh rather than trusting these picks.
@@ -74,7 +82,6 @@ const DIVERSE_MODELS = [
   "qwen3-next-80b-a3b-instruct",
   "llama-4-maverick",
   "nemotron-3-super-120b-a12b",
-  "step-3.5-flash",
   "kimi-k2.5",
   "inkling-small",
   "ministral-3b",
@@ -83,14 +90,16 @@ const DIVERSE_MODELS = [
   "hy3",
 ] as const satisfies readonly ModelProvider[];
 
-// Frontier models. Most cap at 3 instances; claude-sonnet is uncapped and
-// absorbs any overflow once the capped ones are full.
+// The current frontier flagship of each house that ships one, verified to
+// answer inside the vote timeout. Expensive on purpose: this is the preset for
+// when the answer matters more than the bill. One instance each, so the
+// maxInstances caps never bind.
 const PRO_MODELS = [
-  "claude-opus",
-  "claude-sonnet",
-  "gpt-5.4",
-  "gpt-5.6-terra",
+  "claude-opus-5",
+  "gpt-6-astra",
   "gemini-3.1-pro",
+  "kimi-k3-fast",
+  "qwen3.7-max",
 ] as const satisfies readonly ModelProvider[];
 
 export const JEV_PRESET: ConsensusPreset = {
