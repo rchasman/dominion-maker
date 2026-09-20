@@ -1,6 +1,4 @@
-import type { GameState } from "../../types/game-state";
-import type { GameEvent } from "../../events/types";
-import type { EventCategory } from "./constants";
+import type { DevtoolsEvent, EventDevtoolsAdapter } from "./adapter";
 import { TimelineScrubber } from "./TimelineScrubber";
 import { EventList } from "./EventList";
 import { DevtoolsHeader } from "./DevtoolsHeader";
@@ -8,21 +6,24 @@ import { FilterBar } from "./FilterBar";
 import { StateInspector } from "./StateInspector";
 import { styles } from "./constants";
 
-interface DevtoolsContainerProps {
-  events: GameEvent[];
-  filteredEvents: GameEvent[];
-  rootEvents: GameEvent[];
+interface DevtoolsContainerProps<E extends DevtoolsEvent> {
+  events: E[];
+  adapter: EventDevtoolsAdapter<E>;
+  filteredEvents: E[];
+  rootEvents: E[];
   selectedEventId: string | null;
   scrubberIndex: number | null;
   isPlaying: boolean;
-  filter: EventCategory;
+  filter: string;
   showDiff: boolean;
   displayIndex: number | null;
-  selectedState: GameState | null;
-  prevState: GameState | null;
+  selectedState: unknown;
+  prevState: unknown;
   listRef: (node: HTMLDivElement | null) => void;
   onToggle?: () => void;
-  onFilterChange: (filter: EventCategory) => void;
+  /** Absent where the game offers no way to branch from a past event */
+  onBranchFrom?: (eventId: string) => void;
+  onFilterChange: (filter: string) => void;
   onToggleDiff: () => void;
   handlers: {
     handleRewindToBeginning: () => void;
@@ -30,16 +31,16 @@ interface DevtoolsContainerProps {
     handleScrubberChangeWithPause: (e: Event) => void;
     handleResetScrubber: () => void;
     handleEventClick: (
-      event: GameEvent,
+      event: E,
       eventIndex: number,
       isScrubberPosition: boolean,
     ) => void;
-    handleBranchFromEvent: (eventId: string) => void;
   };
 }
 
-export function DevtoolsContainer({
+export function DevtoolsContainer<E extends DevtoolsEvent>({
   events,
+  adapter,
   filteredEvents,
   rootEvents,
   selectedEventId,
@@ -52,10 +53,11 @@ export function DevtoolsContainer({
   prevState,
   listRef,
   onToggle,
+  onBranchFrom,
   onFilterChange,
   onToggleDiff,
   handlers,
-}: DevtoolsContainerProps) {
+}: DevtoolsContainerProps<E>) {
   return (
     <div style={styles.container}>
       <DevtoolsHeader
@@ -73,15 +75,20 @@ export function DevtoolsContainer({
         onScrubberChange={handlers.handleScrubberChangeWithPause}
         onResetScrubber={handlers.handleResetScrubber}
       />
-      <FilterBar filter={filter} onFilterChange={onFilterChange} />
+      <FilterBar
+        categories={adapter.categories}
+        filter={filter}
+        onFilterChange={onFilterChange}
+      />
       <EventList
+        adapter={adapter}
         filteredEvents={filteredEvents}
         events={events}
         selectedEventId={selectedEventId}
         scrubberIndex={scrubberIndex}
         listRef={listRef}
         onEventClick={handlers.handleEventClick}
-        onBranchFrom={handlers.handleBranchFromEvent}
+        {...(onBranchFrom !== undefined && { onBranchFrom })}
       />
       <StateInspector
         selectedState={selectedState}

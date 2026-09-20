@@ -40,6 +40,7 @@ import type { ComplexDecisionData } from "./hooks";
 import { useAnimationSafe } from "../../animation";
 import { isDecisionChoice } from "../../types/pending-choice";
 import { run } from "../../lib/run";
+import { useDominionDevtoolsAdapter } from "./devtoolsAdapter";
 
 const ANIMATION_DURATION = {
   BUY_TO_DISCARD_MS: 300,
@@ -183,6 +184,7 @@ export function BoardContent({
   const denyUndo = denyUndo$.value;
   const contextLocalPlayerId = localPlayerId$$.value;
   const animation = useAnimationSafe();
+  const devtoolsAdapter = useDominionDevtoolsAdapter(game.events);
 
   // Try to get opponent name from players list (multiplayer)
   const opponentPlayerName = players?.find(
@@ -447,6 +449,7 @@ export function BoardContent({
       <Suspense fallback={null}>
         <EventDevtools
           events={game.events}
+          adapter={devtoolsAdapter}
           isOpen={showDevtools}
           onToggle={onToggleDevtools}
           onBranchFrom={onRequestUndo}

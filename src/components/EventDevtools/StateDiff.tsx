@@ -1,9 +1,8 @@
-import type { GameState, PlayerState } from "../../types/game-state";
 import { styles } from "./constants";
 
 interface StateDiffProps {
-  prev: GameState;
-  next: GameState;
+  prev: unknown;
+  next: unknown;
 }
 
 interface StateChange {
@@ -12,106 +11,38 @@ interface StateChange {
   to: string;
 }
 
-function compareSimpleValues(prev: GameState, next: GameState): StateChange[] {
-  return [
-    prev.turn !== next.turn
-      ? {
-          path: "turn",
-          from: String(prev.turn),
-          to: String(next.turn),
-        }
-      : null,
-    prev.phase !== next.phase
-      ? {
-          path: "phase",
-          from: prev.phase,
-          to: next.phase,
-        }
-      : null,
-    prev.activePlayerId !== next.activePlayerId
-      ? {
-          path: "activePlayer",
-          from: prev.activePlayerId,
-          to: next.activePlayerId,
-        }
-      : null,
-    prev.actions !== next.actions
-      ? {
-          path: "actions",
-          from: String(prev.actions),
-          to: String(next.actions),
-        }
-      : null,
-    prev.buys !== next.buys
-      ? {
-          path: "buys",
-          from: String(prev.buys),
-          to: String(next.buys),
-        }
-      : null,
-    prev.coins !== next.coins
-      ? {
-          path: "coins",
-          from: String(prev.coins),
-          to: String(next.coins),
-        }
-      : null,
-  ].filter((change): change is StateChange => change !== null);
-}
+const VALUE_MAX_LENGTH = 120;
 
-function comparePlayerStates(
-  playerId: string,
-  prevPlayer: PlayerState,
-  nextPlayer: PlayerState,
-): StateChange[] {
-  return [
-    (prevPlayer.handCount ?? prevPlayer.hand.length) !==
-    (nextPlayer.handCount ?? nextPlayer.hand.length)
-      ? {
-          path: `${playerId}.hand`,
-          from: prevPlayer.handHidden
-            ? `${prevPlayer.handCount ?? 0} hidden cards`
-            : prevPlayer.hand.join(", ") || "(empty)",
-          to: nextPlayer.handHidden
-            ? `${nextPlayer.handCount ?? 0} hidden cards`
-            : nextPlayer.hand.join(", ") || "(empty)",
-        }
-      : null,
-    (prevPlayer.deckCount ?? prevPlayer.deck.length) !==
-    (nextPlayer.deckCount ?? nextPlayer.deck.length)
-      ? {
-          path: `${playerId}.deck`,
-          from: `${prevPlayer.deckCount ?? prevPlayer.deck.length} cards`,
-          to: `${nextPlayer.deckCount ?? nextPlayer.deck.length} cards`,
-        }
-      : null,
-    prevPlayer.discard.length !== nextPlayer.discard.length
-      ? {
-          path: `${playerId}.discard`,
-          from: `${prevPlayer.discard.length} cards`,
-          to: `${nextPlayer.discard.length} cards`,
-        }
-      : null,
-    JSON.stringify(prevPlayer.inPlay) !== JSON.stringify(nextPlayer.inPlay)
-      ? {
-          path: `${playerId}.inPlay`,
-          from: prevPlayer.inPlay.join(", ") || "(none)",
-          to: nextPlayer.inPlay.join(", ") || "(none)",
-        }
-      : null,
-  ].filter((change): change is StateChange => change !== null);
-}
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  return Object.fromEntries(Object.entries(value));
+};
 
-function compareAllPlayers(prev: GameState, next: GameState): StateChange[] {
-  return (next.playerOrder || [])
-    .map(playerId => {
-      const prevPlayer = prev.players[playerId];
-      const nextPlayer = next.players[playerId];
-      if (!prevPlayer || !nextPlayer) return [];
+const show = (value: unknown): string => {
+  if (value === undefined) return "(absent)";
+  const text = JSON.stringify(value);
+  return text.length > VALUE_MAX_LENGTH
+    ? `${text.slice(0, VALUE_MAX_LENGTH)}…`
+    : text;
+};
 
-      return comparePlayerStates(playerId, prevPlayer, nextPlayer);
-    })
-    .flat();
+/** Top-level fields that differ, which is as far as a game-agnostic diff can see */
+export function changesBetween(prev: unknown, next: unknown): StateChange[] {
+  const before = asRecord(prev);
+  const after = asRecord(next);
+  if (before === null || after === null) {
+    return show(prev) === show(next)
+      ? []
+      : [{ path: "state", from: show(prev), to: show(next) }];
+  }
+  const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
+  return keys.flatMap(key =>
+    JSON.stringify(before[key]) === JSON.stringify(after[key])
+      ? []
+      : [{ path: key, from: show(before[key]), to: show(after[key]) }],
+  );
 }
 
 function renderDiffRow(change: StateChange, index: number) {
@@ -129,13 +60,11 @@ function renderDiffRow(change: StateChange, index: number) {
  * State diff viewer
  */
 export function StateDiff({ prev, next }: StateDiffProps) {
-  const simpleChanges = compareSimpleValues(prev, next);
-  const playerChanges = compareAllPlayers(prev, next);
-  const allChanges = [...simpleChanges, ...playerChanges];
+  const changes = changesBetween(prev, next);
 
-  if (allChanges.length === 0) {
+  if (changes.length === 0) {
     return <div style={styles.noChanges}>No state changes</div>;
   }
 
-  return <div style={styles.diffContent}>{allChanges.map(renderDiffRow)}</div>;
+  return <div style={styles.diffContent}>{changes.map(renderDiffRow)}</div>;
 }

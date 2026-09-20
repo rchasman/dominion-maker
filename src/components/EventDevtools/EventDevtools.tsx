@@ -8,10 +8,11 @@
  * - Branch from any point to create alternate timelines
  * - Diff view showing what changed
  * - Filter events by type
+ *
+ * Every game-specific reading of the log comes in through the adapter.
  */
 import { useState } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
-import type { EventCategory } from "./constants";
+import type { DevtoolsEvent, EventDevtoolsAdapter } from "./adapter";
 import { styles } from "./constants";
 import { getDisplayIndex } from "./utils";
 import { DevtoolsContainer } from "./DevtoolsContainer";
@@ -29,8 +30,9 @@ import {
   usePrevState,
 } from "./stateHooks";
 
-interface EventDevtoolsProps {
-  events: GameEvent[];
+interface EventDevtoolsProps<E extends DevtoolsEvent> {
+  events: E[];
+  adapter: EventDevtoolsAdapter<E>;
   isOpen?: boolean;
   onToggle?: () => void;
   onBranchFrom?: (eventId: string) => void;
@@ -39,25 +41,26 @@ interface EventDevtoolsProps {
 
 const TOGGLE_ICON = "{ }";
 
-export function EventDevtools({
+export function EventDevtools<E extends DevtoolsEvent>({
   events,
+  adapter,
   isOpen = true,
   onToggle,
   onBranchFrom,
   onScrub,
-}: EventDevtoolsProps) {
+}: EventDevtoolsProps<E>) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<EventCategory>("all");
+  const [filter, setFilter] = useState<string>("all");
   const [showDiff, setShowDiff] = useState(false);
   const [scrubberIndex, setScrubberIndex] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const { listRef, listRefInternalRef } = useListScroll(scrubberIndex);
-  const rootEvents = useRootEvents(events);
-  const filteredEvents = useFilteredEvents(events, filter);
+  const rootEvents = useRootEvents(events, adapter);
+  const filteredEvents = useFilteredEvents(events, filter, adapter);
   const displayIndex = getDisplayIndex(scrubberIndex, selectedEventId, events);
-  const selectedState = useSelectedState(events, displayIndex);
-  const prevState = usePrevState(events, displayIndex);
+  const selectedState = useSelectedState(adapter, displayIndex);
+  const prevState = usePrevState(adapter, displayIndex);
 
   useAutoScroll(scrubberIndex, events.length, isOpen, listRefInternalRef);
   useScrubberScroll(scrubberIndex, listRefInternalRef);
@@ -93,6 +96,7 @@ export function EventDevtools({
   return (
     <DevtoolsContainer
       events={events}
+      adapter={adapter}
       filteredEvents={filteredEvents}
       rootEvents={rootEvents}
       selectedEventId={selectedEventId}
@@ -105,6 +109,9 @@ export function EventDevtools({
       prevState={prevState}
       listRef={listRef}
       {...(onToggle !== undefined && { onToggle })}
+      {...(onBranchFrom !== undefined && {
+        onBranchFrom: handlers.handleBranchFromEvent,
+      })}
       onFilterChange={setFilter}
       onToggleDiff={() => setShowDiff(!showDiff)}
       handlers={handlers}

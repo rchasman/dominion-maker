@@ -1,66 +1,83 @@
-import { getStateAtEvent$ } from "../../context/game-signals";
-import type { GameState } from "../../types/game-state";
 import { useMemo, useEffect, useState } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
-import type { EventCategory } from "./constants";
-import { projectState } from "../../events/project";
-import { isRootCauseEvent } from "../../events/types";
-import { CATEGORY_FILTERS } from "./constants";
+import type { DevtoolsEvent, EventDevtoolsAdapter } from "./adapter";
 
-export function useFilteredEvents(events: GameEvent[], filter: EventCategory) {
+const ALL_EVENTS = "all";
+
+export function useFilteredEvents<E extends DevtoolsEvent>(
+  events: E[],
+  filter: string,
+  adapter: EventDevtoolsAdapter<E>,
+) {
   return useMemo(() => {
-    if (filter === "all") return events;
-    const types = CATEGORY_FILTERS[filter];
-    return events.filter(e => types.includes(e.type));
-  }, [events, filter]);
+    if (filter === ALL_EVENTS) return events;
+    return events.filter(e => adapter.category(e) === filter);
+  }, [events, filter, adapter]);
 }
 
-export function useRootEvents(events: GameEvent[]) {
+export function useRootEvents<E extends DevtoolsEvent>(
+  events: E[],
+  adapter: EventDevtoolsAdapter<E>,
+) {
   return useMemo(() => {
-    return events.filter(e => isRootCauseEvent(e));
-  }, [events]);
+    return events.filter(e => adapter.isRoot(e));
+  }, [events, adapter]);
 }
 
-function useHistoricalState(events: GameEvent[], index: number | null) {
-  const getState = getStateAtEvent$.value;
-  const eventId = index === null ? undefined : events[index]?.id;
-  const remote = events.length > 0 && events[0]?.type !== "GAME_INITIALIZED";
-  const [result, setResult] = useState<{
-    eventId: string;
-    state: GameState;
+/**
+ * The state the adapter reports at that point in the log. A game answers
+ * straight away from a local replay or later from the host, so a pending
+ * answer reads as no state rather than as the state of another index.
+ */
+function useHistoricalState<E extends DevtoolsEvent>(
+  adapter: EventDevtoolsAdapter<E>,
+  index: number | null,
+): unknown {
+  const [resolved, setResolved] = useState<{
+    index: number;
+    state: unknown;
   } | null>(null);
+
   useEffect(() => {
-    if (!remote || !eventId || !getState) return;
+    const stateAt = adapter.stateAt;
+    if (!stateAt || index === null || index < 0) return;
     const request = { active: true };
-    void Promise.resolve()
-      .then(() => getState(eventId))
-      .then(state => {
-        if (request.active) setResult({ eventId, state });
-      })
-      .catch(() => {
-        if (request.active) setResult(null);
-      });
+    const settle = (state: unknown) => {
+      if (request.active) setResolved({ index, state });
+    };
+    try {
+      const lookup = stateAt.call(adapter, index);
+      if (lookup instanceof Promise) {
+        lookup.then(settle).catch(() => {
+          if (request.active) setResolved(null);
+        });
+      } else {
+        settle(lookup);
+      }
+    } catch {
+      setResolved(null);
+    }
     return () => {
       request.active = false;
     };
-  }, [eventId, remote, getState]);
-  return useMemo(() => {
-    if (index === null || index < 0) return null;
-    if (remote)
-      return result && result.eventId === eventId ? result.state : null;
-    return projectState(events.slice(0, index + 1));
-  }, [events, index, remote, result, eventId]);
+  }, [adapter, index]);
+
+  if (!adapter.stateAt || index === null || index < 0) return null;
+  return resolved?.index === index ? resolved.state : null;
 }
 
-export function useSelectedState(
-  events: GameEvent[],
+export function useSelectedState<E extends DevtoolsEvent>(
+  adapter: EventDevtoolsAdapter<E>,
   displayIndex: number | null,
-) {
-  return useHistoricalState(events, displayIndex);
+): unknown {
+  return useHistoricalState(adapter, displayIndex);
 }
-export function usePrevState(events: GameEvent[], displayIndex: number | null) {
+
+export function usePrevState<E extends DevtoolsEvent>(
+  adapter: EventDevtoolsAdapter<E>,
+  displayIndex: number | null,
+): unknown {
   return useHistoricalState(
-    events,
+    adapter,
     displayIndex === null ? null : displayIndex - 1,
   );
 }

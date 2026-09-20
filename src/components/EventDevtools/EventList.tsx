@@ -1,17 +1,16 @@
 import { useCallback } from "preact/hooks";
-import type { GameEvent } from "../../events/types";
-import { isRootCauseEvent } from "../../events/types";
-import { EVENT_COLORS, styles } from "./constants";
-import { formatEvent } from "./utils";
+import type { DevtoolsEvent, EventDevtoolsAdapter } from "./adapter";
+import { styles } from "./constants";
 
-interface EventListProps {
-  filteredEvents: GameEvent[];
-  events: GameEvent[];
+interface EventListProps<E extends DevtoolsEvent> {
+  adapter: EventDevtoolsAdapter<E>;
+  filteredEvents: E[];
+  events: E[];
   selectedEventId: string | null;
   scrubberIndex: number | null;
   listRef: (node: HTMLDivElement | null) => void;
   onEventClick: (
-    event: GameEvent,
+    event: E,
     eventIndex: number,
     isScrubberPosition: boolean,
   ) => void;
@@ -60,13 +59,14 @@ function renderEventRightButton({
   return null;
 }
 
-interface EventItemProps {
-  event: GameEvent;
-  events: GameEvent[];
+interface EventItemProps<E extends DevtoolsEvent> {
+  adapter: EventDevtoolsAdapter<E>;
+  event: E;
+  events: E[];
   selectedEventId: string | null;
   scrubberIndex: number | null;
   onEventClick: (
-    event: GameEvent,
+    event: E,
     eventIndex: number,
     isScrubberPosition: boolean,
   ) => void;
@@ -74,7 +74,8 @@ interface EventItemProps {
   handleBranch: (eventId: string | undefined) => void;
 }
 
-function EventItem({
+function EventItem<E extends DevtoolsEvent>({
+  adapter,
   event,
   events,
   selectedEventId,
@@ -82,16 +83,16 @@ function EventItem({
   onEventClick,
   onBranchFrom,
   handleBranch,
-}: EventItemProps) {
+}: EventItemProps<E>) {
   const eventIndex = events.indexOf(event);
   const isSelected =
     selectedEventId === event.id || scrubberIndex === eventIndex;
-  const isRoot = isRootCauseEvent(event);
+  const isRoot = adapter.isRoot(event);
   const hasParent = Boolean(event.causedBy);
   const isScrubberPosition = scrubberIndex === eventIndex;
 
   // Calculate actual nesting depth by traversing causedBy chain
-  const getDepth = (evt: GameEvent): number => {
+  const getDepth = (evt: E): number => {
     if (!evt.causedBy) return 0;
     const parent = events.find(e => e.id === evt.causedBy);
     if (!parent) return 1;
@@ -102,6 +103,7 @@ function EventItem({
   const paddingPerLevel = 20;
   const basePadding = 12;
   const calculatedPadding = basePadding + depth * paddingPerLevel;
+  const colour = adapter.colour(event);
 
   return (
     <div
@@ -113,7 +115,7 @@ function EventItem({
       style={{
         ...styles.eventItem,
         background: isSelected ? "rgba(99, 102, 241, 0.2)" : undefined,
-        borderLeftColor: EVENT_COLORS[event.type] || "#6b7280",
+        borderLeftColor: colour,
         paddingLeft: `${calculatedPadding}px`,
         position: "relative",
         borderRight: isScrubberPosition
@@ -126,12 +128,12 @@ function EventItem({
       <span
         style={{
           ...styles.eventType,
-          color: EVENT_COLORS[event.type] || "#6b7280",
+          color: colour,
         }}
       >
         {event.type}
       </span>
-      <span style={styles.eventDetail}>{formatEvent(event)}</span>
+      <span style={styles.eventDetail}>{adapter.label(event)}</span>
       {renderEventRightButton({
         isScrubberPosition,
         isRoot,
@@ -146,7 +148,8 @@ function EventItem({
 /**
  * Event list rendering
  */
-export function EventList({
+export function EventList<E extends DevtoolsEvent>({
+  adapter,
   filteredEvents,
   events,
   selectedEventId,
@@ -154,7 +157,7 @@ export function EventList({
   listRef,
   onEventClick,
   onBranchFrom,
-}: EventListProps) {
+}: EventListProps<E>) {
   const handleBranch = useCallback(
     (eventId: string | undefined) => {
       if (eventId && onBranchFrom) {
@@ -175,6 +178,7 @@ export function EventList({
       {filteredEvents.map(event => (
         <EventItem
           key={`${event.id}-${events.indexOf(event)}`}
+          adapter={adapter}
           event={event}
           events={events}
           selectedEventId={selectedEventId}
