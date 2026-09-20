@@ -5,6 +5,7 @@ import type { GameClientMessage } from "./protocol";
 import { createGame } from "../engine";
 import { dominionGame } from "../dominion/definition";
 import { dominionModule } from "../dominion/module";
+import { chessModule } from "../chess/module";
 
 const latestState = (h: ReturnType<typeof roomHarness>, socket: ConnLike) => {
   const state = h.statesOf(socket).at(-1);
@@ -182,5 +183,67 @@ describe("seats on the game server", () => {
       .flatMap(m => (m.type === "player_list" ? [m.players] : []))
       .at(-1);
     expect(list?.some(p => p.controller === "heuristic")).toBe(true);
+  });
+});
+
+describe("a chess room", () => {
+  it("lets the host move and has the rules bot answer", async () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "chess",
+      clientId: "alice",
+    });
+    h.send(host, {
+      type: "start_game",
+      bots: [{ name: "Bot", controller: { kind: "heuristic" } }],
+    });
+    const started = h.seen(host).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    const opening = chessModule.stateSchema.parse(started.state);
+    expect(opening.playerOrder[0]).toBe("alice");
+    const botId = opening.playerOrder[1];
+
+    h.send(host, {
+      type: "command",
+      command: { type: "MOVE", playerId: "alice", san: "e4" },
+    });
+    await h.settle();
+
+    const latest = chessModule.stateSchema.parse(h.statesOf(host).at(-1));
+    expect(latest.moves[0]).toBe("e4");
+    const answered = h
+      .seen(host)
+      .flatMap(m =>
+        "events" in m
+          ? m.events.map(e => chessModule.eventSchema.parse(e))
+          : [],
+      )
+      .some(e => e.type === "MOVE" && e.playerId === botId);
+    expect(answered).toBe(true);
+  });
+
+  it("refuses a Dominion join", () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    h.send(host, {
+      type: "join",
+      name: "Alice",
+      game: "chess",
+      clientId: "alice",
+    });
+    const other = h.connect("other");
+    h.send(other, {
+      type: "join",
+      name: "Bob",
+      game: "dominion",
+      clientId: "bob",
+    });
+    expect(h.lastOf(other)).toMatchObject({
+      type: "error",
+      message: "This room is playing Chess",
+    });
   });
 });
