@@ -105,6 +105,5 @@ export function playerView(
     activeEffects: state.activeEffects,
     playerOrder: state.playerOrder,
     ...(state.playerInfo ? { playerInfo: state.playerInfo } : {}),
-    isMultiplayer: true,
   };
 }
