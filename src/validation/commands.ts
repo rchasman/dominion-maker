@@ -30,16 +30,33 @@ const shape = {
   DENY_UNDO: { ...player, requestId: idSchema },
 } satisfies Record<GameCommand["type"], z.ZodRawShape>;
 
-const commandSchemas: Record<string, z.ZodType | undefined> =
+/**
+ * The only commands a seated player may send into a room. Setup stays off the
+ * wire, and the rest are reachable through the engine alone. `shape` above is
+ * exhaustive over `GameCommand`, so this allowlist reads against the full set.
+ */
+const roomCommandTypes = [
+  "PLAY_ACTION",
+  "PLAY_TREASURE",
+  "PLAY_ALL_TREASURES",
+  "BUY_CARD",
+  "END_PHASE",
+  "SUBMIT_DECISION",
+  "REQUEST_UNDO",
+  "APPROVE_UNDO",
+  "DENY_UNDO",
+] as const satisfies readonly GameCommand["type"][];
+
+const roomCommandSchemas: Record<string, z.ZodType | undefined> =
   Object.fromEntries(
-    Object.entries(shape).map(([type, fields]) => [
+    roomCommandTypes.map(type => [
       type,
-      z.object({ type: z.literal(type), ...fields }).strict(),
+      z.object({ type: z.literal(type), ...shape[type] }).strict(),
     ]),
   );
 
 /** One player intent as it crosses the wire; the engine still validates it against the state */
-export const gameCommandSchema = z.custom<GameCommand>(value => {
+export const roomCommandSchema = z.custom<GameCommand>(value => {
   if (
     !value ||
     typeof value !== "object" ||
@@ -47,5 +64,5 @@ export const gameCommandSchema = z.custom<GameCommand>(value => {
     typeof value.type !== "string"
   )
     return false;
-  return commandSchemas[value.type]?.safeParse(value).success ?? false;
+  return roomCommandSchemas[value.type]?.safeParse(value).success ?? false;
 }, "Invalid command");

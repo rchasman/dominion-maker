@@ -275,3 +275,45 @@ describe("the room module acts after an accepted command", () => {
     expect(types).toContain("UNDO_EXECUTED");
   });
 });
+
+describe("setup never crosses the room wire", () => {
+  const playerListOf = (h: RoomHarness, socket: ConnLike) =>
+    h
+      .seen(socket)
+      .flatMap(m => (m.type === "player_list" ? [m.players] : []))
+      .at(-1);
+
+  it("refuses a START_GAME command and leaves the live game standing", () => {
+    const h = roomHarness();
+    const host = h.connect("host");
+    const guest = h.connect("guest");
+    joinAs(h, host, "alice");
+    joinAs(h, guest, "bob");
+    h.send(host, { type: "start_game" });
+    expect(h.countOf(host, "game_started")).toBe(1);
+
+    const active = stateOf(h.statesOf(host).at(-1)).activePlayerId;
+    const seat = active === "alice" ? host : guest;
+    const before = {
+      players: playerListOf(h, host),
+      shipped: h.countOf(host, "game_started", "events", "full_state"),
+      log: h.statesOf(host).length,
+    };
+
+    h.send(seat, {
+      type: "command",
+      command: { type: "START_GAME", players: ["mallory", active], seed: 7 },
+    });
+
+    expect(h.lastOf(seat)?.type).toBe("error");
+    expect(h.countOf(host, "game_started", "events", "full_state")).toBe(
+      before.shipped,
+    );
+    expect(h.statesOf(host).length).toBe(before.log);
+    expect(playerListOf(h, host)).toEqual(before.players);
+    expect(stateOf(h.statesOf(host).at(-1)).playerOrder).toEqual([
+      "alice",
+      "bob",
+    ]);
+  });
+});

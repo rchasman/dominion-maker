@@ -158,3 +158,45 @@ describe("dominionModule", () => {
     ).toBe(false);
   });
 });
+
+describe("the room's command surface", () => {
+  const accepted = [
+    { type: "PLAY_ACTION", playerId: "alice", card: "Village" },
+    { type: "PLAY_TREASURE", playerId: "alice", card: "Copper" },
+    { type: "PLAY_ALL_TREASURES", playerId: "alice" },
+    { type: "BUY_CARD", playerId: "alice", card: "Silver" },
+    { type: "END_PHASE", playerId: "alice" },
+    {
+      type: "SUBMIT_DECISION",
+      playerId: "alice",
+      choice: { selectedCards: ["Copper"] },
+    },
+    { type: "REQUEST_UNDO", playerId: "alice", toEventId: "evt-1" },
+    { type: "APPROVE_UNDO", playerId: "alice", requestId: "req-1" },
+    { type: "DENY_UNDO", playerId: "alice", requestId: "req-1" },
+  ];
+
+  const refused = [
+    { type: "START_GAME", players: ["mallory", "alice"], seed: 7 },
+    { type: "UNPLAY_TREASURE", playerId: "alice", card: "Copper" },
+    { type: "SKIP_DECISION", playerId: "alice" },
+    { type: "REVEAL_REACTION", playerId: "alice", card: "Moat" },
+    { type: "DECLINE_REACTION", playerId: "alice" },
+  ];
+
+  it("accepts each of the nine commands a seated player may send", () => {
+    expect(
+      accepted.filter(
+        command => !dominionModule.commandSchema.safeParse(command).success,
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses setup and every command the room never carried", () => {
+    expect(
+      refused.filter(
+        command => dominionModule.commandSchema.safeParse(command).success,
+      ),
+    ).toEqual([]);
+  });
+});

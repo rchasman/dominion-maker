@@ -4,7 +4,7 @@ import { DEFAULT_LLM_SEAT, isHumanSeat } from "../core/seats";
 import { DominionEngine, createGame } from "../engine";
 import { cardsSchema, gameStateSchema } from "../validation/game-state";
 import { gameEventSchema } from "../validation/events";
-import { gameCommandSchema } from "../validation/commands";
+import { roomCommandSchema } from "../validation/commands";
 import { actionSchema } from "../validation/action";
 import { multiplayerLogger } from "../lib/logger";
 import { dominionGame } from "./definition";
@@ -30,7 +30,7 @@ export const dominionModule: GameModule<DominionShape> = {
     createGame(players, options.kingdomCards, options.seed),
   loadEngine,
   eventSchema: gameEventSchema,
-  commandSchema: gameCommandSchema,
+  commandSchema: roomCommandSchema,
   stateSchema: gameStateSchema,
   moveSchema: actionSchema,
   optionsSchema,
