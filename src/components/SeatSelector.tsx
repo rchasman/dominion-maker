@@ -8,18 +8,19 @@ import {
 } from "../context/game-signals";
 import { formatPlayerName } from "../lib/board-utils";
 
-const KINDS: ReadonlyArray<{ kind: ControllerKind; label: string }> = [
-  { kind: "human", label: "Human" },
-  { kind: "heuristic", label: "Rules bot" },
-  { kind: "llm", label: "LLM" },
-];
+const LABELS: Record<ControllerKind, string> = {
+  human: "Manual",
+  heuristic: "Engine",
+  llm: "LLM",
+};
 
-const isKind = (value: string): value is ControllerKind =>
-  KINDS.some(entry => entry.kind === value);
+const isKind = (value: string): value is ControllerKind => value in LABELS;
 
 interface SeatSelectorProps {
   playerId: string;
   config: ControllerConfig;
+  /** Which kinds this table offers: no Engine in a lobby room, no Manual in single player */
+  options: readonly ControllerKind[];
   onChange: (config: ControllerConfig) => void;
   disabled?: boolean;
 }
@@ -28,6 +29,7 @@ interface SeatSelectorProps {
 export function SeatSelector({
   playerId,
   config,
+  options,
   onChange,
   disabled = false,
 }: SeatSelectorProps) {
@@ -67,9 +69,9 @@ export function SeatSelector({
       onChange={handleChange}
       disabled={disabled}
     >
-      {KINDS.map(entry => (
-        <option key={entry.kind} value={entry.kind}>
-          {entry.label}
+      {options.map(kind => (
+        <option key={kind} value={kind}>
+          {LABELS[kind]}
         </option>
       ))}
     </select>

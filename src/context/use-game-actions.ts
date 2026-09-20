@@ -19,6 +19,7 @@ import {
   syncEngineToSignals,
   gameState$,
   llmLogs$,
+  localHumanSeat$,
   playerStrategies$,
 } from "./game-signals";
 import {
@@ -67,6 +68,10 @@ interface GameActions {
  * Hook to create all game action callbacks.
  * All actions write directly to signals via syncEngineToSignals.
  */
+/** The seat this client's human acts for; the active player when nobody is human */
+const actor = (engine: DominionEngine): string =>
+  localHumanSeat$.peek() ?? engine.state.activePlayerId;
+
 export function useGameActions(
   engineRef: MutableRefObject<DominionEngine | null>,
 ): GameActions {
@@ -77,7 +82,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const result = executePlayAction(engine, card);
+      const result = executePlayAction(engine, actor(engine), card);
       if (result.ok) {
         syncEngineToSignals(engine);
       }
@@ -93,7 +98,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const result = executePlayTreasure(engine, card);
+      const result = executePlayTreasure(engine, actor(engine), card);
       if (result.ok) {
         syncEngineToSignals(engine);
       }
@@ -109,7 +114,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const result = executeUnplayTreasure(engine, card);
+      const result = executeUnplayTreasure(engine, actor(engine), card);
       if (result.ok) {
         syncEngineToSignals(engine);
       }
@@ -125,7 +130,7 @@ export function useGameActions(
       return { ok: false, error: "No engine" };
     }
 
-    const result = executePlayAllTreasures(engine, gs);
+    const result = executePlayAllTreasures(engine, actor(engine), gs);
     syncEngineToSignals(engine);
     return result;
   }, [engineRef]);
@@ -137,7 +142,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const result = executeBuyCard(engine, card);
+      const result = executeBuyCard(engine, actor(engine), card);
       if (result.ok) {
         syncEngineToSignals(engine);
       }
@@ -152,7 +157,7 @@ export function useGameActions(
       return { ok: false, error: "No engine" };
     }
 
-    const result = executeEndPhase(engine);
+    const result = executeEndPhase(engine, actor(engine));
     if (result.ok) {
       syncEngineToSignals(engine);
     }
@@ -166,7 +171,7 @@ export function useGameActions(
         return { ok: false, error: "No engine" };
       }
 
-      const result = executeSubmitDecision(engine, choice);
+      const result = executeSubmitDecision(engine, actor(engine), choice);
       if (result.ok) {
         syncEngineToSignals(engine);
       }

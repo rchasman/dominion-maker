@@ -40,6 +40,7 @@ describe("SeatSelector", () => {
         <SeatSelector
           playerId="p1"
           config={config}
+          options={["human", "llm"]}
           onChange={c => changes.push(c)}
         />,
         root,

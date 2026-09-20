@@ -1,7 +1,82 @@
 import { lazy, Suspense } from "preact/compat";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import type { LLMLogEntry } from "../LLMLog";
-import { FULL_PERCENT } from "./constants";
+import {
+  FONT_WEIGHT_NORMAL,
+  FONT_WEIGHT_BOLD,
+  FULL_PERCENT,
+} from "./constants";
+import {
+  SEAT_PRESETS,
+  SEAT_PRESET_NAMES,
+  type SeatPreset,
+} from "../../context/seat-presets";
+
+interface GameModeSwitcherProps {
+  activePreset: SeatPreset | null;
+  onPresetChange: (preset: SeatPreset) => void;
+}
+
+/** Engine / Hybrid / Full: reseat the whole table in one click */
+export function GameModeSwitcher({
+  activePreset,
+  onPresetChange,
+}: GameModeSwitcherProps) {
+  return (
+    <div style={{ marginBlockEnd: "var(--space-3)" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-2)",
+          alignItems: "center",
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--color-text-secondary)",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05rem",
+          }}
+        >
+          Mode:
+        </span>
+        {SEAT_PRESET_NAMES.map(preset => {
+          const isActive = activePreset === preset;
+          return (
+            <button
+              key={preset}
+              onClick={() => onPresetChange(preset)}
+              style={{
+                padding: "3px 8px",
+                fontSize: "0.65rem",
+                fontWeight: isActive ? FONT_WEIGHT_BOLD : FONT_WEIGHT_NORMAL,
+                background: isActive
+                  ? "var(--color-victory-dark)"
+                  : "transparent",
+                color: isActive ? "#fff" : "var(--color-text-secondary)",
+                border: "1px solid",
+                borderColor: isActive
+                  ? "var(--color-victory)"
+                  : "var(--color-border-secondary)",
+                cursor: "pointer",
+                textTransform: "uppercase",
+                letterSpacing: "0.05rem",
+                fontFamily: "inherit",
+                borderRadius: "3px",
+              }}
+            >
+              {SEAT_PRESETS[preset].name}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const LLMLog = lazy(() =>
   import("../LLMLog").then(m => ({ default: m.LLMLog })),
@@ -151,6 +226,8 @@ export function LLMLogSection({
 }
 
 interface GameControlsSectionProps {
+  activePreset: SeatPreset | null;
+  onPresetChange?: (preset: SeatPreset) => void;
   onNewGame?: () => void;
   onEndGame?: () => void;
   onBackToHome?: () => void;
@@ -158,6 +235,8 @@ interface GameControlsSectionProps {
 }
 
 export function GameControlsSection({
+  activePreset,
+  onPresetChange,
   onNewGame,
   onEndGame,
   onBackToHome,
@@ -171,6 +250,13 @@ export function GameControlsSection({
         background: "var(--color-bg-surface)",
       }}
     >
+      {!isSpectator && onPresetChange && (
+        <GameModeSwitcher
+          activePreset={activePreset}
+          onPresetChange={onPresetChange}
+        />
+      )}
+
       <GameActionButtons
         {...(!isSpectator && onNewGame !== undefined && { onNewGame })}
         {...(!isSpectator && onEndGame !== undefined && { onEndGame })}
