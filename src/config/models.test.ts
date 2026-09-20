@@ -125,9 +125,9 @@ describe("generated catalog and its overrides", () => {
   });
 
   it("keeps every provider spelling the picker knows how to colour", () => {
-    const uncoloured = [
-      ...new Set(MODELS.map(m => m.provider)),
-    ].filter(provider => PROVIDER_COLORS_BY_NAME[provider] === undefined);
+    const uncoloured = [...new Set(MODELS.map(m => m.provider))].filter(
+      provider => PROVIDER_COLORS_BY_NAME[provider] === undefined,
+    );
     expect(uncoloured).toEqual([]);
   });
 });

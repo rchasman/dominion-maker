@@ -131,10 +131,18 @@ ${playable.map(entryFor).join("\n")}
 `;
 
 await Bun.write(OUTPUT_PATH, generated);
+// Keep the output prettier-clean so a refresh never fails `bun run check`.
+await Bun.spawn(["bunx", "prettier", "--write", OUTPUT_PATH]).exited;
 
 const providers = new Set(playable.map(providerOf));
-console.log(`wrote ${playable.length} models across ${providers.size} providers to ${OUTPUT_PATH}`);
-console.log(`skipped ${data.length - playable.length} of ${data.length} catalog entries`);
+console.log(
+  `wrote ${playable.length} models across ${providers.size} providers to ${OUTPUT_PATH}`,
+);
+console.log(
+  `skipped ${data.length - playable.length} of ${data.length} catalog entries`,
+);
 if (staleQuirks.length > 0) {
-  console.log(`stale MODEL_QUIRKS entries (no longer in the catalog): ${staleQuirks.join(", ")}`);
+  console.log(
+    `stale MODEL_QUIRKS entries (no longer in the catalog): ${staleQuirks.join(", ")}`,
+  );
 }
