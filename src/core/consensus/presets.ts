@@ -22,8 +22,8 @@ const CHEAP_MODELS = [
   "mistral-nemo",
   "nemotron-3.5-lightning",
   "nova-lite",
-  "deepseek-v4-flash",
-  "gpt-5-nano",
+  "gpt-oss-120b",
+  "grok-4-fast",
 ] as const satisfies readonly ModelProvider[];
 
 // Latency axis, nothing else: the fastest models that can carry a vote,
@@ -41,21 +41,23 @@ const FAST_MODELS = [
   "nova-lite",
   "nemotron-3-super-120b-a12b",
   "gemini-3.5-flash-lite",
-  "gemma-4-26b-a4b-it",
+  "nemotron-nano-12b-v2-vl",
 ] as const satisfies readonly ModelProvider[];
 
-// The mid-tier flagship of eight houses: stronger than the flash tier, far
-// under frontier price, and each verified to answer inside the vote timeout.
-// One per provider, fastest first, so a house cannot dominate the vote.
+// The strongest model each house offers between $1 and $8 per million tokens:
+// past the flash tier, nowhere near frontier price. Price is the only capability
+// proxy the catalog carries, so the pick is the dearest of the band per house
+// rather than the fastest, which is what keeps this preset from collapsing into
+// Diverse.
 const BALANCED_MODELS = [
   "nova-pro",
-  "mistral-medium-3.5",
-  "gpt-5.4-mini",
+  "glm-4.7",
+  "kimi-k2.5",
+  "llama-3.3-70b",
+  "mistral-large-3",
   "minimax-m3",
-  "kimi-k2.6",
   "claude-haiku",
   "inkling",
-  "qwen3.8-27b",
 ] as const satisfies readonly ModelProvider[];
 
 // One model per provider: the fastest of its house. Spread beats price here, a
@@ -63,47 +65,44 @@ const BALANCED_MODELS = [
 // same-house models share theirs. Speed decides the pick because Diverse gives
 // each house exactly one vote, and a vote past the 30s timeout is an abstention.
 //
-// Ranked from a live sweep of all 186 catalog models on 2026-09-20: 3 samples
-// each through the real /api/generate-action path, 20 concurrent calls held
-// constant. A model qualifies with zero failures and no sample past 30s, then
-// takes the lowest median, with every sample under 20s so there is margin
-// against the timeout; medians within 15% count as a tie and price breaks it. Models specialised away from general answers (code completion, vision)
-// are skipped for the same reason morph is denied outright.
+// Ranked from a live sweep on 2026-09-20: 3 samples per model through the real
+// /api/generate-action path, 20 concurrent calls held constant. A model
+// qualifies with zero failures and every sample under 20s, then takes the
+// lowest median; medians within 15% count as a tie and price breaks it.
 //
-// Three houses are absent on purpose: none of xiaomi, inclusionai or stepfun
-// has a model that can carry a vote. presets.test.ts holds that list and fails on any
-// provider the catalog offers that nobody has ruled on.
+// Every house in the catalog is here except xiaomi, whose only surviving model
+// medians 56s. presets.test.ts holds that list and fails on any provider the
+// catalog offers that nobody has ruled on.
 //
 // Re-run the sweep after a catalog refresh rather than trusting these picks.
 const DIVERSE_MODELS = [
   "jev",
-  "claude-3-haiku",
+  "nova-micro",
   "gpt-4.1-mini-fast",
-  "gemma-4-26b-a4b-it",
-  "grok-4-fast",
-  "deepseek-v4.1-flash",
+  "ministral-3b",
+  "nemotron-3-super-120b-a12b",
+  "gemini-3.5-flash-lite",
+  "inkling-small",
   "glm-4.7",
+  "grok-4-fast",
   "qwen3-next-80b-a3b-instruct",
   "llama-4-maverick",
-  "nemotron-3-super-120b-a12b",
   "kimi-k2.5",
-  "inkling-small",
-  "ministral-3b",
-  "nova-micro",
+  "claude-3-haiku",
   "minimax-m3",
+  "deepseek-v4.1-flash",
   "hy3",
 ] as const satisfies readonly ModelProvider[];
 
-// The current frontier flagship of each house that ships one, verified to
-// answer inside the vote timeout. Expensive on purpose: this is the preset for
-// when the answer matters more than the bill. One instance each, so the
-// maxInstances caps never bind.
+// The frontier flagship of each house that ships one inside the vote timeout.
+// Expensive on purpose: this is the preset for when the answer matters more
+// than the bill. One instance each, so the maxInstances caps never bind.
 const PRO_MODELS = [
-  "claude-opus-5",
-  "gpt-6-astra",
+  "gpt-5.1-thinking-fast",
+  "claude-sonnet",
   "gemini-3.1-pro",
-  "kimi-k3-fast",
   "qwen3.7-max",
+  "kimi-k3-fast",
 ] as const satisfies readonly ModelProvider[];
 
 export const JEV_PRESET: ConsensusPreset = {

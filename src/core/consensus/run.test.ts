@@ -12,10 +12,10 @@ const base = (
   signal = new AbortController().signal,
 ) => ({
   providers: [
-    "gpt-5.4-mini",
+    "gpt-4.1-mini-fast",
     "grok-4-fast",
-    "gemini-3.1-flash-lite",
-    "glm-4.7-flash",
+    "gemini-3.5-flash-lite",
+    "glm-5.3-flash",
   ] as const,
   state: null,
   actionId: "t1",
@@ -30,10 +30,10 @@ const base = (
 describe("runModelsInParallel", () => {
   it("tallies every answer and reports no early consensus on a split vote", async () => {
     const byProvider: Record<string, Move> = {
-      "gpt-5.4-mini": end,
+      "gpt-4.1-mini-fast": end,
       "grok-4-fast": buy,
-      "gemini-3.1-flash-lite": end,
-      "glm-4.7-flash": buy,
+      "gemini-3.5-flash-lite": end,
+      "glm-5.3-flash": buy,
     };
     const decideMove: DecideMoveFor<null, Move> = ({ provider }) =>
       Promise.resolve({ move: byProvider[provider] ?? end, distribution: [] });
@@ -50,7 +50,7 @@ describe("runModelsInParallel", () => {
   it("stops early once a diverse lead cannot be overturned and aborts the rest", async () => {
     const log: LLMLogEntryInput[] = [];
     const decideMove: DecideMoveFor<null, Move> = ({ provider, signal }) =>
-      provider === "glm-4.7-flash"
+      provider === "glm-5.3-flash"
         ? new Promise((_, reject) =>
             signal.addEventListener("abort", () =>
               reject(new Error("AbortError")),
