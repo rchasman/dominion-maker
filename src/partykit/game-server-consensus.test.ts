@@ -1,26 +1,29 @@
-import { describe, it, expect, afterAll } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { roomHarness } from "./room-harness.test-fixture";
 import {
   countingModule,
   type CountingShape,
 } from "./counting-module.test-fixture";
 import type { GameModule } from "../core/game-module";
+import type { ResolveDecideMove } from "./game-server";
 import { consensusLogEntrySchema } from "../validation/messages";
 
+const stateTurn = (state: unknown): string =>
+  typeof state === "object" &&
+  state !== null &&
+  "turn" in state &&
+  typeof state.turn === "string"
+    ? state.turn
+    : "a";
+
 /** Stands in for generate-action: every model adds one for whoever is to act */
-const api = Bun.serve({
-  port: 0,
-  fetch: async request => {
-    const body = await request.json();
-    const turn = body.currentState.turn;
-    return Response.json({
-      move: { type: "ADD", by: turn, add: 1 },
+const decideMove: ResolveDecideMove =
+  () =>
+  ({ state }) =>
+    Promise.resolve({
+      move: { type: "ADD", by: stateTurn(state), add: 1 },
       distribution: [],
     });
-  },
-});
-
-afterAll(() => void api.stop(true));
 
 const seatFor = (viewerId: string | null) => viewerId ?? "spectator";
 
@@ -38,9 +41,7 @@ const logsOf = (messages: ReturnType<ReturnType<typeof roomHarness>["seen"]>) =>
 
 describe("GameServer consensus relay", () => {
   it("sends every connection its own projection of a seat's votes", async () => {
-    const harness = roomHarness(() => projectingModule, {
-      API_ORIGIN: api.url.origin,
-    });
+    const harness = roomHarness(() => projectingModule, decideMove);
     const alice = harness.connect("alice-conn");
     const bob = harness.connect("bob-conn");
     harness.send(alice, {

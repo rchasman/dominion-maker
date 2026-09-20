@@ -24,7 +24,7 @@ import type { ControllerConfig, Seats } from "../core/seats";
 import { HUMAN_SEAT, isHumanSeat } from "../core/seats";
 import type { Controller } from "../core/controller";
 import { heuristicController } from "../core/controller";
-import { llmController } from "../core/llm-controller";
+import { llmController, type DecideMove } from "../core/llm-controller";
 import { stampLogEntry } from "../core/consensus/log";
 import { createControllerCache } from "../core/controller-cache";
 import { driveEngine } from "../core/driver";
@@ -39,6 +39,9 @@ type RoomModule = GameModule<GameShape>;
 
 /** How a game id becomes a module; tests pass their own registry */
 export type ResolveModule = (id: GameId) => RoomModule;
+
+/** How a seat's models are reached; tests pass their own transport */
+export type ResolveDecideMove = (module: RoomModule) => DecideMove<GameShape>;
 
 /** The game this room plays, fixed by the first join */
 type RoomGame = {
@@ -119,12 +122,19 @@ export default class GameServer implements Party.Server {
 
   readonly room: RoomLike;
   private readonly resolveModule: ResolveModule;
+  private readonly resolveDecideMove: ResolveDecideMove;
 
-  constructor(room: RoomLike, resolveModule: ResolveModule = moduleFor) {
+  constructor(
+    room: RoomLike,
+    resolveModule: ResolveModule = moduleFor,
+    resolveDecideMove?: ResolveDecideMove,
+  ) {
     this.room = room;
     this.resolveModule = resolveModule;
     this.apiOrigin =
       typeof room.env["API_ORIGIN"] === "string" ? room.env["API_ORIGIN"] : "";
+    this.resolveDecideMove =
+      resolveDecideMove ?? (module => httpDecideMove(module, this.apiOrigin));
   }
 
   /**
@@ -150,7 +160,7 @@ export default class GameServer implements Party.Server {
         if (config.kind === "heuristic")
           return heuristicController(module.definition);
         return llmController(module.definition, config, {
-          decideMove: httpDecideMove(module, this.apiOrigin),
+          decideMove: this.resolveDecideMove(module),
           getPlayerStrategies: () => ({}),
           logger: entry => this.relayConsensusLog(entry),
         });

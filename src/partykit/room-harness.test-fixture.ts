@@ -1,5 +1,6 @@
 import GameServer, {
   type ConnLike,
+  type ResolveDecideMove,
   type ResolveModule,
   type RoomLike,
 } from "./game-server";
@@ -18,13 +19,13 @@ const serverMessage = z.custom<GameServerMessage>(
  */
 export function roomHarness(
   resolveModule?: ResolveModule,
-  env: Record<string, unknown> = {},
+  resolveDecideMove?: ResolveDecideMove,
 ) {
   const sockets = new Map<string, ConnLike>();
   const messages = new Map<string, GameServerMessage[]>();
   const room: RoomLike = {
     id: "test",
-    env,
+    env: {},
     getConnections: () => sockets.values(),
     broadcast: message => {
       Array.from(sockets.values()).map(socket => socket.send(message));
@@ -38,7 +39,7 @@ export function roomHarness(
     },
   };
   const server = resolveModule
-    ? new GameServer(room, resolveModule)
+    ? new GameServer(room, resolveModule, resolveDecideMove)
     : new GameServer(room);
 
   const connect = (id: string): ConnLike => {
