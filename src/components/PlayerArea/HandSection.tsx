@@ -271,10 +271,7 @@ export function HandSection({
             </span>
           )}
       </div>
-      <div
-        className="hand-grid"
-        style={{ padding: "0 var(--space-2) var(--space-2)" }}
-      >
+      <div className="hand-grid" style={{ padding: "var(--space-2)" }}>
         {loading
           ? Array.from({ length: PLACEHOLDER_HAND_SIZE }).map((_, i) => (
               <div
