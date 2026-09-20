@@ -23,8 +23,8 @@ describe("useMultiplayerGameContext", () => {
     } = await import("./game-signals");
 
     const engine = createGame(["p1", "p2"], undefined, 42);
-    /** Round-trips through JSON the way the room's wire does */
-    const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+    /** The room hands over a copy, never the engine's own objects */
+    const wire = <T>(value: T): T => structuredClone(value);
     const viewed: unknown = wire(
       dominionModule.view(engine.state, engine.eventLog, "p1"),
     );

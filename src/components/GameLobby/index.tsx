@@ -87,30 +87,18 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
     return name;
   });
-  const [roomId, setRoomId] = useState<string | null>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    if (!stored) return null;
-    const parsed = parseActiveGameStorage(stored);
-    return parsed?.roomId ?? null;
-  });
-  const [gameId, setGameId] = useState<GameId | null>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    if (!stored) return null;
-    return parseActiveGameStorage(stored)?.game ?? null;
-  });
-  const [isSpectator, setIsSpectator] = useState<boolean>(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-    if (!stored) return false;
-    const parsed = parseActiveGameStorage(stored);
-    return parsed?.isSpectator ?? false;
-  });
+  // Storage is read once; a stored game missing its game id reads as absent
+  const stored = useState(() => {
+    const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
+    return raw === null ? null : parseActiveGameStorage(raw);
+  })[0];
+  const [roomId, setRoomId] = useState<string | null>(stored?.roomId ?? null);
+  const [gameId, setGameId] = useState<GameId | null>(stored?.game ?? null);
+  const [isSpectator, setIsSpectator] = useState<boolean>(
+    stored?.isSpectator ?? false,
+  );
   const [myLastGameRoomId, setMyLastGameRoomId] = useState<string | null>(
-    () => {
-      const stored = localStorage.getItem(STORAGE_KEYS.ACTIVE_GAME);
-      if (!stored) return null;
-      const parsed = parseActiveGameStorage(stored);
-      return parsed?.roomId ?? null;
-    },
+    stored?.roomId ?? null,
   );
 
   // Auto-reconnect to active game on mount

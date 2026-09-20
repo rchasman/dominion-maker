@@ -15,16 +15,31 @@ export class FakeSocket {
     FakeSocket.opened.push(this);
   }
 
-  /** Test files share this registry, so always pick a socket by its room */
+  /**
+   * Test files share this registry, so a socket is found by its room or party,
+   * never by index. The newest match wins: a reconnect to the same room leaves
+   * the closed socket in the registry, and the caller wants the live one.
+   */
   static forRoom(room: string): FakeSocket {
-    const found = FakeSocket.opened.find(s => s.options.room === room);
-    if (!found) throw new Error(`nothing connected to ${room}`);
-    return found;
+    return FakeSocket.newest(
+      s => s.options.room === room,
+      `nothing connected to ${room}`,
+    );
   }
 
   static forParty(party: string): FakeSocket {
-    const found = FakeSocket.opened.find(s => s.options.party === party);
-    if (!found) throw new Error(`nothing connected to the ${party} party`);
+    return FakeSocket.newest(
+      s => s.options.party === party,
+      `nothing connected to the ${party} party`,
+    );
+  }
+
+  static newest(
+    matches: (socket: FakeSocket) => boolean,
+    whenMissing: string,
+  ): FakeSocket {
+    const found = FakeSocket.opened.filter(matches).at(-1);
+    if (!found) throw new Error(whenMissing);
     return found;
   }
 
@@ -56,6 +71,6 @@ export class FakeSocket {
 
   /** Everything this client has sent, in order */
   parsed(): unknown[] {
-    return this.sent.map(raw => JSON.parse(raw) as unknown);
+    return this.sent.map((raw): unknown => JSON.parse(raw));
   }
 }

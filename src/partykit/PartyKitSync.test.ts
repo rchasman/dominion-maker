@@ -29,10 +29,10 @@ describe("PartyKitSync", () => {
     document.body.appendChild(root);
     settled(() => render(h(PartyKitSync, {}), root));
 
-    const socket = FakeSocket.opened.find(s =>
-      GENERATED_ROOM.test(s.options.room),
+    const socket = FakeSocket.newest(
+      s => GENERATED_ROOM.test(s.options.room),
+      "the mirror did not connect",
     );
-    if (!socket) throw new Error("the mirror did not connect");
     settled(() => socket.emit("open", {}));
 
     const join = socket.parsed()[0];
