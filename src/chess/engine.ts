@@ -36,6 +36,10 @@ const opponentOf = (
 const toMove = (playerOrder: ChessPlayerOrder, board: Chess): ChessPlayerId =>
   playerOrder[board.turn() === "w" ? 0 : 1];
 
+/** The player the FEN says is to move, whether or not the game has ended */
+export const sideToMove = (state: ChessState): ChessPlayerId =>
+  toMove(state.playerOrder, new Chess(state.fen));
+
 const resultOf = (board: Chess, resignedBy: ChessPlayerId | null) =>
   run<ChessResult | null>(() => {
     if (board.isCheckmate()) return "checkmate";

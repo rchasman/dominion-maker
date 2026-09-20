@@ -43,8 +43,19 @@ export type ChessState = {
   inCheck: boolean;
 };
 
-/** The SAN a controller picked, with the explanation the consensus viewer shows */
-export type ChessMove = { san: string; reasoning?: string | undefined };
+/**
+ * A legal move as chess.js reports it, plus the explanation the consensus
+ * viewer shows. `from` and `to` are algebraic squares; the board reads them
+ * for click-to-move and for highlighting the move just played.
+ */
+export type ChessMove = {
+  san: string;
+  from: string;
+  to: string;
+  promotion?: string | undefined;
+  captured?: string | undefined;
+  reasoning?: string | undefined;
+};
 
 /** Chess is set up by its rules alone */
 export type ChessOptions = Record<string, never>;

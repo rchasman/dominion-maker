@@ -10,6 +10,8 @@ import type {
 const playerId = z.string().min(1).max(200);
 const san = z.string().min(1).max(10);
 const playerOrder = z.tuple([playerId, playerId]);
+const square = z.string().regex(/^[a-h][1-8]$/);
+const piece = z.enum(["p", "n", "b", "r", "q", "k"]);
 
 export const chessEventSchema: z.ZodType<ChessEvent> = z.discriminatedUnion(
   "type",
@@ -53,6 +55,10 @@ export const chessStateSchema: z.ZodType<ChessState> = z.object({
 
 export const chessMoveSchema: z.ZodType<ChessMove> = z.object({
   san,
+  from: square,
+  to: square,
+  promotion: piece.optional(),
+  captured: piece.optional(),
   reasoning: z.string().max(20000).optional(),
 });
 

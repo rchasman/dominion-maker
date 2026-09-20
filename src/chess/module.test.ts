@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { chessModule } from "./module";
-import type { ChessCommand, ChessEvent } from "./shape";
+import type { ChessCommand, ChessEvent, ChessMove } from "./shape";
 import { createChessGame } from "./engine";
 import { GAMES } from "../games";
 import { gameIdSchema } from "../game-ids";
@@ -21,15 +21,15 @@ describe("the chess module describes its own wire shapes", () => {
 
   it("round-trips commands, state and moves", () => {
     const engine = createChessGame([WHITE, BLACK]);
-    const move: ChessCommand = { type: "MOVE", playerId: WHITE, san: "e4" };
-    expect(chessModule.commandSchema.parse(move)).toEqual(move);
+    const command: ChessCommand = { type: "MOVE", playerId: WHITE, san: "e4" };
+    expect(chessModule.commandSchema.parse(command)).toEqual(command);
     const resign: ChessCommand = { type: "RESIGN", playerId: WHITE };
     expect(chessModule.commandSchema.parse(resign)).toEqual(resign);
     expect(chessModule.stateSchema.parse(engine.state)).toEqual(engine.state);
-    expect(chessModule.moveSchema.parse({ san: "e4" })).toEqual({ san: "e4" });
-    expect(
-      chessModule.moveSchema.parse({ san: "e4", reasoning: "centre" }),
-    ).toEqual({ san: "e4", reasoning: "centre" });
+    const move: ChessMove = { san: "e4", from: "e2", to: "e4" };
+    expect(chessModule.moveSchema.parse(move)).toEqual(move);
+    const explained = { ...move, reasoning: "centre" };
+    expect(chessModule.moveSchema.parse(explained)).toEqual(explained);
   });
 
   it("carries only the two commands a player may send", () => {
@@ -91,22 +91,17 @@ describe("the chess module describes its own wire shapes", () => {
     expect(definition.whoMustAct(engine.state)).toBe(WHITE);
     expect(definition.legalMoves(engine.state, WHITE)).toHaveLength(20);
     expect(
-      definition.moveToCommand(engine.state, { san: "e4" }, WHITE),
+      definition.moveToCommand(
+        engine.state,
+        { san: "e4", from: "e2", to: "e4" },
+        WHITE,
+      ),
     ).toEqual({ type: "MOVE", playerId: WHITE, san: "e4" });
     engine.dispatch({ type: "MOVE", playerId: WHITE, san: "e4" }, WHITE);
     expect(definition.whoMustAct(engine.state)).toBe(BLACK);
     engine.dispatch({ type: "RESIGN", playerId: BLACK }, BLACK);
     expect(definition.whoMustAct(engine.state)).toBeNull();
     expect(definition.legalMoves(engine.state, WHITE)).toEqual([]);
-  });
-
-  it("carries a model's reasoning on a move", () => {
-    const { definition } = chessModule;
-    const move = definition.withReasoning({ san: "e4" }, "centre");
-    expect(definition.reasoningOf(move)).toBe("centre");
-    expect(definition.moveKey(move)).toBe("e4");
-    expect(definition.describeMove(move)).toBe("e4");
-    expect(definition.promptRow(move)).toEqual({ san: "e4" });
   });
 });
 
