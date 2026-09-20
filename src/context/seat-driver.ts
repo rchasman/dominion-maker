@@ -7,6 +7,8 @@ import type { LLMLogger } from "../core/consensus/types";
 import { isHumanSeat, sameConfig } from "../core/seats";
 import { driveEngine } from "../core/driver";
 import { dominionGame } from "../dominion/definition";
+import { dominionModule } from "../dominion/module";
+import { httpDecideMove, httpVerifyMove } from "../agent/http-decide-move";
 import { uiLogger } from "../lib/logger";
 import { createBrowserControllers } from "./controllers";
 import {
@@ -16,6 +18,7 @@ import {
 import {
   isProcessing$,
   localPlayerId$,
+  playerStrategies$,
   seats$,
   syncEngineToSignals,
 } from "./game-signals";
@@ -48,7 +51,11 @@ export function createSeatDriver(params: {
   stepDelayMs: number;
 }): SeatDriver {
   const { engineRef, logger, animation, stepDelayMs } = params;
-  const controllerFor = createBrowserControllers(logger);
+  const controllerFor = createBrowserControllers(dominionModule, logger, {
+    decideMove: httpDecideMove(dominionModule),
+    verifyMove: httpVerifyMove("", logger),
+    getPlayerStrategies: () => playerStrategies$.peek(),
+  });
   const running: { current: Running | null } = { current: null };
 
   const stop = () => {

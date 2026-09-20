@@ -1,4 +1,7 @@
+import { z } from "zod";
 import type { DecideMove } from "../core/llm-controller";
+import type { GameShape } from "../core/game-definition";
+import type { GameModule } from "../core/game-module";
 import type { LLMLogger } from "../core/consensus/types";
 import type { DominionShape } from "../dominion/definition";
 import { createApiClient } from "../api/client";
@@ -7,8 +10,14 @@ import { agentLogger } from "../lib/logger";
 const PERCENT = 100;
 
 /** Ask the generate-action endpoint for one model's move */
-export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
+export function httpDecideMove<G extends GameShape>(
+  module: GameModule<G>,
+  baseUrl = "",
+): DecideMove<G> {
   const client = createApiClient(baseUrl);
+  const distributionSchema = z.array(
+    z.object({ move: module.moveSchema, weight: z.number() }),
+  );
   return async ({
     provider,
     state,
@@ -18,7 +27,7 @@ export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
   }) => {
     const { data, error } = await client.api["generate-action"].post(
       {
-        game: "dominion",
+        game: module.definition.id,
         provider,
         currentState: state,
         playerStrategies,
@@ -29,8 +38,8 @@ export function httpDecideMove(baseUrl = ""): DecideMove<DominionShape> {
     if (error) throw new Error(error.value);
     if (!data?.move) throw new Error("Backend returned no move");
     return {
-      move: data.move,
-      distribution: data.distribution ?? [],
+      move: module.moveSchema.parse(data.move),
+      distribution: distributionSchema.parse(data.distribution ?? []),
       ...(data.usage ? { usage: data.usage } : {}),
     };
   };

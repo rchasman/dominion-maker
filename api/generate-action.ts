@@ -1,5 +1,9 @@
-import { actionRequestSchema, readRequest } from "./_request";
-import { GAMES } from "./_games";
+import {
+  actionRequestSchema,
+  readRequest,
+  type ActionRequest,
+} from "./_request";
+import { moduleFor } from "../src/games";
 import {
   generateObject,
   gateway,
@@ -8,13 +12,11 @@ import {
 } from "ai";
 import type { ModelMessage } from "ai";
 import type { VercelRequest, VercelResponse } from "./_http";
-import type { GameState } from "../src/types/game-state";
 import {
   choiceSchema,
   choiceToMove,
   replyFormatInstruction,
 } from "../src/core/consensus/numbered-choice";
-import { withReasoning } from "../src/dominion/moves";
 import { MODELS, type ModelConfig } from "../src/config/models";
 import { addUsage, type TokenUsage } from "../src/core/consensus/cost";
 import { apiLogger } from "../src/lib/logger";
@@ -46,21 +48,13 @@ if (!env.AI_GATEWAY_API_KEY) {
   apiLogger.info("AI_GATEWAY_API_KEY is configured");
 }
 
-interface RequestBody {
-  game: keyof typeof GAMES;
-  provider: string;
-  currentState: GameState;
-  playerStrategies?: Record<string, unknown> | undefined;
-  customStrategy?: string | undefined;
-}
-
 // Process request body and validate input
 async function processGenerationRequest(
-  body: RequestBody,
+  body: ActionRequest,
   res: VercelResponse,
 ): Promise<VercelResponse> {
   const { provider, currentState } = body;
-  const { game } = GAMES[body.game];
+  const game = moduleFor(body.game).definition;
   const playerStrategies = body.playerStrategies ?? {};
   const customStrategy = body.customStrategy ?? "";
 
@@ -136,7 +130,9 @@ async function processGenerationRequest(
       },
     });
     return {
-      move: choiceToMove(object, legalActions, withReasoning),
+      move: choiceToMove(object, legalActions, (move, reasoning) =>
+        game.withReasoning(move, reasoning),
+      ),
       usage: tokenUsage(usage),
     };
   };

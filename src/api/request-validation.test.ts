@@ -3,6 +3,7 @@ import { handleApiRequest } from "../../api/_router";
 import { actionRequestSchema, analysisRequestSchema } from "../../api/_request";
 import { createGame } from "../engine";
 import { httpDecideMove } from "../agent/http-decide-move";
+import { dominionModule } from "../dominion/module";
 import { MODELS } from "../config/models";
 
 describe("API request boundaries", () => {
@@ -115,7 +116,7 @@ describe("API request boundaries", () => {
     );
     global.fetch = stub;
     try {
-      const result = await httpDecideMove()({
+      const result = await httpDecideMove(dominionModule)({
         provider: "gpt-5.4-mini",
         state: createGame(["human", "ai"]).state,
         actionId: "game-turn-round",
