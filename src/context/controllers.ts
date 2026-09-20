@@ -7,11 +7,12 @@ import type { LLMLogger } from "../core/consensus/types";
 import { dominionGame, type DominionShape } from "../dominion/definition";
 import { reasoningOf } from "../dominion/moves";
 import { httpDecideMove, httpVerifyMove } from "../agent/http-decide-move";
-import { playerStrategies$ } from "./game-signals";
+import type { PlayerStrategyData } from "../types/player-strategy";
 
 /** Browser controllers: the rules bot, or LLM consensus through the same-origin API */
 export function createBrowserControllers(
   logger: LLMLogger,
+  getPlayerStrategies: () => PlayerStrategyData,
 ): (
   config: ControllerConfig,
   player: string,
@@ -22,7 +23,7 @@ export function createBrowserControllers(
     return llmController(dominionGame, config, {
       decideMove: httpDecideMove(),
       logger,
-      getPlayerStrategies: () => playerStrategies$.peek(),
+      getPlayerStrategies,
       verifyMove: httpVerifyMove("", logger),
       reasoningOf,
     });
