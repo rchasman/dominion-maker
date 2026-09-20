@@ -58,8 +58,8 @@ export function PendingAction({
           totalModels: currentTurn.pendingData.totalModels,
         })}
         now={now}
-        {...(currentTurn.pendingData?.gameState?.legalActions !== undefined && {
-          legalActions: currentTurn.pendingData.gameState.legalActions,
+        {...(currentTurn.pendingData?.legalKeys !== undefined && {
+          legalKeys: currentTurn.pendingData.legalKeys,
         })}
       />
     </>

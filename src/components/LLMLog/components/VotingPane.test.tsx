@@ -4,8 +4,14 @@ import { render } from "preact";
 import { VotingPane } from "./VotingPane";
 import type { ModelStatus } from "../types";
 import type { Action } from "../../../types/action";
+import { stripReasoning } from "../../../types/action";
 
 beforeAll(registerHappyDom);
+/** Dominion's own move key, which is what the core stamps on each result */
+const dominionKey = (action: Action) => JSON.stringify(stripReasoning(action));
+
+const GOLD: Action = { type: "buy_card", card: "Gold" };
+
 function statuses(): Map<number, ModelStatus> {
   return new Map(
     ["Economy", "Action balance"].map((reasoning, index) => [
@@ -30,7 +36,7 @@ describe("vote explanations", () => {
         data={null}
         liveStatuses={statuses()}
         totalModels={4}
-        legalActions={["buy_card(Gold)"]}
+        legalKeys={[dominionKey(GOLD)]}
       />,
       root,
     );
@@ -62,7 +68,7 @@ describe("vote explanations", () => {
         data={null}
         liveStatuses={empty}
         totalModels={4}
-        legalActions={["buy_card(Gold)"]}
+        legalKeys={[dominionKey(GOLD)]}
       />,
       root,
     );
@@ -83,10 +89,52 @@ describe("vote explanations", () => {
     render(null, root);
   });
 
-  it("leaves legality unchecked for a move it cannot name", () => {
+  it("judges a chess vote by its own move key", () => {
     // The pane types every game's move as a Dominion Action, so a chess move
-    // reaches it shaped like this and no Dominion formatting fits it
-    const chessMove: Action = JSON.parse('{"san":"Nc6","from":"b8","to":"c6"}');
+    // reaches it shaped like this, keyed by the SAN its own game chose
+    const nc6: Action = JSON.parse('{"san":"Nc6","from":"b8","to":"c6"}');
+    const nf6: Action = JSON.parse('{"san":"Nf6","from":"g8","to":"f6"}');
+    const chessStatus = (index: number, action: Action, key: string) => ({
+      provider: "gpt-5.4-nano" as const,
+      index,
+      startTime: 0,
+      completed: true,
+      success: true,
+      action,
+      key,
+      distribution: [
+        { move: action, weight: 0.75, key },
+        { move: nf6, weight: 0.25, key: "Nf6" },
+      ],
+    });
+    const root = document.createElement("div");
+    render(
+      <VotingPane
+        data={null}
+        liveStatuses={
+          new Map([
+            [0, chessStatus(0, nc6, "Nc6")],
+            [1, chessStatus(1, nc6, "Nc6")],
+          ])
+        }
+        totalModels={2}
+        legalKeys={["Nc6", "Nf6"]}
+      />,
+      root,
+    );
+    expect(root.querySelector('[aria-label="Invalid action"]')).toBeNull();
+    expect(root.querySelectorAll('[aria-label="Valid action"]').length).toBe(2);
+    expect(
+      root.querySelector('[aria-label="75% vote share"]')?.textContent,
+    ).toBe("75%");
+    expect(
+      root.querySelector('[aria-label="25% vote share"]')?.textContent,
+    ).toBe("25%");
+    render(null, root);
+  });
+
+  it("calls a chess move illegal only when its key is not legal", () => {
+    const ke2: Action = JSON.parse('{"san":"Ke2","from":"e1","to":"e2"}');
     const root = document.createElement("div");
     render(
       <VotingPane
@@ -96,32 +144,32 @@ describe("vote explanations", () => {
             [
               0,
               {
-                provider: "gpt-5.4-nano",
+                provider: "gpt-5.4-nano" as const,
                 index: 0,
                 startTime: 0,
                 completed: true,
                 success: true,
-                action: chessMove,
+                action: ke2,
+                key: "Ke2",
                 distribution: [],
               },
             ],
           ])
         }
-        legalActions={["Nc6", "Nf6"]}
+        legalKeys={["Nc6", "Nf6"]}
       />,
       root,
     );
     expect(
-      root.querySelector('[aria-label="Legality unchecked"]')?.textContent,
-    ).toBe("—");
-    expect(root.querySelector('[aria-label="Invalid action"]')).toBeNull();
+      root.querySelector('[aria-label="Invalid action"]')?.textContent,
+    ).toBe("✗");
     render(null, root);
   });
 
   it("marks an illegal action with a cross", () => {
     const root = document.createElement("div");
     render(
-      <VotingPane data={null} liveStatuses={statuses()} legalActions={[]} />,
+      <VotingPane data={null} liveStatuses={statuses()} legalKeys={[]} />,
       root,
     );
     expect(

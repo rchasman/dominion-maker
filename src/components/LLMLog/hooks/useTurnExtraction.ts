@@ -2,7 +2,7 @@ import { useMemo } from "preact/hooks";
 import type { ModelProvider } from "../../../config/models";
 import type { Action } from "../../../types/action";
 import type { TokenUsage } from "../../../core/consensus/cost";
-import type { WeightedVote } from "../../../core/consensus/types";
+import type { LoggedVote } from "../types";
 import type { LLMLogEntry, Turn, PendingData } from "../types";
 
 function extractCardName(prompt: string): string | null {
@@ -144,7 +144,8 @@ function handleConsensusModelComplete(
   status.success = data.success as boolean | undefined;
   status.completed = true;
   status.action = data.action as Action | undefined;
-  status.distribution = data.distribution as WeightedVote<Action>[] | undefined;
+  status.key = data.key as string | undefined;
+  status.distribution = data.distribution as LoggedVote[] | undefined;
   status.aborted = data.aborted as boolean | undefined;
   status.usage = data.usage as TokenUsage | undefined;
 }

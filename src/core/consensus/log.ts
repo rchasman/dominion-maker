@@ -33,9 +33,10 @@ export function logConsensusStart<M>(params: {
   payload: Record<string, unknown>;
   providers: ModelProvider[];
   moves: M[];
+  moveKey: MoveKey<M>;
   logger?: LLMLogger | undefined;
 }): void {
-  const { payload, providers, moves, logger } = params;
+  const { payload, providers, moves, moveKey, logger } = params;
   logger?.({
     type: "consensus-start",
     message: `Starting consensus with ${providers.length} models`,
@@ -43,7 +44,7 @@ export function logConsensusStart<M>(params: {
       providers,
       totalModels: providers.length,
       phase: payload["phase"],
-      legalActionsCount: moves.length,
+      legalKeys: moves.map(moveKey),
       turn: payload["turn"],
       gameState: payload,
     },
@@ -90,7 +91,9 @@ export function logVotingResults<M>(
       : `◉ Voting: winner ${actionDesc} (${formatVoteCount(winner.count)}/${votesConsidered})`,
     data: {
       actionId,
+      legalKeys: moves.map(moveKey),
       topResult: {
+        key: winner.key,
         action: winner.move,
         votes: winner.count,
         voters: winner.voters,
@@ -100,6 +103,7 @@ export function logVotingResults<M>(
         earlyConsensus: validEarlyConsensus,
       },
       allResults: rankedGroups.map(group => ({
+        key: group.key,
         action: group.move,
         votes: group.count,
         voters: group.voters,

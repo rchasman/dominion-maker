@@ -31,12 +31,15 @@ export interface GameStateSnapshot {
     total: number;
   };
   turnHistory: TurnAction[];
-  legalActionsCount?: number;
-  legalActions?: CardName[];
 }
+
+/** One share of a model's probability mass, keyed by the game's own move key */
+export type LoggedVote = WeightedVote<Action> & { key?: string | undefined };
 
 // Voting result for a single action
 export interface VotingResult {
+  /** The game's own key for this move; the viewer never re-derives one */
+  key?: string | undefined;
   action: Action;
   votes: number;
   voters: PlayerId[];
@@ -85,7 +88,8 @@ export interface ModelStatus {
   completed: boolean;
   aborted?: boolean | undefined;
   action?: Action | undefined;
-  distribution?: WeightedVote<Action>[] | undefined;
+  key?: string | undefined;
+  distribution?: LoggedVote[] | undefined;
   usage?: TokenUsage | undefined;
 }
 
@@ -94,6 +98,8 @@ export interface PendingData {
   totalModels: number;
   phase: string;
   gameState?: GameStateSnapshot;
+  /** The game's own keys for this decision's legal moves */
+  legalKeys?: string[];
 }
 
 export interface Turn {

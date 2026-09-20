@@ -5,6 +5,7 @@ import { getModelColor } from "../../../config/models";
 import type {
   ConsensusVotingData,
   ConsensusVerdict,
+  LoggedVote,
   ModelStatus,
 } from "../types";
 import { groupVotersWithColors } from "../utils/groupVoters";
@@ -16,7 +17,8 @@ interface VotingPaneProps {
   data: ConsensusVotingData | null | undefined;
   liveStatuses?: Map<number, ModelStatus>;
   totalModels?: number;
-  legalActions?: string[];
+  /** The game's own keys for this decision's legal moves, stamped at log time */
+  legalKeys?: string[];
   verdict?: ConsensusVerdict;
 }
 
@@ -50,29 +52,17 @@ function JevVerdictLine({ verdict }: { verdict: ConsensusVerdict }) {
 const PIXELS_PER_CHAR_VOTE: number = 7;
 
 /**
- * Format action to match legalActions string format. Null for a move this
- * formatter cannot name, such as a chess move: claiming such a move is
- * illegal would be a false accusation against every model that picked it.
+ * The game's own key for a move, stamped at log time. Entries logged before
+ * the core stamped one fall back to the shape Dominion's own moveKey builds.
  */
-function formatActionForValidation(action: Action): string | null {
-  if (typeof action.type !== "string") return null;
-  if (action.type === "end_phase") return "end_phase";
-  if (action.type === "choose_from_options") {
-    return `choose[${(action as { optionIndex?: number }).optionIndex}]`;
-  }
-  return `${action.type}(${action.card})`;
-}
+const keyOf = (action: Action, stamped: string | undefined): string =>
+  stamped ?? JSON.stringify(stripReasoning(action));
 
-// Check if action is in legalActions list
-function isActionValidFromStrings(
-  action: Action,
-  legalActions: string[] | undefined,
-): boolean | undefined {
-  if (!legalActions) return undefined; // No validation data available
-  const formatted = formatActionForValidation(action);
-  if (formatted === null) return undefined;
-  return legalActions.includes(formatted);
-}
+/** Undefined when the entry named no legal keys, which reads as unchecked */
+const isKeyLegal = (
+  key: string,
+  legalKeys: string[] | undefined,
+): boolean | undefined => (legalKeys ? legalKeys.includes(key) : undefined);
 const PIXELS_PER_CHAR_PERCENTAGE: number = 7.5;
 const PIXELS_PER_VOTER_CIRCLE: number = 11;
 const TOTAL_BAR_CONTAINER_WIDTH: number = 290;
@@ -81,6 +71,7 @@ const PERCENTAGE_MULTIPLIER: number = 100;
 const FONT_WEIGHT_BOLD: number = 700;
 
 type PaneVoteGroup = {
+  key: string;
   action: Action;
   votes: number;
   voters: string[];
@@ -92,24 +83,26 @@ type PaneVoteGroup = {
 // distribution, the voter circle and reasoning only to its top pick
 function buildVoteGroups(
   successfulStatuses: ModelStatus[],
-  legalActions: string[] | undefined,
+  legalKeys: string[] | undefined,
 ) {
   return successfulStatuses.reduce((voteGroups, status) => {
     if (!status.action) return voteGroups;
     const top = status.action;
-    const topSignature = JSON.stringify(stripReasoning(top));
+    const topSignature = keyOf(top, status.key);
     // A text model answers with no probability mass, so its pick is one vote
     const spread = status.distribution ?? [];
-    const votes = spread.length > 0 ? spread : [{ move: top, weight: 1 }];
-    return votes.reduce((groups, { move: action, weight }) => {
-      const signature = JSON.stringify(stripReasoning(action));
+    const votes: LoggedVote[] =
+      spread.length > 0 ? spread : [{ move: top, weight: 1, key: status.key }];
+    return votes.reduce((groups, { move: action, weight, key }) => {
+      const signature = keyOf(action, key);
       const isTop = signature === topSignature;
       const existing = groups.get(signature) ?? {
+        key: signature,
         action,
         votes: 0,
         voters: [],
         reasonings: [],
-        valid: isActionValidFromStrings(action, legalActions),
+        valid: isKeyLegal(signature, legalKeys),
       };
       return new Map(groups).set(signature, {
         ...existing,
@@ -209,7 +202,7 @@ export function VotingPane({
   data,
   liveStatuses,
   totalModels,
-  legalActions,
+  legalKeys,
   verdict,
 }: VotingPaneProps) {
   const { allResults, maxVotes } = run(() => {
@@ -218,7 +211,7 @@ export function VotingPane({
         s => s.completed && s.success !== false && s.action,
       );
 
-      const voteGroups = buildVoteGroups(successfulStatuses, legalActions);
+      const voteGroups = buildVoteGroups(successfulStatuses, legalKeys);
 
       // Sort by vote count descending, then by signature alphabetically for deterministic tie-breaking
       const results = Array.from(voteGroups.values())
@@ -229,7 +222,7 @@ export function VotingPane({
           voters: g.voters,
           valid: g.valid,
           reasonings: g.reasonings,
-          signature: JSON.stringify(stripReasoning(g.action)),
+          signature: g.key,
         }))
         .sort(
           (a, b) => b.votes - a.votes || a.signature.localeCompare(b.signature),

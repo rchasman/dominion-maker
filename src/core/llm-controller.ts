@@ -59,7 +59,13 @@ export function llmController<G extends GameShape>(
     });
     const aheadByK = aheadByKFor(providers.length);
     const { payload } = game.logContext(state, player, moves);
-    logConsensusStart({ payload, providers, moves, logger });
+    logConsensusStart({
+      payload,
+      providers,
+      moves,
+      moveKey: move => game.moveKey(move),
+      logger,
+    });
     const { results, earlyConsensus, voteGroups, completedResults } =
       await runModelsInParallel({
         providers,

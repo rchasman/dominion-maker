@@ -14,20 +14,21 @@ import { run } from "../../lib/run";
 
 const MODEL_TIMEOUT_MS = 30_000;
 
-type HandlerParams = {
+type HandlerParams<M> = {
   provider: ModelProvider;
   index: number;
   modelStart: number;
+  moveKey: MoveKey<M>;
   logger?: LLMLogger | undefined;
 };
 
 const handleModelSuccess = <M>(
   move: M,
-  params: HandlerParams,
+  params: HandlerParams<M>,
   distribution: WeightedVote<M>[] = [{ move, weight: 1 }],
   usage?: TokenUsage,
 ): ModelResult<M> => {
-  const { provider, index, modelStart, logger } = params;
+  const { provider, index, modelStart, moveKey, logger } = params;
   const modelDuration = nowMs() - modelStart;
   logger?.({
     type: "consensus-model-complete",
@@ -36,8 +37,13 @@ const handleModelSuccess = <M>(
       provider,
       index,
       duration: modelDuration,
+      key: moveKey(move),
       action: move,
-      distribution,
+      // The viewer groups by key, so every share of the mass carries its own
+      distribution: distribution.map(vote => ({
+        ...vote,
+        key: moveKey(vote.move),
+      })),
       success: true,
       ...(usage ? { usage } : {}),
     },
@@ -54,7 +60,7 @@ const handleModelSuccess = <M>(
 
 const handleModelError = <M>(
   error: unknown,
-  params: HandlerParams,
+  params: HandlerParams<M>,
 ): ModelResult<M> => {
   const { provider, index, modelStart, logger } = params;
   const modelDuration = nowMs() - modelStart;
@@ -204,10 +210,11 @@ export function runModelsInParallel<S, M>(
         );
         const abortHandler = () => modelAbort.abort();
         runAbort.signal.addEventListener("abort", abortHandler);
-        const handlerParams: HandlerParams = {
+        const handlerParams: HandlerParams<M> = {
           provider,
           index,
           modelStart,
+          moveKey,
           ...(logger !== undefined && { logger }),
         };
 

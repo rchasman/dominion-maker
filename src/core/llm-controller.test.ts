@@ -173,6 +173,33 @@ describe("llmController", () => {
     );
   });
 
+  it("stamps the game's own move key on each result and legal move", async () => {
+    const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
+    const entries: LLMLogEntryInput[] = [];
+    const smithy: Action = { type: "play_action", card: "Smithy" };
+    const controller = llmController(
+      dominionGame,
+      { ...DEFAULT_LLM_SEAT, consensusCount: 1, models: ["gpt-5.4-mini"] },
+      {
+        decideMove: pick(smithy),
+        getPlayerStrategies: noStrategies,
+        logger: entry => {
+          entries.push(entry);
+        },
+      },
+    );
+    await controller.decide(engine, "alice", signal());
+    const key = dominionGame.moveKey(smithy);
+    const voting = entries.find(e => e.type === "consensus-voting");
+    const legalKeys = voting?.data?.["legalKeys"];
+    expect(Array.isArray(legalKeys) && legalKeys).toContain(key);
+    expect(voting?.data?.["topResult"]).toMatchObject({ key });
+    const complete = entries.find(e => e.type === "consensus-model-complete");
+    expect(complete?.data?.["key"]).toBe(key);
+    const start = entries.find(e => e.type === "consensus-start");
+    expect(Array.isArray(start?.data?.["legalKeys"])).toBe(true);
+  });
+
   it("keeps each model's reasoning in the voting log", async () => {
     const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
     const entries: LLMLogEntryInput[] = [];
