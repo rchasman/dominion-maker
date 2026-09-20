@@ -448,6 +448,25 @@ describe("gameMessageSchema", () => {
     expect(parses({ type: "command", command: null })).toBe(true);
   });
 
+  it("rejects a stale client's extra top-level fields", () => {
+    expect(parses({ type: "start_game", kingdomCards: ["Village"] })).toBe(
+      false,
+    );
+    expect(
+      parses({
+        type: "start_singleplayer",
+        seats: { a: { kind: "human" } },
+        kingdomCards: ["Village"],
+      }),
+    ).toBe(false);
+    expect(
+      parses({ type: "join", name: "Player", game: "dominion", mode: "full" }),
+    ).toBe(false);
+    // The two opaque payloads stay opaque
+    expect(parses({ type: "start_game", options: { anything: 1 } })).toBe(true);
+    expect(parses({ type: "command", command: { anything: 1 } })).toBe(true);
+  });
+
   it("rejects the nine Dominion verbs the protocol no longer speaks", () => {
     const retired: unknown[] = [
       { type: "play_action", card: "Village" },
@@ -530,6 +549,16 @@ describe("lobbyMessageSchema", () => {
         game: "dominion",
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects a lobby message carrying an extra field", () => {
+    expect(
+      lobbyMessageSchema.safeParse({
+        type: "accept_request",
+        requestId: "r1",
+        game: "dominion",
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects request_game without a game", () => {

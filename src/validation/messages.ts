@@ -12,70 +12,86 @@ const count = z.number().int().nonnegative();
 const name = z.string().trim().min(1).max(80);
 const token = z.string().min(20).max(200).optional();
 const gameMessage = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("join"),
-    name,
-    game: gameIdSchema,
-    clientId: id.optional(),
-    isBot: z.boolean().optional(),
-    reconnectToken: token,
-  }),
-  z.object({
-    type: z.literal("spectate"),
-    name,
-    game: gameIdSchema,
-    clientId: id.optional(),
-  }),
-  z.object({
-    type: z.literal("start_game"),
-    options: z.unknown().optional(),
-    bots: z
-      .array(z.object({ name, controller: botConfigSchema }))
-      .max(3)
-      .optional(),
-  }),
-  z.object({
-    type: z.literal("start_singleplayer"),
-    seats: seatsSchema,
-    options: z.unknown().optional(),
-  }),
-  z.object({
-    type: z.literal("set_seat"),
-    playerId: id,
-    controller: controllerConfigSchema,
-  }),
-  z.object({
-    type: z.literal("sync_events"),
-    events: z.array(z.unknown()).min(1).max(20000),
-  }),
+  z
+    .object({
+      type: z.literal("join"),
+      name,
+      game: gameIdSchema,
+      clientId: id.optional(),
+      isBot: z.boolean().optional(),
+      reconnectToken: token,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("spectate"),
+      name,
+      game: gameIdSchema,
+      clientId: id.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("start_game"),
+      options: z.unknown().optional(),
+      bots: z
+        .array(z.object({ name, controller: botConfigSchema }))
+        .max(3)
+        .optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("start_singleplayer"),
+      seats: seatsSchema,
+      options: z.unknown().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("set_seat"),
+      playerId: id,
+      controller: controllerConfigSchema,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("sync_events"),
+      events: z.array(z.unknown()).min(1).max(20000),
+    })
+    .strict(),
   /** The room's module validates the payload; the protocol only routes it */
-  z.object({ type: z.literal("command"), command: z.unknown() }),
+  z.object({ type: z.literal("command"), command: z.unknown() }).strict(),
   ...(["resign", "leave"] as const).map(type =>
-    z.object({ type: z.literal(type) }),
+    z.object({ type: z.literal(type) }).strict(),
   ),
-  z.object({ type: z.literal("preview_state"), eventId: id }),
-  z.object({
-    type: z.literal("chat"),
-    message: z.object({
-      id,
-      senderName: name,
-      content: z.string().trim().min(1).max(4000),
-      timestamp: z.number(),
-    }),
-  }),
+  z.object({ type: z.literal("preview_state"), eventId: id }).strict(),
+  z
+    .object({
+      type: z.literal("chat"),
+      message: z.object({
+        id,
+        senderName: name,
+        content: z.string().trim().min(1).max(4000),
+        timestamp: z.number(),
+      }),
+    })
+    .strict(),
 ]);
 export const gameMessageSchema = z.custom<GameClientMessage>(
   value => gameMessage.safeParse(value).success,
 );
 const lobbyMessage = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("join_lobby"), name, clientId: id }),
-  z.object({
-    type: z.literal("request_game"),
-    targetId: id,
-    game: gameIdSchema,
-  }),
-  z.object({ type: z.literal("accept_request"), requestId: id }),
-  z.object({ type: z.literal("cancel_request"), requestId: id }),
+  z.object({ type: z.literal("join_lobby"), name, clientId: id }).strict(),
+  z
+    .object({
+      type: z.literal("request_game"),
+      targetId: id,
+      game: gameIdSchema,
+    })
+    .strict(),
+  z.object({ type: z.literal("accept_request"), requestId: id }).strict(),
+  z.object({ type: z.literal("cancel_request"), requestId: id }).strict(),
 ]);
 export const lobbyMessageSchema = z.custom<LobbyClientMessage>(
   value => lobbyMessage.safeParse(value).success,
