@@ -69,15 +69,17 @@ describe("Protocol Types", () => {
   });
 
   describe("GameRequest", () => {
-    it("should have id, fromId, and toId properties", () => {
+    it("names the game it was made for", () => {
       const request: GameRequest = {
         id: "req-123",
         fromId: "player-1",
         toId: "player-2",
+        game: "dominion",
       };
       expect(request.id).toBe("req-123");
       expect(request.fromId).toBe("player-1");
       expect(request.toId).toBe("player-2");
+      expect(request.game).toBe("dominion");
     });
   });
 

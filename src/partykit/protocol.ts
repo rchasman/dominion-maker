@@ -49,6 +49,8 @@ export interface GameRequest {
   id: string;
   fromId: PlayerId;
   toId: PlayerId;
+  /** The game the sender asked to play; the match is made on it */
+  game: GameId;
 }
 
 export interface ActiveGame {

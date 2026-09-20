@@ -37,12 +37,9 @@ interface ConnectedPlayer {
   clientId: string; // Stable ID across reconnections
 }
 
-/** A request remembers the game it was made for; the match relays it */
-type PendingRequest = GameRequest & { game: GameId };
-
 export default class LobbyServer implements Party.Server {
   private players: Map<string, ConnectedPlayer> = new Map();
-  private requests: Map<string, PendingRequest> = new Map();
+  private requests: Map<string, GameRequest> = new Map();
   private activeGames: Map<string, ActiveGame> = new Map();
   private disconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> =
     new Map();
@@ -222,7 +219,7 @@ export default class LobbyServer implements Party.Server {
     }
 
     // Create new request
-    const request: PendingRequest = {
+    const request: GameRequest = {
       id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       fromId: conn.id,
       toId: targetId,
@@ -271,7 +268,7 @@ export default class LobbyServer implements Party.Server {
   }
 
   private startGame(
-    request: PendingRequest,
+    request: GameRequest,
     player1: ConnectedPlayer,
     player2: ConnectedPlayer,
   ) {
@@ -323,7 +320,7 @@ export default class LobbyServer implements Party.Server {
   private findRequest(
     fromId: PlayerId,
     toId: PlayerId,
-  ): PendingRequest | undefined {
+  ): GameRequest | undefined {
     for (const req of this.requests.values()) {
       if (req.fromId === fromId && req.toId === toId) {
         return req;
