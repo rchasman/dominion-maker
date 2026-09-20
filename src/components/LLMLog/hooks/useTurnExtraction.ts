@@ -1,9 +1,15 @@
 import { useMemo } from "preact/hooks";
-import type { ModelProvider } from "../../../config/models";
-import type { Action } from "../../../types/action";
-import type { TokenUsage } from "../../../core/consensus/cost";
-import type { LoggedVote } from "../types";
-import type { LLMLogEntry, Turn, PendingData } from "../types";
+import {
+  readBoolean,
+  readMove,
+  readNumber,
+  readPending,
+  readProvider,
+  readString,
+  readUsage,
+  readVotes,
+} from "../utils/entryData";
+import type { LLMLogEntry, Turn } from "../types";
 
 function extractCardName(prompt: string): string | null {
   const cardMatch = prompt.match(/^(\w+)(?:\s+attack)?:/i);
@@ -57,7 +63,7 @@ function handleAITurnStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
     state.turns = [...state.turns, state.buildingTurn];
   }
-  const gameTurn = entry.data?.turn as number | undefined;
+  const gameTurn = readNumber(entry.data?.["turn"]);
   state.buildingTurn = {
     turnNumber: state.turns.length + 1,
     ...(gameTurn !== undefined && { gameTurn }),
@@ -73,8 +79,8 @@ function handleAIDecisionResolving(
   if (state.buildingTurn && state.buildingTurn.decisions.length > 0) {
     state.turns = [...state.turns, state.buildingTurn];
   }
-  const prompt = (entry.data?.prompt as string) || "";
-  const gameTurn = entry.data?.turn as number | undefined;
+  const prompt = readString(entry.data?.["prompt"]) ?? "";
+  const gameTurn = readNumber(entry.data?.["turn"]);
   state.buildingTurn = {
     turnNumber: state.turns.length + 1,
     ...(gameTurn !== undefined && { gameTurn }),
@@ -87,8 +93,8 @@ function handleAIDecisionResolving(
 
 function handleConsensusStart(entry: LLMLogEntry, state: TurnBuildState): void {
   if (!state.buildingTurn) {
-    const gameTurn = entry.data?.turn as number | undefined;
-    const pendingData = entry.data as PendingData | undefined;
+    const gameTurn = readNumber(entry.data?.["turn"]);
+    const pendingData = readPending(entry.data);
     state.buildingTurn = {
       turnNumber: state.turns.length + 1,
       ...(gameTurn !== undefined && { gameTurn }),
@@ -100,7 +106,7 @@ function handleConsensusStart(entry: LLMLogEntry, state: TurnBuildState): void {
     };
   } else {
     state.buildingTurn.pending = true;
-    const pendingData = entry.data as PendingData | undefined;
+    const pendingData = readPending(entry.data);
     if (pendingData !== undefined) {
       state.buildingTurn.pendingData = pendingData;
     }
@@ -115,14 +121,13 @@ function handleConsensusModelPending(
 ): void {
   if (!state.buildingTurn) return;
   const data = entry.data || {};
-  const provider = data.provider as ModelProvider;
-  const modelIndex = data.index as number;
-  const startTime = data.startTime as number;
-  if (modelIndex !== undefined) {
+  const provider = readProvider(data["provider"]);
+  const modelIndex = readNumber(data["index"]);
+  if (provider !== undefined && modelIndex !== undefined) {
     state.buildingTurn.modelStatuses?.set(modelIndex, {
       provider,
       index: modelIndex,
-      startTime,
+      startTime: readNumber(data["startTime"]) ?? 0,
       completed: false,
     });
   }
@@ -134,21 +139,21 @@ function handleConsensusModelComplete(
 ): void {
   if (!state.buildingTurn) return;
   const data = entry.data || {};
-  const modelIndex = data.index as number | undefined;
+  const modelIndex = readNumber(data["index"]);
   if (modelIndex === undefined) return;
 
   const status = state.buildingTurn.modelStatuses?.get(modelIndex);
   if (!status) return;
 
-  status.duration = data.duration as number | undefined;
-  status.success = data.success as boolean | undefined;
+  status.duration = readNumber(data["duration"]);
+  status.success = readBoolean(data["success"]);
   status.completed = true;
-  status.action = data.action as Action | undefined;
-  status.key = data.key as string | undefined;
-  status.label = data.label as string | undefined;
-  status.distribution = data.distribution as LoggedVote[] | undefined;
-  status.aborted = data.aborted as boolean | undefined;
-  status.usage = data.usage as TokenUsage | undefined;
+  status.action = readMove(data["action"]);
+  status.key = readString(data["key"]);
+  status.label = readString(data["label"]);
+  status.distribution = readVotes(data["distribution"]);
+  status.aborted = readBoolean(data["aborted"]);
+  status.usage = readUsage(data["usage"]);
 }
 
 function handleConsensusModelAborted(
@@ -157,13 +162,13 @@ function handleConsensusModelAborted(
 ): void {
   if (!state.buildingTurn) return;
   const data = entry.data || {};
-  const modelIndex = data.index as number | undefined;
+  const modelIndex = readNumber(data["index"]);
   if (modelIndex === undefined) return;
 
   const status = state.buildingTurn.modelStatuses?.get(modelIndex);
   if (!status) return;
 
-  status.duration = data.duration as number | undefined;
+  status.duration = readNumber(data["duration"]);
   status.completed = true;
   status.aborted = true;
 }

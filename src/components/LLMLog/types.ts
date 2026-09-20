@@ -102,9 +102,9 @@ export interface PendingData {
   providers: ModelProvider[];
   totalModels: number;
   phase: string;
-  gameState?: GameStateSnapshot;
+  gameState?: GameStateSnapshot | undefined;
   /** The game's own keys for this decision's legal moves */
-  legalKeys?: string[];
+  legalKeys?: string[] | undefined;
 }
 
 export interface Turn {
