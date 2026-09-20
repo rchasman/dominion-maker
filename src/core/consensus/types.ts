@@ -20,6 +20,12 @@ export type LLMLogEntryInput = {
   data?: Record<string, unknown>;
 };
 
+/** One entry as the consensus viewer holds it, wherever it was stamped */
+export type LLMLogEntry = LLMLogEntryInput & {
+  id: string;
+  timestamp: number;
+};
+
 export type LLMLogger = (entry: LLMLogEntryInput) => void;
 
 export type WeightedVote<M> = { move: M; weight: number };

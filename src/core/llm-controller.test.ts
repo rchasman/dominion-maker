@@ -152,6 +152,27 @@ describe("llmController", () => {
     expect(types.filter(t => t === "consensus-voting")).toHaveLength(2);
   });
 
+  it("names the acting seat on every log entry", async () => {
+    const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
+    const entries: LLMLogEntryInput[] = [];
+    const controller = llmController(
+      dominionGame,
+      { ...DEFAULT_LLM_SEAT, consensusCount: 1, models: ["gpt-5.4-mini"] },
+      {
+        decideMove: pick({ type: "play_action", card: "Smithy" }),
+        getPlayerStrategies: noStrategies,
+        logger: entry => {
+          entries.push(entry);
+        },
+      },
+    );
+    await controller.decide(engine, "alice", signal());
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.every(entry => entry.data?.["playerId"] === "alice")).toBe(
+      true,
+    );
+  });
+
   it("keeps each model's reasoning in the voting log", async () => {
     const engine = fixture(["Smithy", "Village", "Market", "Copper", "Copper"]);
     const entries: LLMLogEntryInput[] = [];

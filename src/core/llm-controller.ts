@@ -6,7 +6,11 @@ import type { DecideMoveFor, LLMLogger } from "./consensus/types";
 import { buildRoster } from "./consensus/roster";
 import { runModelsInParallel } from "./consensus/run";
 import { selectConsensusWinner, aheadByKFor } from "./consensus/vote";
-import { logConsensusStart, logVotingResults } from "./consensus/log";
+import {
+  logConsensusStart,
+  loggerForPlayer,
+  logVotingResults,
+} from "./consensus/log";
 
 export type DecideMove<G extends GameShape> = DecideMoveFor<
   G["state"],
@@ -48,13 +52,14 @@ export function llmController<G extends GameShape>(
     actionId: string,
     signal: AbortSignal,
     overallStart: number,
+    logger: LLMLogger | undefined,
   ): Promise<G["move"]> => {
     const providers = buildRoster(config, {
       allowEvaluation: game.evaluate !== undefined,
     });
     const aheadByK = aheadByKFor(providers.length);
     const { payload } = game.logContext(state, player, moves);
-    logConsensusStart({ payload, providers, moves, logger: deps.logger });
+    logConsensusStart({ payload, providers, moves, logger });
     const { results, earlyConsensus, voteGroups, completedResults } =
       await runModelsInParallel({
         providers,
@@ -65,7 +70,7 @@ export function llmController<G extends GameShape>(
         aheadByK,
         decideMove: deps.decideMove,
         moveKey: move => game.moveKey(move),
-        logger: deps.logger,
+        logger,
         signal,
       });
     const selection = selectConsensusWinner(
@@ -86,7 +91,7 @@ export function llmController<G extends GameShape>(
       describeMove: move => game.describeMove(move),
       moveKey: move => game.moveKey(move),
       reasoningOf: move => game.reasoningOf(move),
-      logger: deps.logger,
+      logger,
     });
     deps.verifyMove?.(
       state,
@@ -99,6 +104,7 @@ export function llmController<G extends GameShape>(
 
   return {
     async decide(engine: EngineOf<G>, player, signal) {
+      const logger = loggerForPlayer(deps.logger, player);
       const state = engine.state;
       const moves = game.legalMoves(state, player);
       if (moves.length === 0) throw new Error(`No legal moves for ${player}`);
@@ -106,7 +112,7 @@ export function llmController<G extends GameShape>(
       const turn = context.payload["turn"];
       if (context.turnId !== boundary.lastTurnId) {
         boundary.lastTurnId = context.turnId;
-        deps.logger?.({
+        logger?.({
           type: "ai-turn-start",
           message: "AI turn starting",
           data: {
@@ -117,7 +123,7 @@ export function llmController<G extends GameShape>(
         });
       }
       if (context.isChoice) {
-        deps.logger?.({
+        logger?.({
           type: "ai-decision-resolving",
           message: `AI resolving ${decisionLabel(context.payload["decisionType"])}`,
           data: {
@@ -133,7 +139,7 @@ export function llmController<G extends GameShape>(
       const single =
         moves.length === 1 ? moves[0] : game.autoMove?.(state, player, moves);
       if (single !== undefined) {
-        deps.logger?.({
+        logger?.({
           type: "consensus-skipped",
           message:
             moves.length === 1
@@ -153,6 +159,7 @@ export function llmController<G extends GameShape>(
           actionId,
           signal,
           overallStart,
+          logger,
         );
         return game.moveToCommand(state, winner, player);
       }
@@ -166,6 +173,7 @@ export function llmController<G extends GameShape>(
           `${actionId}-r${picks.length}`,
           signal,
           overallStart,
+          logger,
         );
         if (plan.endsRounds(winner)) return plan.finish(picks);
         return rounds([...picks, winner]);

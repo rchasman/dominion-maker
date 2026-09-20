@@ -1,11 +1,10 @@
 import type { TokenUsage } from "../../core/consensus/cost";
 import type { ModelProvider } from "../../config/models";
 import type { Action } from "../../types/action";
-import type {
-  LLMLogEntryInput,
-  WeightedVote,
-} from "../../core/consensus/types";
+import type { LLMLogEntry, WeightedVote } from "../../core/consensus/types";
 import type { LlmSeatConfig } from "../../core/seats";
+
+export type { LLMLogEntry } from "../../core/consensus/types";
 
 /** An LLM-controlled seat and its config, as the settings panel edits it */
 export type LlmSeat = { playerId: string; config: LlmSeatConfig };
@@ -61,12 +60,6 @@ export interface ConsensusVotingData {
   currentPhase: Phase;
   gameState: GameStateSnapshot;
 }
-
-export type LLMLogEntry = LLMLogEntryInput & {
-  id: string;
-  timestamp: number;
-  children?: LLMLogEntry[];
-};
 
 /** Jev's second opinion on the winner; probabilities, not verdicts */
 export interface ConsensusVerdict {
