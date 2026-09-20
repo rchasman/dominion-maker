@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { LLMLogEntry } from "../components/LLMLog";
-import type { LLMLogEntryInput, LLMLogger } from "../core/consensus/types";
+import type { LLMLogger } from "../core/consensus/types";
 import { firstHumanSeat } from "../core/seats";
 import {
   appMode$,
+  appendLlmLog,
   isProcessing$,
   llmLogs$,
   players$,
@@ -46,16 +46,6 @@ const CHESS_SEAT_NAMES = [
   { id: "b", name: "Black" },
 ];
 
-const createLogEntry = (
-  entry: LLMLogEntryInput,
-  eventCount: number | undefined,
-): LLMLogEntry => ({
-  ...entry,
-  id: `${Date.now()}-${Math.random()}`,
-  timestamp: Date.now(),
-  data: { ...entry.data, eventCount },
-});
-
 export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   const engineRef = useRef<ChessEngine | null>(null);
 
@@ -77,10 +67,7 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   });
 
   const loggerRef = useRef<LLMLogger>(entry => {
-    llmLogs$.value = [
-      ...llmLogs$.value,
-      createLogEntry(entry, engineRef.current?.eventLog.length),
-    ];
+    appendLlmLog(entry, engineRef.current?.eventLog.length);
   });
 
   const state = chessState$.value;

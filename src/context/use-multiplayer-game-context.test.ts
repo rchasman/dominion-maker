@@ -48,6 +48,7 @@ describe("useMultiplayerGameContext", () => {
         { name: "Bob", playerId: "p2", controller: "llm" },
       ],
       chatMessages: [],
+      consensusLog: [],
       sendCommand: (command: unknown) => commands.push(command),
       setSeat: () => undefined,
       getStateAtEvent: () => Promise.resolve(viewed),

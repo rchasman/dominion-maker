@@ -16,6 +16,7 @@ import type {
 } from "../types/game-state";
 import type { GameEvent } from "../events/types";
 import type { ChatMessageData } from "../partykit/protocol";
+import type { LLMLogEntry } from "../core/consensus/types";
 import type { PlayerInfoEntry } from "../types/player-info";
 import type { CommandResult, GameCommand } from "../commands/types";
 import type { PendingUndoRequest } from "../engine/engine";
@@ -35,6 +36,7 @@ import {
   isProcessing$,
   isLoading$,
   chatMessages$,
+  llmLogs$,
   sendChat$,
   localPlayerId$,
   localPlayerName$,
@@ -112,6 +114,8 @@ export interface MultiplayerRoom {
     controller: ControllerKind;
   }>;
   chatMessages: ChatMessageData[];
+  /** The room's own consensus entries, already projected for this viewer */
+  consensusLog: LLMLogEntry[];
   sendCommand: (command: unknown) => void;
   setSeat: (playerId: PlayerId, controller: ControllerConfig) => void;
   getStateAtEvent: (eventId: string) => Promise<unknown>;
@@ -293,6 +297,10 @@ export function useMultiplayerGameContext({
   useEffect(() => {
     chatMessages$.value = game.chatMessages;
   }, [game.chatMessages]);
+  // A room's LLM seats vote on the server, so the votes arrive over the wire
+  useEffect(() => {
+    llmLogs$.value = game.consensusLog;
+  }, [game.consensusLog]);
   useEffect(() => {
     sendChat$.value = (content: string) => {
       sendChat({

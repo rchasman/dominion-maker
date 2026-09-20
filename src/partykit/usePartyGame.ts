@@ -16,6 +16,8 @@ import type {
   ChatMessageData,
 } from "./protocol";
 import type { PlayerInfoEntry } from "../types/player-info";
+import type { LLMLogEntry } from "../core/consensus/types";
+import { consensusLogEntrySchema } from "../validation/messages";
 import type { GameId } from "../game-ids";
 import type { ControllerConfig } from "../core/seats";
 import { loadReconnectToken, saveReconnectToken } from "./reconnect-token";
@@ -52,6 +54,8 @@ interface PartyGameState {
   isHost: boolean;
   disconnectedPlayers: Map<PlayerId, string>;
   chatMessages: ChatMessageData[];
+  /** The room's own consensus entries, already projected for this connection */
+  consensusLog: LLMLogEntry[];
 }
 
 interface PartyGameActions {
@@ -103,6 +107,7 @@ export function usePartyGame({
     isHost: false,
     disconnectedPlayers: new Map(),
     chatMessages: [],
+    consensusLog: [],
   });
 
   useEffect(() => {
@@ -174,8 +179,11 @@ export function usePartyGame({
         break;
       }
       case "joined":
+        // A fresh seat in the room starts on an empty viewer; the server keeps
+        // no history, so anything held here belongs to an earlier connection
         setState(s => ({
           ...s,
+          consensusLog: [],
           isJoined: true,
           playerId: msg.playerId,
           isSpectator: msg.isSpectator,
@@ -195,6 +203,7 @@ export function usePartyGame({
         eventsRef.current = msg.events;
         setState(s => ({
           ...s,
+          consensusLog: [],
           game: msg.game,
           state: msg.state,
           playerInfo: msg.playerInfo,
@@ -277,6 +286,14 @@ export function usePartyGame({
           chatMessages: msg.messages,
         }));
         break;
+
+      case "consensus_log": {
+        const parsed = consensusLogEntrySchema.safeParse(msg.entry);
+        if (!parsed.success) break;
+        const entry = parsed.data;
+        setState(s => ({ ...s, consensusLog: [...s.consensusLog, entry] }));
+        break;
+      }
     }
   }, []);
 

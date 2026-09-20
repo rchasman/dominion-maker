@@ -13,7 +13,8 @@ import type { CommandResult } from "../commands/types";
 import type { PlayerStrategyData } from "../types/player-strategy";
 import type { ControllerConfig, LlmSeatConfig, Seats } from "../core/seats";
 import { firstHumanSeat, withSeat } from "../core/seats";
-import type { LLMLogEntry } from "../components/LLMLog/types";
+import type { LLMLogEntry, LLMLogEntryInput } from "../core/consensus/types";
+import { stampLogEntry } from "../core/consensus/log";
 import type { ChatMessageData } from "../partykit/protocol";
 import type { PendingUndoRequest } from "../engine/engine";
 import {
@@ -112,6 +113,20 @@ export const getStateAtEvent$ = signal<
 // LLM logs signal
 // ---------------------------------------------------------------------------
 export const llmLogs$ = signal<LLMLogEntry[]>([]);
+
+/**
+ * One local seat's entry, stamped and appended. A room's entries arrive
+ * already stamped by the server, so they are assigned to the signal whole.
+ */
+export function appendLlmLog(
+  entry: LLMLogEntryInput,
+  eventCount: number | undefined,
+): void {
+  llmLogs$.value = [
+    ...llmLogs$.value,
+    { ...stampLogEntry(entry), data: { ...entry.data, eventCount } },
+  ];
+}
 
 // ---------------------------------------------------------------------------
 // Multiplayer-specific signals (defaults match single-player)
