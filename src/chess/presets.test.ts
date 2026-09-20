@@ -1,7 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { CHESS_PLAYERS } from "./context";
-import { CHESS_SEAT_PRESETS } from "./presets";
+import { CHESS_PLAYERS } from "./seat";
+import { CHESS_SEAT_PRESETS, chessSeats } from "./presets";
 import { chessModule } from "./module";
+import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
+
+const STORED = { w: HUMAN_SEAT, b: HEURISTIC_SEAT };
 
 const kindsOf = (preset: keyof typeof CHESS_SEAT_PRESETS) =>
   CHESS_PLAYERS.map(id => CHESS_SEAT_PRESETS[preset].seats(CHESS_PLAYERS)[id]);
@@ -34,5 +37,25 @@ describe("the chess seat presets", () => {
       .flatMap(config => (config.kind === "llm" ? [config] : []));
     expect(rosters.length).toBeGreaterThan(0);
     expect(rosters.every(config => !config.models.includes("jev"))).toBe(true);
+  });
+});
+
+describe("seating a chess table", () => {
+  it("takes the chosen preset when the game starts fresh", () => {
+    expect(chessSeats(false, STORED, "watch")).toEqual({
+      w: chessModule.defaultLlmSeat,
+      b: chessModule.defaultLlmSeat,
+    });
+  });
+
+  it("keeps the table a restored game was played on", () => {
+    expect(chessSeats(true, STORED, "watch")).toEqual(STORED);
+  });
+
+  it("ignores a stored table that belongs to another game", () => {
+    expect(chessSeats(true, { human: HUMAN_SEAT }, "rules")).toEqual({
+      w: HUMAN_SEAT,
+      b: HEURISTIC_SEAT,
+    });
   });
 });

@@ -7,9 +7,6 @@ import { loadChessEngine } from "./engine";
 import { chessEventSchema } from "./schemas";
 import type { ChessEvent, ChessState } from "./shape";
 
-/** White first, matching the order the engine seats its players in */
-export const CHESS_PLAYERS = ["w", "b"] as const;
-
 export const CHESS_EVENTS_KEY = "dominion-maker-chess-events";
 
 export const chessState$ = signal<ChessState | null>(null);

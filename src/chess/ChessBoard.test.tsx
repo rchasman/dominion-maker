@@ -3,7 +3,7 @@ import { render } from "preact";
 import { registerHappyDom, settled } from "../happy-dom.test-fixture";
 import { ChessBoard } from "./ChessBoard";
 import { createChessGame } from "./engine";
-import { CHESS_PLAYERS } from "./context";
+import { CHESS_PLAYERS } from "./seat";
 import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
 
 beforeAll(registerHappyDom);

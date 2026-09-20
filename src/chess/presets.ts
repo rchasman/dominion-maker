@@ -2,7 +2,7 @@ import type { Seats } from "../core/seats";
 import { HEURISTIC_SEAT } from "../core/seats";
 import type { SeatPreset } from "../context/seat-presets";
 import { versus } from "../context/seat-presets";
-import { CHESS_LLM_SEAT } from "./seat";
+import { CHESS_LLM_SEAT, CHESS_PLAYERS } from "./seat";
 
 type ChessPreset = {
   name: string;
@@ -32,3 +32,20 @@ export const CHESS_SEAT_PRESETS: Record<SeatPreset, ChessPreset> = {
       Object.fromEntries(players.map(id => [id, CHESS_LLM_SEAT])),
   },
 };
+
+/**
+ * A restored game keeps the table it was played on. A fresh one takes the
+ * chosen preset, so picking a preset on the start screen always applies.
+ * Seats are shared storage, so a stored table that does not name both colours
+ * belongs to the other game and is ignored either way.
+ */
+export function chessSeats(
+  restored: boolean,
+  saved: Seats | null,
+  preset: SeatPreset,
+): Seats {
+  const usable =
+    saved !== null && CHESS_PLAYERS.every(id => id in saved) ? saved : null;
+  if (restored && usable !== null) return usable;
+  return CHESS_SEAT_PRESETS[preset].seats(CHESS_PLAYERS);
+}

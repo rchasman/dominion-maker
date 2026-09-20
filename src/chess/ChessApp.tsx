@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { LLMLogEntry } from "../components/LLMLog";
 import type { LLMLogEntryInput, LLMLogger } from "../core/consensus/types";
-import type { Seats } from "../core/seats";
 import { firstHumanSeat } from "../core/seats";
 import {
   appMode$,
@@ -19,13 +18,13 @@ import {
   chessEvents$,
   chessState$,
   clearStoredChessGame,
-  CHESS_PLAYERS,
   restoreChessEngine,
   saveChessEvents,
   syncChessEngine,
 } from "./context";
 import { createChessGame, type ChessEngine } from "./engine";
-import { CHESS_SEAT_PRESETS } from "./presets";
+import { chessSeats } from "./presets";
+import { CHESS_PLAYERS } from "./seat";
 import { useChessSeatDriver } from "./use-chess-seat-driver";
 
 const CHESS_SEAT_NAMES = [
@@ -43,23 +42,14 @@ const createLogEntry = (
   data: { ...entry.data, eventCount },
 });
 
-/**
- * Seats saved by the other game name players this one does not have. Falling
- * back to the preset keeps a board that nobody can move from ever appearing.
- */
-const seatsForChess = (): Seats => {
-  const saved = loadSeats();
-  if (saved !== null && CHESS_PLAYERS.every(id => id in saved)) return saved;
-  return CHESS_SEAT_PRESETS[loadSeatPreset()].seats(CHESS_PLAYERS);
-};
-
 export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   const engineRef = useRef<ChessEngine | null>(null);
 
   useState(() => {
-    const engine = restoreChessEngine() ?? createChessGame([...CHESS_PLAYERS]);
+    const restored = restoreChessEngine();
+    const engine = restored ?? createChessGame([...CHESS_PLAYERS]);
     engineRef.current = engine;
-    seats$.value = seatsForChess();
+    seats$.value = chessSeats(restored !== null, loadSeats(), loadSeatPreset());
     llmLogs$.value = [];
     isProcessing$.value = false;
     appMode$.value = "local";
@@ -85,8 +75,11 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   }, [events]);
 
   useEffect(() => {
-    if (Object.keys(seats).length > 0) {
+    if (Object.keys(seats).length === 0) return;
+    try {
       localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(seats));
+    } catch (error) {
+      uiLogger.warn("Could not save the chess table", { error });
     }
   }, [seats]);
 

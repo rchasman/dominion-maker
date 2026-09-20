@@ -1,6 +1,9 @@
 import type { LlmSeatConfig } from "../core/seats";
 import { DEFAULT_LLM_SEAT } from "../core/seats";
 
+/** White first, matching the order the engine seats its players in */
+export const CHESS_PLAYERS = ["w", "b"] as const;
+
 /**
  * The LLM roster a new chess seat starts with. It lives apart from the module
  * so the start screen can name the presets without loading a chess engine.
