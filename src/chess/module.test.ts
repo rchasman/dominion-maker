@@ -32,6 +32,21 @@ describe("the chess module describes its own wire shapes", () => {
     ).toEqual({ san: "e4", reasoning: "centre" });
   });
 
+  it("carries only the two commands a player may send", () => {
+    // commandSchema is the room's wire surface: setup and engine-internal
+    // events must never be reachable from it.
+    const rejected = [
+      { type: "GAME_INITIALIZED", players: [WHITE, BLACK] },
+      { type: "RESIGNED", playerId: WHITE },
+      { type: "TRUNCATE", playerId: WHITE, count: 2 },
+    ];
+    expect(
+      rejected.map(
+        command => chessModule.commandSchema.safeParse(command).success,
+      ),
+    ).toEqual([false, false, false]);
+  });
+
   it("takes no options at all", () => {
     expect(chessModule.optionsSchema.parse({})).toEqual({});
     expect(chessModule.optionsSchema.safeParse({ x: 1 }).success).toBe(false);
