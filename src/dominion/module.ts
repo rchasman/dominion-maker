@@ -6,6 +6,7 @@ import { cardsSchema, gameStateSchema } from "../validation/game-state";
 import { gameEventSchema } from "../validation/messages";
 import { gameCommandSchema } from "../validation/commands";
 import { actionSchema } from "../validation/action";
+import { multiplayerLogger } from "../lib/logger";
 import { dominionGame } from "./definition";
 import type { DominionOptions, DominionShape } from "./shape";
 import { playerView, publicEvents } from "./view";
@@ -41,12 +42,19 @@ export const dominionModule: GameModule<DominionShape> = {
     if (!requested) return;
     Object.entries(seats)
       .filter(([, seat]) => !isHumanSeat(seat))
-      .map(([playerId]) =>
-        engine.dispatch({
+      .map(([playerId]) => ({
+        playerId,
+        result: engine.dispatch({
           type: "APPROVE_UNDO",
           playerId,
           requestId: requested.requestId,
         }),
+      }))
+      .filter(({ result }) => !result.ok)
+      .map(({ playerId, result }) =>
+        multiplayerLogger.warn(
+          `Bot ${playerId} could not approve undo ${requested.requestId}: ${result.ok ? "" : result.error}`,
+        ),
       );
   },
   defaultLlmSeat: DEFAULT_LLM_SEAT,

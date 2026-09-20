@@ -46,17 +46,19 @@ describe("dominionModule", () => {
 
   it("keeps private events off the public log", () => {
     const engine = dominionModule.createEngine(["alice", "bob"], { seed: 42 });
+    const isPrivate = (type: string): boolean =>
+      ["INITIAL_HAND_DRAWN", "DECK_SHUFFLED", "RANDOM_STATE_UPDATED"].includes(
+        type,
+      );
+    const privateInLog = engine.eventLog.filter(event =>
+      isPrivate(event.type),
+    );
+    expect(privateInLog.length).toBeGreaterThan(0);
     expect(
       dominionModule
         .publicEvents(engine.eventLog)
-        .some(event =>
-          [
-            "INITIAL_HAND_DRAWN",
-            "DECK_SHUFFLED",
-            "RANDOM_STATE_UPDATED",
-          ].includes(event.type),
-        ),
-    ).toBe(false);
+        .filter(event => isPrivate(event.type)),
+    ).toEqual([]);
   });
 
   it("restores the same state from its own log", () => {

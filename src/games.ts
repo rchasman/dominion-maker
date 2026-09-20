@@ -6,7 +6,13 @@ export const GAMES = { dominion: dominionModule } as const;
 
 export type GameId = keyof typeof GAMES;
 
-export const gameIdSchema = z.enum(["dominion"]);
+/** Listed once per game; a game missing here is a compile error */
+const GAME_IDS = { dominion: "dominion" } as const satisfies Record<
+  GameId,
+  GameId
+>;
+
+export const gameIdSchema = z.enum(GAME_IDS);
 
 export const moduleFor = <K extends GameId>(id: K): (typeof GAMES)[K] =>
   GAMES[id];
