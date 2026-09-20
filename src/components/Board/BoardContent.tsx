@@ -25,13 +25,13 @@ import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
 import { SeatSelector } from "../SeatSelector";
 import { dominionModule } from "../../dominion/module";
+import { SEAT_PRESETS } from "../../context/seat-presets";
 import {
-  SEAT_PRESETS,
   SEAT_PRESET_NAMES,
   presetOf,
   saveSeatPreset,
   type SeatPreset,
-} from "../../context/seat-presets";
+} from "../../core/seat-presets";
 import { setSeats$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { MainPlayerArea } from "./MainPlayerArea";

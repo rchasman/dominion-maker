@@ -1,7 +1,7 @@
 import type { Seats } from "../core/seats";
 import { HEURISTIC_SEAT } from "../core/seats";
-import type { SeatPreset } from "../context/seat-presets";
-import { versus } from "../context/seat-presets";
+import type { SeatPreset } from "../core/seat-presets";
+import { versus } from "../core/seat-presets";
 import { CHESS_LLM_SEAT, CHESS_PLAYERS } from "./seat";
 
 type ChessPreset = {

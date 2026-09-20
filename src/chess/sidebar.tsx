@@ -5,7 +5,7 @@ import {
   SEAT_PRESET_NAMES,
   presetOf,
   type SeatPreset,
-} from "../context/seat-presets";
+} from "../core/seat-presets";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
 import { CHESS_SEAT_PRESETS } from "./presets";

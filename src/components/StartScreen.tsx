@@ -1,8 +1,5 @@
-import {
-  SEAT_PRESETS,
-  SEAT_PRESET_NAMES,
-  type SeatPreset,
-} from "../context/seat-presets";
+import { SEAT_PRESETS } from "../context/seat-presets";
+import { SEAT_PRESET_NAMES, type SeatPreset } from "../core/seat-presets";
 import { CHESS_SEAT_PRESETS } from "../chess/presets";
 import type { GameId } from "../game-ids";
 

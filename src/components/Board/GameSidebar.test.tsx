@@ -3,7 +3,7 @@ import { render } from "preact";
 import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
 import { GameSidebar } from "./GameSidebar";
 import { HUMAN_SEAT } from "../../core/seats";
-import type { SeatPreset } from "../../context/seat-presets";
+import type { SeatPreset } from "../../core/seat-presets";
 
 beforeAll(registerHappyDom);
 

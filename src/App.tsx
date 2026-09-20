@@ -5,7 +5,7 @@ import {
   loadSeatPreset,
   saveSeatPreset,
   type SeatPreset,
-} from "./context/seat-presets";
+} from "./core/seat-presets";
 import { loadGameChoice, saveGameChoice } from "./context/game-choice";
 import type { GameId } from "./game-ids";
 import { uiLogger } from "./lib/logger";

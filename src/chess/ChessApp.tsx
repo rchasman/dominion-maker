@@ -14,7 +14,7 @@ import {
   loadSeatPreset,
   saveSeatPreset,
   type SeatPreset,
-} from "../context/seat-presets";
+} from "../core/seat-presets";
 import { uiLogger } from "../lib/logger";
 import { BoardLayout, GameAreaLayout } from "../components/Board/BoardLayout";
 import { GameSidebar } from "../components/Board/GameSidebar";

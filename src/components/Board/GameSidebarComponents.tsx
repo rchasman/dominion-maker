@@ -6,7 +6,7 @@ import {
   FONT_WEIGHT_BOLD,
   FULL_PERCENT,
 } from "./constants";
-import type { SeatPreset } from "../../context/seat-presets";
+import type { SeatPreset } from "../../core/seat-presets";
 
 /** The table shapes a game offers, and which one the current table matches */
 export interface SidebarPresets {

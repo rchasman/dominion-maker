@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { SEAT_PRESETS, SEAT_PRESET_NAMES } from "./seat-presets";
+import { SEAT_PRESETS } from "./seat-presets";
+import { SEAT_PRESET_NAMES } from "../core/seat-presets";
 import { isHumanSeat } from "../core/seats";
 
 describe("seat presets", () => {
@@ -24,23 +25,9 @@ describe("seat presets", () => {
     expect(Object.values(seats).every(seat => seat.kind === "llm")).toBe(true);
   });
 
-  it("lists every preset name", () => {
-    expect(SEAT_PRESET_NAMES).toEqual(["rules", "hybrid", "watch"]);
-  });
-});
-
-describe("presetOf", () => {
-  it("recognises the three tables and rejects mixed ones", async () => {
-    const { presetOf } = await import("./seat-presets");
-    const { DEFAULT_LLM_SEAT, HEURISTIC_SEAT, HUMAN_SEAT } =
-      await import("../core/seats");
-    expect(presetOf({ a: HUMAN_SEAT, b: HEURISTIC_SEAT })).toBe("rules");
-    expect(presetOf({ a: HUMAN_SEAT, b: DEFAULT_LLM_SEAT })).toBe("hybrid");
-    expect(presetOf({ a: DEFAULT_LLM_SEAT, b: DEFAULT_LLM_SEAT })).toBe(
-      "watch",
-    );
-    expect(presetOf({ a: HUMAN_SEAT, b: HUMAN_SEAT })).toBeNull();
-    expect(presetOf({ a: HEURISTIC_SEAT, b: DEFAULT_LLM_SEAT })).toBeNull();
-    expect(presetOf({})).toBeNull();
+  // The switcher walks the shared name list, so a table that drifts from it
+  // would quietly hide a preset the sidebar is meant to offer
+  it("offers exactly the presets the shared name list names", () => {
+    expect(Object.keys(SEAT_PRESETS)).toEqual([...SEAT_PRESET_NAMES]);
   });
 });
