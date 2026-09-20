@@ -8,7 +8,7 @@ import type { ControllerConfig } from "../core/seats";
 import type { LLMLogger } from "../core/consensus/types";
 
 /** Everything a controller needs from the app that the core must not reach for itself */
-export type ControllerTransport<G extends GameShape> = {
+type ControllerTransport<G extends GameShape> = {
   decideMove: DecideMove<G>;
   verifyMove?: (
     state: G["state"],
