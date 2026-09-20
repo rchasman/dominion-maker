@@ -138,10 +138,16 @@ describe("multiplayer privacy and credentials", () => {
     expect(
       h.messages.get(rejoin.id)!.some(m => m.type === "joined" && m.isHost),
     ).toBe(true);
-    const lastEventId = dominionModule.eventSchema.parse(
-      started.events.at(-1),
-    ).id!;
-    h.send(rejoin, { type: "preview_state", eventId: lastEventId });
+    // Mid-log, so the preview really replays a prefix rather than the whole log
+    const history = started.events.map(event =>
+      dominionModule.eventSchema.parse(event),
+    );
+    const turnStartedId = history.find(
+      event => event.type === "TURN_STARTED",
+    )?.id;
+    expect(turnStartedId).toBeDefined();
+    expect(history.at(-1)?.id).not.toBe(turnStartedId);
+    h.send(rejoin, { type: "preview_state", eventId: turnStartedId! });
     const preview = h.messages.get(rejoin.id)!.at(-1);
     expect(preview?.type).toBe("preview_state");
     if (preview?.type === "preview_state")

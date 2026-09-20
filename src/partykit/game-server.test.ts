@@ -53,7 +53,13 @@ function roomHarness() {
         ? m.events.map(event => dominionModule.eventSchema.parse(event).type)
         : [],
     );
-  return { server, connect, send, raw, seen, lastOf, eventTypes };
+  const latestTurn = (socket: ConnLike) => {
+    const state = seen(socket)
+      .flatMap(m => ("state" in m && m.state ? [m.state] : []))
+      .at(-1);
+    return dominionModule.stateSchema.parse(state).turn;
+  };
+  return { server, connect, send, raw, seen, lastOf, eventTypes, latestTurn };
 }
 
 const startAgainstBot = (h: ReturnType<typeof roomHarness>) => {
@@ -188,6 +194,50 @@ describe("the room module validates what crosses the wire", () => {
       type: "error",
       message: "Invalid command",
     });
+  });
+});
+
+describe("history preview", () => {
+  it("replays a prefix of the log, not the whole log", async () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    const settle = async () => {
+      await h.server.botsDriving;
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await h.server.botsDriving;
+    };
+    await settle();
+    const endPhase: GameClientMessage = {
+      type: "command",
+      command: { type: "END_PHASE", playerId: "alice" },
+    };
+    h.send(host, endPhase);
+    h.send(host, endPhase);
+    await settle();
+
+    const started = h.seen(host).find(m => m.type === "game_started");
+    if (started?.type !== "game_started") throw new Error("Missing game");
+    const firstTurn = started.events
+      .map(event => dominionModule.eventSchema.parse(event))
+      .find(event => event.type === "TURN_STARTED");
+    if (!firstTurn?.id) throw new Error("Missing turn");
+
+    const turnNow = h.latestTurn(host);
+    expect(turnNow).toBeGreaterThanOrEqual(3);
+
+    h.send(host, { type: "preview_state", eventId: firstTurn.id });
+    const preview = h.lastOf(host);
+    if (preview?.type !== "preview_state") throw new Error("Missing preview");
+    expect(dominionModule.stateSchema.parse(preview.state).turn).toBe(1);
+  });
+
+  it("answers a preview of an event it does not hold with no state", () => {
+    const h = roomHarness();
+    const host = startAgainstBot(h);
+    h.send(host, { type: "preview_state", eventId: "evt-nowhere" });
+    const preview = h.lastOf(host);
+    if (preview?.type !== "preview_state") throw new Error("Missing preview");
+    expect(preview.state).toBeNull();
   });
 });
 
