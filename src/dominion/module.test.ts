@@ -199,4 +199,24 @@ describe("the room's command surface", () => {
       ),
     ).toEqual([]);
   });
+
+  // The room reaches the projection only through the module, so an unwired
+  // hook would leak every bot hand with nothing else failing
+  it("projects a relayed log entry away from anyone but the acting seat", () => {
+    const projected = dominionModule.viewLogEntry?.(
+      {
+        id: "log-1",
+        timestamp: 1,
+        type: "consensus-voting",
+        message: "◉ Voting: winner play_action(Militia) (3/5)",
+        data: {
+          playerId: "bot",
+          gameState: { hand: ["Militia", "Chapel"] },
+        },
+      },
+      "alice",
+    );
+    expect(projected).toBeDefined();
+    expect(JSON.stringify(projected)).not.toContain("Chapel");
+  });
 });
