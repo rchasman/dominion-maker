@@ -6,7 +6,7 @@ import {
   clearStoredChessGame,
   loadChessSeats,
   saveChessSeats,
-} from "./context";
+} from "./storage";
 
 beforeAll(registerHappyDom);
 
