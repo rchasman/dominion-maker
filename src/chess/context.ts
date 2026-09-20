@@ -21,7 +21,6 @@ const storedLogSchema = z.array(chessEventSchema);
 export function clearStoredChessGame(): void {
   try {
     localStorage.removeItem(CHESS_EVENTS_KEY);
-    localStorage.removeItem(CHESS_SEATS_KEY);
   } catch (error) {
     uiLogger.warn("Could not clear the saved chess game", { error });
   }

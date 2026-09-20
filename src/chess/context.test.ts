@@ -41,13 +41,15 @@ describe("the stored chess table", () => {
     expect(loadChessSeats()).toBeNull();
   });
 
-  it("drops the table along with the game it was played on", () => {
+  // A new game clears the saved game and leaves the live table alone, so a
+  // reload right after it must still find the table being played on.
+  it("survives the saved game being cleared", () => {
     localStorage.setItem(STORAGE_KEYS.SEATS, DOMINION_TABLE);
     saveChessSeats(TABLE);
 
     clearStoredChessGame();
 
-    expect(loadChessSeats()).toBeNull();
+    expect(loadChessSeats()).toEqual(TABLE);
     expect(localStorage.getItem(STORAGE_KEYS.SEATS)).toBe(DOMINION_TABLE);
   });
 });

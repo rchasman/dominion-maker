@@ -163,6 +163,10 @@ describe("the chess board", () => {
       inCheck: false,
     };
     expect(chessStateSchema.safeParse(unreplayable).success).toBe(true);
+    // A position the board could not draw fails the parse instead
+    expect(
+      chessStateSchema.safeParse({ ...unreplayable, fen: "zzz" }).success,
+    ).toBe(false);
 
     settled(() =>
       render(
