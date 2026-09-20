@@ -13,9 +13,7 @@ import { generateRoomId } from "../../lib/room-id";
 import { generatePlayerName } from "../../lib/name-generator";
 import type { GameId } from "../../game-ids";
 import { gameIdSchema } from "../../game-ids";
-
-/** One game is registered today; PR B turns this into a picker */
-const SELECTED_GAME: GameId = "dominion";
+import { loadGameChoice } from "../../context/game-choice";
 
 type Screen = "lobby" | "game";
 
@@ -74,6 +72,9 @@ export function GameLobby({ onBack }: GameLobbyProps) {
     localStorage.setItem(STORAGE_KEYS.CLIENT_ID, id);
     return id;
   })[0];
+
+  // The game chosen on the start screen is what a new room plays
+  const selectedGame = useState<GameId>(() => loadGameChoice())[0];
 
   const [playerName, setPlayerName] = useState(() => {
     // If in active game, use stored name for stability
@@ -162,7 +163,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
   const handlePlayVsAi = () => {
     const newRoomId = generateRoomId();
     setRoomId(newRoomId);
-    setGameId(SELECTED_GAME);
+    setGameId(selectedGame);
     setMyLastGameRoomId(newRoomId);
     setIsSpectator(false);
     localStorage.setItem(
@@ -170,7 +171,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
       JSON.stringify({
         roomId: newRoomId,
         isSpectator: false,
-        game: SELECTED_GAME,
+        game: selectedGame,
       }),
     );
     setScreen("game");
@@ -258,7 +259,7 @@ export function GameLobby({ onBack }: GameLobbyProps) {
         isConnected={lobby.isConnected}
         getRequestState={lobby.getRequestState}
         getIncomingRequest={lobby.getIncomingRequest}
-        onRequestGame={targetId => lobby.requestGame(targetId, SELECTED_GAME)}
+        onRequestGame={targetId => lobby.requestGame(targetId, selectedGame)}
         onAcceptRequest={lobby.acceptRequest}
         onSpectateGame={handleSpectateGame}
       />

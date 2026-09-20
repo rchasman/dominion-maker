@@ -199,10 +199,7 @@ export function StartScreen({
         {PRESET_COPY[game][preset].description}
       </p>
 
-      {renderActionButtons(
-        onStartSinglePlayer,
-        game === "dominion" ? onStartMultiplayer : undefined,
-      )}
+      {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
     </div>
   );
 }
