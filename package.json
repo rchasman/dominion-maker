@@ -9,6 +9,7 @@
     "dev:web": "portless dominion --force vite",
     "dev:party": "npx partykit dev",
     "dev:multi": "bun run --parallel dev:api dev:web dev:party",
+    "models:refresh": "bun run scripts/refresh-models.ts",
     "build": "vite build",
     "build:analyze": "ANALYZE=true vite build",
     "type": "tsc -b",

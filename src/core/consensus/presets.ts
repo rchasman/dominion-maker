@@ -46,28 +46,41 @@ const BALANCED_MODELS = [
   "inkling",
 ] as const satisfies readonly ModelProvider[];
 
-// One model per provider. Spread beats price here: a shared blind spot is what
-// consensus voting is supposed to catch, and same-house models share theirs.
-// Each house's pick is its fastest model, measured 2026-09-20 over the real
-// /api/generate-action path: 3 samples per model, 11 concurrent calls held
-// constant, ranked on "no sample over the 30s vote timeout" then median.
-// jev, grok-4-fast and step-3.5-flash are the only model their house ships.
-// Re-run the measurement before trusting these picks; gateway routing moves.
+// One model per provider: the fastest of its house. Spread beats price here, a
+// shared blind spot is what consensus voting is supposed to catch, and
+// same-house models share theirs. Speed decides the pick because Diverse gives
+// each house exactly one vote, and a vote past the 30s timeout is an abstention.
+//
+// Ranked from a live sweep of all 186 catalog models on 2026-09-20: 3 samples
+// each through the real /api/generate-action path, 20 concurrent calls held
+// constant. A model qualifies with zero failures and no sample past 30s, then
+// takes the lowest median; medians within 15% count as a tie and price breaks
+// it. Models specialised away from general answers (code completion, vision)
+// are skipped for the same reason morph is denied outright.
+//
+// Two houses are absent on purpose: neither xiaomi nor inclusionai has a model
+// that can carry a vote. presets.test.ts holds that list and fails on any
+// provider the catalog offers that nobody has ruled on.
+//
+// Re-run the sweep after a catalog refresh rather than trusting these picks.
 const DIVERSE_MODELS = [
   "jev",
-  "claude-haiku",
-  "gpt-5.4-mini",
-  "gemini-3.5-flash-lite",
+  "claude-3-haiku",
+  "gpt-4.1-mini-fast",
+  "gemma-4-26b-a4b-it",
   "grok-4-fast",
-  "deepseek-v4-flash",
+  "deepseek-v4.1-flash",
   "glm-4.7",
-  "qwen3-coder-30b-a3b",
-  "llama-3.3-70b",
-  "nemotron-nano-12b-v2-vl",
+  "qwen3-next-80b-a3b-instruct",
+  "llama-4-maverick",
+  "nemotron-3-super-120b-a12b",
   "step-3.5-flash",
-  "kimi-k3-fast",
+  "kimi-k2.5",
   "inkling-small",
   "ministral-3b",
+  "nova-micro",
+  "minimax-m3",
+  "hy3",
 ] as const satisfies readonly ModelProvider[];
 
 // Frontier models. Most cap at 3 instances; claude-sonnet is uncapped and

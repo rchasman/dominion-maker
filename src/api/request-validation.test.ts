@@ -6,7 +6,7 @@ import { httpDecideMove } from "../agent/http-decide-move";
 import { MODELS } from "../config/models";
 
 describe("API request boundaries", () => {
-  it("accepts every roster model and rejects the retired non-ZDR model", () => {
+  it("accepts every catalog model and rejects one the gateway refuses", () => {
     const currentState = createGame(["human", "ai"], undefined, 42).state;
     for (const model of MODELS) {
       expect(
@@ -20,7 +20,8 @@ describe("API request boundaries", () => {
     expect(
       actionRequestSchema.safeParse({
         game: "dominion",
-        provider: "grok-4.5",
+        // zdr "none": the ZDR-only account cannot call it, so it is not generated
+        provider: "claude-fable-5",
         currentState,
       }).success,
     ).toBe(false);
