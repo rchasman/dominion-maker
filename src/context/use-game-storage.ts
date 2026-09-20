@@ -50,7 +50,6 @@ export function useGameStorage(): GameStorageResult {
         return { engineRef: null };
       }
       if (savedEvents && savedSeats) {
-        seats$.value = savedSeats;
         try {
           const engine = new DominionEngine();
           engine.loadEvents(savedEvents);
@@ -60,6 +59,15 @@ export function useGameStorage(): GameStorageResult {
             clearGameStateStorage();
             return { engineRef: null };
           }
+
+          // Seats are shared with the other games, which name other players
+          if (!engine.state.playerOrder.every(id => id in savedSeats)) {
+            uiLogger.info("Saved seats are another game's, starting fresh");
+            localStorage.removeItem(STORAGE_KEYS.EVENTS);
+            return { engineRef: null };
+          }
+          seats$.value = savedSeats;
+
 
           uiLogger.info(`Restored game from ${savedEvents.length} events`);
 

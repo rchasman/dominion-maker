@@ -3,18 +3,57 @@ import {
   SEAT_PRESET_NAMES,
   type SeatPreset,
 } from "../context/seat-presets";
+import { CHESS_SEAT_PRESETS } from "../chess/presets";
+import type { GameId } from "../game-ids";
+
+type PresetCopy = { name: string; description: string };
+
+const PRESET_COPY: Record<GameId, Record<SeatPreset, PresetCopy>> = {
+  dominion: SEAT_PRESETS,
+  chess: CHESS_SEAT_PRESETS,
+};
+
+const TITLES: Record<GameId, { title: string; subtitle: string }> = {
+  dominion: { title: "DOMINION", subtitle: "Base Game" },
+  chess: { title: "CHESS", subtitle: "Standard rules" },
+};
+
+const GAME_NAMES: Record<GameId, string> = {
+  dominion: "Dominion",
+  chess: "Chess",
+};
+
+const GAME_IDS_IN_ORDER: GameId[] = ["dominion", "chess"];
 
 const FONT_WEIGHT_ACTIVE = 700;
 const FONT_WEIGHT_INACTIVE = 400;
 
 interface StartScreenProps {
+  game: GameId;
+  onGameChange: (game: GameId) => void;
   preset: SeatPreset;
   onPresetChange: (preset: SeatPreset) => void;
   onStartSinglePlayer?: () => void;
   onStartMultiplayer?: () => void;
 }
 
+function renderGameButtons(game: GameId, onGameChange: (game: GameId) => void) {
+  return (
+    <div style={{ display: "flex", gap: "var(--space-4)" }}>
+      {GAME_IDS_IN_ORDER.map(id => (
+        <ChoiceButton
+          key={id}
+          label={GAME_NAMES[id]}
+          isActive={id === game}
+          onClick={() => onGameChange(id)}
+        />
+      ))}
+    </div>
+  );
+}
+
 function renderPresetButtons(
+  game: GameId,
   preset: SeatPreset,
   onPresetChange: (preset: SeatPreset) => void,
 ) {
@@ -30,11 +69,11 @@ function renderPresetButtons(
       }}
     >
       {SEAT_PRESET_NAMES.map(name => (
-        <PresetButton
+        <ChoiceButton
           key={name}
-          preset={name}
-          current={preset}
-          onClick={onPresetChange}
+          label={PRESET_COPY[game][name].name}
+          isActive={name === preset}
+          onClick={() => onPresetChange(name)}
         />
       ))}
     </div>
@@ -100,6 +139,8 @@ function renderActionButtons(
 }
 
 export function StartScreen({
+  game,
+  onGameChange,
   preset,
   onPresetChange,
   onStartSinglePlayer,
@@ -127,7 +168,7 @@ export function StartScreen({
           letterSpacing: "0.25rem",
         }}
       >
-        DOMINION
+        {TITLES[game].title}
       </h1>
       <p
         style={{
@@ -138,10 +179,12 @@ export function StartScreen({
           letterSpacing: "0.125rem",
         }}
       >
-        Base Game
+        {TITLES[game].subtitle}
       </p>
 
-      {renderPresetButtons(preset, onPresetChange)}
+      {renderGameButtons(game, onGameChange)}
+
+      {renderPresetButtons(game, preset, onPresetChange)}
 
       <p
         style={{
@@ -153,27 +196,29 @@ export function StartScreen({
           lineHeight: 1.6,
         }}
       >
-        {SEAT_PRESETS[preset].description}
+        {PRESET_COPY[game][preset].description}
       </p>
 
-      {renderActionButtons(onStartSinglePlayer, onStartMultiplayer)}
+      {renderActionButtons(
+        onStartSinglePlayer,
+        game === "dominion" ? onStartMultiplayer : undefined,
+      )}
     </div>
   );
 }
 
-function PresetButton({
-  preset,
-  current,
+function ChoiceButton({
+  label,
+  isActive,
   onClick,
 }: {
-  preset: SeatPreset;
-  current: SeatPreset;
-  onClick: (preset: SeatPreset) => void;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
 }) {
-  const isActive = preset === current;
   return (
     <button
-      onClick={() => onClick(preset)}
+      onClick={onClick}
       style={{
         padding: "var(--space-3) var(--space-6)",
         fontSize: "0.75rem",
@@ -191,7 +236,7 @@ function PresetButton({
         borderRadius: "4px",
       }}
     >
-      {SEAT_PRESETS[preset].name}
+      {label}
     </button>
   );
 }
