@@ -23,7 +23,9 @@ export const chessModule: GameModule<ChessShape> = {
   optionsSchema: chessOptionsSchema,
   view: state => state,
   publicEvents: events => [...events],
-  needsFullResync: () => false,
+  // A batch that opens with the game's first event is the whole log, not an
+  // append: a rewind has to reach clients as a replacement.
+  needsFullResync: events => events[0]?.type === "GAME_INITIALIZED",
   defaultLlmSeat: {
     ...DEFAULT_LLM_SEAT,
     // Jev judges a Dominion state it was taught; it has no chess opinion.

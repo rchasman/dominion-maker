@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { chessModule } from "./module";
-import type { ChessCommand } from "./shape";
+import type { ChessCommand, ChessEvent } from "./shape";
 import { createChessGame } from "./engine";
 import { GAMES } from "../games";
 import { gameIdSchema } from "../game-ids";
@@ -58,7 +58,25 @@ describe("the chess module describes its own wire shapes", () => {
     const events = [...engine.eventLog];
     expect(chessModule.publicEvents(events)).toEqual(events);
     expect(chessModule.view(engine.state, events, BLACK)).toEqual(engine.state);
-    expect(chessModule.needsFullResync(events)).toBe(false);
+  });
+
+  it("tells a rewind apart from an append by where the batch starts", () => {
+    // A batch that opens with the game's first event IS the whole log, so the
+    // client must replace what it has rather than append to it.
+    const engine = createChessGame([WHITE, BLACK]);
+    const batches: ChessEvent[][] = [];
+    engine.subscribe(events => batches.push(events));
+    engine.dispatch({ type: "MOVE", playerId: WHITE, san: "e4" }, WHITE);
+    engine.dispatch({ type: "MOVE", playerId: BLACK, san: "e5" }, BLACK);
+    engine.truncateTo(2);
+    const full = [...engine.eventLog];
+    engine.loadEvents(full);
+    expect(batches.map(batch => chessModule.needsFullResync(batch))).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
   });
 
   it("never asks Jev for a chess move", () => {
