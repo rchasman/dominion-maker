@@ -17,7 +17,7 @@ import {
   chessTurnStatus,
 } from "../../chess/sidebar";
 import { useChessRoom } from "../../chess/use-chess-room";
-import { isProcessing$, llmLogs$, players$ } from "../../context/game-signals";
+import { llmLogs$, players$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "../Board/BoardLayout";
 import { GameSidebar } from "../Board/GameSidebar";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
@@ -126,7 +126,7 @@ export function ChessRoom({
 
           <GameSidebar
             log={<ChessLogRows moves={chess.state.moves} />}
-            logEntries={chess.state.moves}
+            logEntryCount={chess.state.moves.length}
             turnStatus={
               <TurnStatusIndicator
                 status={chessTurnStatus(
@@ -137,7 +137,6 @@ export function ChessRoom({
                 color={chessMoverColor(chess.state)}
               />
             }
-            isProcessing={isProcessing$.value}
             appMode="multiplayer"
             seats={seats}
             {...(room.playerId !== null && { onSeatChange: changeSeat })}

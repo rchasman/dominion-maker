@@ -33,9 +33,8 @@ describe("the game sidebar", () => {
               <div>2. Nf3 Nc6</div>
             </div>
           }
-          logEntries={["e4", "e5", "Nf3", "Nc6"]}
+          logEntryCount={4}
           turnStatus={<div>Your turn...</div>}
-          isProcessing={false}
           appMode="local"
           seats={{ w: HUMAN_SEAT, b: HUMAN_SEAT }}
           presets={{

@@ -59,10 +59,9 @@ function ResizeHandle({
 interface GameSidebarProps {
   /** The game's own log rows, rendered inside the shared "Game log" frame */
   log: ComponentChildren;
-  /** What those rows were built from; a new identity scrolls the log down */
-  logEntries: readonly unknown[];
+  /** How many entries those rows were built from; the log follows it down */
+  logEntryCount: number;
   turnStatus?: ComponentChildren;
-  isProcessing: boolean;
   appMode: "local" | "multiplayer";
   seats: Seats;
   onSeatChange?: (player: string, config: ControllerConfig) => void;
@@ -79,9 +78,8 @@ interface GameSidebarProps {
  */
 export function GameSidebar({
   log,
-  logEntries,
+  logEntryCount,
   turnStatus = null,
-  isProcessing,
   appMode,
   seats,
   onSeatChange,
@@ -111,8 +109,7 @@ export function GameSidebar({
       }}
     >
       <GameLogSection
-        entries={logEntries}
-        isProcessing={isProcessing}
+        entryCount={logEntryCount}
         hasConsensusPanel={showConsensus}
         gameLogHeight={gameLogHeight}
         turnStatus={turnStatus}

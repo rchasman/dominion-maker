@@ -57,6 +57,7 @@ export function presetOf(seats: Seats): SeatPreset | null {
   return null;
 }
 
+/** Every preset, in the order every game's switcher shows them */
 export const SEAT_PRESET_NAMES = Object.keys(SEAT_PRESETS).filter(
   (name): name is SeatPreset => name in SEAT_PRESETS,
 );

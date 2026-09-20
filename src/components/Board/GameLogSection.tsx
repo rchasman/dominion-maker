@@ -3,11 +3,11 @@ import type { ComponentChildren } from "preact";
 
 interface GameLogSectionProps {
   /**
-   * What the rows were built from. A new identity scrolls the log to the
-   * bottom, so the rows themselves stay free to be any markup a game likes.
+   * How many entries the rows were built from. The log follows the newest row
+   * only when this grows: a game that rebuilds its state on every projection
+   * would otherwise yank a reader who had scrolled back up.
    */
-  entries: readonly unknown[];
-  isProcessing: boolean;
+  entryCount: number;
   hasConsensusPanel: boolean;
   gameLogHeight: number;
   turnStatus: ComponentChildren;
@@ -16,25 +16,27 @@ interface GameLogSectionProps {
 
 /** The "Game log" frame every game shares; the rows inside are the game's own */
 export function GameLogSection({
-  entries,
-  isProcessing,
+  entryCount,
   hasConsensusPanel,
   gameLogHeight,
   turnStatus,
   children,
 }: GameLogSectionProps) {
   const gameLogScrollRef = useRef<HTMLDivElement>(null);
+  // Below any count, so a restored game opens at its newest row
+  const lastEntryCount = useRef(-1);
 
   useEffect(() => {
-    if (gameLogScrollRef.current) {
-      requestAnimationFrame(() => {
-        if (gameLogScrollRef.current) {
-          gameLogScrollRef.current.scrollTop =
-            gameLogScrollRef.current.scrollHeight;
-        }
-      });
-    }
-  }, [entries, isProcessing]);
+    const grew = entryCount > lastEntryCount.current;
+    lastEntryCount.current = entryCount;
+    if (!grew || !gameLogScrollRef.current) return;
+    requestAnimationFrame(() => {
+      if (gameLogScrollRef.current) {
+        gameLogScrollRef.current.scrollTop =
+          gameLogScrollRef.current.scrollHeight;
+      }
+    });
+  }, [entryCount]);
 
   return (
     <div

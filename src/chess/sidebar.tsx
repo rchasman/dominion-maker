@@ -1,10 +1,14 @@
 import type { Seats } from "../core/seats";
 import type { SidebarPresets } from "../components/Board/GameSidebarComponents";
 import type { TurnStatus } from "../components/Board/TurnStatusIndicator";
-import { presetOf, type SeatPreset } from "../context/seat-presets";
+import {
+  SEAT_PRESET_NAMES,
+  presetOf,
+  type SeatPreset,
+} from "../context/seat-presets";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
-import { CHESS_SEAT_PRESETS, CHESS_SEAT_PRESET_NAMES } from "./presets";
+import { CHESS_SEAT_PRESETS } from "./presets";
 import type { ChessState } from "./shape";
 
 /** Each side keeps the colour of the squares it plays, on the board and off it */
@@ -71,7 +75,7 @@ export function chessPresets(
   onChange?: (preset: SeatPreset) => void,
 ): SidebarPresets {
   return {
-    names: CHESS_SEAT_PRESET_NAMES,
+    names: SEAT_PRESET_NAMES,
     label: (preset: SeatPreset) => CHESS_SEAT_PRESETS[preset].name,
     active: presetOf(seats),
     ...(onChange !== undefined && { onChange }),

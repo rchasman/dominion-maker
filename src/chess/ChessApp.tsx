@@ -175,14 +175,13 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
 
       <GameSidebar
         log={<ChessLogRows moves={state.moves} />}
-        logEntries={state.moves}
+        logEntryCount={state.moves.length}
         turnStatus={
           <TurnStatusIndicator
             status={chessTurnStatus(state, seats, localHuman)}
             color={chessMoverColor(state)}
           />
         }
-        isProcessing={isProcessing$.value}
         appMode="local"
         seats={seats}
         onSeatChange={updateSeat}

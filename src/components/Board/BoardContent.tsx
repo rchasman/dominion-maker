@@ -394,14 +394,13 @@ export function BoardContent({
             onRequestUndo={onRequestUndo}
           />
         }
-        logEntries={displayState.log}
+        logEntryCount={displayState.log.length}
         turnStatus={
           <TurnStatusIndicator
             status={turnStatus}
             color={getPlayerColor(displayState.activePlayerId)}
           />
         }
-        isProcessing={game.isProcessing}
         appMode={game.appMode}
         seats={game.seats}
         {...(game.setSeat !== undefined && { onSeatChange: game.setSeat })}
