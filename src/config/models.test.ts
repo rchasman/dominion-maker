@@ -20,8 +20,8 @@ describe("Model Configuration", () => {
   describe("getModelColor", () => {
     it("should return color for valid model ID", () => {
       expect(getModelColor("claude-haiku")).toBe("#a78bfa");
-      expect(getModelColor("gpt-5.4-mini")).toBe("#86efac");
-      expect(getModelColor("gemini-3.1-flash-lite")).toBe("#93c5fd");
+      expect(getModelColor("gpt-4.1-mini-fast")).toBe("#86efac");
+      expect(getModelColor("gemini-3.5-flash-lite")).toBe("#93c5fd");
     });
 
     it("should return fallback color for invalid model ID", () => {
@@ -57,9 +57,11 @@ describe("Model Configuration", () => {
       expect(getModelFullName("claude-haiku")).toBe(
         "anthropic/claude-haiku-4.5",
       );
-      expect(getModelFullName("gpt-5.4-mini")).toBe("openai/gpt-5.4-mini");
-      expect(getModelFullName("gemini-3.5-flash")).toBe(
-        "google/gemini-3.5-flash",
+      expect(getModelFullName("gpt-4.1-mini-fast")).toBe(
+        "openai/gpt-4.1-mini-fast",
+      );
+      expect(getModelFullName("gemini-3.8-flash")).toBe(
+        "google/gemini-3.8-flash",
       );
     });
 
@@ -93,7 +95,7 @@ describe("Model Configuration", () => {
     });
 
     it("should have maxInstances for specific models", () => {
-      const proModel = MODELS.find(m => m.id === "gpt-5.4");
+      const proModel = MODELS.find(m => m.id === "gpt-5.5");
       expect(proModel?.maxInstances).toBe(3);
     });
   });

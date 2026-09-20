@@ -13,7 +13,6 @@ export const PROVIDER_ALIASES: Record<string, string> = {
 export const ID_ALIASES: Record<string, string> = {
   "anthropic/claude-haiku-4.5": "claude-haiku",
   "anthropic/claude-sonnet-5": "claude-sonnet",
-  "anthropic/claude-opus-4.8": "claude-opus",
   "google/gemini-3.1-pro-preview": "gemini-3.1-pro",
   "spacexai/grok-4.1-fast-non-reasoning": "grok-4-fast",
 };
@@ -56,11 +55,32 @@ export const SPECIALIST_PATTERNS = [
   /-code($|-)/,
   /safeguard/,
   /moderation/,
+  /-fin($|-)/,
 ];
 
 /** Whole providers that do not answer game actions. */
 export const DENIED_PROVIDERS: Record<string, string> = {
   morph: "applies code edits rather than generating game actions",
+};
+
+/**
+ * Older releases kept alongside the newest of their class, the caret on a
+ * version range. The newest of a class is usually the better model and rarely
+ * the faster or cheaper one, and the presets rank on speed and price. Every
+ * entry needs a measured reason.
+ */
+export const KEEP_VARIANTS: Record<string, string> = {
+  "amazon/nova-lite": "1.4s and $0.30/1M against nova-2-lite's 1.7s and $2.80",
+  "anthropic/claude-3-haiku":
+    "2.2s and $1.50/1M against claude-haiku's 2.4s and $6.00",
+  "openai/gpt-4.1-mini-fast":
+    "1.4s and $3.50/1M against gpt-5.4-mini-fast's 2.9s and $10.50",
+  "moonshotai/kimi-k2.5":
+    "2.0s and $3.60/1M against kimi-k3's 21.8s and $18.00",
+  "zai/glm-4.7":
+    "1.8s and $2.80/1M against glm-5.3's 13.5s, $5.80 and 1 failure in 3",
+  "alibaba/qwen3.7-max":
+    "answered 3 of 3 where the newer qwen3.8-max failed 2 of 3",
 };
 
 export const PROVIDER_COLORS_BY_NAME: Record<string, string> = {
@@ -99,8 +119,8 @@ type ModelQuirks = {
 
 /** Keyed by short id. Each entry is something a live run taught us. */
 export const MODEL_QUIRKS: Record<string, ModelQuirks> = {
-  "claude-opus": { maxInstances: 3 },
-  "gpt-5.4": { maxInstances: 3 },
+  "claude-opus-5": { maxInstances: 3 },
+  "gpt-5.5": { maxInstances: 3 },
   "gpt-5.6-terra": { maxInstances: 3 },
   "gemini-3.1-pro": { maxInstances: 3 },
   "llama-3.3-70b": { structuredOutput: "prompt" },

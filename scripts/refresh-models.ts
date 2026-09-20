@@ -13,11 +13,13 @@ import {
   DENIED_PROVIDERS,
   GENERATOR_TAGS,
   ID_ALIASES,
+  KEEP_VARIANTS,
   MODEL_QUIRKS,
   PROVIDER_ALIASES,
   PROVIDER_COLORS_BY_NAME,
   SPECIALIST_PATTERNS,
 } from "../src/config/model-overrides";
+import { modelFamily } from "../src/config/model-family";
 
 const GATEWAY_MODELS_URL = "https://ai-gateway.vercel.sh/v1/models";
 const OUTPUT_PATH = "src/config/models.generated.ts";
@@ -29,6 +31,7 @@ type GatewayModel = {
   owned_by: string;
   type: string;
   zdr: "all" | "some" | "none";
+  released?: number;
   modalities?: { output?: string[] };
   tags?: string[];
   pricing?: { input?: string; output?: string };
@@ -97,13 +100,26 @@ if (!response.ok) {
 }
 const { data } = (await response.json()) as { data: GatewayModel[] };
 
-const playable = data
-  .filter(isPlayable)
-  .sort((a, b) =>
-    providerOf(a) === providerOf(b)
-      ? shortId(a).localeCompare(shortId(b))
-      : providerOf(a).localeCompare(providerOf(b)),
+/** One entry per class: its newest release, plus any variant pinned by hand. */
+const newestOfEachClass = (models: GatewayModel[]): GatewayModel[] => {
+  const newest = models.reduce<Record<string, GatewayModel>>((acc, model) => {
+    const family = modelFamily(model.id);
+    const held = acc[family];
+    return held && (held.released ?? 0) >= (model.released ?? 0)
+      ? acc
+      : { ...acc, [family]: model };
+  }, {});
+  const kept = new Set(Object.values(newest).map(m => m.id));
+  return models.filter(
+    model => kept.has(model.id) || KEEP_VARIANTS[model.id] !== undefined,
   );
+};
+
+const playable = newestOfEachClass(data.filter(isPlayable)).sort((a, b) =>
+  providerOf(a) === providerOf(b)
+    ? shortId(a).localeCompare(shortId(b))
+    : providerOf(a).localeCompare(providerOf(b)),
+);
 
 const collisions = Object.entries(
   playable.reduce<Record<string, string[]>>(
@@ -119,6 +135,10 @@ if (collisions.length > 0) {
     `Short id collision, add an ID_ALIASES entry: ${JSON.stringify(collisions)}`,
   );
 }
+
+const staleVariants = Object.keys(KEEP_VARIANTS).filter(
+  id => !playable.some(model => model.id === id),
+);
 
 const staleQuirks = Object.keys(MODEL_QUIRKS).filter(
   id => !playable.some(model => shortId(model) === id),
@@ -146,6 +166,11 @@ console.log(
 console.log(
   `skipped ${data.length - playable.length} of ${data.length} catalog entries`,
 );
+if (staleVariants.length > 0) {
+  console.log(
+    `stale KEEP_VARIANTS entries (denied or gone): ${staleVariants.join(", ")}`,
+  );
+}
 if (staleQuirks.length > 0) {
   console.log(
     `stale MODEL_QUIRKS entries (no longer in the catalog): ${staleQuirks.join(", ")}`,

@@ -41,36 +41,36 @@ describe("checkEarlyConsensus", () => {
     const groups = new Map([
       [
         key(village),
-        group(village, ["gpt-5.4-mini", "grok-4-fast", "grok-4-fast"]),
+        group(village, ["gpt-4.1-mini-fast", "grok-4-fast", "grok-4-fast"]),
       ],
-      [key(smithy), group(smithy, ["gemini-3.1-flash-lite"])],
+      [key(smithy), group(smithy, ["gemini-3.5-flash-lite"])],
     ]);
     expect(checkEarlyConsensus(groups, 2)?.move).toEqual(village);
   });
   it("returns null when not ahead by K, tied, or empty", () => {
     const groups = new Map([
-      [key(village), group(village, ["gpt-5.4-mini", "grok-4-fast"])],
+      [key(village), group(village, ["gpt-4.1-mini-fast", "grok-4-fast"])],
       [key(smithy), group(smithy, ["grok-4-fast"])],
     ]);
     expect(checkEarlyConsensus(groups, 2)).toBeNull();
     expect(checkEarlyConsensus(new Map(), 2)).toBeNull();
     const tied = new Map([
-      [key(village), group(village, ["gpt-5.4-mini", "grok-4-fast"])],
-      [key(smithy), group(smithy, ["grok-4-fast", "gemini-3.1-flash-lite"])],
+      [key(village), group(village, ["gpt-4.1-mini-fast", "grok-4-fast"])],
+      [key(smithy), group(smithy, ["grok-4-fast", "gemini-3.5-flash-lite"])],
     ]);
     expect(checkEarlyConsensus(tied, 1)).toBeNull();
   });
 
   describe("electorate safeguards", () => {
     const providers: ModelResult<Move>["provider"][] = [
-      "gpt-5.4-mini",
-      "gpt-5.4-mini",
-      "gpt-5.4-mini",
+      "gpt-4.1-mini-fast",
+      "gpt-4.1-mini-fast",
+      "gpt-4.1-mini-fast",
       "grok-4-fast",
       "grok-4-fast",
-      "gemini-3.1-flash-lite",
-      "gemini-3.1-flash-lite",
-      "glm-4.7-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash-lite",
+      "glm-5.3-flash",
     ];
     const buy: Move = { type: "buy_card", card: "Silver" };
     const votes = (voters: VoteGroup<Move>["voters"]) =>
@@ -79,7 +79,7 @@ describe("checkEarlyConsensus", () => {
     it("waits when three fast matching votes can still be overturned", () => {
       expect(
         checkEarlyConsensus(
-          votes(["gpt-5.4-mini", "grok-4-fast", "gemini-3.1-flash-lite"]),
+          votes(["gpt-4.1-mini-fast", "grok-4-fast", "gemini-3.5-flash-lite"]),
           3,
           { providers, remainingVotes: 5 },
         ),
@@ -87,7 +87,7 @@ describe("checkEarlyConsensus", () => {
     });
     it("requires distinct models even with an unbeatable lead", () => {
       expect(
-        checkEarlyConsensus(votes(Array(5).fill("gpt-5.4-mini")), 3, {
+        checkEarlyConsensus(votes(Array(5).fill("gpt-4.1-mini-fast")), 3, {
           providers,
           remainingVotes: 3,
         }),
@@ -97,11 +97,11 @@ describe("checkEarlyConsensus", () => {
       expect(
         checkEarlyConsensus(
           votes([
-            "gpt-5.4-mini",
-            "gpt-5.4-mini",
+            "gpt-4.1-mini-fast",
+            "gpt-4.1-mini-fast",
             "grok-4-fast",
-            "gemini-3.1-flash-lite",
-            "glm-4.7-flash",
+            "gemini-3.5-flash-lite",
+            "glm-5.3-flash",
           ]),
           3,
           { providers, remainingVotes: 3 },
@@ -110,10 +110,14 @@ describe("checkEarlyConsensus", () => {
     });
     it("supports deliberately single-model electorates", () => {
       expect(
-        checkEarlyConsensus(votes(["gpt-5.4-mini", "gpt-5.4-mini"]), 2, {
-          providers: ["gpt-5.4-mini", "gpt-5.4-mini"],
-          remainingVotes: 0,
-        })?.count,
+        checkEarlyConsensus(
+          votes(["gpt-4.1-mini-fast", "gpt-4.1-mini-fast"]),
+          2,
+          {
+            providers: ["gpt-4.1-mini-fast", "gpt-4.1-mini-fast"],
+            remainingVotes: 0,
+          },
+        )?.count,
       ).toBe(2);
     });
   });
@@ -197,15 +201,15 @@ describe("selectConsensusWinner", () => {
     const groups = new Map([
       [
         key(village),
-        group(village, ["gpt-5.4-mini", "grok-4-fast", "grok-4-fast"]),
+        group(village, ["gpt-4.1-mini-fast", "grok-4-fast", "grok-4-fast"]),
       ],
-      [key(smithy), group(smithy, ["gemini-3.1-flash-lite"])],
+      [key(smithy), group(smithy, ["gemini-3.5-flash-lite"])],
     ]);
     const results = [
-      ok("gpt-5.4-mini", village),
+      ok("gpt-4.1-mini-fast", village),
       ok("grok-4-fast", village),
       ok("grok-4-fast", village),
-      ok("gemini-3.1-flash-lite", smithy),
+      ok("gemini-3.5-flash-lite", smithy),
     ];
     const { winner, votesConsidered } = selectConsensusWinner(
       groups,
@@ -218,10 +222,10 @@ describe("selectConsensusWinner", () => {
     expect(votesConsidered).toBe(4);
   });
   it("uses a legal early consensus winner", () => {
-    const early = group(village, ["gpt-5.4-mini", "grok-4-fast"]);
+    const early = group(village, ["gpt-4.1-mini-fast", "grok-4-fast"]);
     const { winner, validEarlyConsensus } = selectConsensusWinner(
       new Map([[early.key, early]]),
-      [ok("gpt-5.4-mini", village)],
+      [ok("gpt-4.1-mini-fast", village)],
       early,
       [village],
       key,
@@ -232,12 +236,12 @@ describe("selectConsensusWinner", () => {
   it("filters out illegal moves", () => {
     const market: Move = { type: "play_action", card: "Market" };
     const groups = new Map([
-      [key(market), group(market, ["gpt-5.4-mini", "grok-4-fast"])],
+      [key(market), group(market, ["gpt-4.1-mini-fast", "grok-4-fast"])],
       [key(village), group(village, ["grok-4-fast"])],
     ]);
     const { winner } = selectConsensusWinner(
       groups,
-      [ok("gpt-5.4-mini", market), ok("grok-4-fast", village)],
+      [ok("gpt-4.1-mini-fast", market), ok("grok-4-fast", village)],
       null,
       [village],
       key,
@@ -246,7 +250,7 @@ describe("selectConsensusWinner", () => {
   });
   it("throws when every model failed or every move is illegal", () => {
     const failed: ModelResult<Move> = {
-      provider: "gpt-5.4-mini",
+      provider: "gpt-4.1-mini-fast",
       result: null,
       distribution: [],
       error: new Error("x"),
@@ -258,8 +262,8 @@ describe("selectConsensusWinner", () => {
     const market: Move = { type: "play_action", card: "Market" };
     expect(() =>
       selectConsensusWinner(
-        new Map([[key(market), group(market, ["gpt-5.4-mini"])]]),
-        [ok("gpt-5.4-mini", market)],
+        new Map([[key(market), group(market, ["gpt-4.1-mini-fast"])]]),
+        [ok("gpt-4.1-mini-fast", market)],
         null,
         [village],
         key,
@@ -268,12 +272,12 @@ describe("selectConsensusWinner", () => {
   });
   it("breaks ties by key", () => {
     const groups = new Map([
-      [key(village), group(village, ["gpt-5.4-mini"])],
+      [key(village), group(village, ["gpt-4.1-mini-fast"])],
       [key(smithy), group(smithy, ["grok-4-fast"])],
     ]);
     const { winner } = selectConsensusWinner(
       groups,
-      [ok("gpt-5.4-mini", village), ok("grok-4-fast", smithy)],
+      [ok("gpt-4.1-mini-fast", village), ok("grok-4-fast", smithy)],
       null,
       [village, smithy],
       key,
