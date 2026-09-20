@@ -67,6 +67,7 @@ describe("consensus presets", () => {
 const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {
   xiaomi: "fastest model medians 56s, well past the 30s vote timeout",
   inclusionai: "its only model failed 6 of 12 live calls",
+  stepfun: "its only model went past 30s on 2 of 4 live calls",
 };
 
 describe("the diverse preset", () => {
