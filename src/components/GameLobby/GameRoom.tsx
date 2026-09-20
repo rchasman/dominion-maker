@@ -4,6 +4,7 @@
  * Uses a single PartySocket connection via MultiplayerProvider.
  * Shows waiting room or game board based on game state.
  */
+import type { ComponentChildren } from "preact";
 import { useMemo } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import type { BotConfig } from "../../partykit/protocol";
@@ -71,9 +72,13 @@ export function GameRoom({
     return opponent ? { playerId: opponent[0], playerName: opponent[1] } : null;
   }, [room.disconnectedPlayers, room.playerId, isSpectator]);
 
-  // The board waits on the state the adapter parsed, not the raw one the room
-  // sent: a state this client cannot read must not reach the table at all.
-  if (gameState$.value) {
+  // Both preconditions, and neither alone. The room's own state says this room
+  // has a game; the parsed one says this client can read it. gameState$ is
+  // module level and outlives a room, so on its own it shows the last game.
+  const parsedState = gameState$.value;
+  const unreadableState = room.state !== null && parsedState === null;
+
+  if (room.state && parsedState) {
     // Wait for playerId to be set before rendering Board
     if (!isSpectator && !room.playerId) {
       return <BoardSkeleton />;
@@ -129,21 +134,13 @@ export function GameRoom({
             }
           />
         )}
-        {room.error && (
-          <div
-            style={{
-              padding: "var(--space-3)",
-              background: "rgba(220, 38, 38, 0.2)",
-              border: "1px solid rgba(220, 38, 38, 0.5)",
-              borderRadius: "4px",
-              color: "#fca5a5",
-              fontSize: "0.75rem",
-              marginBottom: "var(--space-4)",
-            }}
-          >
-            {room.error}
-          </div>
+        {unreadableState && (
+          <ErrorNote>
+            This room sent a game this client cannot read. Leave and rejoin, or
+            reload to pick up a newer version.
+          </ErrorNote>
         )}
+        {room.error && <ErrorNote>{room.error}</ErrorNote>}
         <button
           onClick={handleResign}
           style={{
@@ -160,6 +157,24 @@ export function GameRoom({
           Leave
         </button>
       </BaseModal>
+    </div>
+  );
+}
+
+function ErrorNote({ children }: { children: ComponentChildren }) {
+  return (
+    <div
+      style={{
+        padding: "var(--space-3)",
+        background: "rgba(220, 38, 38, 0.2)",
+        border: "1px solid rgba(220, 38, 38, 0.5)",
+        borderRadius: "4px",
+        color: "#fca5a5",
+        fontSize: "0.75rem",
+        marginBottom: "var(--space-4)",
+      }}
+    >
+      {children}
     </div>
   );
 }
