@@ -15,14 +15,15 @@ import {
 } from "./constants";
 
 interface BoardLayoutProps {
-  isPreviewMode: boolean;
-  previewError: string | null;
+  /** Only a game with history scrubbing has a preview mode */
+  isPreviewMode?: boolean;
+  previewError?: string | null;
   children: ComponentChildren;
 }
 
 export function BoardLayout({
-  isPreviewMode,
-  previewError,
+  isPreviewMode = false,
+  previewError = null,
   children,
 }: BoardLayoutProps) {
   return (
@@ -65,12 +66,12 @@ export function BoardLayout({
 }
 
 interface GameAreaLayoutProps {
-  isPreviewMode: boolean;
+  isPreviewMode?: boolean;
   children: ComponentChildren;
 }
 
 export function GameAreaLayout({
-  isPreviewMode,
+  isPreviewMode = false,
   children,
 }: GameAreaLayoutProps) {
   return (

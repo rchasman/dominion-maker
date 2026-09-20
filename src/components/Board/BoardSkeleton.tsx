@@ -829,8 +829,8 @@ export function BoardSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading game...">
       <SkeletonAnimation />
-      <BoardLayout isPreviewMode={false} previewError={null}>
-        <GameAreaLayout isPreviewMode={false}>
+      <BoardLayout>
+        <GameAreaLayout>
           <SkeletonPlayerArea inverted={true} />
           <SkeletonSupply />
           <SkeletonPlayerArea inverted={false} />

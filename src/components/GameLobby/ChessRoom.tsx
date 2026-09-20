@@ -108,8 +108,8 @@ export function ChessRoom({
     if (!isSpectator && !room.playerId) return <BoardSkeleton />;
     return (
       <>
-        <BoardLayout isPreviewMode={false} previewError={null}>
-          <GameAreaLayout isPreviewMode={false}>
+        <BoardLayout>
+          <GameAreaLayout>
             <ChessBoard
               state={chess.state}
               seats={seats}

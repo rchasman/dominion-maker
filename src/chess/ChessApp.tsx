@@ -155,8 +155,8 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   };
 
   return (
-    <BoardLayout isPreviewMode={false} previewError={null}>
-      <GameAreaLayout isPreviewMode={false}>
+    <BoardLayout>
+      <GameAreaLayout>
         <ChessBoard
           state={state}
           seats={seats}
