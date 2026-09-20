@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { lazy, Suspense } from "preact/compat";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import type { LLMLogger } from "../core/consensus/types";
 import { firstHumanSeat } from "../core/seats";
 import {
@@ -17,6 +24,8 @@ import {
 } from "../core/seat-presets";
 import { uiLogger } from "../lib/logger";
 import { BoardLayout, GameAreaLayout } from "../components/Board/BoardLayout";
+import { usePreviewMode } from "../components/Board/usePreviewMode";
+import { usePreviewState } from "../components/Board/usePreviewState";
 import { GameSidebar } from "../components/Board/GameSidebar";
 import { TurnStatusIndicator } from "../components/Board/TurnStatusIndicator";
 import { ChessBoard } from "./ChessBoard";
@@ -36,10 +45,18 @@ import {
   saveChessSeats,
   syncChessEngine,
 } from "./context";
-import { createChessGame, type ChessEngine } from "./engine";
+import { chessDevtoolsAdapter, chessStateAt } from "./devtools";
+import { createChessGame, loadChessEngine, type ChessEngine } from "./engine";
 import { CHESS_SEAT_PRESETS, chessSeats } from "./presets";
+import type { ChessState } from "./shape";
 import { CHESS_PLAYERS } from "./seat";
 import { useChessSeatDriver } from "./use-chess-seat-driver";
+
+const EventDevtools = lazy(() =>
+  import("../components/EventDevtools").then(m => ({
+    default: m.EventDevtools,
+  })),
+);
 
 const CHESS_SEAT_NAMES = [
   { id: "w", name: "White" },
@@ -94,6 +111,25 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
 
   useChessSeatDriver(engineRef, loggerRef.current, localHuman);
 
+  const { previewEventId, enterPreview, exitPreview, isPreviewMode } =
+    usePreviewMode();
+  const [showDevtools, setShowDevtools] = useState(false);
+
+  const stateAt = useMemo(() => chessStateAt(events), [events]);
+  const getStateAtEvent = useCallback(
+    (eventId: string): ChessState => {
+      const index = events.findIndex(event => event.id === eventId);
+      if (index < 0) throw new Error("That event is not in this game");
+      return loadChessEngine(events.slice(0, index + 1)).state;
+    },
+    [events],
+  );
+  const preview = usePreviewState(previewEventId, getStateAtEvent);
+  const devtoolsAdapter = useMemo(
+    () => chessDevtoolsAdapter(events, stateAt),
+    [events, stateAt],
+  );
+
   if (state === null) return null;
 
   const dispatch = (command: Parameters<ChessEngine["dispatch"]>[0]) => {
@@ -108,6 +144,7 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   };
 
   const newGame = () => {
+    exitPreview();
     clearStoredChessGame();
     llmLogs$.value = [];
     isProcessing$.value = false;
@@ -124,6 +161,7 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
   const takeBack = () => {
     const engine = engineRef.current;
     if (engine === null || localHuman === null) return;
+    exitPreview();
     const log = engine.eventLog;
     const index = log.reduce<number>(
       (last, event, at) =>
@@ -136,51 +174,83 @@ export function ChessApp({ onBackToHome }: { onBackToHome: () => void }) {
     syncChessEngine(engine);
   };
 
+  /**
+   * Keeps the position the scrubber is showing and drops what came after it,
+   * so the game carries on from the event the player chose.
+   */
+  const branchFrom = (eventId: string) => {
+    const engine = engineRef.current;
+    if (engine === null) return;
+    const index = events.findIndex(event => event.id === eventId);
+    if (index < 0) return;
+    exitPreview();
+    isProcessing$.value = false;
+    engine.truncateTo(index + 1);
+    syncChessEngine(engine);
+  };
+
   const changePreset = (preset: SeatPreset) => {
     seats$.value = CHESS_SEAT_PRESETS[preset].seats(CHESS_PLAYERS);
     saveSeatPreset(preset);
   };
 
+  const displayState = preview.state ?? state;
+
   return (
-    <BoardLayout>
-      <GameAreaLayout align="center">
+    <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
+      <GameAreaLayout align="center" isPreviewMode={isPreviewMode}>
         <ChessBoard
-          state={state}
+          state={displayState}
           seats={seats}
           localPlayerId={localHuman}
+          disabled={isPreviewMode}
           onMove={san => {
             if (localHuman === null) return;
+            exitPreview();
             dispatch({ type: "MOVE", playerId: localHuman, san });
           }}
-          onSeatChange={updateSeat}
-          {...(localHuman !== null && {
-            onTakeBack: takeBack,
-            onResign: () => dispatch({ type: "RESIGN", playerId: localHuman }),
-          })}
+          {...(!isPreviewMode && { onSeatChange: updateSeat })}
+          {...(localHuman !== null &&
+            !isPreviewMode && {
+              onTakeBack: takeBack,
+              onResign: () =>
+                dispatch({ type: "RESIGN", playerId: localHuman }),
+            })}
         />
       </GameAreaLayout>
 
       <GameSidebar
-        log={<ChessLogRows moves={state.moves} />}
-        logEntryCount={state.moves.length}
+        log={<ChessLogRows moves={displayState.moves} />}
+        logEntryCount={displayState.moves.length}
         turnStatus={
           <TurnStatusIndicator
             status={chessTurnStatus(
-              state,
+              displayState,
               seats,
               localHuman,
               isProcessing$.value,
             )}
-            color={chessMoverColor(state)}
+            color={chessMoverColor(displayState)}
           />
         }
         appMode="local"
         seats={seats}
-        onSeatChange={updateSeat}
+        {...(!isPreviewMode && { onSeatChange: updateSeat })}
         presets={chessPresets(seats, changePreset)}
         onNewGame={newGame}
         onBackToHome={onBackToHome}
       />
+
+      <Suspense fallback={null}>
+        <EventDevtools
+          events={events}
+          adapter={devtoolsAdapter}
+          isOpen={showDevtools}
+          onToggle={() => setShowDevtools(!showDevtools)}
+          onBranchFrom={branchFrom}
+          onScrub={enterPreview}
+        />
+      </Suspense>
     </BoardLayout>
   );
 }

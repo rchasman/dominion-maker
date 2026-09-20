@@ -4,6 +4,7 @@
  * Everything the board needs comes from the room: the position from the chess
  * adapter, the seats from the player list, the names from the player info.
  */
+import { lazy, Suspense } from "preact/compat";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { usePartyGame } from "../../partykit/usePartyGame";
 import type { ControllerConfig } from "../../core/seats";
@@ -16,9 +17,12 @@ import {
   chessPresets,
   chessTurnStatus,
 } from "../../chess/sidebar";
+import { chessDevtoolsAdapter } from "../../chess/devtools";
 import { useChessRoom } from "../../chess/use-chess-room";
 import { llmLogs$, players$ } from "../../context/game-signals";
 import { BoardLayout, GameAreaLayout } from "../Board/BoardLayout";
+import { usePreviewMode } from "../Board/usePreviewMode";
+import { usePreviewState } from "../Board/usePreviewState";
 import { GameSidebar } from "../Board/GameSidebar";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { TurnStatusIndicator } from "../Board/TurnStatusIndicator";
@@ -30,6 +34,10 @@ import {
   useRoomChrome,
   type RoomProps,
 } from "./room-chrome";
+
+const EventDevtools = lazy(() =>
+  import("../EventDevtools").then(m => ({ default: m.EventDevtools })),
+);
 
 export function ChessRoom({
   roomId,
@@ -49,9 +57,24 @@ export function ChessRoom({
   });
   const chess = useChessRoom({
     state: room.state,
+    events: room.events,
     playerId: room.playerId,
     sendCommand: room.sendCommand,
+    getStateAtEvent: room.getStateAtEvent,
   });
+  const { previewEventId, enterPreview, exitPreview, isPreviewMode } =
+    usePreviewMode();
+  const [showDevtools, setShowDevtools] = useState(false);
+  const preview = usePreviewState(previewEventId, chess.stateAtEvent);
+  const devtoolsAdapter = useMemo(
+    () =>
+      chessDevtoolsAdapter(chess.events, index => {
+        const eventId = chess.events[index]?.id;
+        if (eventId === undefined) return null;
+        return chess.stateAtEvent(eventId);
+      }),
+    [chess.events, chess.stateAtEvent],
+  );
   const { leave, disconnectedOpponent } = useRoomChrome({
     room,
     isSpectator,
@@ -104,46 +127,62 @@ export function ChessRoom({
 
   if (chess.state !== null) {
     if (!isSpectator && !room.playerId) return <BoardSkeleton />;
+    const shown = preview.state ?? chess.state;
     return (
       <>
-        <BoardLayout>
-          <GameAreaLayout align="center">
+        <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
+          <GameAreaLayout align="center" isPreviewMode={isPreviewMode}>
             <ChessBoard
-              state={chess.state}
+              state={shown}
               seats={seats}
               localPlayerId={chess.localPlayerId}
               playerNames={playerNames}
-              onMove={chess.move}
-              disabled={!room.isConnected}
-              {...(room.playerId !== null && {
-                onSeatChange: changeSeat,
-                onResign: chess.resign,
-              })}
+              onMove={san => {
+                exitPreview();
+                chess.move(san);
+              }}
+              disabled={!room.isConnected || isPreviewMode}
+              {...(room.playerId !== null &&
+                !isPreviewMode && {
+                  onSeatChange: changeSeat,
+                  onResign: chess.resign,
+                })}
             />
           </GameAreaLayout>
 
           <GameSidebar
-            log={<ChessLogRows moves={chess.state.moves} />}
-            logEntryCount={chess.state.moves.length}
+            log={<ChessLogRows moves={shown.moves} />}
+            logEntryCount={shown.moves.length}
             turnStatus={
               <TurnStatusIndicator
                 status={chessTurnStatus(
-                  chess.state,
+                  shown,
                   seats,
                   chess.localPlayerId,
                   // A room's bots run on the server; no client turn is pending
                   false,
                 )}
-                color={chessMoverColor(chess.state)}
+                color={chessMoverColor(shown)}
               />
             }
             appMode="multiplayer"
             seats={seats}
-            {...(room.playerId !== null && { onSeatChange: changeSeat })}
+            {...(room.playerId !== null &&
+              !isPreviewMode && { onSeatChange: changeSeat })}
             presets={chessPresets(seats)}
             isSpectator={isSpectator}
             onBackToHome={leave}
           />
+
+          <Suspense fallback={null}>
+            <EventDevtools
+              events={chess.events}
+              adapter={devtoolsAdapter}
+              isOpen={showDevtools}
+              onToggle={() => setShowDevtools(!showDevtools)}
+              onScrub={enterPreview}
+            />
+          </Suspense>
         </BoardLayout>
         {isSpectator && <SpectatorBadge />}
         {disconnectedOpponent && (

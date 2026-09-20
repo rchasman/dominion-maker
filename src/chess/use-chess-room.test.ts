@@ -32,8 +32,10 @@ describe("useChessRoom", () => {
       rendered.push(
         useChessRoom({
           state: room.state,
+          events: room.events,
           playerId: room.playerId,
           sendCommand: room.sendCommand,
+          getStateAtEvent: room.getStateAtEvent,
         }),
       );
       return null;
