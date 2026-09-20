@@ -95,7 +95,6 @@ describe("dominionGame", () => {
       turn: 1,
       phase: "action",
       hand: ["Village", "Copper", "Copper", "Estate", "Estate"],
-      legalActions: ["play_action(Village)", "end_phase"],
     });
     engine.playAction("alice", "Village");
     engine.endPhase("alice");

@@ -122,7 +122,6 @@ describe("the chess definition answers what the driver asks", () => {
       activePlayerId: BLACK,
       fen: engine.state.fen,
       moves: ["e4", "e5", "Nf3"],
-      legalActions: legal.map(move => move.san),
       lastMove: "Nf3",
     });
   });

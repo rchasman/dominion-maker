@@ -45,7 +45,7 @@ export const chessGame: GameDefinition<ChessShape> = {
   heuristic: chessHeuristic,
   // turn and phase name the action id the consensus log builds, so they carry
   // the keys Dominion's payload carries. Chess has one phase and it is a move.
-  logContext: (state, player, moves) => ({
+  logContext: (state, player) => ({
     turnId: `${player}-${state.moves.length}`,
     isChoice: false,
     payload: {
@@ -54,7 +54,6 @@ export const chessGame: GameDefinition<ChessShape> = {
       activePlayerId: player,
       fen: state.fen,
       moves: [...state.moves],
-      legalActions: moves.map(move => move.san),
       lastMove: state.moves[state.moves.length - 1] ?? null,
     },
   }),

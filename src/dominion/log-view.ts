@@ -39,7 +39,6 @@ const PUBLIC_PAYLOAD_KEYS = [
   "buys",
   "coins",
   "inPlay",
-  "legalActionsCount",
   "decisionType",
 ] as const;
 
@@ -77,14 +76,7 @@ const PROJECTIONS = new Map<string, Project>([
   [
     "consensus-start",
     data => ({
-      ...pick(data, [
-        "playerId",
-        "providers",
-        "totalModels",
-        "phase",
-        "legalActionsCount",
-        "turn",
-      ]),
+      ...pick(data, ["playerId", "providers", "totalModels", "phase", "turn"]),
       gameState: publicPayload(data["gameState"]),
     }),
   ],
