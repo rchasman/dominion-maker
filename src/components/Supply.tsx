@@ -430,7 +430,7 @@ export function Supply({
             display: "flex",
             gap: "var(--space-3)",
             alignItems: "center",
-            justifyContent: "flex-start",
+            justifyContent: "flex-end",
             minBlockSize: ACTION_ROW_BLOCK_SIZE,
             marginBlockStart: "var(--space-1)",
           }}
