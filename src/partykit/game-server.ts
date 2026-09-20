@@ -1055,16 +1055,16 @@ export default class GameServer implements Party.Server {
     });
   }
 
-  /**
-   * One viewer's copy of a state-carrying message: the module decides what
-   * this viewer may see, and `seen` is the history that view is built from.
-   */
   /** Whose eyes this connection sees through; a spectator sees nobody's */
   private viewerFor(conn: ConnLike): string | null {
     const player = this.connections.get(conn.id);
     return player && !player.isSpectator ? player.clientId : null;
   }
 
+  /**
+   * One viewer's copy of a state-carrying message: the module decides what
+   * this viewer may see, and `seen` is the history that view is built from.
+   */
   private sendState(
     conn: ConnLike,
     head: StateHead,
