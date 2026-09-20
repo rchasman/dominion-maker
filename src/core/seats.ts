@@ -1,4 +1,5 @@
 import type { ModelProvider } from "../config/models";
+import { FAST_PRESET } from "./consensus/presets";
 
 export type LlmSeatConfig = {
   kind: "llm";
@@ -20,17 +21,8 @@ export const HUMAN_SEAT: ControllerConfig = { kind: "human" };
 export const HEURISTIC_SEAT: ControllerConfig = { kind: "heuristic" };
 export const DEFAULT_LLM_SEAT: LlmSeatConfig = {
   kind: "llm",
-  models: [
-    "jev",
-    "grok-4-fast",
-    "gpt-5.4-nano",
-    "gpt-5.4-mini",
-    "gemini-3.1-flash-lite",
-    "deepseek-v4-pro",
-    "glm-4.7-flash",
-    "qwen3.5-flash",
-  ],
-  consensusCount: 12,
+  models: [...FAST_PRESET.models],
+  consensusCount: FAST_PRESET.consensusCount,
   customStrategy: "",
 };
 
