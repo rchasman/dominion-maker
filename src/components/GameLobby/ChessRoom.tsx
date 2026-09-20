@@ -65,15 +65,16 @@ export function ChessRoom({
   const { previewEventId, enterPreview, exitPreview, isPreviewMode } =
     usePreviewMode();
   const [showDevtools, setShowDevtools] = useState(false);
-  const preview = usePreviewState(previewEventId, chess.stateAtEvent);
+  const { events: chessEvents, stateAtEvent } = chess;
+  const preview = usePreviewState(previewEventId, stateAtEvent);
   const devtoolsAdapter = useMemo(
     () =>
-      chessDevtoolsAdapter(chess.events, index => {
-        const eventId = chess.events[index]?.id;
+      chessDevtoolsAdapter(chessEvents, index => {
+        const eventId = chessEvents[index]?.id;
         if (eventId === undefined) return null;
-        return chess.stateAtEvent(eventId);
+        return stateAtEvent(eventId);
       }),
-    [chess.events, chess.stateAtEvent],
+    [chessEvents, stateAtEvent],
   );
   const { leave, disconnectedOpponent } = useRoomChrome({
     room,
@@ -176,7 +177,7 @@ export function ChessRoom({
 
           <Suspense fallback={null}>
             <EventDevtools
-              events={chess.events}
+              events={chessEvents}
               adapter={devtoolsAdapter}
               isOpen={showDevtools}
               onToggle={() => setShowDevtools(!showDevtools)}
