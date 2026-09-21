@@ -17,6 +17,7 @@ import {
   useDominionSession,
 } from "../../session/SessionContext";
 import { ChessRoom } from "./ChessRoom";
+import { ACTIVE_GAME_STORAGE_KEY } from "./active-game-key";
 import {
   GameOverNotification,
   SpectatorBadge,
@@ -97,7 +98,7 @@ function DominionRoomContent({
           <GameOverNotification
             message={gameEndReason}
             onClose={() => {
-              localStorage.removeItem("dominion_active_game");
+              localStorage.removeItem(ACTIVE_GAME_STORAGE_KEY);
               onBack();
             }}
           />

@@ -14,6 +14,7 @@ import { generatePlayerName } from "../../lib/name-generator";
 import type { GameId } from "../../game-ids";
 import { gameIdSchema } from "../../game-ids";
 import { loadGameChoice } from "../../context/game-choice";
+import { ACTIVE_GAME_STORAGE_KEY } from "./active-game-key";
 
 type Screen = "lobby" | "game";
 
@@ -23,7 +24,7 @@ interface GameLobbyProps {
 
 const STORAGE_KEYS = {
   PLAYER_NAME: "dominion_player_name",
-  ACTIVE_GAME: "dominion_active_game",
+  ACTIVE_GAME: ACTIVE_GAME_STORAGE_KEY,
   CLIENT_ID: "dominion_client_id",
 };
 
