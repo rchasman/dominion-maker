@@ -4,13 +4,11 @@ import { registerHappyDom, settled } from "../happy-dom.test-fixture";
 import { ChessBoard } from "./ChessBoard";
 import { createChessGame } from "./engine";
 import { CHESS_PLAYERS } from "./seat";
-import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
+import { NO_SEAT_CONTROL } from "../components/Board/seat-control";
 import { chessStateSchema } from "./schemas";
 import type { ChessState } from "./shape";
 
 beforeAll(registerHappyDom);
-
-const SEATS = { w: HUMAN_SEAT, b: HEURISTIC_SEAT };
 
 const headerOrder = (root: HTMLElement) =>
   [...root.querySelectorAll("[data-chess-player]")].map(el =>
@@ -48,7 +46,7 @@ const drag = (root: HTMLElement, from: string, to: string) => {
   pointer(root, `[data-square="${to}"]`, "pointerup");
 };
 
-/** One sequential test: the board mounts SeatSelector, which reads signals */
+/** One sequential test: every render lands in the one shared root */
 describe("the chess board", () => {
   it("draws every square and sends the move the clicked squares name", () => {
     const root = document.createElement("div");
@@ -59,7 +57,7 @@ describe("the chess board", () => {
       render(
         <ChessBoard
           state={engine.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="w"
           onMove={san => {
             sent.push(san);
@@ -129,7 +127,7 @@ describe("the chess board", () => {
       render(
         <ChessBoard
           state={promotion.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="w"
           onMove={san => picked.push(san)}
         />,
@@ -154,7 +152,7 @@ describe("the chess board", () => {
       render(
         <ChessBoard
           state={fresh.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="w"
           onMove={san => picked.push(san)}
         />,
@@ -181,7 +179,7 @@ describe("the chess board", () => {
       render(
         <ChessBoard
           state={mated.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="w"
           onMove={() => undefined}
         />,
@@ -211,7 +209,7 @@ describe("the chess board", () => {
       render(
         <ChessBoard
           state={unreplayable}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="b"
           onMove={() => undefined}
         />,

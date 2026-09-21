@@ -4,12 +4,10 @@ import { registerHappyDom, settled } from "../happy-dom.test-fixture";
 import { GoBoard } from "./GoBoard";
 import { createGoGame, type GoEngine } from "./engine";
 import { GO_PLAYERS } from "./seat";
-import { HEURISTIC_SEAT, HUMAN_SEAT } from "../core/seats";
+import { NO_SEAT_CONTROL } from "../components/Board/seat-control";
 import type { GoCommand } from "./shape";
 
 beforeAll(registerHappyDom);
-
-const SEATS = { b: HUMAN_SEAT, w: HEURISTIC_SEAT };
 
 const headerOrder = (root: HTMLElement) =>
   [...root.querySelectorAll("[data-go-player]")].map(el =>
@@ -62,7 +60,7 @@ const play = (engine: GoEngine, commands: readonly GoCommand[]) => {
   }
 };
 
-/** One sequential test: the board mounts SeatSelector, which reads signals */
+/** One sequential test: every render lands in the one shared root */
 describe("the go board", () => {
   it("draws every point and sends the placement the clicked point names", () => {
     const root = document.createElement("div");
@@ -74,7 +72,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={engine.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="b"
           onPlace={(x, y) => {
             sent.push([x, y]);
@@ -152,7 +150,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={engine.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="b"
           disabled
           onPlace={(x, y) => sent.push([x, y])}
@@ -174,7 +172,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={engine.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId={null}
           onPlace={() => undefined}
           onPass={() => passes.push(-1)}
@@ -200,7 +198,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={capture.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="w"
           onPlace={() => undefined}
           onPass={() => undefined}
@@ -233,7 +231,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={scored.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="b"
           onPlace={() => undefined}
           onPass={() => undefined}
@@ -255,7 +253,7 @@ describe("the go board", () => {
       render(
         <GoBoard
           state={resigned.state}
-          seats={SEATS}
+          seatControl={NO_SEAT_CONTROL}
           localPlayerId="b"
           playerNames={{ b: "Shusaku" }}
           onPlace={() => undefined}
@@ -267,6 +265,26 @@ describe("the go board", () => {
     expect(root.textContent).toContain("Resignation. Shusaku wins.");
     expect(root.querySelectorAll("[data-point]").length).toBe(169);
     expect(root.querySelector('[data-point="N13"]')).not.toBeNull();
+
+    // The seat control lands on the local header only; the other seat is reseated elsewhere
+    const fresh = createGoGame([...GO_PLAYERS], { size: 9 });
+    settled(() =>
+      render(
+        <GoBoard
+          state={fresh.state}
+          seatControl={playerId => <span data-seat-control={playerId} />}
+          localPlayerId="w"
+          onPlace={() => undefined}
+          onPass={() => undefined}
+        />,
+        root,
+      ),
+    );
+    expect(
+      [...root.querySelectorAll("[data-seat-control]")].map(el =>
+        el.getAttribute("data-seat-control"),
+      ),
+    ).toEqual(["w"]);
 
     render(null, root);
     root.remove();

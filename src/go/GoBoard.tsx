@@ -1,11 +1,9 @@
+import type { VNode } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import type { ControllerConfig, Seats } from "../core/seats";
-import { HUMAN_SEAT } from "../core/seats";
 import { BoardButton } from "../components/BoardButton";
-import { DEFAULT_SEAT_OPTIONS, SeatSelector } from "../components/SeatSelector";
+import type { SeatControl } from "../components/Board/seat-control";
 import { run } from "../lib/run";
 import { goGame } from "./definition";
-import { goModule } from "./module";
 import {
   columnLabels,
   pointKey,
@@ -32,15 +30,14 @@ const HOSHI_LINES: Record<GoSize, readonly number[]> = {
 
 interface GoBoardProps {
   state: GoState;
-  seats: Seats;
   /** The seat this client plays; its header sits under the board */
   localPlayerId: string | null;
   /** Player ids read as names where a player is named; ids alone otherwise */
   playerNames?: Record<string, string>;
   onPlace: (x: number, y: number) => void;
   onPass: () => void;
-  /** Omitted where the table is not this client's to change */
-  onSeatChange?: (player: string, config: ControllerConfig) => void;
+  /** What each player header shows for who plays the seat */
+  seatControl: SeatControl;
   onTakeBack?: () => void;
   onResign?: () => void;
   disabled?: boolean;
@@ -95,12 +92,11 @@ const lastStoneOf = (state: GoState): Point | null => {
  */
 export function GoBoard({
   state,
-  seats,
   localPlayerId,
   playerNames = {},
   onPlace,
   onPass,
-  onSeatChange,
+  seatControl,
   onTakeBack,
   onResign,
   disabled = false,
@@ -149,11 +145,10 @@ export function GoBoard({
   const header = (playerId: string) => (
     <PlayerHeader
       state={state}
-      seats={seats}
       playerNames={playerNames}
       playerId={playerId}
       isMover={mover === playerId}
-      {...(onSeatChange !== undefined && { onSeatChange })}
+      control={playerId === localPlayerId ? seatControl(playerId) : null}
     />
   );
 
@@ -383,21 +378,20 @@ function Stone({
 
 interface PlayerHeaderProps {
   state: GoState;
-  seats: Seats;
   playerNames: Record<string, string>;
   playerId: string;
   isMover: boolean;
-  onSeatChange?: (player: string, config: ControllerConfig) => void;
+  /** The seat selector, on your own header only; every other seat shows none */
+  control: VNode | null;
 }
 
 /** A player's name, their captures so far and who plays their seat */
 function PlayerHeader({
   state,
-  seats,
   playerNames,
   playerId,
   isMover,
-  onSeatChange,
+  control,
 }: PlayerHeaderProps) {
   const index = state.playerOrder.indexOf(playerId);
   const captured = run(() => {
@@ -448,14 +442,7 @@ function PlayerHeader({
           Captures: {captured}
         </span>
       </span>
-      <SeatSelector
-        playerId={playerId}
-        config={seats[playerId] ?? HUMAN_SEAT}
-        options={DEFAULT_SEAT_OPTIONS}
-        defaultLlm={goModule.defaultLlmSeat}
-        onChange={config => onSeatChange?.(playerId, config)}
-        disabled={onSeatChange === undefined}
-      />
+      {control}
     </div>
   );
 }

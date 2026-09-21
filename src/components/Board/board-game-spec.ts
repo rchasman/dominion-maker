@@ -10,11 +10,11 @@
 import type { ComponentChildren, VNode } from "preact";
 import type { GameShape } from "../../core/game-definition";
 import type { EventEngine, GameModule } from "../../core/game-module";
-import type { ControllerConfig, Seats } from "../../core/seats";
 import type { SeatPreset, TablePreset } from "../../core/seat-presets";
 import type { GameStorage } from "../../session/game-storage";
 import type { DevtoolsEvent } from "../EventDevtools/adapter";
 import type { TurnLogReading } from "../EventDevtools/turn-log-adapter";
+import type { SeatControl } from "./seat-control";
 
 /** A game whose events the devtools can read */
 export type BoardShape = GameShape & { event: DevtoolsEvent };
@@ -23,14 +23,13 @@ export type BoardShape = GameShape & { event: DevtoolsEvent };
 type BoardArgs<G extends BoardShape, S> = {
   session: S;
   state: G["state"];
-  seats: Seats;
   /** The seat this client plays; null for a spectator or an all-bot table */
   localPlayerId: string | null;
   /** Player ids read as names where a room names them; empty on a local table */
   playerNames: Record<string, string>;
   disabled: boolean;
-  /** Omitted where the table is not this client's to change */
-  onSeatChange?: (player: string, config: ControllerConfig) => void;
+  /** The selector each player header shows; the screen decides who may reseat whom */
+  seatControl: SeatControl;
   onTakeBack?: () => void;
   onResign?: () => void;
 };

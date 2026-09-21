@@ -1,12 +1,10 @@
+import type { VNode } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Chess } from "chess.js";
-import type { ControllerConfig, Seats } from "../core/seats";
-import { HUMAN_SEAT } from "../core/seats";
 import { BoardButton } from "../components/BoardButton";
-import { DEFAULT_SEAT_OPTIONS, SeatSelector } from "../components/SeatSelector";
+import type { SeatControl } from "../components/Board/seat-control";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
-import { chessModule } from "./module";
 import { replayMoves } from "./replay";
 import type { ChessMove, ChessState } from "./shape";
 
@@ -51,14 +49,13 @@ type Drag = { from: string; at: { x: number; y: number } | null };
 
 interface ChessBoardProps {
   state: ChessState;
-  seats: Seats;
   /** The seat this client plays; the board flips when it is Black */
   localPlayerId: string | null;
   /** Player ids read as names where a player is named; ids alone otherwise */
   playerNames?: Record<string, string>;
   onMove: (san: string) => void;
-  /** Omitted where the table is not this client's to change */
-  onSeatChange?: (player: string, config: ControllerConfig) => void;
+  /** What each player header shows for who plays the seat */
+  seatControl: SeatControl;
   onTakeBack?: () => void;
   onResign?: () => void;
   disabled?: boolean;
@@ -113,11 +110,10 @@ const lastMoveOf = (
  */
 export function ChessBoard({
   state,
-  seats,
   localPlayerId,
   playerNames = {},
   onMove,
-  onSeatChange,
+  seatControl,
   onTakeBack,
   onResign,
   disabled = false,
@@ -250,11 +246,10 @@ export function ChessBoard({
     playerId === undefined ? null : (
       <PlayerHeader
         state={state}
-        seats={seats}
         playerNames={playerNames}
         playerId={playerId}
         isMover={mover === playerId}
-        {...(onSeatChange !== undefined && { onSeatChange })}
+        control={playerId === localPlayerId ? seatControl(playerId) : null}
       />
     );
 
@@ -517,20 +512,19 @@ function PieceGlyph({
 
 interface PlayerHeaderProps {
   state: ChessState;
-  seats: Seats;
   playerNames: Record<string, string>;
   playerId: string;
   isMover: boolean;
-  onSeatChange?: (player: string, config: ControllerConfig) => void;
+  /** The seat selector, on your own header only; every other seat shows none */
+  control: VNode | null;
 }
 
 function PlayerHeader({
   state,
-  seats,
   playerNames,
   playerId,
   isMover,
-  onSeatChange,
+  control,
 }: PlayerHeaderProps) {
   return (
     <div
@@ -551,14 +545,7 @@ function PlayerHeader({
         {nameOf(state, playerNames, playerId)}
         {isMover ? " to move" : ""}
       </span>
-      <SeatSelector
-        playerId={playerId}
-        config={seats[playerId] ?? HUMAN_SEAT}
-        options={DEFAULT_SEAT_OPTIONS}
-        defaultLlm={chessModule.defaultLlmSeat}
-        onChange={config => onSeatChange?.(playerId, config)}
-        disabled={onSeatChange === undefined}
-      />
+      {control}
     </div>
   );
 }
