@@ -1,5 +1,6 @@
 import { Chess } from "chess.js";
 import { run } from "../lib/run";
+import { seededIndex } from "../lib/seeded-draw";
 import { sideToMove } from "./engine";
 import type { ChessCommand, ChessPlayerId, ChessState } from "./shape";
 
@@ -35,22 +36,6 @@ const takenByAPawn = (fen: string, candidate: Candidate): boolean =>
   playOn(fen, candidate.san)
     .moves({ verbose: true })
     .some(reply => reply.piece === "p" && reply.to === candidate.to);
-
-/** FNV-1a over the FEN, so the same position always seeds the same draw */
-const hashOf = (text: string): number =>
-  [...text].reduce(
-    (hash, character) =>
-      Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0,
-    2166136261,
-  );
-
-/** One mulberry32 step, written without the usual mutable generator state */
-const firstDraw = (seed: number): number => {
-  const a = (seed + 0x9e3779b9) >>> 0;
-  const b = Math.imul(a ^ (a >>> 15), 1 | a);
-  const c = (b + Math.imul(b ^ (b >>> 7), 61 | b)) >>> 0;
-  return ((c ^ (c >>> 14)) >>> 0) / 4294967296;
-};
 
 const move = (playerId: ChessPlayerId, san: string): ChessCommand => ({
   type: "MOVE",
@@ -100,6 +85,6 @@ export function chessHeuristic(
   });
   if (best) return move(playerId, best.san);
 
-  const index = Math.floor(firstDraw(hashOf(state.fen)) * moves.length);
+  const index = seededIndex(state.fen, moves.length);
   return move(playerId, (moves[index] ?? fallback).san);
 }
