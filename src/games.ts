@@ -3,6 +3,7 @@ import type { GameModule } from "./core/game-module";
 import type { GameId } from "./game-ids";
 import { chessModule } from "./chess/module";
 import { dominionModule } from "./dominion/module";
+import { goModule } from "./go/module";
 
 /**
  * The one file that knows every game; everything else takes a GameModule.
@@ -12,6 +13,7 @@ import { dominionModule } from "./dominion/module";
 export const GAMES = {
   dominion: dominionModule,
   chess: chessModule,
+  go: goModule,
 } as const satisfies Record<GameId, GameModule<GameShape>>;
 
 export const moduleFor = <K extends GameId>(id: K): (typeof GAMES)[K] =>

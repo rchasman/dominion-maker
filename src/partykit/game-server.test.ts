@@ -31,7 +31,10 @@ describe("a room plays one registered game", () => {
   it("refuses a join that does not name the room's game", () => {
     const h = roomHarness();
     const stranger = h.connect("stranger");
-    h.raw(stranger, JSON.stringify({ type: "join", name: "Zed", game: "go" }));
+    h.raw(
+      stranger,
+      JSON.stringify({ type: "join", name: "Zed", game: "checkers" }),
+    );
     expect(h.lastOf(stranger)).toMatchObject({
       type: "error",
       message: "Invalid message",

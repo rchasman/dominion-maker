@@ -5,6 +5,7 @@ import {
 } from "./_request";
 import { chessModule } from "../src/chess/module";
 import { dominionModule } from "../src/dominion/module";
+import { goModule } from "../src/go/module";
 import type { GameShape } from "../src/core/game-definition";
 import type { GameModule } from "../src/core/game-module";
 import {
@@ -65,6 +66,8 @@ function processGenerationRequest(
       return generateForGame(dominionModule, body.currentState, body, res);
     case "chess":
       return generateForGame(chessModule, body.currentState, body, res);
+    case "go":
+      return generateForGame(goModule, body.currentState, body, res);
   }
 }
 
