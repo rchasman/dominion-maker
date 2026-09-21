@@ -8,7 +8,7 @@ import {
 import { goGame } from "./definition";
 import { goEvaluate, goJevQuestion, goJevState } from "./jev";
 import type { GoMove, GoMoveRecord, GoState } from "./shape";
-import { goStateAfter } from "./test-helpers";
+import { goStateAfter, placedStone } from "./test-helpers";
 
 const BLACK = "b";
 const WHITE = "w";
@@ -32,13 +32,6 @@ const descriptionOf = (
   label: string,
 ): string | null | undefined =>
   question.options.find(option => option.move.label === label)?.description;
-
-const stone = (x: number, y: number, label: string): GoMove => ({
-  kind: "place",
-  x,
-  y,
-  label,
-});
 
 describe("goJevQuestion", () => {
   it("offers every offered move once, keyed by table number and label", () => {
@@ -112,7 +105,36 @@ describe("goJevQuestion", () => {
     expect(descriptionOf(question, "G5")).toContain(
       "Touches 1 own stone and 0 enemy stones",
     );
+    expect(descriptionOf(question, "G5")).not.toContain("Leaves");
     expect(descriptionOf(question, "A1")).not.toContain("Saves");
+    expect(descriptionOf(question, "A1")).toBe(
+      "Black stone at A1, on line 1. Captures nothing. The group it joins would have 2 liberties. Leaves 2 own stones the opponent can capture with its next stone. Leaves an own group of 1 stone the opponent can put in atari with a stone that is not itself in atari. Touches 0 own stones and 0 enemy stones",
+    );
+  });
+
+  it("states what the opponent's next stone could do to the stone it describes", () => {
+    const question = questionFor(after([]));
+    expect(descriptionOf(question, "A9")).toContain(
+      "Leaves an own group of 1 stone the opponent can put in atari with a stone that is not itself in atari",
+    );
+    expect(descriptionOf(question, "D4")).not.toContain("Leaves");
+    // Black takes the ko at D8; the retake would repeat the position, so nothing is left to capture
+    const ko = questionFor(
+      after([
+        point(1, 1),
+        point(3, 0),
+        point(2, 0),
+        point(3, 2),
+        point(2, 2),
+        point(4, 1),
+        point(7, 7),
+        point(2, 1),
+      ]),
+    );
+    expect(descriptionOf(ko, "D8")).not.toContain("Leaves");
+    expect(descriptionOf(ko, "E5")).toContain(
+      "Leaves 1 own stone the opponent can capture with its next stone",
+    );
   });
 
   it("states when a placement puts enemy stones in atari", () => {
@@ -130,7 +152,9 @@ describe("goJevQuestion", () => {
     // A8 and B9 are Black's stones, so A9 is an eye the table leaves out
     const eye = after([point(1, 0), point(8, 8), point(0, 1), point(8, 7)]);
     expect(descriptionOf(questionFor(eye), "A9")).toBeUndefined();
-    expect(descriptionOf(goJevQuestion(eye, [stone(0, 0, "A9")]), "A9")).toBe(
+    expect(
+      descriptionOf(goJevQuestion(eye, [placedStone(0, 0, "A9")]), "A9"),
+    ).toBe(
       "Black stone at A9, on line 1. Captures nothing. The group it joins would have 3 liberties. Touches 2 own stones and 0 enemy stones",
     );
     // With White on A8 and B8, Black's A9 would stand on B9 alone
@@ -141,7 +165,7 @@ describe("goJevQuestion", () => {
       point(1, 1),
     ]);
     expect(
-      descriptionOf(goJevQuestion(cornered, [stone(0, 0, "A9")]), "A9"),
+      descriptionOf(goJevQuestion(cornered, [placedStone(0, 0, "A9")]), "A9"),
     ).toContain("would have 1 liberty: in atari");
   });
 
@@ -235,11 +259,42 @@ describe("goJevQuestion", () => {
     expect(question.options).toHaveLength(JEV_MAX_OPTIONS);
     expect(descriptionOf(question, "A18")).toContain("Captures 1 White stone");
     expect(descriptionOf(question, "A1")).toBeUndefined();
+    expect(question.instructions).toContain(
+      "then the placements that leave the fewest own stones open to capture, then the inner lines",
+    );
+  });
+
+  it("cuts an inner-line stone the opponent could capture before a clean stone on the edge", () => {
+    // White's D3, C4 and E4 leave Black's D4 with D5 as its one liberty
+    const state = afterOnFullBoard([
+      point(15, 3),
+      point(3, 16),
+      point(15, 4),
+      point(2, 15),
+      point(15, 5),
+      point(4, 15),
+    ]);
+    const offered = goGame.legalMoves(state, BLACK);
+    expect(offered.map(move => move.label)).not.toContain("D4");
+    const question = goJevQuestion(state, [
+      ...offered,
+      placedStone(3, 15, "D4"),
+    ]);
+    expect(question.options).toHaveLength(JEV_MAX_OPTIONS);
+    expect(descriptionOf(question, "D4")).toBeUndefined();
+    expect(descriptionOf(question, "A2")).toBeUndefined();
+    expect(descriptionOf(question, "D3")).toBeUndefined();
+    expect(descriptionOf(question, "C3")).toContain("on line 3");
+    expect(
+      descriptionOf(goJevQuestion(state, [placedStone(3, 15, "D4")]), "D4"),
+    ).toContain(
+      "Leaves 1 own stone the opponent can capture with its next stone",
+    );
   });
 
   it("refuses a placement the rules do not allow", () => {
     const state = after([point(3, 5)]);
-    expect(() => goJevQuestion(state, [stone(3, 5, "D4")])).toThrow(
+    expect(() => goJevQuestion(state, [placedStone(3, 5, "D4")])).toThrow(
       "D4 is occupied",
     );
   });
@@ -339,6 +394,19 @@ describe("goJevState", () => {
       around: "E5",
       liberties: 1,
       inAtari: true,
+    });
+    expect(jevState.threatsNow).toEqual({
+      stonesTheOpponentCanCapture: 2,
+      largestGroupTheOpponentCanPutInAtariWithoutSelfAtari: 0,
+    });
+  });
+
+  it("states what the opponent could take right now on a quiet board", () => {
+    // Black's lone A9 stone stands on two liberties White may fill
+    const jevState = goJevState(after([point(0, 0), point(4, 4)]), "");
+    expect(jevState.threatsNow).toEqual({
+      stonesTheOpponentCanCapture: 0,
+      largestGroupTheOpponentCanPutInAtariWithoutSelfAtari: 1,
     });
   });
 

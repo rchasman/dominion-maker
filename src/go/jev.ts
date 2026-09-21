@@ -12,7 +12,6 @@ import {
   describePass,
   describeScore,
   factsOf,
-  isSelfAtari,
   positionFacts,
   type PlacementFacts,
 } from "./candidates";
@@ -20,6 +19,7 @@ import { RECALLED_MOVES } from "./prompt";
 import {
   boardHeader,
   boardRows,
+  isSelfAtari,
   KOMI,
   opponentOf,
   recordLabel,
@@ -63,6 +63,16 @@ const describePlacement = (
     ...(facts.atari > 0
       ? [`Puts ${plural(facts.atari, `${enemy} stone`)} in atari`]
       : []),
+    ...(facts.exposed > 0
+      ? [
+          `Leaves ${plural(facts.exposed, "own stone")} the opponent can capture with its next stone`,
+        ]
+      : []),
+    ...(facts.threatened > 0
+      ? [
+          `Leaves an own group of ${plural(facts.threatened, "stone")} the opponent can put in atari with a stone that is not itself in atari`,
+        ]
+      : []),
     `Touches ${plural(facts.touchesOwn, "own stone")} and ${plural(facts.touchesEnemy, "enemy stone")}`,
   ];
   return sentences.join(". ");
@@ -72,7 +82,7 @@ const passOption = (state: GoState): string =>
   `Pass: plays no stone. It ${describePass(state)}`;
 
 const cutNotice = (offered: number): string =>
-  ` Only the ${offered} strongest candidate moves are listed: every capture and rescue, then the placements on the inner lines; the rest were left out as the weakest by these facts.`;
+  ` Only the ${offered} strongest candidate moves are listed: every capture and rescue, then the placements that leave the fewest own stones open to capture, then the inner lines; the rest were left out as the weakest by these facts.`;
 
 const instructions = (colour: string, cut: string): string =>
   `You are ${colour} and it is your move. Which move should you play now? Every option is a legal move and its description states what the stone does on the board; those facts are binding.${cut} Capture stones that cannot escape and save your own stones in atari. Keep your groups connected with two or more liberties and do not fill your own eyes. Early in the game play on line 3 or line 4 near a corner; a stone on line 1 or line 2 gives territory away, and the exact corner point is the weakest of all. Pass only when every stone would lose points. When \`strategyOverride\` is present, follow it. Pick the option that most improves ${colour}'s chance of winning this game of Go under area scoring.`;
@@ -100,17 +110,18 @@ const judgeMoves = (state: GoState, moves: GoMove[]): Judged[] => {
   }));
 };
 
-/** Captures first, then rescues, then the inner lines; a tie keeps board order */
-const byStrength = (a: Judged, b: Judged): number => {
-  const factsA = a.facts ?? { captures: 0, rescues: 0, line: 0 };
-  const factsB = b.facts ?? { captures: 0, rescues: 0, line: 0 };
-  return (
-    factsB.captures - factsA.captures ||
-    factsB.rescues - factsA.rescues ||
-    factsB.line - factsA.line ||
-    a.index - b.index
-  );
-};
+type JudgedPlacement = Judged & { facts: PlacementFacts };
+
+const isPlacement = (entry: Judged): entry is JudgedPlacement =>
+  entry.facts !== null;
+
+/** Captures first, then rescues, then the fewest own stones left open to capture, then the inner lines; a tie keeps board order */
+const byStrength = (a: JudgedPlacement, b: JudgedPlacement): number =>
+  b.facts.captures - a.facts.captures ||
+  b.facts.rescues - a.facts.rescues ||
+  a.facts.exposed - b.facts.exposed ||
+  b.facts.line - a.facts.line ||
+  a.index - b.index;
 
 const byIndex = (a: Judged, b: Judged): number => a.index - b.index;
 
@@ -121,7 +132,7 @@ const byIndex = (a: Judged, b: Judged): number => a.index - b.index;
  */
 const strongestJudged = (judged: Judged[]): Judged[] => {
   const passes = judged.filter(entry => entry.facts === null);
-  const placements = judged.filter(entry => entry.facts !== null);
+  const placements = judged.filter(isPlacement);
   const room = JEV_MAX_OPTIONS - passes.length;
   return [...passes, ...[...placements].sort(byStrength).slice(0, room)].sort(
     byIndex,
@@ -144,7 +155,7 @@ export function goJevQuestion(
 }
 
 export function goJevState(state: GoState, customStrategy: string): JsonObject {
-  const { score, territory, groups } = positionFacts(state);
+  const { score, territory, groups, threats } = positionFacts(state);
   const recentMoves = state.moves
     .slice(-RECALLED_MOVES)
     .map(move => recordLabel(state.size, move));
@@ -173,6 +184,10 @@ export function goJevState(state: GoState, customStrategy: string): JsonObject {
       liberties: group.liberties,
       inAtari: group.liberties === 1,
     })),
+    threatsNow: {
+      stonesTheOpponentCanCapture: threats.exposed,
+      largestGroupTheOpponentCanPutInAtariWithoutSelfAtari: threats.threatened,
+    },
     ...(recentMoves.length > 0 ? { recentMoves } : {}),
     ...(strategy.length > 0 ? { strategyOverride: strategy } : {}),
   };
