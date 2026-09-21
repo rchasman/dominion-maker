@@ -7,7 +7,7 @@ const MIN_RETRY_DELAY_MS = 500;
 
 type DriveOptions<G extends GameShape> = {
   game: GameDefinition<G>;
-  getSeats: () => Seats<G["playerId"]>;
+  getSeats: () => Seats;
   controllerFor: (
     config: ControllerConfig,
     player: G["playerId"],

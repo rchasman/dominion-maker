@@ -20,7 +20,7 @@ import type { SessionPlayer } from "./table-session";
 type LocalTableParams<G extends GameShape, E extends EventEngine<G>> = {
   module: GameModule<G>;
   engine: E;
-  seats: Seats<G["playerId"]>;
+  seats: Seats;
   llmLogs: LLMLogEntry[];
   /** Named seats for the selectors; a game that names seats from its state passes none */
   players: SessionPlayer[];
@@ -38,7 +38,7 @@ type LocalTableCore<G extends GameShape, E extends EventEngine<G>> = {
   readonly engineRef: { current: E };
   readonly state: Signal<G["state"] | null>;
   readonly events: Signal<G["event"][]>;
-  readonly seats: Signal<Seats<G["playerId"]>>;
+  readonly seats: Signal<Seats>;
   readonly players: Signal<SessionPlayer[]>;
   readonly localHumanSeat: ReadonlySignal<string | null>;
   readonly isProcessing: Signal<boolean>;
@@ -51,8 +51,8 @@ type LocalTableCore<G extends GameShape, E extends EventEngine<G>> = {
   readonly replaceEngine: (next: E) => void;
   /** Abort the bot mid-decision; the driver restarts from the next published state */
   readonly interrupt: () => void;
-  readonly setSeat: (player: G["playerId"], config: ControllerConfig) => void;
-  readonly setSeats: (seats: Seats<G["playerId"]>) => void;
+  readonly setSeat: (player: string, config: ControllerConfig) => void;
+  readonly setSeats: (seats: Seats) => void;
   readonly dispose: () => void;
 };
 
@@ -69,7 +69,7 @@ export function createLocalTable<G extends GameShape, E extends EventEngine<G>>(
 
   const state = signal<G["state"] | null>(stateOf(engineRef.current));
   const events = signal<G["event"][]>([...engineRef.current.eventLog]);
-  const seats = signal<Seats<G["playerId"]>>(params.seats);
+  const seats = signal<Seats>(params.seats);
   const players = signal<SessionPlayer[]>(params.players);
   const isProcessing = signal(false);
   const llmLogs = signal<LLMLogEntry[]>(params.llmLogs);
