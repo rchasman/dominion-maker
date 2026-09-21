@@ -5,6 +5,7 @@ import { BoardButton } from "../components/BoardButton";
 import type { SeatControl } from "../components/Board/seat-control";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
+import { playerLabel } from "./names";
 import { replayMoves } from "./replay";
 import type { ChessMove, ChessState } from "./shape";
 
@@ -73,20 +74,15 @@ const piecesOf = (
     ),
   );
 
-/** A player is their colour, unless the caller knows a name for the id */
-const nameOf = (
-  state: ChessState,
-  names: Record<string, string>,
-  id: string,
-): string => names[id] ?? (id === state.playerOrder[0] ? "White" : "Black");
-
 const resultText = (
   state: ChessState,
   names: Record<string, string>,
 ): string | null => {
   if (!state.gameOver) return null;
   const winner =
-    state.winnerId === null ? null : nameOf(state, names, state.winnerId);
+    state.winnerId === null
+      ? null
+      : playerLabel(state.playerOrder, names, state.winnerId);
   if (state.result === "stalemate") return "Draw by stalemate";
   if (state.result === "draw") return "Draw";
   if (state.result === "checkmate") return `Checkmate. ${winner} wins.`;
@@ -542,7 +538,7 @@ function PlayerHeader({
       }}
     >
       <span style={{ fontWeight: 600 }}>
-        {nameOf(state, playerNames, playerId)}
+        {playerLabel(state.playerOrder, playerNames, playerId)}
         {isMover ? " to move" : ""}
       </span>
       {control}

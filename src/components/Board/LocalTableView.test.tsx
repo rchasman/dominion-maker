@@ -22,11 +22,13 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/** Two plies in, so the scrubber has a past, with White to move so the engine seat stays quiet */
-const twoPliesIn = () =>
+/** Four plies in, so the scrubber has a past, with White to move so the engine seat stays quiet */
+const fourPliesIn = () =>
   [
     ["w", "e4"],
     ["b", "e5"],
+    ["w", "Nf3"],
+    ["b", "Nc6"],
   ].reduce(
     (engine, [playerId, san]) => {
       if (playerId === undefined || san === undefined)
@@ -42,7 +44,7 @@ const twoPliesIn = () =>
 describe("a board game on a local table", () => {
   it("shows no seat selector on any header, live or in preview", async () => {
     const session = createLocalChessSession({
-      engine: twoPliesIn(),
+      engine: fourPliesIn(),
       seats: { w: HUMAN_SEAT, b: HEURISTIC_SEAT },
     });
     const root = document.createElement("div");
@@ -63,14 +65,26 @@ describe("a board game on a local table", () => {
     expect(root.querySelector("[data-chess-player='b']")).not.toBeNull();
     expect(headerSelectors(root)).toBe(0);
 
-    // A past position is nobody's to reseat either
+    // Every move but the newest can be undone to from the log
+    expect(root.querySelectorAll("[data-undo-to]").length).toBe(3);
+
+    // A past position is nobody's to reseat, and nothing to undo from, either
     const rows = await openDevtools(root);
     scrubTo(rows[1]);
     expect(root.textContent).toContain("PREVIEW MODE");
     expect(headerSelectors(root)).toBe(0);
+    expect(root.querySelectorAll("[data-undo-to]").length).toBe(0);
 
     clickTitled(root, "Jump to live");
     expect(headerSelectors(root)).toBe(0);
+
+    // Undo to Black's first reply: the game keeps two plies, White to move
+    const undo = root.querySelectorAll("[data-undo-to]")[1];
+    settled(() => {
+      undo?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(session.state.value?.moves).toEqual(["e4", "e5"]);
+    expect(root.querySelectorAll("[data-undo-to]").length).toBe(1);
 
     render(null, root);
     root.remove();

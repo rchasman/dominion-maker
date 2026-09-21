@@ -20,19 +20,22 @@ const PIECE_NAMES: Record<string, PieceName> = {
 export const pieceName = (symbol: string): PieceName =>
   PIECE_NAMES[symbol] ?? "Pawn";
 
-/** Everything a move did beyond landing a piece on a square */
+/** Everything a move did beyond its action */
 export type ChessMoveEvent =
   | { kind: "capture"; piece: PieceName }
   | { kind: "en-passant" }
-  | { kind: "castle"; side: "kingside" | "queenside" }
   | { kind: "promotion"; piece: PieceName }
   | { kind: "check" }
   | { kind: "checkmate" };
 
+/** What the mover did: put a piece somewhere, or castle */
+export type ChessMoveAction =
+  | { kind: "move"; piece: PieceName; to: string }
+  | { kind: "castle"; side: "kingside" | "queenside" };
+
 export type DescribedMove = {
   san: string;
-  piece: PieceName;
-  to: string;
+  action: ChessMoveAction;
   events: ChessMoveEvent[];
 };
 
@@ -46,18 +49,21 @@ const checkEvents = (san: string): ChessMoveEvent[] => {
 const when = (applies: boolean, event: ChessMoveEvent): ChessMoveEvent[] =>
   applies ? [event] : [];
 
+const actionOf = (move: Move): ChessMoveAction => {
+  if (move.isKingsideCastle()) return { kind: "castle", side: "kingside" };
+  if (move.isQueensideCastle()) return { kind: "castle", side: "queenside" };
+  return { kind: "move", piece: pieceName(move.piece), to: move.to };
+};
+
 export const describeMove = (move: Move): DescribedMove => ({
   san: move.san,
-  piece: pieceName(move.piece),
-  to: move.to,
+  action: actionOf(move),
   events: [
     ...when(move.captured !== undefined, {
       kind: "capture",
       piece: pieceName(move.captured ?? ""),
     }),
     ...when(move.isEnPassant(), { kind: "en-passant" }),
-    ...when(move.isKingsideCastle(), { kind: "castle", side: "kingside" }),
-    ...when(move.isQueensideCastle(), { kind: "castle", side: "queenside" }),
     ...when(move.promotion !== undefined, {
       kind: "promotion",
       piece: pieceName(move.promotion ?? ""),
@@ -66,19 +72,41 @@ export const describeMove = (move: Move): DescribedMove => ({
   ],
 });
 
-export const eventText = (event: ChessMoveEvent): string => {
+/** The words of an event: a verb, and the piece it acts on where there is one */
+export type EventPhrase = { verb: string; noun: PieceName | null };
+
+export const eventPhrase = (event: ChessMoveEvent): EventPhrase => {
   switch (event.kind) {
     case "capture":
-      return `Takes ${event.piece}`;
+      return { verb: "takes", noun: event.piece };
     case "en-passant":
-      return "En passant";
-    case "castle":
-      return `Castles ${event.side}`;
+      return { verb: "en passant", noun: null };
     case "promotion":
-      return `Promotes to ${event.piece}`;
+      return { verb: "promotes to", noun: event.piece };
     case "check":
-      return "Check";
+      return { verb: "gives check", noun: null };
     case "checkmate":
-      return "Checkmate";
+      return { verb: "checkmates", noun: null };
   }
 };
+
+/** A fact for a model to hold, sentence-case, as the Jev prompt states it */
+export const eventText = (event: ChessMoveEvent): string => {
+  const phrase = eventPhrase(event);
+  const verb = {
+    capture: "Takes",
+    "en-passant": "En passant",
+    promotion: "Promotes to",
+    check: "Check",
+    checkmate: "Checkmate",
+  }[event.kind];
+  return phrase.noun === null ? verb : `${verb} ${phrase.noun}`;
+};
+
+/** Everything a move did, as facts: castling first where it applies, then each event */
+export const moveFacts = (described: DescribedMove): string[] => [
+  ...(described.action.kind === "castle"
+    ? [`Castles ${described.action.side}`]
+    : []),
+  ...described.events.map(eventText),
+];

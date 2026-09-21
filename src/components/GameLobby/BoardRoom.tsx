@@ -139,7 +139,7 @@ function BoardRoomContent<G extends BoardShape, S extends GameSession>({
           </GameAreaLayout>
 
           <GameSidebar
-            log={spec.log(shown)}
+            log={spec.log({ state: shown, events, playerNames })}
             logEntryCount={spec.logEntryCount(shown)}
             turnStatus={
               <TurnStatusIndicator
