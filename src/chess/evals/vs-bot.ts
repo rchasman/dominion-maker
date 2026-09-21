@@ -15,6 +15,7 @@ import {
   playAgainstBot,
   playColours,
   readVsBotArgs,
+  rivalName,
   signed,
   VS_BOT_OPTIONS,
   winRate,
@@ -30,7 +31,11 @@ const [WHITE_ID, BLACK_ID] = CHESS_PLAYERS;
 const DEFAULT_CAP = 200;
 
 const { values: args } = parseArgs({ options: VS_BOT_OPTIONS });
-const { model, games, api, both, cap } = readVsBotArgs(args, DEFAULT_CAP);
+const { model, opponent, games, api, both, cap } = readVsBotArgs(
+  args,
+  DEFAULT_CAP,
+);
+const rival = rivalName(opponent);
 
 type Played = { state: ChessState; failures: string[] };
 
@@ -44,6 +49,7 @@ const playGame = async (colour: Color): Promise<Played> => {
     engine,
     model,
     api,
+    opponent,
     modelSeat: seatOf(colour),
     botSeat: seatOf(opponentOf(colour)),
     plies: state => state.moves.length,
@@ -86,7 +92,7 @@ const report = (played: Played, colour: Color, index: number): Summary => {
   const margin = marginFor(state, colour);
   const outcome = outcomeFor(state, colour);
   console.log(
-    `[${model} as ${colourName(colour)}] game ${index + 1}: ${state.moves.length} plies, ended by ${endingOf(state)}, ${outcome}. Material margin ${signed(margin)}. Hung pieces ${stats.hung}, landed on a cheaper attacker ${stats.cheaperAttacker}, lost for free ${stats.lostForFree}, captures made ${stats.captures}, checkmates delivered ${stats.checkmates}`,
+    `[${model} as ${colourName(colour)} vs ${rival}] game ${index + 1}: ${state.moves.length} plies, ended by ${endingOf(state)}, ${outcome}. Material margin ${signed(margin)}. Hung pieces ${stats.hung}, landed on a cheaper attacker ${stats.cheaperAttacker}, lost for free ${stats.lostForFree}, captures made ${stats.captures}, checkmates delivered ${stats.checkmates}`,
   );
   console.log(`  record: ${recordOf(state.moves)}`);
   failures.map(failure => console.log(`  failure: ${failure}`));
@@ -100,7 +106,7 @@ const summarise = (summaries: Summary[], colour: Color): void => {
   const wins = tally(summaries, "WIN");
   const ahead = summaries.filter(summary => summary.margin > 0).length;
   console.log(
-    `[${model} as ${colourName(colour)}] ${summaries.length} games: win rate ${winRate(wins, summaries.length)} (${wins} won, ${tally(summaries, "LOSS")} lost, ${tally(summaries, "DRAW")} drawn, ${tally(summaries, "UNFINISHED")} unfinished), mean material margin ${signed(Number(mean(summaries.map(summary => summary.margin)).toFixed(1)))}, ahead on material at the end ${ahead}, per game: hung ${perGame(summaries.map(s => s.stats.hung))}, cheaper attacker ${perGame(summaries.map(s => s.stats.cheaperAttacker))}, lost for free ${perGame(summaries.map(s => s.stats.lostForFree))}, captures ${perGame(summaries.map(s => s.stats.captures))}, checkmates ${perGame(summaries.map(s => s.stats.checkmates))}`,
+    `[${model} as ${colourName(colour)} vs ${rival}] ${summaries.length} games: win rate ${winRate(wins, summaries.length)} (${wins} won, ${tally(summaries, "LOSS")} lost, ${tally(summaries, "DRAW")} drawn, ${tally(summaries, "UNFINISHED")} unfinished), mean material margin ${signed(Number(mean(summaries.map(summary => summary.margin)).toFixed(1)))}, ahead on material at the end ${ahead}, per game: hung ${perGame(summaries.map(s => s.stats.hung))}, cheaper attacker ${perGame(summaries.map(s => s.stats.cheaperAttacker))}, lost for free ${perGame(summaries.map(s => s.stats.lostForFree))}, captures ${perGame(summaries.map(s => s.stats.captures))}, checkmates ${perGame(summaries.map(s => s.stats.checkmates))}`,
   );
 };
 

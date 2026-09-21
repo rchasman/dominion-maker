@@ -29,6 +29,7 @@ export const VS_BOT_OPTIONS = {
   api: { type: "string" },
   both: { type: "boolean" },
   cap: { type: "string" },
+  opponent: { type: "string" },
 } as const;
 
 /** What parseArgs hands back for the shared flags; a runner's own flags may sit alongside */
@@ -44,6 +45,8 @@ type VsBotArgs = {
   both: boolean;
   /** Plies after which a game the rules have not ended is stopped */
   cap: number;
+  /** A second text model in the other seat; the rules bot plays it otherwise */
+  opponent: ModelProvider | null;
 };
 
 const isModelId = (id: string): id is ModelProvider =>
@@ -63,8 +66,11 @@ export const readVsBotArgs = (
 ): VsBotArgs => {
   if (values.model === undefined || !isModelId(values.model))
     throw new Error("--model must name a model id from the catalog");
+  if (values.opponent !== undefined && !isModelId(values.opponent))
+    throw new Error("--opponent must name a model id from the catalog");
   return {
     model: values.model,
+    opponent: values.opponent ?? null,
     games:
       values.games === undefined
         ? DEFAULT_GAMES
@@ -75,10 +81,23 @@ export const readVsBotArgs = (
   };
 };
 
+/** How the report names the other seat */
+export const rivalName = (opponent: ModelProvider | null): string =>
+  opponent ?? "the rules bot";
+
+const llmSeat = (model: ModelProvider): ControllerConfig => ({
+  kind: "llm",
+  models: [model],
+  consensusCount: 1,
+  customStrategy: "",
+});
+
 type BotGame<G extends GameShape> = {
   module: GameModule<G>;
   engine: EventEngine<G>;
   model: ModelProvider;
+  /** A second text model for the other seat, or null for the rules bot */
+  opponent: ModelProvider | null;
   api: string;
   modelSeat: G["playerId"];
   botSeat: G["playerId"];
@@ -91,13 +110,15 @@ type BotGame<G extends GameShape> = {
 
 /**
  * One game to the end, the cap or the failure limit: the model's seat votes
- * through the endpoint, the bot's seat plays the game's heuristic. Returns
+ * through the endpoint, the other seat plays the game's heuristic or, when
+ * an opponent model is named, votes through the endpoint as well. Returns
  * every failed decision; the engine holds the finished state.
  */
 export const playAgainstBot = async <G extends GameShape>({
   module,
   engine,
   model,
+  opponent,
   api,
   modelSeat,
   botSeat,
@@ -107,13 +128,8 @@ export const playAgainstBot = async <G extends GameShape>({
 }: BotGame<G>): Promise<string[]> => {
   const game = module.definition;
   const seats: Seats = {
-    [modelSeat]: {
-      kind: "llm",
-      models: [model],
-      consensusCount: 1,
-      customStrategy: "",
-    },
-    [botSeat]: { kind: "heuristic" },
+    [modelSeat]: llmSeat(model),
+    [botSeat]: opponent === null ? { kind: "heuristic" } : llmSeat(opponent),
   };
   const decideMove = httpDecideMove(module, api);
   const abort = new AbortController();

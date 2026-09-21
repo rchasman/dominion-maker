@@ -11,6 +11,7 @@ import {
   groupAt,
   groupsOn,
   isEyeOf,
+  isSelfAtari,
   judgePlacement,
   judgedPlacements,
   leaderOf,
@@ -25,17 +26,24 @@ import {
   stoneName,
   stoneOf,
   territoryOf,
+  threatsAfter,
+  threatsTo,
   type Candidate,
   type Point,
   type Stone,
   type Territory,
+  type Threats,
 } from "./rules";
 import type { GoMove, GoMoveRecord, GoScore, GoState } from "./shape";
 
 const PASS: GoMove = { kind: "pass", label: "pass" };
 
-/** What the rules prove about one placement, read off the board before and after the stone lands */
-export type PlacementFacts = {
+/**
+ * What the rules prove about one placement, read off the board before and
+ * after the stone lands, and one move further: what the opponent's best
+ * legal reply could then do to the mover's groups.
+ */
+export type PlacementFacts = Threats & {
   /** Counted in from the nearest edge; line 1 is the edge itself */
   line: number;
   /** Enemy stones the stone lifts off the board */
@@ -59,37 +67,50 @@ export const FACT_COLUMNS: readonly (keyof PlacementFacts)[] = [
   "atari",
   "touchesOwn",
   "touchesEnemy",
+  "exposed",
+  "threatened",
 ];
 
+/**
+ * The facts of each placement from one position. The one-move read-ahead is
+ * prepared once here and shared by every candidate; `positions` holds every
+ * board the game has shown, so superko can refuse the opponent's reply.
+ */
 export const placementFacts = (
   size: number,
   board: string,
+  positions: ReadonlySet<string>,
   stone: Stone,
-  candidate: Candidate,
-): PlacementFacts => {
-  const { point, placement } = candidate;
-  return {
-    line: lineOf(size, point),
-    captures: placement.captured,
-    libertiesAfter: groupAt(placement.board, size, point).liberties.length,
-    rescues: rescuedStones(size, board, stone, candidate),
-    atari: atariStones(size, placement.board, stone, point),
-    touchesOwn: neighbourStones(size, board, point, stone),
-    touchesEnemy: neighbourStones(size, board, point, opponentOf(stone)),
+): ((candidate: Candidate) => PlacementFacts) => {
+  const threats = threatsAfter(size, board, positions, stone);
+  return candidate => {
+    const { point, placement } = candidate;
+    return {
+      line: lineOf(size, point),
+      captures: placement.captured,
+      libertiesAfter: groupAt(placement.board, size, point).liberties.length,
+      rescues: rescuedStones(size, board, stone, candidate),
+      atari: atariStones(size, placement.board, stone, point),
+      touchesOwn: neighbourStones(size, board, point, stone),
+      touchesEnemy: neighbourStones(size, board, point, opponentOf(stone)),
+      ...threats(candidate),
+    };
   };
 };
 
-/** A stone that leaves its own group on one liberty and lifts nothing: the opponent takes it next move */
-export const isSelfAtari = (facts: PlacementFacts): boolean =>
-  facts.libertiesAfter === 1 && facts.captures === 0;
-
 const moverOf = (state: GoState): Stone => stoneOf(state.moves.length);
 
+/**
+ * Every board the game has shown, this one included, which superko holds the
+ * next stones to. The engine derives the board from the moves, so the replay
+ * ends on it; a board built by hand is added so a ko reads the same.
+ */
+const shownBoards = (state: GoState): ReadonlySet<string> =>
+  new Set([...replayMoves(state.size, state.moves).positions, state.board]);
+
 /** Every placement the rules allow the side to move, with the board each leaves, in board order */
-export const legalCandidates = (state: GoState): Candidate[] => {
-  const { positions } = replayMoves(state.size, state.moves);
-  return judgedPlacements(state.size, state.board, positions, moverOf(state));
-};
+export const legalCandidates = (state: GoState): Candidate[] =>
+  judgedPlacements(state.size, state.board, shownBoards(state), moverOf(state));
 
 /** What the pass rule reads off a state; a replayed record fits it as well as a live game */
 type PassPosition = Pick<GoState, "size" | "board"> & {
@@ -145,10 +166,14 @@ const settled = (state: GoState, kept: readonly Judged[]): boolean => {
  */
 export const offeredMoves = (state: GoState): GoMove[] => {
   const stone = moverOf(state);
-  const judged = legalCandidates(state).map(candidate => ({
-    candidate,
-    facts: placementFacts(state.size, state.board, stone, candidate),
-  }));
+  const positions = shownBoards(state);
+  const factsFor = placementFacts(state.size, state.board, positions, stone);
+  const judged = judgedPlacements(
+    state.size,
+    state.board,
+    positions,
+    stone,
+  ).map(candidate => ({ candidate, facts: factsFor(candidate) }));
   const kept = judged.filter(entry => defensible(state, stone, entry));
   const placements = (kept.length > 0 ? kept : judged).map(entry =>
     placementMove(state.size, entry.candidate.point),
@@ -171,7 +196,8 @@ export const factsOf = (
   moves: readonly GoMove[],
 ): JudgedMove[] => {
   const stone = moverOf(state);
-  const { positions } = replayMoves(state.size, state.moves);
+  const positions = shownBoards(state);
+  const factsFor = placementFacts(state.size, state.board, positions, stone);
   return moves.map(move => {
     if (move.kind === "pass") return { move, facts: null };
     const judged = judgePlacement(
@@ -184,10 +210,7 @@ export const factsOf = (
     if (!judged.ok) throw new Error(`${move.label} is ${judged.error}`);
     return {
       move,
-      facts: placementFacts(state.size, state.board, stone, {
-        point: move,
-        placement: judged.placement,
-      }),
+      facts: factsFor({ point: move, placement: judged.placement }),
     };
   });
 };
@@ -206,6 +229,8 @@ type PositionFacts = {
   territory: Territory;
   /** Black's groups then White's, each side in board order */
   groups: GroupFacts[];
+  /** What the opponent's next stone could do to the mover's groups on the board as it stands */
+  threats: Threats;
 };
 
 export const positionFacts = (state: GoState): PositionFacts => {
@@ -230,6 +255,7 @@ export const positionFacts = (state: GoState): PositionFacts => {
       ...groups.filter(group => group.stone === "B"),
       ...groups.filter(group => group.stone === "W"),
     ],
+    threats: threatsTo(size, board, shownBoards(state), moverOf(state)),
   };
 };
 
