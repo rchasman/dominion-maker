@@ -5,13 +5,17 @@ import {
   finalScore,
   groupAt,
   groupsOn,
+  isSelfAtari,
   judgePlacement,
   judgedPlacements,
   leaderOf,
   lineOf,
   pointLabel,
   replayMoves,
+  stoneOf,
   territoryOf,
+  threatsAfter,
+  threatsTo,
 } from "./rules";
 import type { GoMoveRecord } from "./shape";
 
@@ -359,5 +363,170 @@ describe("area scoring", () => {
     expect(leaderOf({ black: 40.5, white: 40.5 })).toBeNull();
     expect(leaderOf({ black: 40, white: 40.5 })).toBe(1);
     expect(leaderOf({ black: 41, white: 40.5 })).toBe(0);
+  });
+});
+
+describe("one move of reading ahead", () => {
+  const threats = (board: string, stone: "B" | "W") =>
+    threatsTo(SIZE, board, new Set([board]), stone);
+
+  /** Black's B9 and its D9-E9 pair both hang by C9 */
+  const SHARED_LIBERTY = boardOf([
+    "W B . B B W . . .",
+    "W W W W W W . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ]);
+
+  /**
+   * Black's eight stones breathe at B9, an eye White may not fill, and at
+   * E9, where a White stone would stand on F9 alone and capture nothing.
+   */
+  const SELF_ATARI_REPLY = boardOf([
+    "B . B B . . W . .",
+    "B B B B B W W . .",
+    "W W W W W W . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ]);
+
+  it("names a self-atari by the liberties left and the stones lifted alone", () => {
+    expect(isSelfAtari({ libertiesAfter: 1, captures: 0 })).toBe(true);
+    expect(isSelfAtari({ libertiesAfter: 1, captures: 1 })).toBe(false);
+    expect(isSelfAtari({ libertiesAfter: 2, captures: 0 })).toBe(false);
+  });
+
+  it("counts every stone one enemy placement lifts, across the groups hanging by that point", () => {
+    expect(
+      groupsOn(SHARED_LIBERTY, SIZE).map(group => [
+        group.stone,
+        group.stones.length,
+        group.liberties.length,
+      ]),
+    ).toEqual([
+      ["W", 8, 9],
+      ["B", 1, 1],
+      ["B", 2, 1],
+    ]);
+    expect(threats(SHARED_LIBERTY, "B")).toEqual({ exposed: 3, threatened: 0 });
+    expect(threats(SHARED_LIBERTY, "W")).toEqual({ exposed: 0, threatened: 0 });
+  });
+
+  it("holds the enemy to superko, so a ko stone just taken is not exposed", () => {
+    // Black has just taken the ko at D8; White's retake at C8 repeats the position
+    const game = replayMoves(SIZE, [
+      point(1, 1),
+      point(3, 0),
+      point(2, 0),
+      point(3, 2),
+      point(2, 2),
+      point(4, 1),
+      point(7, 7),
+      point(2, 1),
+      point(3, 1),
+    ]);
+    expect(groupAt(game.board, SIZE, { x: 3, y: 1 }).liberties).toEqual([
+      { x: 2, y: 1 },
+    ]);
+    expect(threatsTo(SIZE, game.board, game.positions, "B")).toEqual({
+      exposed: 0,
+      threatened: 0,
+    });
+    // With no history the retake is a plain capture of the ko stone, and it
+    // also leaves Black's C9 stone, breathing at B9 and C8, on one liberty
+    expect(threatsTo(SIZE, game.board, NO_HISTORY, "B")).toEqual({
+      exposed: 1,
+      threatened: 1,
+    });
+  });
+
+  it("does not call a group threatened by a stone the rules refuse or that would stand in atari itself", () => {
+    expect(judge(SELF_ATARI_REPLY, "W", 1, 0)).toEqual({
+      ok: false,
+      error: "suicide",
+    });
+    const atE9 = judge(SELF_ATARI_REPLY, "W", 4, 0);
+    if (!atE9.ok) throw new Error(atE9.error);
+    expect(atE9.placement.captured).toBe(0);
+    expect(
+      groupAt(atE9.placement.board, SIZE, { x: 4, y: 0 }).liberties,
+    ).toEqual([{ x: 5, y: 0 }]);
+    expect(threats(SELF_ATARI_REPLY, "B")).toEqual({
+      exposed: 0,
+      threatened: 0,
+    });
+  });
+
+  it("calls a group on two liberties threatened when the enemy may fill one soundly", () => {
+    // Black's A9-A8 pair breathes at B9 and B8; White on B8 stands on two liberties
+    const board = boardOf([
+      "B . . . . . . . .",
+      "B . . . . . . . .",
+      "W . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+    ]);
+    expect(threats(board, "B")).toEqual({ exposed: 0, threatened: 2 });
+    // White's lone A7 stone breathes at B7 and A6, both sound for Black
+    expect(threats(board, "W")).toEqual({ exposed: 0, threatened: 1 });
+  });
+});
+
+describe("reading ahead from each candidate", () => {
+  /** A linear congruential generator, so the boards are the same on every run */
+  const seeded = (seed: number): (() => number) => {
+    const state = { value: seed >>> 0 };
+    return () => {
+      state.value = (state.value * 1664525 + 1013904223) >>> 0;
+      return state.value / 4294967296;
+    };
+  };
+
+  /** Random legal play, self-atari and eye fills included, so groups die and liberties change */
+  const randomMoves = (
+    size: number,
+    count: number,
+    seed: number,
+  ): GoMoveRecord[] => {
+    const next = seeded(seed);
+    return Array.from({ length: count }).reduce<GoMoveRecord[]>(moves => {
+      const { board, positions } = replayMoves(size, moves);
+      const legal = judgedPlacements(
+        size,
+        board,
+        positions,
+        stoneOf(moves.length),
+      );
+      const pick = legal[Math.floor(next() * legal.length)];
+      return pick === undefined ? moves : [...moves, pick.point];
+    }, []);
+  };
+
+  it("reads the same threats as judging the board after each stone afresh, on 50 random boards", () => {
+    Array.from({ length: 50 }, (_, index) => index).map(index => {
+      const size = index % 5 === 0 ? 13 : 9;
+      const moves = randomMoves(size, 20 + ((index * 7) % 60), index + 1);
+      const game = replayMoves(size, moves);
+      const stone = stoneOf(moves.length);
+      const readAfter = threatsAfter(size, game.board, game.positions, stone);
+      judgedPlacements(size, game.board, game.positions, stone).map(candidate =>
+        expect(readAfter(candidate)).toEqual(
+          threatsTo(size, candidate.placement.board, game.positions, stone),
+        ),
+      );
+    });
   });
 });

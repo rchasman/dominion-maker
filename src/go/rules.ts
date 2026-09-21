@@ -147,37 +147,28 @@ export function groupAt(board: string, size: number, start: Point): Group {
 /** A connected run of one character, flooded from its first point in board order */
 type Component<S extends string> = Fill & { stone: S };
 
-type Partition<S extends string> = {
-  claimed: ReadonlySet<number>;
-  found: Component<S>[];
-};
-
 /**
  * The board cut into the connected runs of the characters `accepts` picks
  * out, in board order: the groups when it picks stones, the empty areas when
- * it picks the dot. Each run is flooded once, from its first point.
+ * it picks the dot. Each run is flooded once, from its first point; the
+ * claimed set is local to this call.
  */
-const components = <S extends string>(
+function components<S extends string>(
   board: string,
   size: number,
   accepts: (current: string) => current is S,
-): Component<S>[] =>
-  allPoints(size).reduce<Partition<S>>(
-    (tally, point) => {
-      const stone = stoneAt(board, size, point);
-      if (!accepts(stone) || tally.claimed.has(indexOf(size, point)))
-        return tally;
-      const fill = floodFill(board, size, point, current => current === stone);
-      return {
-        claimed: new Set([
-          ...tally.claimed,
-          ...fill.inside.map(next => indexOf(size, next)),
-        ]),
-        found: [...tally.found, { ...fill, stone }],
-      };
-    },
-    { claimed: new Set<number>(), found: [] },
-  ).found;
+): Component<S>[] {
+  const claimed = new Set<number>();
+  const found: Component<S>[] = [];
+  for (const point of allPoints(size)) {
+    const stone = stoneAt(board, size, point);
+    if (!accepts(stone) || claimed.has(indexOf(size, point))) continue;
+    const fill = floodFill(board, size, point, current => current === stone);
+    for (const inside of fill.inside) claimed.add(indexOf(size, inside));
+    found.push({ ...fill, stone });
+  }
+  return found;
+}
 
 const isStone = (current: string): current is Stone =>
   current === "B" || current === "W";
@@ -186,13 +177,25 @@ const isEmpty = (current: string): current is typeof EMPTY => current === EMPTY;
 
 type ColouredGroup = Group & { stone: Stone };
 
+const asGroup = (
+  board: string,
+  size: number,
+  component: Component<Stone>,
+): ColouredGroup => ({
+  stone: component.stone,
+  stones: component.inside,
+  liberties: libertiesOf(board, size, component.edge),
+});
+
 /** Every group on the board in board order; each group's first stone is its first in board order */
 export const groupsOn = (board: string, size: number): ColouredGroup[] =>
-  components(board, size, isStone).map(component => ({
-    stone: component.stone,
-    stones: component.inside,
-    liberties: libertiesOf(board, size, component.edge),
-  }));
+  components(board, size, isStone).map(component =>
+    asGroup(board, size, component),
+  );
+
+/** The board with `stone` on the one point at `index` */
+const withStone = (board: string, index: number, stone: string): string =>
+  `${board.slice(0, index)}${stone}${board.slice(index + 1)}`;
 
 const withStones = (
   board: string,
@@ -200,6 +203,7 @@ const withStones = (
   points: readonly Point[],
   stone: string,
 ): string => {
+  if (points.length === 0) return board;
   const indices = new Set(points.map(point => indexOf(size, point)));
   return [...board]
     .map((current, index) => (indices.has(index) ? stone : current))
@@ -234,7 +238,7 @@ export function judgePlacement(
   if (!onBoard(size, point)) return { ok: false, error: "off the board" };
   if (stoneAt(board, size, point) !== EMPTY)
     return { ok: false, error: "occupied" };
-  const placed = withStones(board, size, [point], stone);
+  const placed = withStone(board, indexOf(size, point), stone);
   const enemy = opponentOf(stone);
   const captured = neighbours(size, point)
     .filter(next => stoneAt(placed, size, next) === enemy)
@@ -267,6 +271,12 @@ export const judgedPlacements = (
 
 const ONE_LIBERTY = 1;
 const SAFE_LIBERTIES = 2;
+
+/** A stone that leaves its own group on one liberty and lifts nothing: the opponent takes it next move */
+export const isSelfAtari = (facts: {
+  libertiesAfter: number;
+  captures: number;
+}): boolean => facts.libertiesAfter === ONE_LIBERTY && facts.captures === 0;
 
 /** The stones of `colour` touching `point` that stand on one liberty, a group reached through two neighbours counted once */
 const stonesInAtariAround = (
@@ -329,6 +339,247 @@ export const isEyeOf = (
   point: Point,
 ): boolean =>
   neighbours(size, point).every(next => stoneAt(board, size, next) === stone);
+
+/** What one legal enemy stone could do to `stone`'s groups on this board */
+export type Threats = {
+  /** The most of `stone`'s stones a single enemy placement lifts */
+  exposed: number;
+  /** The largest of `stone`'s groups a single enemy placement, itself not self-atari, leaves on one liberty */
+  threatened: number;
+};
+
+const largest = (counts: readonly number[]): number => Math.max(0, ...counts);
+
+/** The points once each, in first-seen order */
+const uniquePoints = (points: readonly Point[]): Point[] => [
+  ...new Map(points.map(point => [pointKey(point), point])).values(),
+];
+
+/** What an enemy stone on one point does: refused by the rules, or the stones it lifts and the liberties it then has */
+type Reply =
+  | { ok: false }
+  | { ok: true; captures: number; libertiesAfter: number };
+
+const REFUSED: Reply = { ok: false };
+
+const replyOn = (
+  size: number,
+  board: string,
+  positions: ReadonlySet<string>,
+  enemy: Stone,
+  point: Point,
+): Reply => {
+  const judged = judgePlacement(size, board, positions, enemy, point);
+  return judged.ok
+    ? {
+        ok: true,
+        captures: judged.placement.captured,
+        libertiesAfter: groupAt(judged.placement.board, size, point).liberties
+          .length,
+      }
+    : REFUSED;
+};
+
+const lifts = (reply: Reply): number => (reply.ok ? reply.captures : 0);
+
+/** The rules allow the enemy stone and it does not hand itself over */
+const isSound = (reply: Reply): boolean =>
+  reply.ok &&
+  !isSelfAtari({
+    libertiesAfter: reply.libertiesAfter,
+    captures: reply.captures,
+  });
+
+/**
+ * One move of reading ahead, from `stone`'s groups rather than from every
+ * enemy reply. A group on one liberty hangs by that point, and the enemy
+ * stone there lifts every group hanging by it, unless superko refuses the
+ * stone, as it does the retake of a ko. A group on two liberties is put in
+ * atari by an enemy stone on either, unless the rules refuse the stone or it
+ * would stand in atari itself.
+ */
+const threatsFrom = (
+  groups: readonly Group[],
+  replyAt: (point: Point) => Reply,
+): Threats => {
+  const hangingBy = uniquePoints(
+    groups
+      .filter(group => group.liberties.length === ONE_LIBERTY)
+      .flatMap(group => group.liberties),
+  );
+  return {
+    exposed: largest(hangingBy.map(point => lifts(replyAt(point)))),
+    threatened: largest(
+      groups
+        .filter(group => group.liberties.length === SAFE_LIBERTIES)
+        .filter(group => group.liberties.some(point => isSound(replyAt(point))))
+        .map(group => group.stones.length),
+    ),
+  };
+};
+
+/**
+ * What the enemy's next stone could do to `stone`'s groups on `board` as it
+ * stands. `positions` holds every board shown before this one; no reply can
+ * repeat this board itself, since it adds a stone.
+ */
+export const threatsTo = (
+  size: number,
+  board: string,
+  positions: ReadonlySet<string>,
+  stone: Stone,
+): Threats =>
+  threatsFrom(
+    groupsOn(board, size).filter(group => group.stone === stone),
+    point => replyOn(size, board, positions, opponentOf(stone), point),
+  );
+
+const NO_HISTORY: ReadonlySet<string> = new Set();
+
+/**
+ * An enemy reply judged on the board before the candidate lands, kept for
+ * every candidate that leaves the reply's neighbourhood as it was. Superko
+ * is left out: it compares the whole board, so each candidate checks it on
+ * its own board, which `lifted` rebuilds from.
+ */
+type KeptReply = { reply: Reply; lifted: Point[] };
+
+/**
+ * A group is known by its number in board order, and every stone names the
+ * group holding it, so the groups touching a point are read off without a
+ * flood.
+ */
+type GroupTable = {
+  groups: ColouredGroup[];
+  groupIdAt: ReadonlyMap<number, number>;
+};
+
+const groupTable = (board: string, size: number): GroupTable => {
+  const groups = groupsOn(board, size);
+  return {
+    groups,
+    groupIdAt: new Map(
+      groups.flatMap((group, id) =>
+        group.stones.map(point => [indexOf(size, point), id]),
+      ),
+    ),
+  };
+};
+
+const groupIdsAround = (
+  size: number,
+  table: GroupTable,
+  point: Point,
+): number[] => [
+  ...new Set(
+    neighbours(size, point).flatMap(next => {
+      const id = table.groupIdAt.get(indexOf(size, next));
+      return id === undefined ? [] : [id];
+    }),
+  ),
+];
+
+/**
+ * The threats to `stone` after each candidate lands, read once per
+ * candidate. The candidate changes the board only around its point: it
+ * joins the own groups it touches, takes a liberty from the enemy groups it
+ * touches, lifts the enemy groups it leaves without one, and gives the own
+ * groups beside those a liberty back. Every other group of `stone` stands
+ * as it did, and an enemy reply whose neighbours all stand as they did does
+ * what it did before, so it is judged once on the board before the stone
+ * and reused, with only superko checked again on the candidate's board.
+ */
+export const threatsAfter = (
+  size: number,
+  board: string,
+  positions: ReadonlySet<string>,
+  stone: Stone,
+): ((candidate: Candidate) => Threats) => {
+  const enemy = opponentOf(stone);
+  const table = groupTable(board, size);
+  const { groups } = table;
+  const ownIds = groups.flatMap((group, id) =>
+    group.stone === stone ? [id] : [],
+  );
+  const liftedBy = (point: Point): Point[] =>
+    groupIdsAround(size, table, point)
+      .map(id => groups[id])
+      .filter(
+        (group): group is ColouredGroup =>
+          group !== undefined &&
+          group.stone === stone &&
+          group.liberties.length === ONE_LIBERTY,
+      )
+      .flatMap(group => group.stones);
+  const kept = new Map<string, KeptReply>(
+    ownIds
+      .map(id => groups[id])
+      .filter(
+        (group): group is ColouredGroup =>
+          group !== undefined && group.liberties.length <= SAFE_LIBERTIES,
+      )
+      .flatMap(group => group.liberties)
+      .map(point => [
+        pointKey(point),
+        {
+          reply: replyOn(size, board, NO_HISTORY, enemy, point),
+          lifted: liftedBy(point),
+        },
+      ]),
+  );
+
+  return ({ point, placement }) => {
+    const after = placement.board;
+    const touchingPoint = groupIdsAround(size, table, point);
+    const lifted = touchingPoint
+      .map(id => groups[id])
+      .filter(
+        (group): group is ColouredGroup =>
+          group !== undefined &&
+          group.stone === enemy &&
+          group.liberties.length === ONE_LIBERTY,
+      )
+      .flatMap(group => group.stones);
+    const besideLifted = lifted.flatMap(next =>
+      groupIdsAround(size, table, next),
+    );
+    const touched = new Set([...touchingPoint, ...besideLifted]);
+    const changed = new Set([
+      indexOf(size, point),
+      ...lifted.map(next => indexOf(size, next)),
+      ...[...touched].flatMap(id =>
+        (groups[id]?.stones ?? []).map(next => indexOf(size, next)),
+      ),
+    ]);
+    const ownAfter: Group[] = [
+      groupAt(after, size, point),
+      ...ownIds
+        .filter(id => touched.has(id) && !touchingPoint.includes(id))
+        .flatMap(id => {
+          const [first] = groups[id]?.stones ?? [];
+          return first === undefined ? [] : [groupAt(after, size, first)];
+        }),
+      ...ownIds.filter(id => !touched.has(id)).flatMap(id => groups[id] ?? []),
+    ];
+    const replyAt = (at: Point): Reply => {
+      const known = kept.get(pointKey(at));
+      const disturbed = neighbours(size, at).some(next =>
+        changed.has(indexOf(size, next)),
+      );
+      if (known === undefined || disturbed)
+        return replyOn(size, after, positions, enemy, at);
+      if (!known.reply.ok) return REFUSED;
+      const shown = withStones(
+        withStone(after, indexOf(size, at), enemy),
+        size,
+        known.lifted,
+        EMPTY,
+      );
+      return positions.has(shown) ? REFUSED : known.reply;
+    };
+    return threatsFrom(ownAfter, replyAt);
+  };
+};
 
 type Replayed = {
   board: string;

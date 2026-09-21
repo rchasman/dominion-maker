@@ -3,9 +3,10 @@
  * eval reports, each judged on the board the move was played on, with the
  * same facts the voters were shown.
  */
-import { isSelfAtari, passWinsNow, placementFacts } from "../candidates";
+import { passWinsNow, placementFacts } from "../candidates";
 import {
   isEyeOf,
+  isSelfAtari,
   judgePlacement,
   pointLabel,
   replayMoves,
@@ -69,7 +70,12 @@ const judgeMove = (
   const judged = judgePlacement(size, board, positions, stone, move);
   if (!judged.ok)
     throw new Error(`${pointLabel(size, move)} is ${judged.error}`);
-  const facts = placementFacts(size, board, stone, {
+  const facts = placementFacts(
+    size,
+    board,
+    positions,
+    stone,
+  )({
     point: move,
     placement: judged.placement,
   });
