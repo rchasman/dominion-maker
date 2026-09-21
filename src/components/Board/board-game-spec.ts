@@ -34,10 +34,17 @@ type BoardArgs<G extends BoardShape, S> = {
   onResign?: () => void;
 };
 
+/** What the screens hand the game's log rows */
+export type LogArgs<G extends BoardShape> = {
+  state: G["state"];
+  /** Player ids read as names where a room names them; empty on a local table */
+  playerNames: Record<string, string>;
+};
+
 export interface BoardGameSpec<G extends BoardShape, S> {
   module: GameModule<G>;
   board: (args: BoardArgs<G, S>) => VNode;
-  log: (state: G["state"]) => ComponentChildren;
+  log: (args: LogArgs<G>) => ComponentChildren;
   logEntryCount: (state: G["state"]) => number;
   /** One colour per player, in seat order, for the mover indicator */
   colours: readonly string[];

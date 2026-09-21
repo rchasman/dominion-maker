@@ -15,7 +15,7 @@ export const goBoardGame: BoardGameSpec<GoShape, GoSession> = {
   board: ({ session, ...board }) => (
     <GoBoard {...board} onPlace={session.place} onPass={session.pass} />
   ),
-  log: state => <GoLogRows size={state.size} moves={state.moves} />,
+  log: ({ state }) => <GoLogRows size={state.size} moves={state.moves} />,
   logEntryCount: state => state.moves.length,
   colours: SIDE_TEXT_COLORS,
   players: GO_PLAYERS,

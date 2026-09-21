@@ -15,7 +15,9 @@ export const chessBoardGame: BoardGameSpec<ChessShape, ChessSession> = {
   board: ({ session, ...board }) => (
     <ChessBoard {...board} onMove={session.move} />
   ),
-  log: state => <ChessLogRows moves={state.moves} />,
+  log: ({ state, playerNames }) => (
+    <ChessLogRows state={state} playerNames={playerNames} />
+  ),
   logEntryCount: state => state.moves.length,
   colours: SIDE_COLORS,
   players: CHESS_PLAYERS,

@@ -136,7 +136,7 @@ function LocalTableContent<G extends BoardShape, S extends GameSession>({
       </GameAreaLayout>
 
       <GameSidebar
-        log={spec.log(displayState)}
+        log={spec.log({ state: displayState, playerNames: {} })}
         logEntryCount={spec.logEntryCount(displayState)}
         turnStatus={
           <TurnStatusIndicator
