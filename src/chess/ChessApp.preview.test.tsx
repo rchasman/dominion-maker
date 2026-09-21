@@ -2,6 +2,11 @@ import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { render } from "preact";
 import { z } from "zod";
 import { registerHappyDom, settled } from "../happy-dom.test-fixture";
+import {
+  clickTitled,
+  openDevtools,
+  scrubTo,
+} from "../components/preview/scrub.test-fixture";
 import { ChessApp } from "./ChessApp";
 import { createChessGame } from "./engine";
 import { CHESS_PLAYERS } from "./seat";
@@ -19,21 +24,6 @@ const storedPlies = (): number => {
 };
 
 beforeAll(registerHappyDom);
-
-const settledAsync = async () => {
-  await new Promise(resolve => setTimeout(resolve, 0));
-  settled(() => {});
-};
-
-const clickButton = (root: HTMLElement, title: string) => {
-  const target = [...root.querySelectorAll("button")].find(
-    button => button.getAttribute("title") === title,
-  );
-  if (target === undefined) throw new Error(`no button titled ${title}`);
-  settled(() => {
-    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-};
 
 /** Squares listen for pointer presses; a tap is a press and release on one */
 const click = (root: HTMLElement, selector: string) => {
@@ -91,19 +81,6 @@ const seedTwoPlies = () => {
   );
 };
 
-const openDevtools = async (root: HTMLElement) => {
-  // The panel loads on demand, as it does for Dominion
-  await import("../components/EventDevtools");
-  await settledAsync();
-  const toggle = [...root.querySelectorAll("button")].find(button =>
-    button.textContent?.includes("{ }"),
-  );
-  settled(() => {
-    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-  return [...root.querySelectorAll("[data-event-index]")];
-};
-
 const mountApp = () => {
   const root = document.createElement("div");
   document.body.appendChild(root);
@@ -129,9 +106,7 @@ describe("scrubbing the local chess game", () => {
 
     // Scrub to the latest move: the position is the live one, and White is to
     // move, so only preview mode can stop the board from taking the click
-    settled(() => {
-      rows[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[2]);
     expect(root.textContent).toContain("PREVIEW MODE");
     const before = piecesOnBoard(root);
     move(root, "d2", "d4");
@@ -139,14 +114,12 @@ describe("scrubbing the local chess game", () => {
     expect(piecesOnBoard(root)).toBe(before);
 
     // Scrub back one move: the pawn is on e4 and e5 is empty again
-    settled(() => {
-      rows[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[1]);
     expect(pieceAt(root, "e5")).toBe("");
     expect(pieceAt(root, "e7")).not.toBe("");
 
     // Leaving preview hands the live position back, and a move lands
-    clickButton(root, "Jump to live");
+    clickTitled(root, "Jump to live");
     expect(root.textContent).not.toContain("PREVIEW MODE");
     move(root, "d2", "d4");
     expect(storedPlies()).toBe(4);
@@ -162,13 +135,11 @@ describe("scrubbing the local chess game", () => {
     expect(storedPlies()).toBe(3);
 
     const rows = await openDevtools(root);
-    settled(() => {
-      rows[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[1]);
     expect(root.textContent).toContain("PREVIEW MODE");
 
     // Branching keeps the event on show: three events become two
-    clickButton(root, "Branch from here");
+    clickTitled(root, "Branch from here");
     expect(storedPlies()).toBe(2);
     expect(root.textContent).toContain("e4");
     expect(root.textContent).not.toContain("PREVIEW MODE");
