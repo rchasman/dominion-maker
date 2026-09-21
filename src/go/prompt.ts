@@ -4,10 +4,17 @@ import {
   replyFormatInstruction,
   replyShape,
 } from "../core/consensus/numbered-choice";
-import { KOMI, columnLabels, recordLabel, stoneName, stoneOf } from "./rules";
+import {
+  KOMI,
+  boardHeader,
+  boardRows,
+  recordLabel,
+  stoneName,
+  stoneOf,
+} from "./rules";
 import type { GoMove, GoShape, GoState } from "./shape";
 
-const RECALLED_MOVES = 8;
+export const RECALLED_MOVES = 8;
 
 /** One row of the numbered table; the label already names the point */
 export const goPromptRow = (move: GoMove) => ({ point: move.label });
@@ -40,18 +47,11 @@ ${replyFormatInstruction(choiceCount)}
 ${GUIDANCE}`;
 }
 
-function asciiBoard(board: string, size: number): string {
-  const header = `   ${columnLabels(size).join(" ")}`;
-  const rows = Array.from({ length: size }, (_, y) => {
-    const stones = board
-      .slice(y * size, (y + 1) * size)
-      .split("")
-      .map(stone => GLYPHS[stone] ?? stone)
-      .join(" ");
-    return `${String(size - y).padStart(2)} ${stones}`;
-  });
-  return [header, ...rows].join("\n");
-}
+const asciiBoard = (board: string, size: number): string =>
+  [
+    boardHeader(size),
+    ...boardRows(board, size, stone => GLYPHS[stone] ?? stone),
+  ].join("\n");
 
 const capturesLine = (state: GoState): string =>
   `CAPTURES: Black has taken ${state.captures[0]}, White has taken ${state.captures[1]}. KOMI: ${KOMI} to White.`;

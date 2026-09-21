@@ -4,20 +4,14 @@ import { createGoGame, type GoEngine } from "./engine";
 import { replyFormatInstruction } from "../core/consensus/numbered-choice";
 import { KOMI } from "./rules";
 import type { GoMove, GoMoveRecord, GoState } from "./shape";
+import { playGoMoves } from "./test-helpers";
 
 const BLACK = "black";
 const WHITE = "white";
 const OPENING_MOVES = 82;
 
 const play = (engine: GoEngine, moves: GoMoveRecord[]) =>
-  moves.map((move, index) => {
-    const playerId = index % 2 === 0 ? BLACK : WHITE;
-    return engine.dispatch(
-      move === "pass"
-        ? { type: "PASS", playerId }
-        : { type: "PLACE", playerId, x: move.x, y: move.y },
-    );
-  });
+  playGoMoves(engine, [BLACK, WHITE], moves);
 
 const newGame = () => createGoGame([BLACK, WHITE], { size: 9 });
 

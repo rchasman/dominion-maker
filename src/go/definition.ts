@@ -1,6 +1,7 @@
 import type { GameDefinition } from "../core/game-definition";
 import { sideToMove } from "./engine";
 import { goHeuristic } from "./heuristic";
+import { goEvaluate } from "./jev";
 import { goPrompt, goPromptRow } from "./prompt";
 import {
   legalPlacements,
@@ -44,6 +45,7 @@ export const goGame: GameDefinition<GoShape> = {
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
   prompt: goPrompt,
+  evaluate: goEvaluate,
   heuristic: goHeuristic,
   // turn and phase name the action id the consensus log builds, so they carry
   // the keys Dominion's payload carries. Go has one phase and it is a move.

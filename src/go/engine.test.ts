@@ -2,7 +2,8 @@ import { describe, it, expect } from "bun:test";
 import { createGoGame, loadGoEngine } from "./engine";
 import type { GoEngine } from "./engine";
 import { KOMI } from "./rules";
-import type { GoCommand, GoEvent, GoMoveRecord } from "./shape";
+import type { GoEvent, GoMoveRecord } from "./shape";
+import { playGoMoves } from "./test-helpers";
 
 const BLACK = "black";
 const WHITE = "white";
@@ -13,14 +14,7 @@ const newGame = (): GoEngine => createGoGame([BLACK, WHITE], { size: SIZE });
 const moverAt = (index: number) => (index % 2 === 0 ? BLACK : WHITE);
 
 const play = (engine: GoEngine, moves: GoMoveRecord[]) =>
-  moves.map((move, index) => {
-    const playerId = moverAt(index);
-    const command: GoCommand =
-      move === "pass"
-        ? { type: "PASS", playerId }
-        : { type: "PLACE", playerId, x: move.x, y: move.y };
-    return engine.dispatch(command, playerId);
-  });
+  playGoMoves(engine, [BLACK, WHITE], moves);
 
 const point = (x: number, y: number): GoMoveRecord => ({ x, y });
 

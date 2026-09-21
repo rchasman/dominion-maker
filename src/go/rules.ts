@@ -36,11 +36,30 @@ export const pointKey = (point: Point): string => `${point.x},${point.y}`;
 export const columnLabels = (size: number): string[] =>
   COLUMNS.slice(0, size).split("");
 
+/** The column letters spaced to sit over the stones of `boardRows` */
+export const boardHeader = (size: number): string =>
+  `   ${columnLabels(size).join(" ")}`;
+
+/** One line per row, numbered from the top so row 1 is the bottom edge, each stone drawn by `glyphOf` */
+export const boardRows = (
+  board: string,
+  size: number,
+  glyphOf: (stone: string) => string,
+): string[] =>
+  Array.from({ length: size }, (_, y) => {
+    const stones = board
+      .slice(y * size, (y + 1) * size)
+      .split("")
+      .map(glyphOf)
+      .join(" ");
+    return `${String(size - y).padStart(2)} ${stones}`;
+  });
+
 /** Black plays the even-numbered moves, counting from zero */
 export const stoneOf = (moveIndex: number): Stone =>
   moveIndex % 2 === 0 ? "B" : "W";
 
-const opponentOf = (stone: Stone): Stone => (stone === "B" ? "W" : "B");
+export const opponentOf = (stone: Stone): Stone => (stone === "B" ? "W" : "B");
 
 export const stoneName = (stone: Stone): string =>
   stone === "B" ? "Black" : "White";
@@ -178,15 +197,72 @@ export function judgePlacement(
   return { ok: true, placement: { board: afterCaptures, captured: lifted } };
 }
 
+export type Candidate = { point: Point; placement: Placement };
+
+/** Every placement the rules allow and the board it leaves, in board order */
+export const judgedPlacements = (
+  size: number,
+  board: string,
+  positions: ReadonlySet<string>,
+  stone: Stone,
+): Candidate[] =>
+  allPoints(size).flatMap(point => {
+    const judged = judgePlacement(size, board, positions, stone, point);
+    return judged.ok ? [{ point, placement: judged.placement }] : [];
+  });
+
 export const legalPlacements = (
   size: number,
   board: string,
   positions: ReadonlySet<string>,
   stone: Stone,
 ): Point[] =>
-  allPoints(size).filter(
-    point => judgePlacement(size, board, positions, stone, point).ok,
+  judgedPlacements(size, board, positions, stone).map(
+    candidate => candidate.point,
   );
+
+const ONE_LIBERTY = 1;
+const SAFE_LIBERTIES = 2;
+
+/**
+ * The stones this placement pulls out of atari: own groups whose one liberty
+ * is the point, provided the joined group then breathes. A group counted
+ * through two neighbours is counted once.
+ */
+export const rescuedStones = (
+  size: number,
+  board: string,
+  stone: Stone,
+  candidate: Candidate,
+): number => {
+  const threatened = neighbours(size, candidate.point)
+    .filter(next => stoneAt(board, size, next) === stone)
+    .map(next => groupAt(board, size, next))
+    .filter(group => group.liberties.length === ONE_LIBERTY);
+  if (threatened.length === 0) return 0;
+  const joined = groupAt(candidate.placement.board, size, candidate.point);
+  if (joined.liberties.length < SAFE_LIBERTIES) return 0;
+  return new Set(threatened.flatMap(group => group.stones.map(pointKey))).size;
+};
+
+/** How many neighbours of the point hold `stone` */
+export const neighbourStones = (
+  size: number,
+  board: string,
+  point: Point,
+  stone: Stone,
+): number =>
+  neighbours(size, point).filter(next => stoneAt(board, size, next) === stone)
+    .length;
+
+/** An empty point every neighbour of which is `stone`'s; filling it costs an eye */
+export const isEyeOf = (
+  size: number,
+  board: string,
+  stone: Stone,
+  point: Point,
+): boolean =>
+  neighbours(size, point).every(next => stoneAt(board, size, next) === stone);
 
 type Replayed = {
   board: string;
