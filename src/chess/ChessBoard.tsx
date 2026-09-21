@@ -6,6 +6,7 @@ import { SeatSelector } from "../components/SeatSelector";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
 import { chessModule } from "./module";
+import { replayMoves } from "./replay";
 import type { ChessMove, ChessState } from "./shape";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
@@ -98,21 +99,13 @@ const resultText = (
 };
 
 /**
- * The squares the last move touched, from a replay of the log. The position
- * itself comes from the FEN, so a log this client cannot replay costs the
- * board its last-move tint and nothing else.
+ * The squares the last move touched. The position itself comes from the FEN,
+ * so a log this client cannot replay costs the board its last-move tint and
+ * nothing else.
  */
 const lastMoveOf = (
   moves: readonly string[],
-): { from: string; to: string } | null => {
-  const chess = new Chess();
-  try {
-    for (const san of moves) chess.move(san);
-  } catch {
-    return null;
-  }
-  return chess.history({ verbose: true }).at(-1) ?? null;
-};
+): { from: string; to: string } | null => replayMoves(moves)?.at(-1) ?? null;
 
 /**
  * The chess game area: an 8x8 SVG board, the promotion picker, a header per
