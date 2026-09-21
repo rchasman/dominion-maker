@@ -7,15 +7,18 @@
  * Usage: bun src/go/evals/vs-bot.ts --model gemini-3.5-flash-lite --games 3 --size 9 --api http://localhost:5178 [--both] [--cap 300]
  */
 import { parseArgs } from "node:util";
-import { httpDecideMove } from "../../agent/http-decide-move";
-import { MODEL_IDS, type ModelProvider } from "../../config/models";
 import type { LLMLogEntryInput } from "../../core/consensus/types";
-import { heuristicController } from "../../core/controller";
-import { driveEngine } from "../../core/driver";
-import { llmController } from "../../core/llm-controller";
-import type { ControllerConfig, Seats } from "../../core/seats";
-import { run } from "../../lib/run";
-import { goGame } from "../definition";
+import {
+  failAbandoned,
+  mean,
+  perGame,
+  playAgainstBot,
+  playColours,
+  readVsBotArgs,
+  signed,
+  VS_BOT_OPTIONS,
+  winRate,
+} from "../../evals/vs-bot";
 import { goModule } from "../module";
 import {
   finalScore,
@@ -29,43 +32,19 @@ import type { GoScore, GoSize, GoState } from "../shape";
 import { gameStats, type MoveStats } from "./game-stats";
 
 const [BLACK_ID, WHITE_ID] = GO_PLAYERS;
-/** Past this many refused or failed decisions a game is abandoned, not retried forever */
-const MAX_FAILURES = 10;
-const PERCENT = 100;
+const DEFAULT_CAP = 300;
 
 const { values: args } = parseArgs({
-  options: {
-    model: { type: "string" },
-    games: { type: "string", default: "3" },
-    size: { type: "string", default: "9" },
-    api: { type: "string", default: "http://localhost:5174" },
-    both: { type: "boolean", default: false },
-    cap: { type: "string", default: "300" },
-  },
+  options: { ...VS_BOT_OPTIONS, size: { type: "string" } },
 });
-
-const isModelId = (id: string): id is ModelProvider =>
-  MODEL_IDS.some(known => known === id);
 
 const isGoSize = (size: number): size is GoSize =>
   size === 9 || size === 13 || size === 19;
 
-const positiveInt = (name: string, raw: string): number => {
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed < 1)
-    throw new Error(`--${name} must be a positive integer, got "${raw}"`);
-  return parsed;
-};
-
-if (args.model === undefined || !isModelId(args.model))
-  throw new Error("--model must name a model id from the catalog");
-const model: ModelProvider = args.model;
-const games = positiveInt("games", args.games);
-const cap = positiveInt("cap", args.cap);
-const boardSize = Number(args.size);
+const { model, games, api, both, cap } = readVsBotArgs(args, DEFAULT_CAP);
+const boardSize = Number(args.size ?? "9");
 if (!isGoSize(boardSize)) throw new Error("--size must be 9, 13 or 19");
 const size: GoSize = boardSize;
-const api = args.api;
 
 type Played = {
   state: GoState;
@@ -84,49 +63,19 @@ const reasoningOfPass = (entry: LLMLogEntryInput): string | null => {
 
 const playGame = async (colour: Stone): Promise<Played> => {
   const engine = goModule.createEngine([BLACK_ID, WHITE_ID], { size });
-  const modelSeat = colour === "B" ? BLACK_ID : WHITE_ID;
-  const botSeat = colour === "B" ? WHITE_ID : BLACK_ID;
-  const seats: Seats = {
-    [modelSeat]: {
-      kind: "llm",
-      models: [model],
-      consensusCount: 1,
-      customStrategy: "",
-    },
-    [botSeat]: { kind: "heuristic" },
-  };
-  const decideMove = httpDecideMove(goModule, api);
-  const abort = new AbortController();
-  const failures: string[] = [];
   const passReasons: string[] = [];
-  const controllerFor = (config: ControllerConfig) =>
-    run(() => {
-      if (config.kind === "llm")
-        return llmController(goGame, config, {
-          decideMove,
-          getPlayerStrategies: () => ({}),
-          logger: entry => {
-            const reason = reasoningOfPass(entry);
-            if (reason !== null) passReasons.push(reason);
-          },
-        });
-      if (config.kind === "heuristic") return heuristicController(goGame);
-      return null;
-    });
-
-  await driveEngine(engine, {
-    game: goGame,
-    getSeats: () => seats,
-    controllerFor,
-    onStep: () => {
-      if (engine.state.moves.length >= cap) abort.abort();
-    },
-    stepDelayMs: 0,
-    minRetryDelayMs: 1000,
-    signal: abort.signal,
-    logError: message => {
-      failures.push(message);
-      if (failures.length >= MAX_FAILURES) abort.abort();
+  const failures = await playAgainstBot({
+    module: goModule,
+    engine,
+    model,
+    api,
+    modelSeat: colour === "B" ? BLACK_ID : WHITE_ID,
+    botSeat: colour === "B" ? WHITE_ID : BLACK_ID,
+    plies: state => state.moves.length,
+    cap,
+    logger: entry => {
+      const reason = reasoningOfPass(entry);
+      if (reason !== null) passReasons.push(reason);
     },
   });
   return { state: engine.state, failures, passReasons };
@@ -143,9 +92,6 @@ const outcomeFor = (score: GoScore, colour: Stone): string => {
 
 const endingOf = (state: GoState): string =>
   state.gameOver ? "two passes" : "the move cap";
-
-const signed = (value: number): string =>
-  value > 0 ? `+${value}` : `${value}`;
 
 type Summary = {
   margin: number;
@@ -172,41 +118,18 @@ const report = (played: Played, colour: Stone, index: number): Summary => {
   return { margin, won: outcome === "WIN", stats, capturesMade };
 };
 
-const mean = (values: number[]): number =>
-  values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
-
-const perGame = (values: number[]): string => mean(values).toFixed(1);
-
 const summarise = (summaries: Summary[], colour: Stone): void => {
   const wins = summaries.filter(summary => summary.won).length;
   console.log(
-    `[${model} as ${stoneName(colour)}] ${summaries.length} games: win rate ${Math.round((PERCENT * wins) / Math.max(summaries.length, 1))}%, mean margin ${mean(summaries.map(summary => summary.margin)).toFixed(1)}, per game: first-line ${perGame(summaries.map(s => s.stats.firstLine))} (quiet ${perGame(summaries.map(s => s.stats.quietFirstLine))}), self-atari ${perGame(summaries.map(s => s.stats.selfAtari))}, eye fills ${perGame(summaries.map(s => s.stats.eyeFills))}, captures ${perGame(summaries.map(s => s.capturesMade))}, premature passes ${perGame(summaries.map(s => s.stats.prematurePasses))}`,
+    `[${model} as ${stoneName(colour)}] ${summaries.length} games: win rate ${winRate(wins, summaries.length)}, mean margin ${mean(summaries.map(summary => summary.margin)).toFixed(1)}, per game: first-line ${perGame(summaries.map(s => s.stats.firstLine))} (quiet ${perGame(summaries.map(s => s.stats.quietFirstLine))}), self-atari ${perGame(summaries.map(s => s.stats.selfAtari))}, eye fills ${perGame(summaries.map(s => s.stats.eyeFills))}, captures ${perGame(summaries.map(s => s.capturesMade))}, premature passes ${perGame(summaries.map(s => s.stats.prematurePasses))}`,
   );
 };
 
-const runColour = async (colour: Stone): Promise<Played[]> => {
-  const played = await Promise.all(
-    Array.from({ length: games }, () => playGame(colour)),
-  );
+const colours: Stone[] = both ? ["B", "W"] : ["B"];
+const played = await playColours(colours, games, playGame, (finished, colour) =>
   summarise(
-    played.map((game, index) => report(game, colour, index)),
+    finished.map((game, index) => report(game, colour, index)),
     colour,
-  );
-  return played;
-};
-
-const colours: Stone[] = args.both ? ["B", "W"] : ["B"];
-const played = await colours.reduce<Promise<Played[]>>(
-  async (previous, colour) => [
-    ...(await previous),
-    ...(await runColour(colour)),
-  ],
-  Promise.resolve([]),
+  ),
 );
-const abandoned = played.filter(game => game.failures.length >= MAX_FAILURES);
-if (abandoned.length > 0) {
-  console.log(
-    `${abandoned.length} game(s) were abandoned after ${MAX_FAILURES} failed decisions; their numbers are not complete games.`,
-  );
-  process.exitCode = 1;
-}
+failAbandoned(played);
