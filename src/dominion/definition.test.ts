@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { dominionGame } from "./definition";
+import { promptRow } from "./moves";
 import { fixture } from "./test-fixture";
 
 describe("dominionGame", () => {
@@ -69,11 +70,11 @@ describe("dominionGame", () => {
     expect(
       dominionGame.moveKey({ type: "buy_card", card: "Gold", reasoning: "x" }),
     ).toBe(dominionGame.moveKey({ type: "buy_card", card: "Gold" }));
-    expect(dominionGame.promptRow({ type: "buy_card", card: "Gold" })).toEqual({
+    expect(promptRow({ type: "buy_card", card: "Gold" })).toEqual({
       type: "buy_card",
       card: "Gold",
     });
-    expect(dominionGame.promptRow({ type: "end_phase" })).toEqual({
+    expect(promptRow({ type: "end_phase" })).toEqual({
       type: "end_phase",
       card: "",
     });

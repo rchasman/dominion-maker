@@ -75,10 +75,14 @@ const pointAt = (size: number, index: number): Point => ({
 const onBoard = (size: number, point: Point): boolean =>
   point.x >= 0 && point.y >= 0 && point.x < size && point.y < size;
 
-export const allPoints = (size: number): Point[] =>
+const allPoints = (size: number): Point[] =>
   Array.from({ length: size * size }, (_, index) => pointAt(size, index));
 
-export const neighbours = (size: number, point: Point): Point[] =>
+/** Lines are counted in from the nearest edge, the way players read a board */
+export const lineOf = (size: number, point: Point): number =>
+  Math.min(point.x, point.y, size - 1 - point.x, size - 1 - point.y) + 1;
+
+const neighbours = (size: number, point: Point): Point[] =>
   [
     { x: point.x, y: point.y - 1 },
     { x: point.x + 1, y: point.y },
@@ -125,6 +129,9 @@ function floodFill(
 
 type Group = { stones: Point[]; liberties: Point[] };
 
+const libertiesOf = (board: string, size: number, edge: Point[]): Point[] =>
+  edge.filter(point => stoneAt(board, size, point) === EMPTY);
+
 /** The stones joined to the one on `start`, and the empty points they touch */
 export function groupAt(board: string, size: number, start: Point): Group {
   const colour = stoneAt(board, size, start);
@@ -134,11 +141,58 @@ export function groupAt(board: string, size: number, start: Point): Group {
     start,
     stone => stone === colour,
   );
-  return {
-    stones: inside,
-    liberties: edge.filter(point => stoneAt(board, size, point) === EMPTY),
-  };
+  return { stones: inside, liberties: libertiesOf(board, size, edge) };
 }
+
+/** A connected run of one character, flooded from its first point in board order */
+type Component<S extends string> = Fill & { stone: S };
+
+type Partition<S extends string> = {
+  claimed: ReadonlySet<number>;
+  found: Component<S>[];
+};
+
+/**
+ * The board cut into the connected runs of the characters `accepts` picks
+ * out, in board order: the groups when it picks stones, the empty areas when
+ * it picks the dot. Each run is flooded once, from its first point.
+ */
+const components = <S extends string>(
+  board: string,
+  size: number,
+  accepts: (current: string) => current is S,
+): Component<S>[] =>
+  allPoints(size).reduce<Partition<S>>(
+    (tally, point) => {
+      const stone = stoneAt(board, size, point);
+      if (!accepts(stone) || tally.claimed.has(indexOf(size, point)))
+        return tally;
+      const fill = floodFill(board, size, point, current => current === stone);
+      return {
+        claimed: new Set([
+          ...tally.claimed,
+          ...fill.inside.map(next => indexOf(size, next)),
+        ]),
+        found: [...tally.found, { ...fill, stone }],
+      };
+    },
+    { claimed: new Set<number>(), found: [] },
+  ).found;
+
+const isStone = (current: string): current is Stone =>
+  current === "B" || current === "W";
+
+const isEmpty = (current: string): current is typeof EMPTY => current === EMPTY;
+
+type ColouredGroup = Group & { stone: Stone };
+
+/** Every group on the board in board order; each group's first stone is its first in board order */
+export const groupsOn = (board: string, size: number): ColouredGroup[] =>
+  components(board, size, isStone).map(component => ({
+    stone: component.stone,
+    stones: component.inside,
+    liberties: libertiesOf(board, size, component.edge),
+  }));
 
 const withStones = (
   board: string,
@@ -152,7 +206,7 @@ const withStones = (
     .join("");
 };
 
-export type Placement = { board: string; captured: number };
+type Placement = { board: string; captured: number };
 
 type PlacementError =
   | "off the board"
@@ -211,23 +265,27 @@ export const judgedPlacements = (
     return judged.ok ? [{ point, placement: judged.placement }] : [];
   });
 
-export const legalPlacements = (
-  size: number,
-  board: string,
-  positions: ReadonlySet<string>,
-  stone: Stone,
-): Point[] =>
-  judgedPlacements(size, board, positions, stone).map(
-    candidate => candidate.point,
-  );
-
 const ONE_LIBERTY = 1;
 const SAFE_LIBERTIES = 2;
 
+/** The stones of `colour` touching `point` that stand on one liberty, a group reached through two neighbours counted once */
+const stonesInAtariAround = (
+  size: number,
+  board: string,
+  colour: Stone,
+  point: Point,
+): number =>
+  new Set(
+    neighbours(size, point)
+      .filter(next => stoneAt(board, size, next) === colour)
+      .map(next => groupAt(board, size, next))
+      .filter(group => group.liberties.length === ONE_LIBERTY)
+      .flatMap(group => group.stones.map(pointKey)),
+  ).size;
+
 /**
  * The stones this placement pulls out of atari: own groups whose one liberty
- * is the point, provided the joined group then breathes. A group counted
- * through two neighbours is counted once.
+ * is the point, provided the joined group then breathes.
  */
 export const rescuedStones = (
   size: number,
@@ -235,15 +293,23 @@ export const rescuedStones = (
   stone: Stone,
   candidate: Candidate,
 ): number => {
-  const threatened = neighbours(size, candidate.point)
-    .filter(next => stoneAt(board, size, next) === stone)
-    .map(next => groupAt(board, size, next))
-    .filter(group => group.liberties.length === ONE_LIBERTY);
-  if (threatened.length === 0) return 0;
+  const threatened = stonesInAtariAround(size, board, stone, candidate.point);
+  if (threatened === 0) return 0;
   const joined = groupAt(candidate.placement.board, size, candidate.point);
-  if (joined.liberties.length < SAFE_LIBERTIES) return 0;
-  return new Set(threatened.flatMap(group => group.stones.map(pointKey))).size;
+  return joined.liberties.length < SAFE_LIBERTIES ? 0 : threatened;
 };
+
+/**
+ * The enemy stones the stone on `point` leaves with one liberty, read off the
+ * board after it landed and its captures were lifted. An enemy group touching
+ * the point had two or more liberties before, or the stone captured it.
+ */
+export const atariStones = (
+  size: number,
+  after: string,
+  stone: Stone,
+  point: Point,
+): number => stonesInAtariAround(size, after, opponentOf(stone), point);
 
 /** How many neighbours of the point hold `stone` */
 export const neighbourStones = (
@@ -330,7 +396,49 @@ export function replayMoves(
 const countStones = (board: string, stone: Stone): number =>
   [...board].filter(current => current === stone).length;
 
-type Territory = { claimed: ReadonlySet<number>; black: number; white: number };
+type EmptyRegion = {
+  points: Point[];
+  /** The one colour whose stones border the region; null when both do, or none does */
+  owner: Stone | null;
+};
+
+const ownerOf = (
+  board: string,
+  size: number,
+  edge: readonly Point[],
+): Stone | null => {
+  const borders = [...new Set(edge.map(next => stoneAt(board, size, next)))];
+  const only = borders.length === 1 ? borders[0] : undefined;
+  return only !== undefined && isStone(only) ? only : null;
+};
+
+/** The connected empty areas of the board, in board order, each with the colour that alone borders it */
+const emptyRegions = (board: string, size: number): EmptyRegion[] =>
+  components(board, size, isEmpty).map(component => ({
+    points: component.inside,
+    owner: ownerOf(board, size, component.edge),
+  }));
+
+/** Empty points by who alone reaches them; neutral points are reached by both colours, or by neither */
+export type Territory = { black: number; white: number; neutral: number };
+
+/** The empty points neither colour alone reaches, in board order: the dame, and the shared liberties of a seki */
+export const neutralPoints = (board: string, size: number): Point[] =>
+  emptyRegions(board, size).flatMap(region =>
+    region.owner === null ? region.points : [],
+  );
+
+/** Territory is decided here once: the score, the position summary and the pass gate all read it from here */
+export const territoryOf = (board: string, size: number): Territory =>
+  emptyRegions(board, size).reduce<Territory>(
+    (tally, region) => ({
+      black: tally.black + (region.owner === "B" ? region.points.length : 0),
+      white: tally.white + (region.owner === "W" ? region.points.length : 0),
+      neutral:
+        tally.neutral + (region.owner === null ? region.points.length : 0),
+    }),
+    { black: 0, white: 0, neutral: 0 },
+  );
 
 /**
  * Area scoring: each colour's stones plus the empty points only that colour
@@ -338,27 +446,7 @@ type Territory = { claimed: ReadonlySet<number>; black: number; white: number };
  * Seki gets no special case; its shared liberties are neutral by this rule.
  */
 function areaScore(board: string, size: number): GoScore {
-  const territory = allPoints(size).reduce<Territory>(
-    (tally, point) => {
-      const index = indexOf(size, point);
-      if (stoneAt(board, size, point) !== EMPTY || tally.claimed.has(index))
-        return tally;
-      const region = floodFill(board, size, point, stone => stone === EMPTY);
-      const borders = new Set(
-        region.edge.map(next => stoneAt(board, size, next)),
-      );
-      const owner = borders.size === 1 ? [...borders][0] : undefined;
-      return {
-        claimed: new Set([
-          ...tally.claimed,
-          ...region.inside.map(next => indexOf(size, next)),
-        ]),
-        black: tally.black + (owner === "B" ? region.inside.length : 0),
-        white: tally.white + (owner === "W" ? region.inside.length : 0),
-      };
-    },
-    { claimed: new Set<number>(), black: 0, white: 0 },
-  );
+  const territory = territoryOf(board, size);
   return {
     black: countStones(board, "B") + territory.black,
     white: countStones(board, "W") + territory.white,

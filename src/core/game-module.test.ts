@@ -107,7 +107,6 @@ const countingGame: GameDefinition<G> = {
   moveToCommand: (_state, move) => ({ add: move.add, by: move.by }),
   moveKey: move => String(move.add),
   describeMove: move => `add ${move.add}`,
-  promptRow: move => ({ add: move.add }),
   prompt: () => ({ system: "", user: "" }),
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,

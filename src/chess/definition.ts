@@ -3,7 +3,7 @@ import type { GameDefinition } from "../core/game-definition";
 import { moveNumberOf, sideToMove } from "./engine";
 import { chessHeuristic } from "./heuristic";
 import { chessEvaluate } from "./jev";
-import { chessPrompt, chessPromptRow } from "./prompt";
+import { chessPrompt } from "./prompt";
 import type { ChessMove, ChessShape } from "./shape";
 
 /**
@@ -39,7 +39,6 @@ export const chessGame: GameDefinition<ChessShape> = {
   }),
   moveKey: move => move.san,
   describeMove: move => move.san,
-  promptRow: chessPromptRow,
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
   prompt: chessPrompt,

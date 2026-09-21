@@ -1,39 +1,46 @@
 import { describe, expect, it } from "bun:test";
+import { llmController, type DecideMove } from "../core/llm-controller";
+import { offeredMoves } from "./candidates";
 import { goGame } from "./definition";
 import { createGoGame, type GoEngine } from "./engine";
-import { replyFormatInstruction } from "../core/consensus/numbered-choice";
-import { KOMI } from "./rules";
-import type { GoMove, GoMoveRecord, GoState } from "./shape";
-import { playGoMoves } from "./test-helpers";
+import type { GoMove, GoMoveRecord, GoShape, GoState } from "./shape";
+import { goStateAfter, playGoMoves } from "./test-helpers";
 
 const BLACK = "black";
 const WHITE = "white";
-const OPENING_MOVES = 82;
+const OPENING_MOVES = 81;
+const PASS: GoMove = { kind: "pass", label: "pass" };
+
+const point = (x: number, y: number): GoMoveRecord => ({ x, y });
 
 const play = (engine: GoEngine, moves: GoMoveRecord[]) =>
   playGoMoves(engine, [BLACK, WHITE], moves);
 
 const newGame = () => createGoGame([BLACK, WHITE], { size: 9 });
 
-const promptFor = (state: GoState, customStrategy = "") =>
-  goGame.prompt({
-    state,
-    player: goGame.whoMustAct(state) ?? BLACK,
-    moves: goGame.legalMoves(state, BLACK),
-    playerStrategies: {},
-    customStrategy,
-  });
+const after = (moves: GoMoveRecord[]): GoState =>
+  goStateAfter([BLACK, WHITE], moves);
 
 const labelled = (moves: GoMove[], label: string): GoMove | undefined =>
   moves.find(move => move.label === label);
 
+const autoMoveAfter = (moves: GoMoveRecord[]): GoMove | undefined => {
+  const state = after(moves);
+  const player = goGame.whoMustAct(state) ?? BLACK;
+  return goGame.autoMove?.(state, player, goGame.legalMoves(state, player));
+};
+
+/** A voter that must never be asked; the controller has to settle the move itself */
+const neverAsked: DecideMove<GoShape> = () =>
+  Promise.reject(new Error("the models were asked"));
+
 describe("the Go definition answers what the driver asks", () => {
-  it("offers every point of the empty board and the pass, each labelled", () => {
+  it("offers every point of the empty board, each labelled, and no pass", () => {
     const moves = goGame.legalMoves(newGame().state, BLACK);
     expect(moves).toHaveLength(OPENING_MOVES);
     expect(moves[0]).toEqual({ kind: "place", x: 0, y: 0, label: "A9" });
     expect(moves[80]).toEqual({ kind: "place", x: 8, y: 8, label: "J1" });
-    expect(moves[81]).toEqual({ kind: "pass", label: "pass" });
+    expect(labelled(moves, "pass")).toBeUndefined();
     expect(labelled(moves, "D4")).toEqual({
       kind: "place",
       x: 3,
@@ -42,12 +49,24 @@ describe("the Go definition answers what the driver asks", () => {
     });
   });
 
-  it("drops a taken point and a superko repeat from the table", () => {
+  it("drops a taken point from the table", () => {
     const engine = newGame();
     play(engine, [{ x: 4, y: 4 }]);
     const moves = goGame.legalMoves(engine.state, WHITE);
     expect(moves).toHaveLength(OPENING_MOVES - 1);
     expect(labelled(moves, "E5")).toBeUndefined();
+  });
+
+  it("offers the voters the moves the rules can defend", () => {
+    // A9 is Black's eye here; the voters are not offered it, the engine still takes it
+    const state = after([point(1, 0), point(7, 8), point(0, 1), point(7, 7)]);
+    expect(goGame.legalMoves(state, BLACK)).toEqual(offeredMoves(state));
+    expect(labelled(goGame.legalMoves(state, BLACK), "A9")).toBeUndefined();
+    const engine = newGame();
+    play(engine, [point(1, 0), point(7, 8), point(0, 1), point(7, 7)]);
+    expect(
+      engine.dispatch({ type: "PLACE", playerId: BLACK, x: 0, y: 0 }).ok,
+    ).toBe(true);
   });
 
   it("hands the turn over and stops once the game is over", () => {
@@ -71,8 +90,7 @@ describe("the Go definition answers what the driver asks", () => {
       x: 3,
       y: 5,
     });
-    const pass = labelled(moves, "pass");
-    expect(pass && goGame.moveToCommand(engine.state, pass, BLACK)).toEqual({
+    expect(goGame.moveToCommand(engine.state, PASS, BLACK)).toEqual({
       type: "PASS",
       playerId: BLACK,
     });
@@ -84,61 +102,29 @@ describe("the Go definition answers what the driver asks", () => {
     expect(goGame.reasoningOf(move)).toBe("corner");
     expect(goGame.moveKey(move)).toBe("D4");
     expect(goGame.describeMove(move)).toBe("D4");
-    expect(goGame.promptRow(move)).toEqual({ point: "D4" });
   });
 
-  it("teaches the reply format in the system text", () => {
-    const { system } = promptFor(newGame().state);
-    expect(system.length).toBeGreaterThan(200);
-    expect(system).toContain("Go");
-    expect(system).toContain(replyFormatInstruction(OPENING_MOVES));
-    expect(system).toContain('{"reasoning"');
-  });
-
-  it("shows the board, the captures, the komi and a numbered move table", () => {
+  it("passes without a vote when the opponent has passed and it leads", async () => {
+    expect(autoMoveAfter([point(3, 5), "pass"])).toEqual(PASS);
     const engine = newGame();
-    play(engine, [
-      { x: 3, y: 5 },
-      { x: 5, y: 3 },
-    ]);
-    const { user } = promptFor(engine.state);
-    expect(user).toContain("   A B C D E F G H J");
-    expect(user).toContain(" 9 . . . . . . . . .");
-    expect(user).toContain(" 6 . . . . . O . . .");
-    expect(user).toContain(" 4 . . . X . . . . .");
-    expect(user).toContain(" 1 . . . . . . . . .");
-    expect(user).toContain(`KOMI: ${KOMI} to White`);
-    expect(user).toContain("Black has taken 0, White has taken 0");
-    expect(user).toContain("LEGAL MOVES");
-    expect(user).toContain("1\tA9");
-    expect(user).toContain(`${OPENING_MOVES - 2}\tpass`);
-  });
-
-  it("recalls only the last eight moves", () => {
-    const engine = newGame();
-    play(engine, [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-      { x: 2, y: 0 },
-      { x: 3, y: 0 },
-      { x: 4, y: 0 },
-      { x: 5, y: 0 },
-      { x: 6, y: 0 },
-      { x: 7, y: 0 },
-      "pass",
-      { x: 8, y: 0 },
-    ]);
-    const { user } = promptFor(engine.state);
-    expect(user).toContain("RECENT MOVES: C9 D9 E9 F9 G9 H9 pass J9");
-    expect(user).not.toContain("A9 B9");
-  });
-
-  it("adds a custom strategy only when there is one", () => {
-    const state = newGame().state;
-    expect(promptFor(state).user).not.toContain("STRATEGY");
-    expect(promptFor(state, "  Take the corners.  ").user).toContain(
-      "Take the corners.",
+    play(engine, [point(3, 5), "pass"]);
+    const controller = llmController(
+      goGame,
+      { kind: "llm", models: [], consensusCount: 1, customStrategy: "" },
+      { decideMove: neverAsked, getPlayerStrategies: () => ({}) },
     );
+    expect(
+      await controller.decide(engine, BLACK, new AbortController().signal),
+    ).toEqual({ type: "PASS", playerId: BLACK });
+  });
+
+  it("asks for a vote when it is behind, or when the opponent has not passed", () => {
+    // Two Black stones against one White stone and komi: Black is behind
+    expect(
+      autoMoveAfter([point(4, 4), point(2, 6), point(6, 2), "pass"]),
+    ).toBeUndefined();
+    expect(autoMoveAfter([point(3, 5), point(2, 6)])).toBeUndefined();
+    expect(autoMoveAfter([])).toBeUndefined();
   });
 
   it("describes the position for the consensus viewer", () => {

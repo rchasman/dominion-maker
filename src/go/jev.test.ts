@@ -12,8 +12,9 @@ import { goStateAfter } from "./test-helpers";
 
 const BLACK = "b";
 const WHITE = "w";
-const OPENING_MOVES = 82;
-const FULL_BOARD_OPENING_MOVES = 362;
+const OPENING_MOVES = 81;
+const FULL_BOARD_OPENING_MOVES = 361;
+const PASS: GoMove = { kind: "pass", label: "pass" };
 
 const point = (x: number, y: number): GoMoveRecord => ({ x, y });
 
@@ -32,8 +33,15 @@ const descriptionOf = (
 ): string | null | undefined =>
   question.options.find(option => option.move.label === label)?.description;
 
+const stone = (x: number, y: number, label: string): GoMove => ({
+  kind: "place",
+  x,
+  y,
+  label,
+});
+
 describe("goJevQuestion", () => {
-  it("offers every legal point and the pass once, keyed by table number and label", () => {
+  it("offers every offered move once, keyed by table number and label", () => {
     const state = after([]);
     const moves = goGame.legalMoves(state, BLACK);
     const question = goJevQuestion(state, moves);
@@ -107,33 +115,66 @@ describe("goJevQuestion", () => {
     expect(descriptionOf(question, "A1")).not.toContain("Saves");
   });
 
-  it("counts the liberties of the group a stone joins and warns when it lands in atari", () => {
-    // A8 and B9 are Black's stones; A9 joins them into one group of three.
+  it("states when a placement puts enemy stones in atari", () => {
+    // White's E5 stone has Black on D5 and F5; E6 leaves it E4 alone
     const question = questionFor(
-      after([point(1, 0), point(8, 8), point(0, 1), point(8, 7)]),
+      after([point(3, 4), point(4, 4), point(5, 4), point(7, 8)]),
     );
-    expect(descriptionOf(question, "A9")).toBe(
+    expect(descriptionOf(question, "E6")).toBe(
+      "Black stone at E6, on line 4. Captures nothing. The group it joins would have 3 liberties. Puts 1 White stone in atari. Touches 0 own stones and 1 enemy stone",
+    );
+    expect(descriptionOf(question, "E3")).not.toContain("in atari");
+  });
+
+  it("describes a stone it is asked about even when the voters were not offered it", () => {
+    // A8 and B9 are Black's stones, so A9 is an eye the table leaves out
+    const eye = after([point(1, 0), point(8, 8), point(0, 1), point(8, 7)]);
+    expect(descriptionOf(questionFor(eye), "A9")).toBeUndefined();
+    expect(descriptionOf(goJevQuestion(eye, [stone(0, 0, "A9")]), "A9")).toBe(
       "Black stone at A9, on line 1. Captures nothing. The group it joins would have 3 liberties. Touches 2 own stones and 0 enemy stones",
     );
-    const cornered = questionFor(
-      after([point(8, 8), point(0, 1), point(8, 7), point(1, 1)]),
+    // With White on A8 and B8, Black's A9 would stand on B9 alone
+    const cornered = after([
+      point(8, 8),
+      point(0, 1),
+      point(8, 7),
+      point(1, 1),
+    ]);
+    expect(
+      descriptionOf(goJevQuestion(cornered, [stone(0, 0, "A9")]), "A9"),
+    ).toContain("would have 1 liberty: in atari");
+  });
+
+  it("calls a ko capture a ko, not a stone capturable on the next move", () => {
+    // Black takes the ko at D8 with a stone that stands on one liberty
+    const question = questionFor(
+      after([
+        point(1, 1),
+        point(3, 0),
+        point(2, 0),
+        point(3, 2),
+        point(2, 2),
+        point(4, 1),
+        point(7, 7),
+        point(2, 1),
+      ]),
     );
-    expect(descriptionOf(cornered, "A9")).toContain(
-      "would have 1 liberty: in atari",
+    const description = descriptionOf(question, "D8");
+    expect(description).toContain("Captures 1 White stone");
+    expect(description).toContain(
+      "would have 1 liberty after capturing: a ko or snapback, a ko cannot be retaken at once",
     );
+    expect(description).not.toContain("capturable on the next move");
   });
 
   it("describes the pass with the score the board would settle at", () => {
-    const fresh = questionFor(after([]));
+    const fresh = goJevQuestion(after([]), [PASS]);
     expect(descriptionOf(fresh, "pass")).toBe(
-      "Pass: plays no stone. If the opponent passes next, the game ends and is scored as it stands: Black 0 to White 7.5 with komi counted: White leads by 7.5",
+      "Pass: plays no stone. It ends the game if the opponent passes too; score would be Black 0 to White 7.5 with komi counted: White leads by 7.5",
     );
     const answered = questionFor(after([point(3, 5), "pass"]));
-    expect(descriptionOf(answered, "pass")).toContain(
-      "The opponent has just passed, so this ends the game",
-    );
-    expect(descriptionOf(answered, "pass")).toContain(
-      "Black 81 to White 7.5 with komi counted: Black leads by 73.5",
+    expect(descriptionOf(answered, "pass")).toBe(
+      "Pass: plays no stone. It ends the game now, scored as it stands: Black 81 to White 7.5 with komi counted: Black leads by 73.5",
     );
   });
 
@@ -151,30 +192,39 @@ describe("goJevQuestion", () => {
     expect(OPENING_MOVES).toBeLessThan(JEV_MAX_OPTIONS);
     expect(questionFor(after([])).options).toHaveLength(OPENING_MOVES);
     expect(questionFor(after([])).instructions).not.toContain(
-      "legal moves are offered",
+      "candidate moves are listed",
     );
   });
 
-  it("cuts a 19x19 opening to the option limit, keeping the pass and the original numbering", () => {
+  it("cuts a 19x19 opening to the option limit, keeping the original numbering", () => {
     const state = afterOnFullBoard([]);
     const moves = goGame.legalMoves(state, BLACK);
     expect(moves).toHaveLength(FULL_BOARD_OPENING_MOVES);
     const question = goJevQuestion(state, moves);
     expect(question.options).toHaveLength(JEV_MAX_OPTIONS);
-    expect(question.options.map(option => option.move.label)).toContain("pass");
     question.options.map(option =>
       expect(option.key).toBe(
         jevOptionKey(moves.indexOf(option.move), option.move.label),
       ),
     );
     expect(question.instructions).toContain(
-      `Only ${JEV_MAX_OPTIONS} of the ${FULL_BOARD_OPENING_MOVES} legal moves are offered`,
+      `Only the ${JEV_MAX_OPTIONS} strongest candidate moves are listed`,
     );
     // Every first-line point is weaker by these facts than any inner point.
     expect(descriptionOf(question, "A1")).toBeUndefined();
     expect(descriptionOf(question, "T19")).toBeUndefined();
     expect(descriptionOf(question, "D4")).toContain("on line 4");
     expect(descriptionOf(question, "K10")).toContain("on line 10");
+  });
+
+  it("keeps the pass inside the cut when it is offered", () => {
+    // White passed and Black leads, so the pass is on the table
+    const state = afterOnFullBoard([point(3, 15), "pass"]);
+    const moves = goGame.legalMoves(state, BLACK);
+    expect(moves).toHaveLength(FULL_BOARD_OPENING_MOVES);
+    const question = goJevQuestion(state, moves);
+    expect(question.options).toHaveLength(JEV_MAX_OPTIONS);
+    expect(descriptionOf(question, "pass")).toContain("ends the game now");
   });
 
   it("keeps a capture on the edge inside the cut list", () => {
@@ -189,18 +239,18 @@ describe("goJevQuestion", () => {
 
   it("refuses a placement the rules do not allow", () => {
     const state = after([point(3, 5)]);
-    expect(() =>
-      goJevQuestion(state, [{ kind: "place", x: 3, y: 5, label: "D4" }]),
-    ).toThrow("D4 is occupied");
+    expect(() => goJevQuestion(state, [stone(3, 5, "D4")])).toThrow(
+      "D4 is occupied",
+    );
   });
 
-  it("maps Jev's distribution back onto the legal moves", () => {
-    const question = questionFor(after([]));
+  it("maps Jev's distribution back onto the offered moves", () => {
+    const question = questionFor(after([point(3, 5), "pass"]));
     const read = readJevChoice(
       {
         type: "choice",
         choice: "34. G6",
-        probabilities: { "34. G6": 0.5, "82. pass": 0.45, "1. A9": 0.005 },
+        probabilities: { "34. G6": 0.5, "81. pass": 0.45, "1. A9": 0.005 },
       },
       question.options,
     );
@@ -216,7 +266,7 @@ describe("goJevQuestion", () => {
 });
 
 describe("goJevState", () => {
-  it("spells the board out row by row with the score as it stands", () => {
+  it("spells the board out row by row with the score, the territory and the groups", () => {
     const jevState = goJevState(after([point(3, 5), point(5, 3)]), "");
     expect(jevState.size).toBe(9);
     expect(jevState.sideToMove).toBe("Black");
@@ -241,8 +291,55 @@ describe("goJevState", () => {
       white: 8.5,
       summary: "Black 1 to White 8.5 with komi counted: White leads by 7.5",
     });
+    expect(jevState.emptyPoints).toEqual({
+      blackTerritory: 0,
+      whiteTerritory: 0,
+      neutral: 79,
+    });
+    expect(jevState.groups).toEqual([
+      {
+        colour: "Black",
+        stones: 1,
+        around: "D4",
+        liberties: 4,
+        inAtari: false,
+      },
+      {
+        colour: "White",
+        stones: 1,
+        around: "F6",
+        liberties: 4,
+        inAtari: false,
+      },
+    ]);
     expect(jevState.recentMoves).toEqual(["D4", "F6"]);
     expect(jevState).not.toHaveProperty("strategyOverride");
+  });
+
+  it("flags a group in atari", () => {
+    // Black's E5-F5 pair hangs by G5
+    const jevState = goJevState(
+      after([
+        point(4, 4),
+        point(3, 4),
+        point(5, 4),
+        point(4, 3),
+        point(7, 7),
+        point(5, 3),
+        point(8, 6),
+        point(4, 5),
+        point(7, 8),
+        point(5, 5),
+      ]),
+      "",
+    );
+    expect(jevState.groups).toContainEqual({
+      colour: "Black",
+      stones: 2,
+      around: "E5",
+      liberties: 1,
+      inAtari: true,
+    });
   });
 
   it("omits the recent moves before the first one and carries the trimmed override", () => {

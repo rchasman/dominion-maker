@@ -1,14 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import {
   KOMI,
+  atariStones,
   finalScore,
   groupAt,
+  groupsOn,
   judgePlacement,
+  judgedPlacements,
   leaderOf,
-  legalPlacements,
-  neighbours,
+  lineOf,
   pointLabel,
   replayMoves,
+  territoryOf,
 } from "./rules";
 import type { GoMoveRecord } from "./shape";
 
@@ -41,14 +44,81 @@ describe("Go coordinates", () => {
     expect(pointLabel(19, { x: 18, y: 18 })).toBe("T1");
   });
 
-  it("gives a corner two neighbours, an edge three and the middle four", () => {
-    expect(neighbours(9, { x: 0, y: 0 })).toHaveLength(2);
-    expect(neighbours(9, { x: 4, y: 0 })).toHaveLength(3);
-    expect(neighbours(9, { x: 4, y: 4 })).toHaveLength(4);
-    expect(neighbours(9, { x: 8, y: 8 })).toEqual([
-      { x: 8, y: 7 },
-      { x: 7, y: 8 },
+  it("counts lines in from the nearest edge", () => {
+    expect(lineOf(9, { x: 0, y: 0 })).toBe(1);
+    expect(lineOf(9, { x: 8, y: 3 })).toBe(1);
+    expect(lineOf(9, { x: 3, y: 5 })).toBe(4);
+    expect(lineOf(9, { x: 4, y: 4 })).toBe(5);
+    expect(lineOf(19, { x: 9, y: 9 })).toBe(10);
+  });
+});
+
+describe("the groups and the empty regions of a board", () => {
+  const board = boardOf([
+    "B . B . . . . . W",
+    "B B B . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . W B . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ]);
+
+  it("lists every group in board order with its colour and liberties", () => {
+    expect(
+      groupsOn(board, SIZE).map(group => ({
+        stone: group.stone,
+        stones: group.stones.length,
+        first: pointLabel(SIZE, group.stones[0] ?? { x: -1, y: -1 }),
+        liberties: group.liberties.length,
+      })),
+    ).toEqual([
+      { stone: "B", stones: 5, first: "A9", liberties: 6 },
+      { stone: "W", stones: 1, first: "J9", liberties: 2 },
+      { stone: "W", stones: 1, first: "E5", liberties: 3 },
+      { stone: "B", stones: 1, first: "F5", liberties: 3 },
     ]);
+  });
+
+  it("gives each empty region to the one colour that borders it, or to nobody", () => {
+    // B9 is walled in by Black alone; the rest touches both colours
+    expect(territoryOf(board, SIZE)).toEqual({
+      black: 1,
+      white: 0,
+      neutral: 72,
+    });
+    expect(territoryOf(EMPTY_BOARD, SIZE)).toEqual({
+      black: 0,
+      white: 0,
+      neutral: 81,
+    });
+  });
+
+  it("counts the enemy stones a placed stone leaves on one liberty", () => {
+    // Black on D5 and F5 flank White's E5; E6 leaves it E4 alone
+    const flanked = boardOf([
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . B W B . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+      ". . . . . . . . .",
+    ]);
+    const judged = judge(flanked, "B", 4, 3);
+    if (!judged.ok) throw new Error(judged.error);
+    expect(atariStones(SIZE, judged.placement.board, "B", { x: 4, y: 3 })).toBe(
+      1,
+    );
+    const elsewhere = judge(flanked, "B", 0, 0);
+    if (!elsewhere.ok) throw new Error(elsewhere.error);
+    expect(
+      atariStones(SIZE, elsewhere.placement.board, "B", { x: 0, y: 0 }),
+    ).toBe(0);
   });
 });
 
@@ -135,12 +205,12 @@ describe("a stone landing on the board", () => {
 
   it("offers every empty point on an open board and no occupied one", () => {
     expect(
-      legalPlacements(SIZE, EMPTY_BOARD, new Set([EMPTY_BOARD]), "B"),
+      judgedPlacements(SIZE, EMPTY_BOARD, new Set([EMPTY_BOARD]), "B"),
     ).toHaveLength(81);
     const one = judge(EMPTY_BOARD, "B", 4, 4);
     if (!one.ok) throw new Error(one.error);
     expect(
-      legalPlacements(SIZE, one.placement.board, NO_HISTORY, "W"),
+      judgedPlacements(SIZE, one.placement.board, NO_HISTORY, "W"),
     ).toHaveLength(80);
   });
 });

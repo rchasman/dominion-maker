@@ -138,7 +138,7 @@ describe("the Go module describes its own wire shapes", () => {
     const { definition } = goModule;
     expect(definition.players(engine.state)).toEqual([BLACK, WHITE]);
     expect(definition.whoMustAct(engine.state)).toBe(BLACK);
-    expect(definition.legalMoves(engine.state, BLACK)).toHaveLength(82);
+    expect(definition.legalMoves(engine.state, BLACK)).toHaveLength(81);
     expect(
       definition.moveToCommand(
         engine.state,

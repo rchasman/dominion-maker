@@ -65,8 +65,6 @@ export interface GameDefinition<G extends GameShape> {
   ): G["command"];
   moveKey(move: G["move"]): string;
   describeMove(move: G["move"]): string;
-  /** One row of the numbered table the models pick from */
-  promptRow(move: G["move"]): Record<string, string | number>;
   /** Attaches a model's explanation to the move it picked */
   withReasoning(move: G["move"], reasoning: string): G["move"];
   /** Reads a model's explanation back off a move for the voting log */
