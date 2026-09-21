@@ -1,10 +1,11 @@
 /**
- * Live evaluation: one text model plays the rules bot on a Go board through
- * the real generate-action endpoint, so the offered moves, the prompt and the
- * reply protocol are the production ones. Each game is judged by the rules'
- * own facts, then the mean margin and the win rate follow.
+ * Live evaluation: one text model plays the rules bot, or a second text
+ * model, on a Go board through the real generate-action endpoint, so the
+ * offered moves, the prompt and the reply protocol are the production ones.
+ * Each game is judged by the rules' own facts, then the mean margin and the
+ * win rate follow.
  *
- * Usage: bun src/go/evals/vs-bot.ts --model gemini-3.5-flash-lite --games 3 --size 9 --api http://localhost:5178 [--both] [--cap 300]
+ * Usage: bun src/go/evals/vs-bot.ts --model gemini-3.5-flash-lite --games 3 --size 9 --api http://localhost:5178 [--both] [--cap 300] [--opponent claude-haiku]
  */
 import { parseArgs } from "node:util";
 import { httpDecideMove } from "../../agent/http-decide-move";
@@ -13,7 +14,7 @@ import type { LLMLogEntryInput } from "../../core/consensus/types";
 import { heuristicController } from "../../core/controller";
 import { driveEngine } from "../../core/driver";
 import { llmController } from "../../core/llm-controller";
-import type { ControllerConfig, Seats } from "../../core/seats";
+import type { ControllerConfig, LlmSeatConfig, Seats } from "../../core/seats";
 import { run } from "../../lib/run";
 import { goGame } from "../definition";
 import { goModule } from "../module";
@@ -41,6 +42,7 @@ const { values: args } = parseArgs({
     api: { type: "string", default: "http://localhost:5174" },
     both: { type: "boolean", default: false },
     cap: { type: "string", default: "300" },
+    opponent: { type: "string" },
   },
 });
 
@@ -57,43 +59,59 @@ const positiveInt = (name: string, raw: string): number => {
   return parsed;
 };
 
+/** The second text model, when one is named; the rules bot takes the seat otherwise */
+const opponentModel = (raw: string | undefined): ModelProvider | null => {
+  if (raw === undefined) return null;
+  if (!isModelId(raw))
+    throw new Error("--opponent must name a model id from the catalog");
+  return raw;
+};
+
 if (args.model === undefined || !isModelId(args.model))
   throw new Error("--model must name a model id from the catalog");
 const model: ModelProvider = args.model;
+const opponent = opponentModel(args.opponent);
 const games = positiveInt("games", args.games);
 const cap = positiveInt("cap", args.cap);
 const boardSize = Number(args.size);
 if (!isGoSize(boardSize)) throw new Error("--size must be 9, 13 or 19");
 const size: GoSize = boardSize;
 const api = args.api;
+const rival = opponent ?? "the rules bot";
+
+const llmSeat = (id: ModelProvider): LlmSeatConfig => ({
+  kind: "llm",
+  models: [id],
+  consensusCount: 1,
+  customStrategy: "",
+});
+
+const rivalSeat: ControllerConfig =
+  opponent === null ? { kind: "heuristic" } : llmSeat(opponent);
 
 type Played = {
   state: GoState;
   failures: string[];
-  /** The model's explanation each time it passed, in play order */
+  /** Each pass a model explained, named by the model, in play order */
   passReasons: string[];
 };
 
 const reasoningOfPass = (entry: LLMLogEntryInput): string | null => {
   if (entry.type !== "consensus-model-complete") return null;
   const action = entry.data?.["action"];
+  const provider = entry.data?.["provider"];
   const move = goModule.moveSchema.safeParse(action);
   if (!move.success || move.data.kind !== "pass") return null;
-  return move.data.reasoning ?? "(no reasoning given)";
+  return `${typeof provider === "string" ? provider : "unknown model"}: ${move.data.reasoning ?? "(no reasoning given)"}`;
 };
 
 const playGame = async (colour: Stone): Promise<Played> => {
   const engine = goModule.createEngine([BLACK_ID, WHITE_ID], { size });
   const modelSeat = colour === "B" ? BLACK_ID : WHITE_ID;
-  const botSeat = colour === "B" ? WHITE_ID : BLACK_ID;
+  const otherSeat = colour === "B" ? WHITE_ID : BLACK_ID;
   const seats: Seats = {
-    [modelSeat]: {
-      kind: "llm",
-      models: [model],
-      consensusCount: 1,
-      customStrategy: "",
-    },
-    [botSeat]: { kind: "heuristic" },
+    [modelSeat]: llmSeat(model),
+    [otherSeat]: rivalSeat,
   };
   const decideMove = httpDecideMove(goModule, api);
   const abort = new AbortController();
@@ -162,7 +180,7 @@ const report = (played: Played, colour: Stone, index: number): Summary => {
   const margin = marginFor(score, colour);
   const outcome = outcomeFor(score, colour);
   console.log(
-    `[${model} as ${stoneName(colour)}] game ${index + 1}: ${state.moves.length} moves, ended by ${endingOf(state)}, ${outcome}. Score Black ${score.black} to White ${score.white}, margin ${signed(margin)}. First-line moves ${stats.firstLine} (${stats.quietFirstLine} quiet), self-atari ${stats.selfAtari}, eye fills ${stats.eyeFills}, captures made ${capturesMade}, passes ${stats.passes}, passed with neutral points left: ${stats.prematurePasses > 0 ? `yes (${stats.prematurePasses})` : "no"}`,
+    `[${model} as ${stoneName(colour)} vs ${rival}] game ${index + 1}: ${state.moves.length} moves, ended by ${endingOf(state)}, ${outcome}. Score Black ${score.black} to White ${score.white}, margin ${signed(margin)}. First-line moves ${stats.firstLine} (${stats.quietFirstLine} quiet), self-atari ${stats.selfAtari}, eye fills ${stats.eyeFills}, captures made ${capturesMade}, passes ${stats.passes}, passed with neutral points left: ${stats.prematurePasses > 0 ? `yes (${stats.prematurePasses})` : "no"}`,
   );
   console.log(
     `  record: ${state.moves.map(move => recordLabel(size, move)).join(" ")}`,
@@ -180,7 +198,7 @@ const perGame = (values: number[]): string => mean(values).toFixed(1);
 const summarise = (summaries: Summary[], colour: Stone): void => {
   const wins = summaries.filter(summary => summary.won).length;
   console.log(
-    `[${model} as ${stoneName(colour)}] ${summaries.length} games: win rate ${Math.round((PERCENT * wins) / Math.max(summaries.length, 1))}%, mean margin ${mean(summaries.map(summary => summary.margin)).toFixed(1)}, per game: first-line ${perGame(summaries.map(s => s.stats.firstLine))} (quiet ${perGame(summaries.map(s => s.stats.quietFirstLine))}), self-atari ${perGame(summaries.map(s => s.stats.selfAtari))}, eye fills ${perGame(summaries.map(s => s.stats.eyeFills))}, captures ${perGame(summaries.map(s => s.capturesMade))}, premature passes ${perGame(summaries.map(s => s.stats.prematurePasses))}`,
+    `[${model} as ${stoneName(colour)} vs ${rival}] ${summaries.length} games: win rate ${Math.round((PERCENT * wins) / Math.max(summaries.length, 1))}%, mean margin ${mean(summaries.map(summary => summary.margin)).toFixed(1)}, per game: first-line ${perGame(summaries.map(s => s.stats.firstLine))} (quiet ${perGame(summaries.map(s => s.stats.quietFirstLine))}), self-atari ${perGame(summaries.map(s => s.stats.selfAtari))}, eye fills ${perGame(summaries.map(s => s.stats.eyeFills))}, captures ${perGame(summaries.map(s => s.capturesMade))}, premature passes ${perGame(summaries.map(s => s.stats.prematurePasses))}`,
   );
 };
 
