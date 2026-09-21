@@ -3,11 +3,6 @@ import { render } from "preact";
 import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
 import { mockCardUrls } from "../../data/card-urls.test-fixture";
 import { chessBoardGame } from "../../chess/board-game";
-import {
-  isDisabled,
-  optionsOf,
-  selectorOf,
-} from "../../chess/seat-selector.test-fixture";
 import { createRemoteChessSession } from "../../chess/create-remote-chess-session";
 import { createChessGame } from "../../chess/engine";
 import { chessModule } from "../../chess/module";
@@ -15,6 +10,19 @@ import { rememberedLlm$ } from "../../context/game-signals";
 import type { ControllerKind } from "../../core/seats";
 import type { GameServerMessage, PlayerInfo } from "../../partykit/protocol";
 import { fakeRoom } from "../../session/fake-room.test-fixture";
+
+/** The seat selector in one chess player's header, or null where that header shows none */
+export const selectorOf = (root: HTMLElement, playerId: string) =>
+  root.querySelector(`[data-chess-player="${playerId}"] select.seat-selector`);
+
+export const optionsOf = (select: Element | null) =>
+  [...(select?.querySelectorAll("option") ?? [])].map(
+    option => option.textContent,
+  );
+
+/** null when there is no select at all, so a missing selector never reads as enabled */
+export const isDisabled = (select: Element | null) =>
+  select instanceof HTMLSelectElement ? select.disabled : null;
 
 // Static imports hoist above the mock, so the one module that reaches the card art loads after it
 await mockCardUrls();
