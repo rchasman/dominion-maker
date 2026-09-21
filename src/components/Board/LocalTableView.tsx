@@ -16,6 +16,7 @@ import { usePreviewState } from "../preview/usePreviewState";
 import type { BoardGameSpec, BoardShape } from "./board-game-spec";
 import { BoardLayout, GameAreaLayout } from "./BoardLayout";
 import { GameSidebar } from "./GameSidebar";
+import { NO_SEAT_CONTROL, seatControlFor } from "./seat-control";
 import { moverColorFor, presetsFor, turnStatusFor } from "./turn-sidebar";
 import { TurnStatusIndicator } from "./TurnStatusIndicator";
 
@@ -108,6 +109,13 @@ function LocalTableContent<G extends BoardShape, S extends GameSession>({
   };
 
   const displayState = preview.state ?? state;
+  const seatControl = isPreviewMode
+    ? NO_SEAT_CONTROL
+    : seatControlFor({
+        table: { mode: "local", seats },
+        defaultLlm: spec.module.defaultLlmSeat,
+        setSeat: session.setSeat,
+      });
 
   return (
     <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
@@ -115,11 +123,10 @@ function LocalTableContent<G extends BoardShape, S extends GameSession>({
         {spec.board({
           session,
           state: displayState,
-          seats,
           localPlayerId: localHuman,
           playerNames: {},
           disabled: isPreviewMode,
-          ...(!isPreviewMode && { onSeatChange: session.setSeat }),
+          seatControl,
           ...(localHuman !== null &&
             !isPreviewMode && {
               onTakeBack: takeBack,

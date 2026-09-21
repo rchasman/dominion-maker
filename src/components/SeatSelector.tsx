@@ -20,13 +20,6 @@ const LABELS: Record<ControllerKind, string> = {
 
 const isKind = (value: string): value is ControllerKind => value in LABELS;
 
-/** Every kind a seat can hold, for a table with no seat it hides */
-export const DEFAULT_SEAT_OPTIONS: readonly ControllerKind[] = [
-  "human",
-  "heuristic",
-  "llm",
-];
-
 interface SeatSelectorProps {
   playerId: string;
   config: ControllerConfig;

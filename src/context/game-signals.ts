@@ -58,7 +58,6 @@ export const pendingUndo$ = view(
 export const llmLogs$ = view(s => s.llmLogs.value, EMPTY);
 export const chatMessages$ = view(s => s.chatMessages.value, EMPTY);
 export const isSpectator$ = view(s => s.isSpectator.value, false);
-export const isHost$ = view(s => s.isHost.value, false);
 export const players$ = view(s => s.players.value, EMPTY);
 
 // ---------------------------------------------------------------------------

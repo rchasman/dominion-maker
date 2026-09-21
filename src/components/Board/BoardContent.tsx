@@ -6,7 +6,6 @@ import { formatPlayerName, getPlayerColor } from "../../lib/board-utils";
 import {
   players$,
   pendingUndo$,
-  isHost$,
   isSpectator$,
   localPlayerId$ as localPlayerId$$,
 } from "../../context/game-signals";
@@ -19,10 +18,9 @@ import { GameOverModal } from "./GameOverModal";
 import { UndoRequestModal } from "./UndoRequestModal";
 import type { CardName, GameState, PlayerId } from "../../types/game-state";
 import type { GameEvent } from "../../events/types";
-import type { ControllerConfig, ControllerKind, Seats } from "../../core/seats";
-import { HUMAN_SEAT, isHumanSeat } from "../../core/seats";
+import type { ControllerConfig, Seats } from "../../core/seats";
 import type { PlayerStrategyData } from "../../types/player-strategy";
-import { SeatSelector } from "../SeatSelector";
+import { seatControlFor, type SeatTable } from "./seat-control";
 import { dominionModule } from "../../dominion/module";
 import { SEAT_PRESETS } from "../../context/seat-presets";
 import {
@@ -231,33 +229,22 @@ export function BoardContent({
     }
     return null;
   });
-  const isHost = isHost$.value;
-  const isLocalGame = game.appMode === "local";
-  // Single player: you are always the human, so your own seat has no selector.
-  // Lobby rooms: Manual or LLM; Engine stays a single-player option.
-  const seatOptions: readonly ControllerKind[] = isLocalGame
-    ? ["heuristic", "llm"]
-    : ["human", "llm"];
-  const showsSelector = (playerId: PlayerId): boolean =>
-    !isLocalGame || !isHumanSeat(game.seats[playerId]);
-  const canEditSeat = (playerId: PlayerId): boolean =>
-    isLocalGame ||
-    playerId === contextLocalPlayerId ||
-    (isHost && !isHumanSeat(game.seats[playerId]));
+  const seatTable: SeatTable =
+    game.appMode === "local"
+      ? { mode: "local", seats: game.seats }
+      : {
+          mode: "room",
+          seats: game.seats,
+          localPlayerId: contextLocalPlayerId,
+        };
   const seatControl =
     setSeat === undefined || isPreviewMode
       ? null
-      : (playerId: PlayerId) =>
-          showsSelector(playerId) ? (
-            <SeatSelector
-              playerId={playerId}
-              config={game.seats[playerId] ?? HUMAN_SEAT}
-              options={seatOptions}
-              defaultLlm={dominionModule.defaultLlmSeat}
-              onChange={config => setSeat(playerId, config)}
-              disabled={!canEditSeat(playerId)}
-            />
-          ) : null;
+      : seatControlFor({
+          table: seatTable,
+          defaultLlm: dominionModule.defaultLlmSeat,
+          setSeat,
+        });
 
   // Wrap buyCard to add flying animation from supply to discard
   const animatedBuyCard = useCallback(

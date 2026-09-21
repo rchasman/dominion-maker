@@ -15,6 +15,7 @@ import { BoardLayout, GameAreaLayout } from "../Board/BoardLayout";
 import { BoardSkeleton } from "../Board/BoardSkeleton";
 import { turnLogAdapter } from "../EventDevtools/turn-log-adapter";
 import { GameSidebar } from "../Board/GameSidebar";
+import { NO_SEAT_CONTROL, seatControlFor } from "../Board/seat-control";
 import {
   moverColorFor,
   presetsFor,
@@ -108,6 +109,19 @@ function BoardRoomContent<G extends BoardShape, S extends GameSession>({
     if (!isSpectator && !playerId) return <BoardSkeleton />;
     const shown = preview.state ?? state;
     const localHuman = room.localHumanSeat.value;
+    const seatControl =
+      playerId === null || isSpectator || isPreviewMode
+        ? NO_SEAT_CONTROL
+        : seatControlFor({
+            table: {
+              mode: "room",
+              seats,
+              localPlayerId: playerId,
+            },
+            defaultLlm: spec.module.defaultLlmSeat,
+            setSeat: room.setSeat,
+            disabled: !room.isConnected.value,
+          });
     return (
       <>
         <BoardLayout isPreviewMode={isPreviewMode} previewError={preview.error}>
@@ -115,15 +129,12 @@ function BoardRoomContent<G extends BoardShape, S extends GameSession>({
             {spec.board({
               session: room,
               state: shown,
-              seats,
               localPlayerId: localHuman,
               playerNames,
               disabled: !room.isConnected.value || isPreviewMode,
+              seatControl,
               ...(playerId !== null &&
-                !isPreviewMode && {
-                  onSeatChange: room.setSeat,
-                  onResign: room.resign,
-                }),
+                !isPreviewMode && { onResign: room.resign }),
             })}
           </GameAreaLayout>
 

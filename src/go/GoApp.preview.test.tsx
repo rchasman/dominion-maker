@@ -1,6 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { render } from "preact";
 import { registerHappyDom, settled } from "../happy-dom.test-fixture";
+import {
+  clickTitled,
+  openDevtools,
+  scrubTo,
+} from "../components/preview/scrub.test-fixture";
 import { GoApp } from "./GoApp";
 import { createGoGame } from "./engine";
 import { GO_PLAYERS } from "./seat";
@@ -19,21 +24,6 @@ const storedEvents = (): number => {
 };
 
 beforeAll(registerHappyDom);
-
-const settledAsync = async () => {
-  await new Promise(resolve => setTimeout(resolve, 0));
-  settled(() => {});
-};
-
-const clickButton = (root: HTMLElement, title: string) => {
-  const target = [...root.querySelectorAll("button")].find(
-    button => button.getAttribute("title") === title,
-  );
-  if (target === undefined) throw new Error(`no button titled ${title}`);
-  settled(() => {
-    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-};
 
 /** Points listen for clicks; a tap is one click on the point's group */
 const place = (root: HTMLElement, label: string) => {
@@ -83,19 +73,6 @@ const seedTwoStones = () => {
   );
 };
 
-const openDevtools = async (root: HTMLElement) => {
-  // The panel loads on demand, as it does for Dominion
-  await import("../components/EventDevtools");
-  await settledAsync();
-  const toggle = [...root.querySelectorAll("button")].find(button =>
-    button.textContent?.includes("{ }"),
-  );
-  settled(() => {
-    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-  return [...root.querySelectorAll("[data-event-index]")];
-};
-
 const mountApp = () => {
   const root = document.createElement("div");
   document.body.appendChild(root);
@@ -122,9 +99,7 @@ describe("scrubbing the local go game", () => {
 
     // Scrub to the latest move: the position is the live one, and Black is to
     // move, so only preview mode can stop the board from taking the click
-    settled(() => {
-      rows[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[2]);
     expect(root.textContent).toContain("PREVIEW MODE");
     const before = stonesOnBoard(root);
     place(root, "C3");
@@ -132,14 +107,12 @@ describe("scrubbing the local go game", () => {
     expect(stonesOnBoard(root)).toBe(before);
 
     // Scrub back one move: Black's stone stands and White's is not yet there
-    settled(() => {
-      rows[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[1]);
     expect(stoneAt(root, "D4")).toBe("B");
     expect(stoneAt(root, "F6")).toBe("");
 
     // Leaving preview hands the live position back, and a stone lands
-    clickButton(root, "Jump to live");
+    clickTitled(root, "Jump to live");
     expect(root.textContent).not.toContain("PREVIEW MODE");
     place(root, "C3");
     expect(storedEvents()).toBe(4);
@@ -156,13 +129,11 @@ describe("scrubbing the local go game", () => {
     expect(storedEvents()).toBe(3);
 
     const rows = await openDevtools(root);
-    settled(() => {
-      rows[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    scrubTo(rows[1]);
     expect(root.textContent).toContain("PREVIEW MODE");
 
     // Branching keeps the event on show: three events become two
-    clickButton(root, "Branch from here");
+    clickTitled(root, "Branch from here");
     expect(storedEvents()).toBe(2);
     expect(root.textContent).toContain("D4");
     expect(root.textContent).not.toContain("PREVIEW MODE");
