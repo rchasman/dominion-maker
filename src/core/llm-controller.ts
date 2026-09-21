@@ -76,7 +76,7 @@ export function llmController<G extends GameShape>(
         aheadByK,
         decideMove: deps.decideMove,
         moveKey: move => game.moveKey(move),
-        describeMove: move => game.describeMove(move),
+        describeMove: move => game.describeMove(state, move),
         logger,
         signal,
       });
@@ -95,7 +95,7 @@ export function llmController<G extends GameShape>(
       moves,
       overallStart,
       payload,
-      describeMove: move => game.describeMove(move),
+      describeMove: move => game.describeMove(state, move),
       moveKey: move => game.moveKey(move),
       reasoningOf: move => game.reasoningOf(move),
       logger,
@@ -152,7 +152,7 @@ export function llmController<G extends GameShape>(
             moves.length === 1
               ? "Only one legal action available"
               : "Auto move",
-          data: { action: game.describeMove(single), turn },
+          data: { action: game.describeMove(state, single), turn },
         });
         return game.moveToCommand(state, single, player);
       }

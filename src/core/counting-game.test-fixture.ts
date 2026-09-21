@@ -27,7 +27,7 @@ export const game: GameDefinition<G> = {
   ],
   moveToCommand: (_s, m) => m,
   moveKey: m => String(m.add),
-  describeMove: m => `add ${m.add}`,
+  describeMove: (_s, m) => `add ${m.add}`,
   withReasoning: (m, reasoning) => ({ ...m, reasoning }),
   reasoningOf: m => m.reasoning,
   prompt: () => ({ system: "", user: "" }),

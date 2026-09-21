@@ -78,9 +78,12 @@ describe("dominionGame", () => {
       type: "end_phase",
       card: "",
     });
-    expect(dominionGame.describeMove({ type: "buy_card", card: "Gold" })).toBe(
-      "buy_card(Gold)",
-    );
+    expect(
+      dominionGame.describeMove(fixture([]).state, {
+        type: "buy_card",
+        card: "Gold",
+      }),
+    ).toBe("buy_card(Gold)");
   });
 
   it("builds the viewer log context", () => {

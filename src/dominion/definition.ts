@@ -32,7 +32,7 @@ export const dominionGame: GameDefinition<DominionShape> = {
       : undefined,
   moveToCommand,
   moveKey: move => JSON.stringify(stripReasoning(move)),
-  describeMove: formatActionDescription,
+  describeMove: (_state, move) => formatActionDescription(move),
   withReasoning,
   reasoningOf,
   prompt: dominionPrompt,

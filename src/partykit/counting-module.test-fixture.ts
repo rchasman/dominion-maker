@@ -45,7 +45,7 @@ const definition: GameDefinition<CountingShape> = {
   ],
   moveToCommand: (_state, move) => move,
   moveKey: move => String(move.add),
-  describeMove: move => `add ${String(move.add)}`,
+  describeMove: (_state, move) => `add ${String(move.add)}`,
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
   prompt: () => ({ system: "", user: "" }),

@@ -64,7 +64,8 @@ export interface GameDefinition<G extends GameShape> {
     player: G["playerId"],
   ): G["command"];
   moveKey(move: G["move"]): string;
-  describeMove(move: G["move"]): string;
+  /** The words the vote panes and the log print for a move in this position */
+  describeMove(state: G["state"], move: G["move"]): string;
   /** Attaches a model's explanation to the move it picked */
   withReasoning(move: G["move"], reasoning: string): G["move"];
   /** Reads a model's explanation back off a move for the voting log */

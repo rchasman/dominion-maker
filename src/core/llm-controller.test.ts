@@ -194,7 +194,7 @@ describe("llmController", () => {
     );
     await controller.decide(engine, "alice", signal());
     const key = dominionGame.moveKey(smithy);
-    const label = dominionGame.describeMove(smithy);
+    const label = dominionGame.describeMove(engine.state, smithy);
     const voting = entries.find(e => e.type === "consensus-voting");
     const legalKeys = voting?.data?.["legalKeys"];
     expect(Array.isArray(legalKeys) && legalKeys).toContain(key);
