@@ -1,12 +1,11 @@
-import { experimental_evaluate, gateway } from "ai";
+import { experimental_evaluate, gateway, type JSONValue } from "ai";
 import type { TokenUsage } from "../core/consensus/cost";
-import type { JSONValue } from "ai";
-import { z } from "zod";
 import type { Action } from "../types/action";
 import type { WeightedVote } from "../core/consensus/types";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
 import { hasCardField } from "../lib/action-utils";
+import { plural } from "../lib/plural";
 import { optimizeStateForAI } from "./state-projection";
 import { isDecisionChoice, isReactionChoice } from "../types/pending-choice";
 import {
@@ -17,16 +16,19 @@ import {
 } from "./system-prompt";
 import { buildStrategicFacts, summarizeRecentTurns } from "./strategic-context";
 import { decisionSummary, optionFacts } from "./jev-decision-facts";
+import { askJevChoice } from "./jev-evaluate";
+import {
+  formatPercent,
+  jevOptionKey,
+  type JevChoiceAnswer,
+  type JevChoiceQuestion,
+  type JsonObject,
+} from "./jev-protocol";
 
-// Jev (TypeSafe's System One model) answers a typed Choice question instead of
-// writing JSON with reasoning. Every legal action becomes one option; the
-// answer maps back to the action by its number. No text parsing, no retry.
-// Jev reads JSON, not TOON, and loses accuracy on indirection, so the state is
-// plain objects with named fields and each option carries its own card advice.
+// Dominion's side of the Jev protocol: every legal action becomes one option
+// carrying its own card advice, the state is the Dominion projection as plain
+// JSON, and two companion questions read the game alongside the pick.
 
-export const JEV_QUESTION_ID = "action";
-/** Below this an option is noise in the tally and the voting pane */
-const MIN_VOTE_WEIGHT = 0.01;
 const JEV_PHASE_ID = "gamePhase";
 const JEV_OPPONENT_ID = "opponentDeckStronger";
 
@@ -174,10 +176,6 @@ function describeLegalAction(action: Action): string {
   return hasCardField(action) ? `${verb} ${action.card}` : verb;
 }
 
-function jevOptionKey(index: number, action: Action): string {
-  return `${index + 1}. ${describeLegalAction(action)}`;
-}
-
 function describeOption(state: GameState, action: Action): string | null {
   const note = ACTION_NOTES[action.type];
   const facts = optionFacts(state, action);
@@ -221,30 +219,29 @@ function jevInstructions(state: GameState, legalActions: Action[]): string {
     return `${pending.cardBeingPlayed ?? "A card effect"} asks you to ${verb} a card (\`currentState.pendingChoice\` gives the exact constraint). Which card should you ${verb} now?${skip} ${AUTHORITY}`;
   }
   if (state.phase === "action") {
-    return `It is your Action phase with ${state.actions} action${state.actions === 1 ? "" : "s"} left. Which action card should you play now, or should you end the phase and move to buying? ${AUTHORITY}`;
+    return `It is your Action phase with ${plural(state.actions, "action")} left. Which action card should you play now, or should you end the phase and move to buying? ${AUTHORITY}`;
   }
   if (
     offeredToJev(legalActions).every(o => o.action.type === "play_treasure")
   ) {
     return `It is your Buy phase and you still hold treasures. Which treasure should you play next? Every treasure in hand gets played before buying. ${AUTHORITY}`;
   }
-  return `It is your Buy phase with ${state.coins} coins and ${state.buys} buy${state.buys === 1 ? "" : "s"}. Which card should you buy now, or should you end the phase without buying? ${AUTHORITY}`;
+  return `It is your Buy phase with ${state.coins} coins and ${plural(state.buys, "buy")}. Which card should you buy now, or should you end the phase without buying? ${AUTHORITY}`;
 }
 
-export function buildJevQuestion(state: GameState, legalActions: Action[]) {
+export function buildJevQuestion(
+  state: GameState,
+  legalActions: Action[],
+): JevChoiceQuestion<Action> {
   return {
-    type: "choice" as const,
     instructions: jevInstructions(state, legalActions),
-    criteria: Object.fromEntries(
-      offeredToJev(legalActions).map(({ action, index }) => [
-        jevOptionKey(index, action),
-        describeOption(state, action),
-      ]),
-    ),
+    options: offeredToJev(legalActions).map(({ action, index }) => ({
+      key: jevOptionKey(index, describeLegalAction(action)),
+      description: describeOption(state, action),
+      move: action,
+    })),
   };
 }
-
-type JsonObject = { [key: string]: JSONValue };
 
 // The projection types carry `unknown` fields; the evaluation API wants proven JSON.
 // Undefined entries are dropped the way JSON.stringify would drop them.
@@ -296,71 +293,6 @@ export function buildJevState(params: {
   });
 }
 
-type JevChoiceAnswer = {
-  type: "choice";
-  choice: string;
-  probabilities?: Record<string, number>;
-};
-
-const PERCENT = 100;
-const formatPercent = (probability: number): string =>
-  `${Math.round(probability * PERCENT)}%`;
-
-function summariseDistribution(
-  choice: string,
-  probabilities: Record<string, number> | undefined,
-): string {
-  if (!probabilities) return "Jev picked this option.";
-  const chosen = probabilities[choice];
-  const runnerUp = Object.entries(probabilities)
-    .filter(([key]) => key !== choice)
-    .sort(([, a], [, b]) => b - a)[0];
-  const lead =
-    chosen === undefined
-      ? "Jev picked this option."
-      : `Jev picked this with ${formatPercent(chosen)} probability.`;
-  if (!runnerUp) return lead;
-  const [runnerUpKey, runnerUpProbability] = runnerUp;
-  const runnerUpLabel = runnerUpKey.replace(/^\d+\. /, "");
-  return `${lead} Runner-up: ${runnerUpLabel} (${formatPercent(runnerUpProbability)}).`;
-}
-
-export function jevAnswerToAction(
-  answer: JevChoiceAnswer,
-  legalActions: Action[],
-): Action {
-  const index = legalActions.findIndex(
-    (action, i) => jevOptionKey(i, action) === answer.choice,
-  );
-  const legal = legalActions[index];
-  if (!legal) {
-    throw new Error(`choice "${answer.choice}" is not an offered option`);
-  }
-  return {
-    ...legal,
-    reasoning: summariseDistribution(answer.choice, answer.probabilities),
-  };
-}
-
-/** Jev's whole distribution as weighted votes, so the tally can use the mass and not just the argmax */
-export function jevDistribution(
-  answer: JevChoiceAnswer,
-  legalActions: Action[],
-): WeightedVote<Action>[] {
-  if (!answer.probabilities) {
-    return [{ move: jevAnswerToAction(answer, legalActions), weight: 1 }];
-  }
-  return Object.entries(answer.probabilities)
-    .filter(([, weight]) => weight >= MIN_VOTE_WEIGHT)
-    .flatMap(([key, weight]) => {
-      const index = legalActions.findIndex(
-        (action, i) => jevOptionKey(i, action) === key,
-      );
-      const legal = legalActions[index];
-      return legal ? [{ move: legal, weight }] : [];
-    });
-}
-
 export type JevVote = {
   action: Action;
   usage: TokenUsage;
@@ -370,17 +302,6 @@ export type JevVote = {
   /** TypeSafe's distribution-concentration statistic for the pick, 0-1 */
   confidence: number | undefined;
 };
-
-const typesafeMetadataSchema = z.object({
-  typesafe: z.object({ confidence: z.record(z.string(), z.number()) }),
-});
-
-function readTypesafeConfidence(metadata: unknown): number | undefined {
-  const parsed = typesafeMetadataSchema.safeParse(metadata);
-  return parsed.success
-    ? parsed.data.typesafe.confidence[JEV_QUESTION_ID]
-    : undefined;
-}
 
 /** One Jev vote: the same call for the endpoint and the evals */
 export async function askJev(params: {
@@ -392,38 +313,26 @@ export async function askJev(params: {
   abortSignal?: AbortSignal | undefined;
 }): Promise<JevVote> {
   const { modelId, legalActions, abortSignal, ...stateParams } = params;
-  // Jev's rate limits move with demand; a 429 should not fail the vote outright
-  const { answers, providerMetadata, usage } = await experimental_evaluate({
-    model: gateway.evaluationModel(modelId),
+  const vote = await askJevChoice({
+    modelId,
     state: buildJevState(stateParams),
-    questions: {
-      [JEV_QUESTION_ID]: buildJevQuestion(
-        stateParams.currentState,
-        legalActions,
-      ),
-      ...buildJevReadQuestions(),
-    },
-    maxRetries: 2,
-    ...(abortSignal ? { abortSignal } : {}),
+    question: buildJevQuestion(stateParams.currentState, legalActions),
+    extraQuestions: buildJevReadQuestions(),
+    abortSignal,
   });
-  const answer = answers[JEV_QUESTION_ID];
   const read: JevGameRead = {
-    gamePhase: answers[JEV_PHASE_ID].score,
-    opponentDeckStronger: answers[JEV_OPPONENT_ID].probability,
+    gamePhase: vote.answers[JEV_PHASE_ID].score,
+    opponentDeckStronger: vote.answers[JEV_OPPONENT_ID].probability,
   };
-  const picked = jevAnswerToAction(answer, legalActions);
   return {
-    usage: {
-      inputTokens: usage.inputTokens ?? 0,
-      outputTokens: usage.outputTokens ?? 0,
-    },
+    usage: vote.usage,
     action: {
-      ...picked,
-      reasoning: `${picked.reasoning} ${describeGameRead(read)}`,
+      ...vote.move,
+      reasoning: `${vote.reasoning} ${describeGameRead(read)}`,
     },
-    distribution: jevDistribution(answer, legalActions),
-    answer,
+    distribution: vote.distribution,
+    answer: vote.answer,
     read,
-    confidence: readTypesafeConfidence(providerMetadata),
+    confidence: vote.confidence,
   };
 }
