@@ -1,20 +1,6 @@
-/**
- * Chess's reading of its own log for the shared event devtools. The scrubber
- * stops on the moves and on a resignation, which are the acts a player takes;
- * the opening event is setup and carries no position of its own.
- */
-import type { EventDevtoolsAdapter } from "../components/EventDevtools/adapter";
-import { loadChessEngine } from "./engine";
-import type { ChessEvent, ChessState } from "./shape";
-
-const MOVES = "moves";
-const GAME = "game";
-
-const CHESS_EVENT_CATEGORIES = [MOVES, GAME] as const;
-
-const MOVE_COLOUR = "#8b5cf6";
-const SETUP_COLOUR = "#22c55e";
-const RESIGN_COLOUR = "#dc2626";
+/** Chess's reading of its own log for the shared event devtools */
+import type { TurnLogReading } from "../components/EventDevtools/turn-log-adapter";
+import type { ChessEvent } from "./shape";
 
 const PLIES_PER_MOVE = 2;
 
@@ -26,10 +12,10 @@ const moveLabel = (ply: number, san: string): string => {
     : `${number}... ${san}`;
 };
 
-function chessEventLabels(
+const chessEventLabels = (
   events: readonly ChessEvent[],
-): Map<ChessEvent, string> {
-  return events.reduce(
+): Map<ChessEvent, string> =>
+  events.reduce(
     (built, event) => {
       if (event.type === "MOVE") {
         built.labels.set(event, moveLabel(built.plies, event.san));
@@ -44,28 +30,9 @@ function chessEventLabels(
     },
     { labels: new Map<ChessEvent, string>(), plies: 0 },
   ).labels;
-}
 
-/** The position after the first `index + 1` events, replayed here */
-export const chessStateAt =
-  (events: readonly ChessEvent[]) =>
-  (index: number): ChessState =>
-    loadChessEngine(events.slice(0, index + 1)).state;
-
-export function chessDevtoolsAdapter(
-  events: readonly ChessEvent[],
-  stateAt: (index: number) => unknown,
-): EventDevtoolsAdapter<ChessEvent> {
-  const labels = chessEventLabels(events);
-  return {
-    isRoot: event => event.type === "MOVE" || event.type === "RESIGNED",
-    label: event => labels.get(event) ?? event.type,
-    category: event => (event.type === "MOVE" ? MOVES : GAME),
-    categories: CHESS_EVENT_CATEGORIES,
-    colour: event => {
-      if (event.type === "MOVE") return MOVE_COLOUR;
-      return event.type === "RESIGNED" ? RESIGN_COLOUR : SETUP_COLOUR;
-    },
-    stateAt,
-  };
-}
+export const CHESS_LOG_READING: TurnLogReading<ChessEvent> = {
+  isPlay: event => event.type === "MOVE",
+  isResign: event => event.type === "RESIGNED",
+  labels: chessEventLabels,
+};

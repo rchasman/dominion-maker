@@ -3,25 +3,30 @@
  * The shared table shapes carry the position; these add chess's verbs.
  */
 
-import type { LocalTable, RoomTable } from "../session/table-session";
-import type { ChessShape, ChessState } from "./shape";
+import type { CommandFor } from "../session/create-local-turn-session";
+import type { LocalTurnTable, RoomTable } from "../session/table-session";
+import type { ChessShape } from "./shape";
 
 type ChessTable = {
   readonly game: "chess";
   readonly move: (san: string) => void;
-  readonly resign: () => void;
 };
 
-export type LocalChessSession = LocalTable<ChessShape> &
-  ChessTable & {
-    readonly getStateAtEvent: (eventId: string) => ChessState;
-    /** Rewind to just before the human's own last move, so the human is to move again */
-    readonly takeBack: () => void;
-    /** Keep the position at this event and drop what came after it */
-    readonly branchFrom: (eventId: string) => void;
-    readonly newGame: () => void;
-  };
+export type LocalChessSession = LocalTurnTable<ChessShape> & ChessTable;
 
 export type RemoteChessSession = RoomTable<ChessShape> & ChessTable;
 
 export type ChessSession = LocalChessSession | RemoteChessSession;
+
+export const resignChess: CommandFor<ChessShape> = playerId => ({
+  type: "RESIGN",
+  playerId,
+});
+
+/** Chess's one verb, built on whichever table's `act` it is handed */
+export const chessVerbs = (
+  act: (build: CommandFor<ChessShape>) => void,
+): ChessTable => ({
+  game: "chess",
+  move: san => act(playerId => ({ type: "MOVE", playerId, san })),
+});

@@ -1,20 +1,8 @@
-import type { Seats } from "../core/seats";
-import type { SidebarPresets } from "../components/Board/GameSidebarComponents";
-import type { TurnStatus } from "../components/Board/TurnStatusIndicator";
-import {
-  SEAT_PRESET_NAMES,
-  presetOf,
-  type SeatPreset,
-} from "../core/seat-presets";
-import { run } from "../lib/run";
-import { chessGame } from "./definition";
 import { describeMove, eventText, type ChessMoveEvent } from "./describe-move";
-import { CHESS_SEAT_PRESETS } from "./presets";
 import { replayMoves } from "./replay";
-import type { ChessState } from "./shape";
 
 /** Each side keeps the colour of the squares it plays, on the board and off it */
-const SIDE_COLORS = ["#e8d3ad", "#c9a875"] as const;
+export const SIDE_COLORS = ["#e8d3ad", "#c9a875"] as const;
 
 const EVENT_COLORS: Record<ChessMoveEvent["kind"], string> = {
   capture: "#ef4444",
@@ -107,45 +95,4 @@ export function ChessLogRows({ moves }: { moves: readonly string[] }) {
       ))}
     </>
   );
-}
-
-/**
- * A bot on the clock reads as thinking; the local human's own turn as theirs.
- * A turn still being processed reads as neither, matching Dominion: the seat
- * is nominally the human's, but the table is not theirs to act on yet.
- */
-export function chessTurnStatus(
-  state: ChessState,
-  seats: Seats,
-  localPlayerId: string | null,
-  isProcessing: boolean,
-): TurnStatus {
-  const mover = chessGame.whoMustAct(state);
-  return run(() => {
-    if (mover === null) return null;
-    if (mover === localPlayerId) return isProcessing ? null : "yours";
-    return seats[mover]?.kind === "human" ? null : "thinking";
-  });
-}
-
-export function chessMoverColor(state: ChessState): string {
-  const mover = chessGame.whoMustAct(state);
-  const index = state.playerOrder.findIndex(id => id === mover);
-  return SIDE_COLORS[index] ?? "var(--color-text-secondary)";
-}
-
-/**
- * The same three modes Dominion offers. A room leaves out `onChange`, so the
- * switcher hides itself exactly as it does on Dominion's multiplayer board.
- */
-export function chessPresets(
-  seats: Seats,
-  onChange?: (preset: SeatPreset) => void,
-): SidebarPresets {
-  return {
-    names: SEAT_PRESET_NAMES,
-    label: (preset: SeatPreset) => CHESS_SEAT_PRESETS[preset].name,
-    active: presetOf(seats),
-    ...(onChange !== undefined && { onChange }),
-  };
 }

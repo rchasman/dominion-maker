@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { render } from "preact";
+import { z } from "zod";
 import { registerHappyDom, settled } from "../happy-dom.test-fixture";
 import { ChessApp } from "./ChessApp";
 import { createChessGame } from "./engine";
@@ -12,7 +13,9 @@ const CHESS_SEATS_KEY = "dominion-maker-chess-seats";
 /** The app saves the log after every change, so storage is the log the board plays from */
 const storedPlies = (): number => {
   const saved = localStorage.getItem(CHESS_EVENTS_KEY);
-  return saved === null ? 0 : (JSON.parse(saved) as unknown[]).length;
+  return saved === null
+    ? 0
+    : z.array(z.unknown()).parse(JSON.parse(saved)).length;
 };
 
 beforeAll(registerHappyDom);
