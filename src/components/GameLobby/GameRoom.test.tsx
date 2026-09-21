@@ -1,13 +1,10 @@
 import { beforeAll, describe, expect, it, mock } from "bun:test";
 import { registerHappyDom, settled } from "../../happy-dom.test-fixture";
+import { mockCardUrls } from "../../data/card-urls.test-fixture";
 import { FakeSocket } from "../../partykit/fake-socket.test-fixture";
 
 await mock.module("partysocket", () => ({ default: FakeSocket }));
-// The board's art module is built on import.meta.glob, which only Vite provides
-await mock.module("../../data/card-urls", () => ({
-  CARD_BACK_IMAGE_URL: "card-back.webp",
-  getCardImageUrl: (card: string) => `${card}.webp`,
-}));
+await mockCardUrls();
 
 beforeAll(registerHappyDom);
 
