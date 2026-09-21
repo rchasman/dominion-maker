@@ -1,7 +1,8 @@
 import { Chess } from "chess.js";
 import type { GameDefinition } from "../core/game-definition";
-import { sideToMove } from "./engine";
+import { moveNumberOf, sideToMove } from "./engine";
 import { chessHeuristic } from "./heuristic";
+import { chessEvaluate } from "./jev";
 import { chessPrompt, chessPromptRow } from "./prompt";
 import type { ChessMove, ChessShape } from "./shape";
 
@@ -42,6 +43,7 @@ export const chessGame: GameDefinition<ChessShape> = {
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
   prompt: chessPrompt,
+  evaluate: chessEvaluate,
   heuristic: chessHeuristic,
   // turn and phase name the action id the consensus log builds, so they carry
   // the keys Dominion's payload carries. Chess has one phase and it is a move.
@@ -49,7 +51,7 @@ export const chessGame: GameDefinition<ChessShape> = {
     turnId: `${player}-${state.moves.length}`,
     isChoice: false,
     payload: {
-      turn: Math.floor(state.moves.length / 2) + 1,
+      turn: moveNumberOf(state),
       phase: "move",
       activePlayerId: player,
       fen: state.fen,
