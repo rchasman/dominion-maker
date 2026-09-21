@@ -8,6 +8,32 @@ import {
   type GoState,
 } from "./shape";
 
+/**
+ * A position drawn as rows from the top edge down, spaces ignored, on the
+ * default board. `moves` is the record the state carries: its length names
+ * the side to move and its last entry says whether the opponent just passed.
+ */
+export const goStateFromRows = (
+  players: GoPlayerOrder,
+  rows: readonly string[],
+  moves: readonly GoMoveRecord[] = [],
+): GoState => {
+  if (rows.length !== DEFAULT_GO_SIZE)
+    throw new Error(`Expected ${DEFAULT_GO_SIZE} rows, got ${rows.length}`);
+  return {
+    size: DEFAULT_GO_SIZE,
+    board: rows.map(row => row.replaceAll(" ", "")).join(""),
+    playerOrder: players,
+    moves: [...moves],
+    captures: [0, 0],
+    consecutivePasses: 0,
+    gameOver: false,
+    winnerId: null,
+    result: null,
+    score: null,
+  };
+};
+
 const commandFor = (playerId: string, move: GoMoveRecord): GoCommand =>
   move === "pass"
     ? { type: "PASS", playerId }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import { BoardButton } from "../components/BoardButton";
 import type { SeatControl } from "../components/Board/seat-control";
 import { run } from "../lib/run";
+import { legalCandidates } from "./candidates";
 import { goGame } from "./definition";
 import {
   columnLabels,
@@ -111,11 +112,13 @@ export function GoBoard({
 
   const { size } = state;
   const mover = goGame.whoMustAct(state);
+  // Every point the rules allow, not the voters' shortlist: a human may
+  // self-atari or fill an eye if they choose to
   const legalPoints = useMemo(
     () =>
       new Set(
-        (mover === null ? [] : goGame.legalMoves(state, mover)).flatMap(move =>
-          move.kind === "place" ? [pointKey(move)] : [],
+        (mover === null ? [] : legalCandidates(state)).map(candidate =>
+          pointKey(candidate.point),
         ),
       ),
     [state, mover],

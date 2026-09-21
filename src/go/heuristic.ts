@@ -1,24 +1,15 @@
 import { seededIndex } from "../lib/seeded-draw";
+import { legalCandidates, passWinsNow } from "./candidates";
 import { sideToMove } from "./engine";
 import {
-  finalScore,
   isEyeOf,
-  judgedPlacements,
-  leaderOf,
   neighbourStones,
-  replayMoves,
   rescuedStones,
   stoneOf,
   type Candidate,
   type Point,
-  type Stone,
 } from "./rules";
 import type { GoCommand, GoPlayerId, GoState } from "./shape";
-
-const legalCandidates = (state: GoState, stone: Stone): Candidate[] => {
-  const { positions } = replayMoves(state.size, state.moves);
-  return judgedPlacements(state.size, state.board, positions, stone);
-};
 
 /** The first candidate with the highest measure, so a tie keeps board order */
 const bestBy =
@@ -59,13 +50,9 @@ export function goHeuristic(state: GoState, playerId: GoPlayerId): GoCommand {
   }
 
   const stone = stoneOf(state.moves.length);
-  const candidates = legalCandidates(state, stone);
-  if (candidates.length === 0) return command(playerId, null);
-
-  const opponentPassed = state.moves[state.moves.length - 1] === "pass";
-  const ahead =
-    leaderOf(finalScore(state.board, state.size)) === state.moves.length % 2;
-  if (opponentPassed && ahead) return command(playerId, null);
+  const candidates = legalCandidates(state);
+  if (candidates.length === 0 || passWinsNow(state))
+    return command(playerId, null);
 
   const capture = firstOf(candidates, head =>
     candidates.reduce(
