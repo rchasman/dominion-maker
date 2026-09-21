@@ -4,6 +4,7 @@ import type { ChessCommand, ChessEvent, ChessMove } from "./shape";
 import { createChessGame } from "./engine";
 import { GAMES } from "../games";
 import { gameIdSchema } from "../game-ids";
+import { DEFAULT_LLM_SEAT } from "../core/seats";
 
 const WHITE = "white";
 const BLACK = "black";
@@ -79,9 +80,9 @@ describe("the chess module describes its own wire shapes", () => {
     ]);
   });
 
-  it("never asks Jev for a chess move", () => {
-    expect(chessModule.defaultLlmSeat.models).not.toContain("jev");
-    expect(chessModule.defaultLlmSeat.consensusCount).toBe(6);
+  it("starts an LLM seat on the default roster, Jev included", () => {
+    expect(chessModule.defaultLlmSeat).toBe(DEFAULT_LLM_SEAT);
+    expect(chessModule.defaultLlmSeat.models).toContain("jev");
   });
 
   it("knows who must act and what they may play", () => {

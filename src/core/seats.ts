@@ -26,16 +26,6 @@ export const DEFAULT_LLM_SEAT: LlmSeatConfig = {
   customStrategy: "",
 };
 
-/**
- * The LLM roster a new seat at a board game starts with. Jev judges a
- * Dominion state it was taught; it has no opinion on any other board.
- */
-export const BOARD_GAME_LLM_SEAT: LlmSeatConfig = {
-  ...DEFAULT_LLM_SEAT,
-  models: DEFAULT_LLM_SEAT.models.filter(model => model !== "jev"),
-  consensusCount: 6,
-};
-
 /** A room reports seats as kinds only; the LLM roster stays on the server */
 export const seatFromKind = (
   kind: ControllerKind,
