@@ -8,7 +8,7 @@ import {
 } from "./describe-move";
 import { playerLabel } from "./names";
 import { replayMoves } from "./replay";
-import type { ChessState } from "./shape";
+import type { ChessEvent, ChessState } from "./shape";
 
 /** Each side keeps the colour of the squares it plays, on the board and off it */
 export const SIDE_COLORS = ["#e8d3ad", "#c9a875"] as const;
@@ -35,6 +35,8 @@ const CASTLE_COLOR = "#3b82f6";
 
 type LogRow = {
   ply: number;
+  /** The MOVE event this row stands for; absent when the log has none for it */
+  eventId: string | null;
   side: "w" | "b";
   player: string;
   san: string;
@@ -49,15 +51,20 @@ const moveLabel = (ply: number): string =>
 /** A log no engine produced still lists its SAN, with nothing to say about it */
 const logRows = (
   state: ChessState,
+  events: readonly ChessEvent[],
   playerNames: Record<string, string>,
 ): LogRow[] => {
   const replayed = replayMoves(state.moves);
+  const moveIds = events.flatMap(event =>
+    event.type === "MOVE" ? [event.id ?? null] : [],
+  );
   return state.moves.map((san, ply) => {
     const move = replayed?.[ply];
     const side = ply % 2 === 0 ? "w" : "b";
     const playerId = state.playerOrder[side === "w" ? 0 : 1];
     return {
       ply,
+      eventId: moveIds[ply] ?? null,
       side,
       player: playerLabel(state.playerOrder, playerNames, playerId),
       san,
@@ -150,20 +157,54 @@ function EventWords({ event }: { event: ChessMoveEvent }) {
   );
 }
 
+/** Dominion's undo glyph, which rewinds the game to just after this row's move */
+function UndoToHere({
+  eventId,
+  onUndoTo,
+}: {
+  eventId: string;
+  onUndoTo: (eventId: string) => void;
+}) {
+  return (
+    <button
+      data-undo-to={eventId}
+      title="Undo to here"
+      onClick={() => onUndoTo(eventId)}
+      style={{
+        padding: 0,
+        background: "transparent",
+        border: "none",
+        color: "#22c55e",
+        cursor: "pointer",
+        fontSize: "1rem",
+        lineHeight: 1,
+        marginTop: "2px",
+      }}
+    >
+      ⎌
+    </button>
+  );
+}
+
 /**
  * One row per move, read as Dominion reads a play: the player, an italic
  * verb, the coloured noun it acts on, with each further event nested beneath.
  */
 export function ChessLogRows({
   state,
+  events = [],
   playerNames = {},
+  onUndoTo,
 }: {
   state: ChessState;
+  events?: readonly ChessEvent[];
   playerNames?: Record<string, string>;
+  onUndoTo?: (eventId: string) => void;
 }) {
+  const rows = logRows(state, events, playerNames);
   return (
     <>
-      {logRows(state, playerNames).map(row => (
+      {rows.map(row => (
         <div
           key={row.ply}
           data-chess-ply={row.ply}
@@ -175,25 +216,38 @@ export function ChessLogRows({
             whiteSpace: "pre",
           }}
         >
-          <div>
-            <span style={{ opacity: 0.6 }}>{moveLabel(row.ply)} </span>
-            <Part kind="player" color={SIDE_COLORS[row.side === "w" ? 0 : 1]}>
-              {row.player}
-            </Part>{" "}
-            {row.described === null ? (
-              row.san
-            ) : (
-              <>
-                <ActionWords action={row.described.action} />{" "}
-                <Part
-                  kind="san"
-                  color="var(--color-text-secondary)"
-                  bold={false}
-                >
-                  {`(${row.san})`}
-                </Part>
-              </>
-            )}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+            }}
+          >
+            <div style={{ flex: 1, whiteSpace: "pre-wrap" }}>
+              <span style={{ opacity: 0.6 }}>{moveLabel(row.ply)} </span>
+              <Part kind="player" color={SIDE_COLORS[row.side === "w" ? 0 : 1]}>
+                {row.player}
+              </Part>{" "}
+              {row.described === null ? (
+                row.san
+              ) : (
+                <>
+                  <ActionWords action={row.described.action} />{" "}
+                  <Part
+                    kind="san"
+                    color="var(--color-text-secondary)"
+                    bold={false}
+                  >
+                    {`(${row.san})`}
+                  </Part>
+                </>
+              )}
+            </div>
+            {onUndoTo !== undefined &&
+              row.eventId !== null &&
+              row.ply < rows.length - 1 && (
+                <UndoToHere eventId={row.eventId} onUndoTo={onUndoTo} />
+              )}
           </div>
           {(row.described?.events ?? []).map((event, index, events) => (
             <div key={event.kind} data-chess-event={event.kind}>

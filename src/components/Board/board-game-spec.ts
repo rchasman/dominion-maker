@@ -37,8 +37,12 @@ type BoardArgs<G extends BoardShape, S> = {
 /** What the screens hand the game's log rows */
 export type LogArgs<G extends BoardShape> = {
   state: G["state"];
+  /** The full log, so a row can name the event it stands for */
+  events: readonly G["event"][];
   /** Player ids read as names where a room names them; empty on a local table */
   playerNames: Record<string, string>;
+  /** Rewinds the game to just after this event; absent where the log is not the viewer's to cut */
+  onUndoTo?: (eventId: string) => void;
 };
 
 export interface BoardGameSpec<G extends BoardShape, S> {

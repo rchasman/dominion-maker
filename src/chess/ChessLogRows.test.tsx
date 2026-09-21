@@ -8,7 +8,7 @@ import type { ChessState } from "./shape";
 
 beforeAll(registerHappyDom);
 
-const played = (line: string[]): ChessState => {
+const engineAfter = (line: string[]) => {
   const engine = createChessGame([...CHESS_PLAYERS]);
   for (const [ply, san] of line.entries()) {
     const result = engine.dispatch({
@@ -18,8 +18,10 @@ const played = (line: string[]): ChessState => {
     });
     if (!result.ok) throw new Error(`${san}: ${result.error}`);
   }
-  return engine.state;
+  return engine;
 };
+
+const played = (line: string[]): ChessState => engineAfter(line).state;
 
 const mount = (state: ChessState, playerNames: Record<string, string> = {}) => {
   const root = document.createElement("div");
@@ -128,6 +130,53 @@ describe("ChessLogRows", () => {
     const root = mount(state);
     expect(rowText(root)).toEqual(["1. White zzz", "1… Black yyy"]);
     expect(root.querySelectorAll("[data-chess-event]").length).toBe(0);
+    unmount(root);
+  });
+
+  it("offers an undo back to every move but the newest", () => {
+    const engine = engineAfter(["e4", "e5", "Nf3"]);
+    const undone: string[] = [];
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    settled(() =>
+      render(
+        <ChessLogRows
+          state={engine.state}
+          events={engine.eventLog}
+          onUndoTo={eventId => undone.push(eventId)}
+        />,
+        root,
+      ),
+    );
+    const buttons = [...root.querySelectorAll("[data-undo-to]")];
+    expect(buttons.map(el => el.getAttribute("title"))).toEqual([
+      "Undo to here",
+      "Undo to here",
+    ]);
+    const moveIds = engine.eventLog
+      .filter(event => event.type === "MOVE")
+      .map(event => event.id ?? null);
+    expect(buttons.map(el => el.getAttribute("data-undo-to"))).toEqual(
+      moveIds.slice(0, 2),
+    );
+    settled(() => {
+      buttons[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(undone).toEqual([moveIds[1] ?? "missing"]);
+    unmount(root);
+  });
+
+  it("offers no undo without a handler, as in a room or a preview", () => {
+    const engine = engineAfter(["e4", "e5", "Nf3"]);
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    settled(() =>
+      render(
+        <ChessLogRows state={engine.state} events={engine.eventLog} />,
+        root,
+      ),
+    );
+    expect(root.querySelectorAll("[data-undo-to]").length).toBe(0);
     unmount(root);
   });
 });
