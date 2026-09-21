@@ -17,12 +17,35 @@ const headerOrder = (root: HTMLElement) =>
     el.getAttribute("data-chess-player"),
   );
 
+const pointer = (root: HTMLElement, selector: string, type: string) => {
+  const target = root.querySelector(selector);
+  if (!(target instanceof Element)) throw new Error(`no ${selector}`);
+  settled(() => {
+    target.dispatchEvent(
+      new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1 }),
+    );
+  });
+};
+
+/** A press and release on one square, which is how a tap or a click arrives */
 const click = (root: HTMLElement, selector: string) => {
+  pointer(root, selector, "pointerdown");
+  pointer(root, selector, "pointerup");
+};
+
+const pressButton = (root: HTMLElement, selector: string) => {
   const target = root.querySelector(selector);
   if (!(target instanceof Element)) throw new Error(`no ${selector}`);
   settled(() => {
     target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
+};
+
+/** A press on one square released over another */
+const drag = (root: HTMLElement, from: string, to: string) => {
+  pointer(root, `[data-square="${from}"]`, "pointerdown");
+  pointer(root, `[data-square="${to}"]`, "pointermove");
+  pointer(root, `[data-square="${to}"]`, "pointerup");
 };
 
 /** One sequential test: the board mounts SeatSelector, which reads signals */
@@ -56,6 +79,29 @@ describe("the chess board", () => {
     click(root, '[data-square="e4"]');
     expect(sent).toEqual(["e4"]);
     expect(engine.state.moves).toEqual(["e4"]);
+
+    // A piece dragged onto a legal square moves there in one gesture
+    settled(mount);
+    engine.dispatch({ type: "MOVE", playerId: "b", san: "e5" });
+    settled(mount);
+    drag(root, "g1", "f3");
+    expect(sent).toEqual(["e4", "Nf3"]);
+    expect(engine.state.moves).toEqual(["e4", "e5", "Nf3"]);
+
+    // A drag released on a square the piece cannot reach sends nothing and
+    // leaves nothing selected; a release outside the board does the same
+    engine.dispatch({ type: "MOVE", playerId: "b", san: "Nc6" });
+    settled(mount);
+    drag(root, "f3", "f6");
+    expect(sent).toEqual(["e4", "Nf3"]);
+    expect(root.querySelectorAll("[data-legal-target]").length).toBe(0);
+    pointer(root, '[data-square="f3"]', "pointerdown");
+    expect(root.querySelectorAll("[data-legal-target]").length).toBe(5);
+    settled(() => {
+      window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
+    });
+    expect(root.querySelector("[data-drag-ghost]")).toBeNull();
+    expect(sent).toEqual(["e4", "Nf3"]);
 
     // A white pawn reaches c7 with four ways to take the queen on d8
     const promotion = createChessGame([...CHESS_PLAYERS]);
@@ -95,7 +141,7 @@ describe("the chess board", () => {
     click(root, '[data-square="d8"]');
     expect(picked).toEqual([]);
     expect(root.querySelectorAll("[data-promotion]").length).toBe(4);
-    click(root, '[data-promotion="q"]');
+    pressButton(root, '[data-promotion="q"]');
     expect(picked).toEqual(["cxd8=Q+"]);
     expect(root.querySelectorAll("[data-promotion]").length).toBe(0);
 

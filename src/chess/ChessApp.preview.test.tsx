@@ -32,12 +32,17 @@ const clickButton = (root: HTMLElement, title: string) => {
   });
 };
 
+/** Squares listen for pointer presses; a tap is a press and release on one */
 const click = (root: HTMLElement, selector: string) => {
   const target = root.querySelector(selector);
   if (!(target instanceof Element)) throw new Error(`no ${selector}`);
-  settled(() => {
-    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
+  for (const type of ["pointerdown", "pointerup"]) {
+    settled(() => {
+      target.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, cancelable: true }),
+      );
+    });
+  }
 };
 
 const move = (root: HTMLElement, from: string, to: string) => {

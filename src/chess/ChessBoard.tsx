@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Chess } from "chess.js";
 import type { ControllerConfig, ControllerKind, Seats } from "../core/seats";
 import { HUMAN_SEAT } from "../core/seats";
@@ -48,6 +48,9 @@ const CHECK_TINT = "rgba(220, 38, 38, 0.6)";
 type Piece = { square: string; type: string; color: string };
 
 type Pending = { from: string; to: string; options: ChessMove[] };
+
+/** A piece held by the pointer; `at` is in board units once the pointer moved */
+type Drag = { from: string; at: { x: number; y: number } | null };
 
 interface ChessBoardProps {
   state: ChessState;
@@ -132,13 +135,29 @@ export function ChessBoard({
 }: ChessBoardProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   // A new position is a new set of legal moves: a picker or a selection the
   // last position opened would send a move this one does not have.
   useEffect(() => {
     setPending(null);
     setSelected(null);
+    setDrag(null);
   }, [state.fen]);
+
+  // A release off the board puts the piece back; the square stays selected so
+  // a tap on a target still completes the move.
+  useEffect(() => {
+    if (drag === null) return;
+    const release = () => setDrag(null);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("pointercancel", release);
+    return () => {
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+    };
+  }, [drag]);
 
   const board = useMemo(() => new Chess(state.fen), [state.fen]);
 
@@ -169,28 +188,65 @@ export function ChessBoard({
   const interactive = myMove && !disabled;
   const targets = legalMoves.filter(move => move.from === selected);
 
-  const selectFrom = (square: string) =>
-    setSelected(legalMoves.some(move => move.from === square) ? square : null);
+  const canMoveFrom = (square: string) =>
+    legalMoves.some(move => move.from === square);
 
-  const handleSquare = (square: string) => {
-    if (!interactive || pending !== null) return;
-    if (selected === null) {
-      selectFrom(square);
-      return;
-    }
+  /** Sends the move `from` → `to`, or opens the picker when it promotes */
+  const playTo = (from: string, to: string): boolean => {
     const matches = legalMoves.filter(
-      move => move.from === selected && move.to === square,
+      move => move.from === from && move.to === to,
     );
-    if (matches.length === 0) {
-      selectFrom(square);
-      return;
-    }
-    if (matches.length === 1 && matches[0] !== undefined) {
+    const only = matches[0];
+    if (only === undefined) return false;
+    if (matches.length === 1) {
       setSelected(null);
-      onMove(matches[0].san);
+      onMove(only.san);
+      return true;
+    }
+    setPending({ from, to, options: matches });
+    return true;
+  };
+
+  /** Pressing a piece picks it up; pressing anywhere else is a click on it */
+  const handlePress = (square: string, event: PointerEvent) => {
+    if (!interactive || pending !== null) return;
+    event.preventDefault();
+    if (canMoveFrom(square)) {
+      setSelected(square);
+      setDrag({ from: square, at: null });
       return;
     }
-    setPending({ from: selected, to: square, options: matches });
+    if (selected !== null && playTo(selected, square)) return;
+    setSelected(null);
+  };
+
+  /** Releasing on the square the piece left keeps it selected for a tap */
+  const handleRelease = (square: string) => {
+    if (drag === null) return;
+    setDrag(null);
+    if (square === drag.from) return;
+    if (!playTo(drag.from, square)) setSelected(null);
+  };
+
+  const handleDragMove = (event: PointerEvent) => {
+    if (drag === null) return;
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (rect === undefined || rect.width === 0) return;
+    setDrag({
+      from: drag.from,
+      at: {
+        x: ((event.clientX - rect.left) / rect.width) * 8,
+        y: ((event.clientY - rect.top) / rect.height) * 8,
+      },
+    });
+  };
+
+  const heldPiece = drag === null ? undefined : pieces.get(drag.from);
+
+  const squareCursor = (square: string): string => {
+    if (!interactive) return "default";
+    if (drag !== null) return "grabbing";
+    return canMoveFrom(square) ? "grab" : "pointer";
   };
 
   const result = resultText(state, playerNames);
@@ -235,14 +291,17 @@ export function ChessBoard({
           }}
         >
           <svg
+            ref={svgRef}
             viewBox="0 0 8 8"
             role="img"
             aria-label="Chess board"
+            onPointerMove={handleDragMove}
             style={{
               width: "100%",
               height: "100%",
               display: "block",
               userSelect: "none",
+              touchAction: "none",
             }}
           >
             {orderedRanks.map((rank, row) =>
@@ -263,8 +322,9 @@ export function ChessBoard({
                   <g
                     key={square}
                     data-square={square}
-                    onClick={() => handleSquare(square)}
-                    style={{ cursor: interactive ? "pointer" : "default" }}
+                    onPointerDown={event => handlePress(square, event)}
+                    onPointerUp={() => handleRelease(square)}
+                    style={{ cursor: squareCursor(square) }}
                   >
                     <rect
                       x={column}
@@ -307,18 +367,14 @@ export function ChessBoard({
                       </text>
                     )}
                     {piece !== undefined && (
-                      <text
+                      <PieceGlyph
+                        piece={piece}
                         x={column + 0.5}
                         y={row + 0.5}
-                        fontSize={0.78}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fill={piece.color === "w" ? "#ffffff" : "#1a1a1a"}
-                        stroke={piece.color === "w" ? "#1a1a1a" : "none"}
-                        strokeWidth={0.015}
-                      >
-                        {GLYPHS[`${piece.color}${piece.type}`]}
-                      </text>
+                        opacity={
+                          drag?.at !== null && drag?.from === square ? 0.3 : 1
+                        }
+                      />
                     )}
                     {isTarget && (
                       <circle
@@ -340,6 +396,11 @@ export function ChessBoard({
                   </g>
                 );
               }),
+            )}
+            {heldPiece !== undefined && drag?.at && (
+              <g data-drag-ghost style={{ pointerEvents: "none" }}>
+                <PieceGlyph piece={heldPiece} x={drag.at.x} y={drag.at.y} />
+              </g>
             )}
           </svg>
 
@@ -434,6 +495,34 @@ export function ChessBoard({
         )}
       </div>
     </>
+  );
+}
+
+function PieceGlyph({
+  piece,
+  x,
+  y,
+  opacity = 1,
+}: {
+  piece: Piece;
+  x: number;
+  y: number;
+  opacity?: number;
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      fontSize={0.78}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fill={piece.color === "w" ? "#ffffff" : "#1a1a1a"}
+      stroke={piece.color === "w" ? "#1a1a1a" : "none"}
+      strokeWidth={0.015}
+      opacity={opacity}
+    >
+      {GLYPHS[`${piece.color}${piece.type}`]}
+    </text>
   );
 }
 
