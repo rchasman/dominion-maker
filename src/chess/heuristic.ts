@@ -1,16 +1,18 @@
-import { Chess } from "chess.js";
+import { Chess, type PieceSymbol } from "chess.js";
 import { run } from "../lib/run";
 import { seededIndex } from "../lib/seeded-draw";
 import { sideToMove } from "./engine";
-import { PIECE_VALUES } from "./material";
+import { pieceValue } from "./facts";
 import type { ChessCommand, ChessPlayerId, ChessState } from "./shape";
 
-type Candidate = { san: string; to: string; captured?: string | undefined };
+type Candidate = {
+  san: string;
+  to: string;
+  captured?: PieceSymbol | undefined;
+};
 
 const valueOf = (candidate: Candidate): number =>
-  candidate.captured === undefined
-    ? 0
-    : (PIECE_VALUES[candidate.captured] ?? 0);
+  candidate.captured === undefined ? 0 : (pieceValue(candidate.captured) ?? 0);
 
 const richer = (best: Candidate, next: Candidate): Candidate =>
   valueOf(next) > valueOf(best) ? next : best;

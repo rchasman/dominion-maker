@@ -62,7 +62,6 @@ export const chessMoveSchema: z.ZodType<ChessMove> = z.object({
   from: square,
   to: square,
   promotion: piece.optional(),
-  captured: piece.optional(),
   reasoning: z.string().max(20000).optional(),
 });
 
