@@ -1,5 +1,5 @@
 import type { GameModule } from "../core/game-module";
-import { BOARD_GAME_LLM_SEAT } from "../core/seats";
+import { DEFAULT_LLM_SEAT } from "../core/seats";
 import { goGame } from "./definition";
 import { createGoGame, loadGoEngine } from "./engine";
 import {
@@ -26,5 +26,5 @@ export const goModule: GameModule<GoShape> = {
   // A batch that opens with the game's first event is the whole log, not an
   // append: a rewind has to reach clients as a replacement.
   needsFullResync: events => events[0]?.type === "GAME_INITIALIZED",
-  defaultLlmSeat: BOARD_GAME_LLM_SEAT,
+  defaultLlmSeat: DEFAULT_LLM_SEAT,
 };

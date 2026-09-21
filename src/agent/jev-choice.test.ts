@@ -2,16 +2,27 @@ import { describe, it, expect } from "bun:test";
 import {
   buildJevQuestion,
   buildJevState,
-  jevAnswerToAction,
-  jevDistribution,
   describeGameRead,
   buildJevReadQuestions,
   buildJevVerifyQuestions,
   GAME_PHASE_LEVELS,
 } from "./jev-choice";
+import { jevQuestions, type JevChoiceQuestion } from "./jev-protocol";
 import type { Action } from "../types/action";
 import type { GameState } from "../types/game-state";
 import { CARDS } from "../data/cards";
+
+const keysOf = (question: JevChoiceQuestion<Action>): string[] =>
+  question.options.map(option => option.key);
+
+const descriptionOf = (
+  question: JevChoiceQuestion<Action>,
+  key: string,
+): string | null => {
+  const option = question.options.find(candidate => candidate.key === key);
+  if (!option) throw new Error(`${key} was not offered`);
+  return option.description;
+};
 
 const LEGAL: Action[] = [
   { type: "play_treasure", card: "Copper" },
@@ -64,30 +75,53 @@ describe("buildJevQuestion", () => {
   const question = buildJevQuestion(buyPhaseState(), NO_TREASURES_LEFT);
 
   it("offers one numbered option per legal action once treasures are played", () => {
-    expect(Object.keys(question.criteria)).toEqual([
+    expect(keysOf(question)).toEqual([
       "1. buy Silver",
       "2. buy Chapel",
       "3. end phase",
     ]);
+    expect(question.options.map(option => option.move)).toEqual(
+      NO_TREASURES_LEFT,
+    );
   });
 
   it("offers only treasure plays while any treasure is still in hand, with duplicates distinct", () => {
     const withTreasures = buildJevQuestion(buyPhaseState(), LEGAL);
-    expect(Object.keys(withTreasures.criteria)).toEqual([
+    expect(keysOf(withTreasures)).toEqual([
       "1. play treasure Copper",
       "2. play treasure Copper",
     ]);
   });
 
   it("describes card options with the printed card effect", () => {
-    expect(question.criteria["1. buy Silver"]).toContain("Silver");
-    expect(question.criteria["1. buy Silver"]).toContain("cost 3");
+    expect(descriptionOf(question, "1. buy Silver")).toContain("Silver");
+    expect(descriptionOf(question, "1. buy Silver")).toContain("cost 3");
   });
 
   it("asks the buy-phase question with the coins and buys spelled out", () => {
-    expect(question.type).toBe("choice");
     expect(question.instructions).toContain("Buy phase with 0 coins and 1 buy");
     expect(question.instructions).toContain("`currentState.you`");
+  });
+
+  it("sends the same choice question and companions the endpoint always sent", () => {
+    const sent = jevQuestions(question, buildJevReadQuestions());
+    expect(Object.keys(sent)).toEqual([
+      "action",
+      "gamePhase",
+      "opponentDeckStronger",
+    ]);
+    expect(sent.action).toEqual({
+      type: "choice",
+      instructions: question.instructions,
+      criteria: {
+        "1. buy Silver": descriptionOf(question, "1. buy Silver"),
+        "2. buy Chapel": descriptionOf(question, "2. buy Chapel"),
+        "3. end phase": descriptionOf(question, "3. end phase"),
+      },
+    });
+    expect(sent.action.criteria["3. end phase"]).toContain(
+      "Moves to the next phase",
+    );
   });
 
   it("asks a treasure question while treasures remain", () => {
@@ -147,8 +181,10 @@ describe("buildJevQuestion", () => {
 describe("buildJevQuestion option advice", () => {
   it("puts the card's strategy advice on the option so Jev needs no lookup", () => {
     const question = buildJevQuestion(buyPhaseState(), NO_TREASURES_LEFT);
-    expect(question.criteria["1. buy Silver"]).toContain("Advice:");
-    expect(question.criteria["1. buy Silver"]).toContain(CARDS.Silver.strategy);
+    expect(descriptionOf(question, "1. buy Silver")).toContain("Advice:");
+    expect(descriptionOf(question, "1. buy Silver")).toContain(
+      CARDS.Silver.strategy,
+    );
   });
 });
 
@@ -189,98 +225,6 @@ describe("buildJevState", () => {
 
     expect(jevState).toMatchObject({
       strategy: { strategyOverride: "Always buy Province at $8" },
-    });
-  });
-});
-
-describe("jevAnswerToAction", () => {
-  it("maps the chosen option back to the legal action by its number", () => {
-    const action = jevAnswerToAction(
-      {
-        type: "choice",
-        choice: "3. buy Silver",
-        probabilities: {
-          "1. play treasure Copper": 0.1,
-          "2. play treasure Copper": 0.1,
-          "3. buy Silver": 0.7,
-          "4. end phase": 0.1,
-        },
-      },
-      LEGAL,
-    );
-
-    expect(action.type).toBe("buy_card");
-    expect(action).toHaveProperty("card", "Silver");
-  });
-
-  it("summarises the distribution as the reasoning, runner-up included", () => {
-    const action = jevAnswerToAction(
-      {
-        type: "choice",
-        choice: "3. buy Silver",
-        probabilities: {
-          "1. play treasure Copper": 0.05,
-          "2. play treasure Copper": 0.05,
-          "3. buy Silver": 0.7,
-          "4. end phase": 0.2,
-        },
-      },
-      LEGAL,
-    );
-
-    expect(action.reasoning).toBe(
-      "Jev picked this with 70% probability. Runner-up: end phase (20%).",
-    );
-  });
-
-  it("states the pick alone when no distribution is returned", () => {
-    const action = jevAnswerToAction(
-      { type: "choice", choice: "4. end phase" },
-      LEGAL,
-    );
-
-    expect(action.type).toBe("end_phase");
-    expect(action.reasoning).toBe("Jev picked this option.");
-  });
-
-  it("throws when the choice is not one of the offered options", () => {
-    expect(() =>
-      jevAnswerToAction({ type: "choice", choice: "9. buy Gold" }, LEGAL),
-    ).toThrow("not an offered option");
-  });
-});
-
-describe("jevDistribution", () => {
-  it("turns the probabilities into weighted votes on the legal actions, dropping slivers under 1%", () => {
-    const votes = jevDistribution(
-      {
-        type: "choice",
-        choice: "3. buy Silver",
-        probabilities: {
-          "1. play treasure Copper": 0.1,
-          "2. play treasure Copper": 0.004,
-          "3. buy Silver": 0.7,
-          "4. end phase": 0.2,
-        },
-      },
-      LEGAL,
-    );
-    expect(votes).toEqual([
-      { move: { type: "play_treasure", card: "Copper" }, weight: 0.1 },
-      { move: { type: "buy_card", card: "Silver" }, weight: 0.7 },
-      { move: { type: "end_phase" }, weight: 0.2 },
-    ]);
-  });
-
-  it("is one whole vote on the pick when no distribution came back", () => {
-    const votes = jevDistribution(
-      { type: "choice", choice: "4. end phase" },
-      LEGAL,
-    );
-    expect(votes).toHaveLength(1);
-    expect(votes[0]).toMatchObject({
-      weight: 1,
-      move: { type: "end_phase" },
     });
   });
 });

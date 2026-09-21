@@ -3,18 +3,13 @@ import { chessGame } from "./definition";
 import { createChessGame, type ChessEngine } from "./engine";
 import { replyFormatInstruction } from "../core/consensus/numbered-choice";
 import type { ChessMove, ChessState } from "./shape";
+import { playChessMoves } from "./test-helpers";
 
 const WHITE = "white";
 const BLACK = "black";
 
 const play = (engine: ChessEngine, sans: string[]) =>
-  sans.map((san, index) =>
-    engine.dispatch({
-      type: "MOVE",
-      playerId: index % 2 === 0 ? WHITE : BLACK,
-      san,
-    }),
-  );
+  playChessMoves(engine, [WHITE, BLACK], sans);
 
 const promptFor = (state: ChessState, customStrategy = "") =>
   chessGame.prompt({

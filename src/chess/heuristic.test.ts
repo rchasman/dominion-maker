@@ -1,25 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { chessHeuristic } from "./heuristic";
-import { createChessGame, type ChessEngine } from "./engine";
+import { createChessGame } from "./engine";
 import type { ChessState } from "./shape";
+import { chessStateAfter } from "./test-helpers";
 
 const WHITE = "white";
 const BLACK = "black";
 
-const play = (engine: ChessEngine, sans: string[]) =>
-  sans.map((san, index) =>
-    engine.dispatch({
-      type: "MOVE",
-      playerId: index % 2 === 0 ? WHITE : BLACK,
-      san,
-    }),
-  );
-
-const after = (sans: string[]): ChessState => {
-  const engine = createChessGame([WHITE, BLACK]);
-  play(engine, sans);
-  return engine.state;
-};
+const after = (sans: string[]): ChessState =>
+  chessStateAfter([WHITE, BLACK], sans);
 
 const sanChosen = (state: ChessState, player: string): string => {
   const command = chessHeuristic(state, player);

@@ -2,6 +2,7 @@ import type { PendingChoice } from "../types/pending-choice";
 import { isReactionChoice } from "../types/pending-choice";
 import { canSkipDecision } from "../lib/decision-utils";
 import { hasCustomActions, getCurrentRoundIndex } from "./decision-decomposer";
+import { plural } from "../lib/plural";
 import { run } from "../lib/run";
 
 /** AI-facing PendingChoice: what the model needs to decide, minus UI fields */
@@ -24,10 +25,10 @@ export function projectPendingChoiceForAI(
 
   const constraint = run(() => {
     if (min === max) {
-      return `select exactly ${min} card${min === 1 ? "" : "s"}`;
+      return `select exactly ${plural(min, "card")}`;
     }
     if (canSkipDecision(choice)) {
-      return `select up to ${max} card${max === 1 ? "" : "s"} (skipping is allowed)`;
+      return `select up to ${plural(max, "card")} (skipping is allowed)`;
     }
     return `select between ${min} and ${max} cards`;
   });

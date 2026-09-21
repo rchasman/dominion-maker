@@ -40,6 +40,10 @@ const toMove = (playerOrder: ChessPlayerOrder, board: Chess): ChessPlayerId =>
 export const sideToMove = (state: ChessState): ChessPlayerId =>
   toMove(state.playerOrder, new Chess(state.fen));
 
+/** The move number a game record shows: both sides' plies share one number */
+export const moveNumberOf = (state: ChessState): number =>
+  Math.floor(state.moves.length / 2) + 1;
+
 const resultOf = (board: Chess, resignedBy: ChessPlayerId | null) =>
   run<ChessResult | null>(() => {
     if (board.isCheckmate()) return "checkmate";

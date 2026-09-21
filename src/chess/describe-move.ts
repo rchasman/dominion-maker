@@ -17,7 +17,8 @@ const PIECE_NAMES: Record<string, PieceName> = {
   k: "King",
 };
 
-const pieceName = (symbol: string): PieceName => PIECE_NAMES[symbol] ?? "Pawn";
+export const pieceName = (symbol: string): PieceName =>
+  PIECE_NAMES[symbol] ?? "Pawn";
 
 /** Everything a move did beyond landing a piece on a square */
 export type ChessMoveEvent =

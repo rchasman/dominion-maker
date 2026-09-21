@@ -7,7 +7,13 @@ import {
 } from "../core/consensus/numbered-choice";
 import type { ChessMove, ChessShape } from "./shape";
 
-const RECALLED_MOVES = 8;
+export const RECALLED_MOVES = 8;
+
+export const colourName = (colour: "w" | "b"): "White" | "Black" =>
+  colour === "w" ? "White" : "Black";
+
+export const colourToMove = (board: Chess): "White" | "Black" =>
+  colourName(board.turn());
 
 /** One row of the numbered table; SAN already names both squares */
 export const chessPromptRow = (move: ChessMove) => ({ san: move.san });
@@ -43,7 +49,7 @@ export function chessPrompt({
   customStrategy,
 }: PromptInput<ChessShape>): { system: string; user: string } {
   const board = new Chess(state.fen);
-  const colour = board.turn() === "w" ? "White" : "Black";
+  const colour = colourToMove(board);
   const check = state.inCheck ? " You are in check." : "";
   const recent = state.moves.slice(-RECALLED_MOVES);
   const strategy = customStrategy.trim();

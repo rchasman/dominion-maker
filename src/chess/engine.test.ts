@@ -3,6 +3,7 @@ import { Chess } from "chess.js";
 import { createChessGame, loadChessEngine } from "./engine";
 import type { ChessEngine } from "./engine";
 import type { ChessEvent } from "./shape";
+import { playChessMoves } from "./test-helpers";
 
 const WHITE = "white";
 const BLACK = "black";
@@ -11,12 +12,7 @@ const START_FEN = new Chess().fen();
 const newGame = (): ChessEngine => createChessGame([WHITE, BLACK]);
 
 const play = (engine: ChessEngine, sans: string[]) =>
-  sans.map((san, index) =>
-    engine.dispatch(
-      { type: "MOVE", playerId: index % 2 === 0 ? WHITE : BLACK, san },
-      index % 2 === 0 ? WHITE : BLACK,
-    ),
-  );
+  playChessMoves(engine, [WHITE, BLACK], sans);
 
 const FOOLS_MATE = ["f3", "e5", "g4", "Qh4#"];
 // The start position recurs for the third time on the eighth ply.

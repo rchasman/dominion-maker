@@ -1,39 +1,23 @@
 import { seededIndex } from "../lib/seeded-draw";
 import { sideToMove } from "./engine";
 import {
-  allPoints,
   finalScore,
-  groupAt,
-  judgePlacement,
+  isEyeOf,
+  judgedPlacements,
   leaderOf,
-  neighbours,
-  pointKey,
+  neighbourStones,
   replayMoves,
-  stoneAt,
+  rescuedStones,
   stoneOf,
-  type Placement,
+  type Candidate,
   type Point,
   type Stone,
 } from "./rules";
 import type { GoCommand, GoPlayerId, GoState } from "./shape";
 
-type Candidate = { point: Point; placement: Placement };
-
-const ONE_LIBERTY = 1;
-const SAFE_LIBERTIES = 2;
-
 const legalCandidates = (state: GoState, stone: Stone): Candidate[] => {
   const { positions } = replayMoves(state.size, state.moves);
-  return allPoints(state.size).flatMap(point => {
-    const judged = judgePlacement(
-      state.size,
-      state.board,
-      positions,
-      stone,
-      point,
-    );
-    return judged.ok ? [{ point, placement: judged.placement }] : [];
-  });
+  return judgedPlacements(state.size, state.board, positions, stone);
 };
 
 /** The first candidate with the highest measure, so a tie keeps board order */
@@ -41,41 +25,6 @@ const bestBy =
   (measure: (candidate: Candidate) => number) =>
   (best: Candidate, next: Candidate): Candidate =>
     measure(next) > measure(best) ? next : best;
-
-/**
- * The stones this placement pulls out of atari: own groups whose one liberty
- * is the point, provided the joined group then breathes. A group counted
- * through two neighbours is counted once.
- */
-const rescuedBy = (
-  state: GoState,
-  stone: Stone,
-  candidate: Candidate,
-): number => {
-  const threatened = neighbours(state.size, candidate.point)
-    .filter(next => stoneAt(state.board, state.size, next) === stone)
-    .map(next => groupAt(state.board, state.size, next))
-    .filter(group => group.liberties.length === ONE_LIBERTY);
-  if (threatened.length === 0) return 0;
-  const joined = groupAt(
-    candidate.placement.board,
-    state.size,
-    candidate.point,
-  );
-  if (joined.liberties.length < SAFE_LIBERTIES) return 0;
-  return new Set(threatened.flatMap(group => group.stones.map(pointKey))).size;
-};
-
-const ownNeighbours = (state: GoState, stone: Stone, point: Point): number =>
-  neighbours(state.size, point).filter(
-    next => stoneAt(state.board, state.size, next) === stone,
-  ).length;
-
-/** An empty point every neighbour of which is ours; filling it costs an eye */
-const isOwnEye = (state: GoState, stone: Stone, point: Point): boolean =>
-  neighbours(state.size, point).every(
-    next => stoneAt(state.board, state.size, next) === stone,
-  );
 
 const command = (playerId: GoPlayerId, point: Point | null): GoCommand =>
   point === null
@@ -129,22 +78,27 @@ export function goHeuristic(state: GoState, playerId: GoPlayerId): GoCommand {
 
   const rescue = firstOf(candidates, head =>
     candidates.reduce(
-      bestBy(candidate => rescuedBy(state, stone, candidate)),
+      bestBy(candidate =>
+        rescuedStones(state.size, state.board, stone, candidate),
+      ),
       head,
     ),
   );
-  if (rescue && rescuedBy(state, stone, rescue) > 0)
+  if (rescue && rescuedStones(state.size, state.board, stone, rescue) > 0)
     return command(playerId, rescue.point);
 
   const openPoints = candidates.filter(
-    candidate => !isOwnEye(state, stone, candidate.point),
+    candidate => !isEyeOf(state.size, state.board, stone, candidate.point),
   );
   const touching = openPoints.filter(
-    candidate => ownNeighbours(state, stone, candidate.point) > 0,
+    candidate =>
+      neighbourStones(state.size, state.board, candidate.point, stone) > 0,
   );
   const closest = firstOf(touching, head =>
     touching.reduce(
-      bestBy(candidate => ownNeighbours(state, stone, candidate.point)),
+      bestBy(candidate =>
+        neighbourStones(state.size, state.board, candidate.point, stone),
+      ),
       head,
     ),
   );

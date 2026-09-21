@@ -2,10 +2,8 @@ import { Chess } from "chess.js";
 import { run } from "../lib/run";
 import { seededIndex } from "../lib/seeded-draw";
 import { sideToMove } from "./engine";
+import { PIECE_VALUES } from "./material";
 import type { ChessCommand, ChessPlayerId, ChessState } from "./shape";
-
-/** Material worth of a captured piece; the king is never captured */
-const PIECE_VALUES: Record<string, number> = { q: 9, r: 5, b: 3, n: 3, p: 1 };
 
 type Candidate = { san: string; to: string; captured?: string | undefined };
 

@@ -1,30 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import { goHeuristic } from "./heuristic";
-import { createGoGame, type GoEngine } from "./engine";
+import { createGoGame } from "./engine";
 import type { GoCommand, GoMoveRecord, GoState } from "./shape";
+import { goStateAfter } from "./test-helpers";
 
 const BLACK = "black";
 const WHITE = "white";
 
 const point = (x: number, y: number): GoMoveRecord => ({ x, y });
 
-const play = (engine: GoEngine, moves: GoMoveRecord[]) =>
-  moves.map((move, index) => {
-    const playerId = index % 2 === 0 ? BLACK : WHITE;
-    const result = engine.dispatch(
-      move === "pass"
-        ? { type: "PASS", playerId }
-        : { type: "PLACE", playerId, x: move.x, y: move.y },
-    );
-    if (!result.ok) throw new Error(result.error);
-    return result;
-  });
-
-const after = (moves: GoMoveRecord[]): GoState => {
-  const engine = createGoGame([BLACK, WHITE], { size: 9 });
-  play(engine, moves);
-  return engine.state;
-};
+const after = (moves: GoMoveRecord[]): GoState =>
+  goStateAfter([BLACK, WHITE], moves);
 
 const chosen = (state: GoState, player: string): GoMoveRecord | "resign" => {
   const command: GoCommand = goHeuristic(state, player);

@@ -4,6 +4,7 @@ import type { GoCommand, GoEvent, GoMove } from "./shape";
 import { createGoGame } from "./engine";
 import { GAMES } from "../games";
 import { gameIdSchema } from "../game-ids";
+import { DEFAULT_LLM_SEAT } from "../core/seats";
 
 const BLACK = "black";
 const WHITE = "white";
@@ -127,9 +128,9 @@ describe("the Go module describes its own wire shapes", () => {
     ]);
   });
 
-  it("never asks Jev for a Go move", () => {
-    expect(goModule.defaultLlmSeat.models).not.toContain("jev");
-    expect(goModule.defaultLlmSeat.consensusCount).toBe(6);
+  it("starts an LLM seat on the default roster, Jev included", () => {
+    expect(goModule.defaultLlmSeat).toBe(DEFAULT_LLM_SEAT);
+    expect(goModule.defaultLlmSeat.models).toContain("jev");
   });
 
   it("knows who must act and what they may play", () => {
