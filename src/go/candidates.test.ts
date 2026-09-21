@@ -3,7 +3,6 @@ import {
   describePass,
   describeScore,
   factsOf,
-  isSelfAtari,
   legalCandidates,
   offeredMoves,
   passWinsNow,
@@ -11,9 +10,15 @@ import {
   positionFacts,
   type PlacementFacts,
 } from "./candidates";
-import { isEyeOf, judgePlacement, pointLabel, stoneOf } from "./rules";
+import {
+  isEyeOf,
+  isSelfAtari,
+  judgePlacement,
+  pointLabel,
+  stoneOf,
+} from "./rules";
 import type { GoMove, GoMoveRecord, GoState } from "./shape";
-import { goStateAfter, goStateFromRows } from "./test-helpers";
+import { goStateAfter, goStateFromRows, placedStone } from "./test-helpers";
 
 const BLACK = "b";
 const WHITE = "w";
@@ -27,6 +32,14 @@ const after = (moves: GoMoveRecord[]): GoState =>
 
 const stateOf = (rows: string[], moves: GoMoveRecord[] = []): GoState =>
   goStateFromRows([BLACK, WHITE], rows, moves);
+
+/** The facts behind one move asked about directly, offered or not */
+const factsFor = (state: GoState, move: GoMove): PlacementFacts => {
+  const [judged] = factsOf(state, [move]);
+  if (judged === undefined || judged.facts === null)
+    throw new Error(`${move.label} has no facts`);
+  return judged.facts;
+};
 
 /**
  * A seki in the top-left: White's ring and Black's D7 stone share C7 and E7
@@ -101,6 +114,8 @@ describe("placement facts", () => {
       atari: 0,
       touchesOwn: 0,
       touchesEnemy: 0,
+      exposed: 0,
+      threatened: 0,
     });
     expect(factsAt(state, "A9")).toMatchObject({ line: 1, libertiesAfter: 2 });
     expect(factsAt(state, "E5")).toMatchObject({ line: 5 });
@@ -144,31 +159,6 @@ describe("placement facts", () => {
     expect(factsAt(state, "G5")).toMatchObject({ captures: 2, atari: 0 });
   });
 
-  it("names a self-atari by its facts alone", () => {
-    expect(
-      isSelfAtari({
-        line: 1,
-        captures: 0,
-        libertiesAfter: 1,
-        rescues: 0,
-        atari: 0,
-        touchesOwn: 0,
-        touchesEnemy: 2,
-      }),
-    ).toBe(true);
-    expect(
-      isSelfAtari({
-        line: 1,
-        captures: 1,
-        libertiesAfter: 1,
-        rescues: 0,
-        atari: 0,
-        touchesOwn: 0,
-        touchesEnemy: 2,
-      }),
-    ).toBe(false);
-  });
-
   it("judges a placement that was not offered when asked directly", () => {
     // Black's A8 would sit between White's A7 and B8 with A9 as its one liberty
     const state = after([point(4, 4), point(0, 2), point(5, 4), point(1, 1)]);
@@ -176,11 +166,17 @@ describe("placement facts", () => {
       entry => pointLabel(SIZE, entry.point) === "A8",
     );
     if (candidate === undefined) throw new Error("A8 is not legal");
-    const facts = placementFacts(SIZE, state.board, "B", candidate);
+    const facts = placementFacts(
+      SIZE,
+      state.board,
+      new Set([state.board]),
+      "B",
+    )(candidate);
     expect(facts).toMatchObject({
       libertiesAfter: 1,
       captures: 0,
       touchesEnemy: 2,
+      exposed: 1,
     });
     expect(isSelfAtari(facts)).toBe(true);
   });
@@ -190,6 +186,138 @@ describe("placement facts", () => {
     expect(() =>
       factsOf(state, [{ kind: "place", x: 3, y: 5, label: "D4" }]),
     ).toThrow("D4 is occupied");
+  });
+});
+
+describe("one move ahead", () => {
+  /** Black's A9 hangs by A8 with White on B9 */
+  const CORNER = [
+    "B W . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ];
+
+  /**
+   * A7 lifts White's A9-A8 pair and stands on A8 alone, a liberty White may
+   * fill at once: two stones came off, so the retake repeats no position.
+   */
+  const SNAPBACK = [
+    "W B . . . . . . .",
+    "W B . . . . . . .",
+    ". W . . . . . . .",
+    "W . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ];
+
+  /** Black lives with two one-point eyes at B9 and D9, both suicide for White */
+  const TWO_EYES = [
+    "B . B . B W . . .",
+    "B B B B B W . . .",
+    "W W W W W W . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+    ". . . . . . . . .",
+  ];
+
+  it("counts the own stones a tenuki leaves the opponent to capture, and the rescue that saves them", () => {
+    const state = stateOf(CORNER);
+    expect(factsFor(state, placedStone(4, 4, "E5"))).toMatchObject({
+      exposed: 1,
+      threatened: 0,
+    });
+    expect(factsFor(state, placedStone(0, 1, "A8"))).toMatchObject({
+      rescues: 1,
+      libertiesAfter: 2,
+      exposed: 0,
+      threatened: 2,
+    });
+  });
+
+  it("sees a group in atari before the move and the pair the opponent could capture instead of the rescue", () => {
+    const state = after(RESCUE);
+    expect(positionFacts(state).threats).toEqual({
+      exposed: 2,
+      threatened: 0,
+    });
+    expect(factsFor(state, placedStone(6, 4, "G5"))).toMatchObject({
+      rescues: 2,
+      exposed: 0,
+    });
+    expect(factsFor(state, placedStone(0, 8, "A1"))).toMatchObject({
+      rescues: 0,
+      exposed: 2,
+      threatened: 1,
+    });
+  });
+
+  it("does not count a ko stone the opponent may not retake at once", () => {
+    // Black takes the ko at D8; White's retake at C8 would repeat the position
+    const state = after([
+      point(1, 1),
+      point(3, 0),
+      point(2, 0),
+      point(3, 2),
+      point(2, 2),
+      point(4, 1),
+      point(7, 7),
+      point(2, 1),
+    ]);
+    expect(factsFor(state, placedStone(3, 1, "D8"))).toMatchObject({
+      captures: 1,
+      libertiesAfter: 1,
+      exposed: 0,
+      threatened: 0,
+    });
+    // Ignoring the ko leaves C9 hanging by B9, which White may fill
+    expect(factsFor(state, placedStone(4, 4, "E5"))).toMatchObject({
+      exposed: 1,
+      threatened: 1,
+    });
+  });
+
+  it("counts a capturing stone the opponent may take straight back", () => {
+    expect(factsFor(stateOf(SNAPBACK), placedStone(0, 2, "A7"))).toMatchObject({
+      captures: 2,
+      libertiesAfter: 1,
+      exposed: 1,
+      threatened: 0,
+    });
+  });
+
+  it("does not call a group on two liberties threatened when the opponent may fill neither", () => {
+    const state = stateOf(TWO_EYES);
+    expect(positionFacts(state).threats).toEqual({
+      exposed: 0,
+      threatened: 0,
+    });
+    expect(factsFor(state, placedStone(4, 4, "E5"))).toMatchObject({
+      exposed: 0,
+      threatened: 0,
+    });
+  });
+
+  it("calls a corner stone threatened on an empty board and an inner stone safe", () => {
+    const state = after([]);
+    expect(factsAt(state, "A9")).toMatchObject({
+      libertiesAfter: 2,
+      exposed: 0,
+      threatened: 1,
+    });
+    expect(factsAt(state, "B9")).toMatchObject({ threatened: 0 });
+    expect(factsAt(state, "D4")).toMatchObject({ exposed: 0, threatened: 0 });
   });
 });
 
@@ -365,8 +493,14 @@ describe("the offered moves", () => {
       const legal = legalCandidates(state);
       const legalLabels = legal.map(c => pointLabel(SIZE, c.point));
       offered.map(label => expect(legalLabels).toContain(label));
+      const factsFor = placementFacts(
+        SIZE,
+        state.board,
+        new Set([state.board]),
+        stone,
+      );
       legal.map(candidate => {
-        const facts = placementFacts(SIZE, state.board, stone, candidate);
+        const facts = factsFor(candidate);
         const faultless =
           !isSelfAtari(facts) &&
           (facts.rescues > 0 ||

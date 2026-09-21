@@ -11,7 +11,7 @@ const WHITE = "white";
 const OPENING_MOVES = 81;
 const PASS: GoMove = { kind: "pass", label: "pass" };
 const FACT_HEADER =
-  "{choice\tpoint\tline\tcaptures\tlibertiesAfter\trescues\tatari\ttouchesOwn\ttouchesEnemy}:";
+  "{choice\tpoint\tline\tcaptures\tlibertiesAfter\trescues\tatari\ttouchesOwn\ttouchesEnemy\texposed\tthreatened}:";
 
 const point = (x: number, y: number): GoMoveRecord => ({ x, y });
 
@@ -36,9 +36,15 @@ describe("the Go prompt", () => {
     expect(system).toContain(replyFormatInstruction(OPENING_MOVES));
     expect(system).toContain('{"reasoning"');
     expect(system).toContain("libertiesAfter");
+    expect(system).toContain(
+      "exposed (own stones the opponent could capture with its next stone) and threatened (the largest own group the opponent could put in atari with a next stone that is not itself in atari)",
+    );
     expect(system).toContain("captures and rescues come first");
     expect(system).toContain("1 with captures 0 is self-atari");
     expect(system).toContain("1 after a capture is a ko or snapback");
+    expect(system).toContain(
+      "exposed and threatened read the board after your stone lands",
+    );
     expect(system).toContain("fill the neutral points before you pass");
     expect(system).toContain(
       "The pass is in the table only when every remaining stone is self-atari or fills your own eye",
@@ -57,7 +63,9 @@ describe("the Go prompt", () => {
     expect(user).toContain("Black has taken 0, White has taken 0");
     expect(user).toContain("LEGAL MOVES");
     expect(user).toContain(`[${OPENING_MOVES - 2}\t]${FACT_HEADER}`);
-    expect(user).toContain("\n  1\tA9\t1\t0\t2\t0\t0\t0\t0\n");
+    // A corner stone stands on two liberties, and White may fill either at once
+    expect(user).toContain("\n  1\tA9\t1\t0\t2\t0\t0\t0\t0\t0\t1\n");
+    expect(user).toContain("\n  2\tB9\t1\t0\t3\t0\t0\t0\t0\t0\t0\n");
     expect(user).not.toContain("pass");
   });
 
@@ -71,10 +79,13 @@ describe("the Go prompt", () => {
     );
     expect(user).toContain("BLACK GROUPS: 1 stone around D4, 4 liberties");
     expect(user).toContain("WHITE GROUPS: 1 stone around F6, 4 liberties");
+    expect(user).toContain(
+      "THREATS NOW: stones the opponent can capture right now: 0. Largest own group the opponent can put in atari right now with a stone that is not itself in atari: 0 stones.",
+    );
     expect(user.indexOf("POSITION:")).toBeLessThan(user.indexOf("LEGAL MOVES"));
   });
 
-  it("flags a group in atari on either side", () => {
+  it("flags a group in atari on either side, and what the opponent could take right now", () => {
     // Black's E5-F5 pair hangs by G5
     const { user } = promptFor(
       after([
@@ -96,7 +107,12 @@ describe("the Go prompt", () => {
     expect(user).toContain(
       "WHITE GROUPS: 2 stones around E6, 4 liberties; 1 stone around D5, 3 liberties; 2 stones around E4, 4 liberties",
     );
-    expect(user).toMatch(/\n +\d+\tG5\t3\t0\t3\t2\t0\t1\t0\n/);
+    expect(user).toContain(
+      "THREATS NOW: stones the opponent can capture right now: 2. Largest own group the opponent can put in atari right now with a stone that is not itself in atari: 0 stones.",
+    );
+    // The rescue leaves nothing to capture; a tenuki at A1 leaves the pair, and A1 itself on two liberties
+    expect(user).toMatch(/\n +\d+\tG5\t3\t0\t3\t2\t0\t1\t0\t0\t0\n/);
+    expect(user).toMatch(/\n +\d+\tA1\t1\t0\t2\t0\t0\t0\t0\t2\t1\n/);
   });
 
   it("puts the capture and the atari counts in the row", () => {
@@ -104,16 +120,24 @@ describe("the Go prompt", () => {
     const { user } = promptFor(
       after([point(3, 4), point(4, 4), point(5, 4), point(7, 8)]),
     );
-    expect(user).toMatch(/\n +\d+\tE6\t4\t0\t3\t0\t1\t0\t1\n/);
+    expect(user).toMatch(/\n +\d+\tE6\t4\t0\t3\t0\t1\t0\t1\t0\t0\n/);
     expect(user).toContain(
       "WHITE GROUPS: 1 stone around E5, 2 liberties; 1 stone around H1",
+    );
+  });
+
+  it("names a single threatened stone in the singular", () => {
+    // Black's lone A9 stone stands on two liberties White may fill
+    const { user } = promptFor(after([point(0, 0), point(4, 4)]));
+    expect(user).toContain(
+      "Largest own group the opponent can put in atari right now with a stone that is not itself in atari: 1 stone.",
     );
   });
 
   it("gives the pass row its effect and no stone facts", () => {
     const { user } = promptFor(after([point(3, 5), "pass"]));
     expect(user).toContain(
-      `${OPENING_MOVES}\t"pass: ends the game now, scored as it stands: Black 81 to White 7.5 with komi counted: Black leads by 73.5"\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a`,
+      `${OPENING_MOVES}\t"pass: ends the game now, scored as it stands: Black 81 to White 7.5 with komi counted: Black leads by 73.5"\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a`,
     );
     const asked = promptFor(after([]), "", [PASS]);
     expect(asked.user).toContain(
