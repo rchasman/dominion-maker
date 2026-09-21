@@ -8,38 +8,101 @@ import {
 } from "../core/seat-presets";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
+import { describeMove, eventText, type ChessMoveEvent } from "./describe-move";
 import { CHESS_SEAT_PRESETS } from "./presets";
+import { replayMoves } from "./replay";
 import type { ChessState } from "./shape";
 
 /** Each side keeps the colour of the squares it plays, on the board and off it */
 const SIDE_COLORS = ["#e8d3ad", "#c9a875"] as const;
 
-const movePairs = (moves: readonly string[]) =>
-  Array.from({ length: Math.ceil(moves.length / 2) }, (_, index) => ({
-    number: index + 1,
-    white: moves[index * 2] ?? "",
-    black: moves[index * 2 + 1] ?? "",
-  }));
+const EVENT_COLORS: Record<ChessMoveEvent["kind"], string> = {
+  capture: "#ef4444",
+  "en-passant": "#a855f7",
+  castle: "#3b82f6",
+  promotion: "#22c55e",
+  check: "#f59e0b",
+  checkmate: "#ef4444",
+};
 
-/** The move list, a numbered pair per row, the latest at the bottom */
+type LogRow = {
+  ply: number;
+  side: "w" | "b";
+  san: string;
+  text: string;
+  events: ChessMoveEvent[];
+};
+
+/** `12.` is White's twelfth move and `12…` is Black's reply, as in print */
+const moveLabel = (ply: number): string =>
+  `${Math.floor(ply / 2) + 1}${ply % 2 === 0 ? "." : "…"}`;
+
+/** A log no engine produced still lists its SAN, with nothing to say about it */
+const logRows = (moves: readonly string[]): LogRow[] => {
+  const replayed = replayMoves(moves);
+  return moves.map((san, ply) => {
+    const move = replayed?.[ply];
+    const side = ply % 2 === 0 ? "w" : "b";
+    if (move === undefined) return { ply, side, san, text: san, events: [] };
+    const described = describeMove(move);
+    return {
+      ply,
+      side,
+      san,
+      text: `${described.piece} to ${described.to}`,
+      events: described.events,
+    };
+  });
+};
+
+/** One row per move, its events nested beneath it the way Dominion nests a play */
 export function ChessLogRows({ moves }: { moves: readonly string[] }) {
   return (
     <>
-      {movePairs(moves).map(pair => (
+      {logRows(moves).map(row => (
         <div
-          key={pair.number}
+          key={row.ply}
+          data-chess-ply={row.ply}
           style={{
-            display: "flex",
-            gap: "var(--space-2)",
             fontFamily: "monospace",
             color: "var(--color-text-secondary)",
             marginBlockEnd: "var(--space-2)",
             lineHeight: 1.4,
+            whiteSpace: "pre",
           }}
         >
-          <span style={{ opacity: 0.6, minWidth: "2rem" }}>{pair.number}.</span>
-          <span style={{ minWidth: "4rem" }}>{pair.white}</span>
-          <span>{pair.black}</span>
+          <div>
+            <span style={{ opacity: 0.6 }}>{moveLabel(row.ply)} </span>
+            <span
+              data-chess-side={row.side}
+              style={{
+                color: SIDE_COLORS[row.side === "w" ? 0 : 1],
+                fontWeight: 600,
+              }}
+            >
+              {row.text}
+            </span>
+            {row.text !== row.san && (
+              <span style={{ opacity: 0.6 }}> ({row.san})</span>
+            )}
+          </div>
+          {row.events.map((event, index) => (
+            <div key={event.kind} data-chess-event={event.kind}>
+              <span
+                style={{ color: "var(--color-border)", userSelect: "none" }}
+              >
+                {index === row.events.length - 1 ? "└─ " : "├─ "}
+              </span>
+              <span
+                style={{
+                  color: EVENT_COLORS[event.kind],
+                  fontWeight: event.kind === "checkmate" ? 700 : 600,
+                }}
+              >
+                {eventText(event)}
+              </span>
+            </div>
+          ))}
         </div>
       ))}
     </>
