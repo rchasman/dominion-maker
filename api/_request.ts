@@ -4,6 +4,7 @@ import { gameStateSchema } from "../src/validation/game-state";
 import { actionSchema } from "../src/validation/action";
 import { chessModule } from "../src/chess/module";
 import { dominionModule } from "../src/dominion/module";
+import { goModule } from "../src/go/module";
 import type { GameShape } from "../src/core/game-definition";
 import type { GameModule } from "../src/core/game-module";
 import type { GameId } from "../src/game-ids";
@@ -40,6 +41,7 @@ const actionRequestArm = <K extends GameId, G extends GameShape>(
 export const actionRequestSchema = z.discriminatedUnion("game", [
   actionRequestArm("dominion", dominionModule),
   actionRequestArm("chess", chessModule),
+  actionRequestArm("go", goModule),
 ]);
 export type ActionRequest = z.infer<typeof actionRequestSchema>;
 export const verifyRequestSchema = z.object({

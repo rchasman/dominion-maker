@@ -17,6 +17,8 @@ import {
   useDominionSession,
 } from "../../session/SessionContext";
 import { ChessRoom } from "./ChessRoom";
+import { ACTIVE_GAME_STORAGE_KEY } from "./active-game-key";
+import { GoRoom } from "./GoRoom";
 import {
   GameOverNotification,
   SpectatorBadge,
@@ -26,13 +28,15 @@ import {
   type RoomProps,
 } from "./room-chrome";
 
-/** Exhaustive on purpose: a third game must not fall through to Dominion */
+/** Exhaustive on purpose: a fourth game must not fall through to Dominion */
 export function GameRoom(props: RoomProps) {
   switch (props.game) {
     case "chess":
       return <ChessRoom {...props} />;
     case "dominion":
       return <DominionRoom {...props} />;
+    case "go":
+      return <GoRoom {...props} />;
   }
 }
 
@@ -97,7 +101,7 @@ function DominionRoomContent({
           <GameOverNotification
             message={gameEndReason}
             onClose={() => {
-              localStorage.removeItem("dominion_active_game");
+              localStorage.removeItem(ACTIVE_GAME_STORAGE_KEY);
               onBack();
             }}
           />

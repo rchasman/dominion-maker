@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Chess } from "chess.js";
-import type { ControllerConfig, ControllerKind, Seats } from "../core/seats";
+import type { ControllerConfig, Seats } from "../core/seats";
 import { HUMAN_SEAT } from "../core/seats";
-import { SeatSelector } from "../components/SeatSelector";
+import { BoardButton } from "../components/BoardButton";
+import { DEFAULT_SEAT_OPTIONS, SeatSelector } from "../components/SeatSelector";
 import { run } from "../lib/run";
 import { chessGame } from "./definition";
 import { chessModule } from "./module";
@@ -12,11 +13,6 @@ import type { ChessMove, ChessState } from "./shape";
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"] as const;
 const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"] as const;
 const PROMOTION_ORDER = ["q", "r", "b", "n"] as const;
-const DEFAULT_SEAT_OPTIONS: readonly ControllerKind[] = [
-  "human",
-  "heuristic",
-  "llm",
-];
 
 const GLYPHS: Record<string, string> = {
   wk: "♔",
@@ -564,37 +560,5 @@ function PlayerHeader({
         disabled={onSeatChange === undefined}
       />
     </div>
-  );
-}
-
-function BoardButton({
-  onClick,
-  disabled = false,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        padding: "var(--space-2) var(--space-5)",
-        fontSize: "0.75rem",
-        fontFamily: "inherit",
-        textTransform: "uppercase",
-        letterSpacing: "0.1rem",
-        background: "var(--color-victory-dark)",
-        color: "#fff",
-        border: "1px solid var(--color-victory)",
-        borderRadius: "4px",
-        cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.5 : 1,
-      }}
-    >
-      {children}
-    </button>
   );
 }

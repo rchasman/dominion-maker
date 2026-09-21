@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { Chess } from "chess.js";
-import { chessDevtoolsAdapter, chessStateAt } from "./devtools";
+import {
+  stateAtFor,
+  turnLogAdapter,
+} from "../components/EventDevtools/turn-log-adapter";
+import { CHESS_LOG_READING } from "./devtools";
 import { createChessGame } from "./engine";
+import { chessModule } from "./module";
 import { CHESS_PLAYERS } from "./seat";
 import type { ChessEvent } from "./shape";
 
@@ -27,9 +32,15 @@ const fenAfter = (sans: string[]): string => {
 
 const SANS = ["e4", "e5", "Nf3", "Nc6", "Bb5"];
 
+const chessStateAt = stateAtFor(chessModule);
+
 describe("the chess devtools adapter", () => {
   const events = played(SANS);
-  const adapter = chessDevtoolsAdapter(events, chessStateAt(events));
+  const adapter = turnLogAdapter(
+    CHESS_LOG_READING,
+    events,
+    chessStateAt(events),
+  );
 
   it("stops the scrubber on every move and on a resignation", () => {
     expect(events.filter(event => adapter.isRoot(event)).length).toBe(
@@ -60,7 +71,11 @@ describe("the chess devtools adapter", () => {
     const log = [...engine.eventLog];
     const resignation = log.at(-1);
     if (resignation === undefined) throw new Error("no resignation");
-    const withResignation = chessDevtoolsAdapter(log, chessStateAt(log));
+    const withResignation = turnLogAdapter(
+      CHESS_LOG_READING,
+      log,
+      chessStateAt(log),
+    );
     expect(withResignation.label(resignation)).toBe("b resigned");
   });
 

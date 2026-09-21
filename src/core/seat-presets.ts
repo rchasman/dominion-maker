@@ -4,11 +4,18 @@
  * keeps its own table of names, descriptions and seats.
  */
 
-import type { ControllerConfig, Seats } from "./seats";
-import { HUMAN_SEAT } from "./seats";
+import type { ControllerConfig, LlmSeatConfig, Seats } from "./seats";
+import { HEURISTIC_SEAT, HUMAN_SEAT } from "./seats";
 import { uiLogger } from "../lib/logger";
 
 export type SeatPreset = "rules" | "hybrid" | "watch";
+
+/** One table shape as a game names, describes and seats it */
+export type TablePreset = {
+  name: string;
+  description: string;
+  seats: (players: readonly string[]) => Seats;
+};
 
 /** Every preset, in the order every game's switcher shows them */
 export const SEAT_PRESET_NAMES: readonly SeatPreset[] = [
@@ -24,6 +31,57 @@ export const versus =
     Object.fromEntries(
       players.map((id, index) => [id, index === 0 ? HUMAN_SEAT : opponent]),
     );
+
+/**
+ * The three presets a two-colour board game offers, under the same names
+ * Dominion uses so one switcher serves every game. The first colour is
+ * always the seat a human takes.
+ */
+export const twoColourPresets = (
+  humanColourName: string,
+  llmSeat: LlmSeatConfig,
+): Record<SeatPreset, TablePreset> => ({
+  rules: {
+    name: "Engine",
+    description: `Play ${humanColourName} against the rules bot`,
+    seats: versus(HEURISTIC_SEAT),
+  },
+  hybrid: {
+    name: "Hybrid",
+    description: `Play ${humanColourName} against MAKER consensus voting`,
+    seats: versus(llmSeat),
+  },
+  watch: {
+    name: "Full",
+    description: "Watch two consensus voters play each other",
+    seats: players => Object.fromEntries(players.map(id => [id, llmSeat])),
+  },
+});
+
+/**
+ * A restored game keeps the table it was played on. A fresh one takes the
+ * chosen preset, so picking a preset on the start screen always applies.
+ * A stored table that does not seat every player belongs to another game,
+ * so it is ignored either way.
+ */
+export function seatsFor({
+  presets,
+  players,
+  restored,
+  saved,
+  preset,
+}: {
+  presets: Record<SeatPreset, TablePreset>;
+  players: readonly string[];
+  restored: boolean;
+  saved: Seats | null;
+  preset: SeatPreset;
+}): Seats {
+  const usable =
+    saved !== null && players.every(id => id in saved) ? saved : null;
+  if (restored && usable !== null) return usable;
+  return presets[preset].seats(players);
+}
 
 /** The preset a table matches, for the sidebar switcher; null for a mixed table */
 export function presetOf(seats: Seats): SeatPreset | null {

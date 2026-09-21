@@ -9,6 +9,7 @@ import {
 import { loadGameChoice, saveGameChoice } from "./context/game-choice";
 import type { GameId } from "./game-ids";
 import { uiLogger } from "./lib/logger";
+import { run } from "./lib/run";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Lazy load game modules (keeps partykit out of single-player bundle)
@@ -18,15 +19,18 @@ const gameLobbyImport = () =>
   import("./components/GameLobby").then(m => ({ default: m.GameLobby }));
 const chessImport = () =>
   import("./chess/ChessApp").then(m => ({ default: m.ChessApp }));
+const goImport = () => import("./go/GoApp").then(m => ({ default: m.GoApp }));
 
 const SinglePlayerApp = lazy(singlePlayerImport);
 const GameLobby = lazy(gameLobbyImport);
 const ChessApp = lazy(chessImport);
+const GoApp = lazy(goImport);
 
 // Preload game modules after menu renders (best of both worlds)
 const preloadSinglePlayer = () => void singlePlayerImport();
 const preloadMultiplayer = () => void gameLobbyImport();
 const preloadChess = () => void chessImport();
+const preloadGo = () => void goImport();
 
 type AppMode = "menu" | "singleplayer" | "multiplayer";
 
@@ -71,8 +75,9 @@ function App() {
   useEffect(() => {
     if (mode !== "menu") return;
     if (game === "chess") preloadChess();
+    else if (game === "go") preloadGo();
     else preloadSinglePlayer();
-    // Either game reaches multiplayer through the same lobby
+    // Every game reaches multiplayer through the same lobby
     preloadMultiplayer();
   }, [mode, game]);
 
@@ -92,6 +97,12 @@ function App() {
 
   // Single player game - GameProvider loaded lazily with SinglePlayerApp
   if (mode === "singleplayer") {
+    const backToMenu = () => setMode("menu");
+    const table = run(() => {
+      if (game === "chess") return <ChessApp onBackToHome={backToMenu} />;
+      if (game === "go") return <GoApp onBackToHome={backToMenu} />;
+      return <SinglePlayerApp onBackToHome={backToMenu} />;
+    });
     return (
       <ErrorBoundary
         fallback={(_error, _retry) => (
@@ -131,13 +142,7 @@ function App() {
           </div>
         )}
       >
-        <Suspense fallback={<LoadingScreen />}>
-          {game === "chess" ? (
-            <ChessApp onBackToHome={() => setMode("menu")} />
-          ) : (
-            <SinglePlayerApp onBackToHome={() => setMode("menu")} />
-          )}
-        </Suspense>
+        <Suspense fallback={<LoadingScreen />}>{table}</Suspense>
       </ErrorBoundary>
     );
   }

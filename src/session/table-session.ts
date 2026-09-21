@@ -52,6 +52,20 @@ export interface LocalTable<G extends GameShape> extends TableSession<G> {
   readonly setSeats: (seats: Seats) => void;
 }
 
+/**
+ * A local table whose log can be cut back: the verbs the board's own buttons
+ * and the scrubber call, on top of the shared local table.
+ */
+export interface LocalTurnTable<G extends GameShape> extends LocalTable<G> {
+  readonly getStateAtEvent: (eventId: string) => G["state"];
+  /** Rewind to just before the human's own last move, so the human is to move again */
+  readonly takeBack: () => void;
+  /** Keep the position at this event and drop what came after it */
+  readonly branchFrom: (eventId: string) => void;
+  readonly newGame: () => void;
+  readonly resign: () => void;
+}
+
 /** A room: the server runs the engine and this client mirrors it over the wire */
 export interface RoomTable<G extends GameShape> extends TableSession<G> {
   readonly mode: "multiplayer";

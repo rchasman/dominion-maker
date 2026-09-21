@@ -13,7 +13,7 @@ beforeAll(registerHappyDom);
 
 // One sequential test: the fake socket registry and the session binding are module-level
 describe("GameRoom", () => {
-  it("puts a board on the table only for the room's own readable state, for either game", async () => {
+  it("puts a board on the table only for the room's own readable state, for every game", async () => {
     const { render } = await import("preact");
     const { createGame } = await import("../../engine");
     const { dominionModule } = await import("../../dominion/module");
@@ -147,6 +147,70 @@ describe("GameRoom", () => {
 
     settled(() => render(null, root));
     expect(chessSocket.readyState).toBe(3);
+
+    // The same room component mounts the goban when the room plays Go
+    const { createGoGame } = await import("../../go/engine");
+    const go = createGoGame(["p1", "p2"], { size: 9 });
+    go.dispatch({ type: "PLACE", playerId: "p1", x: 3, y: 5 });
+    go.dispatch({ type: "PLACE", playerId: "p2", x: 5, y: 3 });
+    settled(() => {
+      render(
+        <GameRoom
+          roomId="go-room"
+          game="go"
+          playerName="Alice"
+          clientId="client-1"
+          isSpectator={false}
+          onBack={() => undefined}
+        />,
+        root,
+      );
+    });
+    const goSocket = FakeSocket.forRoom("go-room");
+    settled(() => goSocket.emit("open", {}));
+    expect(goSocket.parsed()[0]).toMatchObject({ type: "join", game: "go" });
+    settled(() => {
+      goSocket.deliver({
+        type: "joined",
+        playerId: "p1",
+        isSpectator: false,
+        isHost: true,
+      });
+      goSocket.deliver({
+        type: "full_state",
+        game: "go",
+        state: wire(go.state),
+        events: wire([...go.eventLog]),
+        playerInfo: {
+          p1: { id: "p1", name: "Alice", type: "human", connected: true },
+        },
+      });
+    });
+    expect(root.textContent).not.toContain("Starting game...");
+    // The room's log reads the stones as a game record does
+    const goRows = [...root.querySelectorAll("[data-go-move]")].map(
+      row => row.textContent,
+    );
+    expect(goRows).toEqual(["1. D4", "2. F6"]);
+    // Dominion's view of the table stays empty while Go is on it
+    expect(gameState$.value).toBeNull();
+
+    // A Go state this client cannot read says so on screen too
+    settled(() =>
+      goSocket.deliver({
+        type: "full_state",
+        game: "go",
+        state: { board: 42 },
+        events: [],
+        playerInfo: {},
+      }),
+    );
+    expect(root.textContent).toContain(
+      "This room sent a position this client cannot read.",
+    );
+
+    settled(() => render(null, root));
+    expect(goSocket.readyState).toBe(3);
     root.remove();
   });
 });

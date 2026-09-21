@@ -5,5 +5,6 @@
 
 import type { DominionSession } from "../context/dominion-session";
 import type { ChessSession } from "../chess/chess-session";
+import type { GoSession } from "../go/go-session";
 
-export type GameSession = DominionSession | ChessSession;
+export type GameSession = DominionSession | ChessSession | GoSession;

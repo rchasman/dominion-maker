@@ -1,5 +1,5 @@
 import type { GameModule } from "../core/game-module";
-import { CHESS_LLM_SEAT } from "./seat";
+import { BOARD_GAME_LLM_SEAT } from "../core/seats";
 import { chessGame } from "./definition";
 import { createChessGame, loadChessEngine } from "./engine";
 import {
@@ -26,5 +26,5 @@ export const chessModule: GameModule<ChessShape> = {
   // A batch that opens with the game's first event is the whole log, not an
   // append: a rewind has to reach clients as a replacement.
   needsFullResync: events => events[0]?.type === "GAME_INITIALIZED",
-  defaultLlmSeat: CHESS_LLM_SEAT,
+  defaultLlmSeat: BOARD_GAME_LLM_SEAT,
 };

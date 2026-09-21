@@ -1,6 +1,8 @@
 import { SEAT_PRESETS } from "../context/seat-presets";
 import { SEAT_PRESET_NAMES, type SeatPreset } from "../core/seat-presets";
 import { CHESS_SEAT_PRESETS } from "../chess/presets";
+import { GO_SEAT_PRESETS } from "../go/presets";
+import { DEFAULT_GO_SIZE } from "../go/shape";
 import type { GameId } from "../game-ids";
 
 type PresetCopy = { name: string; description: string };
@@ -8,19 +10,25 @@ type PresetCopy = { name: string; description: string };
 const PRESET_COPY: Record<GameId, Record<SeatPreset, PresetCopy>> = {
   dominion: SEAT_PRESETS,
   chess: CHESS_SEAT_PRESETS,
+  go: GO_SEAT_PRESETS,
 };
 
 const TITLES: Record<GameId, { title: string; subtitle: string }> = {
   dominion: { title: "DOMINION", subtitle: "Base Game" },
   chess: { title: "CHESS", subtitle: "Standard rules" },
+  go: {
+    title: "GO",
+    subtitle: `${DEFAULT_GO_SIZE}×${DEFAULT_GO_SIZE}, area scoring`,
+  },
 };
 
 const GAME_NAMES: Record<GameId, string> = {
   dominion: "Dominion",
   chess: "Chess",
+  go: "Go",
 };
 
-const GAME_IDS_IN_ORDER: GameId[] = ["dominion", "chess"];
+const GAME_IDS_IN_ORDER: GameId[] = ["dominion", "chess", "go"];
 
 const FONT_WEIGHT_ACTIVE = 700;
 const FONT_WEIGHT_INACTIVE = 400;

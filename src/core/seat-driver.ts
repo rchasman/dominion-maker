@@ -15,7 +15,7 @@ export type SeatAnimation<G extends GameShape> = {
 
 type SeatDriver<G extends GameShape> = {
   /** Call with every state or seats change; starts, keeps or aborts the driver */
-  update(state: G["state"] | null, seats: Seats<G["playerId"]>): void;
+  update(state: G["state"] | null, seats: Seats): void;
   dispose(): void;
 };
 
@@ -31,7 +31,7 @@ type SeatDriverParams<G extends GameShape> = {
   stepDelayMs: number;
   /** The app writes the engine's log and state wherever its UI reads them */
   onSync: (events: readonly G["event"][], state: G["state"]) => void;
-  getSeats: () => Seats<G["playerId"]>;
+  getSeats: () => Seats;
   setProcessing: (processing: boolean) => void;
   localPlayerId: () => string | null;
 };
