@@ -66,7 +66,6 @@ describe("the chess definition answers what the driver asks", () => {
     expect(chessGame.reasoningOf(move)).toBe("centre");
     expect(chessGame.moveKey(move)).toBe("e4");
     expect(chessGame.describeMove(move)).toBe("e4");
-    expect(chessGame.promptRow(move)).toEqual({ san: "e4" });
   });
 
   it("teaches the reply format in the system text", () => {

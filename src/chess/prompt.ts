@@ -16,7 +16,7 @@ export const colourToMove = (board: Chess): "White" | "Black" =>
   colourName(board.turn());
 
 /** One row of the numbered table; SAN already names both squares */
-export const chessPromptRow = (move: ChessMove) => ({ san: move.san });
+const chessPromptRow = (move: ChessMove) => ({ san: move.san });
 
 const GUIDANCE = `GUIDANCE:
 - Develop your minor pieces towards the centre before moving the same piece twice.

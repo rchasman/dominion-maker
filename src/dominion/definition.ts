@@ -5,7 +5,7 @@ import { getLegalActions } from "../agent/legal-actions";
 import { formatActionDescription, hasCardField } from "../lib/action-utils";
 import { isSimpleTreasure } from "../data/cards";
 import { moveToCommand } from "./move-to-command";
-import { promptRow, reasoningOf, withReasoning } from "./moves";
+import { reasoningOf, withReasoning } from "./moves";
 import { dominionHeuristic } from "./heuristic";
 import { dominionCompound } from "./compound";
 import { dominionLogContext } from "./log-context";
@@ -33,7 +33,6 @@ export const dominionGame: GameDefinition<DominionShape> = {
   moveToCommand,
   moveKey: move => JSON.stringify(stripReasoning(move)),
   describeMove: formatActionDescription,
-  promptRow,
   withReasoning,
   reasoningOf,
   prompt: dominionPrompt,
