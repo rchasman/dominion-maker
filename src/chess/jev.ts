@@ -6,7 +6,7 @@ import {
   type JsonObject,
 } from "../agent/jev-protocol";
 import type { EvaluateInput } from "../core/game-definition";
-import { describeMove, eventText, pieceName } from "./describe-move";
+import { describeMove, moveFacts, pieceName } from "./describe-move";
 import { moveNumberOf } from "./engine";
 import { describeMaterial, materialOf, PIECE_VALUES } from "./material";
 import { colourName, colourToMove, RECALLED_MOVES } from "./prompt";
@@ -28,10 +28,9 @@ const PIECE_VALUES_TEXT = Object.entries(PIECE_VALUES)
 
 /** Everything chess.js proves about one legal move, in the words a player uses */
 const describeOption = (verbose: Move): string => {
-  const described = describeMove(verbose);
   return [
-    `${described.piece} from ${verbose.from} to ${verbose.to}`,
-    ...described.events.map(eventText),
+    `${pieceName(verbose.piece)} from ${verbose.from} to ${verbose.to}`,
+    ...moveFacts(describeMove(verbose)),
   ].join(". ");
 };
 

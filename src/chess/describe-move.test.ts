@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { describeMove, eventText } from "./describe-move";
+import { describeMove, eventPhrase } from "./describe-move";
 import { replayMoves } from "./replay";
 
 const lastOf = (moves: string[]) => {
@@ -14,8 +14,7 @@ describe("describeMove", () => {
   it("names the piece and the square it lands on", () => {
     expect(lastOf(["Nf3"])).toEqual({
       san: "Nf3",
-      piece: "Knight",
-      to: "f3",
+      action: { kind: "move", piece: "Knight", to: "f3" },
       events: [],
     });
   });
@@ -33,11 +32,10 @@ describe("describeMove", () => {
     ]);
   });
 
-  it("reads castling as a king move with a castle event", () => {
+  it("reads castling as the action itself, not a king move", () => {
     const castled = lastOf(["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "O-O"]);
-    expect(castled.piece).toBe("King");
-    expect(castled.to).toBe("g1");
-    expect(castled.events).toEqual([{ kind: "castle", side: "kingside" }]);
+    expect(castled.action).toEqual({ kind: "castle", side: "kingside" });
+    expect(castled.events).toEqual([]);
   });
 
   it("lists a promotion with the piece chosen", () => {
@@ -57,18 +55,28 @@ describe("describeMove", () => {
   });
 });
 
-describe("eventText", () => {
-  it("reads each event as a short phrase", () => {
-    expect(eventText({ kind: "capture", piece: "Rook" })).toBe("Takes Rook");
-    expect(eventText({ kind: "en-passant" })).toBe("En passant");
-    expect(eventText({ kind: "castle", side: "queenside" })).toBe(
-      "Castles queenside",
-    );
-    expect(eventText({ kind: "promotion", piece: "Knight" })).toBe(
-      "Promotes to Knight",
-    );
-    expect(eventText({ kind: "check" })).toBe("Check");
-    expect(eventText({ kind: "checkmate" })).toBe("Checkmate");
+describe("eventPhrase", () => {
+  it("reads each event as a verb and, where one applies, a noun", () => {
+    expect(eventPhrase({ kind: "capture", piece: "Rook" })).toEqual({
+      verb: "takes",
+      noun: "Rook",
+    });
+    expect(eventPhrase({ kind: "en-passant" })).toEqual({
+      verb: "en passant",
+      noun: null,
+    });
+    expect(eventPhrase({ kind: "promotion", piece: "Knight" })).toEqual({
+      verb: "promotes to",
+      noun: "Knight",
+    });
+    expect(eventPhrase({ kind: "check" })).toEqual({
+      verb: "gives check",
+      noun: null,
+    });
+    expect(eventPhrase({ kind: "checkmate" })).toEqual({
+      verb: "checkmates",
+      noun: null,
+    });
   });
 });
 
