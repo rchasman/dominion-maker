@@ -53,7 +53,6 @@ export type ChessMove = {
   from: string;
   to: string;
   promotion?: string | undefined;
-  captured?: string | undefined;
   reasoning?: string | undefined;
 };
 

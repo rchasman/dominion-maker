@@ -1,3 +1,4 @@
+import { mean } from "../../evals/vs-bot";
 import { askJev } from "../jev-choice";
 import { getLegalActions } from "../legal-actions";
 import { stripReasoning } from "../../types/action";
@@ -103,8 +104,6 @@ for (const scenario of jevCases()) {
 }
 
 const passed = rows.filter(r => r.acceptable).length;
-const mean = (xs: number[]) =>
-  xs.reduce((a, b) => a + b, 0) / Math.max(xs.length, 1);
 console.log(
   `\nJEV ${modelId}: acceptable ${passed}/${rows.length} (${Math.round((100 * passed) / rows.length)}%), mean p(acceptable) ${mean(rows.map(r => r.pAcceptable)).toFixed(2)}, mean latency ${Math.round(mean(rows.map(r => r.ms)))}ms`,
 );

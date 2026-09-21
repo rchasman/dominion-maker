@@ -5,7 +5,7 @@ import {
   type ChessMoveEvent,
   type DescribedMove,
   type PieceName,
-} from "./describe-move";
+} from "./facts";
 import { playerLabel } from "./names";
 import { replayMoves } from "./replay";
 import type { ChessEvent, ChessState } from "./shape";

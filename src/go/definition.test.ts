@@ -101,7 +101,7 @@ describe("the Go definition answers what the driver asks", () => {
     const move = goGame.withReasoning(picked, "corner");
     expect(goGame.reasoningOf(move)).toBe("corner");
     expect(goGame.moveKey(move)).toBe("D4");
-    expect(goGame.describeMove(move)).toBe("D4");
+    expect(goGame.describeMove(newGame().state, move)).toBe("D4");
   });
 
   it("passes without a vote when the opponent has passed and it leads", async () => {

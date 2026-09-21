@@ -21,7 +21,7 @@ export const goGame: GameDefinition<GoShape> = {
       ? { type: "PASS", playerId: player }
       : { type: "PLACE", playerId: player, x: move.x, y: move.y },
   moveKey: move => move.label,
-  describeMove: move => move.label,
+  describeMove: (_state, move) => move.label,
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
   prompt: goPrompt,
