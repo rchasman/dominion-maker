@@ -2,6 +2,7 @@ import { createGoGame, type GoEngine } from "./engine";
 import {
   DEFAULT_GO_SIZE,
   type GoCommand,
+  type GoMove,
   type GoMoveRecord,
   type GoPlayerOrder,
   type GoSize,
@@ -33,6 +34,14 @@ export const goStateFromRows = (
     score: null,
   };
 };
+
+/** The placement move a voter would pick, named the way the table names it */
+export const placedStone = (x: number, y: number, label: string): GoMove => ({
+  kind: "place",
+  x,
+  y,
+  label,
+});
 
 const commandFor = (playerId: string, move: GoMoveRecord): GoCommand =>
   move === "pass"
