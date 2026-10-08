@@ -39,10 +39,6 @@ export default async function handler(
     });
 
     const messages = [
-      {
-        role: "system" as const,
-        content: STRATEGY_REACTOR_SYSTEM,
-      },
       ...conversationHistory.map(msg => ({
         role: msg.role,
         content: msg.content,
@@ -55,6 +51,7 @@ export default async function handler(
 
     const result = await generateText({
       model: gateway("mistral/mistral-medium-3.5"),
+      instructions: STRATEGY_REACTOR_SYSTEM,
       messages,
       maxOutputTokens: 150,
       temperature: 0.9,
