@@ -20,9 +20,13 @@ describe("buildRoster", () => {
     expect(roster.filter(m => m === "grok-4-fast")).toHaveLength(3);
   });
   it("respects per-model instance limits", () => {
-    const roster = buildRoster(seat(["claude-opus-5.5", "gpt-4.1-mini-fast"], 10));
+    const roster = buildRoster(
+      seat(["claude-opus-5.5", "gpt-4.1-mini-fast"], 10),
+    );
     expect(roster).toHaveLength(10);
-    expect(roster.filter(m => m === "claude-opus-5.5").length).toBeLessThanOrEqual(3);
+    expect(
+      roster.filter(m => m === "claude-opus-5.5").length,
+    ).toBeLessThanOrEqual(3);
   });
   it("builds from a seat config and deduplicates the enabled list", () => {
     const roster = buildRoster({
