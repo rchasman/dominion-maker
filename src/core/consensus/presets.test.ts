@@ -101,9 +101,7 @@ describe("consensus presets", () => {
  * vote and nothing else, so an unreliable pick means that house abstains.
  * A provider belongs here or in the preset, never neither.
  */
-const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {
-  xiaomi: "fastest model medians 56s, well past the 30s vote timeout",
-};
+const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {};
 
 describe("the diverse preset", () => {
   const providersOf = (ids: readonly string[]) =>
