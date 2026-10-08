@@ -29,9 +29,7 @@ interface PlayerAreaProps {
   onInPlayClick?: ((card: CardName, index: number) => void) | undefined;
   inverted?: boolean; // If true, in-play appears at bottom (for top player)
   pendingChoice?:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined;
+    Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
   phase: Phase;
   actions?: number | undefined;
   loading?: boolean;
@@ -91,9 +89,7 @@ function HandAndDeckGrid({
   loading?: boolean;
   selectedCardIndices: number[];
   pendingChoice?:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | null
-    | undefined;
+    Extract<PendingChoice, { choiceType: "decision" }> | null | undefined;
   isInteractive: boolean;
   isActive: boolean;
   playerId?: PlayerId | undefined;

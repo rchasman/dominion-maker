@@ -47,9 +47,7 @@ function canInteractWithCard(
   canBuyCard: { canBuy: boolean; availableCoins: number },
   state: GameState,
   pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | undefined
-    | null,
+    Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
 ): boolean {
   // If there's a gain decision from supply, only enable cards in the options
   if (pendingChoice && pendingChoice.from === "supply") {
@@ -68,9 +66,7 @@ function canInteractWithCard(
 function getSupplyCardHighlightMode(
   card: CardName,
   pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | undefined
-    | null,
+    Extract<PendingChoice, { choiceType: "decision" }> | undefined | null,
 ): "trash" | "discard" | "gain" | undefined {
   if (!pendingChoice || pendingChoice.from !== "supply") return undefined;
 
@@ -243,9 +239,7 @@ function renderSupplyColumn(params: {
   state: GameState;
   canBuyParams: { canBuy: boolean; availableCoins: number };
   pendingChoice:
-    | Extract<PendingChoice, { choiceType: "decision" }>
-    | undefined
-    | null;
+    Extract<PendingChoice, { choiceType: "decision" }> | undefined | null;
   onBuyCard: ((card: CardName) => void) | undefined;
 }) {
   const { cards, size, state, canBuyParams, pendingChoice, onBuyCard } = params;

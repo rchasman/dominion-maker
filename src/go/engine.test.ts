@@ -30,9 +30,7 @@ const CAPTURE: GoMoveRecord[] = [
 ];
 
 type LogEntry = { playerId: string } & (
-  | { x: number; y: number }
-  | { pass: true }
-  | { resigned: true }
+  { x: number; y: number } | { pass: true } | { resigned: true }
 );
 
 const eventOf = (entry: LogEntry, id: string): GoEvent => {
@@ -394,11 +392,10 @@ describe("the Go engine distrusts a log it did not build", () => {
 
   it("accepts a hand-built log whose movers are right", () => {
     const finished: GoMoveRecord[] = [...CAPTURE, "pass", "pass"];
-    const entries = finished.map(
-      (move, index): LogEntry =>
-        move === "pass"
-          ? { playerId: moverAt(index), pass: true }
-          : { playerId: moverAt(index), x: move.x, y: move.y },
+    const entries = finished.map((move, index): LogEntry =>
+      move === "pass"
+        ? { playerId: moverAt(index), pass: true }
+        : { playerId: moverAt(index), x: move.x, y: move.y },
     );
     const engine = loadGoEngine(logOf([BLACK, WHITE], entries));
     expect(engine.state.result).toBe("score");

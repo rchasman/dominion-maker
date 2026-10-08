@@ -5,12 +5,7 @@ import type { DecisionChoice, PendingChoice } from "../types/pending-choice";
 import type { GameEvent } from "../events/types";
 
 export type JsonValue =
-  | null
-  | boolean
-  | number
-  | string
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+  null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type ChoiceRequest = Extract<PendingChoice, { choiceType: "decision" }>;
 export type EffectTrigger =
   | { type: "play" }
