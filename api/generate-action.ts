@@ -146,9 +146,6 @@ async function generateForGame<G extends GameShape>(
       maxRetries: 0,
       providerOptions: {
         gateway: {
-          ...(config.gatewayProviders
-            ? { only: [...config.gatewayProviders] }
-            : {}),
           // Actions are short: prioritize time to first token.
           sort: "ttft",
         },

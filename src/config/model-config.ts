@@ -8,7 +8,6 @@ export interface ModelConfig {
   color: string; // UI color
   inputPrice: number; // Catalog base price per 1M input tokens in USD
   outputPrice: number; // Catalog base price per 1M output tokens in USD
-  gatewayProviders?: readonly string[]; // Restrict incompatible provider routes
   structuredOutput?: "prompt"; // For providers without native JSON schemas
   evaluation?: true; // Answers a typed Choice via experimental_evaluate, no JSON reply
   maxInstances?: number; // Max instances allowed in consensus (optional, default: unlimited)

@@ -12,7 +12,7 @@ import {
  * Both names come from the roster itself: one it ships and one it cannot,
  * so editing the model list can never quietly invert what this asserts.
  */
-const shipped = MODEL_IDS[0] ?? "claude-opus-5";
+const shipped = MODEL_IDS[0] ?? "claude-opus-5.5";
 const retired = `${MODEL_IDS.join("-")}-retired`;
 
 describe("reading a log entry's data", () => {

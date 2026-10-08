@@ -65,13 +65,12 @@ const BALANCED_MODELS = [
 // same-house models share theirs. Speed decides the pick because Diverse gives
 // each house exactly one vote, and a vote past the 30s timeout is an abstention.
 //
-// Ranked from a live sweep on 2026-09-20: 3 samples per model through the real
+// Ranked from a live sweep on 2026-09-20, rechecked 2026-10-08: 3 samples per model through the real
 // /api/generate-action path, 20 concurrent calls held constant. A model
 // qualifies with zero failures and every sample under 20s, then takes the
 // lowest median; medians within 15% count as a tie and price breaks it.
 //
-// Every house in the catalog is here except xiaomi, whose only surviving model
-// medians 56s. presets.test.ts holds that list and fails on any provider the
+// Every house in the catalog is here. presets.test.ts fails on any provider the
 // catalog offers that nobody has ruled on.
 //
 // Re-run the sweep after a catalog refresh rather than trusting these picks.
@@ -88,18 +87,20 @@ const DIVERSE_MODELS = [
   "qwen3-next-80b-a3b-instruct",
   "llama-4-maverick",
   "kimi-k2.5",
-  "claude-3-haiku",
+  "claude-haiku",
   "minimax-m3",
   "deepseek-v4.1-flash",
   "hy3",
+  "ember-1",
+  "mimo-v2.6-flash",
 ] as const satisfies readonly ModelProvider[];
 
 // The frontier flagship of each house that ships one inside the vote timeout.
 // Expensive on purpose: this is the preset for when the answer matters more
 // than the bill. One instance each, so the maxInstances caps never bind.
 const PRO_MODELS = [
-  "gpt-5.1-thinking-fast",
-  "claude-sonnet",
+  "gpt-6.1-sol-fast",
+  "claude-opus-5.5-fast",
   "gemini-3.1-pro",
   "qwen3.7-max",
   "kimi-k3-fast",
