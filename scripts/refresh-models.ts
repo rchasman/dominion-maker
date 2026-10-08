@@ -79,9 +79,6 @@ const entryFor = (model: GatewayModel): string => {
     ...(quirks?.structuredOutput
       ? [`    structuredOutput: ${quote(quirks.structuredOutput)},`]
       : []),
-    ...(quirks?.gatewayProviders
-      ? [`    gatewayProviders: ${JSON.stringify(quirks.gatewayProviders)},`]
-      : []),
     ...(quirks?.maxInstances
       ? [`    maxInstances: ${quirks.maxInstances},`]
       : []),
