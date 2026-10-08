@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { readJevChoice, type JevChoiceQuestion } from "../agent/jev-protocol";
 import { chessGame } from "./definition";
 import { createChessGame } from "./engine";
-import { chessEvaluate, chessJevQuestion, chessJevState } from "./jev";
+import { chessJevQuestion, chessJevState } from "./jev";
 import type { ChessMove, ChessState } from "./shape";
 import { chessStateAfter } from "./test-helpers";
 
@@ -287,11 +287,5 @@ describe("chessJevState", () => {
       "Play the London.",
     );
     expect(chessJevState(state, "   ")).not.toHaveProperty("strategyOverride");
-  });
-});
-
-describe("the chess definition", () => {
-  it("judges with Jev through the shared evaluate step", () => {
-    expect(chessGame.evaluate).toBe(chessEvaluate);
   });
 });

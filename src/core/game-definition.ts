@@ -70,7 +70,6 @@ export interface GameDefinition<G extends GameShape> {
   withReasoning(move: G["move"], reasoning: string): G["move"];
   /** Reads a model's explanation back off a move for the voting log */
   reasoningOf(move: G["move"]): string | undefined;
-  prompt(input: PromptInput<G>): { system: string; user: string };
   logContext(
     state: G["state"],
     player: G["playerId"],
@@ -80,10 +79,18 @@ export interface GameDefinition<G extends GameShape> {
     state: G["state"],
     player: G["playerId"],
   ): CompoundDecision<G> | null;
-  evaluate?(input: EvaluateInput<G>): Promise<{
+  heuristic?(state: G["state"], player: G["playerId"]): G["command"];
+}
+
+/**
+ * How the server asks a model for a move. Kept off GameDefinition because the
+ * browser imports the definitions, and evaluate pulls in the gateway SDK.
+ */
+export interface ModelQuestions<G extends GameShape> {
+  prompt(input: PromptInput<G>): { system: string; user: string };
+  evaluate(input: EvaluateInput<G>): Promise<{
     move: G["move"];
     distribution: WeightedVote<G["move"]>[];
     usage: TokenUsage;
   }>;
-  heuristic?(state: G["state"], player: G["playerId"]): G["command"];
 }

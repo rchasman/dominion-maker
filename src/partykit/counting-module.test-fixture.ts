@@ -48,7 +48,6 @@ const definition: GameDefinition<CountingShape> = {
   describeMove: (_state, move) => `add ${String(move.add)}`,
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
-  prompt: () => ({ system: "", user: "" }),
   logContext: state => ({
     turnId: `${state.turn}-${String(state.total)}`,
     isChoice: false,

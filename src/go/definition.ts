@@ -2,8 +2,6 @@ import type { GameDefinition } from "../core/game-definition";
 import { offeredMoves, passWinsNow } from "./candidates";
 import { sideToMove } from "./engine";
 import { goHeuristic } from "./heuristic";
-import { goEvaluate } from "./jev";
-import { goPrompt } from "./prompt";
 import { recordLabel } from "./rules";
 import type { GoShape } from "./shape";
 
@@ -24,8 +22,6 @@ export const goGame: GameDefinition<GoShape> = {
   describeMove: (_state, move) => move.label,
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
-  prompt: goPrompt,
-  evaluate: goEvaluate,
   heuristic: goHeuristic,
   // turn and phase name the action id the consensus log builds, so they carry
   // the keys Dominion's payload carries. Go has one phase and it is a move.

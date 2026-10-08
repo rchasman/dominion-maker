@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { chessGame } from "./definition";
+import { chessPrompt } from "./prompt";
 import { createChessGame, type ChessEngine } from "./engine";
 import { replyFormatInstruction } from "../core/consensus/numbered-choice";
 import type { ChessMove, ChessState } from "./shape";
@@ -18,7 +19,7 @@ const after = (sans: string[]): ChessState =>
 
 const promptFor = (state: ChessState, customStrategy = "") => {
   const player = chessGame.whoMustAct(state) ?? WHITE;
-  return chessGame.prompt({
+  return chessPrompt({
     state,
     player,
     moves: chessGame.legalMoves(state, player),
