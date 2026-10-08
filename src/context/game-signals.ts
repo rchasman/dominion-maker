@@ -63,7 +63,7 @@ export const players$ = view(s => s.players.value, EMPTY);
 // ---------------------------------------------------------------------------
 // UI preferences that outlive any one session
 // ---------------------------------------------------------------------------
-/** Seat whose LLM settings panel should open, if any */
-export const settingsSeat$ = signal<string | null>(null);
+/** Set when a seat just became an LLM, so the model settings panel opens */
+export const settingsRequested$ = signal(false);
 /** The LLM config each seat last had, so handing a seat back to an LLM restores its roster */
 export const rememberedLlm$ = signal<Record<string, LlmSeatConfig>>({});

@@ -33,14 +33,13 @@ describe("API request boundaries", () => {
     for (const endpoint of [
       "generate-action",
       "analyze-strategy",
-      "patrick-chat",
       "strategy-react",
     ]) {
       for (const body of [
         "{",
         "null",
         "{}",
-        '{"message":42,"strategy":false,"currentState":{}}',
+        '{"strategy":false,"currentState":{}}',
       ]) {
         const response = await handleApiRequest(
           new Request(`http://localhost/api/${endpoint}`, {

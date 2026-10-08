@@ -8,7 +8,7 @@ import {
   gameState$,
   players$,
   rememberedLlm$,
-  settingsSeat$,
+  settingsRequested$,
 } from "../context/game-signals";
 import { formatPlayerName } from "../lib/board-utils";
 
@@ -64,7 +64,7 @@ export function SeatSelector({
           ? config
           : (rememberedLlm$.value[playerId] ?? defaultLlm),
       );
-      settingsSeat$.value = playerId;
+      settingsRequested$.value = true;
     }
   };
 

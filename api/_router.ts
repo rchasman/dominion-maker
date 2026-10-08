@@ -1,7 +1,6 @@
 import generateAction from "./generate-action";
 import analyzeStrategy from "./analyze-strategy";
 import strategyReact from "./strategy-react";
-import patrickChat from "./patrick-chat";
 import verifyAction from "./verify-action";
 import type { VercelRequest, VercelResponse } from "./_http";
 
@@ -10,7 +9,6 @@ const routes: Record<string, Handler> = {
   "/api/generate-action": generateAction,
   "/api/analyze-strategy": analyzeStrategy,
   "/api/strategy-react": strategyReact,
-  "/api/patrick-chat": patrickChat,
   "/api/verify-action": verifyAction,
 };
 
