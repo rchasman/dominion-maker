@@ -9,11 +9,13 @@
  */
 import {
   DEFAULT_PROVIDER_COLOR,
+  DECISION_TOKENS,
   DENIED_MODELS,
   DENIED_PROVIDERS,
   GENERATOR_TAGS,
   ID_ALIASES,
   KEEP_VARIANTS,
+  MAX_DECISION_COST_USD,
   MODEL_QUIRKS,
   PROVIDER_ALIASES,
   PROVIDER_COLORS_BY_NAME,
@@ -53,11 +55,16 @@ const isGenerator = (model: GatewayModel): boolean =>
 const isSpecialist = (model: GatewayModel): boolean =>
   SPECIALIST_PATTERNS.some(pattern => pattern.test(model.id));
 
+const decisionCost = (model: GatewayModel): number =>
+  Number(model.pricing?.input ?? 0) * DECISION_TOKENS.input +
+  Number(model.pricing?.output ?? 0) * DECISION_TOKENS.output;
+
 const isPlayable = (model: GatewayModel): boolean =>
   (model.type === "language" || model.type === "evaluation") &&
   model.zdr !== "none" &&
   !isGenerator(model) &&
   !isSpecialist(model) &&
+  decisionCost(model) <= MAX_DECISION_COST_USD &&
   DENIED_MODELS[model.id] === undefined &&
   DENIED_PROVIDERS[providerOf(model)] === undefined;
 

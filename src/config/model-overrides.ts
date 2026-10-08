@@ -17,6 +17,14 @@ export const ID_ALIASES: Record<string, string> = {
   "spacexai/grok-4.1-fast-non-reasoning": "grok-4-fast",
 };
 
+/**
+ * /api/generate-action is open to anyone, so the catalog is the spending
+ * limit: a model priced past this per decision is never offered or accepted.
+ * A Dominion decision measured 3-5k input and 36-74 output tokens (2026-10-08).
+ */
+export const DECISION_TOKENS = { input: 4000, output: 100 };
+export const MAX_DECISION_COST_USD = 0.02;
+
 /** Models that reach the gateway but cannot play the game. */
 export const DENIED_MODELS: Record<string, string> = {
   "openai/gpt-oss-20b":
@@ -139,7 +147,6 @@ type ModelQuirks = {
 /** Keyed by short id. Each entry is something a live run taught us. */
 export const MODEL_QUIRKS: Record<string, ModelQuirks> = {
   "claude-opus-5.5": { maxInstances: 3 },
-  "gpt-5.5": { maxInstances: 3 },
   "gpt-5.6-terra": { maxInstances: 3 },
   "gemini-3.1-pro": { maxInstances: 3 },
   "llama-3.3-70b": { structuredOutput: "prompt" },
