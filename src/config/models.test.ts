@@ -55,7 +55,7 @@ describe("Model Configuration", () => {
   describe("getModelFullName", () => {
     it("should return full name for valid model ID", () => {
       expect(getModelFullName("claude-haiku")).toBe(
-        "anthropic/claude-haiku-4.5",
+        "anthropic/claude-haiku-5.5",
       );
       expect(getModelFullName("gpt-4.1-mini-fast")).toBe(
         "openai/gpt-4.1-mini-fast",

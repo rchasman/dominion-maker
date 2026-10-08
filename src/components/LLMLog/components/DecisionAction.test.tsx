@@ -63,8 +63,8 @@ describe("decision cost", () => {
       stepNumber: 1,
       modelStatuses: statuses({ inputTokens: 2000, outputTokens: 200 }),
     });
-    // claude-haiku at $1/1M in and $5/1M out: 0.002 + 0.001
-    expect(text).toContain("1.80s · $0.0030");
+    // claude-haiku at $0.10/1M in and $0.50/1M out: 0.0002 + 0.0001
+    expect(text).toContain("1.80s · $0.0003");
   });
 
   it("shows the timing alone when no model reported usage", () => {

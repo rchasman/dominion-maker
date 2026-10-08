@@ -11,8 +11,8 @@ export const PROVIDER_ALIASES: Record<string, string> = {
 
 /** Short ids that predate the generator. Changing one breaks saved seat configs. */
 export const ID_ALIASES: Record<string, string> = {
-  "anthropic/claude-haiku-4.5": "claude-haiku",
-  "anthropic/claude-sonnet-5": "claude-sonnet",
+  "anthropic/claude-haiku-5.5": "claude-haiku",
+  "anthropic/claude-sonnet-5.5": "claude-sonnet",
   "google/gemini-3.1-pro-preview": "gemini-3.1-pro",
   "spacexai/grok-4.1-fast-non-reasoning": "grok-4-fast",
 };
@@ -40,6 +40,28 @@ export const DENIED_MODELS: Record<string, string> = {
     "every live call past the 30s vote timeout (median 20s)",
   "stepfun/step-3.5-flash":
     "went past the 30s vote timeout on 2 of 4 live calls",
+  "mistral/mistral-large-4":
+    "all 3 live calls past 35s in the 2026-10-08 sweep",
+  "openai/gpt-5.5-pro": "1 of 3 live calls past 35s, median 26.5s, 2026-10-08",
+  "openai/gpt-4-turbo":
+    "the gateway refuses json_schema response_format for it, 2026-10-08",
+  "openai/gpt-3.5-turbo":
+    "the gateway refuses json_schema response_format for it, 2026-10-08",
+  "nvidia/nemotron-nano-9b-v2":
+    "its working route is gone; 0 of 3 legal replies in prompt mode, 2026-10-08",
+  "nvidia/nemotron-3-nano-30b-a3b": "0 of 6 live calls inside 35s, 2026-10-08",
+  "alibaba/qwen3.8-flash": "0 of 3 live calls inside 35s on rerun, 2026-10-08",
+  "alibaba/qwen3.8-27b": "1 of 6 live calls inside 35s, 2026-10-08",
+  "alibaba/qwen3.8-omni-flash": "1 of 6 live calls inside 35s, 2026-10-08",
+  "alibaba/qwen3-235b-a22b-thinking":
+    "3 of 6 live calls inside 35s, median 35s, 2026-10-08",
+  "alibaba/qwen3-next-80b-a3b-thinking":
+    "median 29s, at the 30s vote timeout, 2026-10-08",
+  "alibaba/qwen3.7-flash": "median 32s, past the 30s vote timeout, 2026-10-08",
+  "alibaba/qwen3.5-flash": "1 of 3 live calls inside 35s, 2026-10-08",
+  "alibaba/qwen3.6-27b": "median 20s, max 25s, 2026-10-08",
+  "deepseek/deepseek-v4-flash-vision-exp":
+    "2 of 3 live calls inside 35s, median 22s, 2026-10-08",
 };
 
 /** A game move is text. Emitting an image or a video is a different job, and a
@@ -71,8 +93,6 @@ export const DENIED_PROVIDERS: Record<string, string> = {
  */
 export const KEEP_VARIANTS: Record<string, string> = {
   "amazon/nova-lite": "1.4s and $0.30/1M against nova-2-lite's 1.7s and $2.80",
-  "anthropic/claude-3-haiku":
-    "2.2s and $1.50/1M against claude-haiku's 2.4s and $6.00",
   "openai/gpt-4.1-mini-fast":
     "1.4s and $3.50/1M against gpt-5.4-mini-fast's 2.9s and $10.50",
   "moonshotai/kimi-k2.5":
@@ -104,6 +124,7 @@ export const PROVIDER_COLORS_BY_NAME: Record<string, string> = {
   tencent: "#38bdf8",
   inclusionai: "#4ade80",
   arcee: "#94a3b8",
+  fireworks: "#fdba74",
 };
 
 export const DEFAULT_PROVIDER_COLOR = "#94a3b8";
@@ -111,24 +132,17 @@ export const DEFAULT_PROVIDER_COLOR = "#94a3b8";
 type ModelQuirks = {
   /** Providers without native JSON schema support need the prompt fallback */
   structuredOutput?: "prompt";
-  /** Restrict incompatible gateway routes */
-  gatewayProviders?: readonly string[];
   /** Cap instances in one consensus round */
   maxInstances?: number;
 };
 
 /** Keyed by short id. Each entry is something a live run taught us. */
 export const MODEL_QUIRKS: Record<string, ModelQuirks> = {
-  "claude-opus-5": { maxInstances: 3 },
+  "claude-opus-5.5": { maxInstances: 3 },
   "gpt-5.5": { maxInstances: 3 },
   "gpt-5.6-terra": { maxInstances: 3 },
   "gemini-3.1-pro": { maxInstances: 3 },
   "llama-3.3-70b": { structuredOutput: "prompt" },
-  "nemotron-nano-9b-v2": {
-    structuredOutput: "prompt",
-    // Bedrock returns malformed JSON for the game-choice protocol.
-    gatewayProviders: ["deepinfra"],
-  },
+  "llama-4-maverick": { structuredOutput: "prompt" },
   "nemotron-nano-12b-v2-vl": { structuredOutput: "prompt" },
-  "nemotron-3-nano-30b-a3b": { structuredOutput: "prompt" },
 };
