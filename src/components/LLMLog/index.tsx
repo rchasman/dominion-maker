@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { ControllerConfig, Seats } from "../../core/seats";
 import type { LLMLogEntry, LlmSeat } from "./types";
-import { settingsSeat$ } from "../../context/game-signals";
+import { settingsRequested$ } from "../../context/game-signals";
 import { useLiveTimer } from "./hooks/useLiveTimer";
 import { useTurnExtraction } from "./hooks/useTurnExtraction";
 import { useNavigationState } from "./hooks/useNavigationState";
@@ -25,20 +25,15 @@ interface LLMLogProps {
 
 export function LLMLog({ entries, seats, onSeatChange }: LLMLogProps) {
   const llmSeats = llmSeatsOf(seats);
-  const requestedSeat = settingsSeat$.value;
+  const isSettingsRequested = settingsRequested$.value;
   const [isModelSettingsExpanded, setIsModelSettingsExpanded] = useState(false);
-  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
 
-  // A seat selector that just switched a player to LLM asks for that seat's panel
+  // A seat selector that just switched a player to LLM opens the panel
   useEffect(() => {
-    if (requestedSeat === null) return;
-    setSelectedSeat(requestedSeat);
+    if (!isSettingsRequested) return;
     setIsModelSettingsExpanded(true);
-    settingsSeat$.value = null;
-  }, [requestedSeat]);
-
-  const activeSeat =
-    llmSeats.find(seat => seat.playerId === selectedSeat) ?? llmSeats[0];
+    settingsRequested$.value = false;
+  }, [isSettingsRequested]);
 
   const turns = useTurnExtraction(entries);
   const now = useLiveTimer(turns);
@@ -58,7 +53,7 @@ export function LLMLog({ entries, seats, onSeatChange }: LLMLogProps) {
 
   const currentDecision = currentTurn?.decisions[currentActionIndex];
   const { activePane, setActivePane } = useActivePane();
-  const canEdit = onSeatChange !== undefined && activeSeat !== undefined;
+  const canEdit = onSeatChange !== undefined && llmSeats.length > 0;
 
   return (
     <div
@@ -80,16 +75,10 @@ export function LLMLog({ entries, seats, onSeatChange }: LLMLogProps) {
         isModelSettingsExpanded={isModelSettingsExpanded}
         setIsModelSettingsExpanded={setIsModelSettingsExpanded}
         hasModelSettings={canEdit}
-        llmSeats={llmSeats}
-        selectedSeat={activeSeat?.playerId ?? null}
-        onSelectSeat={setSelectedSeat}
       />
 
-      {isModelSettingsExpanded && canEdit && activeSeat && (
-        <ModelSettingsPanel
-          settings={activeSeat.config}
-          onChange={config => onSeatChange(activeSeat.playerId, config)}
-        />
+      {isModelSettingsExpanded && canEdit && (
+        <ModelSettingsPanel seats={llmSeats} onChange={onSeatChange} />
       )}
 
       <div

@@ -1,20 +1,20 @@
 import type { LlmSeatConfig } from "../core/seats";
 import { AVAILABLE_MODELS } from "../core/consensus/roster";
 import { MODELS, type ModelConfig, type ModelProvider } from "../config/models";
+import type { LlmSeat } from "./LLMLog/types";
+import { SeatName } from "./SeatName";
 
 interface ModelPickerProps {
-  settings: LlmSeatConfig;
-  onChange: (settings: LlmSeatConfig) => void;
+  seats: LlmSeat[];
+  onChange: (playerId: string, config: LlmSeatConfig) => void;
 }
 
 // Constants
 const NOT_FOUND_INDEX = -1;
 const FIRST_POSITION = -1;
 const SECOND_POSITION = 1;
-const ZERO_MODELS = 0;
 const Z_INDEX_STICKY = 1;
 const FONT_WEIGHT_SEMIBOLD = 600;
-const FLEX_FILL = 1;
 
 // Helper to get display name for a model
 const getModelDisplayName = (model: ModelProvider): string => {
@@ -110,54 +110,52 @@ const ProviderHeader = ({ provider, color }: ProviderHeaderProps) => (
   </div>
 );
 
-interface ModelCheckboxProps {
+const CHECKBOX_COLUMN = "3.5rem";
+
+const seatColumns = (seats: LlmSeat[]): string =>
+  `1fr ${seats.map(() => CHECKBOX_COLUMN).join(" ")}`;
+
+const smallButton = {
+  fontSize: "0.5625rem",
+  padding: "0 var(--space-1)",
+  background: "transparent",
+  border: "1px solid var(--color-border)",
+  borderRadius: "3px",
+  color: "var(--color-text-secondary)",
+  cursor: "pointer",
+  fontFamily: "inherit",
+};
+
+interface ModelRowProps {
   model: ModelProvider;
-  isEnabled: boolean;
+  seats: LlmSeat[];
   color: string;
-  onToggle: (model: ModelProvider) => void;
+  onToggle: (seat: LlmSeat, model: ModelProvider) => void;
 }
 
-const ModelCheckbox = ({
-  model,
-  isEnabled,
-  color,
-  onToggle,
-}: ModelCheckboxProps) => {
+const ModelRow = ({ model, seats, color, onToggle }: ModelRowProps) => {
   const modelConfig: ModelConfig | undefined = MODELS.find(
     (m: ModelConfig) => m.id === model,
   );
+  const enabledBy = seats.filter(seat => seat.config.models.includes(model));
 
   return (
-    <label
+    <div
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: seatColumns(seats),
         alignItems: "center",
-        gap: "var(--space-2)",
-        cursor: "pointer",
-        padding: "var(--space-2)",
+        padding: "var(--space-1) var(--space-2)",
         paddingLeft: "var(--space-4)",
         borderRadius: "3px",
-        background: isEnabled ? `${color}15` : "transparent",
+        background: enabledBy.length > 0 ? `${color}15` : "transparent",
         border: "1px solid",
-        borderColor: isEnabled ? color : "var(--color-border-secondary)",
+        borderColor:
+          enabledBy.length > 0 ? color : "var(--color-border-secondary)",
         fontSize: "0.6875rem",
       }}
     >
-      <input
-        id={`model-${model}`}
-        type="checkbox"
-        checked={isEnabled}
-        onChange={() => onToggle(model)}
-        style={{ cursor: "pointer" }}
-      />
-      <div
-        style={{
-          flex: FLEX_FILL,
-          display: "flex",
-          flexDirection: "column",
-          gap: "2px",
-        }}
-      >
+      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
         <span style={{ color: "var(--color-text-primary)" }}>
           {getModelDisplayName(model)}
         </span>
@@ -176,41 +174,40 @@ const ModelCheckbox = ({
           </span>
         )}
       </div>
-    </label>
+      {seats.map(seat => (
+        <input
+          key={seat.playerId}
+          id={`model-${seat.playerId}-${model}`}
+          type="checkbox"
+          aria-label={`${getModelDisplayName(model)} for ${seat.playerId}`}
+          checked={seat.config.models.includes(model)}
+          onChange={() => onToggle(seat, model)}
+          style={{ cursor: "pointer", justifySelf: "center" }}
+        />
+      ))}
+    </div>
   );
 };
 
-interface ProviderSectionProps {
-  provider: string;
-  models: ModelProvider[];
-  enabledModels: Set<ModelProvider>;
-  onToggle: (model: ModelProvider) => void;
+interface ColumnHeaderProps {
+  seats: LlmSeat[];
+  onSetModels: (seat: LlmSeat, models: ModelProvider[]) => void;
 }
 
-interface HeaderProps {
-  enabledCount: number;
-  totalCount: number;
-  onSelectAll: () => void;
-  onSelectNone: () => void;
-}
-
-const Header = ({
-  enabledCount,
-  totalCount,
-  onSelectAll,
-  onSelectNone,
-}: HeaderProps) => (
+const ColumnHeader = ({ seats, onSetModels }: ColumnHeaderProps) => (
   <div
     style={{
       position: "sticky",
-      top: ZERO_MODELS,
+      top: 0,
       background: "var(--color-bg-secondary)",
       zIndex: Z_INDEX_STICKY,
       paddingTop: "var(--space-2)",
       paddingBottom: "var(--space-2)",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
+      paddingInline: "var(--space-2)",
+      display: "grid",
+      gridTemplateColumns: seatColumns(seats),
+      alignItems: "end",
+      gap: "var(--space-1) 0",
     }}
   >
     <label
@@ -221,47 +218,55 @@ const Header = ({
         textTransform: "uppercase",
       }}
     >
-      Enabled Models ({enabledCount}/{totalCount})
+      Models
     </label>
-    <div style={{ display: "flex", gap: "var(--space-2)" }}>
-      <button
-        onClick={onSelectAll}
+    {seats.map(seat => (
+      <div
+        key={seat.playerId}
         style={{
-          fontSize: "0.625rem",
-          padding: "var(--space-1) var(--space-2)",
-          background: "transparent",
-          border: "1px solid var(--color-border)",
-          borderRadius: "3px",
-          color: "var(--color-text-secondary)",
-          cursor: "pointer",
-          fontFamily: "inherit",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2px",
+          minWidth: 0,
         }}
       >
-        All
-      </button>
-      <button
-        onClick={onSelectNone}
-        style={{
-          fontSize: "0.625rem",
-          padding: "var(--space-1) var(--space-2)",
-          background: "transparent",
-          border: "1px solid var(--color-border)",
-          borderRadius: "3px",
-          color: "var(--color-text-secondary)",
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
-      >
-        None
-      </button>
-    </div>
+        <SeatName playerId={seat.playerId} />
+        <span
+          style={{ fontSize: "0.5625rem", color: "var(--color-text-tertiary)" }}
+        >
+          {seat.config.models.length}/{AVAILABLE_MODELS.length}
+        </span>
+        <button
+          style={smallButton}
+          title={`Enable every model for ${seat.playerId}`}
+          onClick={() => onSetModels(seat, [...AVAILABLE_MODELS])}
+        >
+          All
+        </button>
+        <button
+          style={smallButton}
+          title={`Disable every model for ${seat.playerId}`}
+          onClick={() => onSetModels(seat, [])}
+        >
+          None
+        </button>
+      </div>
+    ))}
   </div>
 );
+
+interface ProviderSectionProps {
+  provider: string;
+  models: ModelProvider[];
+  seats: LlmSeat[];
+  onToggle: (seat: LlmSeat, model: ModelProvider) => void;
+}
 
 const ProviderSection = ({
   provider,
   models,
-  enabledModels,
+  seats,
   onToggle,
 }: ProviderSectionProps) => {
   const providerModel: ModelConfig | undefined = MODELS.find(
@@ -280,10 +285,10 @@ const ProviderSection = ({
     >
       <ProviderHeader provider={provider} color={providerColor} />
       {models.map(modelId => (
-        <ModelCheckbox
+        <ModelRow
           key={String(modelId)}
           model={modelId}
-          isEnabled={enabledModels.has(modelId)}
+          seats={seats}
           color={providerColor}
           onToggle={onToggle}
         />
@@ -292,24 +297,24 @@ const ProviderSection = ({
   );
 };
 
-export function ModelPicker({ settings, onChange }: ModelPickerProps) {
-  const enabledModels = new Set(settings.models);
-  const withModels = (models: ModelProvider[]): void =>
-    onChange({ ...settings, models });
+/** One checkbox column per LLM seat, so each player's roster reads side by side */
+export function ModelPicker({ seats, onChange }: ModelPickerProps) {
+  const setModels = (seat: LlmSeat, models: ModelProvider[]): void =>
+    onChange(seat.playerId, { ...seat.config, models });
 
-  const handleModelToggle = (model: ModelProvider): void =>
-    withModels(
-      enabledModels.has(model)
-        ? settings.models.filter(id => id !== model)
-        : [...settings.models, model],
+  const toggle = (seat: LlmSeat, model: ModelProvider): void =>
+    setModels(
+      seat,
+      seat.config.models.includes(model)
+        ? seat.config.models.filter(id => id !== model)
+        : [...seat.config.models, model],
     );
-
-  const handleSelectAll = (): void => withModels([...AVAILABLE_MODELS]);
-
-  const handleSelectNone = (): void => withModels([]);
 
   const modelsByProvider = groupModelsByProvider(AVAILABLE_MODELS);
   const sortedProviders = sortProviders(Object.keys(modelsByProvider));
+  const seatsWithoutModels = seats.filter(
+    seat => seat.config.models.length === 0,
+  );
 
   return (
     <div
@@ -319,12 +324,7 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
         gap: "var(--space-3)",
       }}
     >
-      <Header
-        enabledCount={enabledModels.size}
-        totalCount={AVAILABLE_MODELS.length}
-        onSelectAll={handleSelectAll}
-        onSelectNone={handleSelectNone}
-      />
+      <ColumnHeader seats={seats} onSetModels={setModels} />
       {sortedProviders.map((provider: string) => {
         const models: ModelProvider[] | undefined = modelsByProvider[provider];
         return models ? (
@@ -332,13 +332,14 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
             key={provider}
             provider={provider}
             models={models}
-            enabledModels={enabledModels}
-            onToggle={handleModelToggle}
+            seats={seats}
+            onToggle={toggle}
           />
         ) : null;
       })}
-      {enabledModels.size === ZERO_MODELS && (
+      {seatsWithoutModels.map(seat => (
         <div
+          key={seat.playerId}
           style={{
             padding: "var(--space-2)",
             background: "rgba(239, 68, 68, 0.1)",
@@ -348,9 +349,9 @@ export function ModelPicker({ settings, onChange }: ModelPickerProps) {
             color: "#ef4444",
           }}
         >
-          ⚠ At least one model must be enabled
+          ⚠ {seat.playerId} has no model enabled
         </div>
-      )}
+      ))}
     </div>
   );
 }
