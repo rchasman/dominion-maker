@@ -9,7 +9,6 @@ import { reasoningOf, withReasoning } from "./moves";
 import { dominionHeuristic } from "./heuristic";
 import { dominionCompound } from "./compound";
 import { dominionLogContext } from "./log-context";
-import { dominionEvaluate, dominionPrompt } from "./prompt";
 
 export type { DominionShape } from "./shape";
 
@@ -35,8 +34,6 @@ export const dominionGame: GameDefinition<DominionShape> = {
   describeMove: (_state, move) => formatActionDescription(move),
   withReasoning,
   reasoningOf,
-  prompt: dominionPrompt,
-  evaluate: dominionEvaluate,
   logContext: dominionLogContext,
   compound: dominionCompound,
   heuristic: dominionHeuristic,

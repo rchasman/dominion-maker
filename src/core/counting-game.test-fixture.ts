@@ -30,7 +30,6 @@ export const game: GameDefinition<G> = {
   describeMove: (_s, m) => `add ${m.add}`,
   withReasoning: (m, reasoning) => ({ ...m, reasoning }),
   reasoningOf: m => m.reasoning,
-  prompt: () => ({ system: "", user: "" }),
   logContext: s => ({
     turnId: `${s.turn}-${s.n}`,
     isChoice: false,

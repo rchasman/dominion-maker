@@ -6,7 +6,12 @@ import {
 import { chessModule } from "../src/chess/module";
 import { dominionModule } from "../src/dominion/module";
 import { goModule } from "../src/go/module";
-import type { GameShape } from "../src/core/game-definition";
+import type { GameShape, ModelQuestions } from "../src/core/game-definition";
+import { chessEvaluate } from "../src/chess/jev";
+import { chessPrompt } from "../src/chess/prompt";
+import { dominionEvaluate, dominionPrompt } from "../src/dominion/prompt";
+import { goEvaluate } from "../src/go/jev";
+import { goPrompt } from "../src/go/prompt";
 import type { GameModule } from "../src/core/game-module";
 import {
   generateObject,
@@ -63,17 +68,36 @@ function processGenerationRequest(
 ): Promise<VercelResponse> {
   switch (body.game) {
     case "dominion":
-      return generateForGame(dominionModule, body.currentState, body, res);
+      return generateForGame(
+        dominionModule,
+        { prompt: dominionPrompt, evaluate: dominionEvaluate },
+        body.currentState,
+        body,
+        res,
+      );
     case "chess":
-      return generateForGame(chessModule, body.currentState, body, res);
+      return generateForGame(
+        chessModule,
+        { prompt: chessPrompt, evaluate: chessEvaluate },
+        body.currentState,
+        body,
+        res,
+      );
     case "go":
-      return generateForGame(goModule, body.currentState, body, res);
+      return generateForGame(
+        goModule,
+        { prompt: goPrompt, evaluate: goEvaluate },
+        body.currentState,
+        body,
+        res,
+      );
   }
 }
 
 // Process request body and validate input
 async function generateForGame<G extends GameShape>(
   module: GameModule<G>,
+  questions: ModelQuestions<G>,
   currentState: G["state"],
   body: ActionRequest,
   res: VercelResponse,
@@ -111,12 +135,7 @@ async function generateForGame<G extends GameShape>(
   };
 
   if (config.evaluation) {
-    if (!game.evaluate) {
-      return res
-        .status(HTTP_BAD_REQUEST)
-        .json({ error: "This game has no evaluation model" });
-    }
-    const { move, distribution, usage } = await game.evaluate({
+    const { move, distribution, usage } = await questions.evaluate({
       ...promptInput,
       modelId: config.fullName,
     });
@@ -132,7 +151,8 @@ async function generateForGame<G extends GameShape>(
         })
       : baseModel;
 
-  const { system: systemPrompt, user: userMessage } = game.prompt(promptInput);
+  const { system: systemPrompt, user: userMessage } =
+    questions.prompt(promptInput);
 
   // No text repair by design — invalid replies get one corrective retry and
   // habitual misformatters surface as warns (roster live-verified 2026-09)

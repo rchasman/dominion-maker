@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { replyFormatInstruction } from "../core/consensus/numbered-choice";
 import { goGame } from "./definition";
+import { goPrompt } from "./prompt";
 import { KOMI } from "./rules";
 import type { GoMove, GoMoveRecord, GoState } from "./shape";
 import { factsOf } from "./candidates";
@@ -20,7 +21,7 @@ const after = (moves: GoMoveRecord[]): GoState =>
 
 const promptFor = (state: GoState, customStrategy = "", moves?: GoMove[]) => {
   const player = goGame.whoMustAct(state) ?? BLACK;
-  return goGame.prompt({
+  return goPrompt({
     state,
     player,
     moves: moves ?? goGame.legalMoves(state, player),

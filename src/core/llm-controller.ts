@@ -54,9 +54,7 @@ export function llmController<G extends GameShape>(
     overallStart: number,
     logger: LLMLogger | undefined,
   ): Promise<G["move"]> => {
-    const providers = buildRoster(config, {
-      allowEvaluation: game.evaluate !== undefined,
-    });
+    const providers = buildRoster(config);
     const aheadByK = aheadByKFor(providers.length);
     const { payload } = game.logContext(state, player, moves);
     logConsensusStart({

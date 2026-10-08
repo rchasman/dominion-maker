@@ -3,8 +3,6 @@ import type { GameDefinition } from "../core/game-definition";
 import { moveNumberOf, sideToMove } from "./engine";
 import { legalMoveLabel } from "./facts";
 import { chessHeuristic } from "./heuristic";
-import { chessEvaluate } from "./jev";
-import { chessPrompt } from "./prompt";
 import type { ChessMove, ChessShape } from "./shape";
 
 /**
@@ -42,8 +40,6 @@ export const chessGame: GameDefinition<ChessShape> = {
   describeMove: (state, move) => legalMoveLabel(state.fen, move),
   withReasoning: (move, reasoning) => ({ ...move, reasoning }),
   reasoningOf: move => move.reasoning,
-  prompt: chessPrompt,
-  evaluate: chessEvaluate,
   heuristic: chessHeuristic,
   // turn and phase name the action id the consensus log builds, so they carry
   // the keys Dominion's payload carries. Chess has one phase and it is a move.

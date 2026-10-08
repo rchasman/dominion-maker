@@ -6,7 +6,7 @@ import {
   type JevChoiceQuestion,
 } from "../agent/jev-protocol";
 import { goGame } from "./definition";
-import { goEvaluate, goJevQuestion, goJevState } from "./jev";
+import { goJevQuestion, goJevState } from "./jev";
 import type { GoMove, GoMoveRecord, GoState } from "./shape";
 import { goStateAfter, placedStone } from "./test-helpers";
 
@@ -424,11 +424,5 @@ describe("goJevState", () => {
     expect(jevState.captures).toEqual({ black: 0, white: 1 });
     expect(jevState.consecutivePasses).toBe(1);
     expect(jevState.sideToMove).toBe("White");
-  });
-});
-
-describe("the Go definition", () => {
-  it("judges with Jev through the shared evaluate step", () => {
-    expect(goGame.evaluate).toBe(goEvaluate);
   });
 });

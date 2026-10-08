@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { DominionEngine } from "../engine";
 import { dominionGame } from "../dominion/definition";
+import { dominionPrompt } from "../dominion/prompt";
 import { gameEventSchema } from "../validation/events";
 
 // Captured from master before the consensus core moved. The live roster
@@ -42,7 +43,7 @@ describe("Dominion prompt bytes", () => {
       expect(player).not.toBeNull();
       if (player === null) return;
       const moves = dominionGame.legalMoves(state, player);
-      const { system, user } = dominionGame.prompt({
+      const { system, user } = dominionPrompt({
         state,
         player,
         moves,
