@@ -16,12 +16,7 @@ import { plural } from "../lib/plural";
 import type { ChessMove } from "./shape";
 
 export type PieceName =
-  | "Pawn"
-  | "Knight"
-  | "Bishop"
-  | "Rook"
-  | "Queen"
-  | "King";
+  "Pawn" | "Knight" | "Bishop" | "Rook" | "Queen" | "King";
 
 const PIECE_NAMES: Record<PieceSymbol, PieceName> = {
   p: "Pawn",

@@ -9,9 +9,7 @@ export type LlmSeatConfig = {
 };
 
 export type ControllerConfig =
-  | { kind: "human" }
-  | { kind: "heuristic" }
-  | LlmSeatConfig;
+  { kind: "human" } | { kind: "heuristic" } | LlmSeatConfig;
 
 export type ControllerKind = ControllerConfig["kind"];
 

@@ -14,9 +14,7 @@ import { countCards } from "../lib/card-array-utils";
 
 // Extended event type for aggregated card operations
 type AggregatedCardEvent = (
-  | CardDrawnEvent
-  | CardDiscardedEvent
-  | CardTrashedEvent
+  CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent
 ) & {
   cards: CardName[];
   cardCounts: Record<string, number>;
@@ -229,9 +227,7 @@ function aggregateCardEvents(events: GameEvent[]): MaybeAggregatedEvent[] {
         ...acc,
         aggregateGroup(
           groupEvents as (
-            | CardDrawnEvent
-            | CardDiscardedEvent
-            | CardTrashedEvent
+            CardDrawnEvent | CardDiscardedEvent | CardTrashedEvent
           )[],
         ),
       ]);

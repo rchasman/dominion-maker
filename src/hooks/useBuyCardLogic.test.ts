@@ -327,8 +327,7 @@ describe("useBuyCardLogic hook", () => {
       });
 
       const pendingChoice = undefined as
-        | Extract<PendingChoice, { choiceType: "decision" }>
-        | undefined;
+        Extract<PendingChoice, { choiceType: "decision" }> | undefined;
 
       const handleBuyCard = (card: CardName): CommandResult => {
         if (pendingChoice?.from === "supply") {

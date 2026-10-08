@@ -216,7 +216,7 @@ export function ModelSettingsPanel({
   const [conversation, setConversation] = useState<ConversationEntry[]>([]);
   const [isReacting, setIsReacting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const typingTimeoutRef = useRef<number>();
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // Load conversation from localStorage on mount
   useEffect(() => {

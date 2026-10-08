@@ -82,8 +82,7 @@ export function DecisionAction({
           modelStatuses: currentDecision.modelStatuses,
         })}
         {...((currentDecision.votingEntry.data?.gameState as
-          | GameStateSnapshot
-          | undefined) !== undefined && {
+          GameStateSnapshot | undefined) !== undefined && {
           gameStateData: currentDecision.votingEntry.data
             ?.gameState as GameStateSnapshot,
         })}

@@ -34,8 +34,7 @@ const wait = (ms: number, signal: AbortSignal): Promise<void> =>
       });
 
 type Decided<C> =
-  | { command: C; error: null }
-  | { command: null; error: unknown };
+  { command: C; error: null } | { command: null; error: unknown };
 
 const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
