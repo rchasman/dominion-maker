@@ -100,10 +100,10 @@ const DIVERSE_MODELS = [
 // than the bill. One instance each, so the maxInstances caps never bind.
 const PRO_MODELS = [
   "gpt-6.1-sol-fast",
-  "claude-opus-5.5-fast",
+  "claude-sonnet",
   "gemini-3.1-pro",
   "qwen3.7-max",
-  "kimi-k3-fast",
+  "kimi-k3",
 ] as const satisfies readonly ModelProvider[];
 
 export const JEV_PRESET: ConsensusPreset = {

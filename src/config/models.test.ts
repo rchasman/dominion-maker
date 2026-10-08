@@ -8,9 +8,11 @@ import {
   MODELS,
 } from "./models";
 import {
+  DECISION_TOKENS,
   DENIED_MODELS,
   DENIED_PROVIDERS,
   ID_ALIASES,
+  MAX_DECISION_COST_USD,
   MODEL_QUIRKS,
   PROVIDER_COLORS_BY_NAME,
   SPECIALIST_PATTERNS,
@@ -95,7 +97,7 @@ describe("Model Configuration", () => {
     });
 
     it("should have maxInstances for specific models", () => {
-      const proModel = MODELS.find(m => m.id === "gpt-5.5");
+      const proModel = MODELS.find(m => m.id === "claude-opus-5.5");
       expect(proModel?.maxInstances).toBe(3);
     });
   });
@@ -144,5 +146,19 @@ describe("generated catalog and its overrides", () => {
       provider => PROVIDER_COLORS_BY_NAME[provider] === undefined,
     );
     expect(uncoloured).toEqual([]);
+  });
+});
+
+describe("the price ceiling", () => {
+  it("offers no model that costs more than the ceiling per decision", () => {
+    const decisionCost = (model: (typeof MODELS)[number]) =>
+      (model.inputPrice * DECISION_TOKENS.input +
+        model.outputPrice * DECISION_TOKENS.output) /
+      1_000_000;
+    expect(
+      MODELS.filter(model => decisionCost(model) > MAX_DECISION_COST_USD).map(
+        model => model.id,
+      ),
+    ).toEqual([]);
   });
 });
