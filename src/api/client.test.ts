@@ -373,6 +373,20 @@ describe("api.api.generate-action", () => {
     expect(callArgs[1].headers).toEqual(expect.objectContaining(customHeaders));
   });
 
+  it("sends the client's own headers on every call", async () => {
+    global.fetch = mockFetch(
+      async () => new Response(JSON.stringify({}), { status: 200 }),
+    );
+    await createApiClient("", { "x-party-key": "k" }).api[
+      "generate-action"
+    ].post(request);
+    const callArgs = (global.fetch as any).mock.calls[0];
+    expect(callArgs[1].headers).toEqual({
+      "Content-Type": "application/json",
+      "x-party-key": "k",
+    });
+  });
+
   it("prefixes the base URL when one is given", async () => {
     global.fetch = mockFetch(
       async () => new Response(JSON.stringify({}), { status: 200 }),

@@ -32,6 +32,12 @@ import { httpDecideMove } from "../agent/http-decide-move";
 import { moduleFor } from "../games";
 import type { GameId } from "../game-ids";
 
+/**
+ * The Vercel firewall limits /api/* per IP. Every room's bots share this
+ * worker's IP, so their calls carry PARTY_API_KEY and the rule skips them.
+ */
+const PARTY_KEY_HEADER = "x-party-key";
+
 /** One event as the room handles it: opaque apart from the id it is sliced by */
 type RoomEvent = GameShape["event"];
 
@@ -133,8 +139,12 @@ export default class GameServer implements Party.Server {
     this.resolveModule = resolveModule;
     this.apiOrigin =
       typeof room.env["API_ORIGIN"] === "string" ? room.env["API_ORIGIN"] : "";
+    const partyKey = room.env["PARTY_API_KEY"];
+    const headers: Record<string, string> =
+      typeof partyKey === "string" ? { [PARTY_KEY_HEADER]: partyKey } : {};
     this.resolveDecideMove =
-      resolveDecideMove ?? (module => httpDecideMove(module, this.apiOrigin));
+      resolveDecideMove ??
+      (module => httpDecideMove(module, this.apiOrigin, headers));
   }
 
   /**

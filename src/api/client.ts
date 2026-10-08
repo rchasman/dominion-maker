@@ -47,8 +47,14 @@ interface AnalyzeStrategyResponse {
   message?: string;
 }
 
-/** `baseUrl` is empty in the browser (same origin) and the API origin in the PartyKit worker */
-export function createApiClient(baseUrl = "") {
+/**
+ * `baseUrl` is empty in the browser (same origin) and the API origin in the
+ * PartyKit worker, which also sends `headers` to pass the per-IP rate limit.
+ */
+export function createApiClient(
+  baseUrl = "",
+  headers: Record<string, string> = {},
+) {
   return {
     api: {
       "analyze-strategy": {
@@ -59,9 +65,7 @@ export function createApiClient(baseUrl = "") {
           try {
             const response = await fetch(`${baseUrl}/api/analyze-strategy`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers: { "Content-Type": "application/json", ...headers },
               body: JSON.stringify(body),
               ...options?.fetch,
             });
@@ -89,7 +93,7 @@ export function createApiClient(baseUrl = "") {
           try {
             const response = await fetch(`${baseUrl}/api/verify-action`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...headers },
               body: JSON.stringify(body),
               ...options?.fetch,
             });
@@ -121,9 +125,7 @@ export function createApiClient(baseUrl = "") {
           try {
             const response = await fetch(`${baseUrl}/api/generate-action`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers: { "Content-Type": "application/json", ...headers },
               body: JSON.stringify(body),
               ...options?.fetch,
             });
