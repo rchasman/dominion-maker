@@ -29,14 +29,12 @@ function finish(
   }
   return [
     ...events,
-    ...remaining.map(
-      (card): GameEvent => ({
-        type: "CARD_DISCARDED",
-        playerId: target,
-        card,
-        from: "setAside",
-      }),
-    ),
+    ...remaining.map((card): GameEvent => ({
+      type: "CARD_DISCARDED",
+      playerId: target,
+      card,
+      from: "setAside",
+    })),
   ];
 }
 

@@ -94,14 +94,12 @@ export const sentry = defineEffect(
     );
     const order = [...new Set([...requestedOrder, ...kept])];
     events.push(
-      ...order.reverse().map(
-        (index): GameEvent => ({
-          type: "CARD_PUT_ON_DECK",
-          playerId,
-          card: revealed[index]!,
-          from: "setAside",
-        }),
-      ),
+      ...order.reverse().map((index): GameEvent => ({
+        type: "CARD_PUT_ON_DECK",
+        playerId,
+        card: revealed[index]!,
+        from: "setAside",
+      })),
     );
     return done(events);
   },

@@ -1,4 +1,5 @@
-import type { StateUpdater, MutableRef, Dispatch } from "preact/hooks";
+import type { RefObject } from "preact";
+import type { StateUpdater, Dispatch } from "preact/hooks";
 import { useEffect, useRef, useCallback } from "preact/hooks";
 import type { DevtoolsEvent } from "./adapter";
 
@@ -36,7 +37,7 @@ export function useAutoScroll(
   scrubberIndex: number | null,
   eventsLength: number,
   isOpen: boolean,
-  listRefInternalRef: MutableRef<HTMLDivElement | null>,
+  listRefInternalRef: RefObject<HTMLDivElement | null>,
 ) {
   useEffect(() => {
     if (scrubberIndex === null && isOpen) {
@@ -52,7 +53,7 @@ export function useAutoScroll(
 
 export function useScrubberScroll(
   scrubberIndex: number | null,
-  listRefInternalRef: MutableRef<HTMLDivElement | null>,
+  listRefInternalRef: RefObject<HTMLDivElement | null>,
 ) {
   useEffect(() => {
     if (scrubberIndex !== null && listRefInternalRef.current) {

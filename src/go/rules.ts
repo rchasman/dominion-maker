@@ -213,14 +213,10 @@ const withStones = (
 type Placement = { board: string; captured: number };
 
 type PlacementError =
-  | "off the board"
-  | "occupied"
-  | "suicide"
-  | "a repeat of an earlier position";
+  "off the board" | "occupied" | "suicide" | "a repeat of an earlier position";
 
 type Judged =
-  | { ok: true; placement: Placement }
-  | { ok: false; error: PlacementError };
+  { ok: true; placement: Placement } | { ok: false; error: PlacementError };
 
 /**
  * The board after `stone` lands on `point` and lifts every enemy group it
@@ -357,8 +353,7 @@ const uniquePoints = (points: readonly Point[]): Point[] => [
 
 /** What an enemy stone on one point does: refused by the rules, or the stones it lifts and the liberties it then has */
 type Reply =
-  | { ok: false }
-  | { ok: true; captures: number; libertiesAfter: number };
+  { ok: false } | { ok: true; captures: number; libertiesAfter: number };
 
 const REFUSED: Reply = { ok: false };
 

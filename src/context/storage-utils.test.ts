@@ -174,8 +174,7 @@ describe("storage-utils", () => {
       localStorage.setItem(STORAGE_KEYS.STRATEGIES, JSON.stringify([]));
       // JSON.parse("[]") returns an array despite the Record return type
       const result = loadPlayerStrategies() as
-        | PlayerStrategyData
-        | PlayerStrategy[];
+        PlayerStrategyData | PlayerStrategy[];
       expect(result).toEqual([]);
     });
 

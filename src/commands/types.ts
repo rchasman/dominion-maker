@@ -116,5 +116,4 @@ export type GameCommand =
  * Result of handling a command.
  */
 export type CommandResult =
-  | { ok: true; events: GameEvent[] }
-  | { ok: false; error: string };
+  { ok: true; events: GameEvent[] } | { ok: false; error: string };

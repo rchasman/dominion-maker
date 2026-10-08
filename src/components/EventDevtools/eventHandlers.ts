@@ -1,4 +1,5 @@
-import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
+import type { RefObject } from "preact";
+import type { StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { DevtoolsEvent } from "./adapter";
 import { useScrubberHandlers } from "./scrubberHandlers";
@@ -9,7 +10,7 @@ interface HandlerDeps<E extends DevtoolsEvent> {
   selectedEventId: string | null;
   scrubberIndex: number | null;
   isPlaying: boolean;
-  playIntervalRef: MutableRef<NodeJS.Timeout | null>;
+  playIntervalRef: RefObject<NodeJS.Timeout | null>;
   onScrub: ((eventId: string | null) => void) | undefined;
   onBranchFrom: ((eventId: string) => void) | undefined;
 }

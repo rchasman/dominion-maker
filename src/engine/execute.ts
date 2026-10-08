@@ -9,8 +9,7 @@ import { CARDS } from "../data/cards";
 import { getAvailableReactions } from "../cards/effect-types";
 
 export type ExecutionResponse =
-  | { choice: DecisionChoice; skip?: boolean }
-  | { reaction: CardName | null };
+  { choice: DecisionChoice; skip?: boolean } | { reaction: CardName | null };
 export type EffectRegistry = (card: CardName) => CardEffect | undefined;
 
 /** The only execution loop. Frames contain rules data; requests live in the view. */

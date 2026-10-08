@@ -1,4 +1,5 @@
-import type { MutableRef, StateUpdater, Dispatch } from "preact/hooks";
+import type { RefObject } from "preact";
+import type { StateUpdater, Dispatch } from "preact/hooks";
 import { useCallback } from "preact/hooks";
 import type { DevtoolsEvent } from "./adapter";
 
@@ -7,7 +8,7 @@ interface ScrubberDeps<E extends DevtoolsEvent> {
   rootEvents: E[];
   scrubberIndex: number | null;
   isPlaying: boolean;
-  playIntervalRef: MutableRef<NodeJS.Timeout | null>;
+  playIntervalRef: RefObject<NodeJS.Timeout | null>;
   onScrub: ((eventId: string | null) => void) | undefined;
 }
 
@@ -18,7 +19,7 @@ interface ScrubberActions {
 }
 
 function stopPlayback(
-  playIntervalRef: MutableRef<NodeJS.Timeout | null>,
+  playIntervalRef: RefObject<NodeJS.Timeout | null>,
   setIsPlaying: Dispatch<StateUpdater<boolean>>,
 ) {
   setIsPlaying(false);
