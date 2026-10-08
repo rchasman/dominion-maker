@@ -24,7 +24,6 @@ try {
     ["/api/generate-action", "OPTIONS", undefined, 204],
     ["/api/generate-action", "POST", "broken JSON", 400],
     ["/api/analyze-strategy", "POST", "{}", 400],
-    ["/api/patrick-chat", "POST", '{"message":42}', 400],
     ["/api/strategy-react", "POST", '{"strategy":false}', 400],
     ["/missing", "GET", undefined, 404],
   ] as const) {

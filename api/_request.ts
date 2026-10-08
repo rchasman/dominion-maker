@@ -53,10 +53,6 @@ export const analysisRequestSchema = z.object({
   currentState: gameStateSchema,
   previousAnalysis: z.record(z.string(), strategy).optional(),
 });
-export const chatRequestSchema = z.object({
-  message: text,
-  conversationHistory: history,
-});
 export const reactionRequestSchema = z.object({
   strategy: text,
   conversationHistory: history,
