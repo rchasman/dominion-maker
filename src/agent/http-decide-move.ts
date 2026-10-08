@@ -13,8 +13,9 @@ const PERCENT = 100;
 export function httpDecideMove<G extends GameShape>(
   module: GameModule<G>,
   baseUrl = "",
+  headers: Record<string, string> = {},
 ): DecideMove<G> {
-  const client = createApiClient(baseUrl);
+  const client = createApiClient(baseUrl, headers);
   const distributionSchema = z.array(
     z.object({ move: module.moveSchema, weight: z.number() }),
   );
