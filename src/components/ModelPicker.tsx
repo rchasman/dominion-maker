@@ -35,11 +35,14 @@ const providerDisplayNames: Record<string, string> = {
   alibaba: "Alibaba",
   meta: "Meta",
   nvidia: "NVIDIA",
-  stepfun: "StepFun",
   moonshotai: "Moonshot AI",
   thinkingmachines: "Thinking Machines",
   mistral: "Mistral",
   typesafe: "TypeSafe",
+  baseten: "Baseten",
+  microsoft: "Microsoft",
+  particle: "Particle",
+  paperinstruments: "Paper Instruments",
 };
 
 const providerOrder = [

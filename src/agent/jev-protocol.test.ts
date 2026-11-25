@@ -74,7 +74,7 @@ describe("readJevChoice", () => {
     );
     expect(read.move).toEqual({ san: "e4" });
     expect(read.reasoning).toBe(
-      "Jev picked this with 70% probability. Runner-up: d4 (20%).",
+      "Picked this with 70% probability. Runner-up: d4 (20%).",
     );
   });
 
@@ -114,7 +114,7 @@ describe("readJevChoice", () => {
   it("is one whole vote with a plain line when no distribution came back", () => {
     const read = readJevChoice({ type: "choice", choice: "4. h4" }, OPTIONS);
     expect(read.move).toEqual({ san: "h4" });
-    expect(read.reasoning).toBe("Jev picked this option.");
+    expect(read.reasoning).toBe("Picked this option.");
     expect(read.distribution).toEqual([{ move: { san: "h4" }, weight: 1 }]);
   });
 

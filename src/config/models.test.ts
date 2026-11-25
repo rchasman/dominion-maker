@@ -89,7 +89,7 @@ describe("Model Configuration", () => {
 
     it("should have valid price data for all models", () => {
       for (const model of MODELS) {
-        expect(model.inputPrice).toBeGreaterThanOrEqual(0);
+        expect(model.inputPrice).toBeGreaterThan(0);
         expect(model.outputPrice).toBeGreaterThanOrEqual(0);
         expect(model.color).toBeDefined();
         expect(model.color.length).toBeGreaterThan(0);

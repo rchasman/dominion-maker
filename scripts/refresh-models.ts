@@ -59,11 +59,17 @@ const decisionCost = (model: GatewayModel): number =>
   Number(model.pricing?.input ?? 0) * DECISION_TOKENS.input +
   Number(model.pricing?.output ?? 0) * DECISION_TOKENS.output;
 
+/** The gateway lists "0" for a model whose price varies by provider. On an
+ *  open endpoint an unknown price is an unbounded one. */
+const hasKnownPrice = (model: GatewayModel): boolean =>
+  Number(model.pricing?.input ?? 0) > 0;
+
 const isPlayable = (model: GatewayModel): boolean =>
   (model.type === "language" || model.type === "evaluation") &&
   model.zdr !== "none" &&
   !isGenerator(model) &&
   !isSpecialist(model) &&
+  hasKnownPrice(model) &&
   decisionCost(model) <= MAX_DECISION_COST_USD &&
   DENIED_MODELS[model.id] === undefined &&
   DENIED_PROVIDERS[providerOf(model)] === undefined;

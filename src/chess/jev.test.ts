@@ -153,7 +153,7 @@ describe("chessJevQuestion", () => {
     );
     expect(read.move).toEqual({ san: "e4", from: "e2", to: "e4" });
     expect(read.reasoning).toBe(
-      "Jev picked this with 60% probability. Runner-up: d4 (30%).",
+      "Picked this with 60% probability. Runner-up: d4 (30%).",
     );
     expect(read.distribution).toEqual([
       { move: { san: "e4", from: "e2", to: "e4" }, weight: 0.6 },

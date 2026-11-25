@@ -311,7 +311,7 @@ describe("goJevQuestion", () => {
     );
     expect(read.move).toEqual({ kind: "place", x: 6, y: 3, label: "G6" });
     expect(read.reasoning).toBe(
-      "Jev picked this with 50% probability. Runner-up: pass (45%).",
+      "Picked this with 50% probability. Runner-up: pass (45%).",
     );
     expect(read.distribution).toEqual([
       { move: { kind: "place", x: 6, y: 3, label: "G6" }, weight: 0.5 },

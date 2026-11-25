@@ -13,7 +13,7 @@ const base = (
 ) => ({
   providers: [
     "gpt-4.1-mini-fast",
-    "grok-4-fast",
+    "grok-4.20-non-reasoning",
     "gemini-3.5-flash-lite",
     "glm-5.3-flash",
   ] as const,
@@ -32,7 +32,7 @@ describe("runModelsInParallel", () => {
   it("tallies every answer and reports no early consensus on a split vote", async () => {
     const byProvider: Record<string, Move> = {
       "gpt-4.1-mini-fast": end,
-      "grok-4-fast": buy,
+      "grok-4.20-non-reasoning": buy,
       "gemini-3.5-flash-lite": end,
       "glm-5.3-flash": buy,
     };

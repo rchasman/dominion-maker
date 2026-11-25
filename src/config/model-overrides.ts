@@ -14,7 +14,7 @@ export const ID_ALIASES: Record<string, string> = {
   "anthropic/claude-haiku-5.5": "claude-haiku",
   "anthropic/claude-sonnet-5.5": "claude-sonnet",
   "google/gemini-3.1-pro-preview": "gemini-3.1-pro",
-  "spacexai/grok-4.1-fast-non-reasoning": "grok-4-fast",
+  "typesafe-ai/jev-1.14.0": "jev",
 };
 
 /**
@@ -70,6 +70,16 @@ export const DENIED_MODELS: Record<string, string> = {
   "alibaba/qwen3.6-27b": "median 20s, max 25s, 2026-10-08",
   "deepseek/deepseek-v4-flash-vision-exp":
     "2 of 3 live calls inside 35s, median 22s, 2026-10-08",
+  "baseten/joey-1":
+    "6 of 15 acceptable picks on the Jev decision eval, 2026-11-25",
+  "baseten/elephant-1":
+    "11 of 15 acceptable picks on the Jev decision eval, 2026-11-25",
+  "spacexai/grok-4.20-non-reasoning-beta":
+    "same model and price as grok-4.20-non-reasoning, listed twice",
+  "spacexai/grok-4.20-reasoning-beta":
+    "same model and price as grok-4.20-reasoning, listed twice",
+  "spacexai/grok-4.20-multi-agent-beta":
+    "same model and price as grok-4.20-multi-agent, listed twice",
 };
 
 /** A game move is text. Emitting an image or a video is a different job, and a
@@ -121,18 +131,17 @@ export const PROVIDER_COLORS_BY_NAME: Record<string, string> = {
   alibaba: "#f97316",
   meta: "#818cf8",
   nvidia: "#a3e635",
-  stepfun: "#2dd4bf",
   moonshotai: "#e879f9",
   thinkingmachines: "#fb7185",
   mistral: "#fb923c",
   typesafe: "#f472b6",
   amazon: "#facc15",
   minimax: "#c084fc",
-  xiaomi: "#f87171",
-  tencent: "#38bdf8",
-  inclusionai: "#4ade80",
-  arcee: "#94a3b8",
   fireworks: "#fdba74",
+  baseten: "#5eead4",
+  microsoft: "#7dd3fc",
+  particle: "#fca5a5",
+  paperinstruments: "#bef264",
 };
 
 export const DEFAULT_PROVIDER_COLOR = "#94a3b8";
@@ -147,9 +156,9 @@ type ModelQuirks = {
 /** Keyed by short id. Each entry is something a live run taught us. */
 export const MODEL_QUIRKS: Record<string, ModelQuirks> = {
   "claude-opus-5.5": { maxInstances: 3 },
-  "gpt-5.6-terra": { maxInstances: 3 },
   "gemini-3.1-pro": { maxInstances: 3 },
   "llama-3.3-70b": { structuredOutput: "prompt" },
   "llama-4-maverick": { structuredOutput: "prompt" },
+  "llama-4-scout": { structuredOutput: "prompt" },
   "nemotron-nano-12b-v2-vl": { structuredOutput: "prompt" },
 };

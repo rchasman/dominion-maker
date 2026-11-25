@@ -3,6 +3,7 @@ import { askJev } from "../jev-choice";
 import { getLegalActions } from "../legal-actions";
 import { stripReasoning } from "../../types/action";
 import { jevCases } from "./jev-cases";
+import { getModelFullName } from "../../config/models";
 
 // Opt-in live evaluation of Jev's picks. Prints one JSON line per case and a
 // summary table; nonzero exit when any acceptable-rate regression is visible.
@@ -10,7 +11,7 @@ import { jevCases } from "./jev-cases";
 if (!process.env.AI_GATEWAY_API_KEY)
   throw new Error("AI_GATEWAY_API_KEY is required for live evaluations");
 const repeats = Number(process.env.JEV_REPEATS ?? 1);
-const modelId = process.env.JEV_MODEL ?? "typesafe-ai/jev";
+const modelId = process.env.JEV_MODEL ?? getModelFullName("jev");
 const only = process.env.JEV_ONLY?.split(",").filter(Boolean);
 
 const sameAction = (a: unknown, b: unknown) =>

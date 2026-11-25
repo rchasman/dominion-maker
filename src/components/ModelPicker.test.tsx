@@ -33,8 +33,8 @@ const renderPicker = () => {
 describe("the model picker", () => {
   it("shows every LLM seat's roster side by side", () => {
     const { box } = renderPicker();
-    expect(box("Jev for Matrix").checked).toBe(true);
-    expect(box("Jev for Cortex").checked).toBe(true);
+    expect(box("Jev 1.14.0 for Matrix").checked).toBe(true);
+    expect(box("Jev 1.14.0 for Cortex").checked).toBe(true);
     expect(box("Nova Micro for Cortex").checked).toBe(false);
   });
 

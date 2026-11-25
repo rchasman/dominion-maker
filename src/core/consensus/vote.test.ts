@@ -41,7 +41,11 @@ describe("checkEarlyConsensus", () => {
     const groups = new Map([
       [
         key(village),
-        group(village, ["gpt-4.1-mini-fast", "grok-4-fast", "grok-4-fast"]),
+        group(village, [
+          "gpt-4.1-mini-fast",
+          "grok-4.20-non-reasoning",
+          "grok-4.20-non-reasoning",
+        ]),
       ],
       [key(smithy), group(smithy, ["gemini-3.5-flash-lite"])],
     ]);
@@ -49,14 +53,23 @@ describe("checkEarlyConsensus", () => {
   });
   it("returns null when not ahead by K, tied, or empty", () => {
     const groups = new Map([
-      [key(village), group(village, ["gpt-4.1-mini-fast", "grok-4-fast"])],
-      [key(smithy), group(smithy, ["grok-4-fast"])],
+      [
+        key(village),
+        group(village, ["gpt-4.1-mini-fast", "grok-4.20-non-reasoning"]),
+      ],
+      [key(smithy), group(smithy, ["grok-4.20-non-reasoning"])],
     ]);
     expect(checkEarlyConsensus(groups, 2)).toBeNull();
     expect(checkEarlyConsensus(new Map(), 2)).toBeNull();
     const tied = new Map([
-      [key(village), group(village, ["gpt-4.1-mini-fast", "grok-4-fast"])],
-      [key(smithy), group(smithy, ["grok-4-fast", "gemini-3.5-flash-lite"])],
+      [
+        key(village),
+        group(village, ["gpt-4.1-mini-fast", "grok-4.20-non-reasoning"]),
+      ],
+      [
+        key(smithy),
+        group(smithy, ["grok-4.20-non-reasoning", "gemini-3.5-flash-lite"]),
+      ],
     ]);
     expect(checkEarlyConsensus(tied, 1)).toBeNull();
   });
@@ -66,8 +79,8 @@ describe("checkEarlyConsensus", () => {
       "gpt-4.1-mini-fast",
       "gpt-4.1-mini-fast",
       "gpt-4.1-mini-fast",
-      "grok-4-fast",
-      "grok-4-fast",
+      "grok-4.20-non-reasoning",
+      "grok-4.20-non-reasoning",
       "gemini-3.5-flash-lite",
       "gemini-3.5-flash-lite",
       "glm-5.3-flash",
@@ -79,7 +92,11 @@ describe("checkEarlyConsensus", () => {
     it("waits when three fast matching votes can still be overturned", () => {
       expect(
         checkEarlyConsensus(
-          votes(["gpt-4.1-mini-fast", "grok-4-fast", "gemini-3.5-flash-lite"]),
+          votes([
+            "gpt-4.1-mini-fast",
+            "grok-4.20-non-reasoning",
+            "gemini-3.5-flash-lite",
+          ]),
           3,
           { providers, remainingVotes: 5 },
         ),
@@ -99,7 +116,7 @@ describe("checkEarlyConsensus", () => {
           votes([
             "gpt-4.1-mini-fast",
             "gpt-4.1-mini-fast",
-            "grok-4-fast",
+            "grok-4.20-non-reasoning",
             "gemini-3.5-flash-lite",
             "glm-5.3-flash",
           ]),
@@ -201,14 +218,18 @@ describe("selectConsensusWinner", () => {
     const groups = new Map([
       [
         key(village),
-        group(village, ["gpt-4.1-mini-fast", "grok-4-fast", "grok-4-fast"]),
+        group(village, [
+          "gpt-4.1-mini-fast",
+          "grok-4.20-non-reasoning",
+          "grok-4.20-non-reasoning",
+        ]),
       ],
       [key(smithy), group(smithy, ["gemini-3.5-flash-lite"])],
     ]);
     const results = [
       ok("gpt-4.1-mini-fast", village),
-      ok("grok-4-fast", village),
-      ok("grok-4-fast", village),
+      ok("grok-4.20-non-reasoning", village),
+      ok("grok-4.20-non-reasoning", village),
       ok("gemini-3.5-flash-lite", smithy),
     ];
     const { winner, votesConsidered } = selectConsensusWinner(
@@ -222,7 +243,10 @@ describe("selectConsensusWinner", () => {
     expect(votesConsidered).toBe(4);
   });
   it("uses a legal early consensus winner", () => {
-    const early = group(village, ["gpt-4.1-mini-fast", "grok-4-fast"]);
+    const early = group(village, [
+      "gpt-4.1-mini-fast",
+      "grok-4.20-non-reasoning",
+    ]);
     const { winner, validEarlyConsensus } = selectConsensusWinner(
       new Map([[early.key, early]]),
       [ok("gpt-4.1-mini-fast", village)],
@@ -236,12 +260,15 @@ describe("selectConsensusWinner", () => {
   it("filters out illegal moves", () => {
     const market: Move = { type: "play_action", card: "Market" };
     const groups = new Map([
-      [key(market), group(market, ["gpt-4.1-mini-fast", "grok-4-fast"])],
-      [key(village), group(village, ["grok-4-fast"])],
+      [
+        key(market),
+        group(market, ["gpt-4.1-mini-fast", "grok-4.20-non-reasoning"]),
+      ],
+      [key(village), group(village, ["grok-4.20-non-reasoning"])],
     ]);
     const { winner } = selectConsensusWinner(
       groups,
-      [ok("gpt-4.1-mini-fast", market), ok("grok-4-fast", village)],
+      [ok("gpt-4.1-mini-fast", market), ok("grok-4.20-non-reasoning", village)],
       null,
       [village],
       key,
@@ -273,11 +300,11 @@ describe("selectConsensusWinner", () => {
   it("breaks ties by key", () => {
     const groups = new Map([
       [key(village), group(village, ["gpt-4.1-mini-fast"])],
-      [key(smithy), group(smithy, ["grok-4-fast"])],
+      [key(smithy), group(smithy, ["grok-4.20-non-reasoning"])],
     ]);
     const { winner } = selectConsensusWinner(
       groups,
-      [ok("gpt-4.1-mini-fast", village), ok("grok-4-fast", smithy)],
+      [ok("gpt-4.1-mini-fast", village), ok("grok-4.20-non-reasoning", smithy)],
       null,
       [village, smithy],
       key,
