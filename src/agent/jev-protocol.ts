@@ -64,15 +64,15 @@ function summariseDistribution(
   choice: string,
   probabilities: Record<string, number> | undefined,
 ): string {
-  if (!probabilities) return "Jev picked this option.";
+  if (!probabilities) return "Picked this option.";
   const chosen = probabilities[choice];
   const runnerUp = Object.entries(probabilities)
     .filter(([key]) => key !== choice)
     .sort(([, a], [, b]) => b - a)[0];
   const lead =
     chosen === undefined
-      ? "Jev picked this option."
-      : `Jev picked this with ${formatPercent(chosen)} probability.`;
+      ? "Picked this option."
+      : `Picked this with ${formatPercent(chosen)} probability.`;
   if (!runnerUp) return lead;
   const [runnerUpKey, runnerUpProbability] = runnerUp;
   const runnerUpLabel = runnerUpKey.replace(/^\d+\. /, "");
