@@ -74,6 +74,14 @@ export const DENIED_MODELS: Record<string, string> = {
     "6 of 15 acceptable picks on the Jev decision eval, 2026-11-25",
   "baseten/elephant-1":
     "11 of 15 acceptable picks on the Jev decision eval, 2026-11-25",
+  "mistral/mistral-large-3": "5 of 15 decision cases past 35s, 2026-11-25",
+  "alibaba/qwen3.8-max-prime": "4 of 15 decision cases past 35s, 2026-11-25",
+  "alibaba/qwen3.8-2.4t-a95b": "3 of 15 decision cases past 35s, 2026-11-25",
+  "spacexai/grok-4.7": "3 of 15 decision cases past 35s, 2026-11-25",
+  "google/gemini-4-carbon": "2 of 15 decision cases past 35s, 2026-11-25",
+  "paperinstruments/ultramarine-1-flash":
+    "2 of 15 decision cases past 35s, 2026-11-25",
+  "spacexai/grok-4.6": "3 of 15 decision cases past 35s, 2026-11-25",
   "spacexai/grok-4.20-non-reasoning-beta":
     "same model and price as grok-4.20-non-reasoning, listed twice",
   "spacexai/grok-4.20-reasoning-beta":
