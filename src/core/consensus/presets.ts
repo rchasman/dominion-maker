@@ -18,12 +18,12 @@ export interface ConsensusPreset {
 const CHEAP_MODELS = [
   "jev",
   "nova-micro",
+  "groundhog-1",
+  "decision-1.1",
+  "microsoft-decision-1",
   "ministral-3b",
-  "mistral-nemo",
-  "nemotron-3.5-lightning",
   "nova-lite",
   "gpt-oss-120b",
-  "grok-4-fast",
 ] as const satisfies readonly ModelProvider[];
 
 // Latency axis, nothing else: the fastest models that can carry a vote,
@@ -65,7 +65,7 @@ const BALANCED_MODELS = [
 // same-house models share theirs. Speed decides the pick because Diverse gives
 // each house exactly one vote, and a vote past the 30s timeout is an abstention.
 //
-// Ranked from a live sweep on 2026-09-20, rechecked 2026-10-08: 3 samples per model through the real
+// Ranked from a live sweep on 2026-09-20, rechecked 2026-10-08 and 2026-11-25: 3 samples per model through the real
 // /api/generate-action path, 20 concurrent calls held constant. A model
 // qualifies with zero failures and every sample under 20s, then takes the
 // lowest median; medians within 15% count as a tie and price breaks it.
@@ -81,25 +81,27 @@ const DIVERSE_MODELS = [
   "ministral-3b",
   "nemotron-3-super-120b-a12b",
   "gemini-3.5-flash-lite",
-  "inkling-small",
+  "inkling-2-small",
   "glm-4.7",
-  "grok-4-fast",
-  "qwen3-next-80b-a3b-instruct",
+  "grok-4.20-non-reasoning",
+  "qwen-3-32b",
   "llama-4-maverick",
   "kimi-k2.5",
   "claude-haiku",
   "minimax-m3",
-  "deepseek-v4.1-flash",
-  "hy3",
+  "deepseek-v4.1-flash-1017",
   "ember-1",
-  "mimo-v2.6-flash",
+  "groundhog-1",
+  "decision-1.1",
+  "particle-1",
+  "ultramarine-1-flash",
 ] as const satisfies readonly ModelProvider[];
 
 // The frontier flagship of each house that ships one inside the vote timeout.
 // Expensive on purpose: this is the preset for when the answer matters more
 // than the bill. One instance each, so the maxInstances caps never bind.
 const PRO_MODELS = [
-  "gpt-6.1-sol-fast",
+  "gpt-6.2-sol-fast",
   "claude-sonnet",
   "gemini-3.1-pro",
   "qwen3.7-max",

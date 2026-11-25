@@ -14,10 +14,12 @@ describe("buildRoster", () => {
     expect(new Set(roster).size).toBeGreaterThan(1);
   });
   it("cycles enabled models to reach the count", () => {
-    const roster = buildRoster(seat(["gpt-4.1-mini-fast", "grok-4-fast"], 6));
+    const roster = buildRoster(
+      seat(["gpt-4.1-mini-fast", "grok-4.20-non-reasoning"], 6),
+    );
     expect(roster).toHaveLength(6);
     expect(roster.filter(m => m === "gpt-4.1-mini-fast")).toHaveLength(3);
-    expect(roster.filter(m => m === "grok-4-fast")).toHaveLength(3);
+    expect(roster.filter(m => m === "grok-4.20-non-reasoning")).toHaveLength(3);
   });
   it("respects per-model instance limits", () => {
     const roster = buildRoster(
@@ -37,7 +39,7 @@ describe("buildRoster", () => {
     expect(roster).toEqual(["jev", "jev"]);
   });
   it("keeps evaluation models when the game can evaluate", () => {
-    const roster = buildRoster(seat(["jev", "grok-4-fast"], 4));
+    const roster = buildRoster(seat(["jev", "grok-4.20-non-reasoning"], 4));
     expect(roster).toContain("jev");
   });
 });
