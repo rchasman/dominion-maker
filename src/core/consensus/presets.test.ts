@@ -81,6 +81,18 @@ describe("consensus presets", () => {
     );
   });
 
+  // Evaluation models share one protocol and one gateway path, so an outage
+  // there silences all of them at once.
+  it("gives evaluation models at most half the votes", () => {
+    CONSENSUS_PRESETS.filter(preset => preset.models.length > 1).forEach(
+      preset => {
+        const roster = rosterFor(preset);
+        const evaluationVotes = roster.filter(id => configOf(id)?.evaluation);
+        expect(evaluationVotes.length).toBeLessThanOrEqual(roster.length / 2);
+      },
+    );
+  });
+
   it("keeps every preset within each model's maxInstances cap", () => {
     CONSENSUS_PRESETS.forEach(preset => {
       const roster = rosterFor(preset);
@@ -98,7 +110,11 @@ describe("consensus presets", () => {
  * vote and nothing else, so an unreliable pick means that house abstains.
  * A provider belongs here or in the preset, never neither.
  */
-const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {};
+const DIVERSE_EXCLUDED_PROVIDERS: Record<string, string> = {
+  fireworks: "ember-1 went past 35s on 1 of 15 decision cases, 2026-11-25",
+  thinkingmachines:
+    "inkling-2-small went past 35s and inkling past 20s on the decision cases, 2026-11-25",
+};
 
 describe("the diverse preset", () => {
   const providersOf = (ids: readonly string[]) =>
