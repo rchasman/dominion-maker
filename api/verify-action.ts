@@ -1,6 +1,6 @@
 import { verifyRequestSchema, readRequest } from "./_request";
 import type { VercelRequest, VercelResponse } from "./_http";
-import { MODELS, type ModelConfig } from "../src/config/models";
+import { MODELS } from "../src/config/models";
 import { getLegalActions } from "../src/agent/legal-actions";
 import { verifyWithJev } from "../src/agent/jev-choice";
 import { apiLogger } from "../src/lib/logger";
@@ -18,7 +18,9 @@ const sameMove = (legal: Action, proposed: Action): boolean =>
     : legal.type === proposed.type &&
       (legal.card ?? null) === (proposed.card ?? null);
 
-// Second opinion on a consensus winner from the evaluation model. The action
+const VERIFIER_ID = "jev";
+
+// Second opinion on a consensus winner from Jev. The action
 // must be legal in the state so the server can type it from its own list.
 export default async function handler(
   req: VercelRequest,
@@ -26,12 +28,11 @@ export default async function handler(
 ): Promise<VercelResponse> {
   const body = await readRequest(req, res, verifyRequestSchema);
   if (!body) return res;
-  const configs: readonly ModelConfig[] = MODELS;
-  const verifier = configs.find(m => m.evaluation);
+  const verifier = MODELS.find(m => m.id === VERIFIER_ID);
   if (!verifier) {
     return res
       .status(HTTP_INTERNAL_ERROR)
-      .json({ error: "No evaluation model configured" });
+      .json({ error: `No ${VERIFIER_ID} model in the catalog` });
   }
   const proposed = body.action;
   const action = getLegalActions(body.currentState).find(legal =>
